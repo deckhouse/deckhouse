@@ -75,7 +75,7 @@ type ElasticsearchBulk struct {
 	Index  string `json:"index,omitempty"`
 }
 
-func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Elasticsearch {
+func NewElasticsearch(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec) *Elasticsearch {
 	spec := cspec.Elasticsearch
 
 	bulkAction := "index"
@@ -86,20 +86,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec, sou
 		mode = "data_stream"
 	}
 
-	tls := CommonTLS{
-		CAFile:            decodeB64(spec.TLS.CAFile),
-		CertFile:          decodeB64(spec.TLS.CertFile),
-		KeyFile:           decodeB64(spec.TLS.KeyFile),
-		KeyPass:           decodeB64(spec.TLS.KeyPass),
-		VerifyCertificate: true,
-		VerifyHostname:    true,
-	}
-	if spec.TLS.VerifyCertificate != nil {
-		tls.VerifyCertificate = *spec.TLS.VerifyCertificate
-	}
-	if spec.TLS.VerifyHostname != nil {
-		tls.VerifyHostname = *spec.TLS.VerifyHostname
-	}
+	tls := commonTLSFromSpec(spec.TLS)
 
 	// We use autodetect logic from https://vector.dev/docs/reference/configuration/sinks/elasticsearch/#api_version
 	apiVersion := "v8"
@@ -110,7 +97,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec, sou
 	return &Elasticsearch{
 		APIVersion: apiVersion,
 		CommonSettings: CommonSettings{
-			Name:   ComposeNameWithSourceType(name, sourceType),
+			Name:   sinkName,
 			Type:   "elasticsearch",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

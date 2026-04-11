@@ -31,8 +31,8 @@ const (
 	keyFieldField = "key_field"
 )
 
-// ThrottleTransform adds throttling to event's flow.
-func ThrottleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
+// throttleTransform adds throttling to event's flow.
+func throttleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
 	throttleTransform := &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "ratelimit",

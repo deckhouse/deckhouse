@@ -18,6 +18,7 @@ package composer
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
@@ -26,14 +27,16 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transform"
 )
 
 type Composer struct {
-	Source []v1alpha1.ClusterLoggingConfig
-	Dest   []v1alpha1.ClusterLogDestination
+	Source     []v1alpha1.ClusterLoggingConfig
+	Dest       []v1alpha1.ClusterLogDestination
+	destByName map[string]v1alpha1.ClusterLogDestination
 }
 
 // FromInput collects ClusterLoggingConfig sources from snapshots and combines them with provided destinations.
@@ -43,12 +46,15 @@ func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDesti
 	namespacedSourceSnap := input.Snapshots.Get("namespaced_log_source")
 
 	res := &Composer{
-		Source: make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),
-		Dest:   make([]v1alpha1.ClusterLogDestination, 0, len(destinations)),
+		Source:     make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),
+		Dest:       slices.Clone(destinations),
+		destByName: make(map[string]v1alpha1.ClusterLogDestination, len(destinations)),
 	}
 
-	for _, dest := range destinations {
-		res.Dest = append(res.Dest, dest)
+	for _, dest := range res.Dest {
+		if _, ok := res.destByName[dest.Name]; !ok {
+			res.destByName[dest.Name] = dest
+		}
 		customResourceMetric(input, "ClusterLogDestination", dest.Name, dest.Namespace, dest.Spec.Type)
 	}
 
@@ -131,12 +137,11 @@ func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis
 }
 
 func (c *Composer) getDestinationSpecByName(name string) *v1alpha1.ClusterLogDestination {
-	for _, d := range c.Dest {
-		if d.Name == name {
-			return &d
-		}
+	d, ok := c.destByName[name]
+	if !ok {
+		return nil
 	}
-	return nil
+	return &d
 }
 
 // composeDestinations resolves destination references, creates destination instances, and applies transforms.
@@ -150,14 +155,15 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 			continue
 		}
 
-		dest := newLogDest(destSpec.Spec.Type, destSpec.Name, destSpec.Spec, sourceType)
-		if dest == nil {
-			continue
-		}
-
-		transforms, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
+		transforms, sinkLabelMaps, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
 		if err != nil {
 			return nil, err
+		}
+
+		sinkName := destination.ComposeNameWithSourceType(destSpec.Name, sourceType)
+		dest := newLogDest(destSpec.Spec.Type, sinkName, destSpec.Spec, sinkLabelMaps)
+		if dest == nil {
+			continue
 		}
 
 		destinations = append(destinations, PipelineDestination{
@@ -170,22 +176,22 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 }
 
 // newLogDest creates a log destination instance based on the destination type.
-func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec, sourceType string) apis.LogDestination {
+func newLogDest(typ, sinkName string, spec v1alpha1.ClusterLogDestinationSpec, labelMaps loglabels.DestinationSinkLabelMaps) apis.LogDestination {
 	switch typ {
 	case v1alpha1.DestLoki:
-		return destination.NewLoki(name, spec, sourceType)
+		return destination.NewLoki(sinkName, spec, labelMaps.LokiLabels)
 	case v1alpha1.DestElasticsearch:
-		return destination.NewElasticsearch(name, spec, sourceType)
+		return destination.NewElasticsearch(sinkName, spec)
 	case v1alpha1.DestLogstash:
-		return destination.NewLogstash(name, spec, sourceType)
+		return destination.NewLogstash(sinkName, spec)
 	case v1alpha1.DestVector:
-		return destination.NewVector(name, spec, sourceType)
+		return destination.NewVector(sinkName, spec)
 	case v1alpha1.DestKafka:
-		return destination.NewKafka(name, spec, sourceType)
+		return destination.NewKafka(sinkName, spec, labelMaps.CEFExtensions)
 	case v1alpha1.DestSplunk:
-		return destination.NewSplunk(name, spec, sourceType)
+		return destination.NewSplunk(sinkName, spec, labelMaps.SplunkIndexedFields)
 	case v1alpha1.DestSocket:
-		return destination.NewSocket(name, spec, sourceType)
+		return destination.NewSocket(sinkName, spec, labelMaps.CEFExtensions)
 	}
 	return nil
 }

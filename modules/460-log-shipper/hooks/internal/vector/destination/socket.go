@@ -21,7 +21,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 type Socket struct {
@@ -36,12 +35,12 @@ type Socket struct {
 	TLS CommonTLS `json:"tls,omitempty"`
 }
 
-func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Socket {
+func NewSocket(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec, cefExtensions map[string]string) *Socket {
 	spec := cspec.Socket
 
 	result := &Socket{
 		CommonSettings: CommonSettings{
-			Name:   ComposeNameWithSourceType(name, sourceType),
+			Name:   sinkName,
 			Type:   "socket",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),
@@ -51,25 +50,7 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 	}
 
 	if spec.Mode == v1alpha1.SocketModeTCP {
-		tls := CommonTLS{
-			CAFile:            decodeB64(spec.TCP.TLS.CAFile),
-			CertFile:          decodeB64(spec.TCP.TLS.CertFile),
-			KeyFile:           decodeB64(spec.TCP.TLS.KeyFile),
-			KeyPass:           decodeB64(spec.TCP.TLS.KeyPass),
-			VerifyCertificate: true,
-			VerifyHostname:    true,
-		}
-		if spec.TCP.TLS.VerifyCertificate != nil {
-			tls.VerifyCertificate = *spec.TCP.TLS.VerifyCertificate
-		}
-		if spec.TCP.TLS.VerifyHostname != nil {
-			tls.VerifyHostname = *spec.TCP.TLS.VerifyHostname
-		}
-		if spec.TCP.TLS.CAFile != "" || spec.TCP.TLS.CertFile != "" {
-			tls.Enabled = true
-		}
-
-		result.TLS = tls
+		result.TLS = commonTLSFromSpecWithClientEnabled(spec.TCP.TLS)
 	}
 
 	encoding := Encoding{TimestampFormat: "rfc3339"}
@@ -81,33 +62,8 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 		encoding.Codec = "text"
 		// the main encoding is done by the vrl rule
 	case v1alpha1.EncodingCodecCEF:
-		deviceVendor := "Deckhouse"
-		if spec.Encoding.CEF.DeviceVendor != "" {
-			deviceVendor = spec.Encoding.CEF.DeviceVendor
-		}
-
-		deviceProduct := "log-shipper-agent"
-		if spec.Encoding.CEF.DeviceProduct != "" {
-			deviceProduct = spec.Encoding.CEF.DeviceProduct
-		}
-
-		deviceVersion := "1"
-		if spec.Encoding.CEF.DeviceVersion != "" {
-			deviceVersion = spec.Encoding.CEF.DeviceVersion
-		}
-		extensions := loglabels.GetCEFExtensions(sourceType, cspec.ExtraLabels)
-
 		encoding.Codec = "cef"
-		encoding.CEF = CEFEncoding{
-			Version:            "V1",
-			DeviceVendor:       deviceVendor,
-			DeviceProduct:      deviceProduct,
-			DeviceVersion:      deviceVersion,
-			DeviceEventClassID: "Log event",
-			Name:               "cef.name",
-			Severity:           "cef.severity",
-			Extensions:         extensions,
-		}
+		encoding.CEF = cefEncodingFromCRD(spec.Encoding.CEF, cefExtensions)
 
 	case v1alpha1.EncodingCodecGELF:
 		encoding.Codec = "gelf"

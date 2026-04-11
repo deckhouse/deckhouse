@@ -16,12 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
-// Modules labeles transformation that users can use
 type TransformationSpec struct {
 	Action       TransformationAction `json:"action"`
-	ReplaceKeys  ReplaceKeysSpec      `josn:"replaceKeys,omitempty"`
+	ReplaceKeys  ReplaceKeysSpec      `json:"replaceKeys,omitempty"`
 	ParseMessage ParseMessageSpec     `json:"parseMessage,omitempty"`
 	DropLabels   DropLabelsSpec       `json:"dropLabels,omitempty"`
+	AddLabels    AddLabelsRule        `json:"addLabels,omitempty"`
+	ReplaceValue ReplaceValueSpec     `json:"replaceValue,omitempty"`
 }
 
 type TransformationAction string
@@ -30,6 +31,8 @@ const (
 	ReplaceKeys  TransformationAction = "ReplaceKeys"
 	ParseMessage TransformationAction = "ParseMessage"
 	DropLabels   TransformationAction = "DropLabels"
+	AddLabels    TransformationAction = "AddLabels"
+	ReplaceValue TransformationAction = "ReplaceValue"
 )
 
 type ReplaceKeysSpec struct {
@@ -37,14 +40,34 @@ type ReplaceKeysSpec struct {
 	Target string   `json:"target"`
 	Labels []string `json:"labels"`
 }
+
 type DropLabelsSpec struct {
+	Labels        []string `json:"labels"`
+	KeepChildKeys []string `json:"keepChildKeys,omitempty"`
+}
+
+type ReplaceValueSpec struct {
+	Source string   `json:"source"`
+	Target string   `json:"target"`
 	Labels []string `json:"labels"`
 }
-type ParseMessageSpec struct {
-	SourceFormat SourceFormat           `json:"sourceFormat"`
-	String       SourceFormatStringSpec `json:"string,omitempty"`
-	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
+
+type AddLabelsRule struct {
+	When      []string          `json:"when,omitempty"`
+	SetLabels map[string]string `json:"setLabels"`
 }
+
+// DefaultParseMessageTargetLabel matches the OpenAPI default for parseMessage.targetLabel in ClusterLogDestination.
+const DefaultParseMessageTargetLabel = ".message"
+
+type ParseMessageSpec struct {
+	SourceFormat SourceFormat `json:"sourceFormat"`
+	// TargetLabel is the destination path for the parsed value. Empty means DefaultParseMessageTargetLabel.
+	TargetLabel string                 `json:"targetLabel,omitempty"`
+	String      SourceFormatStringSpec `json:"string,omitempty"`
+	JSON        SourceFormatJSONSpec   `json:"json,omitempty"`
+}
+
 type SourceFormat string
 
 const (
@@ -57,8 +80,11 @@ const (
 )
 
 type SourceFormatStringSpec struct {
-	TargetField string `json:"targetField"`
+	TargetField string            `json:"targetField,omitempty"`
+	Regex       string            `json:"regex,omitempty"`
+	SetLabels   map[string]string `json:"setLabels,omitempty"`
 }
+
 type SourceFormatJSONSpec struct {
 	Depth int `json:"depth,omitempty"`
 }
