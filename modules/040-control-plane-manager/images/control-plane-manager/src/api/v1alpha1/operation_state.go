@@ -55,6 +55,11 @@ func (op *ControlPlaneOperation) IsCommandCompleted(name CommandName) bool {
 	return meta.IsStatusConditionTrue(op.Status.Conditions, string(name))
 }
 
+func (op *ControlPlaneOperation) IsCommandInProgress(name CommandName) bool {
+	cond := meta.FindStatusCondition(op.Status.Conditions, string(name))
+	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == "InProgress"
+}
+
 func (op *ControlPlaneOperation) FailureMessage() string {
 	for _, cond := range op.Status.Conditions {
 		if cond.Type == CPOConditionFailed && cond.Status == metav1.ConditionTrue {
@@ -80,6 +85,9 @@ func (s *OperationState) IsTerminal() bool  { return s.op.IsTerminal() }
 func (s *OperationState) IsCancelled() bool { return s.op.IsCancelled() }
 func (s *OperationState) IsCommandCompleted(name CommandName) bool {
 	return s.op.IsCommandCompleted(name)
+}
+func (s *OperationState) IsCommandInProgress(name CommandName) bool {
+	return s.op.IsCommandInProgress(name)
 }
 func (s *OperationState) FailureMessage() string { return s.op.FailureMessage() }
 

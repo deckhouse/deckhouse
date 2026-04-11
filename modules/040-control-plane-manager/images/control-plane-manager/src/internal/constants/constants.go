@@ -128,6 +128,10 @@ const (
 	BackupBasePath         = DeckhousePath + "/backups"
 	MaxBackupsPerComponent = 7
 
+	// Diff config
+	DiffBasePath         = DeckhousePath + "/diffs"
+	MaxDiffsPerComponent = 7
+
 	// CertObserverInterval - minimum duration between periodic CertObserver(all) operations.
 	CertObserverInterval = 7 * 24 * time.Hour
 

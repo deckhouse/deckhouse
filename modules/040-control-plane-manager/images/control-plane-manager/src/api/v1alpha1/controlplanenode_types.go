@@ -117,10 +117,6 @@ func (c *ComponentsStatus) Component(comp OperationComponent) *ComponentStatus {
 }
 
 type ControlPlaneNodeSpec struct {
-	// ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion of pki secret]"
-	// +kubebuilder:validation:Required
-	ConfigVersion string `json:"configVersion"`
-
 	// CAChecksum is the hash of d8-pki secret (CA certificates).
 	// +optional
 	CAChecksum string `json:"caChecksum,omitempty"`
@@ -135,10 +131,6 @@ type ControlPlaneNodeSpec struct {
 }
 
 type ControlPlaneNodeStatus struct {
-	// ConfigVersion that is actually applied / running on the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"
-	// +optional
-	ConfigVersion string `json:"configVersion,omitempty"`
-
 	// +optional
 	CAChecksum string `json:"caChecksum,omitempty"`
 
