@@ -1,0 +1,118 @@
+diff --git a/promql/parser/printer.go b/promql/parser/printer.go
+index 63b1950..de246ca 100644
+--- a/promql/parser/printer.go
++++ b/promql/parser/printer.go
+@@ -16,6 +16,7 @@ package parser
+ import (
+ 	"fmt"
+ 	"sort"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -62,14 +63,35 @@ func (es Expressions) String() (s string) {
+ }
+ 
+ func (node *AggregateExpr) String() string {
+-	aggrString := node.getAggOpStr()
+-	aggrString += "("
++	var aggrString strings.Builder
++	if node.Op.IsOPTop() {
++		_, _ = aggrString.WriteString(node.Op.String()) // aggrString == op_top
++		_, _ = aggrString.WriteString("(")              // aggrString == op_top(
++
++		// op_top(limit, arg1, ..., expr) — Param is the limit, Grouping holds middle args
++		_, _ = aggrString.WriteString(node.Param.String())
++		for _, g := range node.Grouping {
++			_, _ = aggrString.WriteString(", ")
++			_, _ = aggrString.WriteString(g)
++		}
++
++		_, _ = aggrString.WriteString(", ")
++		_, _ = aggrString.WriteString(node.Expr.String())
++		_, _ = aggrString.WriteString(")")
++
++		return aggrString.String()
++	}
++
++	_, _ = aggrString.WriteString(node.getAggOpStr())
++	_, _ = aggrString.WriteString("(")
+ 	if node.Op.IsAggregatorWithParam() {
+-		aggrString += fmt.Sprintf("%s, ", node.Param)
++		_, _ = aggrString.WriteString(node.Param.String())
++		_, _ = aggrString.WriteString(", ")
+ 	}
+-	aggrString += fmt.Sprintf("%s)", node.Expr)
++	_, _ = aggrString.WriteString(node.Expr.String())
++	_, _ = aggrString.WriteString(")")
+ 
+-	return aggrString
++	return aggrString.String()
+ }
+ 
+ func (node *AggregateExpr) ShortString() string {
+@@ -78,16 +100,21 @@ func (node *AggregateExpr) ShortString() string {
+ }
+ 
+ func (node *AggregateExpr) getAggOpStr() string {
+-	aggrString := node.Op.String()
++	var aggrString strings.Builder
++	_, _ = aggrString.WriteString(node.Op.String())
+ 
+ 	switch {
+ 	case node.Without:
+-		aggrString += fmt.Sprintf(" without (%s) ", joinLabels(node.Grouping))
++		_, _ = aggrString.WriteString(" without (")
++		_, _ = aggrString.WriteString(joinLabels(node.Grouping))
++		_, _ = aggrString.WriteString(") ")
+ 	case len(node.Grouping) > 0:
+-		aggrString += fmt.Sprintf(" by (%s) ", joinLabels(node.Grouping))
++		_, _ = aggrString.WriteString(" by (")
++		_, _ = aggrString.WriteString(joinLabels(node.Grouping))
++		_, _ = aggrString.WriteString(") ")
+ 	}
+ 
+-	return aggrString
++	return aggrString.String()
+ }
+ 
+ func joinLabels(ss []string) string {
+@@ -223,7 +250,7 @@ func (node *SubqueryExpr) getSubqueryTimeSuffix() string {
+ }
+ 
+ func (node *NumberLiteral) String() string {
+-	return fmt.Sprint(node.Val)
++	return strconv.FormatFloat(node.Val, 'g', -1, 64)
+ }
+ 
+ func (node *ParenExpr) String() string {
+diff --git a/promql/parser/printer_test.go b/promql/parser/printer_test.go
+index 0a557ad..7669755 100644
+--- a/promql/parser/printer_test.go
++++ b/promql/parser/printer_test.go
+@@ -263,3 +263,25 @@ func TestVectorSelector_String(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestOpTopString(t *testing.T) {
++	inputs := []struct {
++		in string
++	}{
++		{in: `op_top(1, up)`},
++		{in: `op_top(1, up{pod="pod1"})`},
++		{in: `op_top(1, max, up{pod="pod1"})`},
++		{in: `op_top(1, true, up)`},
++		{in: `op_top(1, true, max, up)`},
++		{in: `op_top(1, true, max, sum(up{pod="pod1"}))`},
++		{in: `op_top(1, true, exp, sum by (pod) (up{pod="pod1"}))`},
++		{in: `op_top(10, sum by (instance) (rate(node_cpu_seconds_total{job="node"}[5m])))`},
++	}
++
++	for _, test := range inputs {
++		expr, err := ParseExpr(test.in)
++		require.NoError(t, err)
++
++		require.Equal(t, test.in, expr.String())
++	}
++}

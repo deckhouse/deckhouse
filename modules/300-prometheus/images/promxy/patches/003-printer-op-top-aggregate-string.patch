@@ -1,0 +1,105 @@
+diff --git a/promql/parser/printer.go b/promql/parser/printer.go
+--- a/promql/parser/printer.go
++++ b/promql/parser/printer.go
+@@ -16,6 +16,7 @@
+ import (
+ 	"fmt"
+ 	"sort"
++	"strconv"
+ 	"strings"
+ 	"time"
+ 
+@@ -62,23 +63,44 @@
+ }
+ 
+ func (node *AggregateExpr) String() string {
+-	aggrString := node.Op.String()
+-
+-	if node.Without {
+-		aggrString += fmt.Sprintf(" without(%s) ", strings.Join(node.Grouping, ", "))
+-	} else {
+-		if len(node.Grouping) > 0 {
+-			aggrString += fmt.Sprintf(" by(%s) ", strings.Join(node.Grouping, ", "))
++	var aggrString strings.Builder
++	if node.Op.IsOPTop() {
++		_, _ = aggrString.WriteString(node.Op.String()) // aggrString == op_top
++		_, _ = aggrString.WriteString("(")              // aggrString == op_top(
++
++		// op_top(limit, arg1, ..., expr) — Param is the limit, Grouping holds middle args
++		_, _ = aggrString.WriteString(node.Param.String())
++		for _, g := range node.Grouping {
++			_, _ = aggrString.WriteString(", ")
++			_, _ = aggrString.WriteString(g)
+ 		}
++
++		_, _ = aggrString.WriteString(", ")
++		_, _ = aggrString.WriteString(node.Expr.String())
++		_, _ = aggrString.WriteString(")")
++
++		return aggrString.String()
+ 	}
+ 
+-	aggrString += "("
++	_, _ = aggrString.WriteString(node.Op.String())
++	if node.Without {
++		_, _ = aggrString.WriteString(" without(")
++		_, _ = aggrString.WriteString(strings.Join(node.Grouping, ", "))
++		_, _ = aggrString.WriteString(") ")
++	} else if len(node.Grouping) > 0 {
++		_, _ = aggrString.WriteString(" by(")
++		_, _ = aggrString.WriteString(strings.Join(node.Grouping, ", "))
++		_, _ = aggrString.WriteString(") ")
++	}
++	_, _ = aggrString.WriteString("(")
+ 	if node.Op.IsAggregatorWithParam() {
+-		aggrString += fmt.Sprintf("%s, ", node.Param)
++		_, _ = aggrString.WriteString(node.Param.String())
++		_, _ = aggrString.WriteString(", ")
+ 	}
+-	aggrString += fmt.Sprintf("%s)", node.Expr)
++	_, _ = aggrString.WriteString(node.Expr.String())
++	_, _ = aggrString.WriteString(")")
+ 
+-	return aggrString
++	return aggrString.String()
+ }
+ 
+ func (node *BinaryExpr) String() string {
+@@ -166,7 +188,7 @@
+ }
+ 
+ func (node *NumberLiteral) String() string {
+-	return fmt.Sprint(node.Val)
++	return strconv.FormatFloat(node.Val, 'g', -1, 64)
+ }
+ 
+ func (node *ParenExpr) String() string {
+diff --git a/promql/parser/printer_test.go b/promql/parser/printer_test.go
+--- a/promql/parser/printer_test.go
++++ b/promql/parser/printer_test.go
+@@ -213,3 +213,25 @@
+ 		})
+ 	}
+ }
++
++func TestOpTopString(t *testing.T) {
++	inputs := []struct {
++		in string
++	}{
++		{in: `op_top(1, up)`},
++		{in: `op_top(1, up{pod="pod1"})`},
++		{in: `op_top(1, max, up{pod="pod1"})`},
++		{in: `op_top(1, true, up)`},
++		{in: `op_top(1, true, max, up)`},
++		{in: `op_top(1, true, max, sum(up{pod="pod1"}))`},
++		{in: `op_top(1, true, exp, sum by (pod) (up{pod="pod1"}))`},
++		{in: `op_top(10, sum by (instance) (rate(node_cpu_seconds_total{job="node"}[5m])))`},
++	}
++
++	for _, test := range inputs {
++		expr, err := ParseExpr(test.in)
++		require.NoError(t, err)
++
++		require.Equal(t, test.in, expr.String())
++	}
++}
