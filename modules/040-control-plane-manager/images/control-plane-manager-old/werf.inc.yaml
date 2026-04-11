@@ -27,7 +27,7 @@ imageSpec:
 {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 fromCacheVersion: "2025-07-25-3"
 final: false
 import:

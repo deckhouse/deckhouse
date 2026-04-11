@@ -1,0 +1,56 @@
+# Architecture
+
+## Overview
+
+`control-plane-manager` is a `controller-runtime` manager with 4 controllers:
+
+- `control-plane-configuration-controller` (CPC)
+- `control-plane-node-controller` (CPN)
+- `control-plane-operation-controller` (CPO)
+- `operations-approver-controller`
+
+The manager registers all of them in `internal/manager.go`.
+
+## Main Objects
+
+- `Node` (cluster node labels decide control-plane membership)
+- `ControlPlaneNode` (`cpn`) - desired and observed checksums per component
+- `ControlPlaneOperation` (`cpo`) - one operation pipeline for one component on one node
+- Secrets in `kube-system`:
+- `d8-control-plane-manager-config`
+- `d8-pki`
+
+## Source of Truth
+
+Desired state comes from:
+
+- Node role labels (`control-plane` / `etcd-arbiter`)
+- Checksums calculated from `d8-control-plane-manager-config`
+- CA checksum calculated from `d8-pki`
+
+Observed state comes from:
+
+- CPO command/ready conditions
+- CPO observed certificate state (`CertObserve`)
+- Static pod readiness and checksum annotations
+
+## Reconciliation Flow
+
+1. `control-plane-configuration` computes desired checksums and applies `CPN.spec`.
+2. `control-plane-node` compares `CPN.spec` vs `CPN.status`, creates missing CPOs, and derives `CPN.status.conditions`.
+3. `operations-approver` approves queued CPOs by stage/concurrency rules.
+4. `control-plane-operation` executes approved CPO pipelines on the target node.
+5. Completed CPO results are folded back into `CPN.status`.
+6. New changes in secrets or labels re-run the same loop.
+
+## Execution and Safety Rules
+
+- CPO execution starts only when `spec.approved=true`.
+- CPO controller runs with local `NODE_NAME` and watches only operations for this node.
+- Pipeline commands are sequential and idempotent by status conditions.
+- Commit-point commands (`SyncManifests`, `JoinEtcdCluster`, `SyncHotReload`) have crash-recovery checks from disk/etcd state.
+- CPN reads only operations owned by current `CPN` UID (no status restore from stale history after CPN recreation).
+- For component condition selection (matching desired checksums), priority is deterministic:
+- active op -> completed op -> terminal op.
+- For checksum application, CPN uses latest terminal applied operation:
+- `Completed` OR terminal with commit-point completed.

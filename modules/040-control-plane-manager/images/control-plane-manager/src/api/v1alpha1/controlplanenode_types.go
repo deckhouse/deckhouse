@@ -20,58 +20,129 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ComponentChecksum holds checksum for a single control plane component
-type ComponentChecksum struct {
-	// +kubebuilder:validation:Required
-	Checksum string `json:"checksum"`
+// Checksums holds config/pki/ca hashes for a single control plane component.
+type Checksums struct {
+	// Config is the hash of the component static pod template and extra-files.
+	// +optional
+	Config string `json:"config,omitempty"`
+
+	// PKI is the hash of PKI-related config keys (certSANs, encryption-algorithm).
+	// +optional
+	PKI string `json:"pki,omitempty"`
+
+	// CA is the hash of CA certificates applied to this component.
+	// In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+	// +optional
+	CA string `json:"ca,omitempty"`
 }
 
-// ComponentChecksums holds checksums for control plane components
-type ComponentChecksums struct {
-	// +kubebuilder:validation:Required
-	Etcd ComponentChecksum `json:"etcd"`
+// ComponentSpec holds the desired state of a single control plane component (used in CPN spec).
+type ComponentSpec struct {
+	// +optional
+	Checksums Checksums `json:"checksums,omitempty"`
+}
 
-	// +kubebuilder:validation:Required
-	KubeAPIServer ComponentChecksum `json:"kube-apiserver"`
+// ComponentStatus holds the observed state of a single control plane component (used in CPN status).
+type ComponentStatus struct {
+	// +optional
+	Checksums Checksums `json:"checksums,omitempty"`
 
-	// +kubebuilder:validation:Required
-	KubeControllerManager ComponentChecksum `json:"kube-controller-manager"`
+	// CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
+	// Populated via CertObserve command.
+	// +optional
+	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
+}
 
-	// +kubebuilder:validation:Required
-	KubeScheduler ComponentChecksum `json:"kube-scheduler"`
+// ComponentsSpec holds spec checksums for all control plane components.
+// Zero values are allowed for etcd-arbiter nodes (etcd only).
+type ComponentsSpec struct {
+	// +optional
+	Etcd ComponentSpec `json:"etcd,omitempty"`
+
+	// +optional
+	KubeAPIServer ComponentSpec `json:"kube-apiserver,omitempty"`
+
+	// +optional
+	KubeControllerManager ComponentSpec `json:"kube-controller-manager,omitempty"`
+
+	// +optional
+	KubeScheduler ComponentSpec `json:"kube-scheduler,omitempty"`
+}
+
+// ComponentsStatus holds status checksums and observed state for all control plane components.
+type ComponentsStatus struct {
+	// +optional
+	Etcd ComponentStatus `json:"etcd,omitempty"`
+
+	// +optional
+	KubeAPIServer ComponentStatus `json:"kube-apiserver,omitempty"`
+
+	// +optional
+	KubeControllerManager ComponentStatus `json:"kube-controller-manager,omitempty"`
+
+	// +optional
+	KubeScheduler ComponentStatus `json:"kube-scheduler,omitempty"`
+}
+
+// Component returns a pointer to the ComponentSpec for the given component.
+// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
+	switch comp {
+	case OperationComponentEtcd:
+		return &c.Etcd
+	case OperationComponentKubeAPIServer:
+		return &c.KubeAPIServer
+	case OperationComponentKubeControllerManager:
+		return &c.KubeControllerManager
+	case OperationComponentKubeScheduler:
+		return &c.KubeScheduler
+	}
+	return nil
+}
+
+// Component returns a pointer to the ComponentStatus for the given component.
+// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+func (c *ComponentsStatus) Component(comp OperationComponent) *ComponentStatus {
+	switch comp {
+	case OperationComponentEtcd:
+		return &c.Etcd
+	case OperationComponentKubeAPIServer:
+		return &c.KubeAPIServer
+	case OperationComponentKubeControllerManager:
+		return &c.KubeControllerManager
+	case OperationComponentKubeScheduler:
+		return &c.KubeScheduler
+	}
+	return nil
 }
 
 type ControlPlaneNodeSpec struct {
-	// ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion of pki secret]"
-	// +kubebuilder:validation:Required
-	ConfigVersion string `json:"configVersion"`
-
-	// Checksum of PKI secret
-	// +kubebuilder:validation:Required
-	PKIChecksum string `json:"pkiChecksum"`
+	// CAChecksum is the hash of d8-pki secret (CA certificates).
+	// +optional
+	CAChecksum string `json:"caChecksum,omitempty"`
 
 	// Checksums per component
-	// +kubebuilder:validation:Required
-	Components ComponentChecksums `json:"components"`
+	// +optional
+	Components ComponentsSpec `json:"components,omitempty"`
 
 	// For reload mechanisms (e.g. in-place reload)
-	// +kubebuilder:validation:Required
-	HotReloadChecksum string `json:"hotReloadChecksum"`
+	// +optional
+	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 }
 
 type ControlPlaneNodeStatus struct {
-	// ConfigVersion that is actually applied / running on the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"
 	// +optional
-	ConfigVersion string `json:"configVersion"`
+	CAChecksum string `json:"caChecksum,omitempty"`
 
 	// +optional
-	PKIChecksum string `json:"pkiChecksum"`
+	Components ComponentsStatus `json:"components,omitempty"`
 
 	// +optional
-	Components ComponentChecksums `json:"components"`
+	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 
+	// LastObservedAt is the timestamp of the last completed Observe operation.
 	// +optional
-	HotReloadChecksum string `json:"hotReloadChecksum"`
+	LastObservedAt *metav1.Time `json:"lastObservedAt,omitempty"`
 
 	// +optional
 	// +listMapKey=type

@@ -125,21 +125,25 @@ func (suite *ControllerTestSuite) TestReconcileCreatesControlPlaneNode() {
 
 		cpn := suite.getControlPlaneNode()
 
-		require.NotEmpty(suite.T(), cpn.Spec.PKIChecksum, "PKIChecksum should not be empty")
+		require.NotEmpty(suite.T(), cpn.Spec.CAChecksum, "CAChecksum should not be empty")
 		require.NotEmpty(suite.T(), cpn.Spec.ConfigVersion, "ConfigVersion should not be empty")
 		require.NotEmpty(suite.T(), cpn.Spec.HotReloadChecksum, "HotReloadChecksum should not be empty")
 
 		require.NotNil(suite.T(), cpn.Spec.Components.Etcd, "Etcd should not be nil")
-		require.NotEmpty(suite.T(), cpn.Spec.Components.Etcd.Checksum, "Etcd checksum should not be empty")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.Etcd.Checksums.Config, "Etcd checksum should not be empty")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.Etcd.Checksums.PKI, "Etcd pki checksum should not be empty")
 
 		require.NotNil(suite.T(), cpn.Spec.Components.KubeAPIServer, "KubeAPIServer should not be nil")
-		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeAPIServer.Checksum, "KubeAPIServer checksum should not be empty")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeAPIServer.Checksums.Config, "KubeAPIServer checksum should not be empty")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeAPIServer.Checksums.PKI, "KubeAPIServer pki checksum should not be empty")
 
 		require.NotNil(suite.T(), cpn.Spec.Components.KubeControllerManager, "KubeControllerManager should not be nil")
-		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeControllerManager.Checksum, "KubeControllerManager checksum should not be empty")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeControllerManager.Checksums.Config, "KubeControllerManager checksum should not be empty")
+		require.Empty(suite.T(), cpn.Spec.Components.KubeControllerManager.Checksums.PKI, "KubeControllerManager must have no PKIChecksum (no leaf certs)")
 
 		require.NotNil(suite.T(), cpn.Spec.Components.KubeScheduler, "KubeScheduler should not be nil")
-		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeScheduler.Checksum, "KubeScheduler checksum should not be empty")
+		require.NotEmpty(suite.T(), cpn.Spec.Components.KubeScheduler.Checksums.Config, "KubeScheduler checksum should not be empty")
+		require.Empty(suite.T(), cpn.Spec.Components.KubeScheduler.Checksums.PKI, "KubeScheduler must have no PKIChecksum (no leaf certs)")
 	})
 }
 
@@ -188,16 +192,18 @@ func (suite *ControllerTestSuite) TestGoldenControlPlaneNode() {
 	})
 }
 
-// TestPKIChecksumChangesOnSecretUpdate verifies that the PKI checksum in the
-// ControlPlaneNode changes when the d8-pki secret is updated, while component checksums (which depend only on the config secret) remain stable
-func (suite *ControllerTestSuite) TestPKIChecksumChangesOnSecretUpdate() {
-	suite.Run("PKIChecksum should change when PKI secret is updated; component checksums should not", func() {
+// TestCAChecksumChangesOnPKISecretUpdate verifies that CAChecksum changes when d8-pki changes,
+// while per-component PKIChecksum (cert-sans/encryption-algorithm) and ConfigChecksums remain stable.
+func (suite *ControllerTestSuite) TestCAChecksumChangesOnPKISecretUpdate() {
+	suite.Run("CAChecksum should change when PKI secret is updated; per-component PKIChecksum and ConfigChecksums should not", func() {
 		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
 		suite.reconcile()
 
 		cpn := suite.getControlPlaneNode()
-		oldPKIChecksum := cpn.Spec.PKIChecksum
-		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksum
+		oldCAChecksum := cpn.Spec.CAChecksum
+		oldEtcdConfigChecksum := cpn.Spec.Components.Etcd.Checksums.Config
+		oldEtcdPKIChecksum := cpn.Spec.Components.Etcd.Checksums.PKI
+		oldAPIServerPKIChecksum := cpn.Spec.Components.KubeAPIServer.Checksums.PKI
 
 		pkiSecret := suite.getPKISecret()
 		pkiSecret.Data["ca.crt"] = []byte("NEW-CA-CERT-CONTENT")
@@ -206,10 +212,83 @@ func (suite *ControllerTestSuite) TestPKIChecksumChangesOnSecretUpdate() {
 		suite.reconcile()
 
 		cpn = suite.getControlPlaneNode()
-		require.NotEqual(suite.T(), oldPKIChecksum, cpn.Spec.PKIChecksum,
-			"PKI checksum should change after PKI secret update")
-		require.Equal(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksum,
-			"Etcd checksum should not change when only PKI secret is updated")
+		require.NotEqual(suite.T(), oldCAChecksum, cpn.Spec.CAChecksum,
+			"CAChecksum should change after d8-pki secret update")
+		require.Equal(suite.T(), oldEtcdConfigChecksum, cpn.Spec.Components.Etcd.Checksums.Config,
+			"Etcd ConfigChecksum should not change when only PKI secret is updated")
+		require.Equal(suite.T(), oldEtcdPKIChecksum, cpn.Spec.Components.Etcd.Checksums.PKI,
+			"Etcd PKIChecksum should not change when only d8-pki secret is updated (it depends on cert-sans/encryption-algorithm)")
+		require.Equal(suite.T(), oldAPIServerPKIChecksum, cpn.Spec.Components.KubeAPIServer.Checksums.PKI,
+			"KubeAPIServer PKIChecksum should not change when only d8-pki secret is updated")
+	})
+}
+
+// TestCertSANsChangeAffectsOnlyAPIServerPKI verifies that updating cert-sans in the config secret
+// changes kube-apiserver PKIChecksum but not etcd PKIChecksum (cert-sans don't affect etcd certs).
+// ConfigChecksums are unaffected because cert-sans is not a template dependency.
+func (suite *ControllerTestSuite) TestCertSANsChangeAffectsOnlyAPIServerPKI() {
+	suite.Run("cert-sans change should update only kube-apiserver PKIChecksum", func() {
+		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
+
+		cpn := suite.getControlPlaneNode()
+		oldEtcdConfig := cpn.Spec.Components.Etcd.Checksums.Config
+		oldEtcdPKI := cpn.Spec.Components.Etcd.Checksums.PKI
+		oldAPIServerConfig := cpn.Spec.Components.KubeAPIServer.Checksums.Config
+		oldAPIServerPKI := cpn.Spec.Components.KubeAPIServer.Checksums.PKI
+
+		configSecret := suite.getConfigSecret()
+		configSecret.Data["cert-sans"] = []byte("new-san.example.com,10.0.0.1")
+		require.NoError(suite.T(), suite.client.Update(suite.ctx, configSecret))
+
+		suite.reconcile()
+
+		cpn = suite.getControlPlaneNode()
+		require.Equal(suite.T(), oldEtcdConfig, cpn.Spec.Components.Etcd.Checksums.Config,
+			"Etcd ConfigChecksum must not change when cert-sans is updated")
+		require.Equal(suite.T(), oldEtcdPKI, cpn.Spec.Components.Etcd.Checksums.PKI,
+			"Etcd PKIChecksum must not change when cert-sans is updated (cert-sans only affects apiserver)")
+		require.Equal(suite.T(), oldAPIServerConfig, cpn.Spec.Components.KubeAPIServer.Checksums.Config,
+			"KubeAPIServer ConfigChecksum must not change when cert-sans is updated")
+		require.NotEqual(suite.T(), oldAPIServerPKI, cpn.Spec.Components.KubeAPIServer.Checksums.PKI,
+			"KubeAPIServer PKIChecksum must change when cert-sans is updated")
+	})
+}
+
+// TestEncryptionAlgorithmChangeAffectsBothPKIChecksums verifies that updating encryption-algorithm
+// changes PKIChecksum for both etcd and kube-apiserver, but leaves all ConfigChecksums untouched.
+func (suite *ControllerTestSuite) TestEncryptionAlgorithmChangeAffectsBothPKIChecksums() {
+	suite.Run("encryption-algorithm change should update PKIChecksum for etcd and kube-apiserver", func() {
+		suite.setupController(suite.fetchTestFileData("basic-config.yaml"))
+		suite.reconcile()
+
+		cpn := suite.getControlPlaneNode()
+		oldEtcdConfig := cpn.Spec.Components.Etcd.Checksums.Config
+		oldEtcdPKI := cpn.Spec.Components.Etcd.Checksums.PKI
+		oldAPIServerConfig := cpn.Spec.Components.KubeAPIServer.Checksums.Config
+		oldAPIServerPKI := cpn.Spec.Components.KubeAPIServer.Checksums.PKI
+		oldKCMConfig := cpn.Spec.Components.KubeControllerManager.Checksums.Config
+		oldSchedulerConfig := cpn.Spec.Components.KubeScheduler.Checksums.Config
+
+		configSecret := suite.getConfigSecret()
+		configSecret.Data["encryption-algorithm"] = []byte("RSA-4096")
+		require.NoError(suite.T(), suite.client.Update(suite.ctx, configSecret))
+
+		suite.reconcile()
+
+		cpn = suite.getControlPlaneNode()
+		require.NotEqual(suite.T(), oldEtcdPKI, cpn.Spec.Components.Etcd.Checksums.PKI,
+			"Etcd PKIChecksum must change when encryption-algorithm is updated")
+		require.NotEqual(suite.T(), oldAPIServerPKI, cpn.Spec.Components.KubeAPIServer.Checksums.PKI,
+			"KubeAPIServer PKIChecksum must change when encryption-algorithm is updated")
+		require.Equal(suite.T(), oldEtcdConfig, cpn.Spec.Components.Etcd.Checksums.Config,
+			"Etcd ConfigChecksum must not change when encryption-algorithm is updated")
+		require.Equal(suite.T(), oldAPIServerConfig, cpn.Spec.Components.KubeAPIServer.Checksums.Config,
+			"KubeAPIServer ConfigChecksum must not change when encryption-algorithm is updated")
+		require.Equal(suite.T(), oldKCMConfig, cpn.Spec.Components.KubeControllerManager.Checksums.Config,
+			"KubeControllerManager ConfigChecksum must not change when encryption-algorithm is updated")
+		require.Equal(suite.T(), oldSchedulerConfig, cpn.Spec.Components.KubeScheduler.Checksums.Config,
+			"KubeScheduler ConfigChecksum must not change when encryption-algorithm is updated")
 	})
 }
 
@@ -221,10 +300,10 @@ func (suite *ControllerTestSuite) TestEtcdChecksumChangesOnManifestUpdate() {
 		suite.reconcile()
 
 		cpn := suite.getControlPlaneNode()
-		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksum
-		oldAPIServerChecksum := cpn.Spec.Components.KubeAPIServer.Checksum
-		oldKCMChecksum := cpn.Spec.Components.KubeControllerManager.Checksum
-		oldSchedulerChecksum := cpn.Spec.Components.KubeScheduler.Checksum
+		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksums.Config
+		oldAPIServerChecksum := cpn.Spec.Components.KubeAPIServer.Checksums.Config
+		oldKCMChecksum := cpn.Spec.Components.KubeControllerManager.Checksums.Config
+		oldSchedulerChecksum := cpn.Spec.Components.KubeScheduler.Checksums.Config
 
 		configSecret := suite.getConfigSecret()
 		configSecret.Data["etcd.yaml.tpl"] = append(configSecret.Data["etcd.yaml.tpl"], []byte("\n# updated")...)
@@ -233,13 +312,13 @@ func (suite *ControllerTestSuite) TestEtcdChecksumChangesOnManifestUpdate() {
 		suite.reconcile()
 
 		cpn = suite.getControlPlaneNode()
-		require.NotEqual(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksum,
+		require.NotEqual(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksums.Config,
 			"Etcd checksum should change after manifest update")
-		require.Equal(suite.T(), oldAPIServerChecksum, cpn.Spec.Components.KubeAPIServer.Checksum,
+		require.Equal(suite.T(), oldAPIServerChecksum, cpn.Spec.Components.KubeAPIServer.Checksums.Config,
 			"KubeAPIServer checksum should not change when etcd manifest is updated")
-		require.Equal(suite.T(), oldKCMChecksum, cpn.Spec.Components.KubeControllerManager.Checksum,
+		require.Equal(suite.T(), oldKCMChecksum, cpn.Spec.Components.KubeControllerManager.Checksums.Config,
 			"KubeControllerManager checksum should not change when etcd manifest is updated")
-		require.Equal(suite.T(), oldSchedulerChecksum, cpn.Spec.Components.KubeScheduler.Checksum,
+		require.Equal(suite.T(), oldSchedulerChecksum, cpn.Spec.Components.KubeScheduler.Checksums.Config,
 			"KubeScheduler checksum should not change when etcd manifest is updated")
 	})
 }
@@ -252,8 +331,8 @@ func (suite *ControllerTestSuite) TestAPIServerChecksumChangesOnExtraFileUpdate(
 		suite.reconcile()
 
 		cpn := suite.getControlPlaneNode()
-		oldAPIServerChecksum := cpn.Spec.Components.KubeAPIServer.Checksum
-		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksum
+		oldAPIServerChecksum := cpn.Spec.Components.KubeAPIServer.Checksums.Config
+		oldEtcdChecksum := cpn.Spec.Components.Etcd.Checksums.Config
 
 		configSecret := suite.getConfigSecret()
 		configSecret.Data["extra-file-audit-policy.yaml"] = []byte(
@@ -264,9 +343,9 @@ func (suite *ControllerTestSuite) TestAPIServerChecksumChangesOnExtraFileUpdate(
 		suite.reconcile()
 
 		cpn = suite.getControlPlaneNode()
-		require.NotEqual(suite.T(), oldAPIServerChecksum, cpn.Spec.Components.KubeAPIServer.Checksum,
+		require.NotEqual(suite.T(), oldAPIServerChecksum, cpn.Spec.Components.KubeAPIServer.Checksums.Config,
 			"KubeAPIServer checksum should change when extra-file-audit-policy.yaml is updated")
-		require.Equal(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksum,
+		require.Equal(suite.T(), oldEtcdChecksum, cpn.Spec.Components.Etcd.Checksums.Config,
 			"Etcd checksum should not change when an apiserver extra-file is updated")
 	})
 }

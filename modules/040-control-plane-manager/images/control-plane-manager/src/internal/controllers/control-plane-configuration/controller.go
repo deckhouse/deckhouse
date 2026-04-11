@@ -20,7 +20,6 @@ import (
 	"context"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
-	"control-plane-manager/internal/operations"
 	"fmt"
 	"log/slog"
 	"time"
@@ -54,11 +53,13 @@ const (
 
 type Reconciler struct {
 	client client.Client
+	log    *log.Logger
 }
 
 func Register(mgr manager.Manager) error {
 	r := &Reconciler{
 		client: mgr.GetClient(),
+		log:    log.Default().With(slog.String("controller", constants.CpcControllerName)),
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -114,16 +115,19 @@ func getControlPlaneNodeResourcePredicate() predicate.Predicate {
 	}
 }
 
-// getNodeControlPlaneLabelPredicate triggers only when Node labels change
-// Ignores updates to status, capacity, etc.
+// isControlPlaneOrArbiter returns true if the node has the control-plane or etcd-arbiter label.
+func isControlPlaneOrArbiter(o client.Object) bool {
+	labels := o.GetLabels()
+	_, cp := labels[constants.ControlPlaneNodeLabelKey]
+	_, arb := labels[constants.EtcdArbiterNodeLabelKey]
+	return cp || arb
+}
+
+// getNodeControlPlaneLabelPredicate triggers only when Node labels change for nodes that are control-plane or etcd-arbiter.
 func getNodeControlPlaneLabelPredicate() predicate.Predicate {
-	hasLabel := func(o client.Object) bool {
-		_, has := o.GetLabels()[constants.ControlPlaneNodeLabelKey]
-		return has
-	}
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return hasLabel(e.Object)
+			return isControlPlaneOrArbiter(e.Object)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldNode, okOld := e.ObjectOld.(*corev1.Node)
@@ -134,10 +138,10 @@ func getNodeControlPlaneLabelPredicate() predicate.Predicate {
 			if equality.Semantic.DeepEqual(oldNode.Labels, newNode.Labels) {
 				return false
 			}
-			return hasLabel(e.ObjectNew) || hasLabel(e.ObjectOld)
+			return isControlPlaneOrArbiter(e.ObjectNew) || isControlPlaneOrArbiter(e.ObjectOld)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return hasLabel(e.Object)
+			return isControlPlaneOrArbiter(e.Object)
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			return false
@@ -145,9 +149,9 @@ func getNodeControlPlaneLabelPredicate() predicate.Predicate {
 	}
 }
 
-// mapSecretToControlPlaneNodes enqueues reconcile for every master node (secret change affects all ControlPlaneNodes).
+// mapSecretToControlPlaneNodes enqueues reconcile for every control-plane and arbiter node.
 func (r *Reconciler) mapSecretToControlPlaneNodes(ctx context.Context, _ client.Object) []reconcile.Request {
-	nodes, err := r.getControlPlaneNodes(ctx)
+	nodes, err := r.getControlPlaneAndArbiterNodes(ctx)
 	if err != nil {
 		return nil
 	}
@@ -182,16 +186,35 @@ func (r *Reconciler) getSecret(ctx context.Context, name string) (*corev1.Secret
 	return secret, nil
 }
 
-// getControlPlaneNodes helper function to get all nodes with control plane label.
-func (r *Reconciler) getControlPlaneNodes(ctx context.Context) ([]corev1.Node, error) {
-	nodeList := &corev1.NodeList{}
-	err := r.client.List(ctx, nodeList, client.MatchingLabels{
+// getControlPlaneAndArbiterNodes returns all nodes that are control-plane or etcd-arbiter.
+func (r *Reconciler) getControlPlaneAndArbiterNodes(ctx context.Context) ([]corev1.Node, error) {
+	cpList := &corev1.NodeList{}
+	if err := r.client.List(ctx, cpList, client.MatchingLabels{
 		constants.ControlPlaneNodeLabelKey: "",
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
-	return nodeList.Items, nil
+
+	arbList := &corev1.NodeList{}
+	if err := r.client.List(ctx, arbList, client.MatchingLabels{
+		constants.EtcdArbiterNodeLabelKey: "",
+	}); err != nil {
+		return nil, err
+	}
+
+	// Merge/dedup by name (control-plane and etcd-arbiter labels are mutually exclusive)
+	seen := make(map[string]struct{}, len(cpList.Items))
+	result := make([]corev1.Node, 0, len(cpList.Items)+len(arbList.Items))
+	for _, n := range cpList.Items {
+		seen[n.Name] = struct{}{}
+		result = append(result, n)
+	}
+	for _, n := range arbList.Items {
+		if _, exists := seen[n.Name]; !exists {
+			result = append(result, n)
+		}
+	}
+	return result, nil
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -210,8 +233,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 		return reconcile.Result{}, err
 	}
-	if _, hasLabel := node.Labels[constants.ControlPlaneNodeLabelKey]; !hasLabel {
-		// No longer a master — remove ControlPlaneNode
+	_, isControlPlane := node.Labels[constants.ControlPlaneNodeLabelKey]
+	_, isArbiter := node.Labels[constants.EtcdArbiterNodeLabelKey]
+	if !isControlPlane && !isArbiter {
 		if err := r.deleteControlPlaneNodeIfExists(ctx, nodeName); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -237,7 +261,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	desiredCPN, err := buildDesiredControlPlaneNode(nodeName, cpmSecret, pkiSecret)
+	desiredCPN, err := buildDesiredControlPlaneNode(nodeName, cpmSecret, pkiSecret, isArbiter)
 	if err != nil {
 		log.Error("Error occurred while building desired ControlPlaneNode", slog.String("node", nodeName), log.Err(err))
 		return reconcile.Result{}, err
@@ -287,29 +311,70 @@ func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *control
 }
 
 // buildDesiredControlPlaneNode builds desired ControlPlaneNode spec from d8-control-plane-manager-config and d8-pki secrets.
-func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneNode, error) {
-	pkiChecksum, err := checksum.PKIChecksum(pkiSecret.Data)
+// For etcd-arbiter nodes only Etcd and CA checksums are populated.
+func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pkiSecret *corev1.Secret, isArbiter bool) (*controlplanev1alpha1.ControlPlaneNode, error) {
+	caChecksum, err := checksum.PKIChecksum(pkiSecret.Data)
 	if err != nil {
 		return nil, err
 	}
 
-	components := []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
-	checksums := make(map[string]string)
+	var components []string
+	if isArbiter {
+		components = []string{"etcd"}
+	} else {
+		components = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
+	}
+
+	configChecksums := make(map[string]string)
+	pkiChecksums := make(map[string]string)
 	for _, component := range components {
-		componentChecksum, err := checksum.ComponentChecksum(cpmSecret.Data, component)
+		cs, err := checksum.ComponentChecksum(cpmSecret.Data, component)
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate checksum for %s: %w", component, err)
 		}
-		checksums[component] = componentChecksum
+		configChecksums[component] = cs
+
+		pkiCS, err := checksum.ComponentPKIChecksum(cpmSecret.Data, component)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate pki checksum for %s: %w", component, err)
+		}
+		pkiChecksums[component] = pkiCS
 	}
-	hotReloadChecksum, err := checksum.HotReloadChecksum(cpmSecret.Data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate hot reload checksum: %w", err)
+
+	spec := controlplanev1alpha1.ControlPlaneNodeSpec{
+		CAChecksum: caChecksum,
+		Components: controlplanev1alpha1.ComponentsSpec{
+			Etcd: controlplanev1alpha1.ComponentSpec{
+				Checksums: controlplanev1alpha1.Checksums{
+					Config: configChecksums["etcd"],
+					PKI:    pkiChecksums["etcd"],
+				},
+			},
+		},
 	}
-	// temporary for testing
-	err = operations.SyncSecretToTmp(cpmSecret, "/tmp/control-plane-manager-config")
-	if err != nil {
-		return nil, fmt.Errorf("failed to sync secret to tmp: %w", err)
+
+	if !isArbiter {
+		hotReloadChecksum, err := checksum.HotReloadChecksum(cpmSecret.Data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate hot reload checksum: %w", err)
+		}
+		spec.HotReloadChecksum = hotReloadChecksum
+		spec.Components.KubeAPIServer = controlplanev1alpha1.ComponentSpec{
+			Checksums: controlplanev1alpha1.Checksums{
+				Config: configChecksums["kube-apiserver"],
+				PKI:    pkiChecksums["kube-apiserver"],
+			},
+		}
+		spec.Components.KubeControllerManager = controlplanev1alpha1.ComponentSpec{
+			Checksums: controlplanev1alpha1.Checksums{
+				Config: configChecksums["kube-controller-manager"],
+			},
+		}
+		spec.Components.KubeScheduler = controlplanev1alpha1.ComponentSpec{
+			Checksums: controlplanev1alpha1.Checksums{
+				Config: configChecksums["kube-scheduler"],
+			},
+		}
 	}
 
 	return &controlplanev1alpha1.ControlPlaneNode{
@@ -319,16 +384,6 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 				constants.ControlPlaneNodeNameLabelKey: nodeName,
 			},
 		},
-		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
-			PKIChecksum:       pkiChecksum,
-			ConfigVersion:     fmt.Sprintf("%s.%s", cpmSecret.ResourceVersion, pkiSecret.ResourceVersion),
-			HotReloadChecksum: hotReloadChecksum,
-			Components: controlplanev1alpha1.ComponentChecksums{
-				Etcd:                  controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
-				KubeAPIServer:         controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-apiserver"]},
-				KubeControllerManager: controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-controller-manager"]},
-				KubeScheduler:         controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-scheduler"]},
-			},
-		},
+		Spec: spec,
 	}, nil
 }

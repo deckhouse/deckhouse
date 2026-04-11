@@ -20,13 +20,14 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // componentChecksumDeps sets the dependencies of the component's checksum on the keys of the control_plane_config secret.
 // The map is based on the control_plane_config template in daemonset.yaml.
 var componentChecksumDeps = map[string]componentFieldMap{
 	"kube-apiserver": {
-		checksumDependsOn: []string{
+		configChecksumDependsOn: []string{
 			"kube-apiserver.yaml.tpl",
 			"extra-file-admission-control-config.yaml",
 			"extra-file-audit-policy.yaml",
@@ -36,33 +37,61 @@ var componentChecksumDeps = map[string]componentFieldMap{
 			"extra-file-secret-encryption-config.yaml",
 			"extra-file-webhook-config.yaml",
 		},
+		pkiChecksumDependsOn: []string{
+			"cert-sans",
+			"encryption-algorithm",
+		},
 	},
 	"etcd": {
-		checksumDependsOn: []string{
+		configChecksumDependsOn: []string{
 			"etcd.yaml.tpl",
+		},
+		pkiChecksumDependsOn: []string{
+			"encryption-algorithm",
 		},
 	},
 	"kube-controller-manager": {
-		checksumDependsOn: []string{
+		configChecksumDependsOn: []string{
 			"kube-controller-manager.yaml.tpl",
 		},
+		pkiChecksumDependsOn: nil,
 	},
 	"kube-scheduler": {
-		checksumDependsOn: []string{
+		configChecksumDependsOn: []string{
 			"kube-scheduler.yaml.tpl",
 			"extra-file-scheduler-config.yaml",
 		},
+		pkiChecksumDependsOn: nil,
 	},
 }
 
-var hotReloadChecksumDependsOn = []string{
+var HotReloadChecksumDependsOn = []string{
 	"extra-file-authentication-config.yaml",
 	"extra-file-authorization-config.yaml",
 }
 
 type componentFieldMap struct {
-	// secret keys of d8-control-plane-manager-config, on which the component's checksum depends.
-	checksumDependsOn []string
+	// configChecksumDependsOn are secret keys of d8-control-plane-manager-config that affect the components configChecksum (template + extra-files).
+	configChecksumDependsOn []string
+	// pkiChecksumDependsOn are secret keys of d8-control-plane-manager-config that affect the components pkiChecksum (certSANs, encryption-algorithm)
+	// nil - this component has no PKI leaf cert dependencies.
+	pkiChecksumDependsOn []string
+}
+
+// ExtraFileKeysForPodComponent returns secret keys for extra files mounted with the static pod
+// (extra-file-* subset of componentChecksumDeps). Unknown podComponent yields nil.
+func ExtraFileKeysForPodComponent(podComponent string) []string {
+	fm, ok := componentChecksumDeps[podComponent]
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(fm.configChecksumDependsOn))
+	for _, k := range fm.configChecksumDependsOn {
+		if strings.HasPrefix(k, "extra-file-") {
+			out = append(out, k)
+		}
+	}
+	return out
 }
 
 // sortedKeysFromMap returns a sorted slice of keys from the map.
@@ -113,7 +142,7 @@ func collectDependencyData(secretData map[string][]byte, component string) ([]st
 	if !ok {
 		return nil, fmt.Errorf("unknown component %q", component)
 	}
-	return sortedKeysFromSlice(fieldMap.checksumDependsOn, secretData), nil
+	return sortedKeysFromSlice(fieldMap.configChecksumDependsOn, secretData), nil
 }
 
 // PKIChecksum calculates the total checksum of all the keys of the pki secret based only on the values in the secret.
@@ -123,5 +152,31 @@ func PKIChecksum(pkiSecretData map[string][]byte) (string, error) {
 }
 
 func HotReloadChecksum(secretData map[string][]byte) (string, error) {
-	return hashKeys(secretData, sortedKeysFromSlice(hotReloadChecksumDependsOn, secretData)), nil
+	return hashKeys(secretData, sortedKeysFromSlice(HotReloadChecksumDependsOn, secretData)), nil
+}
+
+// ComponentPKIChecksum calculates the pkiChecksum for a component based on certSANs and encryption-algorithm keys.
+// Returns "", nil if the component has no PKI leaf cert dependencies - kube-controller-manager, kube-scheduler.
+func ComponentPKIChecksum(secretData map[string][]byte, component string) (string, error) {
+	fieldMap, ok := componentChecksumDeps[component]
+	if !ok {
+		return "", fmt.Errorf("unknown component %q", component)
+	}
+	if len(fieldMap.pkiChecksumDependsOn) == 0 {
+		return "", nil
+	}
+	return hashKeys(secretData, sortedKeysFromSlice(fieldMap.pkiChecksumDependsOn, secretData)), nil
+}
+
+// ComponentHasPKIChecksum returns true if the component has PKI leaf cert dependencies.
+func ComponentHasPKIChecksum(component string) bool {
+	fm, ok := componentChecksumDeps[component]
+	return ok && len(fm.pkiChecksumDependsOn) > 0
+}
+
+func ShortChecksum(checksum string) string {
+	if len(checksum) > 8 {
+		return checksum[:8]
+	}
+	return checksum
 }

@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package operations
+package kubeconfig
 
-import corev1 "k8s.io/api/core/v1"
+type File string
 
-// If operations need special logic for generating manifests on the node, it can be implemented here.
-func GenerateManifests(cmpSecret, pkiSecret *corev1.Secret) (string, error) {
-	// TODO: Generate using new lib in place of kubeadm
-	return "", nil
-}
+const (
+	SuperAdmin        File = "super-admin.conf"
+	Admin             File = "admin.conf"
+	Scheduler         File = "scheduler.conf"
+	ControllerManager File = "controller-manager.conf"
+	Kubelet           File = "kubelet.conf"
+)
