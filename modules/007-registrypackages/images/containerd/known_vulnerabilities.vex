@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-0a7dee882b0213b53ce1f13791d223657afca21285b99e07e15b935fa0456093",
   "author": "Deckhouse Deckhouse <contact@deckhouse.io>",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -102,10 +102,24 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость CVE-2026-34986 невозможно эксплуатировать в рамках Deckhouse: плтаформа не использует шифрование образов, в ней не настроен и не используется ctd-decoder, цепочка вызовов которого (containerd -> imgcrypt -> ocicrypt -> go-jose) и может привести к эксплуатации уязвимости, при всех воплощённых в ней условиях.",
+      "impact_statement": "Уязвимость CVE-2026-34986 невозможно эксплуатировать в рамках Deckhouse: плтаформа не использует шифрование образов, в ней не настроен и не используется ctd-decoder, цепочка вызовов которого (containerd -\u003e imgcrypt -\u003e ocicrypt -\u003e go-jose) и может привести к эксплуатации уязвимости, при всех воплощённых в ней условиях.",
       "timestamp": "2026-04-07T13:06:33.386247Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T09:12:06.165622Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:38Z",
-  "last_updated": "2026-04-07T13:06:33Z"
+  "last_updated": "2026-04-10T09:12:06Z"
 }

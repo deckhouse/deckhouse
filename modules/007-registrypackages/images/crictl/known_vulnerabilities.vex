@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 8,
+  "version": 9,
   "statements": [
     {
       "vulnerability": {
@@ -99,7 +99,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Уязвимость GHSA-6g7g-w4f8-9c9x невозможно эксплуатировать в рамках Deckhouse: платформа использует исключительно клиентскую библиотеку github.com/buger/jsonparser через стандартизированные kubelet-интерфейсы, которые не используют функцию Delete при обработке JSON-входов от внешних источников, что является обязательным условием для эксплуатации. Все входящие JSON>запросы поступают от внутренних компонентов Deckhouse через валидированные protobuf-конверторы, исключая возможность отправки невалидного JSON через штатные интерфейсы управления.",
+      "impact_statement": "Уязвимость GHSA-6g7g-w4f8-9c9x невозможно эксплуатировать в рамках Deckhouse: платформа использует исключительно клиентскую библиотеку github.com/buger/jsonparser через стандартизированные kubelet-интерфейсы, которые не используют функцию Delete при обработке JSON-входов от внешних источников, что является обязательным условием для эксплуатации. Все входящие JSON\u003eзапросы поступают от внутренних компонентов Deckhouse через валидированные protobuf-конверторы, исключая возможность отправки невалидного JSON через штатные интерфейсы управления.",
       "timestamp": "2026-03-26T14:29:37.200879Z"
     },
     {
@@ -129,8 +129,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-33997 невозможно эксплуатировать в рамках Deckhouse: платформа использует лишь пакет github.com/docker/docker/api/types/time. А уязвимость затрагивает часть по работе с Docker Engine при установке устаревших (legacy) плагинов Docker - установка плагинов и проверка их привилегий в crictl не выполняются.",
       "timestamp": "2026-04-07T10:45:27.439571Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T09:12:10.219163Z"
     }
   ],
   "timestamp": "2026-01-21T10:25:02Z",
-  "last_updated": "2026-04-07T10:45:27Z"
+  "last_updated": "2026-04-10T09:12:10Z"
 }
