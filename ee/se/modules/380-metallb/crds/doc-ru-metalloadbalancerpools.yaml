@@ -1,0 +1,15 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает пул IP-адресов (MetalLoadBalancerPool) для использования балансировщиком нагрузки в режиме BGP.
+          properties:
+            spec:
+              properties:
+                addresses:
+                  description: |-
+                    Массив диапазонов публичных IP-адресов.
+                    
+                    Каждый диапазон может быть указан с помощью CIDR (например, `192.168.1.0/24`) или путем прямого указания диапазона (например, `10.10.10.1-10.10.10.100`).
