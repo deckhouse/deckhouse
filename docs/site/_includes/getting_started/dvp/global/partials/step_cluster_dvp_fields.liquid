@@ -83,6 +83,28 @@
     </div>
   </div>
 
+  <h3>{% if page.lang == 'ru' %}Дополнительные параметры (необязательно){% else %}Optional advanced parameters{% endif %}</h3>
+  <p class="info">{% if page.lang == 'ru' %}Если оставить поля пустыми, в <code>config.yml</code> подставятся значения по умолчанию из быстрого старта.{% else %}Leave blank to keep quick start defaults in <code>config.yml</code>.{% endif %}</p>
+  <div class="form__row">
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 260px;">
+        <label class="label">{% if page.lang == 'ru' %}Имя NFS StorageClass и default StorageClass{% else %}NFS StorageClass name (and cluster default){% endif %}</label>
+        <input class="textfield" type="text" id="nfsstoragclassname" name="nfsstoragclassname" placeholder="nfs-storage-class" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Имя ресурса Kubernetes: строчные буквы, цифры, дефис.{% else %}Kubernetes name: lowercase letters, digits, hyphens.{% endif %}</span>
+      </div>
+      <div style="flex: 1; min-width: 200px;">
+        <label class="label">{% if page.lang == 'ru' %}Размер тома DVCR{% else %}DVCR PVC size{% endif %}</label>
+        <input class="textfield" type="text" id="dvcrdisksize" name="dvcrdisksize" placeholder="50G" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Например <code>10Gi</code>, <code>50G</code>.{% else %}E.g. <code>10Gi</code>, <code>50G</code>.{% endif %}</span>
+      </div>
+      <div style="flex: 1; min-width: 220px;">
+        <label class="label">{% if page.lang == 'ru' %}Имя демо-проекта (namespace){% else %}Demo project name (namespace){% endif %}</label>
+        <input class="textfield" type="text" id="projectname" name="projectname" placeholder="test-project" autocomplete="off" />
+        <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}DNS-имя подпространства имён: строчные буквы, цифры, дефис.{% else %}RFC 1123 subdomain: lowercase, digits, hyphens.{% endif %}</span>
+      </div>
+    </div>
+  </div>
+
   <h3>{% if page.lang == 'ru' %}Настройки доступа{% else %}Access{% endif %}</h3>
   <div class="form__row">
     <label class="label">{% if page.lang == 'ru' %}Публичный SSH-ключ пользователя caps{% else %}Public SSH key for user <code>caps</code>{% endif %} <span style="color: red;">*</span></label>

@@ -1,46 +1,19 @@
-# [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
-# [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-# [<en>] Address space of the cluster's Pods.
-# [<ru>] Адресное пространство подов кластера.
-# [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR and internalNetworkCIDRs.
-# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR и internalNetworkCIDRs.
-podSubnetCIDR: <POD_SUBNET_CIDR>
-# [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство сети сервисов кластера.
-# [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR and internalNetworkCIDRs.
-# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR и internalNetworkCIDRs.
-serviceSubnetCIDR: <SERVICE_SUBNET_CIDR>
-kubernetesVersion: "Automatic"
-# [<en>] Cluster domain (used for local routing).
-# [<ru>] Домен кластера.
-clusterDomain: "internal.cluster.local"
-# [<en>] The container runtime type that used on cluster nodes (NodeGroups) by default.
-# [<ru>] Тип container runtime, используемый на узлах кластера (в NodeGroup’ах) по умолчанию.
-defaultCRI: "ContainerdV2"
 ---
-# [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
-# [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  # [<en>] Address of the Docker registry where the Deckhouse images are located
-  # [<ru>] Адрес Docker registry с образами Deckhouse
   imagesRepo: registry.deckhouse.ru/deckhouse/ce
-  # [<en>] A special string with your token to access Docker registry (generated automatically for your license token)
-  # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
   registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
 ---
-# [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/modules/deckhouse/configuration.html
-# [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/modules/deckhouse/configuration.html
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: <POD_SUBNET_CIDR>
+serviceSubnetCIDR: <SERVICE_SUBNET_CIDR>
+kubernetesVersion: "Automatic"
+clusterDomain: "internal.cluster.local"
+defaultCRI: "ContainerdV2"
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -53,10 +26,6 @@ spec:
     releaseChannel: EarlyAccess
     logLevel: Info
 ---
-# [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/reference/api/global.html#parameters
-# [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -64,21 +33,10 @@ metadata:
 spec:
   version: 2
   settings:
+    defaultClusterStorageClass: <NFS_STORAGE_CLASS_NAME>
     modules:
-      # [<en>] Template that will be used for system apps domains within the cluster.
-      # [<en>] E.g., Grafana for %s.example.com will be available as 'grafana.example.com'.
-      # [<en>] The domain MUST NOT match the one specified in the clusterDomain parameter of the ClusterConfiguration resource.
-      # [<en>] You can change it to your own or follow the steps in the guide and change it after installation.
-      # [<ru>] Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
-      # [<ru>] Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
-      # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
-      # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
-      publicDomainTemplate: "%s.example.com"
+      publicDomainTemplate: "<PUBLIC_DOMAIN_TEMPLATE>"
 ---
-# [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/modules/user-authn/configuration.html
-# [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -89,10 +47,6 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -100,26 +54,16 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
-# [<en>] cni-cilium module settings.
-# [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
-# [<ru>] Настройки модуля cni-cilium.
-# [<ru>] https://deckhouse.io/modules/cni-cilium/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: cni-cilium
 spec:
   version: 1
-  # [<en>] Enable cni-cilium module
-  # [<ru>] Включить модуль cni-cilium
   enabled: true
   settings:
     tunnelMode: VXLAN
 ---
-# [<en>] admission-policy-engine module settings
-# [<en>] https://deckhouse.io/modules/admission-policy-engine/configuration.html
-# [<ru>] Настройки модуля admission-policy-engine
-# [<ru>] https://deckhouse.io/modules/admission-policy-engine/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -128,10 +72,6 @@ spec:
   enabled: true
   version: 1
 ---
-# [<en>] multitenancy-manager module settings
-# [<en>] https://deckhouse.io/modules/multitenancy-manager/configuration.html
-# [<ru>] Настройки модуля multitenancy-manager
-# [<en>] https://deckhouse.io/modules/multitenancy-manager/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -140,19 +80,191 @@ spec:
   enabled: true
   version: 1
 ---
-# [<en>] Static cluster settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
-# [<ru>] Параметры статического кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
-# [<en>] List of internal cluster networks (e.g., '10.0.4.0/24'), which is
-# [<en>] used for linking Kubernetes components (kube-apiserver, kubelet etc.).
-# [<en>] Specify, if the cluster nodes have more than one network interface or if you are using the virtualization module.
-# [<en>] If only one interface is used on the nodes of the cluster, the StaticClusterConfiguration resource does not need to be created.
-# [<ru>] Список внутренних сетей узлов кластера (например, '10.0.4.0/24'), который
-# [<ru>] используется для связи компонентов Kubernetes (kube-apiserver, kubelet...) между собой.
-# [<ru>] Укажите, если используете модуль virtualization или узлы кластера имеют более одного сетевого интерфейса.
-# [<ru>] Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
-- <INTERNAL_NETWORK_CIDRS>
+  - <INTERNAL_NETWORK_CIDRS>
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        role: worker
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SSHCredentials
+metadata:
+  name: caps
+spec:
+  user: caps
+  privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: dvp-worker
+  labels:
+    role: worker
+spec:
+  address: <WORKER_NODE_IP>
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: csi-nfs
+spec:
+  enabled: true
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  enabled: true
+  version: 1
+  settings:
+    dvcr:
+      storage:
+        persistentVolumeClaim:
+          size: <DVCR_STORAGE_SIZE>
+        type: PersistentVolumeClaim
+    virtualMachineCIDRs:
+      - <VIRTUAL_MACHINE_CIDRS>
+---
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: NFSStorageClass
+metadata:
+  name: <NFS_STORAGE_CLASS_NAME>
+spec:
+  connection:
+    host: <NFS_HOST>
+    share: <NFS_SHARE>
+    nfsVersion: "4.1"
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+  workloadNodes:
+    nodeSelector:
+      matchLabels:
+        storage: "true"
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/control-plane
+      operator: Exists
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: snapshot-controller
+spec:
+  source: deckhouse
+  version: 1
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: console
+spec:
+  version: 1
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: upmeter
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: local-path-provisioner
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: pod-reloader
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: secret-copier
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: namespace-configurator
+spec:
+  enabled: false
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Project
+metadata:
+  name: <DVP_PROJECT_NAME>
+spec:
+  description: <DVP_PROJECT_NAME>
+  projectTemplateName: default
+  parameters:
+    resourceQuota:
+      requests:
+        cpu: 20
+        memory: 20Gi
+      limits:
+        cpu: 20
+        memory: 20Gi
+    administrators:
+      - subject: User
+        name: <USER_NAME>@deckhouse.io
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: <USER_NAME>
+spec:
+  email: <USER_NAME>@deckhouse.io
+  password: '<GENERATED_PASSWORD_HASH>'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: <DVP_PROJECT_NAME>
+  name: admin
+subjects:
+  - kind: User
+    name: <USER_NAME>@deckhouse.io
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: d8:use:role:admin
+  apiGroup: rbac.authorization.k8s.io
+# caps SSH public key (same value is passed to dhctl installer context):
+# <SSH_PUBLIC_KEY>

@@ -1,12 +1,12 @@
 <script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}'; const revisionNames = {ce: '{{ site.data.i18n.ce }}', be: '{{ site.data.i18n.be }}', se: '{{ site.data.i18n.se }}', 'se-plus': '{{ site.data.i18n.se-plus }}', ee: '{{ site.data.i18n.ee }}', cse: '{{ site.data.i18n.cse }}'};</script>
-<script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag dvp-getting-started-shared %}[_assets/js/dvp/getting-started-dvp-shared.js]{% endjavascript_asset_tag %}'></script>
 {% if page.platform_code == "bm-private" -%}
   <script type="text/javascript" src='{% javascript_asset_tag getting-started-private %}[_assets/js/getting-started-private.js]{% endjavascript_asset_tag %}'></script>
   {%- include getting_started/global/partials/NOTICES.liquid %}
 {% endif %}
-<script type="text/javascript" src='{% javascript_asset_tag getting-started-install %}[_assets/js/getting-started-install.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag dvp-getting-started-install %}[_assets/js/dvp/getting-started-dvp-install.js]{% endjavascript_asset_tag %}'></script>
 <script type="text/javascript" src='{% javascript_asset_tag dvp-cluster-setup %}[_assets/js/dvp/getting-started-cluster-setup.js]{% endjavascript_asset_tag %}'></script>
-<script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
+<script type="text/javascript" src='{% javascript_asset_tag dvp-bcrypt %}[_assets/js/dvp/bcrypt-dvp.js]{% endjavascript_asset_tag %}'></script>
 
 
 <span style="display: none" id="platform_code">{{page.platform_code}}</span>
@@ -101,9 +101,11 @@ $(document).ready(function() {
 
   triggerBlockOnItemContent('[license-token-ee]', '.dimmer-block-content', {% if page.ee_only != true %}true{% endif %});
 
+  {%- unless page.platform_type == 'dvp' %}
   generate_password(true);
   replace_snippet_password();
-  /* DOMContentLoaded уже вызвал dvp_config_update; replace_snippet_password правит только snippetcut__raw — обновляем видимую подсветку и dhctl. */
+  {%- endunless %}
+  /* DOMContentLoaded уже вызвал dvp_config_update; для DVP пароль и hash задаются на шаге параметров кластера (dvp_config_update). */
   if (typeof dvp_refresh_visible_snippets === 'function') {
     dvp_refresh_visible_snippets();
   }
