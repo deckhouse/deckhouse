@@ -342,8 +342,7 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 	}
 
 	spec := controlplanev1alpha1.ControlPlaneNodeSpec{
-		CAChecksum:    caChecksum,
-		ConfigVersion: fmt.Sprintf("%s.%s", cpmSecret.ResourceVersion, pkiSecret.ResourceVersion),
+		CAChecksum: caChecksum,
 		Components: controlplanev1alpha1.ComponentsSpec{
 			Etcd: controlplanev1alpha1.ComponentSpec{
 				Checksums: controlplanev1alpha1.Checksums{

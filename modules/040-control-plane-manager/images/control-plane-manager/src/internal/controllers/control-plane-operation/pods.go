@@ -75,7 +75,7 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 
 	var reqs []reconcile.Request
 	for i := range ops.Items {
-		if ops.Items[i].Spec.Approved && !ops.Items[i].IsCompleted() {
+		if ops.Items[i].Spec.Approved && !ops.Items[i].IsTerminal() {
 			reqs = append(reqs, reconcile.Request{
 				NamespacedName: types.NamespacedName{Name: ops.Items[i].Name},
 			})

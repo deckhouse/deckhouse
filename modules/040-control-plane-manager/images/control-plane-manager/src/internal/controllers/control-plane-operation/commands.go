@@ -173,23 +173,35 @@ func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logge
 	configChecksum := op.Spec.DesiredConfigChecksum
 	pkiChecksum := op.Spec.DesiredPKIChecksum
 	caChecksum := op.Spec.DesiredCAChecksum
+	var results []fileWriteResult
 
 	if configChecksum != "" {
-		if err := writeExtraFiles(component, env.CPMSecretData, constants.ExtraFilesPath); err != nil {
+		extraResults, err := writeExtraFilesIfChanged(component, env.CPMSecretData, constants.ExtraFilesPath)
+		if err != nil {
 			logger.Error("failed to write extra-files", log.Err(err))
 			return reconcile.Result{}, err
 		}
-		if err := writeStaticPodManifest(component, env.CPMSecretData,
-			configChecksum, pkiChecksum, caChecksum, constants.ManifestsPath); err != nil {
+		manifestResult, err := writeStaticPodManifestIfChanged(component, env.CPMSecretData,
+			configChecksum, pkiChecksum, caChecksum, constants.ManifestsPath)
+		if err != nil {
 			logger.Error("failed to write manifest", log.Err(err))
 			return reconcile.Result{}, err
 		}
+		results = append(results, extraResults...)
+		results = append(results, manifestResult)
 	} else {
-		if err := updateChecksumAnnotations(component,
-			pkiChecksum, caChecksum, op.CertRenewalID(), constants.ManifestsPath); err != nil {
+		manifestResult, err := updateChecksumAnnotationsIfChanged(component,
+			pkiChecksum, caChecksum, op.CertRenewalID(), constants.ManifestsPath)
+		if err != nil {
 			logger.Error("failed to update checksum annotations", log.Err(err))
 			return reconcile.Result{}, err
 		}
+		results = append(results, manifestResult)
+	}
+
+	saveDiffResults(component, op.Name, results, logger)
+	if !hasChangedFiles(results) {
+		logger.Info("sync manifests no-op: desired content already on disk")
 	}
 	return reconcile.Result{}, nil
 }
@@ -214,9 +226,23 @@ type syncHotReloadCommand struct{}
 
 func (c *syncHotReloadCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	logger.Info("writing hot-reload files")
-	if err := writeHotReloadFiles(env.CPMSecretData, constants.ExtraFilesPath); err != nil {
+	results, err := writeHotReloadFilesIfChanged(env.CPMSecretData, constants.ExtraFilesPath)
+	if err != nil {
 		logger.Error("failed to write hot-reload files", log.Err(err))
 		return reconcile.Result{}, err
 	}
+	saveDiffResults(controlplanev1alpha1.OperationComponentHotReload, env.State.Raw().Name, results, logger)
+	if !hasChangedFiles(results) {
+		logger.Info("sync hot-reload no-op: desired content already on disk")
+	}
 	return reconcile.Result{}, nil
+}
+
+func hasChangedFiles(results []fileWriteResult) bool {
+	for i := range results {
+		if results[i].Changed {
+			return true
+		}
+	}
+	return false
 }

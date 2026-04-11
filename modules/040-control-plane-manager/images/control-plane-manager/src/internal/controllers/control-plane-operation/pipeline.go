@@ -80,6 +80,9 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 	state.MarkCommandInProgress(name)
 	state.SetReadyReason(commandReadyReasons[name], fmt.Sprintf("executing command %s", name))
 	if patchErr := r.patchStatus(ctx, state); patchErr != nil {
+		if isCommitPointCommand(name) {
+			return reconcile.Result{}, fmt.Errorf("set in-progress condition for commit-point command %s: %w", name, patchErr)
+		}
 		cmdLogger.Warn("failed to set in-progress condition", log.Err(patchErr))
 	}
 
@@ -104,6 +107,17 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 		return result, fmt.Errorf("set completed condition for %s: %w", name, err)
 	}
 	return result, nil
+}
+
+func isCommitPointCommand(name controlplanev1alpha1.CommandName) bool {
+	switch name {
+	case controlplanev1alpha1.CommandSyncManifests,
+		controlplanev1alpha1.CommandJoinEtcdCluster,
+		controlplanev1alpha1.CommandSyncHotReload:
+		return true
+	default:
+		return false
+	}
 }
 
 // patchStatus flushes OperationState status changes to the API server.

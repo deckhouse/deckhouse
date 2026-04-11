@@ -102,11 +102,6 @@ spec:
                 - HotReload
                 - CertObserver
                 type: string
-              configVersion:
-                description: |-
-                  ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion of pki secret]"
-                  that this operation targets.
-                type: string
               desiredCaChecksum:
                 description: |-
                   DesiredCAChecksum is the expected caChecksum after the operation completed.
@@ -130,7 +125,6 @@ spec:
             - approved
             - commands
             - component
-            - configVersion
             - nodeName
             type: object
           status:

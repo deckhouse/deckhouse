@@ -149,15 +149,9 @@ spec:
                         type: object
                     type: object
                 type: object
-              configVersion:
-                description: ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion
-                  of pki secret]"
-                type: string
               hotReloadChecksum:
                 description: For reload mechanisms (e.g. in-place reload)
                 type: string
-            required:
-            - configVersion
             type: object
           status:
             properties:
@@ -351,10 +345,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              configVersion:
-                description: 'ConfigVersion that is actually applied / running on
-                  the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"'
-                type: string
               hotReloadChecksum:
                 type: string
               lastObservedAt:

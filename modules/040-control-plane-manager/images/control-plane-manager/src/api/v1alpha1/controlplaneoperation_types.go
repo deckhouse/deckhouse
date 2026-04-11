@@ -107,11 +107,6 @@ func OperationComponentFromPodName(name string) (OperationComponent, bool) {
 
 // ControlPlaneOperationSpec defines the desired state of ControlPlaneOperation.
 type ControlPlaneOperationSpec struct {
-	// ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion of pki secret]"
-	// that this operation targets.
-	// +kubebuilder:validation:Required
-	ConfigVersion string `json:"configVersion"`
-
 	// NodeName is the name of the control-plane node on which the operation should be executed.
 	// +kubebuilder:validation:Required
 	NodeName string `json:"nodeName"`
