@@ -6,7 +6,10 @@ properties:
     enum: ["Frequent", "Moderate", "Rare"]
     default: "Moderate"
     description: |
-      Preset for the interval between descheduler runs.
-      - `Frequent` — every 5 minutes;
-      - `Moderate` — every 15 minutes;
-      - `Rare` — every 30 minutes.
+      Interval between pod redistribution runs.
+
+      Supported values:
+
+      - `Frequent`: Runs every 5 minutes. Suitable for clusters where faster pod redistribution is important.
+      - `Moderate`: Runs every 15 minutes (default).
+      - `Rare`: Runs every 30 minutes. Suitable for clusters where it's important to minimize the number of pod redistributions.
