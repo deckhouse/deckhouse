@@ -34,7 +34,7 @@ k8s:
     status: end-of-life
     patch: 14
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: '1'
     crictlPatch: 1
     ccm:
       openstack: v1.31.4
@@ -58,7 +58,7 @@ k8s:
     status: available
     patch: 13
     bashible: *bashible
-    clusterAutoscalerPatch: '2'
+    clusterAutoscalerPatch: '3'
     crictlPatch: 0
     ccm:
       openstack: v1.32.1
@@ -83,7 +83,7 @@ k8s:
     status: available
     patch: 10
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: '1'
     crictlPatch: 0
     ccm:
       openstack: v1.33.1
@@ -107,7 +107,7 @@ k8s:
     status: available
     patch: 6
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: '1'
     crictlPatch: 0
     ccm:
       openstack: v1.34.1
@@ -131,7 +131,7 @@ k8s:
     status: preview
     patch: 3
     bashible: *bashible
-    clusterAutoscalerPatch: '0'
+    clusterAutoscalerPatch: '1'
     crictlPatch: 0
     ccm:
       openstack: v1.35.0
