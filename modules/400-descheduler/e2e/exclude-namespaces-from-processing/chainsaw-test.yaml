@@ -1,0 +1,234 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: descheduler-exclude-namespaces-from-processing
+spec:
+  timeouts:
+    apply: 30s
+    assert: 120s
+    delete: 30s
+    exec: 120s
+
+  steps:
+    # Step 1: Verify cluster has 2+ nodes and descheduler is installed.
+    - name: check-prerequisites
+      try:
+        - script:
+            content: |
+              NODE_COUNT=$(kubectl get nodes --no-headers | wc -l | tr -d ' ')
+              echo "Cluster has $NODE_COUNT node(s)"
+
+              if [ "$NODE_COUNT" -lt 2 ]; then
+                echo "FAIL: This test requires at least 2 nodes, found $NODE_COUNT"
+                exit 1
+              fi
+
+              if ! kubectl get deployment descheduler -n d8-descheduler --no-headers 2>/dev/null; then
+                echo "FAIL: Descheduler deployment not found in d8-descheduler namespace"
+                exit 1
+              fi
+              echo "OK: Multi-node cluster with existing descheduler detected"
+
+    # Step 2: Backup current policy, apply LowNodeUtilization config, restart descheduler.
+    - name: configure-descheduler
+      try:
+        - script:
+            content: |
+              echo "Backing up existing descheduler policy..."
+              kubectl get configmap descheduler-policy -n d8-descheduler -o yaml > /tmp/descheduler-policy-backup.yaml
+              echo "Backup saved to /tmp/descheduler-policy-backup.yaml"
+
+              echo "Applying LowNodeUtilization policy..."
+              kubectl apply -f - <<'EOF'
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                policy.yaml: |
+                  apiVersion: "descheduler/v1alpha2"
+                  kind: "DeschedulerPolicy"
+                  profiles:
+                    - name: default
+                      pluginConfig:
+                        - name: DefaultEvictor
+                          args:
+                            nodeFit: true
+                        - name: LowNodeUtilization
+                          args:
+                            thresholds:
+                              cpu: 20
+                              memory: 20
+                              pods: 20
+                            targetThresholds:
+                              cpu: 50
+                              memory: 50
+                              pods: 50
+                      plugins:
+                        balance:
+                          enabled:
+                            - LowNodeUtilization
+                        evict:
+                          enabled:
+                            - DefaultEvictor
+              EOF
+              echo "Policy applied"
+
+              echo "Restarting descheduler to pick up new policy..."
+              kubectl rollout restart deployment/descheduler -n d8-descheduler
+              kubectl rollout status deployment/descheduler -n d8-descheduler --timeout=120s
+              echo "Descheduler restarted successfully"
+
+      catch:
+        - events:
+            namespace: d8-descheduler
+        - podLogs:
+            namespace: d8-descheduler
+            selector: app=descheduler
+
+    # Step 3: Create pods in protected (d8-*) and regular namespaces on one node.
+    - name: create-workloads
+      try:
+        - script:
+            content: |
+              TARGET_NODE=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name' | head -1)
+              echo "Pinning all pods to node: $TARGET_NODE"
+
+              # Create a d8-* namespace (protected by the patch).
+              kubectl create namespace d8-chainsaw-test --dry-run=client -o yaml | kubectl apply -f -
+              echo "Created protected namespace: d8-chainsaw-test"
+
+              # Create 5 pods in the protected d8-* namespace.
+              for i in $(seq 1 5); do
+                kubectl run protected-pod-$i \
+                  --namespace d8-chainsaw-test \
+                  --image=registry.k8s.io/pause:3.9 \
+                  --overrides="{\"spec\":{\"nodeName\":\"$TARGET_NODE\"}}"
+              done
+              echo "Created 5 pods in d8-chainsaw-test (protected)"
+
+              # Create 5 pods in the regular test namespace.
+              for i in $(seq 1 5); do
+                kubectl run regular-pod-$i \
+                  --namespace "$NAMESPACE" \
+                  --image=registry.k8s.io/pause:3.9 \
+                  --overrides="{\"spec\":{\"nodeName\":\"$TARGET_NODE\"}}"
+              done
+              echo "Created 5 pods in $NAMESPACE (regular)"
+
+              echo "Waiting for all pods to be Ready..."
+              for i in $(seq 1 5); do
+                kubectl wait --namespace d8-chainsaw-test \
+                  --for=condition=Ready pod/protected-pod-$i --timeout=60s
+                kubectl wait --namespace "$NAMESPACE" \
+                  --for=condition=Ready pod/regular-pod-$i --timeout=60s
+              done
+
+              echo ""
+              echo "=== Initial Pod Distribution ==="
+              echo "Protected (d8-chainsaw-test):"
+              kubectl get pods -n d8-chainsaw-test -o wide --no-headers
+              echo "Regular ($NAMESPACE):"
+              kubectl get pods -n "$NAMESPACE" -o wide --no-headers
+
+      catch:
+        - events: {}
+        - podLogs: {}
+
+    # Step 4: Wait for descheduler cycle and verify namespace filtering.
+    - name: verify-namespace-exclusion
+      try:
+        - script:
+            timeout: 300s
+            content: |
+              echo "Waiting for descheduler to run a cycle (up to 5 minutes)..."
+
+              DESCHEDULER_POD=$(kubectl get pods -n d8-descheduler -l app=descheduler --no-headers -o custom-columns=':metadata.name' | head -1)
+              echo "Descheduler pod: $DESCHEDULER_POD"
+
+              # Poll logs until LowNodeUtilization appears.
+              for i in $(seq 1 60); do
+                if kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler --since=5m 2>/dev/null | grep -q "LowNodeUtilization"; then
+                  echo "LowNodeUtilization plugin has executed"
+                  break
+                fi
+                if [ "$i" -eq 60 ]; then
+                  echo "FAIL: Timed out waiting for LowNodeUtilization to execute"
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              echo ""
+              echo "=== Checking namespace exclusion (patch validation) ==="
+
+              # The patch logs "pod in the deckhouse namespace(<ns>)" when filtering.
+              FILTER_LOGS=$(kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler --since=5m 2>/dev/null | grep "pod in the deckhouse namespace" || true)
+              if [ -n "$FILTER_LOGS" ]; then
+                echo "PASS: Patch is active — descheduler filtered pods in protected namespaces:"
+                echo "$FILTER_LOGS" | head -20
+              else
+                echo "WARNING: No namespace filtering log entries found"
+              fi
+
+              echo ""
+              echo "=== Protected pods (d8-chainsaw-test) — must NOT be evicted ==="
+              PROTECTED_COUNT=$(kubectl get pods -n d8-chainsaw-test --no-headers 2>/dev/null | grep -c Running || echo "0")
+              echo "Running protected pods: $PROTECTED_COUNT / 5"
+
+              PROTECTED_EVICTIONS=$(kubectl get events -n d8-chainsaw-test --field-selector reason=Evicted --no-headers 2>/dev/null | wc -l | tr -d ' ')
+              echo "Eviction events in d8-chainsaw-test: $PROTECTED_EVICTIONS"
+
+              if [ "$PROTECTED_EVICTIONS" -gt 0 ]; then
+                echo "FAIL: Pods in d8-* namespace were evicted — patch is NOT working"
+                kubectl get events -n d8-chainsaw-test --field-selector reason=Evicted 2>/dev/null
+                exit 1
+              fi
+
+              if [ "$PROTECTED_COUNT" -ne 5 ]; then
+                echo "FAIL: Expected 5 running protected pods, got $PROTECTED_COUNT"
+                kubectl get pods -n d8-chainsaw-test -o wide 2>/dev/null
+                exit 1
+              fi
+              echo "PASS: All protected pods remain intact"
+
+              echo ""
+              echo "=== Regular pods ($NAMESPACE) — may be evicted ==="
+              kubectl get pods -n "$NAMESPACE" -o wide --no-headers
+              REGULAR_EVICTIONS=$(kubectl get events -n "$NAMESPACE" --field-selector reason=Evicted --no-headers 2>/dev/null | wc -l | tr -d ' ')
+              echo "Eviction events in $NAMESPACE: $REGULAR_EVICTIONS"
+
+              echo ""
+              echo "=== Descheduler Logs ==="
+              kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler --since=5m 2>/dev/null | grep -i "LowNodeUtilization\|evict\|deckhouse namespace" | tail -30 || true
+
+              echo ""
+              echo "PASS: Namespace exclusion patch is working correctly"
+
+      catch:
+        - events:
+            namespace: d8-descheduler
+        - podLogs:
+            namespace: d8-descheduler
+            selector: app=descheduler
+
+      # Always restore original policy and clean up test namespace.
+      finally:
+        - script:
+            timeout: 180s
+            content: |
+              echo "Cleaning up d8-chainsaw-test namespace..."
+              kubectl delete namespace d8-chainsaw-test --ignore-not-found --timeout=60s
+
+              echo "Restoring original descheduler policy..."
+              if [ -f /tmp/descheduler-policy-backup.yaml ]; then
+                kubectl apply -f /tmp/descheduler-policy-backup.yaml
+                rm -f /tmp/descheduler-policy-backup.yaml
+                echo "Restarting descheduler with original policy..."
+                kubectl rollout restart deployment/descheduler -n d8-descheduler
+                kubectl rollout status deployment/descheduler -n d8-descheduler --timeout=120s
+                echo "Original policy restored"
+              else
+                echo "WARNING: Backup file not found, skipping restore"
+              fi
