@@ -10,7 +10,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,14 +33,14 @@ import (
 )
 
 type IstioFederationMergeCrdInfo struct {
-	Name             string                             `json:"name"`
-	TrustDomain      string                             `json:"trustDomain"`
-	SpiffeEndpoint   string                             `json:"spiffeEndpoint"`
-	IngressGateways  *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
-	MetadataCA       string                             `json:"ca"`
-	MetadataInsecure bool                               `json:"insecureSkipVerify"`
-	PublicServices   *[]eeCrd.FederationPublicServices  `json:"publicServices"`
-	Public           *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
+	Name             string                            `json:"name"`
+	TrustDomain      string                            `json:"trustDomain"`
+	SpiffeEndpoint   string                            `json:"spiffeEndpoint"`
+	IngressGateways  *[]eeCrd.FederationIngressGateway `json:"ingressGateways"`
+	MetadataCA       string                            `json:"ca"`
+	MetadataInsecure bool                              `json:"insecureSkipVerify"`
+	PublicServices   *[]eeCrd.FederationPublicService  `json:"publicServices"`
+	Public           *eeCrd.AlliancePublicMetadata     `json:"public,omitempty"`
 }
 
 type IstioMulticlusterMergeCrdInfo struct {
@@ -54,6 +56,45 @@ type IstioMulticlusterMergeCrdInfo struct {
 	Public               *eeCrd.AlliancePublicMetadata        `json:"public,omitempty"`
 }
 
+type ServiceEntry struct {
+	Name      string                              `json:"name"`
+	Hostname  string                              `json:"hostname"`
+	Ports     []eeCrd.FederationPublicServicePort `json:"ports"`
+	Endpoints []eeCrd.FederationIngressGateway    `json:"endpoints"`
+}
+
+func sortedEndpointsKey(endpoints []eeCrd.FederationIngressGateway) string {
+	sorted := make([]eeCrd.FederationIngressGateway, len(endpoints))
+	copy(sorted, endpoints)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].Address != sorted[j].Address {
+			return sorted[i].Address < sorted[j].Address
+		}
+		return sorted[i].Port < sorted[j].Port
+	})
+	parts := make([]string, len(sorted))
+	for i, ep := range sorted {
+		parts[i] = fmt.Sprintf("%s:%d", ep.Address, ep.Port)
+	}
+	return strings.Join(parts, ",")
+}
+
+const safeChars = "bcdfghjklmnpqrstvwxz2456789"
+
+func safeEncodeString(s string) string {
+	r := make([]byte, len(s))
+	for i, b := range []byte(s) {
+		r[i] = safeChars[int(b)%len(safeChars)]
+	}
+	return string(r)
+}
+
+func serviceEntryName(hostname string, endpoints []eeCrd.FederationIngressGateway) string {
+	h := fnv.New32a()
+	h.Write([]byte(sortedEndpointsKey(endpoints)))
+	return strings.ReplaceAll(hostname, ".", "-") + "-" + safeEncodeString(fmt.Sprint(h.Sum32()))
+}
+
 func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var federation eeCrd.IstioFederation
 	err := sdk.FromUnstructured(obj, &federation)
@@ -64,8 +105,8 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	me := federation.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
-	var igs *[]eeCrd.FederationIngressGateways
-	var pss *[]eeCrd.FederationPublicServices
+	var igs *[]eeCrd.FederationIngressGateway
+	var pss *[]eeCrd.FederationPublicService
 	var p *eeCrd.AlliancePublicMetadata
 
 	if federation.Status.MetadataCache.Private != nil {
@@ -364,6 +405,115 @@ federationsLoop:
 		properFederations = append(properFederations, federationInfo)
 	}
 
+	// Build ServiceEntries by merging endpoints across federations for each
+	// (hostname, port) pair, then grouping ports that share the same hostname
+	// and endpoint set into a single ServiceEntry.
+	// Port collisions (same number, different name/protocol) are first-wins with a warning.
+
+	portDefs := make(map[string]map[uint]eeCrd.FederationPublicServicePort)
+	portEndpoints := make(map[string]map[uint]map[eeCrd.FederationIngressGateway]struct{})
+
+	for _, fed := range properFederations {
+		if fed.PublicServices == nil || fed.IngressGateways == nil {
+			continue
+		}
+
+		seenInFed := make(map[string]map[uint]struct{}) // hostname -> set of port numbers
+		for _, ps := range *fed.PublicServices {
+			if seenInFed[ps.Hostname] == nil {
+				seenInFed[ps.Hostname] = make(map[uint]struct{})
+			}
+			if portDefs[ps.Hostname] == nil {
+				portDefs[ps.Hostname] = make(map[uint]eeCrd.FederationPublicServicePort)
+				portEndpoints[ps.Hostname] = make(map[uint]map[eeCrd.FederationIngressGateway]struct{})
+			}
+
+			for _, port := range ps.Ports {
+				if _, dup := seenInFed[ps.Hostname][port.Port]; dup {
+					continue
+				}
+				seenInFed[ps.Hostname][port.Port] = struct{}{}
+
+				if existing, ok := portDefs[ps.Hostname][port.Port]; !ok {
+					portDefs[ps.Hostname][port.Port] = port
+					eps := make(map[eeCrd.FederationIngressGateway]struct{}, len(*fed.IngressGateways))
+					for _, ig := range *fed.IngressGateways {
+						eps[ig] = struct{}{}
+					}
+					portEndpoints[ps.Hostname][port.Port] = eps
+				} else {
+					if existing.Name != port.Name || existing.Protocol != port.Protocol {
+						input.Logger.Warn("port collision: same hostname and port number with different name/protocol across federations, keeping first definition",
+							slog.String("federation", fed.Name),
+							slog.String("hostname", ps.Hostname),
+							slog.Uint64("port", uint64(port.Port)),
+							slog.String("existing_name", existing.Name),
+							slog.String("existing_protocol", existing.Protocol),
+							slog.String("conflicting_name", port.Name),
+							slog.String("conflicting_protocol", port.Protocol),
+						)
+					}
+					for _, ig := range *fed.IngressGateways {
+						portEndpoints[ps.Hostname][port.Port][ig] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	// Group ports sharing the same hostname and endpoint set into ServiceEntries.
+	// hostname -> endpointSetKey -> *ServiceEntry
+
+	serviceEntriesByHost := make(map[string]map[string]*ServiceEntry)
+	for hostname, ports := range portDefs {
+		for portNum, port := range ports {
+			endpoints := make([]eeCrd.FederationIngressGateway, 0, len(portEndpoints[hostname][portNum]))
+			for ep := range portEndpoints[hostname][portNum] {
+				endpoints = append(endpoints, ep)
+			}
+			epKey := sortedEndpointsKey(endpoints)
+
+			byEpKey := serviceEntriesByHost[hostname]
+			if byEpKey == nil {
+				byEpKey = make(map[string]*ServiceEntry)
+				serviceEntriesByHost[hostname] = byEpKey
+			}
+
+			if se, ok := byEpKey[epKey]; ok {
+				se.Ports = append(se.Ports, port)
+			} else {
+				byEpKey[epKey] = &ServiceEntry{
+					Hostname:  hostname,
+					Ports:     []eeCrd.FederationPublicServicePort{port},
+					Endpoints: endpoints,
+				}
+			}
+		}
+	}
+
+	serviceEntries := make([]ServiceEntry, 0)
+	for _, byEpKey := range serviceEntriesByHost {
+		for _, se := range byEpKey {
+			sort.Slice(se.Ports, func(i, j int) bool {
+				return se.Ports[i].Port < se.Ports[j].Port
+			})
+			sort.Slice(se.Endpoints, func(i, j int) bool {
+				if se.Endpoints[i].Address != se.Endpoints[j].Address {
+					return se.Endpoints[i].Address < se.Endpoints[j].Address
+				}
+				return se.Endpoints[i].Port < se.Endpoints[j].Port
+			})
+			se.Name = serviceEntryName(se.Hostname, se.Endpoints)
+			serviceEntries = append(serviceEntries, *se)
+		}
+	}
+	sort.Slice(serviceEntries, func(i, j int) bool {
+		if serviceEntries[i].Hostname != serviceEntries[j].Hostname {
+			return serviceEntries[i].Hostname < serviceEntries[j].Hostname
+		}
+		return serviceEntries[i].Ports[0].Port < serviceEntries[j].Ports[0].Port
+	})
+
 multiclustersLoop:
 	for multiclusterInfo, err := range sdkobjectpatch.SnapshotIter[IstioMulticlusterMergeCrdInfo](input.Snapshots.Get("multiclusters")) {
 		if err != nil {
@@ -439,6 +589,7 @@ multiclustersLoop:
 	}
 
 	input.Values.Set("istio.internal.federations", properFederations)
+	input.Values.Set("istio.internal.federationServiceEntries", serviceEntries)
 	input.Values.Set("istio.internal.multiclusters", properMulticlusters)
 	input.Values.Set("istio.internal.multiclustersNeedIngressGateway", multiclustersNeedIngressGateway)
 	input.Values.Set("istio.internal.remotePublicMetadata", remotePublicMetadata)

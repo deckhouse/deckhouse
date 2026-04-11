@@ -84,6 +84,7 @@ const istioValues = `
       operatorVersionsToInstall: []
       versionsToInstall: []
       federations: []
+      federationServiceEntries: []
       multiclusters: []
       remoteAuthnKeypair:
         priv: aaa
@@ -341,6 +342,16 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     - name: aaa
       port: 456
 `)
+			f.ValuesSetFromYaml("istio.internal.federationServiceEntries", `
+- name: xxx-yyy-6bff7489f5
+  hostname: xxx.yyy
+  ports:
+  - name: aaa
+    port: 456
+  endpoints:
+  - address: 1.1.1.1
+    port: 123
+`)
 			f.ValuesSetFromYaml("istio.internal.remotePublicMetadata", `
 neighbour-0:
   clusterUUID: r-e-m-o-t-e
@@ -352,8 +363,8 @@ neighbour-0:
 		It("ServiceEntry and DestinationRule must be created, metadata-exporter and ingressgateway must be deployed", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			se := f.KubernetesResource("ServiceEntry", "d8-istio", "neighbour-0-xxx-yyy")
-			dr := f.KubernetesResource("DestinationRule", "d8-istio", "neighbour-0-xxx-yyy")
+			se := f.KubernetesResource("ServiceEntry", "d8-istio", "xxx-yyy-6bff7489f5")
+			dr := f.KubernetesResource("DestinationRule", "d8-istio", "xxx-yyy-6bff7489f5")
 
 			Expect(se.Exists()).To(BeTrue())
 			Expect(dr.Exists()).To(BeTrue())
@@ -396,6 +407,209 @@ neighbour-0:
 			Expect(iopV21.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---"}]`))
 			Expect(iopV21.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("Two federations expose the same public service hostname", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSet("istio.federation.enabled", true)
+			f.ValuesSetFromYaml("istio.internal.federations", `
+- name: cluster-a
+  trustDomain: cluster.local
+  spiffeEndpoint: https://cluster-a.example.com/spiffe-bundle-endpoint
+  ingressGateways:
+  - address: 1.1.1.1
+    port: 15443
+  publicServices:
+  - hostname: my-svc.my-ns.svc.cluster.local
+    ports:
+    - name: http
+      port: 8080
+      protocol: HTTP
+- name: cluster-b
+  trustDomain: cluster.local
+  spiffeEndpoint: https://cluster-b.example.com/spiffe-bundle-endpoint
+  ingressGateways:
+  - address: 2.2.2.2
+    port: 15443
+  publicServices:
+  - hostname: my-svc.my-ns.svc.cluster.local
+    ports:
+    - name: http
+      port: 8080
+      protocol: HTTP
+`)
+			f.ValuesSetFromYaml("istio.internal.federationServiceEntries", `
+- name: my-svc-my-ns-svc-cluster-local-9c8cbb5bc
+  hostname: my-svc.my-ns.svc.cluster.local
+  ports:
+  - name: http
+    port: 8080
+    protocol: HTTP
+  endpoints:
+  - address: 1.1.1.1
+    port: 15443
+  - address: 2.2.2.2
+    port: 15443
+`)
+			f.ValuesSetFromYaml("istio.internal.remotePublicMetadata", `
+cluster-a:
+  clusterUUID: uuid-a
+  rootCA: ---ROOT CA A---
+cluster-b:
+  clusterUUID: uuid-b
+  rootCA: ---ROOT CA B---
+`)
+			f.HelmRender()
+		})
+
+		It("should create a single merged ServiceEntry and DestinationRule with endpoints from both federations", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			se := f.KubernetesResource("ServiceEntry", "d8-istio", "my-svc-my-ns-svc-cluster-local-9c8cbb5bc")
+			dr := f.KubernetesResource("DestinationRule", "d8-istio", "my-svc-my-ns-svc-cluster-local-9c8cbb5bc")
+
+			Expect(se.Exists()).To(BeTrue())
+			Expect(dr.Exists()).To(BeTrue())
+
+			Expect(se.Field("spec.hosts.0").String()).To(Equal("my-svc.my-ns.svc.cluster.local"))
+			Expect(se.Field("spec.ports").String()).To(MatchYAML(`
+            - name: http
+              number: 8080
+              protocol: HTTP
+            `))
+			Expect(se.Field("spec.endpoints").String()).To(MatchYAML(`
+            - address: 1.1.1.1
+              ports:
+                http: 15443
+            - address: 2.2.2.2
+              ports:
+                http: 15443
+            `))
+
+			Expect(dr.Field("spec.host").String()).To(Equal("my-svc.my-ns.svc.cluster.local"))
+			Expect(dr.Field("spec.trafficPolicy.tls.mode").String()).To(Equal("ISTIO_MUTUAL"))
+
+			// Ensure no duplicate ServiceEntry with federation name prefix exists
+			seA := f.KubernetesResource("ServiceEntry", "d8-istio", "cluster-a-my-svc-my-ns-svc-cluster-local")
+			seB := f.KubernetesResource("ServiceEntry", "d8-istio", "cluster-b-my-svc-my-ns-svc-cluster-local")
+			Expect(seA.Exists()).To(BeFalse())
+			Expect(seB.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Two federations with different hostnames", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSet("istio.federation.enabled", true)
+			f.ValuesSetFromYaml("istio.internal.federations", `
+- name: cluster-a
+  trustDomain: a.local
+  spiffeEndpoint: https://cluster-a.example.com/spiffe-bundle-endpoint
+  ingressGateways:
+  - address: 1.1.1.1
+    port: 15443
+  publicServices:
+  - hostname: svc-a.ns-a.svc.a.local
+    ports:
+    - name: http
+      port: 8080
+      protocol: HTTP
+- name: cluster-b
+  trustDomain: b.local
+  spiffeEndpoint: https://cluster-b.example.com/spiffe-bundle-endpoint
+  ingressGateways:
+  - address: 2.2.2.2
+    port: 15443
+  publicServices:
+  - hostname: svc-b.ns-b.svc.b.local
+    ports:
+    - name: grpc
+      port: 9090
+      protocol: HTTP2
+`)
+			f.ValuesSetFromYaml("istio.internal.federationServiceEntries", `
+- name: svc-a-ns-a-svc-a-local-766f584864
+  hostname: svc-a.ns-a.svc.a.local
+  ports:
+  - name: http
+    port: 8080
+    protocol: HTTP
+  endpoints:
+  - address: 1.1.1.1
+    port: 15443
+- name: svc-b-ns-b-svc-b-local-6d9f68f9b
+  hostname: svc-b.ns-b.svc.b.local
+  ports:
+  - name: grpc
+    port: 9090
+    protocol: HTTP2
+  endpoints:
+  - address: 2.2.2.2
+    port: 15443
+`)
+			f.ValuesSetFromYaml("istio.internal.remotePublicMetadata", `
+cluster-a:
+  clusterUUID: uuid-a
+  rootCA: ---ROOT CA A---
+cluster-b:
+  clusterUUID: uuid-b
+  rootCA: ---ROOT CA B---
+`)
+			f.HelmRender()
+		})
+
+		It("should create separate ServiceEntry and DestinationRule for each hostname", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			seA := f.KubernetesResource("ServiceEntry", "d8-istio", "svc-a-ns-a-svc-a-local-766f584864")
+			drA := f.KubernetesResource("DestinationRule", "d8-istio", "svc-a-ns-a-svc-a-local-766f584864")
+			seB := f.KubernetesResource("ServiceEntry", "d8-istio", "svc-b-ns-b-svc-b-local-6d9f68f9b")
+			drB := f.KubernetesResource("DestinationRule", "d8-istio", "svc-b-ns-b-svc-b-local-6d9f68f9b")
+
+			Expect(seA.Exists()).To(BeTrue())
+			Expect(drA.Exists()).To(BeTrue())
+			Expect(seB.Exists()).To(BeTrue())
+			Expect(drB.Exists()).To(BeTrue())
+
+			// Verify ServiceEntry A has only cluster-a endpoints
+			Expect(seA.Field("spec.hosts.0").String()).To(Equal("svc-a.ns-a.svc.a.local"))
+			Expect(seA.Field("spec.ports").String()).To(MatchYAML(`
+            - name: http
+              number: 8080
+              protocol: HTTP
+            `))
+			Expect(seA.Field("spec.endpoints").String()).To(MatchYAML(`
+            - address: 1.1.1.1
+              ports:
+                http: 15443
+            `))
+
+			// Verify ServiceEntry B has only cluster-b endpoints
+			Expect(seB.Field("spec.hosts.0").String()).To(Equal("svc-b.ns-b.svc.b.local"))
+			Expect(seB.Field("spec.ports").String()).To(MatchYAML(`
+            - name: grpc
+              number: 9090
+              protocol: HTTP2
+            `))
+			Expect(seB.Field("spec.endpoints").String()).To(MatchYAML(`
+            - address: 2.2.2.2
+              ports:
+                grpc: 15443
+            `))
+
+			// Verify no cross-contamination of endpoints
+			Expect(len(seA.Field("spec.endpoints").Array())).To(Equal(1))
+			Expect(len(seB.Field("spec.endpoints").Array())).To(Equal(1))
 		})
 	})
 
