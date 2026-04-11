@@ -2,6 +2,8 @@
   {{- $Root := . }}
   {{- $ModulesImagesDigestList := list }}
   {{- $ExcludedModulesDict := dict }}
+  {{- $AvailableModulesDict := dict }}
+  {{- $HasAvailableModules := false }}
 
 # Collect images if desired for editions
 #
@@ -18,6 +20,12 @@
     {{- if $edition.excludeModules }}
     {{- range $_, $exludeModuleName := $edition.excludeModules }}
     {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
+    {{- end }}
+    {{- end }}
+    {{- if $edition.AvailableModules }}
+    {{- $HasAvailableModules = true }}
+    {{- range $_, $availableModuleName := $edition.AvailableModules }}
+    {{- $_ := set $AvailableModulesDict (printf "%s" $availableModuleName) "true" }}
     {{- end }}
     {{- end }}
 
@@ -38,6 +46,9 @@
       {{- if hasKey $ExcludedModulesDict $moduleName }}
       {{- continue -}}
       {{- end }}
+      {{- if and $HasAvailableModules (not (hasKey $AvailableModulesDict $moduleName)) }}
+      {{- continue -}}
+      {{- end }}
 
       {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
       {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
@@ -49,6 +60,8 @@
       {{- $_ := set $ctx "Files" $Root.Files }}
       {{- $_ := set $ctx "Env" $Root.Env }}
       {{- $_ := set $ctx "isEE" $Root.isEE }}
+      {{- $_ := set $ctx "HasAvailableModules" $HasAvailableModules }}
+      {{- $_ := set $ctx "AvailableModulesDict" $AvailableModulesDict }}
 
       {{- $_ := set $ctx "Images" $Root.Images }}
       {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}

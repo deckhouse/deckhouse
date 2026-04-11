@@ -1,3 +1,4 @@
+{{- if eq $.Env "FE" }}
 ---
 image: tests-prebuild
 fromImage: base-for-go
@@ -8,11 +9,12 @@ git:
     install:
     - go.mod
     - go.sum
+    setup:
+    - '**/*'
   includePaths:
   - deckhouse-controller
   - dhctl
   - candi
-  - modules
   - global-hooks
   - go_lib
   - pkg
@@ -29,17 +31,17 @@ git:
   excludePaths:
   {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
   - docs
-  - modules/*/docs
-  - modules/*/README.md
-  - modules/*/images
-  - modules/*/webhooks
-  - modules/0[1-9][1-9]-*/crds     # we need here only the 000-common/crds
-  - modules/[1-9][0-9][0-9]-*/crds
 - url: {{ .SOURCE_REPO }}/flant/shell-operator
   tag: v1.4.10
   add: /frameworks/shell
   to: /deckhouse/shell-operator/frameworks/shell
-  {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+  # we need here only the 000-common/crds
+- add: /modules/000-common/crds
+  to: /deckhouse/modules/000-common/crds
+  stageDependencies:
+    setup:
+    - '**/*'
+  {{ .Files.Get (printf "tools/build_includes/modules-tests-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
@@ -81,22 +83,8 @@ imageSpec:
 image: tests
 fromImage: tests-prebuild
 import:
-- image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /terraform/terraform
-  to: /dhctl-tests/bin/terraform
-  before: setup
-- image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
-  add: /opentofu/opentofu
-  to: /dhctl-tests/bin/opentofu
-  before: setup
-- image: {{ .TF.yandex.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ .TF.yandex.artifactBinary }}
-  to: /dhctl-tests/plugins/registry.opentofu.org/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $.TF.yandex.version }}/linux_amd64/{{ .TF.yandex.destinationBinary }}
-  before: setup
-- image: {{ .TF.gcp.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-  add: /{{ .TF.gcp.artifactBinary }}
-  to: /dhctl-tests/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ $.TF.gcp.version }}/linux_amd64/{{ .TF.gcp.destinationBinary }}
-  before: setup
+{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+{{ include "installer_and_installer_standalone_opentofu_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
 - image: images-digests
   add: /images_digests.json
   to: /deckhouse/modules/images_digests.json
@@ -105,3 +93,9 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+shell:
+  setup:
+  - mkdir /dhctl-tests
+  - ln -s -v /bin /dhctl-tests/bin
+  - ln -s -v /plugins /dhctl-tests/plugins
+{{- end }}
