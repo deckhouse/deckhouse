@@ -69,12 +69,12 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "trustDomain": "bbb", "spiffeEndpoint": "ccc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "publicServices": [{"hostname": "zzz.xxx.ccc", "ports": [{"name": "ddd", "port": 2345, "protocol": "TCP"}], "virtualIP": "3.4.5.6"}]}]
+        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "trustDomain": "bbb", "rootCA": "---ROOT CA---", "spiffeEndpoint": "ccc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}], "publicServices": [{"hostname": "zzz.xxx.ccc", "ports": [{"name": "ddd", "port": 2345, "protocol": "TCP"}]}]}]
       multiclusters:
         type: array
         default: []
         x-examples:
-        - [{"name": "aaa", "spiffeEndpoint": "ccc", "ca": "---CERT---asdasda314g---ENDCERT", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
+        - [{"name": "aaa", "clusterUUID": "uuid-aaa", "spiffeEndpoint": "ccc", "rootCA": "---ROOT CA---", "metadataExporterCA": "---METADATA CA---", "insecureSkipVerify": true, "enableIngressGateway": true, "apiHost": "aaa.sss.ddd", "networkName": "a-b-c-1-2-3", "apiJWT": "aAaA.bBbB.CcCc", "ingressGateways": [{"address": "1.2.3.4", "port": 1234}]}]
       remotePublicMetadata:
         type: object
         default: {}

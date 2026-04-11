@@ -31,27 +31,30 @@ import (
 )
 
 type IstioFederationMergeCrdInfo struct {
-	Name             string                             `json:"name"`
-	TrustDomain      string                             `json:"trustDomain"`
-	SpiffeEndpoint   string                             `json:"spiffeEndpoint"`
-	IngressGateways  *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
-	MetadataCA       string                             `json:"ca"`
-	MetadataInsecure bool                               `json:"insecureSkipVerify"`
-	PublicServices   *[]eeCrd.FederationPublicServices  `json:"publicServices"`
-	Public           *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
+	ClusterUUID              string                             `json:"clusterUUID"`
+	EnableInsecureConnection bool                               `json:"insecureSkipVerify"`
+	IngressGateways          *[]eeCrd.FederationIngressGateways `json:"ingressGateways"`
+	Name                     string                             `json:"name"`
+	Public                   *eeCrd.AlliancePublicMetadata      `json:"public,omitempty"`
+	PublicServices           *[]eeCrd.FederationPublicServices  `json:"publicServices"`
+	RootCA                   string                             `json:"rootCA"`
+	SpiffeEndpoint           string                             `json:"spiffeEndpoint"`
+	TrustDomain              string                             `json:"trustDomain"`
 }
 
 type IstioMulticlusterMergeCrdInfo struct {
-	Name                 string                               `json:"name"`
-	SpiffeEndpoint       string                               `json:"spiffeEndpoint"`
-	EnableIngressGateway bool                                 `json:"enableIngressGateway"`
-	MetadataCA           string                               `json:"ca"`
-	MetadataInsecure     bool                                 `json:"insecureSkipVerify"`
-	APIHost              string                               `json:"apiHost"`
-	NetworkName          string                               `json:"networkName"`
-	APIJWT               string                               `json:"apiJWT"`
-	IngressGateways      *[]eeCrd.MulticlusterIngressGateways `json:"ingressGateways"`
-	Public               *eeCrd.AlliancePublicMetadata        `json:"public,omitempty"`
+	APIHost                  string                               `json:"apiHost"`
+	APIJWT                   string                               `json:"apiJWT"`
+	ClusterUUID              string                               `json:"clusterUUID"`
+	EnableIngressGateway     bool                                 `json:"enableIngressGateway"`
+	EnableInsecureConnection bool                                 `json:"insecureSkipVerify"`
+	IngressGateways          *[]eeCrd.MulticlusterIngressGateways `json:"ingressGateways"`
+	MetadataExporterCA       string                               `json:"metadataExporterCA"`
+	Name                     string                               `json:"name"`
+	NetworkName              string                               `json:"networkName"`
+	Public                   *eeCrd.AlliancePublicMetadata        `json:"public,omitempty"`
+	RootCA                   string                               `json:"rootCA"`
+	SpiffeEndpoint           string                               `json:"spiffeEndpoint"`
 }
 
 func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -64,9 +67,13 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	me := federation.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
-	var igs *[]eeCrd.FederationIngressGateways
-	var pss *[]eeCrd.FederationPublicServices
-	var p *eeCrd.AlliancePublicMetadata
+	var (
+		igs    *[]eeCrd.FederationIngressGateways
+		pss    *[]eeCrd.FederationPublicServices
+		p      *eeCrd.AlliancePublicMetadata
+		uuid   string
+		rootCA string
+	)
 
 	if federation.Status.MetadataCache.Private != nil {
 		if federation.Status.MetadataCache.Private.IngressGateways != nil {
@@ -78,17 +85,20 @@ func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 	}
 	if federation.Status.MetadataCache.Public != nil {
 		p = federation.Status.MetadataCache.Public
+		uuid = federation.Status.MetadataCache.Public.ClusterUUID
+		rootCA = federation.Status.MetadataCache.Public.RootCA
 	}
 
 	return IstioFederationMergeCrdInfo{
-		Name:             federation.GetName(),
-		TrustDomain:      federation.Spec.TrustDomain,
-		SpiffeEndpoint:   me + "/public/spiffe-bundle-endpoint",
-		IngressGateways:  igs,
-		MetadataCA:       federation.Spec.Metadata.ClusterCA,
-		MetadataInsecure: federation.Spec.Metadata.EnableInsecureConnection,
-		PublicServices:   pss,
-		Public:           p,
+		ClusterUUID:              uuid,
+		EnableInsecureConnection: federation.Spec.Metadata.EnableInsecureConnection,
+		IngressGateways:          igs,
+		Name:                     federation.GetName(),
+		Public:                   p,
+		PublicServices:           pss,
+		RootCA:                   rootCA,
+		SpiffeEndpoint:           me + "/public/spiffe-bundle-endpoint",
+		TrustDomain:              federation.Spec.TrustDomain,
 	}, nil
 }
 
@@ -103,10 +113,14 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	me := multicluster.Spec.MetadataEndpoint
 	me = strings.TrimSuffix(me, "/")
 
-	var igs *[]eeCrd.MulticlusterIngressGateways
-	var apiHost string
-	var networkName string
-	var p *eeCrd.AlliancePublicMetadata
+	var (
+		igs         *[]eeCrd.MulticlusterIngressGateways
+		apiHost     string
+		networkName string
+		p           *eeCrd.AlliancePublicMetadata
+		uuid        string
+		rootCA      string
+	)
 
 	if multicluster.Status.MetadataCache.Private != nil {
 		if multicluster.Status.MetadataCache.Private.IngressGateways != nil {
@@ -117,18 +131,22 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 	if multicluster.Status.MetadataCache.Public != nil {
 		p = multicluster.Status.MetadataCache.Public
+		uuid = multicluster.Status.MetadataCache.Public.ClusterUUID
+		rootCA = multicluster.Status.MetadataCache.Public.RootCA
 	}
 
 	return IstioMulticlusterMergeCrdInfo{
-		Name:                 multicluster.GetName(),
-		SpiffeEndpoint:       me + "/public/spiffe-bundle-endpoint",
-		MetadataCA:           multicluster.Spec.Metadata.ClusterCA,
-		MetadataInsecure:     multicluster.Spec.Metadata.EnableInsecureConnection,
-		EnableIngressGateway: multicluster.Spec.EnableIngressGateway,
-		APIHost:              apiHost,
-		NetworkName:          networkName,
-		IngressGateways:      igs,
-		Public:               p,
+		APIHost:                  apiHost,
+		ClusterUUID:              uuid,
+		EnableIngressGateway:     multicluster.Spec.EnableIngressGateway,
+		EnableInsecureConnection: multicluster.Spec.Metadata.EnableInsecureConnection,
+		IngressGateways:          igs,
+		MetadataExporterCA:       multicluster.Spec.Metadata.CA,
+		Name:                     multicluster.GetName(),
+		NetworkName:              networkName,
+		Public:                   p,
+		RootCA:                   rootCA,
+		SpiffeEndpoint:           me + "/public/spiffe-bundle-endpoint",
 	}, nil
 }
 
@@ -421,7 +439,7 @@ multiclustersLoop:
 			privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
 			claims := map[string]string{
 				"iss":   "d8-istio",
-				"aud":   multiclusterInfo.Public.ClusterUUID,
+				"aud":   multiclusterInfo.ClusterUUID,
 				"sub":   input.Values.Get("global.discovery.clusterUUID").String(),
 				"scope": "api",
 			}

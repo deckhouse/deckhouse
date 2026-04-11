@@ -320,7 +320,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
-	Context("There are some federations", func() {
+	Context("There is one federation", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
@@ -330,8 +330,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSet("istio.federation.enabled", true)
 			f.ValuesSetFromYaml("istio.internal.federations", `
 - name: neighbour-0
-  trustDomain: n.n0
-  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
   ingressGateways:
   - address: 1.1.1.1
     port: 123
@@ -340,6 +338,9 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
     ports:
     - name: aaa
       port: 456
+  rootCA: ---ROOT CA---
+  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
+  trustDomain: n.n0
 `)
 			f.ValuesSetFromYaml("istio.internal.remotePublicMetadata", `
 neighbour-0:
@@ -393,7 +394,7 @@ neighbour-0:
 			))
 
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---"}]`))
+			Expect(iopV21.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---", "trustDomains": ["n.n0"]}]`))
 			Expect(iopV21.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeTrue())
 		})
@@ -445,11 +446,14 @@ neighbour-0:
 			f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", true)
 			f.ValuesSetFromYaml("istio.internal.multiclusters", `
 - name: neighbour-0
-  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
-  enableIngressGateway: true
   apiHost: remote.api.example.com
+  apiJWT: aAaA.bBbB.CcCc
+  enableIngressGateway: true
   insecureSkipVerify: false
-  ca: |
+  ingressGateways:
+  - address: 1.1.1.1
+    port: 123
+  metadataExporterCA: |
     -----BEGIN CERTIFICATE-----
     MIIFDTCCAvWgAwIBAgIURb+L4dH5qv53ZSD/tBRSdq37Go4wDQYJKoZIhvcNAQEL
     BQAwFjEUMBIGA1UEAwwLY3VzdG9tLXJvb3QwHhcNMjQxMTI1MTUyNzMwWhcNMzQx
@@ -481,10 +485,8 @@ neighbour-0:
     tQ==
     -----END CERTIFICATE-----
   networkName: a-b-c-1-2-3
-  apiJWT: aAaA.bBbB.CcCc
-  ingressGateways:
-  - address: 1.1.1.1
-    port: 123
+  rootCA: ---ROOT CA---
+  spiffeEndpoint: https://some-proper-host/spiffe-bundle-endpoint
 `)
 			f.ValuesSetFromYaml("istio.internal.remotePublicMetadata", `
 neighbour-0:
@@ -558,7 +560,10 @@ users:
 			))
 
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---"}]`))
+			Expect(iopV21.Field("spec.meshConfig.caCertificates").Array()).To(HaveLen(1))
+			Expect(iopV21.Field("spec.meshConfig.caCertificates.0.pem").Exists()).To(BeTrue())
+			Expect(iopV21.Field("spec.meshConfig.caCertificates.0.pem").String()).To(Equal("---ROOT CA---"))
+			Expect(iopV21.Field("spec.meshConfig.caCertificates.0.trustDomains").Exists()).To(BeFalse())
 			Expect(iopV21.Field("spec.values.global.meshNetworks").String()).To(MatchYAML(`
 a-b-c-1-2-3:
   endpoints:
