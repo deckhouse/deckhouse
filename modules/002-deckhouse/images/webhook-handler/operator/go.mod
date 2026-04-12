@@ -1,6 +1,6 @@
 module deckhouse.io/webhook
 
-go 1.25.0
+go 1.25.8
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250825145639-a11cd86c59d0
