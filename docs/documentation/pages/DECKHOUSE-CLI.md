@@ -5,14 +5,14 @@ description: Deckhouse CLI is a command line interface for cluster management cr
 search: d8, deckhouse cli, d8 utility, command line interface
 ---
 
-Deckhouse CLI (`d8`) is a command-line interface for working with products in the Deckhouse ecosystem. It combines commands for working with Kubernetes, administering Deckhouse Kubernetes Platform, delivering applications, mirroring images, creating backups, collecting diagnostic information, virtualization, working with user data, and other tasks.
+Deckhouse CLI (`d8`) is a command-line interface for working with products in the Deckhouse ecosystem. It combines commands for working with Kubernetes, administering Deckhouse Kubernetes Platform, delivering applications, copying images, creating backups, collecting diagnostic information, virtualization, working with user data, and other tasks.
 
 Starting from release 1.59, `d8` is automatically installed on all DKP cluster nodes. The utility can also be [installed](#how-do-i-install-the-deckhouse-cli) on a separate administrator machine.
 
 ## Main command groups
 
 {% alert level="info" %}
-The `d8 delivery-kit` and `d8 mirror` command groups are not available in Community Edition (CE) and Basic Edition (BE).
+The `d8 delivery-kit` and `d8 mirror` command groups are not available in Community Edition (CE) and Basic Edition (BE) editions.
 {% endalert %}
 
 `d8` commands are grouped by purpose:
@@ -23,12 +23,12 @@ The `d8 delivery-kit` and `d8 mirror` command groups are not available in Commun
 | [`d8 system`](../d8/reference/#d8-system) | Commands for working with platform system settings, configuration, modules, queues, packages, and system logs. |
 | [`d8 status`](../d8/reference/#d8-status) | Command for obtaining the current platform status. |
 | [`d8 backup`](../d8/reference/#d8-backup) | Commands for creating backups of key cluster data and generating diagnostic dumps. |
-| [`d8 mirror`](../d8/reference/#d8-mirror) | Commands for copying the platform to the local filesystem or a third-party container registry. |
+| [`d8 mirror`](../d8/reference/#d8-mirror) | Commands for copying the platform component images to the local filesystem or a third-party container registry. |
 | [`d8 delivery-kit`](../d8/reference/#d8-delivery-kit) | Commands for building, publishing, planning, and deploying applications, as well as for working with Helm, registries, SBOM, and related operations. |
 | [`d8 data`](../d8/reference/#d8-data) | Commands for managing data, as well as exporting and importing it. |
 | [`d8 v`](../d8/reference/#d8-v) | Commands for working with virtual machines created in Deckhouse Virtualization Platform. |
 | [`d8 user`](../d8/reference/#d8-user) | Commands for managing Deckhouse users. |
-| [`d8 stronghold`](../d8/reference/#d8-stronghold) | Commands related to the Stronghold subsystem. |
+| [`d8 stronghold`](../d8/reference/#d8-stronghold) | Commands related to the Deckhouse Stronghold. |
 | [`d8 network`](../d8/reference/#d8-network) | Commands for performing network-related operations in the Deckhouse ecosystem, including CNI migration. |
 | [`d8 completion`](../d8/reference/#d8-completion) | Commands for generating shell completion scripts. |
 | [`d8 tools`](../d8/reference/#d8-tools) | Auxiliary utilities. |
