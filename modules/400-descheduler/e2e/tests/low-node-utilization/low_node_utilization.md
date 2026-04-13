@@ -10,18 +10,23 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 - Multi-node Kubernetes cluster (minimum 2 nodes)
 - Descheduler pre-installed in the `d8-descheduler` namespace
-- Chainsaw CLI installed. Use ../E2e.md for instructions.
+- Chainsaw CLI installed. See `../../E2E.md` for instructions.
 
 ## Test Steps
 
 | Step | Name | Description |
 |------|------|-------------|
-| 1 | `check-prerequisites` | Verifies cluster has 2+ nodes and descheduler deployment exists |
-| 2 | `configure-descheduler` | Backs up existing policy, applies LowNodeUtilization config (thresholds: 20%, targetThresholds: 50%), restarts descheduler |
-| 3 | `create-imbalanced-workload` | Creates 10 `pause` pods pinned to one node via `nodeName` |
-| 4 | `verify-descheduler-results` | Polls descheduler logs (up to 5 min) for `LowNodeUtilization` execution, checks pod distribution and eviction events |
+| 1 | `assert-descheduler-ready` | Asserts descheduler deployment exists and has ready replicas |
+| 2 | `check-minimum-nodes` | Verifies cluster has at least 2 nodes |
+| 3 | `backup-descheduler-policy` | Backs up current policy ConfigMap (cleanup restores it) |
+| 4 | `apply-descheduler-policy` | Applies LowNodeUtilization policy from `files/descheduler-policy.yaml` |
+| 5 | `restart-descheduler` | Restarts descheduler and asserts it becomes ready |
+| 6 | `create-imbalanced-workload` | Creates 10 pause pods pinned to one node via `nodeName` |
+| 7 | `assert-pods-running` | Asserts representative pods are in Running phase |
+| 8 | `wait-for-descheduler-cycle` | Polls descheduler logs for LowNodeUtilization execution |
+| 9 | `verify-pod-redistribution` | Checks pod distribution across nodes |
 
-**Cleanup:** `finally` block in step 4 restores the original descheduler policy from backup.
+**Cleanup:** `cleanup` block on step 3 restores the original descheduler policy. Test namespace pods are auto-deleted by Chainsaw.
 
 ## Policy Config
 
@@ -32,7 +37,11 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 ## Running
 
 ```bash
-chainsaw test --test-dir ./low-node-utilization/
+# From the e2e directory
+task run:low-node-utilization
+
+# Or directly
+chainsaw test --test-dir ./tests/low-node-utilization/
 ```
 
 ## Pass/Fail Criteria

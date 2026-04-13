@@ -1,0 +1,16 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: e2e-exclude-namespaces
+spec:
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      thresholds:
+        cpu: 20
+        memory: 20
+        pods: 20
+      targetThresholds:
+        cpu: 50
+        memory: 50
+        pods: 50
