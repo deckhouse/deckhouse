@@ -21,7 +21,7 @@ type RootCertName string
 const (
 	CACertName           RootCertName = "ca"
 	FrontProxyCACertName RootCertName = "front-proxy-ca"
-	EtcdCACertName       RootCertName = "etcd-ca"
+	EtcdCACertName       RootCertName = "etcd/ca"
 )
 
 type LeafCertName string
@@ -30,8 +30,8 @@ const (
 	ApiserverCertName              LeafCertName = "apiserver"
 	ApiserverKubeletClientCertName LeafCertName = "apiserver-kubelet-client"
 	FrontProxyClientCertName       LeafCertName = "front-proxy-client"
-	EtcdServerCertName             LeafCertName = "etcd-server"
-	EtcdPeerCertName               LeafCertName = "etcd-peer"
-	EtcdHealthcheckClientCertName  LeafCertName = "etcd-healthcheck-client"
+	EtcdServerCertName             LeafCertName = "etcd/server"
+	EtcdPeerCertName               LeafCertName = "etcd/peer"
+	EtcdHealthcheckClientCertName  LeafCertName = "etcd/healthcheck-client"
 	ApiserverEtcdClientCertName    LeafCertName = "apiserver-etcd-client"
 )

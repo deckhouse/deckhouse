@@ -36,7 +36,7 @@ import (
 // Note: sa.key and sa.pub are not X.509 certificates. They are a raw asymmetric key pair
 // used by kube-controller-manager to sign ServiceAccount JWT tokens (sa.key) and by
 // kube-apiserver to verify them (sa.pub).
-func createSAKeysIfNotExists(cfg config) error {
+func createSAKeysIfNotExists(cfg config, rep *PKIApplyReport) error {
 	key, err := pkiutil.LoadKey(keyPath(cfg.pkiDir, "sa"))
 	if err != nil && !isNotExistError(err) {
 		return fmt.Errorf("failed to load SA private key: %w", err)
@@ -46,10 +46,15 @@ func createSAKeysIfNotExists(cfg config) error {
 		// sa.key exists — ensure sa.pub is also present.
 		pubPath := filepath.Join(cfg.pkiDir, "sa.pub")
 		if _, statErr := os.Stat(pubPath); statErr == nil {
+			rep.add("sa", PKIEntryKindServiceAccountKeys, PKIActionUnchanged)
 			return nil
 		}
 		// sa.pub is missing — restore it from the existing key.
-		return writeSAPublicKey(cfg.pkiDir, key)
+		if err := writeSAPublicKey(cfg.pkiDir, key); err != nil {
+			return err
+		}
+		rep.add("sa", PKIEntryKindServiceAccountKeys, PKIActionSAPublicKeyRestored)
+		return nil
 	}
 
 	// sa.key does not exist — create a new key pair.
@@ -62,5 +67,9 @@ func createSAKeysIfNotExists(cfg config) error {
 		return fmt.Errorf("failed to write SA private key: %w", err)
 	}
 
-	return writeSAPublicKey(cfg.pkiDir, key)
+	if err := writeSAPublicKey(cfg.pkiDir, key); err != nil {
+		return err
+	}
+	rep.add("sa", PKIEntryKindServiceAccountKeys, PKIActionWrittenCreated)
+	return nil
 }

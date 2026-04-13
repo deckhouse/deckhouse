@@ -30,17 +30,17 @@ import (
 // createCertTree creates all CA and leaf certificates defined by cfg.CertTreeScheme.
 // For each CA the in-memory cert and key are passed directly to the leaf cert functions,
 // so CAs are created before their leaves within each iteration.
-func createCertTree(cfg config) error {
+func createCertTree(cfg config, rep *PKIApplyReport) error {
 	certSpecTree := renderCertSpecTree(cfg.CertTreeScheme)
 
 	for _, rootCertSpec := range certSpecTree {
-		caCert, caKey, err := createRootCertIfNotExists(cfg, rootCertSpec)
+		caCert, caKey, err := createRootCertIfNotExists(cfg, rootCertSpec, rep)
 		if err != nil {
 			return fmt.Errorf("failed to create root certificate %q: %w", rootCertSpec.BaseName, err)
 		}
 
 		for _, certSpec := range rootCertSpec.leafCerts {
-			if err := createLeafCertIfNotExists(cfg, certSpec, caCert, caKey); err != nil {
+			if err := createLeafCertIfNotExists(cfg, certSpec, caCert, caKey, rep); err != nil {
 				return fmt.Errorf("failed to create certificate %q: %w", certSpec.BaseName, err)
 			}
 		}
@@ -55,7 +55,7 @@ func createCertTree(cfg config) error {
 // if the existing CA fails validation, a CertValidationError is returned and the process stops.
 // CA certificates are never silently regenerated because doing so would invalidate all leaf
 // certificates signed by that CA, requiring a full cluster PKI rotation.
-func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate, crypto.Signer, error) {
+func createRootCertIfNotExists(cfg config, spec rootCertSpec, rep *PKIApplyReport) (*x509.Certificate, crypto.Signer, error) {
 	oldCert, oldKey, err := readCertAndKey(cfg.pkiDir, spec.BaseName)
 	newCertCfg := spec.BuildConfig(cfg)
 	if err == nil {
@@ -65,6 +65,7 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate
 				Reason:   err.Error(),
 			}
 		}
+		rep.add(spec.BaseName, PKIEntryKindRootCA, PKIActionUnchanged)
 		return oldCert, oldKey, nil
 	}
 
@@ -86,6 +87,7 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate
 		return nil, nil, fmt.Errorf("failed to write CA %q: %w", spec.BaseName, err)
 	}
 
+	rep.add(spec.BaseName, PKIEntryKindRootCA, PKIActionWrittenCreated)
 	return newCert, newKey, nil
 }
 
@@ -98,15 +100,19 @@ func createRootCertIfNotExists(cfg config, spec rootCertSpec) (*x509.Certificate
 // A read error other than "file not found" is currently treated the same as a missing file
 // (the certificate is regenerated). This is intentional: a corrupted cert file should not
 // block PKI initialization.
-func createLeafCertIfNotExists(cfg config, spec certSpec[LeafCertName], caCert *x509.Certificate, caKey crypto.Signer) error {
+func createLeafCertIfNotExists(cfg config, spec certSpec[LeafCertName], caCert *x509.Certificate, caKey crypto.Signer, rep *PKIApplyReport) error {
 	oldCert, _, err := readCertAndKey(cfg.pkiDir, spec.BaseName)
 	newCertCfg := spec.BuildConfig(cfg)
+	regenerate := false
 	if err == nil {
 		if err := validateCert(oldCert, newCertCfg); err == nil {
+			rep.add(spec.BaseName, PKIEntryKindLeafCert, PKIActionUnchanged)
 			return nil
 		}
+		regenerate = true
 	} else if !isNotExistError(err) {
 		log.Warn("Cert, will be recreated", slog.String("baseName", spec.BaseName), slog.String("reason", err.Error()))
+		regenerate = true
 	}
 
 	newKey, err := pkiutil.NewPrivateKey(cfg.EncryptionAlgorithmType)
@@ -123,5 +129,10 @@ func createLeafCertIfNotExists(cfg config, spec certSpec[LeafCertName], caCert *
 		return fmt.Errorf("failed to write cert %q: %w", spec.BaseName, err)
 	}
 
+	if regenerate {
+		rep.add(spec.BaseName, PKIEntryKindLeafCert, PKIActionWrittenRegenerated)
+	} else {
+		rep.add(spec.BaseName, PKIEntryKindLeafCert, PKIActionWrittenCreated)
+	}
 	return nil
 }

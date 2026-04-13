@@ -31,8 +31,13 @@ func TestCreateSAKeysIfNotExists_CreatesNewPair(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
 
-	err := createSAKeysIfNotExists(cfg)
+	var rep PKIApplyReport
+	err := createSAKeysIfNotExists(cfg, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, "sa", rep.Entries[0].Name)
+	assert.Equal(t, PKIEntryKindServiceAccountKeys, rep.Entries[0].Kind)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
 
 	for _, f := range []string{"sa.key", "sa.pub"} {
 		_, err := os.Stat(filepath.Join(dir, f))
@@ -44,8 +49,11 @@ func TestCreateSAKeysIfNotExists_SkipsWhenBothExist(t *testing.T) {
 	dir := t.TempDir()
 	cfg := makeTestConfig(t, dir)
 
-	err := createSAKeysIfNotExists(cfg)
+	var rep PKIApplyReport
+	err := createSAKeysIfNotExists(cfg, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
 
 	keyBefore, err := os.ReadFile(filepath.Join(dir, "sa.key"))
 	require.NoError(t, err)
@@ -53,8 +61,11 @@ func TestCreateSAKeysIfNotExists_SkipsWhenBothExist(t *testing.T) {
 	require.NoError(t, err)
 
 	// Second call must leave both files untouched.
-	err = createSAKeysIfNotExists(cfg)
+	rep = PKIApplyReport{}
+	err = createSAKeysIfNotExists(cfg, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionUnchanged, rep.Entries[0].Action)
 
 	keyAfter, err := os.ReadFile(filepath.Join(dir, "sa.key"))
 	require.NoError(t, err)
@@ -70,16 +81,22 @@ func TestCreateSAKeysIfNotExists_RestoresMissingPub(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 
 	// Create the full pair first.
-	err := createSAKeysIfNotExists(cfg)
+	var rep PKIApplyReport
+	err := createSAKeysIfNotExists(cfg, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
 
 	// Simulate sa.pub going missing (e.g. accidental deletion).
 	err = os.Remove(filepath.Join(dir, "sa.pub"))
 	require.NoError(t, err)
 
 	// Must restore sa.pub from the existing sa.key.
-	err = createSAKeysIfNotExists(cfg)
+	rep = PKIApplyReport{}
+	err = createSAKeysIfNotExists(cfg, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionSAPublicKeyRestored, rep.Entries[0].Action)
 
 	pubData, err := os.ReadFile(filepath.Join(dir, "sa.pub"))
 	require.NoError(t, err, "sa.pub should have been restored")
