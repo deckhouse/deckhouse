@@ -22,10 +22,10 @@ spec:
       rego: |
         package d8.security_policies
 
-        is_connect { 
-          input.review.operation == "CONNECT" 
+        is_connect {
+          input.review.operation == "CONNECT"
         }
-        
+
         subresource_is(sub) {
           sr := object.get(input.review, "requestSubResource", input.review.subResource)
           sr == sub
@@ -35,30 +35,46 @@ spec:
           input.review.resource.resource == "pods"
           subresource_is("exec")
         }
+
         is_pod_exec_or_attach {
           input.review.resource.resource == "pods"
           subresource_is("attach")
         }
 
-        is_heritage_pod {
-          input.review.object.metadata.labels["heritage"] == "deckhouse"
+        connect_to_pod_exec_or_attach {
+          is_connect
+          is_pod_exec_or_attach
         }
 
         is_allowed_user {
           input.review.userInfo.username == "system:sudouser"
         }
+
         is_allowed_user {
           startswith(input.review.userInfo.username, "system:serviceaccount:d8-")
         }
+
         is_allowed_user {
           startswith(input.review.userInfo.username, "system:serviceaccount:kube-")
         }
 
-        violation[{"msg": msg}] {
-          is_connect
-          is_pod_exec_or_attach
-          is_heritage_pod
+        deny_candidate {
+          connect_to_pod_exec_or_attach
           not is_allowed_user
-          
-          msg := sprintf("Exec/attach to Pod %q is forbidden for user %q", [input.review.name, input.review.userInfo.username])
+        }
+
+        is_heritage_pod {
+          deny_candidate
+          namespace := input.review.namespace
+          podName := input.review.name
+          pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
+          pod.metadata.labels["heritage"] == "deckhouse"
+        }
+
+        violation[{"msg": msg}] {
+          is_heritage_pod
+          pod  := input.review.name
+          ns   := input.review.namespace
+          user := input.review.userInfo.username
+          msg  := sprintf("Exec/attach to Pod %q in namespace %q with label 'heritage: deckhouse' is forbidden for user %q", [pod, ns, user])
         }
