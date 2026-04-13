@@ -4,7 +4,7 @@ permalink: en/admin/configuration/registry/internal.html
 description: "Configure internal container image registry in Deckhouse Kubernetes Platform. Image caching, storage optimization, and high availability registry management."
 ---
 
-The ability to use internal registry is implemented by the [`registry`](../../modules/registry/) module.
+The ability to use internal registry is implemented by the [`registry`](/modules/registry/) module.
 
 The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
 
