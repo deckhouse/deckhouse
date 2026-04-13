@@ -86,11 +86,22 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	if err != nil {
 		return nil, nil, err
 	}
-	runnerInterface, err := provider.GetRunnerInterface(ctx,
-		cfg,
-		baseProviderSettings,
-		sshProviderInitializer,
-	)
+
+	var runnerInterface provider.RunnerInterface
+	if len(cfg.KubeConfig) > 0 || cfg.KubeConfigInCluster {
+		runnerInterface, err = provider.GetRunnerInterface(ctx,
+			cfg,
+			baseProviderSettings,
+			nil,
+		)
+	} else {
+		runnerInterface, err = provider.GetRunnerInterface(ctx,
+			cfg,
+			baseProviderSettings,
+			sshProviderInitializer,
+		)
+	}
+
 	if err != nil {
 		return sshProviderInitializer, nil, err
 	}
