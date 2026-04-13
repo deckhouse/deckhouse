@@ -16,7 +16,10 @@ rm -rf /var/lib/bashible/kubeadm
 bb-package-remove kubeadm
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
-bb-package-remove module-registry-auth module-registry-distribution cfssl
+bb-package-remove module-registry-auth \
+                  module-registry-distribution \
+                  module-registry-syncer \
+                  cfssl
 rm -rf "${REGISTRY_MODULE_IGNITER_DIR}"
 {{- end }}
 
