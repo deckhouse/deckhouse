@@ -388,7 +388,7 @@ This example shows how you can use filters in the StaticInstance [label selector
    EOF
    ```
 
-1. Create [StaticInstance](cr.html#staticinstance) resources in the cluster and specify the valid IP addresses of the servers:
+1. Create [StaticInstance](cr.html#staticinstance) resources in the cluster and specify the valid IP addresses of the servers: 
 
    ```shell
    d8 k create -f - <<EOF
