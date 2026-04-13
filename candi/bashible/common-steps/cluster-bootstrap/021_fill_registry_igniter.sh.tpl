@@ -14,6 +14,6 @@
 
 {{- if has (.registry).mode (list "Proxy" "Local") }}
 
-syncer | bb-log-dhctl-output
+syncer | bb-log-stream-dhctl
 
 {{- end }}
