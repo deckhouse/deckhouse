@@ -30,6 +30,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+const (
+	masterSSHIPOutputKey    = "master_ip_address_for_ssh"
+	nodeInternalIPOutputKey = "node_internal_ip_address"
+	kubeDataPathOutputKey   = "kubernetes_data_device_path"
+)
+
 type PipelineOutputs struct {
 	InfrastructureState []byte
 	CloudDiscovery      []byte
@@ -53,26 +59,45 @@ func equalArray(a, b []string) bool {
 	return true
 }
 
-func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor OutputExecutor) (string, error) {
-	result, err := executor.Output(ctx, statePath, "master_ip_address_for_ssh")
+type OutputMasterIPs struct {
+	SSH      string
+	Internal string
+}
 
-	if err != nil {
-		var ee *exec.ExitError
-		if errors.As(err, &ee) {
-			err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+func GetMasterIPAddressForSSH(ctx context.Context, statePath string, executor OutputExecutor) (*OutputMasterIPs, error) {
+	res := OutputMasterIPs{}
+
+	outputs := map[string]*string{
+		masterSSHIPOutputKey:    &res.SSH,
+		nodeInternalIPOutputKey: &res.Internal,
+	}
+
+	for k, v := range outputs {
+		result, err := executor.Output(ctx, statePath, k)
+		if err != nil {
+			var ee *exec.ExitError
+			if errors.As(err, &ee) {
+				err = fmt.Errorf("%s\n%v", string(ee.Stderr), err)
+			}
+			if matchNoOutput(err.Error()) {
+				*v = ""
+				continue
+			}
+
+			return nil, fmt.Errorf("Cannot extract infrastructure output for '%s': %w", k, err)
 		}
 
-		return "", fmt.Errorf("failed to get infrastructure output for 'master_ip_address_for_ssh'\n%v", err)
+		var output string
+
+		err = json.Unmarshal(result, &output)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to unmarshal infrastructure output for '%s': %w", k, err)
+		}
+
+		*v = output
 	}
 
-	var output string
-
-	err = json.Unmarshal(result, &output)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal infrastructure output for 'master_ip_address_for_ssh'\n%v", err)
-	}
-
-	return output, nil
+	return &res, nil
 }
 
 func ApplyPipeline(
@@ -301,17 +326,17 @@ func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutput
 }
 
 func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
-	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, "master_ip_address_for_ssh")
+	masterIPAddressForSSH, err := getStringOrIntOutput(ctx, r, masterSSHIPOutputKey)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeInternalIP, err := getStringOrIntOutput(ctx, r, "node_internal_ip_address")
+	nodeInternalIP, err := getStringOrIntOutput(ctx, r, nodeInternalIPOutputKey)
 	if err != nil {
 		return nil, err
 	}
 
-	kubernetesDataDevicePath, err := getStringOrIntOutput(ctx, r, "kubernetes_data_device_path")
+	kubernetesDataDevicePath, err := getStringOrIntOutput(ctx, r, kubeDataPathOutputKey)
 	if err != nil {
 		return nil, err
 	}
@@ -336,9 +361,9 @@ func GetMasterNodeResult(ctx context.Context, r RunnerInterface) (*PipelineOutpu
 func GetMasterNodeResultNoStrict(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
 	res := &PipelineOutputs{}
 	toReceive := map[string]*string{
-		"master_ip_address_for_ssh":   &res.MasterIPForSSH,
-		"node_internal_ip_address":    &res.NodeInternalIP,
-		"kubernetes_data_device_path": &res.KubeDataDevicePath,
+		masterSSHIPOutputKey:    &res.MasterIPForSSH,
+		nodeInternalIPOutputKey: &res.NodeInternalIP,
+		kubeDataPathOutputKey:   &res.KubeDataDevicePath,
 	}
 
 	for k, dest := range toReceive {
