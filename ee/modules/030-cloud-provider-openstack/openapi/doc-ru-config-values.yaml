@@ -115,8 +115,6 @@ properties:
 
           > **Внимание.** Если установлено значение `false`, все новые PersistentVolume'ы создаются без учета ограничений топологии.
   csiDriver:
-      type: object
-      default: {}
       description: |
         Параметры настройки Cinder CSI Driver.
       properties:
