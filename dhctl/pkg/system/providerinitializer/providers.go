@@ -16,11 +16,13 @@ package providerinitializer
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
 	flag "github.com/spf13/pflag"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/kube"
 	"github.com/deckhouse/lib-connection/pkg/provider"
@@ -44,37 +46,10 @@ func WithConnectionConfig(s string) ProviderOptions {
 func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, libcon.KubeProvider, error) {
 	baseProviderSettings := settings.NewBaseProviders(params)
 
-	options := &providerOptions{}
-	for _, o := range opts {
-		o(options)
+	sshProviderInitializer, err := getProviderInitializer(baseProviderSettings, opts...)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	var config *libcon_config.ConnectionConfig
-	var err error
-	if len(options.connectionConfig) > 0 {
-		config, err = libcon_config.ParseConnectionConfig(
-			strings.NewReader(options.connectionConfig),
-			baseProviderSettings,
-			libcon_config.ParseWithRequiredSSHHost(false),
-		)
-
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		parser := libcon_config.NewFlagsParser(baseProviderSettings)
-		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
-		flags, err := parser.InitFlags(fset)
-		if err != nil {
-			return nil, nil, err
-		}
-		config, err = flags.ExtractConfig(os.Args[1:])
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-
-	sshProviderInitializer := NewSSHProviderInitializer(baseProviderSettings, config)
 
 	parser := kube.NewFlagsParser(baseProviderSettings)
 	fset := flag.NewFlagSet("my-set", flag.ExitOnError)
@@ -87,20 +62,13 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		return nil, nil, err
 	}
 
-	var runnerInterface provider.RunnerInterface
-	if len(cfg.KubeConfig) > 0 || cfg.KubeConfigInCluster {
-		runnerInterface, err = provider.GetRunnerInterface(ctx,
-			cfg,
-			baseProviderSettings,
-			nil,
-		)
-	} else {
-		runnerInterface, err = provider.GetRunnerInterface(ctx,
-			cfg,
-			baseProviderSettings,
-			sshProviderInitializer,
-		)
-	}
+	log.InfoF("config: %-v\n", cfg)
+
+	runnerInterface, err := provider.GetRunnerInterface(ctx,
+		cfg,
+		baseProviderSettings,
+		sshProviderInitializer,
+	)
 
 	if err != nil {
 		return sshProviderInitializer, nil, err
@@ -108,4 +76,46 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 	kubeProvider := provider.NewDefaultKubeProvider(baseProviderSettings, cfg, runnerInterface)
 
 	return sshProviderInitializer, kubeProvider, nil
+}
+
+func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
+	options := &providerOptions{}
+	for _, o := range opts {
+		o(options)
+	}
+
+	var config *libcon_config.ConnectionConfig
+	var err error
+	var sshProviderInitializer *SSHProviderInitializer
+	if len(options.connectionConfig) > 0 {
+		config, err = libcon_config.ParseConnectionConfig(
+			strings.NewReader(options.connectionConfig),
+			baseProviderSettings,
+			libcon_config.ParseWithRequiredSSHHost(false),
+		)
+
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		log.InfoLn("parsing ssh flags")
+		parser := libcon_config.NewFlagsParser(baseProviderSettings)
+		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
+		flags, err := parser.InitFlags(fset)
+		if err != nil {
+			return nil, fmt.Errorf("init flags: %w", err)
+		}
+		config, err = flags.ExtractConfig(os.Args[1:])
+		if err != nil {
+			if strings.Contains(err.Error(), "Failed to read private keys from flags") {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("extract config: %w", err)
+		}
+	}
+
+	log.InfoF("config: %-v\n", config)
+
+	sshProviderInitializer = NewSSHProviderInitializer(baseProviderSettings, config)
+	return sshProviderInitializer, nil
 }
