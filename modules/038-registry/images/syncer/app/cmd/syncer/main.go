@@ -18,21 +18,12 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"math/rand"
-	"os"
 	"slices"
 	"time"
 )
 
 func main() {
-	logger := slog.New(slog.NewTextHandler(
-		os.Stdout,
-		&slog.HandlerOptions{
-			Level: slog.LevelInfo,
-		},
-	))
-
 	repoSizes := map[string]int{
 		"system/deckhouse":                              50,
 		"system/deckhouse/install":                      30,
@@ -70,12 +61,12 @@ func main() {
 		for i := 1; i <= size; i++ {
 			digest := generateDigest(current)
 
-			logger.Info(fmt.Sprintf("[%d / %d] Syncing localhost:8888/%s:%s",
+			fmt.Printf("[%d / %d] Syncing localhost:8888/%s:%s\n",
 				current,
 				total,
 				repo,
 				digest,
-			))
+			)
 			current++
 
 			sleepTime := time.Duration(10+rand.Intn(90)) * time.Millisecond
