@@ -52,7 +52,7 @@ type fileSpec struct {
 }
 
 // On error, the returned KubeconfigApplyReport may still contain entries for files that were
-// processed successfully before the failure...
+// processed successfully before the failure.
 func CreateKubeconfigFiles(files []File, options ...option) (KubeconfigApplyReport, error) {
 	logger.Info("creating kubeconfig files for control-plane")
 
