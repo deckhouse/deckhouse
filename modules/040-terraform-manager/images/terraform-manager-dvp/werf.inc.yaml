@@ -1,6 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
-fromCacheVersion: "2026-04-10.1"
 git:
 - add: /{{ .ModulePath }}candi/cloud-providers/dvp
   to: /deckhouse/candi/cloud-providers/dvp
