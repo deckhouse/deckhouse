@@ -31,12 +31,12 @@ spec:
     namespace:  d8-cloud-instance-manager
     name: {{ $prefix }}
   controlPlaneRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
     kind: DeckhouseControlPlane
     namespace: d8-cloud-instance-manager
     name: {{ $prefix }}-control-plane
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: DeckhouseControlPlane
 metadata:
   namespace: d8-cloud-instance-manager

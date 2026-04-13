@@ -673,7 +673,7 @@ internal:
       type: "Containerd"
 `
 	nodeManagerStaticInstancesStaticMachineTemplate = `
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: StaticMachineTemplate
 metadata:
   namespace: d8-cloud-instance-manager
@@ -723,7 +723,7 @@ spec:
         dataSecretName: manual-bootstrap-for-worker
       clusterName: static
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: StaticMachineTemplate
         namespace: d8-cloud-instance-manager
         name: worker
@@ -1771,7 +1771,7 @@ ccc: ddd
 			Expect(cluster.Field("spec.clusterNetwork.services.cidrBlocks.0").String()).To(Equal("10.222.0.0/16"))
 			Expect(cluster.Field("spec.clusterNetwork.serviceDomain").String()).To(Equal("cluster.local"))
 
-			Expect(cluster.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1alpha1"))
+			Expect(cluster.Field("spec.controlPlaneRef.apiVersion").String()).To(Equal("infrastructure.cluster.x-k8s.io/v1beta2"))
 			Expect(cluster.Field("spec.controlPlaneRef.kind").String()).To(Equal("DeckhouseControlPlane"))
 			Expect(cluster.Field("spec.controlPlaneRef.namespace").String()).To(Equal("d8-cloud-instance-manager"))
 			Expect(cluster.Field("spec.controlPlaneRef.name").String()).To(Equal(fmt.Sprintf("%s-control-plane", clusterName)))
