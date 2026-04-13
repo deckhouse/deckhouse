@@ -105,3 +105,6 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+shell:
+  beforeInstall:
+  - touch $HOME/.ack-ginkgo-rc
