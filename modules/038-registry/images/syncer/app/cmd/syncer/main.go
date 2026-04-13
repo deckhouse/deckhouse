@@ -16,4 +16,74 @@ limitations under the License.
 
 package main
 
-func main() {}
+import (
+	"fmt"
+	"log/slog"
+	"math/rand"
+	"os"
+	"slices"
+	"time"
+)
+
+func main() {
+	logger := slog.New(slog.NewTextHandler(
+		os.Stdout,
+		&slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		},
+	))
+
+	repoSizes := map[string]int{
+		"system/deckhouse":                              50,
+		"system/deckhouse/install":                      30,
+		"system/deckhouse/install-standalone":           25,
+		"system/deckhouse/installer":                    20,
+		"system/deckhouse/modules":                      40,
+		"system/deckhouse/modules/console":              35,
+		"system/deckhouse/modules/console/release":      28,
+		"system/deckhouse/modules/pod-reloader":         22,
+		"system/deckhouse/modules/pod-reloader/release": 18,
+		"system/deckhouse/modules/prompp":               15,
+		"system/deckhouse/modules/prompp/release":       12,
+		"system/deckhouse/release-channel":              10,
+		"system/deckhouse/security/trivy-bdu":           8,
+		"system/deckhouse/security/trivy-checks":        6,
+		"system/deckhouse/security/trivy-db":            5,
+		"system/deckhouse/security/trivy-java-db":       4,
+	}
+
+	repos := make([]string, 0, len(repoSizes))
+	for repo := range repoSizes {
+		repos = append(repos, repo)
+	}
+	slices.Sort(repos)
+
+	total := 0
+	current := 1
+
+	for _, size := range repoSizes {
+		total += size
+	}
+
+	for _, repo := range repos {
+		size := repoSizes[repo]
+		for i := 1; i <= size; i++ {
+			digest := generateDigest(current)
+
+			logger.Info(fmt.Sprintf("[%d / %d] Syncing localhost:8888/%s:%s",
+				current,
+				total,
+				repo,
+				digest,
+			))
+			current++
+
+			sleepTime := time.Duration(10+rand.Intn(90)) * time.Millisecond
+			time.Sleep(sleepTime)
+		}
+	}
+}
+
+func generateDigest(seq int) string {
+	return fmt.Sprintf("%064x", seq)
+}
