@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-8a9dfe37d09b0d07a4b05b9b988170ebfdcf9c880fec4727cc44fe12ecaaa70b",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -52,15 +52,15 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.78.0"
+          "@id": "pkg:golang/google.golang.org/grpc"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость не может быть эксплуатирована в рамках Deckhouse. Данная уязвимость позволяет обойти авторизацию на gRPC-сервере через отсутствие ведущего слеша в заголовке :path. Descheduler не запускает gRPC-сервер и не использует пакет grpc/authz или какие-либо перехватчики авторизации на основе путей. Зависимость google.golang.org/grpc является транзитивной через клиентские библиотеки Kubernetes и уязвимый код не вызывается ни в одном пути выполнения.",
-      "timestamp": "2026-03-23T12:49:34.002300Z"
+      "impact_statement": "Уязвимость представляет собой обход авторизации на стороне gRPC-сервера через отсутствие ведущего слеша в псевдозаголовке :path. Для эксплуатации требуется, чтобы приложение запускало gRPC-сервер с перехватчиками авторизации на основе путей (grpc/authz) и имело политику с deny-правилами и fallback allow-правилом. Descheduler использует google.golang.org/grpc исключительно как клиентскую библиотеку для подключения к Kubernetes API server. Он не запускает gRPC-сервер и не использует серверную авторизацию на основе путей, поэтому уязвимый код не исполняется.",
+      "timestamp": "2026-04-07T11:44:30.123456Z"
     }
   ],
   "timestamp": "2025-12-22T13:43:52Z",
-  "last_updated": "2026-03-23T12:49:34Z"
+  "last_updated": "2026-04-07T11:44:30Z"
 }
