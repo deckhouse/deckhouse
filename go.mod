@@ -104,6 +104,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7 // indirect
 	github.com/deckhouse/lib-connection v0.5.0 // indirect
 	github.com/deckhouse/lib-dhctl v0.17.0 // indirect
+	github.com/deckhouse/lib-connection v0.5.0 // indirect
 	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dop251/goja v0.0.0-20251121114222-56b1242a5f86 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20251015164255-5e94316bedaf // indirect
