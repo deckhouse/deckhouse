@@ -469,6 +469,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"mirrorer":            "imageHash-registry-mirrorer",
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
 		"registryProxy":       "imageHash-registry-registryProxy",
+		"syncer":              "imageHash-registry-syncer",
 	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",
