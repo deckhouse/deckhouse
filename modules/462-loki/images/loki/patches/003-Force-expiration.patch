@@ -198,7 +198,6 @@ index eafdb4b6..7711cc03 100644
  // ToIndexFile creates an indexFile from the chunksmetas stored in the builder.
  // Before building the index, it takes care of the lined up updates i.e deletes and adding of new chunks.
  func (c *compactedIndex) ToIndexFile() (shipperindex.Index, error) {
-
 diff --git a/pkg/compactor/force_expiration.go b/pkg/compactor/force_expiration.go
 new file mode 100644
 index 00000000..db37cf83
@@ -699,10 +698,10 @@ index 00000000..db37cf83
 +}
 diff --git a/pkg/compactor/retention/force_expiration.go b/pkg/compactor/retention/force_expiration.go
 new file mode 100644
-index 00000000..68a9bf5f
+index 00000000..a020c34f
 --- /dev/null
 +++ b/pkg/compactor/retention/force_expiration.go
-@@ -0,0 +1,98 @@
+@@ -0,0 +1,113 @@
 +package retention
 +
 +import (
@@ -774,7 +773,16 @@ index 00000000..68a9bf5f
 +	return f.internalExpirationChecker.Expired(userID, chk, lbls, seriesID, tableName, now)
 +}
 +
++func (f *ForceExpirationChecker) hasForceExpiredChunks() bool {
++	f.mu.RLock()
++	defer f.mu.RUnlock()
++	return len(f.expiredChunkIds) > 0
++}
++
 +func (f *ForceExpirationChecker) IntervalMayHaveExpiredChunks(interval model.Interval, userID string) bool {
++	if f.hasForceExpiredChunks() {
++		return true
++	}
 +	return f.internalExpirationChecker.IntervalMayHaveExpiredChunks(interval, userID)
 +}
 +
@@ -795,9 +803,15 @@ index 00000000..68a9bf5f
 +}
 +
 +func (f *ForceExpirationChecker) DropFromIndex(userID []byte, chk Chunk, lbls labels.Labels, tableEndTime model.Time, now model.Time) bool {
++	if f.isChunkExpired(unsafeGetString(chk.ChunkID)) {
++		return true
++	}
 +	return f.internalExpirationChecker.DropFromIndex(userID, chk, lbls, tableEndTime, now)
 +}
 +
 +func (f *ForceExpirationChecker) CanSkipSeries(userID []byte, lbls labels.Labels, seriesID []byte, seriesStart model.Time, tableName string, now model.Time) bool {
++	if f.hasForceExpiredChunks() {
++		return false
++	}
 +	return f.internalExpirationChecker.CanSkipSeries(userID, lbls, seriesID, seriesStart, tableName, now)
 +}
