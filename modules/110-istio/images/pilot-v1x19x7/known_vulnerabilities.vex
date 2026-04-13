@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-96be67b0926b8421d7c3cc8194cfcc8e41407ff9904ed219746ba4283a4310cc",
+  "@id": "https://openvex.dev/docs/public/vex-084a7487582aa7ad96f78596487d12d0e4a107351cb796d2f0d93f3deea1ca4e",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
@@ -16,8 +16,22 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Компонент Istio Pilot (istiod) использует gRPC в составе control-plane. Уязвимость проявляется только на gRPC-серверах с авторизацией на основе псевдо-заголовка :path (включая google.golang.org/grpc/authz), когда политика содержит явные deny для канонических путей и по умолчанию разрешает прочие запросы — тогда неканонический :path без ведущего «/» может не сопоставиться с deny. В данном образе такая комбинация path-based interceptors и политики не используется, поэтому описанный сценарий обхода авторизации на исполняемом пути недоступен.",
-      "timestamp": "2026-03-30T11:44:33.582914703Z"
+      "timestamp": "2026-03-25T08:24:25.865706119Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.16.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Компонент Istio Pilot (istiod) использует библиотеку go.opentelemetry.io/otel/sdk как зависимость. Уязвимость CVE-2026-39883 связана с детектированием ресурсов в SDK: на платформах BSD и Solaris вызывается утилита kenv без абсолютного пути, что теоретически допускает подмену через PATH (CWE-426), см. GHSA-hfvc-g4fc-pqhx. Образ pilot собран и выполняется в контейнере на Linux; указанный путь исполнения относится к BSD/Solaris и на типовом рабочем окружении Deckhouse не задействован, поэтому эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-04-13T11:00:41.218374056Z"
     }
   ],
-  "timestamp": "2026-03-30T11:48Z"
+  "timestamp": "2026-04-13T11:15Z"
 }
