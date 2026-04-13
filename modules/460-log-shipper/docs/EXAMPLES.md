@@ -948,7 +948,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .example
+          - label: .example
 ```
 
 #### Example of removing a specific label from a structured message
@@ -971,7 +971,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .message.example
+          - label: .message.example
 ```
 
 Example original log entry:
@@ -1023,7 +1023,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .message
+          - label: .message
 ```
 
 Example source log line: a Java app emits structured JSON to stdout, therefore the JSON line is stored in the `message` field of the event. The `msg` field inside that line holds the program log text.

@@ -945,7 +945,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .example
+          - label: .example
 ```
 
 #### Пример удаления заданного лейбла из структурированного сообщения
@@ -968,7 +968,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .message.example
+          - label: .message.example
 ```
 
 Пример изначальной записи в логе:
@@ -1020,7 +1020,7 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .message
+          - label: .message
 ```
 
 Пример исходной записи: приложение на Java пишет структурированный JSON в stdout, поэтому в поле `message` события попадает JSON-строка. Поле `msg` внутри этой строки содержит текст программного лога.
