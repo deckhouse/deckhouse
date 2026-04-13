@@ -258,7 +258,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	// Check if static cluster without ssh-host
-	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {
+	if metaConfig.IsStatic() && !b.SSHProviderInitializer.CheckHosts() {
 		if input.IsTerminal() {
 			confirmation := input.NewConfirmation().
 				WithMessage("Do you really want to bootstrap the cluster on the current host?")

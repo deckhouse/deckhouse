@@ -22,7 +22,6 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/kube"
 	"github.com/deckhouse/lib-connection/pkg/provider"
@@ -62,8 +61,6 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		return nil, nil, err
 	}
 
-	log.InfoF("config: %-v\n", cfg)
-
 	runnerInterface, err := provider.GetRunnerInterface(ctx,
 		cfg,
 		baseProviderSettings,
@@ -98,7 +95,6 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 			return nil, err
 		}
 	} else {
-		log.InfoLn("parsing ssh flags")
 		parser := libcon_config.NewFlagsParser(baseProviderSettings)
 		fset := flag.NewFlagSet("my-set", flag.ExitOnError)
 		flags, err := parser.InitFlags(fset)
@@ -113,8 +109,6 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 			return nil, fmt.Errorf("extract config: %w", err)
 		}
 	}
-
-	log.InfoF("config: %-v\n", config)
 
 	sshProviderInitializer = NewSSHProviderInitializer(baseProviderSettings, config)
 	return sshProviderInitializer, nil
