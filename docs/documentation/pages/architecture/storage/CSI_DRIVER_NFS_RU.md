@@ -1,5 +1,5 @@
 ---
-title: CSI-драйвер (csi-nfs)
+title: CSI-драйвер (NFS)
 permalink: ru/architecture/storage/csi-drivers/csi-driver-nfs.html
 lang: ru
 search: csi-nfs, nfs
@@ -17,10 +17,10 @@ CSI-драйвер `csi-nfs` - реализация [Container Storage Interface
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура драйвера `csi-nfs` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура CSI-драйвера `csi-nfs` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура драйвера csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.png)
+![Архитектура CSI-драйвера csi-nfs](../../../images/architecture/storage/c4-l2-csi-driver-nfs.ru.png)
 
 ## Компоненты драйвера
 

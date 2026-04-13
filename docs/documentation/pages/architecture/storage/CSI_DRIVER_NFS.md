@@ -1,8 +1,8 @@
 ---
-title: CSI driver (csi-nfs)
+title: CSI driver (NFS)
 permalink: en/architecture/storage/csi-drivers/csi-driver-nfs.html
 search: csi-nfs, nfs
-description: Overview of the CSI driver for NFS-based volumes architecture in Deckhouse Kubernetes Platform.
+description: Overview of the CSI driver architecture for NFS-based volumes in Deckhouse Kubernetes Platform.
 ---
 
 The CSI driver `csi-nfs` is the implementation of [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) to manage NFS-based volumes in Deckhouse Kubernetes Platform (DKP).
@@ -16,10 +16,10 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the CSI driver `csi-nfs` and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the `csi-nfs` CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
-![Reference CSI driver architecture](../../../images/architecture/storage/c4-l2-csi-driver-nfs.png)
+![Architecture of the csi-nfs CSI driver](../../../images/architecture/storage/c4-l2-csi-driver-nfs.png)
 
 ## Driver components
 
@@ -54,8 +54,6 @@ The CSI driver consists of the following components:
      * **Snapshotter** ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)): Works together with the [`snapshot-controller`](/modules/snapshot-controller/) module, watches VolumeSnapshotContent resources, and manages volume snapshots using the RPC methods `CreateSnapshot`, `DeleteSnapshot`, and `ListSnapshots` (if supported by the driver).
 
      * [**Livenessprobe**](https://github.com/kubernetes-csi/livenessprobe): Monitors the health of the CSI driver through the `Probe` RPC from the Identity Service and exposes the HTTP endpoint `/healthz`, which is checked by [kubelet](../../kubernetes-and-scheduling/kubelet.html). If *livenessProbe* fails, kubelet restarts the csi-controller pod.
-
-     * **Syncer**: VMware vSphere specific controller, it is responsible for pushing the PersistentVolumes, PersistentVolumeClaims, and pod metadata to Cloud Native Storage (CNS). [CNS](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/container-storage-plugin/3-0/getting-started-with-vmware-vsphere-container-storage-plug-in-3-0/vsphere-container-storage-plug-in-concepts.html) in vCenter is a storage control plane for container volumes.
 
 1. **Csi-node** (DaemonSet): Node Plugin running on all cluster nodes and responsible for local volume mount and unmount operations.
 
