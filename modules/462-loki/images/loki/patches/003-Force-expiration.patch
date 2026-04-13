@@ -201,10 +201,10 @@ index eafdb4b6..7711cc03 100644
 
 diff --git a/pkg/compactor/force_expiration.go b/pkg/compactor/force_expiration.go
 new file mode 100644
-index 00000000..962c0393
+index 00000000..db37cf83
 --- /dev/null
 +++ b/pkg/compactor/force_expiration.go
-@@ -0,0 +1,491 @@
+@@ -0,0 +1,492 @@
 +package compactor
 +
 +import (
@@ -409,6 +409,7 @@ index 00000000..962c0393
 +			_ = level.Error(util_log.Logger).Log("msg", "failed to remove working directory", "dir", t.workingDirectory, "err", removeErr)
 +		}
 +	}()
++	t.indexStorageClient.RefreshIndexTableCache(ctx, tableName)
 +	indexFiles, usersWithPerUserIndex, err := t.indexStorageClient.ListFiles(t.ctx, t.name, false)
 +	if err != nil {
 +		return nil, err
