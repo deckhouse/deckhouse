@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
+// CreateLogDestinationTransforms creates a list of transforms for a log destination
 func CreateLogDestinationTransforms(name string, dest v1alpha2.ClusterLogDestination, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkLabelMaps, error) {
 	var transforms []apis.LogTransform
 	if dest.Spec.RateLimit.LinesPerMinute != nil {

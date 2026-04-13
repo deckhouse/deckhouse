@@ -16,6 +16,7 @@ limitations under the License.
 
 package v1alpha2
 
+// Modules labeles transformation that users can use
 type TransformationSpec struct {
 	Action       TransformationAction `json:"action"`
 	ReplaceKeys  ReplaceKeysSpec      `json:"replaceKeys,omitempty"`
@@ -61,13 +62,15 @@ type AddLabelsRule struct {
 	SetLabels map[string]string `json:"setLabels"`
 }
 
+// DefaultParseMessageTargetLabel matches the OpenAPI default for parseMessage.targetLabel in ClusterLogDestination.
 const DefaultParseMessageTargetLabel = ".message"
 
 type ParseMessageSpec struct {
-	SourceFormat SourceFormat           `json:"sourceFormat"`
-	TargetLabel  string                 `json:"targetLabel,omitempty"`
-	String       SourceFormatStringSpec `json:"string,omitempty"`
-	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
+	SourceFormat SourceFormat `json:"sourceFormat"`
+	// TargetLabel is the destination path for the parsed value. Empty means DefaultParseMessageTargetLabel.
+	TargetLabel string                 `json:"targetLabel,omitempty"`
+	String      SourceFormatStringSpec `json:"string,omitempty"`
+	JSON        SourceFormatJSONSpec   `json:"json,omitempty"`
 }
 
 type SourceFormat string

@@ -55,6 +55,10 @@ func NewLoki(sinkName string, cspec v1alpha2.ClusterLogDestinationSpec, labels m
 
 	tls := commonTLSFromSpec(spec.TLS)
 
+	// default labels
+	//
+	// Asterisk is required here to expand all pod labels
+	// See https://github.com/vectordotdev/vector/pull/12041
 	return &Loki{
 		CommonSettings: CommonSettings{
 			Name:   sinkName,

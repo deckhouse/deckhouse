@@ -23,27 +23,51 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
+// ClusterLogDestination specify output for logs stream
 type ClusterLogDestination struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ClusterLogDestinationSpec   `json:"spec"`
+	// Spec defines the behavior of a cluster log source.
+	Spec ClusterLogDestinationSpec `json:"spec"`
+
+	// Most recently observed status of a cluster log source.
+	// Populated by the system.
 	Status ClusterLogDestinationStatus `json:"status,omitempty"`
 }
 
 type ClusterLogDestinationSpec struct {
+	// Type of cluster log source: Loki, Elasticsearch, Logstash, Vector
 	Type string `json:"type,omitempty"`
 
-	Loki          LokiSpec          `json:"loki"`
-	Elasticsearch ElasticsearchSpec `json:"elasticsearch"`
-	Logstash      LogstashSpec      `json:"logstash"`
-	Kafka         KafkaSpec         `json:"kafka"`
-	Splunk        SplunkSpec        `json:"splunk"`
-	Socket        SocketSpec        `json:"socket"`
-	Vector        VectorSpec        `json:"vector"`
+	// Loki describes spec for loki endpoint
+	Loki LokiSpec `json:"loki"`
 
+	// Elasticsearch spec for the Elasticsearch endpoint
+	Elasticsearch ElasticsearchSpec `json:"elasticsearch"`
+
+	// Logstash spec for the Logstash endpoint
+	Logstash LogstashSpec `json:"logstash"`
+
+	// Kafka spec for the Kafka endpoint
+	Kafka KafkaSpec `json:"kafka"`
+
+	// Splunk spec for the Splunk endpoint
+	Splunk SplunkSpec `json:"splunk"`
+
+	// Socket spec for the Socket endpoint
+	Socket SocketSpec `json:"socket"`
+
+	// Vector spec for the Vector endpoint
+	Vector VectorSpec `json:"vector"`
+
+	// Add extra labels for sources
 	ExtraLabels map[string]string `json:"extraLabels,omitempty"`
 
+	// Add rateLimit for sink
 	RateLimit RateLimitSpec `json:"rateLimit,omitempty"`
 
 	Buffer          *Buffer              `json:"buffer,omitempty"`
@@ -53,6 +77,7 @@ type ClusterLogDestinationSpec struct {
 type ClusterLogDestinationStatus struct {
 }
 
+// RateLimitSpec is throttle-transform configuration.
 type RateLimitSpec struct {
 	LinesPerMinute *int32            `json:"linesPerMinute,omitempty"`
 	KeyField       string            `json:"keyField,omitempty"`
@@ -116,6 +141,7 @@ type CommonEncoding struct {
 }
 
 type LokiSpec struct {
+	// TenantID is used only for GrafanaCloud. When running Loki locally, a tenant ID is not required.
 	TenantID string `json:"tenantID,omitempty"`
 
 	Endpoint string `json:"endpoint,omitempty"`
@@ -209,35 +235,52 @@ type SocketTCPSpec struct {
 }
 
 type Buffer struct {
+	// The type of buffer to use.
 	Type BufferType `json:"type,omitempty"`
 
+	// Relevant when: type = "disk"
 	Disk BufferDisk `json:"disk,omitempty"`
 
+	// Relevant when: type = "memory"
 	Memory BufferMemory `json:"memory,omitempty"`
 
+	// Event handling behavior when a buffer is full.
 	WhenFull BufferWhenFull `json:"whenFull,omitempty"`
 }
 
 type BufferType = string
 
 const (
+	// BufferTypeDisk specifies that events are buffered on disk.
+	// This is less performant, but more durable. Data that has been synchronized to disk will not be lost if Vector is restarted forcefully or crashes.
+	// Data is synchronized to disk every 500ms.
 	BufferTypeDisk BufferType = "Disk"
 
+	// BufferTypeMemory specifies that events are buffered in memory.
+	// This is more performant, but less durable. Data will be lost if Vector is restarted forcefully or crashes.
 	BufferTypeMemory BufferType = "Memory"
 )
 
 type BufferWhenFull = string
 
 const (
+	// BufferWhenFullDropNewest makes vector dropping the event instead of waiting for free space in buffer.
+	// The event will be intentionally dropped. This mode is typically used when performance is the highest priority,
+	// and it is preferable to temporarily lose events rather than cause a slowdown in the acceptance/consumption of events.
 	BufferWhenFullDropNewest BufferWhenFull = "DropNewest"
 
+	// BufferWhenFullBlock makes vector waiting for free space in the buffer.
+	// This applies backpressure up the topology, signalling that sources should slow down the acceptance/consumption of events. This means that while no data is lost, data will pile up at the edge.
 	BufferWhenFullBlock BufferWhenFull = "Block"
 )
 
 type BufferDisk struct {
+	// 	The maximum size of the buffer on disk.
+	// Must be at least ~256 megabytes (268435488 bytes).
 	MaxSize resource.Quantity `json:"maxSize,omitempty"`
 }
 
 type BufferMemory struct {
+	// The maximum number of events allowed in the buffer.
 	MaxEvents uint32 `json:"maxEvents,omitempty"`
 }

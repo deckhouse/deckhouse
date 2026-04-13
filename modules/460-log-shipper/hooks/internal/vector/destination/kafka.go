@@ -66,6 +66,7 @@ func NewKafka(sinkName string, cspec v1alpha2.ClusterLogDestinationSpec, cefExte
 		Codec:           "json",
 		TimestampFormat: "rfc3339",
 	}
+	// Get CEF extensions based on source type (uses K8sLabels and FilesLabels)
 	if spec.Encoding.Codec == v1alpha2.EncodingCodecCEF {
 		encoding.Codec = "cef"
 		encoding.CEF = cefEncodingFromCRD(spec.Encoding.CEF, cefExtensions)

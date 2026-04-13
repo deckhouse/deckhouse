@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
+// Kubernetes label field names used in kubernetes_logs source annotation_fields.
 const (
 	K8sLabelPod        = "pod"
 	K8sLabelPodLabels  = "pod_labels"
@@ -43,6 +44,7 @@ const (
 
 const podLabelsLokiKey = "pod_labels_*"
 
+// K8sLabels contains default Kubernetes labels for log destinations.
 var K8sLabels = map[string]string{
 	K8sLabelNamespace: "{{ namespace }}",
 	K8sLabelContainer: "{{ container }}",
@@ -55,6 +57,7 @@ var K8sLabels = map[string]string{
 	K8sLabelPodOwner:  "{{ pod_owner }}",
 }
 
+// FilesLabels contains default file labels for log destinations.
 var FilesLabels = map[string]string{
 	"host":    "{{ .host }}",
 	"host_ip": "{{ .host_ip }}",
@@ -187,6 +190,7 @@ func RemoveDropLables(keys []string, dropKeys []string) []string {
 	return kept
 }
 
+// SortedMapKeys returns sorted keys from a map for deterministic order.
 func SortedMapKeys(m map[string]string) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -196,6 +200,7 @@ func SortedMapKeys(m map[string]string) []string {
 	return keys
 }
 
+// K8sLabelsWithPodLabels contains K8sLabels plus pod_labels_*.
 var K8sLabelsWithPodLabels = func() map[string]string {
 	result := make(map[string]string, len(K8sLabels)+1)
 	maps.Copy(result, K8sLabels)
