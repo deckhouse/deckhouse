@@ -96,12 +96,11 @@ parse_args "$@"
 check_requirements
 
 REGISTRY_URL=${IMAGES_PATH}
-INSTALL_IMAGE_PATH=""
-MINOR_TAG=$(echo "$TAG" | cut -d. -f2 | sed 's/^v//')
-if [[ $EDITION == "fe" ]]; then
-  INSTALL_IMAGE_PATH=${REGISTRY_URL}/install:release-${MINOR_TAG}
+RELEASE_TAG=$(echo "$TAG" | cut -d. -f1,2 | sed 's/^v//')
+if [[ ${EDITION} == "fe" ]]; then
+  INSTALL_IMAGE_PATH=${REGISTRY_URL}/install:release-${RELEASE_TAG}
 else
-  INSTALL_IMAGE_PATH=${REGISTRY_URL}/install:release-${MINOR_TAG}-${EDITION}
+  INSTALL_IMAGE_PATH=${REGISTRY_URL}/install:release-${RELEASE_TAG}-${EDITION}
 fi
 
 if [ -n "`docker ps -a| grep d8-install-${EDITION}-${TAG}`" ]; then
