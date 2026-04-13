@@ -266,11 +266,11 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 	}
 
 	pkeys = append(pkeys, session.AgentPrivateKey{Key: privateKeyPath})
-	client, err := sshProvider.SwitchClient(ctx, config, pkeys)
+	client, err := sshProvider.NewStandaloneClient(ctx, config, pkeys)
 	if err != nil {
 		return fmt.Errorf("Cannot create SSH client: %w", err)
 	}
-	defer sshProvider.SwitchToDefault(ctx)
+	defer client.Stop()
 
 	if err := client.Start(); err != nil {
 		return fmt.Errorf("Cannot connect to SSH host %s: %w", address, err)
