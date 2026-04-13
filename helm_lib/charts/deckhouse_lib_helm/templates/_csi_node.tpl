@@ -184,12 +184,15 @@ spec:
   {{- end }}
       - name: node
         securityContext:
+          allowPrivilegeEscalation: true
           privileged: true
           readOnlyRootFilesystem: true
           seccompProfile:
             type: RuntimeDefault
-        {{- if $setSysAdminCapability }}
           capabilities:
+            drop:
+              - ALL
+        {{- if $setSysAdminCapability }}
             add:
             - SYS_ADMIN
         {{- end }}
@@ -292,6 +295,12 @@ spec:
         description: |
           Allow running as root for CSI Node Driver.
           The CSI Node Driver requires root access to perform privileged storage operations on the host, including device management and filesystem mounting.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow privilege escalation for CSI Node Driver.
+          The node plugin may need to escalate privileges during mount, unmount, and device operations that rely on setuid helpers or additional capabilities beyond the container's initial security context.
     runAsUser:
       allowedValues:
         - 0

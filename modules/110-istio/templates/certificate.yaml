@@ -1,3 +1,5 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 ---
 apiVersion: cert-manager.io/v1
@@ -18,5 +20,26 @@ spec:
   - {{ include "helm_lib_module_public_domain" (list . "istio") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+{{- end }}
+{{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-httproute
+  namespace: d8-{{ $.Chart.Name }}
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
+  {{- include "helm_lib_module_labels" (list . (dict "app" "istio")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "istio-httproute-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "istio") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "istio") }}
+  issuerRef:
+    name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
     kind: ClusterIssuer
 {{- end }}
