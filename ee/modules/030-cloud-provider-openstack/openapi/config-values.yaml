@@ -186,9 +186,9 @@ properties:
           type: string
           description: |
             Defines if the underlying volume supports changing ownership and permission of the volume before being mounted.
-            - `ReadWriteOnceWithFSType` — apply fsGroup only for ReadWriteOnce volumes (Kubernetes default behavior).
-            - `File` — always apply fsGroup. Use this for RWX volumes with Ceph backend.
-            - `None` — never change permissions.
+            - `ReadWriteOnceWithFSType`: Apply fsGroup only for ReadWriteOnce volumes (Kubernetes default behavior).
+            - `File`: Always apply fsGroup. Use this for RWX volumes with Ceph backend.
+            - `None`: Never change permissions.
           enum:
             - ReadWriteOnceWithFSType
             - File
