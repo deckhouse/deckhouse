@@ -219,10 +219,14 @@ func GetProviderParams(loggerProvider libdhctl_log.LoggerProvider) settings.Prov
 	return settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: IsDebug, NodeTmpPath: DeckhouseNodeTmpPath, NodeBinPath: DeckhouseNodeBinPath, TmpDir: GetDefaultTmpDir()}
 }
 
+type defaultLoggerProvider interface {
+	GetLoggerProvider() libdhctl_log.LoggerProvider
+}
+
 func GetDefaultProviderParams() (settings.ProviderParams, error) {
-	externalLogger, ok := log.GetDefaultLogger().(*log.ExternalLogger)
+	logger, ok := log.GetDefaultLogger().(defaultLoggerProvider)
 	if !ok {
-		return settings.ProviderParams{}, fmt.Errorf("cannot convert logger to ExternalLogger")
+		return settings.ProviderParams{}, fmt.Errorf("unsupported logger type %T", log.GetDefaultLogger())
 	}
-	return GetProviderParams(externalLogger.GetLoggerProvider()), nil
+	return GetProviderParams(logger.GetLoggerProvider()), nil
 }
