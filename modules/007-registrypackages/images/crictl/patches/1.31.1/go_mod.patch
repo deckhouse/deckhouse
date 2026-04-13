@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index eccb4b8f..98ee3080 100644
+index eccb4b8f..e10615b7 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,12 +1,12 @@
@@ -33,6 +33,15 @@ index eccb4b8f..98ee3080 100644
  	google.golang.org/grpc v1.65.0
  	google.golang.org/protobuf v1.34.2
  	gopkg.in/yaml.v3 v3.0.1
+@@ -45,7 +45,7 @@ require (
+ 	github.com/bahlo/generic-list-go v0.2.0 // indirect
+ 	github.com/beorn7/perks v1.0.1 // indirect
+ 	github.com/blang/semver/v4 v4.0.0 // indirect
+-	github.com/buger/jsonparser v1.1.1 // indirect
++	github.com/buger/jsonparser v1.1.2 // indirect
+ 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+ 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+ 	github.com/cpuguy83/go-md2man/v2 v2.0.4 // indirect
 @@ -87,8 +87,8 @@ require (
  	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
  	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
@@ -45,9 +54,20 @@ index eccb4b8f..98ee3080 100644
  	golang.org/x/tools v0.24.0 // indirect
  	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094 // indirect
 diff --git a/go.sum b/go.sum
-index a61b196c..12737d5e 100644
+index a61b196c..1e60e9ba 100644
 --- a/go.sum
 +++ b/go.sum
+@@ -10,8 +10,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
+ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
+ github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
+ github.com/blang/semver/v4 v4.0.0/go.mod h1:IbckMUScFkM3pff0VJDNKRiT6TG/YpiHIM2yvyW5YoQ=
+-github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
+-github.com/buger/jsonparser v1.1.1/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
++github.com/buger/jsonparser v1.1.2 h1:frqHqw7otoVbk5M8LlE/L7HTnIq2v9RX6EJ48i9AxJk=
++github.com/buger/jsonparser v1.1.2/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
+ github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
+ github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
+ github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 @@ -26,8 +26,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
  github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
  github.com/distribution/reference v0.6.0 h1:0IXCQ5g4/QMHHkarYzh5l+u8T3t73zM5QvfrDyIgxBk=
