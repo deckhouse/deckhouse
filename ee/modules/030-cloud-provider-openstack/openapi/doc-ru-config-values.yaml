@@ -119,7 +119,6 @@ properties:
         Параметры настройки Cinder CSI Driver.
       properties:
         fsGroupPolicy:
-          type: string
           description: |
             Определяет, поддерживает ли том изменение владельца и прав доступа перед монтированием.
             - `ReadWriteOnceWithFSType` — применять fsGroup только для томов ReadWriteOnce (поведение Kubernetes по умолчанию).
