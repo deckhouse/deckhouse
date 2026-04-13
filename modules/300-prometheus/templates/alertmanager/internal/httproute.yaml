@@ -1,0 +1,58 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.prometheus.internal.alertmanagers.internal (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- range .Values.prometheus.internal.alertmanagers.internal }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: alertmanager-{{ .name }}
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "alertmanager")) | nindent 2 }}
+  annotations:
+    {{- if eq (len $.Values.prometheus.internal.alertmanagers.internal) 1 }}
+    web.deckhouse.io/export-name: "alertmanager"
+    {{- else }}
+    web.deckhouse.io/export-name: "alertmanager/{{ .name }}"
+    {{- end }}
+    web.deckhouse.io/export-icon: "/public/img/alertmanager.ico"
+    alb.network.deckhouse.io/rewrite-target: /\2
+    alb.network.deckhouse.io/session-affinity: '{"mode": "cookie", "path": "/", "ttl": 0}'
+    alb.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
+  {{- if or (eq (include "helm_lib_module_https_mode" $) "CertManager") (eq (include "helm_lib_module_https_mode" $) "CustomCertificate") }}
+    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
+  {{- end }}
+  {{- if and (ne (include "helm_lib_module_https_mode" $) "Disabled") $.Values.prometheus.auth.externalAuthentication }}
+    alb.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list $ "grafana")) $.Values.prometheus.auth.externalAuthentication.authSignInURL | quote }}
+    alb.network.deckhouse.io/auth-url: {{ $.Values.prometheus.auth.externalAuthentication.authURL | quote }}
+    {{- if $.Values.prometheus.auth.satisfyAny }}
+    alb.network.deckhouse.io/satisfy: "any"
+    {{- end }}
+  {{- else }}
+    alb.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
+  {{- end }}
+  {{- if $.Values.prometheus.auth.whitelistSourceRanges }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ $.Values.prometheus.auth.whitelistSourceRanges | join "," }}
+  {{- end }}
+spec:
+  hostnames:
+  - {{ include "helm_lib_module_public_domain" (list $ "grafana") }}
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: ListenerSet
+    name: prometheus
+    namespace: d8-monitoring
+    sectionName: grafana
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: {{ .name }}
+      port: 443
+      weight: 1
+    matches:
+    - path:
+        type: RegularExpression
+        value: /alertmanager/{{ .name }}(/|$)(.*)
+{{- end }}
+{{- end }}
