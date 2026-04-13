@@ -77,18 +77,18 @@ type ClusterLogDestinationSpec struct {
 type ClusterLogDestinationStatus struct {
 }
 
-// RateLimitSpec is throttle-transform configuration.
-type RateLimitSpec struct {
-	LinesPerMinute *int32            `json:"linesPerMinute,omitempty"`
-	KeyField       string            `json:"keyField,omitempty"`
-	Excludes       []v1alpha1.Filter `json:"excludes,omitempty"`
-}
-
 type LokiAuthSpec struct {
 	Password string `json:"password,omitempty"`
 	Strategy string `json:"strategy,omitempty"`
 	Token    string `json:"token,omitempty"`
 	User     string `json:"user,omitempty"`
+}
+
+// RateLimitSpec is throttle-transform configuration.
+type RateLimitSpec struct {
+	LinesPerMinute *int32            `json:"linesPerMinute,omitempty"`
+	KeyField       string            `json:"keyField,omitempty"`
+	Excludes       []v1alpha1.Filter `json:"excludes,omitempty"`
 }
 
 type ElasticsearchAuthSpec struct {

@@ -22,15 +22,8 @@ conversions:
                 if t.get("action") == "DropLabels" and isinstance(t.get("dropLabels"), dict):
                     dl = t["dropLabels"]
                     labs = dl.get("labels")
-                    if labs and isinstance(labs[0], str):
-                        kck = dl.pop("keepChildKeys", None)
-                        ent_list = []
-                        for p in labs:
-                            ent = {"label": p}
-                            if kck:
-                                ent["keepKeys"] = list(kck)
-                            ent_list.append(ent)
-                        dl["labels"] = ent_list
+                    if isinstance(labs, list) and labs and isinstance(labs[0], str):
+                        dl["labels"] = [{"label": p} for p in labs]
                 if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
                     pm = t["parseMessage"]
                     if pm.get("sourceFormat") == "String" and isinstance(pm.get("string"), dict):
@@ -69,6 +62,7 @@ conversions:
                         dl["labels"] = [e["label"] for e in labs]
                 if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
                     pm = t["parseMessage"]
+                    pm.pop("targetLabel", None)
                     if pm.get("sourceFormat") == "String" and isinstance(pm.get("string"), dict):
                         st = pm["string"]
                         rx = st.get("regex") or ""
