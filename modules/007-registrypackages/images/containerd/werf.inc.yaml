@@ -46,7 +46,6 @@ shell:
   install:
   - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src
   - cd /src
-  - git apply /patches/{{ $runc_version }}/*.patch --verbose
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/.git
 ---
