@@ -248,7 +248,10 @@ func (u *SSHUploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDi
 	return bundleCmd.StdoutBytes(), err
 }
 
-var stepHeaderRegexp = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
+var (
+	stepHeaderRegexp       = regexp.MustCompile("^=== Step: /var/lib/bashible/bundle_steps/(.*)$")
+	stepOutputHeaderRegexp = regexp.MustCompile("^=== Step output: (.*)$")
+)
 
 func bundleSSHOutputHandler(
 	cmd *SSHCommand,
@@ -304,6 +307,13 @@ func bundleSSHOutputHandler(
 			processLogger.LogProcessStart("Run step " + stepName)
 			*lastStep = match[1]
 			return
+		}
+
+		if stepOutputHeaderRegexp.Match([]byte(l)) {
+			match := stepOutputHeaderRegexp.FindStringSubmatch(l)
+			if len(match) >= 2 {
+				log.InfoLn(match[1])
+			}
 		}
 
 		stepLogs = append(stepLogs, l)

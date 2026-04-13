@@ -130,3 +130,11 @@ bb-log-callstack() {
     done
     bb-log-debug "$MSG"
 }
+
+# Examples
+# `$ echo "hello" | bb-log-dhctl-output`
+# `$ command | bb-log-dhctl-output`
+bb-log-dhctl-output() {
+    local PREFIX="=== Step output: "
+    awk -v prefix="$PREFIX" '{print prefix $0}'
+}
