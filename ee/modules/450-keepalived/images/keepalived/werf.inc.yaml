@@ -75,3 +75,5 @@ import:
   - usr/bin/python3*
   - usr/lib/python3*
   - usr/lib/libc.so
+  excludePaths:
+  - usr/lib/python3*/site-packages/pip-25.3*
