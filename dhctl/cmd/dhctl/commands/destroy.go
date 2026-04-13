@@ -19,8 +19,6 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
@@ -56,13 +54,10 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
 
-		externalLogger, ok := logger.(*log.ExternalLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		params, err := app.GetDefaultProviderParams()
+		if err != nil {
+			return err
 		}
-
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
-		params := app.GetProviderParams(loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			return err

@@ -17,7 +17,6 @@ package commands
 import (
 	"fmt"
 
-	"github.com/name212/govalue"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -26,14 +25,12 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -72,28 +69,29 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
-		logger.LogInfoLn("Check started ...\n")
-
-		// Skip AskBecomePassword for terraform check as it will be requested later during SSH operations
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		params, err := app.GetDefaultProviderParams()
 		if err != nil {
 			return err
 		}
-
-		if govalue.IsNil(sshClient) && !app.KubeConfigInCluster {
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			return err
+		}
+		if sshProviderInitializer == nil && !app.KubeConfigInCluster {
 			return fmt.Errorf("Not enough flags were passed to perform the operation.\n" +
 				"Use dhctl terraform check --help to get available flags.\n" +
 				"Ssh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+		logger.LogInfoLn("Check started ...\n")
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
+		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
 			return err
 		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,

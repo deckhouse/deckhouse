@@ -74,7 +74,6 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		baseProviderSettings,
 		sshProviderInitializer,
 	)
-
 	if err != nil {
 		return sshProviderInitializer, nil, err
 	}
@@ -98,7 +97,6 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 			baseProviderSettings,
 			libcon_config.ParseWithRequiredSSHHost(false),
 		)
-
 		if err != nil {
 			return nil, err
 		}

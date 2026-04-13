@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/name212/govalue"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -29,10 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 const (
@@ -48,24 +44,29 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
+		params, err := app.GetDefaultProviderParams()
+		if err != nil {
 			return err
 		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		sshProviderInitializer, _, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			return err
 		}
 
-		if govalue.IsNil(sshClient) {
+		if sshProviderInitializer == nil {
 			return fmt.Errorf("Not enough flags were provided to perform the operation.\nUse dhctl session --help to get available flags.")
 		}
+		defer sshProviderInitializer.Cleanup(ctx)
 
-		kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-		apiServerPort, err := kubeCl.StartKubernetesProxy(ctx)
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return err
+		}
+		sshCl, err := sshProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		apiServerPort, err := sshCl.KubeProxy().Start(-1)
 		if err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}

@@ -26,9 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -49,23 +47,23 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		params, err := app.GetDefaultProviderParams()
 		if err != nil {
 			return err
 		}
-
-		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
 			return err
 		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
+		kube, err := kubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		confirm := func(l *v1.Lease) error {
 			if app.SanityCheck {

@@ -236,6 +236,7 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 	if err != nil {
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
+	_ = sshProviderInitializer
 
 	var commanderUUID uuid.UUID
 	if p.request.Options.CommanderUuid != "" {

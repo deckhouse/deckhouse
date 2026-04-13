@@ -29,9 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -94,25 +92,24 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		params, err := app.GetDefaultProviderParams()
 		if err != nil {
 			return err
 		}
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			return err
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
 
 		return log.ProcessCtx(ctx, "bootstrap", "Wait for Deckhouse to become Ready", func(ctx context.Context) error {
-			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-
-			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+			kube, err := kubeProvider.Client(ctx)
+			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
+			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 			return deckhouse.WaitForReadiness(ctx, kubeCl)
 		})
