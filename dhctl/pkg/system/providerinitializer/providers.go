@@ -48,6 +48,11 @@ func WithKubeFlagsDefined(b bool) ProviderOptions {
 	}
 }
 
+func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
+	baseProviderSettings := settings.NewBaseProviders(params)
+	return getProviderInitializer(baseProviderSettings, opts...)
+}
+
 // func to initialize both SSHProviderInitializer and KubeProvider
 func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, libcon.KubeProvider, error) {
 	baseProviderSettings := settings.NewBaseProviders(params)

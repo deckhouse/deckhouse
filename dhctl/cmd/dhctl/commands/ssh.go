@@ -43,7 +43,7 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, _, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
 		if err != nil {
 			return err
 		}
@@ -92,7 +92,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, _, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
 		if err != nil {
 			return err
 		}
@@ -170,7 +170,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, _, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, _, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
 		if err != nil {
 			return err
 		}

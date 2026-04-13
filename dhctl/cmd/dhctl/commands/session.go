@@ -48,7 +48,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, _, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
 		if err != nil {
 			return err
 		}
