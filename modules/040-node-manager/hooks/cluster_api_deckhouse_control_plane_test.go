@@ -27,7 +27,7 @@ var _ = Describe("Modules :: node-manager :: hooks :: cluster_api_deckhouse_cont
 	const (
 		controlPlane = `
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: DeckhouseControlPlane
 metadata:
   name: control-plane
@@ -35,7 +35,7 @@ metadata:
 `
 		controlPlaneWithStatus = `
 ---
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: DeckhouseControlPlane
 metadata:
   name: control-plane

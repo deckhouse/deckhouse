@@ -35,7 +35,7 @@ var _ = sdk.RegisterFunc(
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
 				Name:       "control_plane",
-				ApiVersion: "infrastructure.cluster.x-k8s.io/v1alpha1",
+				ApiVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
 				Kind:       "DeckhouseControlPlane",
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
