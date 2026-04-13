@@ -487,9 +487,9 @@ metadata:
   name: hugepages-for-dpdk
 spec:
   bundles:
-    - '*'  # Применить ко всем bundle'ам ОС.
+    - "*"  # Применить ко всем bundle'ам ОС.
   nodeGroups:
-    - '*'  # Применить ко всем группам узлов.
+    - "*"  # Применить ко всем группам узлов.
   weight: 100
   content: |
     #!/bin/bash

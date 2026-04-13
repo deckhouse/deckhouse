@@ -485,7 +485,7 @@ metadata:
   name: hugepages-for-dpdk
 spec:
   bundles:
-    - '*'  # Apply to all OS bundles.
+    - "*"  # Apply to all OS bundles.
   nodeGroups:
     - "*"  # Apply to all node groups.
   weight: 100
