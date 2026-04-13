@@ -10,7 +10,7 @@ spec:
   destinationRefs:
     - test-kafka-dest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-kafka-dest
@@ -38,7 +38,9 @@ spec:
     parseMessage:
       sourceFormat: String
       string:
-        targetField: text
+        regex: "^(?P<text>.*)$"
+        setLabels:
+          text: "{{ text }}"
   - action: ReplaceKeys
     replaceKeys:
       source: "."
@@ -48,5 +50,5 @@ spec:
   - action: DropLabels
     dropLabels:
       labels: 
-        - .first
-        - .second
+        - label: .first
+        - label: .second

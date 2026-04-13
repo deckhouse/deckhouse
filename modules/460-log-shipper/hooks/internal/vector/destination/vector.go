@@ -18,7 +18,7 @@ package destination
 
 import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 type Vector struct {
@@ -37,7 +37,7 @@ type VectorKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewVector(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
+func NewVector(sinkName string, cspec v1alpha2.ClusterLogDestinationSpec) *Vector {
 	spec := cspec.Vector
 
 	tls := commonTLSFromSpecWithClientEnabled(spec.TLS)

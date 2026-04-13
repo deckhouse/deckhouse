@@ -21,10 +21,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
-func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkLabelMaps, error) {
+func CreateLogDestinationTransforms(name string, dest v1alpha2.ClusterLogDestination, sourceType string) ([]apis.LogTransform, loglabels.DestinationSinkLabelMaps, error) {
 	var transforms []apis.LogTransform
 	if dest.Spec.RateLimit.LinesPerMinute != nil {
 		throttleTransform, err := throttleTransform(dest.Spec.RateLimit)
@@ -51,20 +52,20 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 		transforms = append(transforms, deDotTransform())
 	case v1alpha1.DestSocket:
 		switch dest.Spec.Socket.Encoding.Codec {
-		case v1alpha1.EncodingCodecSyslog:
+		case v1alpha2.EncodingCodecSyslog:
 			syslogLabels, err := syslogLabelsTransform(sinkLabelMaps.SyslogStructuredDataKeys)
 			if err != nil {
 				return nil, loglabels.DestinationSinkLabelMaps{}, fmt.Errorf("syslog structured data labels: %w", err)
 			}
 			transforms = append(transforms, syslogLabels)
 			transforms = append(transforms, syslogEncoding())
-		case v1alpha1.EncodingCodecGELF:
+		case v1alpha2.EncodingCodecGELF:
 			transforms = append(transforms, gelfCodecRelabeling())
-		case v1alpha1.EncodingCodecCEF:
+		case v1alpha2.EncodingCodecCEF:
 			transforms = append(transforms, cefNameAndSeverity())
 		}
 	case v1alpha1.DestKafka:
-		if dest.Spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+		if dest.Spec.Kafka.Encoding.Codec == v1alpha2.EncodingCodecCEF {
 			transforms = append(transforms, cefNameAndSeverity())
 		}
 	case v1alpha1.DestSplunk:

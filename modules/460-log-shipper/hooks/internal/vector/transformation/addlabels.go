@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
@@ -32,7 +32,7 @@ type addLabelsBuilt struct {
 	sinkKeys []string
 }
 
-func AddLabelsVRL(rule v1alpha1.AddLabelsRule) (string, []string, error) {
+func AddLabelsVRL(rule v1alpha2.AddLabelsRule) (string, []string, error) {
 	if len(rule.SetLabels) == 0 {
 		return "", nil, fmt.Errorf("addLabels: empty setLabels")
 	}

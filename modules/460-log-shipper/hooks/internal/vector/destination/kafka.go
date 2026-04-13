@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 type Kafka struct {
@@ -47,7 +47,7 @@ type KafkaSASL struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-func NewKafka(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec, cefExtensions map[string]string) *Kafka {
+func NewKafka(sinkName string, cspec v1alpha2.ClusterLogDestinationSpec, cefExtensions map[string]string) *Kafka {
 	spec := cspec.Kafka
 
 	tls := commonTLSFromSpecWithClientEnabled(spec.TLS)
@@ -66,7 +66,7 @@ func NewKafka(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec, cefExte
 		Codec:           "json",
 		TimestampFormat: "rfc3339",
 	}
-	if spec.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+	if spec.Encoding.Codec == v1alpha2.EncodingCodecCEF {
 		encoding.Codec = "cef"
 		encoding.CEF = cefEncodingFromCRD(spec.Encoding.CEF, cefExtensions)
 	}

@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 func TestReplaceValueVRL(t *testing.T) {
 	t.Run("literal target", func(t *testing.T) {
-		got, err := ReplaceValueVRL(v1alpha1.ReplaceValueSpec{
+		got, err := ReplaceValueVRL(v1alpha2.ReplaceValueSpec{
 			Source: "secret",
 			Target: "[REDACTED]",
 			Labels: []string{".message"},
@@ -46,7 +46,7 @@ if err == null && value != null {
 	})
 
 	t.Run("nested path", func(t *testing.T) {
-		got, err := ReplaceValueVRL(v1alpha1.ReplaceValueSpec{
+		got, err := ReplaceValueVRL(v1alpha2.ReplaceValueSpec{
 			Source: `key\d+`,
 			Target: "X",
 			Labels: []string{`.message.secret`},
@@ -65,7 +65,7 @@ if err == null && value != null {
 	})
 
 	t.Run("multiple labels", func(t *testing.T) {
-		got, err := ReplaceValueVRL(v1alpha1.ReplaceValueSpec{
+		got, err := ReplaceValueVRL(v1alpha2.ReplaceValueSpec{
 			Source: "a",
 			Target: "b",
 			Labels: []string{".first", ".second"},
@@ -94,7 +94,7 @@ if err == null && value != null {
 	})
 
 	t.Run("named group target only", func(t *testing.T) {
-		got, err := ReplaceValueVRL(v1alpha1.ReplaceValueSpec{
+		got, err := ReplaceValueVRL(v1alpha2.ReplaceValueSpec{
 			Source: `(?P<uid>[0-9]+)`,
 			Target: `{{ uid }}`,
 			Labels: []string{".msg"},
@@ -114,7 +114,7 @@ if err == null && value != null {
 	})
 
 	t.Run("named group with literal prefix and suffix", func(t *testing.T) {
-		got, err := ReplaceValueVRL(v1alpha1.ReplaceValueSpec{
+		got, err := ReplaceValueVRL(v1alpha2.ReplaceValueSpec{
 			Source: `(?P<code>\w+)`,
 			Target: `ERR: {{ code }} done`,
 			Labels: []string{".line"},
@@ -134,7 +134,7 @@ if err == null && value != null {
 	})
 
 	t.Run("three named groups in target", func(t *testing.T) {
-		got, err := ReplaceValueVRL(v1alpha1.ReplaceValueSpec{
+		got, err := ReplaceValueVRL(v1alpha2.ReplaceValueSpec{
 			Source: `(?P<a>\w+)-(?P<b>\d+)-(?P<c>\w+)`,
 			Target: `{{ a }}:{{ b }}:{{ c }}`,
 			Labels: []string{".line"},

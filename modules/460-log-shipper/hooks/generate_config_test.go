@@ -41,7 +41,7 @@ metadata:
 var _ = Describe("Log shipper :: generate config from crd ::", func() {
 	f := HookExecutionConfigInit(`{"logShipper": {"internal": {"activated": false}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterLoggingConfig", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterLogDestination", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "ClusterLogDestination", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "PodLoggingConfig", true)
 
 	Context("With no namespace", func() {

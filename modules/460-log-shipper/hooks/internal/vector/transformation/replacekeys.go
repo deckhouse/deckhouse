@@ -19,12 +19,12 @@ package transformation
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func ReplaceKeysVRL(r v1alpha1.ReplaceKeysSpec) (string, error) {
+func ReplaceKeysVRL(r v1alpha2.ReplaceKeysSpec) (string, error) {
 	if r.Source == "" {
 		return "", fmt.Errorf("transformations replaceKeys: Source is empty")
 	}

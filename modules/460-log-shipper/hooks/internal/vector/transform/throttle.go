@@ -23,6 +23,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -32,7 +33,7 @@ const (
 )
 
 // throttleTransform adds throttling to event's flow.
-func throttleTransform(rl v1alpha1.RateLimitSpec) (apis.LogTransform, error) {
+func throttleTransform(rl v1alpha2.RateLimitSpec) (apis.LogTransform, error) {
 	throttleTransform := &DynamicTransform{
 		CommonTransform: CommonTransform{
 			Name:   "ratelimit",

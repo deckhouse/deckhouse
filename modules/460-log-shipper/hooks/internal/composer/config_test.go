@@ -30,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
@@ -65,16 +66,16 @@ func TestConfig(t *testing.T) {
 					},
 				}, false)
 
-				spec := v1alpha1.ClusterLogDestinationSpec{
+				spec := v1alpha2.ClusterLogDestinationSpec{
 					Type: v1alpha1.DestLoki,
-					Buffer: &v1alpha1.Buffer{
+					Buffer: &v1alpha2.Buffer{
 						Type: "Disk",
-						Disk: v1alpha1.BufferDisk{
+						Disk: v1alpha2.BufferDisk{
 							MaxSize: *resource.NewQuantity(268435488, resource.BinarySI),
 						},
 						WhenFull: "Block",
 					},
-					Loki: v1alpha1.LokiSpec{
+					Loki: v1alpha2.LokiSpec{
 						Endpoint: "http://testmeip:9000",
 					},
 				}
@@ -106,13 +107,13 @@ func TestConfig(t *testing.T) {
 					},
 				}, false)
 
-				spec := v1alpha1.ClusterLogDestinationSpec{
-					Logstash: v1alpha1.LogstashSpec{
+				spec := v1alpha2.ClusterLogDestinationSpec{
+					Logstash: v1alpha2.LogstashSpec{
 						Endpoint: "192.168.0.1:9000",
 					},
-					Buffer: &v1alpha1.Buffer{
+					Buffer: &v1alpha2.Buffer{
 						Type: "Disk",
-						Disk: v1alpha1.BufferDisk{
+						Disk: v1alpha2.BufferDisk{
 							MaxSize: *resource.NewQuantity(215, resource.BinarySI),
 						},
 						WhenFull: "Block",
@@ -136,12 +137,12 @@ func TestConfig(t *testing.T) {
 					Exclude: []string{"/var/log/syslog"},
 				})
 
-				spec := v1alpha1.ClusterLogDestinationSpec{
-					Elasticsearch: v1alpha1.ElasticsearchSpec{
+				spec := v1alpha2.ClusterLogDestinationSpec{
+					Elasticsearch: v1alpha2.ElasticsearchSpec{
 						Endpoint: "https://192.168.0.1:9200",
 						Index:    "{{ kubernetes.namespace }}-%F",
 						Pipeline: "test-pipe",
-						TLS:      v1alpha1.CommonTLSSpec{VerifyHostname: ptr.To(true)},
+						TLS:      v1alpha2.CommonTLSSpec{VerifyHostname: ptr.To(true)},
 					},
 				}
 
@@ -157,10 +158,10 @@ func TestConfig(t *testing.T) {
 					KeepDeletedFilesOpenedFor: metav1.Duration{Duration: time.Hour},
 				}, false)
 
-				spec := v1alpha1.ClusterLogDestinationSpec{
-					Vector: v1alpha1.VectorSpec{
+				spec := v1alpha2.ClusterLogDestinationSpec{
+					Vector: v1alpha2.VectorSpec{
 						Endpoint: "192.168.0.1:9200",
-						TLS:      v1alpha1.CommonTLSSpec{VerifyCertificate: ptr.To(false)},
+						TLS:      v1alpha2.CommonTLSSpec{VerifyCertificate: ptr.To(false)},
 					},
 				}
 

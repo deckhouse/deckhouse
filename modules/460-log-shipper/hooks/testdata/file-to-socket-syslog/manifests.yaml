@@ -11,7 +11,7 @@ spec:
   destinationRefs:
     - syslog-dest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: syslog-dest
@@ -33,4 +33,4 @@ spec:
     - action: DropLabels
       dropLabels:
         labels:
-          - .host
+          - label: .host

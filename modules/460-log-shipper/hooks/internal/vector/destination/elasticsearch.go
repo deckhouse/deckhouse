@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 type Elasticsearch struct {
@@ -75,7 +75,7 @@ type ElasticsearchBulk struct {
 	Index  string `json:"index,omitempty"`
 }
 
-func NewElasticsearch(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec) *Elasticsearch {
+func NewElasticsearch(sinkName string, cspec v1alpha2.ClusterLogDestinationSpec) *Elasticsearch {
 	spec := cspec.Elasticsearch
 
 	bulkAction := "index"

@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/destination"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/source"
@@ -35,20 +36,20 @@ import (
 
 type Composer struct {
 	Source     []v1alpha1.ClusterLoggingConfig
-	Dest       []v1alpha1.ClusterLogDestination
-	destByName map[string]v1alpha1.ClusterLogDestination
+	Dest       []v1alpha2.ClusterLogDestination
+	destByName map[string]v1alpha2.ClusterLogDestination
 }
 
 // FromInput collects ClusterLoggingConfig sources from snapshots and combines them with provided destinations.
 // Also records telemetry metrics for each custom resource found.
-func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDestination) (*Composer, error) {
+func FromInput(input *go_hook.HookInput, destinations []v1alpha2.ClusterLogDestination) (*Composer, error) {
 	sourceSnap := input.Snapshots.Get("cluster_log_source")
 	namespacedSourceSnap := input.Snapshots.Get("namespaced_log_source")
 
 	res := &Composer{
 		Source:     make([]v1alpha1.ClusterLoggingConfig, 0, len(sourceSnap)+len(namespacedSourceSnap)),
 		Dest:       slices.Clone(destinations),
-		destByName: make(map[string]v1alpha1.ClusterLogDestination, len(destinations)),
+		destByName: make(map[string]v1alpha2.ClusterLogDestination, len(destinations)),
 	}
 
 	for _, dest := range res.Dest {
@@ -136,7 +137,7 @@ func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis
 	return nil
 }
 
-func (c *Composer) getDestinationSpecByName(name string) *v1alpha1.ClusterLogDestination {
+func (c *Composer) getDestinationSpecByName(name string) *v1alpha2.ClusterLogDestination {
 	d, ok := c.destByName[name]
 	if !ok {
 		return nil
@@ -176,7 +177,7 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 }
 
 // newLogDest creates a log destination instance based on the destination type.
-func newLogDest(typ, sinkName string, spec v1alpha1.ClusterLogDestinationSpec, labelMaps loglabels.DestinationSinkLabelMaps) apis.LogDestination {
+func newLogDest(typ, sinkName string, spec v1alpha2.ClusterLogDestinationSpec, labelMaps loglabels.DestinationSinkLabelMaps) apis.LogDestination {
 	switch typ {
 	case v1alpha1.DestLoki:
 		return destination.NewLoki(sinkName, spec, labelMaps.LokiLabels)

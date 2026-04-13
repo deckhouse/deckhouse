@@ -10,7 +10,7 @@ spec:
   destinationRefs:
     - test-kafka-dest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-kafka-dest

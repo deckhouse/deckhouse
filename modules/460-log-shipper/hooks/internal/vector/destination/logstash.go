@@ -18,7 +18,7 @@ package destination
 
 import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 type Logstash struct {
@@ -39,7 +39,7 @@ type LogstashKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewLogstash(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
+func NewLogstash(sinkName string, cspec v1alpha2.ClusterLogDestinationSpec) *Logstash {
 	spec := cspec.Logstash
 
 	tls := commonTLSFromSpecWithClientEnabled(spec.TLS)

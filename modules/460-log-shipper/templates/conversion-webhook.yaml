@@ -1,0 +1,82 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ConversionWebhook
+metadata:
+  name: clusterlogdestinations.deckhouse.io
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+conversions:
+  - from: v1alpha1
+    to: v1alpha2
+    handler:
+      python: |
+        def v1alpha1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
+            bopen, bclose = "{", "}"
+            if o.get("apiVersion") != "deckhouse.io/v1alpha1":
+                return None, o
+            out = dict(o)
+            out["apiVersion"] = "deckhouse.io/v1alpha2"
+            spec = out.get("spec")
+            if not isinstance(spec, dict):
+                return None, out
+            for t in spec.get("transformations") or []:
+                if t.get("action") == "DropLabels" and isinstance(t.get("dropLabels"), dict):
+                    dl = t["dropLabels"]
+                    labs = dl.get("labels")
+                    if labs and isinstance(labs[0], str):
+                        kck = dl.pop("keepChildKeys", None)
+                        ent_list = []
+                        for p in labs:
+                            ent = {"label": p}
+                            if kck:
+                                ent["keepKeys"] = list(kck)
+                            ent_list.append(ent)
+                        dl["labels"] = ent_list
+                if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
+                    pm = t["parseMessage"]
+                    if pm.get("sourceFormat") == "String" and isinstance(pm.get("string"), dict):
+                        st = dict(pm["string"])
+                        tf = st.pop("targetField", None)
+                        if tf:
+                            st["regex"] = r"^(?P<%s>.*)$" % tf
+                            st["setLabels"] = {tf: (bopen * 2 + " %s " % tf + bclose * 2)}
+                        pm["string"] = st
+            return None, out
+
+  - from: v1alpha2
+    to: v1alpha1
+    handler:
+      python: |
+        def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
+            def catch_all_group_name(rx: str):
+                pfx = "^(?P<"
+                sfx = ">.*)$"
+                if not rx.startswith(pfx) or not rx.endswith(sfx):
+                    return None
+                return rx[len(pfx) : -len(sfx)]
+
+            if o.get("apiVersion") != "deckhouse.io/v1alpha2":
+                return None, o
+            out = dict(o)
+            out["apiVersion"] = "deckhouse.io/v1alpha1"
+            spec = out.get("spec")
+            if not isinstance(spec, dict):
+                return None, out
+            for t in spec.get("transformations") or []:
+                if t.get("action") == "DropLabels" and isinstance(t.get("dropLabels"), dict):
+                    dl = t["dropLabels"]
+                    labs = dl.get("labels")
+                    if labs and isinstance(labs[0], dict):
+                        dl["labels"] = [e["label"] for e in labs]
+                if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
+                    pm = t["parseMessage"]
+                    if pm.get("sourceFormat") == "String" and isinstance(pm.get("string"), dict):
+                        st = pm["string"]
+                        rx = st.get("regex") or ""
+                        sl = st.get("setLabels") or {}
+                        name = catch_all_group_name(rx)
+                        if name and len(sl) == 1 and name in sl:
+                            val = str(sl[name]).strip()
+                            bo, bc = "{", "}"
+                            if val in (bo * 2 + name + bc * 2, bo * 2 + " " + name + " " + bc * 2):
+                                pm["string"] = {"targetField": name}
+            return None, out

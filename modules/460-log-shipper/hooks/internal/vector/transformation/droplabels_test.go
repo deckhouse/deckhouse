@@ -22,13 +22,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 func TestDropLabelsVRL(t *testing.T) {
 	t.Run("delete paths", func(t *testing.T) {
-		got, paths, err := DropLabelsVRL(v1alpha1.DropLabelsSpec{
-			Labels: []string{".first", ".second"},
+		got, paths, err := DropLabelsVRL(v1alpha2.DropLabelsSpec{
+			Labels: []v1alpha2.DropLabelEntry{
+				{Label: ".first"},
+				{Label: ".second"},
+			},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, []string{".first", ".second"}, paths)
@@ -36,10 +39,11 @@ func TestDropLabelsVRL(t *testing.T) {
 			"if exists(.second) {\n  del(.second)\n}", got)
 	})
 
-	t.Run("keepChildKeys", func(t *testing.T) {
-		got, paths, err := DropLabelsVRL(v1alpha1.DropLabelsSpec{
-			Labels:        []string{".pod_labels"},
-			KeepChildKeys: []string{"app", "group"},
+	t.Run("keepKeys", func(t *testing.T) {
+		got, paths, err := DropLabelsVRL(v1alpha2.DropLabelsSpec{
+			Labels: []v1alpha2.DropLabelEntry{
+				{Label: ".pod_labels", KeepKeys: []string{"app", "group"}},
+			},
 		})
 		require.NoError(t, err)
 		assert.Nil(t, paths)

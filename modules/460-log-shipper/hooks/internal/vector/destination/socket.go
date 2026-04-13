@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 type Socket struct {
@@ -35,7 +35,7 @@ type Socket struct {
 	TLS CommonTLS `json:"tls,omitempty"`
 }
 
-func NewSocket(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec, cefExtensions map[string]string) *Socket {
+func NewSocket(sinkName string, cspec v1alpha2.ClusterLogDestinationSpec, cefExtensions map[string]string) *Socket {
 	spec := cspec.Socket
 
 	result := &Socket{
@@ -49,23 +49,23 @@ func NewSocket(sinkName string, cspec v1alpha1.ClusterLogDestinationSpec, cefExt
 		Mode:    strings.ToLower(spec.Mode),
 	}
 
-	if spec.Mode == v1alpha1.SocketModeTCP {
+	if spec.Mode == v1alpha2.SocketModeTCP {
 		result.TLS = commonTLSFromSpecWithClientEnabled(spec.TCP.TLS)
 	}
 
 	encoding := Encoding{TimestampFormat: "rfc3339"}
 
 	switch spec.Encoding.Codec {
-	case v1alpha1.EncodingCodecText:
+	case v1alpha2.EncodingCodecText:
 		encoding.Codec = "text"
-	case v1alpha1.EncodingCodecSyslog:
+	case v1alpha2.EncodingCodecSyslog:
 		encoding.Codec = "text"
 		// the main encoding is done by the vrl rule
-	case v1alpha1.EncodingCodecCEF:
+	case v1alpha2.EncodingCodecCEF:
 		encoding.Codec = "cef"
 		encoding.CEF = cefEncodingFromCRD(spec.Encoding.CEF, cefExtensions)
 
-	case v1alpha1.EncodingCodecGELF:
+	case v1alpha2.EncodingCodecGELF:
 		encoding.Codec = "gelf"
 	default:
 		encoding.Codec = "json"

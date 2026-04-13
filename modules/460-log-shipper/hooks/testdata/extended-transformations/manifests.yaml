@@ -10,7 +10,7 @@ spec:
   destinationRefs:
     - test-ext-loki
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-ext-loki
@@ -48,6 +48,6 @@ spec:
   - action: DropLabels
     dropLabels:
       labels:
-      - .pod_labels
-      keepChildKeys:
-      - app
+      - label: .pod_labels
+        keepKeys:
+        - app

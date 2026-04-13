@@ -22,14 +22,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
 var replaceValueMustacheNamedGroupRe = regexp.MustCompile(`\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}`)
 
-func ReplaceValueVRL(spec v1alpha1.ReplaceValueSpec) (string, error) {
+func ReplaceValueVRL(spec v1alpha2.ReplaceValueSpec) (string, error) {
 	if spec.Source == "" {
 		return "", fmt.Errorf("replaceValue: source is empty")
 	}

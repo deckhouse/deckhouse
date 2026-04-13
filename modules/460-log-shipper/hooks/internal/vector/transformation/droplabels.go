@@ -21,47 +21,61 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vector/transformation/parser"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-var keepChildKeysKeyRe = regexp.MustCompile(`^[a-zA-Z0-9_./:@%#*+\-]+$`)
+var keepKeysKeyRe = regexp.MustCompile(`^[a-zA-Z0-9_./:@%#*+\-]+$`)
 
-func isKeepChildKeysKey(s string) bool {
-	return keepChildKeysKeyRe.MatchString(s)
+func isKeepKeysKey(s string) bool {
+	return keepKeysKeyRe.MatchString(s)
 }
 
-func DropLabelsVRL(d v1alpha1.DropLabelsSpec) (string, []string, error) {
+func DropLabelsVRL(d v1alpha2.DropLabelsSpec) (string, []string, error) {
 	if len(d.Labels) == 0 {
 		return "", nil, fmt.Errorf("dropLabels: labels is empty")
 	}
-	if len(d.KeepChildKeys) == 0 {
-		paths, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLDotPath)
+	var dropPaths []string
+	var parts []string
+	for _, item := range d.Labels {
+		path := strings.TrimSpace(item.Label)
+		if path == "" {
+			return "", nil, fmt.Errorf("dropLabels: empty label path")
+		}
+		if len(item.KeepKeys) == 0 {
+			dropPaths = append(dropPaths, path)
+			continue
+		}
+		for _, k := range item.KeepKeys {
+			if !isKeepKeysKey(k) {
+				return "", nil, fmt.Errorf("dropLabels: invalid keepKeys entry %q", k)
+			}
+		}
+		segs, err := parser.ParseLabelPath(path)
+		if err != nil {
+			return "", nil, fmt.Errorf("dropLabels: %w", err)
+		}
+		pa := parser.PathSegmentsToVRLArray(segs)
+		s, err := vrl.DropLabelsKeepChildKeys.Render(vrl.Args{"pathArray": pa, "keepKeys": item.KeepKeys})
+		if err != nil {
+			return "", nil, err
+		}
+		parts = append(parts, s)
+	}
+	if len(dropPaths) > 0 {
+		paths, err := parser.MapLabelPaths(dropPaths, parser.PathSegmentsToVRLDotPath)
 		if err != nil {
 			return "", nil, fmt.Errorf("dropLabels: %w", err)
 		}
 		s, err := vrl.DropLabels.Render(vrl.Args{"spec": struct {
 			Paths []string
 		}{Paths: paths}})
-		return s, paths, err
-	}
-	for _, k := range d.KeepChildKeys {
-		if !isKeepChildKeysKey(k) {
-			return "", nil, fmt.Errorf("dropLabels: invalid keepChildKeys key %q", k)
-		}
-	}
-	pathArrays, err := parser.MapLabelPaths(d.Labels, parser.PathSegmentsToVRLArray)
-	if err != nil {
-		return "", nil, fmt.Errorf("dropLabels: %w", err)
-	}
-	parts := make([]string, 0, len(pathArrays))
-	for _, pa := range pathArrays {
-		s, err := vrl.DropLabelsKeepChildKeys.Render(vrl.Args{"pathArray": pa, "keepKeys": d.KeepChildKeys})
 		if err != nil {
 			return "", nil, err
 		}
-		parts = append(parts, s)
+		parts = append([]string{s}, parts...)
+		return strings.Join(parts, "\n"), dropPaths, nil
 	}
 	return strings.Join(parts, "\n"), nil, nil
 }

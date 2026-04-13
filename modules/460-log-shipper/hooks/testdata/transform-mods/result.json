@@ -29,7 +29,7 @@
       "inputs": [
         "transform/File/destination/test-kafka-dest/01_tf_parseMessage_Klog"
       ],
-      "source": "if is_string(.message) {\n  wrapped = {\"text\": .message}\n\n  . = set!(., [\"message\"], wrapped)\n\n}",
+      "source": "if is_string(.message) {\n  parsed, perr = parse_regex(string!(.message), r'^(?P\u003ctext\u003e.*)$')\n  if perr == null {\n    out = {}\nout = set!(out, [\"text\"], string!(parsed.text))\n\n    . = set!(., [\"message\"], out)\n\n  }\n}",
       "type": "remap"
     },
     "transform/File/destination/test-kafka-dest/03_tf_replaceKeys": {

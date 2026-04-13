@@ -23,19 +23,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 func TestGenerateParseMessageVRL(t *testing.T) {
 	t.Run("JSON", func(t *testing.T) {
 		for _, tc := range []struct {
 			name string
-			spec v1alpha1.ParseMessageSpec
+			spec v1alpha2.ParseMessageSpec
 			want string
 		}{
 			{
 				"root merges object",
-				v1alpha1.ParseMessageSpec{SourceFormat: v1alpha1.FormatJSON, TargetLabel: ".", JSON: v1alpha1.SourceFormatJSONSpec{}},
+				v1alpha2.ParseMessageSpec{SourceFormat: v1alpha2.FormatJSON, TargetLabel: ".", JSON: v1alpha2.SourceFormatJSONSpec{}},
 				`if is_string(.message) {
   parsed = parse_json(.message) ?? null
   if parsed != null {
@@ -49,7 +49,7 @@ func TestGenerateParseMessageVRL(t *testing.T) {
 			},
 			{
 				"depth to .message",
-				v1alpha1.ParseMessageSpec{SourceFormat: v1alpha1.FormatJSON, JSON: v1alpha1.SourceFormatJSONSpec{Depth: 2}},
+				v1alpha2.ParseMessageSpec{SourceFormat: v1alpha2.FormatJSON, JSON: v1alpha2.SourceFormatJSONSpec{Depth: 2}},
 				`if is_string(.message) {
   parsed = parse_json(.message, max_depth: 2) ?? null
   if parsed != null {
@@ -61,7 +61,7 @@ func TestGenerateParseMessageVRL(t *testing.T) {
 			},
 			{
 				"custom path",
-				v1alpha1.ParseMessageSpec{SourceFormat: v1alpha1.FormatJSON, TargetLabel: ".foo.bar", JSON: v1alpha1.SourceFormatJSONSpec{}},
+				v1alpha2.ParseMessageSpec{SourceFormat: v1alpha2.FormatJSON, TargetLabel: ".foo.bar", JSON: v1alpha2.SourceFormatJSONSpec{}},
 				`if is_string(.message) {
   parsed = parse_json(.message) ?? null
   if parsed != null {
@@ -73,7 +73,7 @@ func TestGenerateParseMessageVRL(t *testing.T) {
 			},
 			{
 				"targetLabel parsed",
-				v1alpha1.ParseMessageSpec{SourceFormat: v1alpha1.FormatJSON, TargetLabel: ".parsed", JSON: v1alpha1.SourceFormatJSONSpec{}},
+				v1alpha2.ParseMessageSpec{SourceFormat: v1alpha2.FormatJSON, TargetLabel: ".parsed", JSON: v1alpha2.SourceFormatJSONSpec{}},
 				`if is_string(.message) {
   parsed = parse_json(.message) ?? null
   if parsed != null {
@@ -102,22 +102,22 @@ func TestGenerateParseMessageVRL(t *testing.T) {
   }
 }`
 		for _, tc := range []struct {
-			fmt  v1alpha1.SourceFormat
+			fmt  v1alpha2.SourceFormat
 			expr string
 		}{
-			{v1alpha1.FormatKlog, "parse_klog(.message)"},
-			{v1alpha1.FormatCLF, "parse_common_log(.message)"},
-			{v1alpha1.FormatSysLog, "parse_syslog(.message)"},
-			{v1alpha1.FormatLogfmt, "parse_logfmt(.message)"},
+			{v1alpha2.FormatKlog, "parse_klog(.message)"},
+			{v1alpha2.FormatCLF, "parse_common_log(.message)"},
+			{v1alpha2.FormatSysLog, "parse_syslog(.message)"},
+			{v1alpha2.FormatLogfmt, "parse_logfmt(.message)"},
 		} {
-			got, err := GenerateParseMessageVRL(v1alpha1.ParseMessageSpec{SourceFormat: tc.fmt})
+			got, err := GenerateParseMessageVRL(v1alpha2.ParseMessageSpec{SourceFormat: tc.fmt})
 			require.NoError(t, err)
 			assert.Equal(t, fmt.Sprintf(shell, tc.expr), got, string(tc.fmt))
 		}
 	})
 
 	t.Run("unary targetLabel parsed", func(t *testing.T) {
-		got, err := GenerateParseMessageVRL(v1alpha1.ParseMessageSpec{SourceFormat: v1alpha1.FormatKlog, TargetLabel: ".parsed"})
+		got, err := GenerateParseMessageVRL(v1alpha2.ParseMessageSpec{SourceFormat: v1alpha2.FormatKlog, TargetLabel: ".parsed"})
 		require.NoError(t, err)
 		want := `if is_string(.message) {
   parsed = parse_klog(.message) ?? null
@@ -130,29 +130,10 @@ func TestGenerateParseMessageVRL(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("String legacy", func(t *testing.T) {
-		got, err := GenerateParseMessageVRL(v1alpha1.ParseMessageSpec{
-			SourceFormat: v1alpha1.FormatString,
-			String: v1alpha1.SourceFormatStringSpec{
-				TargetField: "text",
-				Regex:       `ignored`,
-				SetLabels:   map[string]string{"x": "{{ x }}"},
-			},
-		})
-		require.NoError(t, err)
-		want := `if is_string(.message) {
-  wrapped = {"text": .message}
-
-  . = set!(., ["message"], wrapped)
-
-}`
-		assert.Equal(t, want, got)
-	})
-
 	t.Run("String regex", func(t *testing.T) {
-		got, err := GenerateParseMessageVRL(v1alpha1.ParseMessageSpec{
-			SourceFormat: v1alpha1.FormatString,
-			String: v1alpha1.SourceFormatStringSpec{
+		got, err := GenerateParseMessageVRL(v1alpha2.ParseMessageSpec{
+			SourceFormat: v1alpha2.FormatString,
+			String: v1alpha2.SourceFormatStringSpec{
 				Regex: `^(\d+)$`,
 				SetLabels: map[string]string{
 					"z": "lit",

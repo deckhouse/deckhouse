@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 func TestReplaceKeysVRL(t *testing.T) {
 	t.Run("two labels", func(t *testing.T) {
-		got, err := ReplaceKeysVRL(v1alpha1.ReplaceKeysSpec{
+		got, err := ReplaceKeysVRL(v1alpha2.ReplaceKeysSpec{
 			Source: ".",
 			Target: "_",
 			Labels: []string{".pod_labels", ".examples"},

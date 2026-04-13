@@ -22,19 +22,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 func TestAddLabelsVRL(t *testing.T) {
 	t.Run("literals and path template", func(t *testing.T) {
-		got, keys, err := AddLabelsVRL(v1alpha1.AddLabelsRule{
+		got, keys, err := AddLabelsVRL(v1alpha2.AddLabelsRule{
 			SetLabels: map[string]string{".z": "1", ".a": "2"},
 		})
 		require.NoError(t, err)
 		assert.Equal(t, ".a = \"2\"\n.z = \"1\"", got)
 		assert.Equal(t, []string{"a", "z"}, keys)
 
-		got, keys, err = AddLabelsVRL(v1alpha1.AddLabelsRule{
+		got, keys, err = AddLabelsVRL(v1alpha2.AddLabelsRule{
 			SetLabels: map[string]string{".out": "{{ .src }}"},
 		})
 		require.NoError(t, err)
@@ -152,7 +152,7 @@ if err == null {
 			},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
-				got, _, err := AddLabelsVRL(v1alpha1.AddLabelsRule{
+				got, _, err := AddLabelsVRL(v1alpha2.AddLabelsRule{
 					When:      []string{tc.when},
 					SetLabels: tc.labels,
 				})
@@ -163,7 +163,7 @@ if err == null {
 	})
 
 	t.Run("errors", func(t *testing.T) {
-		for _, spec := range []v1alpha1.AddLabelsRule{
+		for _, spec := range []v1alpha2.AddLabelsRule{
 			{SetLabels: map[string]string{}},
 			{When: []string{`broken`}, SetLabels: map[string]string{".a": "1"}},
 			{When: []string{`.x =~ '['`}, SetLabels: map[string]string{".a": "1"}},
@@ -182,7 +182,7 @@ if err == null {
 	})
 
 	t.Run("when multiple AND", func(t *testing.T) {
-		got, _, err := AddLabelsVRL(v1alpha1.AddLabelsRule{
+		got, _, err := AddLabelsVRL(v1alpha2.AddLabelsRule{
 			When: []string{
 				`.ns == "prod"`,
 				`.bar =~ "bar.*"`,

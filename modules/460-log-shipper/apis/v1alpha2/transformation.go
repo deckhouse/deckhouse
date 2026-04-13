@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 type TransformationSpec struct {
 	Action       TransformationAction `json:"action"`
@@ -41,9 +41,13 @@ type ReplaceKeysSpec struct {
 	Labels []string `json:"labels"`
 }
 
+type DropLabelEntry struct {
+	Label    string   `json:"label"`
+	KeepKeys []string `json:"keepKeys,omitempty"`
+}
+
 type DropLabelsSpec struct {
-	Labels        []string `json:"labels"`
-	KeepChildKeys []string `json:"keepChildKeys,omitempty"`
+	Labels []DropLabelEntry `json:"labels"`
 }
 
 type ReplaceValueSpec struct {
@@ -57,15 +61,13 @@ type AddLabelsRule struct {
 	SetLabels map[string]string `json:"setLabels"`
 }
 
-// DefaultParseMessageTargetLabel matches the OpenAPI default for parseMessage.targetLabel in ClusterLogDestination.
 const DefaultParseMessageTargetLabel = ".message"
 
 type ParseMessageSpec struct {
-	SourceFormat SourceFormat `json:"sourceFormat"`
-	// TargetLabel is the destination path for the parsed value. Empty means DefaultParseMessageTargetLabel.
-	TargetLabel string                 `json:"targetLabel,omitempty"`
-	String      SourceFormatStringSpec `json:"string,omitempty"`
-	JSON        SourceFormatJSONSpec   `json:"json,omitempty"`
+	SourceFormat SourceFormat           `json:"sourceFormat"`
+	TargetLabel  string                 `json:"targetLabel,omitempty"`
+	String       SourceFormatStringSpec `json:"string,omitempty"`
+	JSON         SourceFormatJSONSpec   `json:"json,omitempty"`
 }
 
 type SourceFormat string
@@ -80,9 +82,8 @@ const (
 )
 
 type SourceFormatStringSpec struct {
-	TargetField string            `json:"targetField,omitempty"`
-	Regex       string            `json:"regex,omitempty"`
-	SetLabels   map[string]string `json:"setLabels,omitempty"`
+	Regex     string            `json:"regex"`
+	SetLabels map[string]string `json:"setLabels"`
 }
 
 type SourceFormatJSONSpec struct {

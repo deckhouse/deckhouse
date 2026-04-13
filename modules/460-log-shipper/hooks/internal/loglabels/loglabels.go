@@ -24,6 +24,7 @@ import (
 	"unicode"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 const (
@@ -101,7 +102,7 @@ func (b DestinationSinkBuild) cefExtensionsFromKeys() map[string]string {
 	return ext
 }
 
-func BuildDestinationSinkLabelMaps(spec v1alpha1.ClusterLogDestinationSpec, b DestinationSinkBuild) DestinationSinkLabelMaps {
+func BuildDestinationSinkLabelMaps(spec v1alpha2.ClusterLogDestinationSpec, b DestinationSinkBuild) DestinationSinkLabelMaps {
 	var a DestinationSinkLabelMaps
 	switch spec.Type {
 	case v1alpha1.DestLoki:
@@ -112,14 +113,14 @@ func BuildDestinationSinkLabelMaps(spec v1alpha1.ClusterLogDestinationSpec, b De
 		base["datetime"] = ""
 		a.SplunkIndexedFields = base
 	case v1alpha1.DestKafka:
-		if spec.Kafka.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+		if spec.Kafka.Encoding.Codec == v1alpha2.EncodingCodecCEF {
 			a.CEFExtensions = b.cefExtensionsFromKeys()
 		}
 	case v1alpha1.DestSocket:
-		if spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecCEF {
+		if spec.Socket.Encoding.Codec == v1alpha2.EncodingCodecCEF {
 			a.CEFExtensions = b.cefExtensionsFromKeys()
 		}
-		if spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+		if spec.Socket.Encoding.Codec == v1alpha2.EncodingCodecSyslog {
 			a.SyslogStructuredDataKeys = syslogStructuredDataKeysSorted(b.Keys)
 		}
 	}

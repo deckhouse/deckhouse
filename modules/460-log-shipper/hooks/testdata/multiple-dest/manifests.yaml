@@ -61,7 +61,7 @@ spec:
     - test-loki-dest
     - test-logstash-dest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-loki-dest
@@ -78,7 +78,7 @@ spec:
       maxEvents: 4096
     whenFull: DropNewest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-logstash-dest
@@ -101,7 +101,7 @@ spec:
       maxSize: 536870912
     whenFull: DropNewest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-es-dest
