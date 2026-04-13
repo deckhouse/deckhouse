@@ -54,12 +54,18 @@ steps:
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
+<<<<<<< HEAD
   {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
   {!{- if eq $buildType "release" }!}
   {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
+=======
+  {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "release") (eq $buildType "pre-release") }!}
+  {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+  {!{- end }!}
+>>>>>>> 8b90cd8d45 (refactor: change release build)
   {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
@@ -89,7 +95,11 @@ steps:
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}
+<<<<<<< HEAD
 {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
+=======
+{!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "release") (eq $buildType "pre-release") }!}
+>>>>>>> 8b90cd8d45 (refactor: change release build)
       DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
       DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
@@ -129,8 +139,8 @@ steps:
       COSIGN_VAULT_KEY: "dh-2025-aug-ec"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
       COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
 {!{- end }!}
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -174,15 +184,17 @@ steps:
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
+<<<<<<< HEAD
     {!{- if eq $buildType "release" }!}
       STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
       export WERF_REPO="${STAGE_REGISTRY_PATH}"
     {!{- else }!}
+=======
+>>>>>>> 8b90cd8d45 (refactor: change release build)
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
       export WERF_REPO="${DEV_REGISTRY_PATH}"
-    {!{- end }!}
     {!{ if eq $buildType "release" }!}
       # Registry path to publish images for Git tags.
       if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
@@ -260,16 +272,28 @@ steps:
       egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
       mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
   - name: Check DKP images manifests in stage registry
+=======
+  - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
     if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
     id: check_images
     env:
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
       STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
     run: |
       EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
       ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+      DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+    run: |
+      EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
   {!{ if eq $buildType "release" }!}
   - uses: {!{ index (ds "actions") "actions/setup-python" }!}
@@ -280,9 +304,9 @@ steps:
     if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
     env:
       DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+      DECKHOUSE_DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
     run: |
-      export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_FROM="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
       export IMAGES_TAGS_PATH=./images_tags_werf.json
       python .github/scripts/python/copy_attestations.py

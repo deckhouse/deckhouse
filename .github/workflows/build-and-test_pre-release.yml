@@ -321,9 +321,15 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+=======
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
@@ -341,7 +347,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -367,6 +373,10 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -426,16 +436,28 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
+=======
+      - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
@@ -640,9 +662,15 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+=======
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
@@ -660,7 +688,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -686,6 +714,10 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -745,16 +777,28 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
+=======
+      - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
@@ -958,9 +1002,15 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+=======
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
@@ -978,7 +1028,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -1004,6 +1054,10 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1063,16 +1117,28 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
+=======
+      - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
@@ -1276,9 +1342,15 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+=======
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
@@ -1296,7 +1368,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -1322,6 +1394,10 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1381,16 +1457,28 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
+=======
+      - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
@@ -1594,9 +1682,15 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+=======
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
@@ -1614,7 +1708,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -1640,6 +1734,10 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1699,16 +1797,28 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
+=======
+      - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
@@ -1912,9 +2022,15 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+=======
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
@@ -1932,7 +2048,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -1958,6 +2074,10 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -2017,16 +2137,28 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
+=======
+      - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
@@ -2230,9 +2362,15 @@ jobs:
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           COSIGN_VAULT_KEY: "dh-2025-aug-dev"
           COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
           COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
+=======
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
         run: |
@@ -2250,7 +2388,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -2276,6 +2414,10 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8b90cd8d45 (refactor: change release build)
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -2335,16 +2477,28 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
+<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
+=======
+      - name: Check DKP images manifests in dev registry
+>>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
+=======
+          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
+>>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
