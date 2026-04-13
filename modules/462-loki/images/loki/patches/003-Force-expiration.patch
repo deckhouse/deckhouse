@@ -201,10 +201,10 @@ index eafdb4b6..7711cc03 100644
 
 diff --git a/pkg/compactor/force_expiration.go b/pkg/compactor/force_expiration.go
 new file mode 100644
-index 00000000..8be4e759
+index 00000000..2935773a
 --- /dev/null
 +++ b/pkg/compactor/force_expiration.go
-@@ -0,0 +1,443 @@
+@@ -0,0 +1,460 @@
 +package compactor
 +
 +import (
@@ -415,15 +415,32 @@ index 00000000..8be4e759
 +		return nil, err
 +	}
 +	sourceFiles := is.ListSourceFiles()
-+	if len(sourceFiles) != 1 {
-+		return nil, fmt.Errorf("too many source files in index set to open compacted index file")
++	if len(sourceFiles) == 0 {
++		return nil, fmt.Errorf("no source files in index set")
 +	}
-+	downloadedAt, err := is.GetSourceFile(sourceFiles[0])
-+	if err != nil {
-+		return nil, err
++	for _, sf := range sourceFiles {
++		downloadedAt, dlErr := is.GetSourceFile(sf)
++		if dlErr != nil {
++			_ = level.Warn(util_log.Logger).Log(
++				"msg", "failed to download source file, trying next",
++				"file", sf.Name,
++				"err", dlErr,
++			)
++			continue
++		}
++		ci, openErr := indexCompactor.OpenCompactedIndexFile(ctx,
++			downloadedAt, tableName, is.userID, filepath.Join(is.workingDir, is.userID), schemaCfg, is.logger)
++		if openErr != nil {
++			_ = level.Warn(util_log.Logger).Log(
++				"msg", "failed to open index file, trying next",
++				"file", sf.Name,
++				"err", openErr,
++			)
++			continue
++		}
++		return ci, nil
 +	}
-+	return indexCompactor.OpenCompactedIndexFile(ctx,
-+		downloadedAt, tableName, is.userID, filepath.Join(is.workingDir, is.userID), schemaCfg, is.logger)
++	return nil, fmt.Errorf("failed to open any of %d source files in index set", len(sourceFiles))
 +}
 +
 +func (h *forceExpirationHook) evaluateExpiredChunks(ctx context.Context, tableCompactedIndex CompactedIndex, bytesToDelete int64) ([]string, int64, error) {
