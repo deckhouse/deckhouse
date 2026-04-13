@@ -48,7 +48,7 @@ status:
 	)
 
 	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.16.15", "kubernetesVersions":["1.16.15"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}},"nodeManager":{"internal": {}}}`, `{}`)
-	f.RegisterCRD("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane", false)
+	f.RegisterCRD("infrastructure.cluster.x-k8s.io", "v1beta2", "DeckhouseControlPlane", false)
 
 	Context("DeckhouseControlPlane with status field", func() {
 		BeforeEach(func() {
