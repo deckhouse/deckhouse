@@ -673,7 +673,7 @@ internal:
       type: "Containerd"
 `
 	nodeManagerStaticInstancesStaticMachineTemplate = `
-apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: StaticMachineTemplate
 metadata:
   namespace: d8-cloud-instance-manager
@@ -723,7 +723,7 @@ spec:
         dataSecretName: manual-bootstrap-for-worker
       clusterName: static
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: StaticMachineTemplate
         namespace: d8-cloud-instance-manager
         name: worker

@@ -26,7 +26,7 @@ spec:
       bootstrap:
         dataSecretName: manual-bootstrap-for-{{ $ng.name }}
       infrastructureRef:
-        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
         kind: StaticMachineTemplate
         namespace: d8-cloud-instance-manager
         name: {{ $ng.name }}
