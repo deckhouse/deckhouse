@@ -154,7 +154,7 @@ index 0000000000..c4a5ee921f
 +	}
 +}
 diff --git a/internal/tofu/node_resource_abstract_instance.go b/internal/tofu/node_resource_abstract_instance.go
-index 3200163e81..789b0bc9b3 100644
+index 3200163e81..3d53c53006 100644
 --- a/internal/tofu/node_resource_abstract_instance.go
 +++ b/internal/tofu/node_resource_abstract_instance.go
 @@ -6,12 +6,16 @@
@@ -208,8 +208,8 @@ index 3200163e81..789b0bc9b3 100644
 -				return true
 +				if n.allowDataDepsChanges(d, change, providerSchema) {
 +					pendingDeps[d.String()] = struct{}{}
++					break
 +				}
-+				break
  			}
  		}
  	}
