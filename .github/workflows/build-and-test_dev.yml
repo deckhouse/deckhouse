@@ -578,7 +578,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -877,7 +876,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1175,7 +1173,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1473,7 +1470,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -1771,7 +1767,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -2069,7 +2064,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -2367,7 +2361,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"

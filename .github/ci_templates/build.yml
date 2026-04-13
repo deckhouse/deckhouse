@@ -120,7 +120,7 @@ steps:
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}
-{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
       COSIGN_VAULT_KEY: "dh-2025-aug-dev"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
       COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -130,8 +130,8 @@ steps:
       COSIGN_VAULT_KEY: "dh-2025-aug-ec"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
       COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+      REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+      REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
 {!{- end }!}
     run: |
       # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
@@ -281,9 +281,9 @@ steps:
     if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
     env:
       DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-      DECKHOUSE_DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
     run: |
-      export REGISTRY_FROM="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
       export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
       export IMAGES_TAGS_PATH=./images_tags_werf.json
       python .github/scripts/python/copy_attestations.py
