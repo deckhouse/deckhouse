@@ -175,9 +175,15 @@ steps:
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
+    {!{- if eq $buildType "release" }!}
+      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+      export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+      export WERF_REPO="${STAGE_REGISTRY_PATH}"
+    {!{- else }!}
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
       export WERF_REPO="${DEV_REGISTRY_PATH}"
+    {!{- end }!}
     {!{ if eq $buildType "release" }!}
       # Registry path to publish images for Git tags.
       if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
