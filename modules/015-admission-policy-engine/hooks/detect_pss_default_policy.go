@@ -106,7 +106,7 @@ func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 
 	// if deckhouse bootstrap release < v1.55
 	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) < 0 {
-		input.Logger.Info("PSS default policy is set to baseline", slog.String("version", deckhouseVersion))
+		input.Logger.Info("PSS default policy is set to privileged", slog.String("version", deckhouseVersion))
 		return "Privileged"
 	}
 
