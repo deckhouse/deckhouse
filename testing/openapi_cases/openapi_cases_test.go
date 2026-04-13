@@ -35,6 +35,7 @@ func TestOpenAPICases(t *testing.T) {
 }
 
 var _ = Describe("OpenAPI case tests", func() {
+	defer GinkgoRecover()
 	var err error
 
 	openAPIDirs, err := GetAllOpenAPIDirs()
