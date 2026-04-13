@@ -31,6 +31,7 @@ import (
 
 type providerOptions struct {
 	connectionConfig string
+	kubeFlagsDefined bool
 }
 
 type ProviderOptions func(o *providerOptions)
@@ -38,6 +39,12 @@ type ProviderOptions func(o *providerOptions)
 func WithConnectionConfig(s string) ProviderOptions {
 	return func(o *providerOptions) {
 		o.connectionConfig = s
+	}
+}
+
+func WithKubeFlagsDefined(b bool) ProviderOptions {
+	return func(o *providerOptions) {
+		o.kubeFlagsDefined = b
 	}
 }
 
@@ -103,7 +110,7 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 		}
 		config, err = flags.ExtractConfig(os.Args[1:])
 		if err != nil {
-			if strings.Contains(err.Error(), "Failed to read private keys from flags") {
+			if strings.Contains(err.Error(), "Failed to read private keys from flags") && options.kubeFlagsDefined {
 				return nil, nil
 			}
 			return nil, fmt.Errorf("extract config: %w", err)
