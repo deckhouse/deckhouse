@@ -75,7 +75,7 @@ shell:
       --type openvex \
       --key hashivault://${COSIGN_VAULT_KEY} \
       --tlog-upload=false \
-      -y -d \
+      -y \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}
