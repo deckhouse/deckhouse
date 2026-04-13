@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-5a7af0f8c8656570f312693f05dd9d0c8f523f7fa16225650a88b0a022e5a27c",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 6,
+  "version": 7,
   "statements": [
     {
       "vulnerability": {
@@ -73,8 +73,22 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: crictl является gRPC-клиентом, а не сервером. Уязвимость затрагивает исключительно серверную часть gRPC-Go, которая не используется в crictl. Кроме того, эксплуатация требует наличия path-based авторизационных интерцепторов с deny-правилами и fallback allow на стороне сервера, что не является частью архитектуры crictl.",
       "timestamp": "2026-03-24T09:30:46.588349Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T08:11:57.791025Z"
     }
   ],
   "timestamp": "2026-01-21T10:25:02Z",
-  "last_updated": "2026-03-24T09:30:59Z"
+  "last_updated": "2026-04-10T08:11:57Z"
 }
