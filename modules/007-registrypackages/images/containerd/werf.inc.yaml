@@ -1,7 +1,7 @@
-{{- $containerd_versions := list "1.7.30" "2.1.6" }}
-{{- $runc_versions := list "1.3.4" }}
-{{- $containerd2runc := dict "1.7.30" "1.3.4" "2.1.6" "1.3.4" }}
-{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "4" }} # may be redefine in CSE
+{{- $containerd_versions := list "1.7.30" "2.2.3" }}
+{{- $runc_versions := list "1.3.4" "1.3.5" }}
+{{- $containerd2runc := dict "1.7.30" "1.3.4" "2.2.3" "1.3.5" }}
+{{- $containerd_integrity_patches_version := .IntegrityPatchesVersion | default "0" }} # may be redefine in CSE
 
 # calculate additional build options for containerd
 # skip for v1 and not CSE. Now we calculate namespaces for integrity check
@@ -146,7 +146,7 @@ shell:
   install:
 {{- if and (eq $.Env "CSE") $is_v2 }}
   - echo "Attention! Use integrity patches!"
-  - git clone --depth 1 --branch v{{ $containerd_version }}-{{ $containerd_integrity_patches_version }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
+  - git clone --depth 1 --branch integrity-patch-for-containerd-222 git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
   - alias cp='cp'
   - cp /src/integrity-patches/patches/*.patch /patches
   - rm -rf /src/integrity-patches
