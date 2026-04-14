@@ -126,7 +126,7 @@
       "products": [
         {
           "@id": "pkg:golang/google.golang.org/grpc"
-        },
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
