@@ -452,14 +452,12 @@ jobs:
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
-        uses: werf/trdl/actions/setup-app@main
-        with:
-          repo: d8
-          url: https://deckhouse.ru/downloads/deckhouse-cli-trdl
-          root-version: 1
-          root-sha512: 343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
-          group: 0
-          channel: stable
+        env:
+          DECKHOUSE_CLI_VERSION: "v0.29.25"
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
@@ -755,14 +753,12 @@ jobs:
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
-        uses: werf/trdl/actions/setup-app@main
-        with:
-          repo: d8
-          url: https://deckhouse.ru/downloads/deckhouse-cli-trdl
-          root-version: 1
-          root-sha512: 343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
-          group: 0
-          channel: stable
+        env:
+          DECKHOUSE_CLI_VERSION: "v0.29.25"
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
@@ -1057,14 +1053,12 @@ jobs:
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
-        uses: werf/trdl/actions/setup-app@main
-        with:
-          repo: d8
-          url: https://deckhouse.ru/downloads/deckhouse-cli-trdl
-          root-version: 1
-          root-sha512: 343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
-          group: 0
-          channel: stable
+        env:
+          DECKHOUSE_CLI_VERSION: "v0.29.25"
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
@@ -1359,14 +1353,12 @@ jobs:
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
-        uses: werf/trdl/actions/setup-app@main
-        with:
-          repo: d8
-          url: https://deckhouse.ru/downloads/deckhouse-cli-trdl
-          root-version: 1
-          root-sha512: 343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
-          group: 0
-          channel: stable
+        env:
+          DECKHOUSE_CLI_VERSION: "v0.29.25"
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
@@ -1661,14 +1653,12 @@ jobs:
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
-        uses: werf/trdl/actions/setup-app@main
-        with:
-          repo: d8
-          url: https://deckhouse.ru/downloads/deckhouse-cli-trdl
-          root-version: 1
-          root-sha512: 343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
-          group: 0
-          channel: stable
+        env:
+          DECKHOUSE_CLI_VERSION: "v0.29.25"
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
@@ -1963,14 +1953,12 @@ jobs:
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
-        uses: werf/trdl/actions/setup-app@main
-        with:
-          repo: d8
-          url: https://deckhouse.ru/downloads/deckhouse-cli-trdl
-          root-version: 1
-          root-sha512: 343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
-          group: 0
-          channel: stable
+        env:
+          DECKHOUSE_CLI_VERSION: "v0.29.25"
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
@@ -2265,14 +2253,12 @@ jobs:
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
-        uses: werf/trdl/actions/setup-app@main
-        with:
-          repo: d8
-          url: https://deckhouse.ru/downloads/deckhouse-cli-trdl
-          root-version: 1
-          root-sha512: 343bd5f0d8811254e5f0b6fe292372a7b7eda08d276ff255229200f84e58a8151ab2729df3515cb11372dc3899c70df172a4e54c8a596a73d67ae790466a0491
-          group: 0
-          channel: stable
+        env:
+          DECKHOUSE_CLI_VERSION: "v0.29.25"
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
