@@ -14,13 +14,13 @@ conversions:
             import sys
 
             def _conv_log(msg: str, data=None):
-                line = "[log-shipper ClusterLogDestination] v1alpha1_to_v1alpha2 " + msg
+                rec = {"level": "info", "msg": "[log-shipper ClusterLogDestination] v1alpha1_to_v1alpha2 " + msg}
                 if data is not None:
                     try:
-                        line += " " + json.dumps(data, ensure_ascii=False, default=str)
+                        rec["detail"] = json.dumps(data, ensure_ascii=False, default=str)
                     except Exception:
-                        line += " " + repr(data)
-                print(line, file=sys.stderr, flush=True)
+                        rec["detail"] = repr(data)
+                print(json.dumps(rec, ensure_ascii=False), file=sys.stderr, flush=True)
 
             bopen, bclose = "{", "}"
             _conv_log("enter", {"apiVersion": o.get("apiVersion"), "name": (o.get("metadata") or {}).get("name")})
@@ -84,13 +84,13 @@ conversions:
             import sys
 
             def _conv_log(msg: str, data=None):
-                line = "[log-shipper ClusterLogDestination] v1alpha2_to_v1alpha1 " + msg
+                rec = {"level": "info", "msg": "[log-shipper ClusterLogDestination] v1alpha2_to_v1alpha1 " + msg}
                 if data is not None:
                     try:
-                        line += " " + json.dumps(data, ensure_ascii=False, default=str)
+                        rec["detail"] = json.dumps(data, ensure_ascii=False, default=str)
                     except Exception:
-                        line += " " + repr(data)
-                print(line, file=sys.stderr, flush=True)
+                        rec["detail"] = repr(data)
+                print(json.dumps(rec, ensure_ascii=False), file=sys.stderr, flush=True)
 
             def catch_all_group_name(rx: str):
                 pfx = "^(?P<"
