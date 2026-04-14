@@ -9,7 +9,6 @@ Before writing any test, read these files:
 | Resource | Path | Purpose |
 |----------|------|---------|
 | Testing guide (EN) | [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) | Comprehensive human documentation |
-| Testing guide (RU) | [`docs/TESTING_GUIDE.ru.md`](docs/TESTING_GUIDE.ru.md) | Полное руководство (RU) |
 | test_fields schema | [`openapi/constraint-test-fields.schema.yaml`](openapi/constraint-test-fields.schema.yaml) | Validation rules for `test_fields.yaml` |
 | test-matrix schema | [`openapi/constraint-test-matrix.schema.yaml`](openapi/constraint-test-matrix.schema.yaml) | Validation rules for `test-matrix.yaml` |
 | test_profile schema | [`openapi/constraint-test-profile.schema.yaml`](openapi/constraint-test-profile.schema.yaml) | Validation rules for `test_profile.yaml` |
