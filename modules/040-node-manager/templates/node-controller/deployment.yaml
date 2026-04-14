@@ -76,7 +76,7 @@ spec:
         args:
         - --metrics-bind-address=0.0.0.0:8080
         - --health-probe-bind-address=0.0.0.0:8081
-        - -v=6
+        - -v=10
         livenessProbe:
           httpGet:
             path: /healthz
