@@ -10,13 +10,28 @@ conversions:
     handler:
       python: |
         def v1alpha1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
+            import json
+            import sys
+
+            def _conv_log(msg: str, data=None):
+                line = "[log-shipper ClusterLogDestination] v1alpha1_to_v1alpha2 " + msg
+                if data is not None:
+                    try:
+                        line += " " + json.dumps(data, ensure_ascii=False, default=str)
+                    except Exception:
+                        line += " " + repr(data)
+                print(line, file=sys.stderr, flush=True)
+
             bopen, bclose = "{", "}"
+            _conv_log("enter", {"apiVersion": o.get("apiVersion"), "name": (o.get("metadata") or {}).get("name")})
             if o.get("apiVersion") != "deckhouse.io/v1alpha1":
+                _conv_log("skip_wrong_apiVersion", {"got": o.get("apiVersion")})
                 return None, o
             out = dict(o)
             out["apiVersion"] = "deckhouse.io/v1alpha2"
             spec = out.get("spec")
             if not isinstance(spec, dict):
+                _conv_log("skip_no_spec")
                 return None, out
             def _catch_all_group_name(rx: str):
                 pfx = "^(?P<"
@@ -32,6 +47,7 @@ conversions:
                     if not isinstance(labs, list) or not labs:
                         continue
                     if isinstance(labs[0], str):
+                        _conv_log("dropLabels_from_strings", {"labels": labs})
                         dl["labels"] = [{"label": p} for p in labs]
                 if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
                     pm = t["parseMessage"]
@@ -52,7 +68,11 @@ conversions:
                             st.clear()
                             st["regex"] = r"^(?P<%s>.*)$" % tf
                             st["setLabels"] = {tf: (bopen * 2 + " %s " % tf + bclose * 2)}
+                            _conv_log("parseMessage_string_built", {"tf": tf, "string_out": dict(st)})
+                        else:
+                            _conv_log("parseMessage_string_no_tf", {"string_in": dict(pm.get("string") or {})})
                         pm["string"] = st
+            _conv_log("done", {"transformations": spec.get("transformations")})
             return None, out
 
   - from: v1alpha2
@@ -60,6 +80,18 @@ conversions:
     handler:
       python: |
         def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
+            import json
+            import sys
+
+            def _conv_log(msg: str, data=None):
+                line = "[log-shipper ClusterLogDestination] v1alpha2_to_v1alpha1 " + msg
+                if data is not None:
+                    try:
+                        line += " " + json.dumps(data, ensure_ascii=False, default=str)
+                    except Exception:
+                        line += " " + repr(data)
+                print(line, file=sys.stderr, flush=True)
+
             def catch_all_group_name(rx: str):
                 pfx = "^(?P<"
                 sfx = ">.*)$"
@@ -67,18 +99,22 @@ conversions:
                     return None
                 return rx[len(pfx) : -len(sfx)]
 
+            _conv_log("enter", {"apiVersion": o.get("apiVersion"), "name": (o.get("metadata") or {}).get("name")})
             if o.get("apiVersion") != "deckhouse.io/v1alpha2":
+                _conv_log("skip_wrong_apiVersion", {"got": o.get("apiVersion")})
                 return None, o
             out = dict(o)
             out["apiVersion"] = "deckhouse.io/v1alpha1"
             spec = out.get("spec")
             if not isinstance(spec, dict):
+                _conv_log("skip_no_spec")
                 return None, out
             for t in spec.get("transformations") or []:
                 if t.get("action") == "DropLabels" and isinstance(t.get("dropLabels"), dict):
                     dl = t["dropLabels"]
                     labs = dl.get("labels")
                     if labs and isinstance(labs[0], dict):
+                        _conv_log("dropLabels_from_objects", {"labels": labs})
                         dl["labels"] = [e["label"] for e in labs]
                 if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
                     pm = t["parseMessage"]
@@ -87,11 +123,13 @@ conversions:
                         st = pm["string"]
                         tf = st.get("targetField")
                         if isinstance(tf, str) and tf:
+                            _conv_log("parseMessage_keep_targetField", {"targetField": tf})
                             pm["string"] = {"targetField": tf}
                         else:
                             rx = st.get("regex") or ""
                             sl = st.get("setLabels") or {}
                             name = catch_all_group_name(rx)
+                            _conv_log("parseMessage_from_regex", {"regex": rx, "setLabels": sl, "derived_name": name})
                             if name and isinstance(sl, dict) and name in sl:
                                 pm["string"] = {"targetField": name}
                             elif isinstance(sl, dict) and len(sl) == 1:
@@ -99,5 +137,7 @@ conversions:
                             elif name:
                                 pm["string"] = {"targetField": name}
                             else:
+                                _conv_log("parseMessage_fallback_empty_string")
                                 pm["string"] = {}
+            _conv_log("done", {"transformations": spec.get("transformations")})
             return None, out
