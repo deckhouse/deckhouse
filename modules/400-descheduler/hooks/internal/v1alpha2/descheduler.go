@@ -107,6 +107,6 @@ type RemovePodsViolatingTopologySpreadConstraint struct {
 }
 
 type RemovePodsHavingTooManyRestarts struct {
-	Enabled            bool  `json:"enabled" yaml:"enabled"`
+	Enabled             bool  `json:"enabled" yaml:"enabled"`
 	PodRestartThreshold int32 `json:"podRestartThreshold,omitempty" yaml:"podRestartThreshold,omitempty"`
 }
