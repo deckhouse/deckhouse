@@ -25,8 +25,10 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.57.1"
+  DECKHOUSE_CLI_VERSION: "v0.29.20"
+  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
+  WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -91,8 +93,6 @@ jobs:
 
     # <template: d8cli_install_step>
     - name: Install d8 CLI
-      env:
-        DECKHOUSE_CLI_VERSION: "v0.29.25"
       run: |
         mkdir -p bin
         INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
