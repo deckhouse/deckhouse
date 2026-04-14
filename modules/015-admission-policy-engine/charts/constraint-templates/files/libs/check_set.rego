@@ -16,6 +16,7 @@ package lib.check_set
 
 import data.lib.common.get_field
 import data.lib.exception.allowed_values_or_empty
+import data.lib.exception.path_value_resolved
 import data.lib.exception.resolve_spe_for_container
 import data.lib.exception.resolve_spe_from_labels
 import data.lib.match.glob_any
@@ -51,10 +52,11 @@ check_container_value_in_set(container, field_path, field_name, allowed_set, spe
   exception := resolve_spe_for_container(container, labels, namespace)
   spe_allowed := allowed_values_or_empty(exception, spe_path)
   not value_in_set(value, spe_allowed)
-  spe_msg := format_spe_set_msg(spe_allowed)
+  spe_used := path_value_resolved(exception, spe_path)
+  msg := set_violation_msg(field_name, value, allowed_set, spe_used, spe_allowed)
   result := {
     "allowed": false,
-    "msg": sprintf("%v has value %v which is not in allowed set %v. %v", [field_name, value, allowed_set, spe_msg])
+    "msg": msg
   }
 }
 
@@ -93,10 +95,11 @@ check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
   exception := resolve_spe_from_labels(labels, namespace)
   spe_allowed := allowed_values_or_empty(exception, spe_path)
   not value_in_set(value, spe_allowed)
-  spe_msg := format_spe_set_msg(spe_allowed)
+  spe_used := path_value_resolved(exception, spe_path)
+  msg := set_violation_msg(field_name, value, allowed_set, spe_used, spe_allowed)
   result := {
     "allowed": false,
-    "msg": sprintf("%v has value %v which is not in allowed set %v. %v", [field_name, value, allowed_set, spe_msg])
+    "msg": msg
   }
 }
 
@@ -135,10 +138,11 @@ check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
   exception := resolve_spe_from_labels(labels, namespace)
   spe_allowed := allowed_values_or_empty(exception, spe_path)
   not all_in_set_or_prefix(values, spe_allowed)
-  spe_msg := format_spe_set_msg(spe_allowed)
+  spe_used := path_value_resolved(exception, spe_path)
+  msg := array_set_violation_msg(field_name, values, allowed_set, spe_used, spe_allowed)
   result := {
     "allowed": false,
-    "msg": sprintf("%v has values %v which are not in allowed set %v. %v", [field_name, values, allowed_set, spe_msg])
+    "msg": msg
   }
 }
 
@@ -165,10 +169,10 @@ check_value_in_set_with_wildcards(value, allowed_set, spe_allowed, opts) := resu
   value != null
   not value_in_set_or_prefix(value, allowed_set)
   not value_in_set_or_prefix(value, spe_allowed)
-  spe_msg := format_spe_set_msg(spe_allowed)
+  msg := value_set_violation_msg(value, allowed_set, spe_allowed)
   result := {
     "allowed": false,
-    "msg": sprintf("Value %v is not in allowed set %v. %v", [value, allowed_set, spe_msg])
+    "msg": msg
   }
 }
 
@@ -195,10 +199,10 @@ check_value_with_glob(value, allowed_set, spe_allowed) := result if {
   value != null
   not glob_any(allowed_set, value)
   not glob_any(spe_allowed, value)
-  spe_msg := format_spe_set_msg(spe_allowed)
+  msg := value_glob_violation_msg(value, allowed_set, spe_allowed)
   result := {
     "allowed": false,
-    "msg": sprintf("Value %v does not match allowed patterns %v. %v", [value, allowed_set, spe_msg])
+    "msg": msg
   }
 }
 
@@ -275,13 +279,72 @@ value_in_set_or_prefix(value, allowed) if {
   startswith(value, trim_suffix(a, "*"))
 }
 
-format_spe_set_msg(spe_allowed) := "" if {
-  count(spe_allowed) == 0
+set_violation_msg(field_name, value, allowed_set, false, _) := out if {
+  out := sprintf("%v has value %v which is not in allowed set %v. %v", [field_name, value, allowed_set, ""])
 }
 
-format_spe_set_msg(spe_allowed) := out if {
+set_violation_msg(field_name, value, allowed_set, true, spe_allowed) := out if {
+  ctx := spe_set_ctx(value, allowed_set, spe_allowed)
+  out := sprintf("%v has value %v which is not in allowed set %v. %v", [field_name, value, allowed_set, ctx])
+}
+
+array_set_violation_msg(field_name, values, allowed_set, false, _) := out if {
+  out := sprintf("%v has values %v which are not in allowed set %v. %v", [field_name, values, allowed_set, ""])
+}
+
+array_set_violation_msg(field_name, values, allowed_set, true, spe_allowed) := out if {
+  bad_values := [v | v := values[_]; not value_in_set_or_prefix(v, allowed_set); not value_in_set_or_prefix(v, spe_allowed)]
+  bad_value := sort(bad_values)[0]
+  ctx := spe_set_ctx(bad_value, allowed_set, spe_allowed)
+  out := sprintf("%v has values %v which are not in allowed set %v. %v", [field_name, values, allowed_set, ctx])
+}
+
+spe_set_ctx(actual, policy_allowed, spe_allowed) := out if {
+  out := sprintf("forbidden: %v; policy allows: %v; SPE allows: %v", [actual, policy_allowed, spe_allowed])
+}
+
+value_set_violation_msg(value, allowed_set, spe_allowed) := out if {
+  count(spe_allowed) == 0
+  out := sprintf("Value %v is not in allowed set %v. %v", [value, allowed_set, ""])
+}
+
+value_set_violation_msg(value, allowed_set, spe_allowed) := out if {
   count(spe_allowed) > 0
-  out := sprintf("| SecurityPolicyException allowed: %v", [spe_allowed])
+  ctx := spe_set_ctx(value, allowed_set, spe_allowed)
+  out := sprintf("Value %v is not in allowed set %v. %v", [value, allowed_set, ctx])
+}
+
+value_glob_violation_msg(value, allowed_set, spe_allowed) := out if {
+  count(spe_allowed) == 0
+  out := sprintf("Value %v does not match allowed patterns %v. %v", [value, allowed_set, ""])
+}
+
+value_glob_violation_msg(value, allowed_set, spe_allowed) := out if {
+  count(spe_allowed) > 0
+  ctx := spe_set_ctx(value, allowed_set, spe_allowed)
+  out := sprintf("Value %v does not match allowed patterns %v. %v", [value, allowed_set, ctx])
+}
+
+value_set_violation_msg(value, allowed_set, spe_allowed) := out if {
+  count(spe_allowed) == 0
+  out := sprintf("Value %v is not in allowed set %v. %v", [value, allowed_set, ""])
+}
+
+value_set_violation_msg(value, allowed_set, spe_allowed) := out if {
+  count(spe_allowed) > 0
+  ctx := spe_set_ctx(value, allowed_set, spe_allowed)
+  out := sprintf("Value %v is not in allowed set %v. %v", [value, allowed_set, ctx])
+}
+
+value_glob_violation_msg(value, allowed_set, spe_allowed) := out if {
+  count(spe_allowed) == 0
+  out := sprintf("Value %v does not match allowed patterns %v. %v", [value, allowed_set, ""])
+}
+
+value_glob_violation_msg(value, allowed_set, spe_allowed) := out if {
+  count(spe_allowed) > 0
+  ctx := spe_set_ctx(value, allowed_set, spe_allowed)
+  out := sprintf("Value %v does not match allowed patterns %v. %v", [value, allowed_set, ctx])
 }
 
 denied(value, denylist) if {

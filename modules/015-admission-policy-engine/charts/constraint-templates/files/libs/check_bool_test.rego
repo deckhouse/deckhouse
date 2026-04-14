@@ -32,6 +32,8 @@ test_container_bool_violates if {
     "default"
   )
   result.allowed == false
+  contains(result.msg, "privileged has value true, expected false")
+  not contains(result.msg, "SPE allows")
 }
 
 # Default matches expected → allowed
@@ -99,6 +101,29 @@ test_container_bool_spe_denies if {
   ) with data.inventory as inventory_allow_false
   result.allowed == false
   contains(result.msg, "expected")
+  contains(result.msg, "forbidden: true")
+  contains(result.msg, "policy allows: false")
+  contains(result.msg, "SPE allows: [false]")
+}
+
+# Pod-level SPE denies value with context
+test_pod_bool_spe_denies_with_context if {
+  pod := {
+    "metadata": {"labels": {"security.deckhouse.io/security-policy-exception": "spe"}, "namespace": "default"},
+    "spec": {"hostPID": true}
+  }
+  result := check_bool.check_pod_bool(
+    pod,
+    ["spec", "hostPID"],
+    "hostPID",
+    false,
+    false,
+    ["spec", "network", "hostPID", "allowedValue"]
+  ) with data.inventory as inventory_pod_allow_false
+  result.allowed == false
+  contains(result.msg, "forbidden: true")
+  contains(result.msg, "policy allows: false")
+  contains(result.msg, "SPE allows: false")
 }
 
 # Pod-level boolean with SPE
@@ -166,6 +191,44 @@ inventory_pod_allow_true := {
             "spec": {
               "network": {
                 "hostPID": {"allowedValue": true}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+inventory_pod_allow_false := {
+  "namespace": {
+    "default": {
+      "deckhouse.io/v1alpha1": {
+        "SecurityPolicyException": {
+          "spe": {
+            "metadata": {"name": "spe"},
+            "spec": {
+              "network": {
+                "hostPID": {"allowedValue": false}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+inventory_pod_allow_false := {
+  "namespace": {
+    "default": {
+      "deckhouse.io/v1alpha1": {
+        "SecurityPolicyException": {
+          "spe": {
+            "metadata": {"name": "spe"},
+            "spec": {
+              "network": {
+                "hostPID": {"allowedValue": false}
               }
             }
           }

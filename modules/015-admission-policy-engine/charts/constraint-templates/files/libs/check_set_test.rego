@@ -32,6 +32,8 @@ test_container_value_in_set_denied if {
     "default"
   )
   result.allowed == false
+  contains(result.msg, "procMount has value Masked which is not in allowed set")
+  not contains(result.msg, "SPE allows")
 }
 
 # Wildcard allows all
@@ -65,6 +67,25 @@ test_container_value_in_set_spe_allows if {
   result.allowed == true
 }
 
+# SPE present but does not allow value -> denied with context
+
+test_container_value_in_set_spe_denied_with_context if {
+  container := {"name": "app", "securityContext": {"procMount": "Masked"}}
+  labels := {"security.deckhouse.io/security-policy-exception": "spe"}
+  result := check_set.check_container_value_in_set(
+    container,
+    ["securityContext", "procMount"],
+    "procMount",
+    ["Default"],
+    ["spec", "securityContext", "procMount", "allowedValues"],
+    labels,
+    "default"
+  ) with data.inventory as inventory_spe
+  result.allowed == false
+  contains(result.msg, "forbidden: Masked")
+  contains(result.msg, "SPE allows: [\"Unmasked\"]")
+}
+
 # Allowlist/denylist
 
 test_allowlist_denylist_forbidden if {
@@ -91,7 +112,7 @@ inventory_spe := {
                 "procMount": {"allowedValues": ["Unmasked"]}
               }
             }
-          }
+          },
         }
       }
     }
