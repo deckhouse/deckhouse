@@ -1,12 +1,12 @@
 ---
-title: CSI-драйвер (NFS)
+title: CSI-драйвер NFS
 permalink: ru/architecture/storage/csi-drivers/csi-driver-nfs.html
 lang: ru
 search: csi-nfs, nfs
-description: Архитектура CSI-драйвера для работы с NFS томами в Deckhouse Kubernetes Platform.
+description: Архитектура CSI-драйвера для работы с NFS-томами в Deckhouse Kubernetes Platform.
 ---
 
-CSI-драйвер `csi-nfs` - реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с NFS томами в Deckhouse Kubernetes Platform (DKP).
+CSI-драйвер `csi-nfs` — реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для управления NFS-томами в Deckhouse Kubernetes Platform (DKP).
 
 ## Архитектура драйвера
 
@@ -30,11 +30,11 @@ CSI-драйвер состоит из следующих компонентов
 
    Состоит из следующих контейнеров:
 
-   * **wait-rpcbind** — init-контейнер, ожидает готовности `rpcbind`;
+   * **wait-rpcbind** — init-контейнер, ожидающий доступности Unix-сокета службы rpcbind;
 
-   * **ktls-enabler** — init-контейнер, выполняет загрузку и проверку модулей ядра на узле для работы RPC-with-TLS;
+   * **ktls-enabler** — init-контейнер, выполняющий загрузку и проверку модулей ядра Linux на узле для работы в режиме RPC-with-TLS;
 
-   * **net-handshake-checker** — init-контейнер, выполняет однократный запуск [tlshd](https://github.com/oracle/ktls-utils) для проверки работоспособности `TLS handshake` на уровне ядра ОС;
+   * **net-handshake-checker** — init-контейнер, выполняющий однократный запуск [tlshd](https://github.com/oracle/ktls-utils) для проверки работоспособности `TLS handshake` на уровне ядра ОС;
 
    * **controller** — основной контейнер, реализующий функциональность CSI-драйвера (capabilities) в виде gRPC-сервисов Identity Service и Controller Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
@@ -62,15 +62,15 @@ CSI-драйвер состоит из следующих компонентов
 
    Состоит из следующих контейнеров:
 
-   * **wait-rpcbind** — init-контейнер, ожидает готовности `rpcbind`;
+   * **wait-rpcbind** — init-контейнер, ожидающий доступности Unix-сокета службы rpcbind;
 
-   * **ktls-enabler** — init-контейнер, выполняет загрузку и проверку модулей ядра на узле для работы RPC-with-TLS;
+   * **ktls-enabler** — init-контейнер, выполняющий загрузку и проверку модулей ядра LInux на узле для работы в режиме RPC-with-TLS;
 
-   * **net-handshake-checker** — init-контейнер, выполняет однократный запуск [tlshd](https://github.com/oracle/ktls-utils) для проверки работоспособности `TLS handshake` на уровне ядра ОС;
+   * **net-handshake-checker** — init-контейнер, выполняющий однократный запуск [tlshd](https://github.com/oracle/ktls-utils) для проверки работоспособности `TLS handshake` на уровне ядра ОС;
 
    * **node** — основной контейнер, реализующий функции CSI-драйвера в виде gRPC-сервисов Identity Service и Node Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
-   * **tlshd** — сайдкар-контейнер, обеспечивающий работу RPC-with-TLS;
+   * **tlshd** — сайдкар-контейнер, обеспечивающий работу в режиме RPC-with-TLS;
 
    * **node-driver-registrar** — сайдкар-контейнер, регистрирующий Node Plugin в [kubelet](../../kubernetes-and-scheduling/kubelet.html). Вызывает в контейнере node RPC `GetPluginInfo` и `NodeGetInfo`, чтобы получить информацию о плагине и узле. Взаимодействуют c контейнером **node** по gRPC через Unix-сокет.
 

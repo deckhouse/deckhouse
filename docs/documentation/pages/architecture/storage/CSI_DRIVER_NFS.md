@@ -1,5 +1,5 @@
 ---
-title: CSI driver (NFS)
+title: NFS CSI driver
 permalink: en/architecture/storage/csi-drivers/csi-driver-nfs.html
 search: csi-nfs, nfs
 description: Overview of the CSI driver architecture for NFS-based volumes in Deckhouse Kubernetes Platform.

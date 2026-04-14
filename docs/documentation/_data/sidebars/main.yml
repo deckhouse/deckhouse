@@ -1396,11 +1396,11 @@ entries:
               url: /architecture/storage/sds-node-configurator.html
             - title:
                 en: CSI drivers
-                ru: CSI-драйверы
+                ru: Драйверы CSI
               folders:
                 - title:
-                    en: CSI driver (csi-nfs)
-                    ru: CSI-драйвер csi-nfs
+                    en: NFS CSI driver
+                    ru: CSI-драйвер NFS
                   url: /architecture/storage/csi-drivers/csi-driver-nfs.html
         - title:
             en: Observability subsystem

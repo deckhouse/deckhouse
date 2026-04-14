@@ -27,14 +27,14 @@ The Level 2 C4 architecture of the [`csi-nfs`](/modules/csi-nfs/) module and its
 
 The module consists of the following components:
 
-1. **Controller**: It reconciles [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) custom resources. NFSStorageClass is a Kubernetes custom resource that defines the configuration for Kubernetes StorageClass. The StorageClass being created uses `nfs.csi.k8s.io` provisioner. StorageClass configures connection settings to NFS-server, reclaim policy, volume binding mode, etc. These settings are used by the provisioner of CSI driver (`csi-nfs`) when managing NFS-based volumes.
+1. **Controller**: It reconciles [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) custom resources. NFSStorageClass is a Kubernetes custom resource that defines the configuration for Kubernetes StorageClass. The StorageClass being created uses `nfs.csi.k8s.io` provisioner. StorageClass configures connection settings to NFS-server, reclaim policy, volume binding mode, etc. These settings are used by the provisioner of CSI driver (`csi-nfs`) when managing NFS-based volumes. Also the controller synchronizes node labels with [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) custom resource [spec.workloadNodes.nodeSelector](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) parameter.
 
    It consists of the following containers:
 
    * **controller**: Main container.
-   * **webhook**: A sidecar container that implements a webhook server for validating NFSStorageClass custom resources, StorageClass resources.
+   * **webhooks**: A sidecar container that implements a webhook server for validating ModuleConfig and NFSStorageClass custom resources, as well as StorageClass resources.
 
-2. **Scheduler-extender**: It consists of a single container. It is a kube-scheduler extender, which implements a scheduling logic specific for pods using NFS-based volumes. When planning, the rules of selecting nodes in NFSStorageClass are taken into account.
+2. **Csi-nfs-scheduler-extender**: It consists of a single container. It is a kube-scheduler extender, which implements a scheduling logic specific for pods using NFS-based volumes. When planning, the rules of selecting nodes in NFSStorageClass custom resource are taken into account.
 
 3. **CSI driver (`csi-nfs`)**: It is an implementation of the CSI driver for `nfs.csi.k8s.io` ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). To study the CSI driver (`csi-nfs`) architecture used in DKP, refer to [the CSI-driver architecture documentation section](../storage/csi-drivers/csi-driver-nfs.html).
 
@@ -50,6 +50,6 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Kube-apiserver**: Validates NFSStorageClass custom resources and StorageClass resources.
+1. **Kube-apiserver**: Validates ModuleConfig and NFSStorageClass custom resources, as well as StorageClass resources.
 
 2. **Kube-scheduler**: Sends scheduling requests to the `csi-nfs-scheduler-extender` webhook for the pods used NFS-based volumes.
