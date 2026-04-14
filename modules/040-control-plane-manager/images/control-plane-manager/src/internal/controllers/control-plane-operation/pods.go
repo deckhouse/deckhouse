@@ -32,12 +32,12 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
 
-	if !isPodReadyWithChecksums(pod,
-		op.Spec.DesiredConfigChecksum,
-		op.Spec.DesiredPKIChecksum,
-		op.Spec.DesiredCAChecksum,
-		op.CertRenewalID(),
-	) {
+	expected := checksumAnnotations{
+		ConfigChecksum: op.Spec.DesiredConfigChecksum,
+		PKIChecksum:    op.Spec.DesiredPKIChecksum,
+		CAChecksum:     op.Spec.DesiredCAChecksum,
+	}
+	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
@@ -98,22 +98,16 @@ func isPodCrashLooping(pod *corev1.Pod) bool {
 }
 
 // isPodReadyWithChecksums returns true if the pod has the expected checksum annotations and is in Ready condition.
-func isPodReadyWithChecksums(pod *corev1.Pod, configChecksum, pkiChecksum, caChecksum, certRenewalID string) bool {
+func isPodReadyWithChecksums(pod *corev1.Pod, expected checksumAnnotations) bool {
 	if pod == nil {
 		return false
 	}
 
-	if configChecksum != "" && pod.Annotations[constants.ConfigChecksumAnnotationKey] != configChecksum {
-		return false
-	}
-	if pkiChecksum != "" && pod.Annotations[constants.PKIChecksumAnnotationKey] != pkiChecksum {
-		return false
-	}
-	if caChecksum != "" && pod.Annotations[constants.CAChecksumAnnotationKey] != caChecksum {
-		return false
-	}
-	if certRenewalID != "" && pod.Annotations[constants.CertRenewalIDAnnotationKey] != certRenewalID {
-		return false
+	expectedAnnotations := desiredChecksumAnnotations(expected)
+	for key, value := range expectedAnnotations {
+		if pod.Annotations[key] != value {
+			return false
+		}
 	}
 
 	for _, cond := range pod.Status.Conditions {

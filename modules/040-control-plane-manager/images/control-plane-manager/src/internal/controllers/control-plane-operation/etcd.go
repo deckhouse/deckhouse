@@ -124,19 +124,21 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir, 
 
 	algo := string(secretData[constants.SecretKeyEncryptionAlgorithm])
 	if algo != "" {
-		return kubeconfig.CreateKubeconfigFiles(files,
+		_, err := kubeconfig.CreateKubeconfigFiles(files,
 			kubeconfig.WithCertificatesDir(pkiDir),
 			kubeconfig.WithOutDir(kubeconfigDir),
 			kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 			kubeconfig.WithEncryptionAlgorithm(pkiconstants.EncryptionAlgorithmType(algo)),
 		)
+		return err
 	}
 
-	return kubeconfig.CreateKubeconfigFiles(files,
+	_, err := kubeconfig.CreateKubeconfigFiles(files,
 		kubeconfig.WithCertificatesDir(pkiDir),
 		kubeconfig.WithOutDir(kubeconfigDir),
 		kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 	)
+	return err
 }
 
 // reconcileEtcdJoin handles etcd join for a fresh or orphaned node.
@@ -145,7 +147,7 @@ func reconcileEtcdJoin(
 	node NodeIdentity,
 	component controlplanev1alpha1.OperationComponent,
 	secretData map[string][]byte,
-	configChecksum, pkiChecksum, caChecksum string,
+	annotations checksumAnnotations,
 	logger *log.Logger,
 ) (reconcile.Result, error) {
 	// Cleanup stale etcd data dir if it exists (orphaned node case)
@@ -158,7 +160,7 @@ func reconcileEtcdJoin(
 	}
 
 	logger.Info("etcd join: preparing manifest")
-	manifest, err := prepareManifestBytes(component, secretData, configChecksum, pkiChecksum, caChecksum)
+	manifest, err := prepareManifestBytes(component, secretData, annotations)
 	if err != nil {
 		logger.Error("failed to prepare etcd manifest", log.Err(err))
 		return reconcile.Result{}, fmt.Errorf("prepare etcd manifest: %w", err)

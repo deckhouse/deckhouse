@@ -137,10 +137,10 @@ type PKIParams struct {
 // - leaf certs regenerated only if: missing, expires < 30 days, or SANs changed
 // - CA certs are never auto-regenerated
 // certTree limits the cert tree to a specific component's certs (if nil - the full tree is used)
-func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.LeafCertName) error {
+func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.LeafCertName) (pki.PKIApplyReport, error) {
 	ip := net.ParseIP(params.AdvertiseAddress)
 	if ip == nil {
-		return fmt.Errorf("invalid advertise address: %s", params.AdvertiseAddress)
+		return pki.PKIApplyReport{}, fmt.Errorf("invalid advertise address: %s", params.AdvertiseAddress)
 	}
 
 	if params.EncryptionAlgorithm == "" {
@@ -198,4 +198,14 @@ func parsePKIParams(pkiDir string, secretData map[string][]byte, node NodeIdenti
 	}
 
 	return params
+}
+
+// hasRegeneratedCerts reports whether any leaf certificate was regenerated or created.
+func hasRegeneratedCerts(report pki.PKIApplyReport) bool {
+	for _, e := range report.Entries {
+		if e.Kind == pki.PKIEntryKindLeafCert && (e.Action == pki.PKIActionWrittenCreated || e.Action == pki.PKIActionWrittenRegenerated) {
+			return true
+		}
+	}
+	return false
 }

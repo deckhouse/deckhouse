@@ -25,9 +25,7 @@ import (
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
-	"control-plane-manager/internal/constants"
 
-	"github.com/pmezard/go-difflib/difflib"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
@@ -40,7 +38,7 @@ type fileWriteResult struct {
 
 // prepareManifestBytes expands env vars in the template and sets checksum annotations.
 // Returns raw manifest bytes
-func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, configChecksum, pkiChecksum, caChecksum string) ([]byte, error) {
+func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations) ([]byte, error) {
 	key := component.SecretKey()
 	if key == "" {
 		return nil, fmt.Errorf("no secret key for component %s", component)
@@ -53,7 +51,7 @@ func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, sec
 
 	expanded := os.ExpandEnv(string(tpl))
 
-	manifest, err := setChecksumAnnotations([]byte(expanded), configChecksum, pkiChecksum, caChecksum, "")
+	manifest, err := setChecksumAnnotations([]byte(expanded), annotations)
 	if err != nil {
 		return nil, fmt.Errorf("set checksum annotations: %w", err)
 	}
@@ -62,13 +60,13 @@ func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, sec
 }
 
 // writeStaticPodManifest expands env vars in the template, sets checksum annotations and writes the manifest to manifestDir/<component>.yaml atomically.
-func writeStaticPodManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, configChecksum, pkiChecksum, caChecksum, manifestDir string) error {
-	_, err := writeStaticPodManifestIfChanged(component, secretData, configChecksum, pkiChecksum, caChecksum, manifestDir)
+func writeStaticPodManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string) error {
+	_, err := writeStaticPodManifestIfChanged(component, secretData, annotations, manifestDir)
 	return err
 }
 
-func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, configChecksum, pkiChecksum, caChecksum, manifestDir string) (fileWriteResult, error) {
-	manifest, err := prepareManifestBytes(component, secretData, configChecksum, pkiChecksum, caChecksum)
+func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string) (fileWriteResult, error) {
+	manifest, err := prepareManifestBytes(component, secretData, annotations)
 	if err != nil {
 		return fileWriteResult{}, err
 	}
@@ -79,18 +77,18 @@ func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationCom
 
 // updateChecksumAnnotations reads an existing manifest from disk and updates the given checksum annotations
 // Empty strings are not changed. Used for UpdatePKI command where only checksums change, not the template.
-func updateChecksumAnnotations(component controlplanev1alpha1.OperationComponent, pkiChecksum, caChecksum, certRenewalID, manifestDir string) error {
-	_, err := updateChecksumAnnotationsIfChanged(component, pkiChecksum, caChecksum, certRenewalID, manifestDir)
+func updateChecksumAnnotations(component controlplanev1alpha1.OperationComponent, annotations checksumAnnotations, manifestDir string) error {
+	_, err := updateChecksumAnnotationsIfChanged(component, annotations, manifestDir)
 	return err
 }
 
-func updateChecksumAnnotationsIfChanged(component controlplanev1alpha1.OperationComponent, pkiChecksum, caChecksum, certRenewalID, manifestDir string) (fileWriteResult, error) {
+func updateChecksumAnnotationsIfChanged(component controlplanev1alpha1.OperationComponent, annotations checksumAnnotations, manifestDir string) (fileWriteResult, error) {
 	filename := filepath.Join(manifestDir, component.PodComponentName()+".yaml")
 	existing, err := os.ReadFile(filename)
 	if err != nil {
 		return fileWriteResult{}, fmt.Errorf("read existing manifest %s: %w", filename, err)
 	}
-	updated, err := setChecksumAnnotations(existing, "", pkiChecksum, caChecksum, certRenewalID)
+	updated, err := setChecksumAnnotations(existing, annotations)
 	if err != nil {
 		return fileWriteResult{}, fmt.Errorf("set checksum annotations: %w", err)
 	}
@@ -98,7 +96,7 @@ func updateChecksumAnnotationsIfChanged(component controlplanev1alpha1.Operation
 }
 
 // setChecksumAnnotations parses the manifest as a Pod, sets the given checksum annotations, replaces any existing values and serializes back to YAML
-func setChecksumAnnotations(manifestBytes []byte, configChecksum, pkiChecksum, caChecksum, certRenewalID string) ([]byte, error) {
+func setChecksumAnnotations(manifestBytes []byte, annotations checksumAnnotations) ([]byte, error) {
 	pod := &corev1.Pod{}
 	if err := yaml.Unmarshal(manifestBytes, pod); err != nil {
 		return nil, fmt.Errorf("unmarshal pod manifest: %w", err)
@@ -107,17 +105,8 @@ func setChecksumAnnotations(manifestBytes []byte, configChecksum, pkiChecksum, c
 	if pod.Annotations == nil {
 		pod.Annotations = make(map[string]string)
 	}
-	if configChecksum != "" {
-		pod.Annotations[constants.ConfigChecksumAnnotationKey] = configChecksum
-	}
-	if pkiChecksum != "" {
-		pod.Annotations[constants.PKIChecksumAnnotationKey] = pkiChecksum
-	}
-	if caChecksum != "" {
-		pod.Annotations[constants.CAChecksumAnnotationKey] = caChecksum
-	}
-	if certRenewalID != "" {
-		pod.Annotations[constants.CertRenewalIDAnnotationKey] = certRenewalID
+	for key, value := range desiredChecksumAnnotations(annotations) {
+		pod.Annotations[key] = value
 	}
 
 	out, err := yaml.Marshal(pod)
@@ -239,28 +228,4 @@ func readFileIfExists(path string) ([]byte, bool, error) {
 		return nil, false, nil
 	}
 	return nil, false, fmt.Errorf("read %s: %w", path, err)
-}
-
-func computeUnifiedDiff(oldContent, newContent, filename string) string {
-	diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        difflib.SplitLines(normalizeDiffInput(oldContent)),
-		B:        difflib.SplitLines(normalizeDiffInput(newContent)),
-		FromFile: filename,
-		ToFile:   filename + " (new)",
-		Context:  3,
-	})
-	if err != nil {
-		return ""
-	}
-	return diff
-}
-
-func normalizeDiffInput(content string) string {
-	if content == "" {
-		return ""
-	}
-	if strings.HasSuffix(content, "\n") {
-		return content
-	}
-	return content + "\n"
 }

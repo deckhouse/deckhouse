@@ -93,9 +93,14 @@ func (c *renewPKICertsCommand) Execute(_ context.Context, env *CommandEnv, logge
 	if certTree != nil {
 		logger.Info("renewing leaf certificates if needed")
 		params := parsePKIParams(constants.KubernetesPkiPath, env.CPMSecretData, env.Node)
-		if err := renewCertsIfNeeded(params, certTree); err != nil {
+		report, err := renewCertsIfNeeded(params, certTree)
+		if err != nil {
 			logger.Error("failed to renew certs", log.Err(err))
 			return reconcile.Result{}, err
+		}
+		if hasRegeneratedCerts(report) {
+			logger.Info("leaf certificates were regenerated")
+			env.CertsRenewed = true
 		}
 	}
 	return reconcile.Result{}, nil
@@ -108,9 +113,14 @@ type renewKubeconfigsCommand struct{}
 func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	component := env.State.Raw().Spec.Component
 	kubeconfigDir := env.Node.KubeconfigDir
-	if err := renewKubeconfigsForComponent(component, env.CPMSecretData, constants.KubernetesPkiPath, kubeconfigDir, env.Node.AdvertiseIP); err != nil {
+	kubeconfigsRenewed, err := renewKubeconfigsForComponent(component, env.CPMSecretData, constants.KubernetesPkiPath, kubeconfigDir, env.Node.AdvertiseIP)
+	if err != nil {
 		logger.Error("failed to renew kubeconfigs", log.Err(err))
 		return reconcile.Result{}, err
+	}
+	if kubeconfigsRenewed {
+		logger.Info("kubeconfigs were regenerated")
+		env.KubeconfigsRenewed = true
 	}
 	// dont return error if failed to update root kubeconfig symlink, maybe return reconcile.Result{}, err later.
 	if needsRootKubeconfig(component) {
@@ -148,7 +158,12 @@ func (c *joinEtcdClusterCommand) Execute(_ context.Context, env *CommandEnv, log
 	}
 	logger.Info("etcd needs join, executing join flow")
 	return reconcileEtcdJoin(env.Node, op.Spec.Component, env.CPMSecretData,
-		op.Spec.DesiredConfigChecksum, op.Spec.DesiredPKIChecksum, op.Spec.DesiredCAChecksum, logger)
+		checksumAnnotations{
+			ConfigChecksum: op.Spec.DesiredConfigChecksum,
+			PKIChecksum:    op.Spec.DesiredPKIChecksum,
+			CAChecksum:     op.Spec.DesiredCAChecksum,
+		},
+		logger)
 }
 
 // syncManifestsCommand writes the static pod manifest (or patches annotations for PKI-only updates).
@@ -162,6 +177,15 @@ func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logge
 	caChecksum := op.Spec.DesiredCAChecksum
 	var results []fileWriteResult
 
+	certRenewalID := ""
+	if env.CertsRenewed {
+		certRenewalID = op.Name
+	}
+	kubeconfigRenewalID := ""
+	if env.KubeconfigsRenewed {
+		kubeconfigRenewalID = op.Name
+	}
+
 	if configChecksum != "" {
 		extraResults, err := writeExtraFilesIfChanged(component, env.CPMSecretData, constants.ExtraFilesPath)
 		if err != nil {
@@ -169,7 +193,14 @@ func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logge
 			return reconcile.Result{}, err
 		}
 		manifestResult, err := writeStaticPodManifestIfChanged(component, env.CPMSecretData,
-			configChecksum, pkiChecksum, caChecksum, constants.ManifestsPath)
+			checksumAnnotations{
+				ConfigChecksum:      configChecksum,
+				PKIChecksum:         pkiChecksum,
+				CAChecksum:          caChecksum,
+				CertRenewalID:       certRenewalID,
+				KubeconfigRenewalID: kubeconfigRenewalID,
+			},
+			constants.ManifestsPath)
 		if err != nil {
 			logger.Error("failed to write manifest", log.Err(err))
 			return reconcile.Result{}, err
@@ -181,7 +212,13 @@ func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logge
 		results = append(results, staleResults...)
 	} else {
 		manifestResult, err := updateChecksumAnnotationsIfChanged(component,
-			pkiChecksum, caChecksum, op.CertRenewalID(), constants.ManifestsPath)
+			checksumAnnotations{
+				PKIChecksum:         pkiChecksum,
+				CAChecksum:          caChecksum,
+				CertRenewalID:       certRenewalID,
+				KubeconfigRenewalID: kubeconfigRenewalID,
+			},
+			constants.ManifestsPath)
 		if err != nil {
 			logger.Error("failed to update checksum annotations", log.Err(err))
 			return reconcile.Result{}, err

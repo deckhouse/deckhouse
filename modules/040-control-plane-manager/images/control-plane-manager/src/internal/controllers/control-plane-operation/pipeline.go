@@ -15,10 +15,12 @@ import (
 // CommandEnv is the input data for command execution: operation state, secrets, and node identity.
 // Commands may mutate State; the pipeline handles all status flushing.
 type CommandEnv struct {
-	State         *controlplanev1alpha1.OperationState
-	CPMSecretData map[string][]byte
-	PKISecretData map[string][]byte
-	Node          NodeIdentity
+	State              *controlplanev1alpha1.OperationState
+	CPMSecretData      map[string][]byte
+	PKISecretData      map[string][]byte
+	Node               NodeIdentity
+	CertsRenewed       bool
+	KubeconfigsRenewed bool
 }
 
 // reconcilePipeline executes the command-based pipeline for component operations.

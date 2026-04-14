@@ -90,8 +90,9 @@ const (
 	CertObserverInterval = 7 * 24 * time.Hour
 
 	// Cert renewal
-	CertRenewalIDAnnotationKey = "control-plane.deckhouse.io/cert-renewal-id"
-	CertRenewalThreshold       = 30 * 24 * time.Hour
+	CertRenewalIDAnnotationKey       = "control-plane.deckhouse.io/cert-renewal-id"
+	KubeconfigRenewalIDAnnotationKey = "control-plane.deckhouse.io/kubeconfig-renewal-id"
+	CertRenewalThreshold             = 30 * 24 * time.Hour
 
 	// CertsRenewal - ControlPlaneNode condition
 	ConditionCertsRenewal = "CertsRenewal"

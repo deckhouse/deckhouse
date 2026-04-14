@@ -28,6 +28,7 @@ import (
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 type diffEntry struct {
@@ -159,4 +160,28 @@ func diffSubdirForPath(path string) string {
 	default:
 		return "files"
 	}
+}
+
+func computeUnifiedDiff(oldContent, newContent, filename string) string {
+	diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
+		A:        difflib.SplitLines(normalizeDiffInput(oldContent)),
+		B:        difflib.SplitLines(normalizeDiffInput(newContent)),
+		FromFile: filename,
+		ToFile:   filename + " (new)",
+		Context:  3,
+	})
+	if err != nil {
+		return ""
+	}
+	return diff
+}
+
+func normalizeDiffInput(content string) string {
+	if content == "" {
+		return ""
+	}
+	if strings.HasSuffix(content, "\n") {
+		return content
+	}
+	return content + "\n"
 }

@@ -49,27 +49,45 @@ func renewKubeconfigsForComponent(
 	component controlplanev1alpha1.OperationComponent,
 	secretData map[string][]byte,
 	pkiDir, kubeconfigDir, advertiseIP string,
-) error {
+) (bool, error) {
 	files := kubeconfigFilesForComponent(component)
 	if len(files) == 0 {
-		return nil
+		return false, nil
 	}
 
 	algo := string(secretData[constants.SecretKeyEncryptionAlgorithm])
 	if algo != "" {
-		return kubeconfig.CreateKubeconfigFiles(files,
+		report, err := kubeconfig.CreateKubeconfigFiles(files,
 			kubeconfig.WithCertificatesDir(pkiDir),
 			kubeconfig.WithOutDir(kubeconfigDir),
 			kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 			kubeconfig.WithEncryptionAlgorithm(pkiconstants.EncryptionAlgorithmType(algo)),
 		)
+		if err != nil {
+			return false, err
+		}
+		return hasRegeneratedKubeconfigs(report), nil
 	}
 
-	return kubeconfig.CreateKubeconfigFiles(files,
+	report, err := kubeconfig.CreateKubeconfigFiles(files,
 		kubeconfig.WithCertificatesDir(pkiDir),
 		kubeconfig.WithOutDir(kubeconfigDir),
 		kubeconfig.WithLocalAPIEndpoint(advertiseIP),
 	)
+	if err != nil {
+		return false, err
+	}
+	return hasRegeneratedKubeconfigs(report), nil
+}
+
+func hasRegeneratedKubeconfigs(report kubeconfig.KubeconfigApplyReport) bool {
+	for i := range report.Entries {
+		switch report.Entries[i].Action {
+		case kubeconfig.KubeconfigActionWrittenCreated, kubeconfig.KubeconfigActionWrittenRegenerated:
+			return true
+		}
+	}
+	return false
 }
 
 // needsRootKubeconfig returns true if the component owns admin.conf (need create /root/.kube/config symlink).
