@@ -41,7 +41,7 @@ This controller is node-local (`NODE_NAME` env) and processes only objects with 
 - `DesiredConfigChecksum + DesiredPKIChecksum + DesiredCAChecksum`
 - If desired checksums changed while another operation is running, a new operation may be created for the same component.
 - CPO name uses `GenerateName` with deterministic prefix:
-- `<node>-<component>-<short desired checksums>-`
+- `<component>-<short desired checksums>-`
 - Commands are selected by component and changed dimensions (`config`, `pki`, `ca`).
 - Generated command list always starts with `Backup`.
 - After creating a CPO, keep only latest 5 terminal CPOs per component (active CPOs are never deleted).

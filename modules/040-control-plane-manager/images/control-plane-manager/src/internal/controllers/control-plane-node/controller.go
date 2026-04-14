@@ -294,7 +294,7 @@ func (r *Reconciler) ensureOperationsExist(
 
 		commands := determineCommands(state, pkiChanged, caChanged)
 		op := operationBase(cpn, state.component, commands)
-		op.ObjectMeta.GenerateName = operationGenerateNamePrefix(cpn.Name, state)
+		op.ObjectMeta.GenerateName = operationGenerateNamePrefix(state)
 		op.Spec.DesiredConfigChecksum = state.spec.Config
 		op.Spec.DesiredPKIChecksum = state.spec.PKI
 		op.Spec.DesiredCAChecksum = state.specCA
@@ -464,8 +464,7 @@ func determineCommands(state componentState, pkiChanged, caChanged bool) []contr
 	}
 }
 
-func operationGenerateNamePrefix(nodeName string, state componentState) string {
-	sanitized := strings.ReplaceAll(nodeName, ".", "-")
+func operationGenerateNamePrefix(state componentState) string {
 	compName := strings.ToLower(string(state.component))
 
 	var parts []string
@@ -480,9 +479,9 @@ func operationGenerateNamePrefix(nodeName string, state componentState) string {
 	}
 
 	if len(parts) == 0 {
-		return fmt.Sprintf("%s-%s-", sanitized, compName)
+		return fmt.Sprintf("%s-", compName)
 	}
-	return fmt.Sprintf("%s-%s-%s-", sanitized, compName, strings.Join(parts, "-"))
+	return fmt.Sprintf("%s-%s-", compName, strings.Join(parts, "-"))
 }
 
 func short(s string) string {
@@ -501,7 +500,7 @@ func operationBase(
 ) *controlplanev1alpha1.ControlPlaneOperation {
 	return &controlplanev1alpha1.ControlPlaneOperation{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-%s-", strings.ReplaceAll(cpn.Name, ".", "-"), strings.ToLower(string(component))),
+			GenerateName: fmt.Sprintf("%s-", strings.ToLower(string(component))),
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
 				constants.ControlPlaneComponentLabelKey: string(component),
@@ -829,8 +828,7 @@ func (r *Reconciler) ensureCertRenewalExists(ctx context.Context, cpn *controlpl
 		}
 
 		op := operationBase(cpn, component, certRenewalCommands(component))
-		op.ObjectMeta.GenerateName = fmt.Sprintf("%s-%s-certrenewal-%s-",
-			strings.ReplaceAll(cpn.Name, ".", "-"),
+		op.ObjectMeta.GenerateName = fmt.Sprintf("%s-certrenewal-%s-",
 			strings.ToLower(string(component)),
 			time.Now().Format("20060102"))
 
