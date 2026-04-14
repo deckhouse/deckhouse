@@ -24,11 +24,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	"gopkg.in/yaml.v3"
 	rbac "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,6 +35,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -72,8 +71,12 @@ func filterUserAuthzModuleConfig(obj *unstructured.Unstructured) (go_hook.Filter
 	return enabled, nil
 }
 
-type d8ClusterConfigurationDoc struct {
-	KubernetesVersion string `yaml:"kubernetesVersion"`
+func userAuthzEnabledFromSnapshot(input *go_hook.HookInput) bool {
+	enabledSnaps, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, "user_authz_module_config")
+	if err != nil || len(enabledSnaps) == 0 {
+		return module.IsEnabled("user-authz", input)
+	}
+	return enabledSnaps[len(enabledSnaps)-1]
 }
 
 func reconcileKubeadmClusterAdminsBindingHook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -82,52 +85,17 @@ func reconcileKubeadmClusterAdminsBindingHook(ctx context.Context, input *go_hoo
 		return fmt.Errorf("kubernetes client: %w", err)
 	}
 
-	secret, err := kubeCl.CoreV1().Secrets("kube-system").Get(ctx, "d8-cluster-configuration", metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("get d8-cluster-configuration: %w", err)
-	}
-
-	raw := secret.Data["cluster-configuration.yaml"]
-	userAuthzEnabled := module.IsEnabled("user-authz", input)
-	return syncKubeadmClusterAdminsClusterRoleBinding(ctx, input.Logger, kubeCl, raw, userAuthzEnabled)
+	return syncKubeadmClusterAdminsClusterRoleBinding(ctx, input.Logger, kubeCl, userAuthzEnabledFromSnapshot(input))
 }
 
 // syncKubeadmClusterAdminsClusterRoleBinding keeps ClusterRoleBinding kubeadm:cluster-admins aligned with
-// user-authz enablement when the control plane runs Kubernetes 1.29+ (same gate as global migrate_k8s_upgrade).
-// clusterConfigYAML is the raw content of d8-cluster-configuration key cluster-configuration.yaml.
+// user-authz enablement (roleRef is immutable, so the binding is recreated when the desired role changes).
 func syncKubeadmClusterAdminsClusterRoleBinding(
 	ctx context.Context,
 	logger go_hook.Logger,
 	kubeCl kubernetes.Interface,
-	clusterConfigYAML []byte,
 	userAuthzModuleEnabled bool,
 ) error {
-	var cfg d8ClusterConfigurationDoc
-	err := yaml.Unmarshal(clusterConfigYAML, &cfg)
-	if err != nil {
-		return fmt.Errorf("unmarshal cluster-configuration.yaml: %w", err)
-	}
-
-	kubernetesVersion := DefaultKubernetesVersion
-	if cfg.KubernetesVersion != "Automatic" {
-		kubernetesVersion = cfg.KubernetesVersion
-	}
-
-	constraintBelow129, err := semver.NewConstraint("< 1.29")
-	if err != nil {
-		return fmt.Errorf("semver constraint: %w", err)
-	}
-	ver, err := semver.NewVersion(kubernetesVersion)
-	if err != nil {
-		return fmt.Errorf("parse kubernetes version %q: %w", kubernetesVersion, err)
-	}
-	if constraintBelow129.Check(ver) {
-		return nil
-	}
-
 	desiredRoleName := clusterAdminWildcardClusterRoleName
 	if userAuthzModuleEnabled {
 		desiredRoleName = userAuthzClusterAdminClusterRoleName
