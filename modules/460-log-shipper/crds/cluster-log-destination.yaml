@@ -1153,7 +1153,7 @@ spec:
                       default: "Block"
     - name: v1alpha2
       served: true
-      storage: true
+      storage: false
       schema:
         openAPIV3Schema:
           type: object
