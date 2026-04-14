@@ -29,16 +29,23 @@ INTEGRITY_NAMESPACES="{{ $namespaces }}"
 
 
 {{- range $runc_version := $runc_versions }}
+{{- $runcPatchesPath := printf "/%smodules/007-%s/images/%s/patches/runc/%s" $.ModulePath $.ModuleName $.ImageName $runc_version }}
+{{- $runcHasPatch := false }}
+{{- range $path, $_ := $.Files.Glob (printf "%s/*.patch" $runcPatchesPath) }}
+  {{- $runcHasPatch = true }}
+{{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-runc-src-artifact-{{ $runc_version }}
 final: false
 fromImage: common/src-artifact
+{{- if $runcHasPatch }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches/runc
   to: /patches
   stageDependencies:
     install:
     - '**/*'
+{{- end }}
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
@@ -46,6 +53,9 @@ shell:
   install:
   - git clone --depth=1 --branch v{{ $runc_version }} $(cat /run/secrets/SOURCE_REPO)/opencontainers/runc /src
   - cd /src
+  {{- if $runcHasPatch }}
+  - git apply /patches/{{ $runc_version }}/*.patch --verbose
+  {{- end }}
   - git describe --dirty --long --always > COMMIT
   - rm -rf /src/.git
 ---
@@ -145,7 +155,7 @@ shell:
   install:
 {{- if and (eq $.Env "CSE") $is_v2 }}
   - echo "Attention! Use integrity patches!"
-  - git clone --depth 1 --branch integrity-patch-for-containerd-222 git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
+  - git clone --depth 1 --branch v{{ $containerd_version }}-{{ $containerd_integrity_patches_version }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/containerd-integrity-patches.git /src/integrity-patches
   - alias cp='cp'
   - cp /src/integrity-patches/patches/*.patch /patches
   - rm -rf /src/integrity-patches
