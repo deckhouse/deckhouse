@@ -139,3 +139,5 @@ until bash --noprofile --norc -c /var/lib/bashible/bashible.sh; do
   echo "Error running bashible script. Retry in 10 seconds."
   sleep 10
 done
+
+echo "test"
