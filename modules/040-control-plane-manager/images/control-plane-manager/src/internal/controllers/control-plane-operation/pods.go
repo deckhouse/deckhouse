@@ -27,7 +27,7 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 
 	if isPodCrashLooping(pod) {
 		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
-		state.SetReadyReason(constants.ReasonWaitingForPod,
+		state.SetReadyReason(controlplanev1alpha1.CPOReasonOperationInProgress,
 			fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}

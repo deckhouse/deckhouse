@@ -62,52 +62,6 @@ const (
 	ReasonWaitingForComponents = "WaitingForComponents"
 	ReasonUnknown              = "Unknown"
 
-	// ControlPlaneOperation conditions
-	ConditionApproved = "Approved"
-	ConditionReady    = "Ready"
-	ConditionFailed   = "Failed"
-
-	// Pipeline command condition types (observability)
-	ConditionCommandBackup           = "Backup"
-	ConditionCommandSyncCA           = "SyncCA"
-	ConditionCommandRenewPKICerts    = "RenewPKICerts"
-	ConditionCommandRenewKubeconfigs = "RenewKubeconfigs"
-	ConditionCommandSyncManifests    = "SyncManifests"
-	ConditionCommandJoinEtcdCluster  = "JoinEtcdCluster"
-	ConditionCommandWaitPodReady     = "WaitPodReady"
-	ConditionCommandSyncHotReload    = "SyncHotReload"
-	ConditionCommandCertObserve      = "CertObserve"
-
-	// Approved condition reasons
-	ReasonApproved             = "Approved"
-	ReasonWaitingForSlot       = "WaitingForSlot"
-	ReasonWaitingForDependency = "WaitingForDependency"
-	ReasonWaitingForFIFO       = "WaitingForFIFO"
-
-	// Command condition reasons
-	ReasonCommandCompleted  = "Completed"
-	ReasonCommandInProgress = "InProgress"
-	ReasonCommandFailed     = "Failed"
-
-	// Ready condition reasons
-	ReasonOperationSucceeded  = "OperationSucceeded"
-	ReasonWaitingForApproval  = "WaitingForApproval"
-	ReasonCreatingBackup      = "CreatingBackup"
-	ReasonSyncingCA           = "SyncingCA"
-	ReasonRenewingPKI         = "RenewingPKI"
-	ReasonRenewingKubeconfigs = "RenewingKubeconfigs"
-	ReasonSyncingManifests    = "SyncingManifests"
-	ReasonJoiningEtcd         = "JoiningEtcd"
-	ReasonWaitingForPod       = "WaitingForPod"
-	ReasonSyncingHotReload    = "SyncingHotReload"
-	ReasonCertObserving       = "CertObserving"
-	ReasonCancelled           = "Cancelled"
-
-	// Failed condition reasons
-	ReasonNoFailure         = "NoFailure"
-	ReasonHealthCheckFailed = "HealthCheckFailed"
-	ReasonTimeout           = "Timeout"
-
 	// Built-in k8s label on static pods with the component name
 	StaticPodComponentLabelKey = "component"
 

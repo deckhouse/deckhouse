@@ -62,6 +62,7 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 // executeCommand runs a single pipeline command with status tracking and start/finish logging.
 func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1alpha1.OperationState, name controlplanev1alpha1.CommandName, cmd Command, env *CommandEnv, logger *log.Logger) (result reconcile.Result, err error) {
 	cmdLogger := logger.With(slog.String("command", string(name)))
+	var execErr error
 
 	if state.IsCommandCompleted(name) {
 		cmdLogger.Info("command already completed, skipping")
@@ -70,6 +71,31 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 
 	cmdLogger.Info("executing command")
 	defer func() {
+		if recovered := recover(); recovered != nil {
+			execErr = fmt.Errorf("panic in command %s: %v", name, recovered)
+		}
+
+		switch {
+		case execErr != nil:
+			state.MarkCommandFailed(name, execErr.Error())
+			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
+				cmdLogger.Error("failed to set failed condition", log.Err(patchErr))
+			}
+			err = execErr
+		case result.RequeueAfter > 0:
+			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
+				cmdLogger.Warn("failed to flush status on requeue", log.Err(patchErr))
+			}
+			err = nil
+		default:
+			state.MarkCommandCompleted(name)
+			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
+				err = fmt.Errorf("set completed condition for %s: %w", name, patchErr)
+			} else {
+				err = nil
+			}
+		}
+
 		if err != nil {
 			cmdLogger.Error("command failed", log.Err(err))
 		} else {
@@ -78,7 +104,7 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 	}()
 
 	state.MarkCommandInProgress(name)
-	state.SetReadyReason(commandReadyReasons[name], fmt.Sprintf("executing command %s", name))
+	state.SetReadyReason(controlplanev1alpha1.CPOReasonOperationInProgress, fmt.Sprintf("executing command %s", name))
 	if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 		if isCommitPointCommand(name) {
 			return reconcile.Result{}, fmt.Errorf("set in-progress condition for commit-point command %s: %w", name, patchErr)
@@ -86,27 +112,8 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 		cmdLogger.Warn("failed to set in-progress condition", log.Err(patchErr))
 	}
 
-	result, err = cmd.Execute(ctx, env, cmdLogger)
-	if err != nil {
-		state.MarkCommandFailed(name, err.Error())
-		if setErr := r.patchStatus(ctx, state); setErr != nil {
-			cmdLogger.Error("failed to set failed condition", log.Err(setErr))
-		}
-		return result, err
-	}
-
-	if result.RequeueAfter > 0 {
-		if patchErr := r.patchStatus(ctx, state); patchErr != nil {
-			cmdLogger.Warn("failed to flush status on requeue", log.Err(patchErr))
-		}
-		return result, nil
-	}
-
-	state.MarkCommandCompleted(name)
-	if err = r.patchStatus(ctx, state); err != nil {
-		return result, fmt.Errorf("set completed condition for %s: %w", name, err)
-	}
-	return result, nil
+	result, execErr = cmd.Execute(ctx, env, cmdLogger)
+	return result, execErr
 }
 
 func isCommitPointCommand(name controlplanev1alpha1.CommandName) bool {

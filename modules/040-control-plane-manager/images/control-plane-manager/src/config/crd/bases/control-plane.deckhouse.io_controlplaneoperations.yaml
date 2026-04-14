@@ -21,21 +21,22 @@ spec:
       jsonPath: .spec.nodeName
       name: Node
       type: string
-    - description: Target component
-      jsonPath: .spec.component
-      name: Component
+    - description: Operation phase
+      jsonPath: .status.conditions[?(@.type=="Ready")].reason
+      name: Phase
       type: string
-    - description: Operation commands
-      jsonPath: .spec.commands
-      name: Commands
+    - description: Currently executing command
+      jsonPath: .status.conditions[?(@.reason=="InProgress")].type
+      name: CurrentStep
       type: string
-    - description: Approved for execution
-      jsonPath: .spec.approved
-      name: Approved
-      type: boolean
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    - description: Target component
+      jsonPath: .spec.component
+      name: Component
+      priority: 1
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

@@ -10,6 +10,7 @@ spec:
   nodeName: master-1
   component: Etcd
   commands:
+    - Backup
     - SyncCA
     - RenewPKICerts
     - JoinEtcdCluster

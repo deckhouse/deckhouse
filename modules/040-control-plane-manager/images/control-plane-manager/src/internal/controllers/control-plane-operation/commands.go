@@ -46,19 +46,6 @@ type Command interface {
 	Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error)
 }
 
-// commandReadyReasons maps command names to their ready reason strings for status reporting.
-var commandReadyReasons = map[controlplanev1alpha1.CommandName]string{
-	controlplanev1alpha1.CommandBackup:           constants.ReasonCreatingBackup,
-	controlplanev1alpha1.CommandSyncCA:           constants.ReasonSyncingCA,
-	controlplanev1alpha1.CommandRenewPKICerts:    constants.ReasonRenewingPKI,
-	controlplanev1alpha1.CommandRenewKubeconfigs: constants.ReasonRenewingKubeconfigs,
-	controlplanev1alpha1.CommandSyncManifests:    constants.ReasonSyncingManifests,
-	controlplanev1alpha1.CommandJoinEtcdCluster:  constants.ReasonJoiningEtcd,
-	controlplanev1alpha1.CommandWaitPodReady:     constants.ReasonWaitingForPod,
-	controlplanev1alpha1.CommandSyncHotReload:    constants.ReasonSyncingHotReload,
-	controlplanev1alpha1.CommandCertObserve:      constants.ReasonCertObserving,
-}
-
 // defaultCommands returns a fresh command registry with all known commands.
 // Reconciler-level deps (podWaiter) must be injected after construction.
 func defaultCommands() map[controlplanev1alpha1.CommandName]Command {
@@ -189,6 +176,9 @@ func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logge
 		}
 		results = append(results, extraResults...)
 		results = append(results, manifestResult)
+
+		staleResults := removeStaleExtraFiles(component, env.CPMSecretData, constants.ExtraFilesPath)
+		results = append(results, staleResults...)
 	} else {
 		manifestResult, err := updateChecksumAnnotationsIfChanged(component,
 			pkiChecksum, caChecksum, op.CertRenewalID(), constants.ManifestsPath)
@@ -213,7 +203,7 @@ type waitPodReadyCommand struct {
 
 func (c *waitPodReadyCommand) Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	op := env.State.Raw()
-	env.State.SetReadyReason(constants.ReasonWaitingForPod,
+	env.State.SetReadyReason(controlplanev1alpha1.CPOReasonOperationInProgress,
 		fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
 			op.Spec.Component.PodComponentName(),
 			checksum.ShortChecksum(op.Spec.DesiredConfigChecksum),

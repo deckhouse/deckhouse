@@ -162,6 +162,34 @@ func writeExtraFiles(component controlplanev1alpha1.OperationComponent, secretDa
 	return err
 }
 
+// removeStaleExtraFiles removes extra-files from disk that belong to this component but no longer present in the secret
+func removeStaleExtraFiles(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) []fileWriteResult {
+	podName := component.PodComponentName()
+	if podName == "" {
+		return nil
+	}
+	allPossibleKeys := checksum.ExtraFileKeysForPodComponent(podName)
+	var results []fileWriteResult
+	for _, key := range allPossibleKeys {
+		if _, exists := secretData[key]; exists {
+			continue
+		}
+		fileName := strings.TrimPrefix(key, "extra-file-")
+		path := filepath.Join(extraFilesDir, fileName)
+		content, exists, _ := readFileIfExists(path)
+		if !exists {
+			continue
+		}
+		if err := os.Remove(path); err != nil {
+			continue
+		}
+		// forming diff for the removed file with full deleted content
+		diff := computeUnifiedDiff(string(content), "", path)
+		results = append(results, fileWriteResult{Path: path, Changed: true, Diff: diff})
+	}
+	return results
+}
+
 func writeExtraFilesIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) ([]fileWriteResult, error) {
 	podName := component.PodComponentName()
 	if podName == "" {

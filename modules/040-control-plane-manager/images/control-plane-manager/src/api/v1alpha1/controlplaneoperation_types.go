@@ -167,10 +167,10 @@ type ControlPlaneOperationStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=cpo
 // +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".spec.nodeName",description="Target node"
-// +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component"
-// +kubebuilder:printcolumn:name="Commands",type="string",JSONPath=".spec.commands",description="Operation commands"
-// +kubebuilder:printcolumn:name="Approved",type="boolean",JSONPath=".spec.approved",description="Approved for execution"
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=`.status.conditions[?(@.type=="Ready")].reason`,description="Operation phase"
+// +kubebuilder:printcolumn:name="CurrentStep",type="string",JSONPath=`.status.conditions[?(@.reason=="InProgress")].type`,description="Currently executing command"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+// +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component",priority=1
 
 // ControlPlaneOperation represents a single pending or completed action
 // that must be applied to a specific component on a control-plane node.

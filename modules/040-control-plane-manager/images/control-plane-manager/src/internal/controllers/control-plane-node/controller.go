@@ -49,9 +49,10 @@ import (
 )
 
 const (
-	maxConcurrentReconciles = 1
-	cacheSyncTimeout        = 3 * time.Minute
-	requeueInterval         = 5 * time.Minute
+	maxConcurrentReconciles     = 1
+	cacheSyncTimeout            = 3 * time.Minute
+	requeueInterval             = 5 * time.Minute
+	maxTerminalCPOsPerComponent = 5
 )
 
 var errStatusConflict = errors.New("status update conflict")
@@ -149,17 +150,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	// Use only operations owned by the current CPN object (UID) for prevents status reconstruction from stale operations after CPN recreation.
 	currentOps := filterOperationsOwnedByCPN(ops.Items, cpn)
 
-	// First, apply completed operation results to CPN status so that drift detection uses up-to-date checksums.
-	states := buildComponentStates(cpn)
-	if err := r.updateStatusFromOperations(ctx, cpn, states, currentOps); err != nil {
+	// Apply completed operation results to CPN status so that drift detection uses up-to-date checksums.
+	states, err := r.updateStatusFromOperations(ctx, cpn, currentOps)
+	if err != nil {
 		if errors.Is(err, errStatusConflict) {
-			return reconcile.Result{Requeue: true}, nil
+			return reconcile.Result{RequeueAfter: requeueInterval}, nil
 		}
 		return reconcile.Result{}, err
 	}
-
-	// Rebuild states after status update — checksums may have changed.
-	states = buildComponentStates(cpn)
 
 	if err := r.ensureOperationsExist(ctx, cpn, states, currentOps, logger); err != nil {
 		return reconcile.Result{}, err
@@ -286,10 +284,10 @@ func (r *Reconciler) ensureOperationsExist(
 			continue
 		}
 
-		activeOp := findActiveOperationForComponent(ops, state.component)
-		if activeOp != nil {
-			logger.Debug("active operation exists, waiting",
-				slog.String("operation", activeOp.Name),
+		// Skip creating duplicates while an active operation with the same desired checksums exists.
+		if existing := findOperationForState(ops, state); existing != nil && !existing.IsTerminal() {
+			logger.Debug("active operation with same desired checksums exists, waiting",
+				slog.String("operation", existing.Name),
 				slog.String("component", string(state.component)))
 			continue
 		}
@@ -309,23 +307,82 @@ func (r *Reconciler) ensureOperationsExist(
 			slog.String("operation", op.Name),
 			slog.String("component", string(state.component)),
 			slog.Any("commands", commands))
+
+		// Keep only 5 terminal operations per component.
+		// Active operations are never deleted
+		rotatedOps, err := r.rotateComponentOperations(ctx, ops, state.component, maxTerminalCPOsPerComponent, logger)
+		if err != nil {
+			return fmt.Errorf("rotate CPOs for %s: %w", state.component, err)
+		}
+		ops = rotatedOps
 	}
 
 	return nil
 }
 
-// findActiveOperationForComponent returns the first non terminal CPO for the given component, or nil.
-func findActiveOperationForComponent(ops []controlplanev1alpha1.ControlPlaneOperation, component controlplanev1alpha1.OperationComponent) *controlplanev1alpha1.ControlPlaneOperation {
+func (r *Reconciler) rotateComponentOperations(
+	ctx context.Context,
+	ops []controlplanev1alpha1.ControlPlaneOperation,
+	component controlplanev1alpha1.OperationComponent,
+	limit int,
+	logger *log.Logger,
+) ([]controlplanev1alpha1.ControlPlaneOperation, error) {
+	if limit <= 0 {
+		return ops, nil
+	}
+
+	terminalOps := make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(ops))
 	for i := range ops {
-		op := &ops[i]
-		if op.Spec.Component != component {
-			continue
-		}
-		if !op.IsTerminal() {
-			return op
+		if ops[i].Spec.Component == component && ops[i].IsTerminal() {
+			terminalOps = append(terminalOps, ops[i])
 		}
 	}
-	return nil
+
+	excess := len(terminalOps) - limit
+	if excess <= 0 {
+		return ops, nil
+	}
+
+	sort.SliceStable(terminalOps, func(i, j int) bool {
+		ti := terminalOps[i].CreationTimestamp.Time
+		tj := terminalOps[j].CreationTimestamp.Time
+		if ti.Equal(tj) {
+			return terminalOps[i].Name < terminalOps[j].Name
+		}
+		return ti.Before(tj)
+	})
+
+	deletedNames := make(map[string]struct{}, excess)
+
+	for i := 0; i < excess; i++ {
+		op := terminalOps[i]
+		if err := r.client.Delete(ctx, &controlplanev1alpha1.ControlPlaneOperation{
+			ObjectMeta: metav1.ObjectMeta{Name: op.Name},
+		}); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return nil, err
+		}
+		deletedNames[op.Name] = struct{}{}
+		logger.Info("ControlPlaneOperation rotated out",
+			slog.String("operation", op.Name),
+			slog.String("component", string(component)))
+	}
+
+	if len(deletedNames) == 0 {
+		return ops, nil
+	}
+
+	filtered := make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(ops)-len(deletedNames))
+	for i := range ops {
+		if _, deleted := deletedNames[ops[i].Name]; deleted {
+			continue
+		}
+		filtered = append(filtered, ops[i])
+	}
+
+	return filtered, nil
 }
 
 func findLatestAppliedOperationForComponent(ops []controlplanev1alpha1.ControlPlaneOperation, component controlplanev1alpha1.OperationComponent) *controlplanev1alpha1.ControlPlaneOperation {
@@ -470,13 +527,10 @@ func operationBase(
 }
 
 // updateStatusFromOperations reads CPO statuses and updates CPN conditions and applied checksums.
-func (r *Reconciler) updateStatusFromOperations(
-	ctx context.Context,
-	cpn *controlplanev1alpha1.ControlPlaneNode,
-	states []componentState,
-	ops []controlplanev1alpha1.ControlPlaneOperation,
-) error {
+// returns component states built from the updated CPN object.
+func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) ([]componentState, error) {
 	original := cpn.DeepCopy()
+	states := buildComponentStates(cpn)
 
 	for _, state := range states {
 		op := findOperationForState(ops, state)
@@ -549,16 +603,17 @@ func (r *Reconciler) updateStatusFromOperations(
 	// CertsRenewal condition
 	meta.SetStatusCondition(&cpn.Status.Conditions, renewalCondition(cpn, ops))
 
+	updatedStates := buildComponentStates(cpn)
 	if reflect.DeepEqual(original.Status, cpn.Status) {
-		return nil
+		return updatedStates, nil
 	}
 	if err := r.client.Status().Update(ctx, cpn); err != nil {
 		if apierrors.IsConflict(err) {
-			return errStatusConflict
+			return nil, errStatusConflict
 		}
-		return err
+		return nil, err
 	}
-	return nil
+	return updatedStates, nil
 }
 
 // findOperationForState finds the current CPO for a given component state by matching desired checksums.

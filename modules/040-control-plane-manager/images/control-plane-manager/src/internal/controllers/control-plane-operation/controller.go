@@ -167,7 +167,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 
 	// Verify that the secret content matches what this operation was created for.
-	if stale, reason := r.isDesiredStale(op, cpmSecret.Data, pkiSecret.Data); stale {
+	if stale, reason := isDesiredStale(op, cpmSecret.Data, pkiSecret.Data); stale {
 		if recoveredCmd, recovered, recoverErr := r.recoverInProgressCommitPoint(ctx, state); recoverErr != nil {
 			return reconcile.Result{}, recoverErr
 		} else if recovered {
@@ -175,7 +175,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		}
 
 		logger.Info("desired checksums stale, cancelling", slog.String("reason", reason))
-		state.SetReadyReason(constants.ReasonCancelled, reason)
+		state.SetReadyReason(controlplanev1alpha1.CPOReasonOperationCancelled, reason)
 		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
@@ -184,7 +184,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 
 // isDesiredStale checks that secret content still matches with desired checksums in the operation spec.
 // Returns true with reason string if stale.
-func (r *Reconciler) isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte) (bool, string) {
+func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte) (bool, string) {
 	component := op.Spec.Component
 
 	if component == controlplanev1alpha1.OperationComponentHotReload {

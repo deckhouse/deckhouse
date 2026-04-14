@@ -23,27 +23,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	CPOConditionReady    = "Ready"
-	CPOConditionFailed   = "Failed"
-	CPOConditionApproved = "Approved"
-)
-
 func (op *ControlPlaneOperation) IsCompleted() bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, CPOConditionReady)
+	return op.IsConditionTrue(CPOConditionReady)
 }
 
 func (op *ControlPlaneOperation) IsFailed() bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, CPOConditionFailed)
+	return op.IsConditionTrue(CPOConditionFailed)
 }
 
 func (op *ControlPlaneOperation) IsCancelled() bool {
-	for _, cond := range op.Status.Conditions {
-		if cond.Type == CPOConditionReady && cond.Reason == "Cancelled" {
-			return true
-		}
-	}
-	return false
+	cond := op.GetCondition(CPOConditionReady)
+	return cond != nil && cond.Reason == CPOReasonOperationCancelled
 }
 
 // IsTerminal reports whether the operation reached a not retryable state.
@@ -52,19 +42,18 @@ func (op *ControlPlaneOperation) IsTerminal() bool {
 }
 
 func (op *ControlPlaneOperation) IsCommandCompleted(name CommandName) bool {
-	return meta.IsStatusConditionTrue(op.Status.Conditions, string(name))
+	return op.IsConditionTrue(string(name))
 }
 
 func (op *ControlPlaneOperation) IsCommandInProgress(name CommandName) bool {
-	cond := meta.FindStatusCondition(op.Status.Conditions, string(name))
-	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == "InProgress"
+	cond := op.GetCondition(string(name))
+	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonCommandInProgress
 }
 
 func (op *ControlPlaneOperation) FailureMessage() string {
-	for _, cond := range op.Status.Conditions {
-		if cond.Type == CPOConditionFailed && cond.Status == metav1.ConditionTrue {
-			return cond.Message
-		}
+	cond := op.GetCondition(CPOConditionFailed)
+	if cond != nil && cond.Status == metav1.ConditionTrue {
+		return cond.Message
 	}
 	return ""
 }
@@ -112,7 +101,7 @@ func (s *OperationState) MarkCommandInProgress(name CommandName) {
 	s.SetCondition(metav1.Condition{
 		Type:   string(name),
 		Status: metav1.ConditionFalse,
-		Reason: "InProgress",
+		Reason: CPOReasonCommandInProgress,
 	})
 }
 
@@ -120,7 +109,7 @@ func (s *OperationState) MarkCommandCompleted(name CommandName) {
 	s.SetCondition(metav1.Condition{
 		Type:   string(name),
 		Status: metav1.ConditionTrue,
-		Reason: "Completed",
+		Reason: CPOReasonCommandCompleted,
 	})
 }
 
@@ -128,7 +117,7 @@ func (s *OperationState) MarkCommandFailed(name CommandName, message string) {
 	s.SetCondition(metav1.Condition{
 		Type:    string(name),
 		Status:  metav1.ConditionFalse,
-		Reason:  "Failed",
+		Reason:  CPOReasonCommandFailed,
 		Message: message,
 	})
 }
@@ -146,13 +135,13 @@ func (s *OperationState) MarkSucceeded() {
 	s.SetCondition(metav1.Condition{
 		Type:    CPOConditionReady,
 		Status:  metav1.ConditionTrue,
-		Reason:  "OperationSucceeded",
+		Reason:  CPOReasonOperationCompleted,
 		Message: "operation completed",
 	})
 	s.SetCondition(metav1.Condition{
 		Type:   CPOConditionFailed,
 		Status: metav1.ConditionFalse,
-		Reason: "NoFailure",
+		Reason: CPOReasonNoFailure,
 	})
 }
 
