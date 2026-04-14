@@ -36,20 +36,14 @@ conversions:
             bo, bc = "{", "}"
 
             for t in spec.get("transformations") or []:
-                if not isinstance(t, dict):
-                    continue
-                if t.get("action") == "DropLabels" and isinstance(t.get("dropLabels"), dict):
+                if t.get("action") == "DropLabels":
                     dl = t["dropLabels"]
-                    labs = dl.get("labels")
-                    if isinstance(labs, list) and labs and isinstance(labs[0], str):
-                        dl["labels"] = [{"label": p} for p in labs]
-                if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
+                    dl["labels"] = [{"label": p} for p in dl.get("labels") or []]
+                if t.get("action") == "ParseMessage":
                     pm = t["parseMessage"]
-                    if pm.get("sourceFormat") == "String" and isinstance(pm.get("string"), dict):
+                    if pm.get("sourceFormat") == "String":
                         st = dict(pm["string"])
-                        tf = st.pop("targetField", None)
-                        if not tf:
-                            continue
+                        tf = st.pop("targetField")
                         st.clear()
                         st["regex"] = r"^(?P<%s>.*)$" % tf
                         st["setLabels"] = {tf: (bo * 2 + " %s " % tf + bc * 2)}
@@ -68,24 +62,16 @@ conversions:
             spec = out.get("spec") or {}
 
             for t in spec.get("transformations") or []:
-                if not isinstance(t, dict):
-                    continue
-                if t.get("action") == "DropLabels" and isinstance(t.get("dropLabels"), dict):
+                if t.get("action") == "DropLabels":
                     dl = t["dropLabels"]
-                    labs = dl.get("labels")
-                    if isinstance(labs, list) and labs and isinstance(labs[0], dict):
-                        dl["labels"] = [
-                            e["label"]
-                            for e in labs
-                            if isinstance(e, dict) and isinstance(e.get("label"), str)
-                        ]
-                if t.get("action") == "ParseMessage" and isinstance(t.get("parseMessage"), dict):
+                    dl["labels"] = [e["label"] for e in dl.get("labels") or []]
+                if t.get("action") == "ParseMessage":
                     pm = t["parseMessage"]
                     pm.pop("targetLabel", None)
-                    if pm.get("sourceFormat") == "String" and isinstance(pm.get("string"), dict):
+                    if pm.get("sourceFormat") == "String":
                         st = pm["string"]
                         sl = st.get("setLabels") or {}
-                        if isinstance(sl, dict) and sl:
+                        if sl:
                             pm["string"] = {"targetField": next(iter(sl))}
                         else:
                             pm["string"] = {"targetField": "msg"}
