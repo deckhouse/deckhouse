@@ -82,13 +82,24 @@ func NewClient(repo string, options ...Option) (Client, error) {
 		opt(opts)
 	}
 
+	var nameOpts []name.Option
+	if opts.useHTTP {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+
+	if _, err := name.NewRepository(repo, nameOpts...); err != nil {
+		return nil, fmt.Errorf("parse repo %q: %w", repo, err)
+	}
+
 	r := &client{
 		registryURL: repo,
 		options:     opts,
 	}
 
+	opts.withoutAuth = opts.dockerCfg == "" && opts.login == ""
+
 	if !opts.withoutAuth {
-		authConfig, err := readAuthConfig(repo, opts.dockerCfg)
+		authConfig, err := readAuthConfig(repo, opts.dockerCfg, opts.login, opts.password)
 		if err != nil {
 			return nil, fmt.Errorf("read auth config: %w", err)
 		}
@@ -196,7 +207,18 @@ func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 	return d.String(), nil
 }
 
-func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
+func readAuthConfig(repo, dockerCfg, login, password string) (authn.AuthConfig, error) {
+	if login != "" {
+		return authn.AuthConfig{
+			Username: login,
+			Password: password,
+		}, nil
+	}
+
+	return readAuthFromDockerCfg(repo, dockerCfg)
+}
+
+func readAuthFromDockerCfg(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	r, err := parse(repo)
 	if err != nil {
 		return authn.AuthConfig{}, fmt.Errorf("parse repo: %w", err)
@@ -260,6 +282,8 @@ type registryOptions struct {
 	useHTTP     bool
 	withoutAuth bool
 	dockerCfg   string
+	login       string
+	password    string
 	userAgent   string
 	timeout     time.Duration
 }
@@ -280,14 +304,20 @@ func WithInsecureSchema(insecure bool) Option {
 	}
 }
 
-// WithAuth use docker config base64 as authConfig
-// if dockerCfg is empty - will use client without auth
-func WithAuth(dockerCfg string) Option {
+// WithDockerCfgAuth sets authentication using a base64-encoded docker config JSON.
+// If empty, this option is a no-op.
+func WithDockerCfgAuth(dockerCfg string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg
-		if dockerCfg == "" {
-			options.withoutAuth = true
-		}
+	}
+}
+
+// WithUserPasswordAuth sets authentication using a plain-text username and password.
+// Takes priority over WithDockerCfgAuth and WithCredentialsBase64.
+func WithUserPasswordAuth(login, password string) Option {
+	return func(options *registryOptions) {
+		options.login = login
+		options.password = password
 	}
 }
 

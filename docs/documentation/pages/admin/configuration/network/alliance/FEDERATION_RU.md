@@ -7,7 +7,7 @@ lang: ru
 ## Федерация средствами Istio (Service Mesh)
 
 {% alert level="info" %}
-Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro 1.67+).
+Доступно только в DKP Enterprise Edition (EE) и DKP Certified Security Edition Pro (CSE Pro).
 {% endalert %}
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D1%84%D0%B5%D0%B4%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D1%8F -->
@@ -16,20 +16,16 @@ lang: ru
 
 * Каждый кластер должен иметь уникальное значение параметра [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) в ресурсе ClusterConfiguration. Обратите внимание, что ни один из кластеров не должен иметь домен `cluster.local`, который является значением по умолчанию.
 
-  > Значение `cluster.local` использовать нельзя — зарезервированный псевдоним для домена локального кластера.
+  > Значение `cluster.local` использовать нельзя, так как это зарезервированный псевдоним для домена локального кластера.
   > Если в AuthorizationPolicy указать `cluster.local` как principals, правило будет применяться только к локальному кластеру, даже если в Service mesh существует кластер, у которого [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) явно определен как `cluster.local` (Подробнее — [в документации Istio](https://istio.io/latest/docs/tasks/security/authorization/authz-td-migration/#best-practices)).
 
-* Подсети сервисов и подов, заданные в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса ClusterConfiguration должны различаться между кластерами.
+* Требования к уникальности подсетей сервисов и подов в параметрах [`serviceSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-servicesubnetcidr) и [`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) при работе кластеров в федерации отсутствуют.
 
   > При анализе трафика Istio использует:
   > - для HTTP/HTTPS-запросов — заголовки;
   > - для TCP-запросов — IP-адрес назначения и порт.
   >
-  > Если IP-адреса пересекаются, Istio может ошибочно применить правила маршрутизации к запросам из других кластеров.
-  > В режиме single-network пересечения подсетей строго запрещены. В режиме multi-networks — формально допустимы, но не рекомендуются. Подробнее — [в документации Istio](https://istio.io/latest/docs/ops/deployment/deployment-models/#single-network).
-  >
-  > - В режиме single-network поды разных кластеров могут взаимодействовать напрямую.
-  > - В режиме multi-networks поды разных кластеров взаимодействуют только через istio-gateway.
+  > Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) — поды разных кластеров взаимодействуют друг с другом только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
 
 ### Общие принципы федерации
 

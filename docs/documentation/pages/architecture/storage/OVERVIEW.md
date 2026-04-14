@@ -34,5 +34,6 @@ The following modules are currently described in this section:
 * [`local-path-provisioner`](local-path-provisioner.html)
 * [`snapshot-controller`](snapshot-controller.html)
 * [`sds-local-volume`](sds-local-volume.html)
+* [`sds-node-configurator`](sds-node-configurator.html)
 
 Documentation for the remaining Storage subsystem modules will be added as it becomes available.

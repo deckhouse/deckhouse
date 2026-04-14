@@ -25,7 +25,7 @@ spec:
         is_connect {
           input.review.operation == "CONNECT"
         }
-        
+
         subresource_is(sub) {
           sr := object.get(input.review, "requestSubResource", input.review.subResource)
           sr == sub
@@ -41,15 +41,11 @@ spec:
           subresource_is("attach")
         }
 
-        # Check if the target pod has heritage: deckhouse label via inventory
-        is_heritage_pod {
-          namespace := input.review.namespace
-          podName := input.review.name
-          pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
-          pod.metadata.labels["heritage"] == "deckhouse"
+        connect_to_pod_exec_or_attach {
+          is_connect
+          is_pod_exec_or_attach
         }
 
-        # allow-list
         is_allowed_user {
           input.review.userInfo.username == "system:sudouser"
         }
@@ -62,11 +58,21 @@ spec:
           startswith(input.review.userInfo.username, "system:serviceaccount:kube-")
         }
 
-        violation[{"msg": msg}] {
-          is_connect
-          is_pod_exec_or_attach
-          is_heritage_pod
+        deny_candidate {
+          connect_to_pod_exec_or_attach
           not is_allowed_user
+        }
+
+        is_heritage_pod {
+          deny_candidate
+          namespace := input.review.namespace
+          podName := input.review.name
+          pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
+          pod.metadata.labels["heritage"] == "deckhouse"
+        }
+
+        violation[{"msg": msg}] {
+          is_heritage_pod
           pod  := input.review.name
           ns   := input.review.namespace
           user := input.review.userInfo.username

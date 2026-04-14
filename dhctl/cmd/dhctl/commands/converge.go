@@ -75,10 +75,11 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					},
 				},
 			},
-			ProviderGetter: providerGetter,
-			TmpDir:         tmpDir,
-			Logger:         logger,
-			IsDebug:        isDebug,
+			ProviderGetter:  providerGetter,
+			TmpDir:          tmpDir,
+			Logger:          logger,
+			IsDebug:         isDebug,
+			DirectoryConfig: app.GetDirConfig(),
 
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
@@ -124,10 +125,11 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 					},
 				},
 			},
-			ProviderGetter: providerGetter,
-			TmpDir:         tmpDir,
-			Logger:         logger,
-			IsDebug:        isDebug,
+			ProviderGetter:  providerGetter,
+			TmpDir:          tmpDir,
+			Logger:          logger,
+			IsDebug:         isDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
 		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
 	})
@@ -186,6 +188,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			TmpDir:                                tmpDir,
 			Logger:                                loggerFor,
 			IsDebug:                               isDebug,
+			DirectoryConfig:                       app.GetDirConfig(),
 		})
 		err = converger.ConvergeMigration(ctx)
 		if err != nil {

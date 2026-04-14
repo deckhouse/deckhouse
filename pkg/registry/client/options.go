@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -66,8 +67,16 @@ type Options struct {
 	Timeout time.Duration
 
 	// Transport overrides the HTTP transport used for registry requests.
-	// When set, CA, TLSSkipVerify and Insecure transport settings are ignored.
+	// When set, CA, TLSSkipVerify, Insecure and ProxyURL transport settings are ignored.
 	Transport http.RoundTripper
+
+	// ProxyURL sets an explicit HTTP/HTTPS proxy for registry requests.
+	// When nil, proxy settings are taken from the environment (HTTP_PROXY / HTTPS_PROXY).
+	ProxyURL *url.URL
+
+	// Middlewares are transport middlewares applied in order around the base
+	// HTTP transport. Use WithMiddleware to add them via functional options.
+	Middlewares []TransportMiddleware
 
 	// Logger for client operations
 	Logger *log.Logger
@@ -114,13 +123,13 @@ func WithUserAgent(ua string) Option {
 }
 
 // WithInsecure enables plain HTTP instead of HTTPS.
-func WithInsecure() Option {
-	return func(o *Options) { o.Insecure = true }
+func WithInsecure(insecure bool) Option {
+	return func(o *Options) { o.Insecure = insecure }
 }
 
 // WithTLSSkipVerify disables TLS certificate verification.
-func WithTLSSkipVerify() Option {
-	return func(o *Options) { o.TLSSkipVerify = true }
+func WithTLSSkipVerify(skip bool) Option {
+	return func(o *Options) { o.TLSSkipVerify = skip }
 }
 
 // WithCA sets a custom PEM-encoded CA certificate for TLS verification.
@@ -147,9 +156,16 @@ func WithLogger(logger *log.Logger) Option {
 
 // WithCustomTransport sets a custom HTTP transport for registry requests.
 // When provided, it takes precedence over any transport built from CA,
-// TLSSkipVerify, or Insecure settings.
+// TLSSkipVerify, Insecure, or ProxyURL settings.
 func WithCustomTransport(transport http.RoundTripper) Option {
 	return func(o *Options) { o.Transport = transport }
+}
+
+// WithProxy sets an explicit proxy URL for registry requests.
+// Overrides any proxy configured via environment variables.
+// Pass nil to disable proxying entirely.
+func WithProxy(proxyURL *url.URL) Option {
+	return func(o *Options) { o.ProxyURL = proxyURL }
 }
 
 // resolveLogger returns the provided logger, or a default named logger when nil.
@@ -161,9 +177,28 @@ func resolveLogger(logger *log.Logger) *log.Logger {
 	return logger
 }
 
+// resolveTransport returns the base HTTP transport from options.
+func resolveTransport(opts *Options) http.RoundTripper {
+	var rt = http.DefaultTransport
+
+	if opts.Transport != nil {
+		rt = opts.Transport
+	}
+
+	if opts.CA != "" || needsCustomTransport(opts) {
+		rt = buildTransport(opts)
+	}
+
+	// Apply transport middlewares in order (first middleware = outermost).
+	for i := len(opts.Middlewares) - 1; i >= 0; i-- {
+		rt = opts.Middlewares[i](rt)
+	}
+
+	return rt
+}
+
 // buildRemoteOptions constructs remote options including auth and transport configuration.
-// logger is used to warn about ignored options when a custom transport is provided.
-func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
+func buildRemoteOptions(opts *Options, logger *log.Logger, baseTransport http.RoundTripper) []remote.Option {
 	remoteOptions := []remote.Option{}
 
 	if opts.Auth != nil {
@@ -195,12 +230,12 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 			logger.Warn("WithCustomTransport is set: TLSSkipVerify option will be ignored")
 		}
 
-		remoteOptions = append(remoteOptions, remote.WithTransport(opts.Transport))
+		remoteOptions = append(remoteOptions, remote.WithTransport(baseTransport))
 
 		return remoteOptions
 	}
 
-	if opts.CA != "" || needsCustomTransport(opts) {
+	if baseTransport != nil && baseTransport != http.DefaultTransport {
 		if opts.TLSSkipVerify {
 			logger.Debug("TLS certificate verification disabled")
 		}
@@ -209,8 +244,7 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 			logger.Debug("Insecure HTTP mode enabled")
 		}
 
-		transport := buildTransport(opts)
-		remoteOptions = append(remoteOptions, remote.WithTransport(transport))
+		remoteOptions = append(remoteOptions, remote.WithTransport(baseTransport))
 	}
 
 	return remoteOptions
@@ -218,7 +252,7 @@ func buildRemoteOptions(opts *Options, logger *log.Logger) []remote.Option {
 
 // needsCustomTransport checks if custom transport configuration is required
 func needsCustomTransport(opts *Options) bool {
-	return opts.Insecure || opts.TLSSkipVerify
+	return opts.Insecure || opts.TLSSkipVerify || opts.ProxyURL != nil
 }
 
 // buildTransport creates a single transport that combines CA and TLS settings
@@ -236,6 +270,10 @@ func buildTransport(opts *Options) http.RoundTripper {
 			transport.TLSClientConfig.InsecureSkipVerify = true
 		}
 
+		if opts.ProxyURL != nil {
+			transport.Proxy = http.ProxyURL(opts.ProxyURL)
+		}
+
 		return transport
 	}
 
@@ -250,8 +288,13 @@ func buildTransport(opts *Options) http.RoundTripper {
 
 // configureTransport creates and configures an HTTP transport with TLS settings
 func configureTransport(opts *Options) *http.Transport {
+	proxyFunc := http.ProxyFromEnvironment
+	if opts.ProxyURL != nil {
+		proxyFunc = http.ProxyURL(opts.ProxyURL)
+	}
+
 	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
+		Proxy: proxyFunc,
 		DialContext: (&net.Dialer{
 			Timeout:   defaultTimeout,
 			KeepAlive: defaultTimeout,

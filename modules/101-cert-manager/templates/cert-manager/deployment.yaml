@@ -1,3 +1,5 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- define "cert_manager_resources" }}
 cpu: 10m
 memory: 25Mi
@@ -84,6 +86,9 @@ spec:
           - --enable-certificate-owner-ref
           {{- end }}
 {{- end }}
+{{- end }}
+{{- if and $moduleGateway (include "helm_lib_kind_exists" (list . "Gateway")) (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+          - --enable-gateway-api=true
 {{- end }}
           ports:
             - containerPort: 9402

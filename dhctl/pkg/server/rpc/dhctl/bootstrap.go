@@ -302,6 +302,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		TmpDir:                     s.params.TmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		DirectoryConfig:            s.params.DownloadDirConfig,
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)

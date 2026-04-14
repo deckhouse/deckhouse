@@ -1,0 +1,113 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authn")) | nindent 2 }}
+  name: user-authn
+  namespace: d8-{{ .Chart.Name }}
+spec:
+  listeners:
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    name: dex
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+        namespace: d8-{{ .Chart.Name }}
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    name: dex-redirect
+    port: 80
+    protocol: HTTP
+  {{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "dex") }}
+    name: dex
+    port: 80
+    protocol: HTTP
+  {{- end }}
+  {{- if or .Values.userAuthn.publishAPI.enabled (include "is_basic_auth_enabled" .) }}
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    name: api
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "publish_api_http_route_certificate_name" . }}
+        namespace: d8-{{ .Chart.Name }}
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    name: api-redirect
+    port: 80
+    protocol: HTTP
+  {{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "api") }}
+    name: api
+    port: 80
+    protocol: HTTP
+  {{- end }}
+  {{- end }}
+  {{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
+    name: kubeconfig
+    port: 443
+    protocol: HTTPS
+    tls:
+      certificateRefs:
+      - group: ""
+        kind: Secret
+        name: {{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-httproute-tls") }}
+        namespace: d8-{{ .Chart.Name }}
+      mode: Terminate
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
+    name: kubeconfig-redirect
+    port: 80
+    protocol: HTTP
+  {{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "kubeconfig") }}
+    name: kubeconfig
+    port: 80
+    protocol: HTTP
+  {{- end }}
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ $moduleGateway.name }}
+    namespace: {{ $moduleGateway.namespace }}
+{{- end }}

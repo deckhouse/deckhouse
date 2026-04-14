@@ -29,7 +29,7 @@ env:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     if: ${{ {!{ $enableWorkflowOnTestRepos }!} || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -51,7 +51,7 @@ jobs:
       {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 
       {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 4 }!}
-      {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 4 }!}
+      {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 4 }!}
       {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 4 }!}
 
     - name: RM Deckhouse image

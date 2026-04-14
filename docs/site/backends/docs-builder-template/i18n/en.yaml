@@ -115,6 +115,7 @@ tags_filter_all_selected: All tags
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_for_alert: The module has [requirements](/modules/%s/configuration.html#requirements) for installation
 requirements_title: Requirements
 requirements_deckhouse_title: To the Deckhouse version
 requirements_kubernetes_title: To the Kubernetes version
@@ -138,6 +139,7 @@ currency_sign: "$"
 commercial: Available in some commercial editions.
 notAvailableInThisEdition: Available in other commercial editions.
 default_value: default
+default_empty_string_value: ‘’
 platform: platform
 pattern: pattern
 example: example

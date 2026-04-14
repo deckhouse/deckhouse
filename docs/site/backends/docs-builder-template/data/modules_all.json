@@ -5,7 +5,8 @@
       "se",
       "se-plus",
       "ee",
-      "ce"
+      "ce",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce",
@@ -14,8 +15,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A separate license is required",
-        "ru": "Требуется отдельная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "commercialBadgeMessage": {
@@ -36,7 +37,8 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "path": "",
     "tags": [
@@ -45,8 +47,21 @@
   },
   "code": {
     "editions": [
-      "ee"
+      "ee",
+      "se",
+      "se-plus"
     ],
+    "editionsWithRestrictions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
+      }
+    },
     "tags": [
       "application",
       "web ui"
@@ -105,8 +120,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
       }
     },
     "tags": [
@@ -127,8 +142,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
       }
     },
     "external": "true",
@@ -158,8 +173,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
       }
     },
     "tags": [
@@ -180,7 +195,8 @@
   },
   "csi-scsi-generic": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "tags": [
       "storage"
@@ -190,7 +206,8 @@
   },
   "csi-yadro-tatlin-unified": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "tags": [
       "storage"
@@ -209,6 +226,36 @@
     "external": "true",
     "path": ""
   },
+  "managed-cassandra": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-cassandra/"
+  },
+  "managed-hive-metastore": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-hive-metastore/"
+  },
+  "managed-kafka": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-kafka/"
+  },
   "managed-postgres": {
     "editions": [
       "ee",
@@ -216,7 +263,7 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-postgres/"
@@ -228,10 +275,20 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-memcached/"
+  },
+  "managed-trino": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "managed services"
+    ],
+    "external": "true",
+    "path": "/modules/managed-trino/"
   },
   "managed-valkey": {
     "editions": [
@@ -240,7 +297,7 @@
       "se-plus"
     ],
     "tags": [
-      "database"
+      "managed services"
     ],
     "external": "true",
     "path": "/modules/managed-valkey/"
@@ -254,8 +311,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
       }
     },
     "tags": [
@@ -312,8 +369,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
       }
     },
     "tags": [
@@ -393,8 +450,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to create snapshots and volume wiping",
-        "ru": "Ограничение на возможность создания снимков и затирание томов"
+        "en": "Restriction on the ability to create snapshots and volume wiping",
+        "ru": "Ограничение на возможность создания снимков и затирание томов"
       }
     },
     "tags": [
@@ -473,7 +530,8 @@
   },
   "storage-volume-data-manager": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "tags": [
       "storage"
@@ -502,8 +560,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "A separate license is required",
-        "ru": "Требуется отдельная лицензия"
+        "en": "A separate license is required",
+        "ru": "Требуется отдельная лицензия"
       }
     },
     "commercialBadgeMessage": {
@@ -521,7 +579,8 @@
     "editions": [
       "ce",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce"

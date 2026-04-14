@@ -44,8 +44,10 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.57.1"
+  DECKHOUSE_CLI_VERSION: "v0.29.20"
+  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
+  WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -77,7 +79,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -152,7 +154,7 @@ jobs:
   # </template: git_info_job>
   detect_editions:
     name: Detect editions
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       BUILD_CE: ${{steps.detect_editions.outputs.BUILD_CE}}
       BUILD_EE: ${{steps.detect_editions.outputs.BUILD_EE}}
@@ -217,7 +219,7 @@ jobs:
   # <template: check_changelog_template>
   check_changelog:
     name: Check changelog
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     steps:
 
       # <template: checkout_step>
@@ -385,12 +387,13 @@ jobs:
       # </template: login_rw_registry_step>
 
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -532,11 +535,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8 && source $(d8 dk ci-env github --verbose --as-file)
+          d8 dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -775,12 +778,13 @@ jobs:
       # </template: login_rw_registry_step>
 
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -922,11 +926,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8 && source $(d8 dk ci-env github --verbose --as-file)
+          d8 dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1165,12 +1169,13 @@ jobs:
       # </template: login_rw_registry_step>
 
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1312,11 +1317,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8 && source $(d8 dk ci-env github --verbose --as-file)
+          d8 dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1543,12 +1548,13 @@ jobs:
       # </template: login_rw_registry_step>
 
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1690,11 +1696,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8 && source $(d8 dk ci-env github --verbose --as-file)
+          d8 dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1921,12 +1927,13 @@ jobs:
       # </template: login_rw_registry_step>
 
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -2068,11 +2075,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8 && source $(d8 dk ci-env github --verbose --as-file)
+          d8 dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2299,12 +2306,13 @@ jobs:
       # </template: login_rw_registry_step>
 
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -2446,11 +2454,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8 && source $(d8 dk ci-env github --verbose --as-file)
+          d8 dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json

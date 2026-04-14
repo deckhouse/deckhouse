@@ -10,7 +10,7 @@ properties:
         type: object
         default: {}
         x-examples:
-          - {"1.21": { "fullVersion": "1.21.6", "revision": "1x21", "imageSuffix": "V1x21x6", "isReady": false } } # must be real
+          - {"1.21": { "fullVersion": "1.21.6", "revision": "1x21", "imageSuffix": "V1x21x6", "isReady": false, "supportsAmbient": false } } # must be real
         additionalProperties:
           type: object
           properties:
@@ -24,6 +24,9 @@ properties:
               type: string
               x-examples: ["V1x21x6"]
             isReady:
+              type: boolean
+              x-examples: [false]
+            supportsAmbient:
               type: boolean
               x-examples: [false]
       kialiSigningKey:

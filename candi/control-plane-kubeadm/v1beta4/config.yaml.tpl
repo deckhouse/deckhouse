@@ -8,9 +8,10 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion -}}
-  {{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations) */ -}}
+  {{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */ -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
   {{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */ -}}

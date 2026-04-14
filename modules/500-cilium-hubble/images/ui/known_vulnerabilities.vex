@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-c98e1c56ffe0fe4145a5cd040f16f368f68a1952ec43fed27c57faa9ddb6d2a0",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33726"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cilium/cilium@v1.17.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33726 не эксплуатируема в Deckhouse, поскольку функция Per-Endpoint Routing не используется и не может быть включена пользователем самостоятельно, а именно её активация является обязательным условием для реализации данной уязвимости.",
+      "timestamp": "2026-04-02T11:59:01.94567Z"
+    }
+  ],
+  "timestamp": "2026-04-02T11:59:01Z"
+}

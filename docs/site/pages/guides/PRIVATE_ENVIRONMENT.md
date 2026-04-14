@@ -9,7 +9,7 @@ layout: sidebar-guides
 This guide describes how to deploy a Deckhouse Kubernetes Platform cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
 
 {% alert level="warning" %}
-Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE.
 {% endalert %}
 
 ## Private environment specifics
@@ -18,45 +18,59 @@ Deploying in a private environment is almost the same as deploying [on bare meta
 
 Key specifics:
 
-* Internet access for applications deployed in the private environment is provided through a proxy server, whose parameters must be specified in the cluster configuration.
-* A container registry with DKP container images is deployed separately and must be reachable from within the private environment. The cluster is configured to use it and is granted the required access permissions.
+* Proxy server parameters set [in the cluster configuration](../documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) during installation are automatically propagated to the `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables for **cluster nodes and DKP components**.
+  User applications (pods) do not receive these variables from the cluster configuration automatically. To give them Internet access via a proxy, you must set the environment variables (`HTTP_PROXY`, `HTTPS_PROXY`, and, if needed, `NO_PROXY`) explicitly in manifests. Depending on corporate policy, application access may be arranged in other ways—for example, by allowing direct egress from nodes.
+* A container registry with DKP images is deployed separately with access from inside the perimeter, and the cluster is configured to use it with the required permissions.
 
-All interactions with external resources are performed via a dedicated physical server or virtual machine called a Bastion host. The container registry and proxy server are deployed on the Bastion host, and all cluster management operations are performed from it.
+Cluster nodes are usually accessed through a dedicated physical server or virtual machine called a bastion host. A proxy for access to external resources from the internal network is deployed according to your network policy and infrastructure architecture; depending on requirements, it may run on the bastion host or on a separate machine.
+A private container registry should preferably run on a separate VM or server in the internal network. Colocating the registry on the bastion host is not recommended for production. An exception may be lab or simplified stand-alone setups for limited use cases.
+
+{% alert level="info" %}
+Depending on your organization’s security policies, access to external resources may be fully disabled. In that case, no proxy is used for outbound access to external networks. Required external artifacts (for example, an archive of DKP container images) are brought into the perimeter onto the target VM by any permitted means—for example, removable media.
+{% endalert %}
 
 Overall private environment diagram:
 
-<img src="/images/gs/private-env-schema.png" alt="Deckhouse Kubernetes Platform deployment diagram in a private environment">
+<img src="/images/guides/install_to_private_environment/private_environment-scheme.png" alt="Deckhouse Kubernetes Platform deployment diagram in a private environment">
 
 {% alert level="info" %}
-The diagram also shows an internal OS package repository. It is required to install `curl` on the future cluster nodes if access to the official repositories is not available even through the proxy server.
+The diagram also shows an internal OS package repository. It is used to install packages on nodes when access to official repositories is not available even through a proxy.
+Many private environments already run internal OS package mirrors, and installation uses them—in that case, a proxy for package traffic is not required.
+A proxy server is used for other kinds of traffic:
+- pulling container images from the public DKP registry to the bastion host
+- DKP components and nodes calling external resources (if allowed by policy)
+- optionally, pod applications accessing external services.
 {% endalert %}
 
 ## Infrastructure selection
 
 This guide describes deploying a cluster in a private environment consisting of one master node and one worker node.
 
-To perform the deployment, you will need:
+You will need:
 
-- a personal computer from which the operations will be performed;
-- a dedicated physical server or virtual machine (Bastion host) where the container registry and related components will be deployed;
+- a personal computer from which you run operations
+- a dedicated physical server or virtual machine for the bastion host
+- a dedicated physical server or virtual machine for the container registry
+- optionally, a physical server or virtual machine for the proxy server
 - two physical servers or two virtual machines for the cluster nodes.
 
 Server requirements:
 
-* **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. This capacity is required because the Bastion host stores all DKP images needed for installation. Before being pushed to the private registry, the images are pulled from the public DKP registry to the Bastion host.
-* **Cluster nodes**: the [resources for the future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) should be selected based on the expected workload. For example, the minimum recommended configuration is 4 CPU cores, 8 GB RAM, and 60 GB on fast storage (400+ IOPS) per node.
+* **Bastion**: at least 4 CPU cores, 8 GB RAM, and 150 GB on fast storage. That much disk space is needed because the bastion host temporarily holds all DKP images used for installation. Images are downloaded from the public DKP registry to the bastion host before being pushed to the private container registry and packed into archives; these steps require substantial free space.
+* **VM for the private registry**: at least 4 CPU cores, 8 GB RAM, and at least 150 GB on fast storage for DKP images. Plan disk capacity with a margin, using the bundle size after `d8 mirror push` as a guide.
+* **Cluster nodes**: choose [resources for future cluster nodes](./hardware-requirements.html#deciding-on-the-amount-of-resources-needed-for-nodes) based on expected workload. For example, the minimum recommended configuration is 4 CPU cores, 8 GB RAM, and 60 GB on fast storage (400+ IOPS) per node.
 
 ## Preparing a private container registry
 
 {% alert level="warning" %}
 DKP supports only the Bearer token authentication scheme for container registries.
-
-Compatibility has been tested and is guaranteed for the following container registries: [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), and [Quay](https://quay.io/).
 {% endalert %}
 
-### Installing Harbor
+You may use any supported private container registry. Compatibility has been tested and is guaranteed for the following: [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), and [Quay](https://quay.io/).
 
-In this guide, [Harbor](https://goharbor.io/) is used as the private registry. It supports policy configuration and role-based access control (RBAC), scans images for vulnerabilities, and allows you to mark trusted artifacts. Harbor is a CNCF project.
+This guide uses [Harbor](https://goharbor.io/) as an example. It supports policy configuration and role-based access control (RBAC), vulnerability scanning, and marking trusted artifacts. Harbor is a CNCF project.
+
+### Installing Harbor
 
 Install the latest Harbor release from the project’s [GitHub releases page](https://github.com/goharbor/harbor/releases). Download the installer archive from the desired release, selecting the asset with `harbor-offline-installer` in its name.
 
@@ -66,7 +80,8 @@ Install the latest Harbor release from the project’s [GitHub releases page](ht
 
 Copy the download URL. For example, for `harbor-offline-installer-v2.14.1.tgz` it will look like this: `https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz`.
 
-Connect to the Bastion host via SSH and download the archive using any convenient method.
+Connect via SSH to the **virtual machine where Harbor will run** and download the archive using any convenient method.
+If that VM has no direct Internet access, download the archive on your workstation or on the bastion host, then copy it to the Harbor VM.
 
 {% offtopic title="How to download the archive with wget..." %}
 Run the command (use the current URL):
@@ -94,6 +109,8 @@ tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 
 The extracted `harbor` directory contains the files required for installation.
 
+On **the same VM**, install [Docker](https://docs.docker.com/engine/install/) and the [Docker Compose](https://docs.docker.com/compose/install/#plugin-linux-only) plugin. You will need them to configure TLS access to the registry and to run the Harbor installer.
+
 Before deploying the registry, generate a self-signed TLS certificate.
 
 {% alert level="info" %}
@@ -107,26 +124,31 @@ Create the `certs` directory inside the `harbor` directory:
 ```bash
 cd harbor/
 mkdir certs
+cd certs
 ```
 
-Generate certificates for external access using the following commands:
+Generate certificates for external access:
 
 ```bash
-openssl ecparam -name prime256v1 -genkey -out ca.key 4096
+openssl genrsa -out ca.key 4096
 ```
 
 ```bash
 openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
 ```
 
-Generate certificates for the internal domain name `harbor.local` so that the Bastion host can be accessed securely from within the private network:
+Generate certificates for the internal domain name `harbor.example` so clients can reach the Harbor VM securely inside the private network.
+
+{% alert level="warning" %}
+In the commands below, replace `<INTERNAL_IP_ADDRESS>` with the Harbor VM’s internal IP address. Cluster nodes and other services use this address to reach the container registry from inside the private environment.
+{% endalert %}
 
 ```bash
-openssl ecparam -name prime256v1 -genkey -out harbor.local.key
+openssl genrsa -out harbor.example.key 4096
 ```
 
 ```bash
-openssl req -sha512 -new -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=harbor.local" -key harbor.local.key -out harbor.local.csr
+openssl req -sha512 -new -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=harbor.example" -key harbor.example.key -out harbor.example.csr
 ```
 
 ```bash
@@ -139,20 +161,16 @@ subjectAltName = @alt_names
 
 [alt_names]
 IP.1=<INTERNAL_IP_ADDRESS>
-DNS.1=harbor.local
+DNS.1=harbor.example
 EOF
 ```
 
-{% alert level="warning" %}
-Do not forget to replace `<INTERNAL_IP_ADDRESS>` with the Bastion host’s internal IP address. This address will be used to access the container registry from within the private network. The `harbor.local` domain name is also associated with this address.
-{% endalert %}
-
 ```bash
-openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.local.csr -out harbor.local.crt
+openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.example.csr -out harbor.example.crt
 ```
 
 ```bash
-openssl x509 -inform PEM -in harbor.local.crt -out harbor.local.cert
+openssl x509 -inform PEM -in harbor.example.crt -out harbor.example.cert
 ```
 
 Verify that all certificates were created successfully:
@@ -171,19 +189,19 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 -rw-rw-r-- 1 ubuntu ubuntu 2037 Dec  5 14:57 ca.crt
 -rw------- 1 ubuntu ubuntu 3272 Dec  5 14:57 ca.key
 -rw-rw-r-- 1 ubuntu ubuntu   41 Dec  5 14:58 ca.srl
--rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.local.cert
--rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.local.crt
--rw-rw-r-- 1 ubuntu ubuntu 1704 Dec  5 14:57 harbor.local.csr
--rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.local.key
+-rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.example.cert
+-rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.example.crt
+-rw-rw-r-- 1 ubuntu ubuntu 1704 Dec  5 14:57 harbor.example.csr
+-rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.example.key
 -rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
 ```
 
 {% endofftopic %}
 
-Next, configure Docker to work with the private container registry over TLS. To do this, create the `harbor.local` directory under `/etc/docker/certs.d/`:
+Next, configure Docker to work with the private container registry over TLS. Create the `harbor.example` directory under `/etc/docker/certs.d/`:
 
 ```bash
-sudo mkdir -p /etc/docker/certs.d/harbor.local
+sudo mkdir -p /etc/docker/certs.d/harbor.example
 ```
 
 > The `-p` option tells `mkdir` to create parent directories if they do not exist (in this case, the `certs.d` directory).
@@ -191,12 +209,18 @@ sudo mkdir -p /etc/docker/certs.d/harbor.local
 Copy the generated certificates into it:
 
 ```bash
-cp ca.crt /etc/docker/certs.d/harbor.local/
-cp harbor.local.cert /etc/docker/certs.d/harbor.local/
-cp harbor.local.key /etc/docker/certs.d/harbor.local/
+cp ca.crt /etc/docker/certs.d/harbor.example/
+cp harbor.example.cert /etc/docker/certs.d/harbor.example/
+cp harbor.example.key /etc/docker/certs.d/harbor.example/
 ```
 
-These certificates will be used when accessing the registry via the `harbor.local` domain name.
+These certificates will be used when accessing the registry via the `harbor.example` domain name.
+
+Return to the `harbor` directory (installer root):
+
+```bash
+cd ..
+```
 
 Copy the configuration file template that comes with the installer:
 
@@ -206,9 +230,9 @@ cp harbor.yml.tmpl harbor.yml
 
 Update the following parameters in `harbor.yml`:
 
-* `hostname`: set to `harbor.local` (the certificates were generated for this name);
-* `certificate`: specify the path to the generated certificate in the `certs` directory (for example, `/home/ubuntu/harbor/certs/harbor.local.crt`);
-* `private_key`: specify the path to the private key (for example, `/home/ubuntu/harbor/certs/harbor.local.key`);
+* `hostname`: set to `harbor.example` (the certificates were generated for this name)
+* `certificate`: specify the path to the generated certificate in the `certs` directory (for example, `/home/ubuntu/harbor/certs/harbor.example.crt`)
+* `private_key`: specify the path to the private key (for example, `/home/ubuntu/harbor/certs/harbor.example.key`)
 * `harbor_admin_password`: set a password for accessing the web UI.
 
 Save the file.
@@ -220,7 +244,7 @@ Save the file.
 
 # The IP address or hostname to access admin UI and registry service.
 # DO NOT use localhost or 127.0.0.1, because Harbor needs to be accessed by external clients.
-hostname: harbor.local
+hostname: harbor.example
 
 # http related config
 http:
@@ -232,8 +256,8 @@ https:
   # https port for harbor, default is 443
   port: 443
   # The path of cert and key files for nginx
-  certificate: /home.ubuntu/harbor/certs/harbor.local.crt
-  private_key: /home.ubuntu/harbor/certs/harbor.local.key
+  certificate: /home/ubuntu/harbor/certs/harbor.example.crt
+  private_key: /home/ubuntu/harbor/certs/harbor.example.key
   # enable strong ssl ciphers (default: false)
   # strong_ssl_ciphers: false
 
@@ -546,8 +570,6 @@ cache:
 
 {% endofftopic %}
 
-Install [Docker](https://docs.docker.com/engine/install/) and the [Docker Compose](https://docs.docker.com/compose/install/#plugin-linux-only) plugin on the Bastion host.
-
 Run the installation script:
 
 ```bash
@@ -601,10 +623,10 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 {% endofftopic %}
 
-Add an entry to `/etc/hosts` that maps the `harbor.local` domain name to the Bastion host’s localhost address so that you can access Harbor by this name from the Bastion host itself:
+On the Harbor VM, add an entry to `/etc/hosts` that maps the `harbor.example` domain name to `localhost` so you can open Harbor by that name from the same machine:
 
 ```bash
-127.0.0.1 localhost harbor.local
+127.0.0.1 localhost harbor.example
 ```
 
 {% alert level="warning" %}
@@ -626,56 +648,62 @@ Harbor installation is now complete! 🎉
 
 ### Configuring Harbor
 
-Create a project and a user that will be used to work with this project.
+Create a project and credentials used to work with it.
 
-Open the Harbor web UI at `harbor.local`:
+Open the Harbor web UI at `harbor.example`. Access to this UI from the public Internet is intentionally blocked; connect only from a host that has access to the internal network.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_page.png" alt="Harbor main page...">
 </div>
 
 {% alert level="info" %}
-To access Harbor by the `harbor.local` domain name from your workstation, add a corresponding entry to `/etc/hosts` and point it to the Bastion host IP address.
+To open Harbor by the `harbor.example` domain name from your workstation, add a matching entry to `/etc/hosts` pointing to the Harbor VM’s internal IP address.
 {% endalert %}
 
-To sign in, use the username and password specified in the `harbor.yml` configuration file.
+Sign in with the username and password from `harbor.yml`.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_dashboard.png" alt="Harbor dashboard...">
 </div>
 
 {% alert level="info" %}
-Your browser may warn about the self-signed certificate and mark the connection as “not secure”. In a private environment this is expected and acceptable. If needed, add the certificate to the trusted certificate store of your browser or operating system to remove the warning.
+Your browser may warn about the self-signed certificate and mark the connection as “not secure”. In a private environment this is expected and acceptable. If needed, add the certificate to your browser or OS trust store to suppress the warning.
 {% endalert %}
 
-Create a new project. Click **New Project** and enter `deckhouse` as the project name. Leave the remaining settings unchanged.
+Create a new project: click **New Project**, set the name to `deckhouse`, and leave the other settings unchanged.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_new_project.png" alt="Creating a project in Harbor...">
 </div>
 
-Create a new user for this project. In the left menu, go to **Users** and click **New User**:
+Create a [robot account](https://goharbor.io/docs/1.10/working-with-projects/project-configuration/create-robot-accounts/) for this project. Robot accounts are tied to a project and meant for automation. They cannot use the web UI and are intended for Docker CLI or Helm CLI only.
+
+Open the `deckhouse` project and go to the **Robot Accounts** tab. Click **New Robot Account**:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_create_new_user.png" alt="Creating a user in Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_account_ru.png" alt="Harbor robot accounts...">
 </div>
 
-Specify the username, email address, and password:
+Set the account name, optional description, and expiration (days or never expire):
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_creating_user.png" alt="Entering user details in Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_create_robot_account_ru.png" alt="Creating a Harbor robot account...">
 </div>
 
-Add the created user to the `deckhouse` project: go back to **Projects**, open the `deckhouse` project, then open the **Members** tab and click **User** to add a member.
+For correct operation, grant full access under **Repository**. Adjust other permissions as needed or per your security policy.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project.png" alt="Adding a user to a Harbor project...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_permissions_ru.png" alt="Harbor robot account permissions...">
 </div>
 
-Keep the default role: **Project Admin**.
+After creation, Harbor shows the robot account secret (token).
+
+{% alert level="warning" %}
+Save the secret immediately. Harbor will not show it again, and it cannot be retrieved later.
+{% endalert %}
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_new_project_user.png" alt="Selecting a user role in a Harbor project...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_created_ru.png" alt="Harbor robot account created...">
 </div>
 
 Harbor configuration is now complete! 🎉
@@ -685,7 +713,7 @@ Harbor configuration is now complete! 🎉
 The next step is to copy DKP component images from the public Deckhouse Kubernetes Platform registry to Harbor.
 
 {% alert level="info" %}
-To proceed with the steps in this section, you need the Deckhouse CLI utility. Install it on the Bastion host according to the [documentation](../documentation/v1/cli/d8/).
+The steps in this section require the Deckhouse CLI. Install it on the host from which you will mirror images to the private registry — in this guide, the bastion host. For installation instructions, see  [the Deckhouse CLI documentation](../documentation/v1/cli/d8/).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -723,63 +751,126 @@ Downloading images takes a significant amount of time. To avoid losing progress 
 {% endofftopic %}
 {% endalert %}
 
-Run the following command to download all required images and pack them into the `d8.tar` archive. Specify your license key and the DKP edition (for example, `se-plus` for Standard Edition+, `ee` for Enterprise Edition, and so on):
+Download DKP images into a dedicated directory using `d8 mirror pull`.
 
-```bash
-d8 mirror pull --source="registry.deckhouse.io/deckhouse/<DKP_EDITION>" --license="<LICENSE_KEY>" $(pwd)/d8.tar
+By default, `d8 mirror pull` downloads current DKP releases, vulnerability scanner databases (if included in your edition), and officially shipped modules.
+
+Run the following command to download current image versions. Replace the placeholders with your values: `<EDITION>`, `<LICENSE_KEY>`, and optionally the target directory path:
+
+```shell
+d8 mirror pull \
+  --source='registry.deckhouse.io/deckhouse/<EDITION>' \
+  --license='<LICENSE_KEY>' /home/ubuntu/d8-bundle
 ```
 
-Depending on your Internet connection speed, the process may take 30 to 40 minutes.
+where:
+
+- `--source` — DKP image registry address
+- `<EDITION>` — DKP edition code (for example, `ee`, `se`, `se-plus`). The default is `ee` (Enterprise Edition), so `--source` may be omitted
+- `--license` — DKP license key for authentication to the official registry
+- `<LICENSE_KEY>` — your license key
+- `/home/ubuntu/d8-bundle` — directory for downloaded image bundles (created automatically if missing).
+
+If the download is interrupted, run the command again to resume, as long as no more than 24 hours have passed since it stopped.
+
+Depending on your Internet connection, the process may take 30 to 40 minutes.
 
 {% offtopic title="Example of a successful image download completion..." %}
 
+Example log when all platform components are pulled:
+
 ```text
-Dec 11 15:06:42.280 INFO  ║ Packing module-csi-scsi-generic.tar
-Dec 11 15:06:56.770 INFO  ║ Packing module-operator-ceph.tar
-Dec 11 15:07:04.748 INFO  ║ Packing module-secrets-store-integration.tar
-Dec 11 15:07:11.936 INFO  ║ Packing module-stronghold.tar
-Dec 11 15:07:18.426 INFO  ║ Packing module-development-platform.tar
-Dec 11 15:07:20.280 INFO  ║ Packing module-sdn.tar
-Dec 11 15:07:24.318 INFO  ║ Packing module-prompp.tar
-Dec 11 15:07:27.777 INFO  ║ Packing module-storage-volume-data-manager.tar
-Dec 11 15:07:28.354 INFO  ║ Packing module-sds-node-configurator.tar
-Dec 11 15:07:29.115 INFO  ║ Packing module-sds-replicated-volume.tar
-Dec 11 15:08:00.529 INFO  ║ Packing module-csi-yadro-tatlin-unified.tar
-Dec 11 15:08:07.376 INFO  ║ Packing module-neuvector.tar
-Dec 11 15:08:30.766 INFO  ╚ Pull Modules succeeded in 27m55.883250757s
+Feb 26 17:49:04.520 INFO  ║║ [822 / 824] Pulling registry.deckhouse.io/deckhouse/ee@sha256:4e5c17098d2a884cc971676fa9a7980f0d784a787d21e113d28a72da96ea8b2b 
+Feb 26 17:49:05.099 INFO  ║║ [823 / 824] Pulling registry.deckhouse.io/deckhouse/ee@sha256:d229564f423a1ca7a59e0be28a71218e362cc8f07d979ce63a15bb505c6ccb40 
+Feb 26 17:49:05.555 INFO  ║║ [824 / 824] Pulling registry.deckhouse.io/deckhouse/ee@sha256:eb5ed1a71783f941addf75a29e9bca9328f9dcca41d70b24b70efd4995eb1ca1 
+Feb 26 17:49:06.447 INFO  ║║ All required Deckhouse images are pulled!
+
+```
+
+Example log when modules are packed:
+
+```text
+Feb 26 18:30:18.263 INFO  ║║ Deckhouse modules pulled!
+Feb 26 18:30:18.263 INFO  ║╚ Pull images succeeded in 29m58.691782336s
+Feb 26 18:30:18.265 INFO  ║ Processing image indexes
+Feb 26 18:30:18.313 INFO  ║ Packing module-csi-hpe.tar
+Feb 26 18:30:19.205 INFO  ║ Packing module-csi-netapp.tar
+Feb 26 18:30:19.342 INFO  ║ Packing module-csi-nfs.tar
+Feb 26 18:30:19.496 INFO  ║ Packing module-operator-argo.tar
+Feb 26 18:30:19.666 INFO  ║ Packing module-runtime-audit-engine.tar
+Feb 26 18:30:21.419 INFO  ║ Packing module-managed-memcached.tar
+Feb 26 18:30:21.708 INFO  ║ Packing module-commander.tar
+Feb 26 18:30:23.829 INFO  ║ Packing module-csi-s3.tar
+Feb 26 18:30:25.199 INFO  ║ Packing module-csi-yadro-tatlin-unified.tar
+Feb 26 18:30:25.889 INFO  ║ Packing module-operator-ceph.tar
+Feb 26 18:30:27.075 INFO  ║ Packing module-operator-postgres.tar
+Feb 26 18:30:28.901 INFO  ║ Packing module-pod-reloader.tar
+Feb 26 18:30:28.929 INFO  ║ Packing module-sds-replicated-volume.tar
+Feb 26 18:30:35.771 INFO  ║ Packing module-secrets-store-integration.tar
+Feb 26 18:30:36.376 INFO  ║ Packing module-snapshot-controller.tar
+Feb 26 18:30:36.458 INFO  ║ Packing module-payload-registry.tar
+Feb 26 18:30:36.550 INFO  ║ Packing module-prompp.tar
+Feb 26 18:30:37.318 INFO  ║ Packing module-code.tar
+Feb 26 18:30:49.954 INFO  ║ Packing module-console.tar
+Feb 26 18:30:50.489 INFO  ║ Packing module-csi-huawei.tar
+Feb 26 18:30:53.224 INFO  ║ Packing module-storage-volume-data-manager.tar
+Feb 26 18:30:53.280 INFO  ║ Packing module-operator-trivy.tar
+Feb 26 18:30:54.042 INFO  ║ Packing module-sds-node-configurator.tar
+Feb 26 18:30:54.249 INFO  ║ Packing module-virtualization.tar
+Feb 26 18:30:58.367 INFO  ║ Packing module-commander-agent.tar
+Feb 26 18:30:58.401 INFO  ║ Packing module-csi-scsi-generic.tar
+Feb 26 18:31:00.045 INFO  ║ Packing module-development-platform.tar
+Feb 26 18:31:00.120 INFO  ║ Packing module-sdn.tar
+Feb 26 18:31:00.201 INFO  ║ Packing module-static-routing-manager.tar
+Feb 26 18:31:00.228 INFO  ║ Packing module-stronghold.tar
+Feb 26 18:31:01.160 INFO  ║ Packing module-sds-local-volume.tar
+Feb 26 18:31:01.397 INFO  ║ Packing module-observability.tar
+Feb 26 18:31:02.749 INFO  ║ Packing module-csi-ceph.tar
+Feb 26 18:31:03.565 INFO  ║ Packing module-managed-postgres.tar
+Feb 26 18:31:05.368 INFO  ║ Packing module-managed-valkey.tar
+Feb 26 18:31:05.595 INFO  ║ Packing module-neuvector.tar
+Feb 26 18:31:08.441 INFO  ║ Packing module-observability-platform.tar
+Feb 26 18:31:17.443 INFO  ║ Packing module-state-snapshotter.tar
+Feb 26 18:31:17.510 INFO  ╚ Pull Modules succeeded in 40m8.735435676s
 ```
 
 {% endofftopic %}
 
-Verify that the archive has been created:
+Verify that the bundles were created (you should see `platform.tar`, `security.tar`, `deckhousereleases.yaml`, and multiple `module-*.tar` files):
 
 ```console
-$ ls -lh
-total 650M
-drwxr-xr-x 2 ubuntu ubuntu 4.0K Dec 11 15:08 d8.tar
+$ ls -lh /home/ubuntu/d8-bundle
+total 51G
+-rw-rw-r-- 1 user user 4.8K Feb 26 17:19 deckhousereleases.yaml
+-rw-rw-r-- 1 user user 4.9G Feb 26 18:30 module-code.tar
+-rw-rw-r-- 1 user user  26G Feb 26 17:50 platform.tar
+-rw-rw-r-- 1 user user 1.3G Feb 26 17:51 security.tar
 ```
 
-Push the downloaded images to the private registry (specify the DKP edition and the credentials of the user created in Harbor):
+Push the downloaded images to the private registry. Substitute the DKP edition and Harbor robot account credentials:
+
+- `<ROBOT_ACCOUNT_NAME>` — robot account name
+- `<PASSWORD>` — token issued when the robot account was created.
 
 ```bash
-d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<DKP_EDITION>' --registry-login='deckhouse' --registry-password='<PASSWORD>' --tls-skip-verify
+d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<EDITION>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
-> The `--tls-skip-verify` flag tells the utility to trust the registry certificate and skip its verification.
+> The `--tls-skip-verify` flag tells the CLI to trust the registry certificate and skip verification.
 
-The archive will be unpacked and the images will be pushed to the registry. This step is usually faster than downloading because it operates on a local archive. It typically takes about 15 minutes.
+Images are read from the local bundles and pushed to the registry. This step is usually faster than download and often takes about 15 minutes.
 
 {% offtopic title="Example of a successful image push completion..." %}
 
 ```text
-Dec 11 18:25:32.350 INFO  ║ Pushing harbor.local:443/deckhouse/ee/modules/virtualization/release
-Dec 11 18:25:32.351 INFO  ║ [1 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:alpha
-Dec 11 18:25:32.617 INFO  ║ [2 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:beta
-Dec 11 18:25:32.760 INFO  ║ [3 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:early-access
-Dec 11 18:25:32.895 INFO  ║ [4 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:rock-solid
-Dec 11 18:25:33.081 INFO  ║ [5 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:stable
-Dec 11 18:25:33.142 INFO  ║ [6 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:v1.1.3
-Dec 11 18:25:33.213 INFO  ║ [7 / 7] Pushing image harbor.local:443/deckhouse/ee/modules/virtualization/release:v1.2.2
+Dec 11 18:25:32.350 INFO  ║ Pushing harbor.example:443/deckhouse/ee/modules/virtualization/release
+Dec 11 18:25:32.351 INFO  ║ [1 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:alpha
+Dec 11 18:25:32.617 INFO  ║ [2 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:beta
+Dec 11 18:25:32.760 INFO  ║ [3 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:early-access
+Dec 11 18:25:32.895 INFO  ║ [4 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:rock-solid
+Dec 11 18:25:33.081 INFO  ║ [5 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:stable
+Dec 11 18:25:33.142 INFO  ║ [6 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:v1.1.3
+Dec 11 18:25:33.213 INFO  ║ [7 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:v1.2.2
 Dec 11 18:25:33.414 INFO  ║ Pushing module tag for virtualization
 Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801312s
 Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres,
@@ -788,7 +879,7 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 
 {% endofftopic %}
 
-To verify that the images have been pushed, open the `deckhouse` project in the Harbor web UI.
+To verify the push, open the `deckhouse` project in the Harbor web UI.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_state_with_images.png" alt="Harbor project page...">
@@ -796,54 +887,21 @@ To verify that the images have been pushed, open the `deckhouse` project in the 
 
 The images are now available and ready to use! 🎉
 
-## Installing a proxy server
-
-To allow the future cluster nodes located in the private environment to access external package repositories (to install packages required for DKP), deploy a proxy server on the Bastion host through which this access will be provided.
-
-You can use any proxy server that meets your requirements. In this example, we will use [Squid](https://www.squid-cache.org/).
-
-Deploy Squid on the Bastion host as a container:
-
-```bash
-docker run -d --name squid -p 3128:3128 ubuntu/squid
-```
-
-{% offtopic title="Example of a successful command execution..." %}
-
-```text
-$ docker run -d --name squid -p 3128:3128 ubuntu/squid
-Unable to find image 'ubuntu/squid:latest' locally
-latest: Pulling from ubuntu/squid
-1678e6c91c57: Pull complete 
-040467b888ae: Pull complete 
-18b9e99f4452: Pull complete 
-Digest: sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
-Status: Downloaded newer image for ubuntu/squid:latest
-059b21fddbd2aba33500920f3f6f0712fa7b23893d512a807397af5eec27fb37
-```
-
-{% endofftopic %}
-
-Verify that the container is running:
-
-```console
-059b21fddbd2   ubuntu/squid                          "entrypoint.sh -f /e…"   About a minute ago   Up About a minute     0.0.0.0:3128->3128/tcp, [::]:3128->3128/tcp                                          squid
-```
-
-The list of running containers must include a container named `squid`.
-
 ## Signing in to the registry to run the installer
 
-Sign in to the Harbor registry so that Docker can pull the [dhctl](../documentation/v1/installing/) installer image from it:
+Use the host from which you will run the installer (in this guide, the bastion host). On that host, `harbor.example` must resolve to the Harbor VM (via `/etc/hosts` or DNS).
+Configure Docker to trust the TLS registry the same way as on the Harbor host: create `/etc/docker/certs.d/harbor.example/` and place the required certificates there (copy them from the Harbor VM or generate again).
+
+Sign in to Harbor so Docker can pull the [dhctl](../documentation/v1/installing/) installer image:
 
 ```bash
-docker login harbor.local
+docker login harbor.example
 ```
 
 {% offtopic title="Example of a successful command execution..." %}
 
 ```text
-$ docker login harbor.local
+$ docker login harbor.example
 Username: deckhouse
 Password: 
 
@@ -867,7 +925,7 @@ During installation, `ContainerdV2` is used as the default container runtime on 
 - systemd version `244`;
 - support for the `erofs` kernel module.
 
-Some distributions do not meet these requirements. In this case, you must bring the OS on the nodes into compliance before installing Deckhouse Kubernetes Platform. For details, see the [documentation](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+Some distributions do not meet these requirements. Bring the node OS into compliance before installing Deckhouse Kubernetes Platform. For details, see the [documentation](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 {% endalert %}
 
 Servers intended for future cluster nodes must meet the following requirements:
@@ -877,18 +935,25 @@ Servers intended for future cluster nodes must meet the following requirements:
 - at least 60 GB of disk space on fast storage (400+ IOPS);
 - a [supported OS](../documentation/v1/reference/supported_versions.html#linux);
 - Linux kernel version `5.8` or later;
-- a unique hostname across all cluster servers (physical servers and virtual machines);
+- a **unique hostname** across all cluster servers (physical servers and virtual machines)
 - one of the package managers available (`apt`/`apt-get`, `yum`, or `rpm`).
 
+- Python installed
+- access to the proxying registry or to the private container registry that holds Deckhouse images
+- access to the standard OS package repositories for your distribution (via a proxy or an internal package mirror)
+- SSH access from the bastion host using a key
+- network access from the bastion host on port `22/TCP`
+- no container runtime packages installed on the node (for example, no containerd or Docker).
+
 {% alert level="warning" %}
-For proper resource sizing, refer to the [production preparation recommendations](/products/kubernetes-platform/guides/production.html) and the [hardware requirements guide](/products/kubernetes-platform/guides/hardware-requirements.html) for selecting node types, the number of nodes, and node resources based on your expected workload and operational requirements.
+For proper resource sizing, read [the production preparation guide](../guides/production.html) and [the hardware requirements](../guides/hardware-requirements.html) for node roles, node counts, and sizing based on workload and operations.
 {% endalert %}
 
-### Configuring access to the Bastion host
+### Mapping `harbor.example` to the Harbor VM
 
-To allow the servers where the master and worker nodes will be deployed to access the private registry, configure them to resolve the `harbor.local` domain name to the Bastion host’s internal IP address in the private network.
+On the servers where the master and worker nodes will run, make the `harbor.example` hostname resolve to the Harbor VM’s internal IP address in the private network.
 
-To do this, connect to each server one by one and add an entry to `/etc/hosts` (and, if necessary, also to the cloud template file if your provider manages `/etc/hosts`).
+Connect to each server in turn and add a line to `/etc/hosts` (and, if your cloud provider manages the file, update the cloud template as well).
 
 {% offtopic title="How to connect to a server without external access..." %}
 To connect via SSH to a server without external access, you can use the Bastion host as a jump host.
@@ -919,10 +984,10 @@ There are two ways to connect:
 {% endofftopic %}
 
 ```console
-<INTERNAL-IP-ADDRESS> harbor.local proxy.local
+<INTERNAL-IP-ADDRESS> harbor.example proxy.local
 ```
 
-> Do not forget to replace `<INTERNAL-IP-ADDRESS>` with the Bastion host’s actual internal IP address.
+> Replace `<INTERNAL-IP-ADDRESS>` with the Harbor VM’s actual internal IP address.
 
 ### Creating a user for the master node
 
@@ -934,7 +999,7 @@ Run the commands as `root` (substitute the public part of your SSH key):
 useradd deckhouse -m -s /bin/bash -G sudo
 echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 mkdir /home/deckhouse/.ssh
-export KEY='ssh-ed25519 AAAAB3NzaC1yc2EAAAADA...'
+export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
 echo $KEY >> /home/deckhouse/.ssh/authorized_keys
 chown -R deckhouse:deckhouse /home/deckhouse
 chmod 700 /home/deckhouse/.ssh
@@ -942,9 +1007,7 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
 
 {% offtopic title="How to obtain the public part of the key..." %}
-You can get the public part of the key by running `cat ~/.ssh/<SSH_PUBLIC_KEY_FILE>`.
-
-Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+Run `cat ~/.ssh/id_rsa.pub` to print the public key (or use the path to your key’s `.pub` file).
 {% endofftopic %}
 
 As a result of these commands:
@@ -961,62 +1024,149 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 
 If the login succeeds, the user has been created correctly.
 
+### Creating a user for the worker node
+
+{% alert level="info" %}
+The following prepares the node for Cluster API Provider Static (CAPS). If you prefer to add static nodes manually with the bootstrap script, you can skip this subsection and the later CAPS steps: create a `Static` NodeGroup, take the script from the Secret, and run it on the server as described in [the documentation (manual method)](../documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html).
+{% endalert %}
+
+On the **master node**, generate an SSH key with an empty passphrase:
+
+```bash
+ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+```
+
+On the worker node server, create the `caps` user. Run the following commands and set the public key from the previous step:
+
+```console
+# Set the user’s public SSH key.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG sudo caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+
+{% offtopic title="If you are using CentOS or Rocky Linux..." %}
+On RHEL-based systems, add the `caps` user to the `wheel` group:
+
+```console
+# Set the user’s public SSH key.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
+
+{% endofftopic %}
+
 ## Preparing the configuration file
 
-The configuration file for deployment in a private environment differs from the configuration used for [bare metal](../gs/bm/step2.html) installation in a few parameters. Take the `config.yml` file from [step 4](../gs/bm/step4.html) of the bare metal installation guide and make the following changes:
+The configuration file for a private environment differs from [bare metal](../gs/bm/step2.html) in several ways. Take `config.yml` from [step 4](../gs/bm/step4.html) of the bare metal guide and apply the changes below.
 
-* In the `deckhouse` section of the `ClusterConfiguration` block, change the container registry settings from the public Deckhouse Kubernetes Platform registry to your private registry:
+If cluster nodes need outbound access via a proxy, deploy the proxy ahead of time—preferably on a dedicated machine with Internet access.
+
+{% offtopic title="Example: Squid proxy in a container..." %}
+
+A proxy may be required for traffic such as pulling images from the public DKP registry to the bastion, or for DKP components and nodes to reach external URLs when policy allows. OS packages on nodes can still come from internal mirrors, in which case the proxy is not used for package traffic.
+
+Deploy a proxy on a separate machine if your environment allows external access.
+
+You may use any suitable proxy. This example uses [Squid](https://www.squid-cache.org/):
+
+```bash
+docker run -d --name squid -p 3128:3128 ubuntu/squid
+```
+
+Example of a successful start:
+
+```text
+$ docker run -d --name squid -p 3128:3128 ubuntu/squid
+Unable to find image 'ubuntu/squid:latest' locally
+latest: Pulling from ubuntu/squid
+1678e6c91c57: Pull complete 
+040467b888ae: Pull complete 
+18b9e99f4452: Pull complete 
+Digest: sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029
+Status: Downloaded newer image for ubuntu/squid:latest
+059b21fddbd2aba33500920f3f6f0712fa7b23893d512a807397af5eec27fb37
+```
+
+Check that the container is running:
+
+```console
+059b21fddbd2   ubuntu/squid                          "entrypoint.sh -f /e…"   About a minute ago   Up About a minute     0.0.0.0:3128->3128/tcp, [::]:3128->3128/tcp                                          squid
+```
+
+You should see a container named `squid` in the list.
+
+{% endofftopic %}
+
+* In ClusterConfiguration, set proxy parameters **if** the environment uses a proxy for external access:
 
   ```yaml
   # Proxy server settings.
   proxy:
     httpProxy: http://proxy.local:3128
     httpsProxy: https://proxy.local:3128
-    noProxy: ["harbor.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+    noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
   ```
 
-   The following parameters are specified here:
-  * the HTTP and HTTPS proxy server addresses deployed on the Bastion host;
-  * the list of domains and IP addresses that will **not** be routed through the proxy server (internal domain names and internal IP addresses of all servers).
+  Here you specify:
+  * HTTP and HTTPS proxy addresses
+  * hostnames and IP addresses that **must not** use the proxy (internal names and internal IPs of your servers).
 
-* In the `InitConfiguration` section, add the parameters required to access the registry:
+* In `InitConfiguration`, add registry access settings:
 
   ```yaml
   deckhouse:
-    # Docker registry address that hosts Deckhouse images (specify the DKP edition).
-    imagesRepo: harbor.local/deckhouse/<DKP_EDITION>
-    # Base64-encoded Docker registry credentials.
-    # You can obtain it by running: `cat .docker/config.json | base64`.
+    # Docker registry that hosts Deckhouse images (set the DKP edition).
+    imagesRepo: harbor.example/deckhouse/<EDITION>
+    # Base64-encoded Docker client auth string for the registry.
     registryDockerCfg: <DOCKER_CFG_BASE64>
-    # Registry access scheme (HTTP or HTTPS).
+    # Registry protocol (HTTP or HTTPS).
     registryScheme: HTTPS
-    # The root CA certificate created earlier.
-    # You can obtain it by running: `cat harbor/certs/ca.crt`.
+    # Root CA used to verify the registry certificate.
+    # Example: `cat harbor/certs/ca.crt`.
     registryCA: |
       -----BEGIN CERTIFICATE-----
       ...
       -----END CERTIFICATE-----
   ```
 
-* In the [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter of the `deckhouse` ModuleConfig, set the value to `Stable` to use the stable [update channel](../documentation/v1/reference/release-channels.html).
-* In the [global](../documentation/v1/reference/api/global.html) ModuleConfig, configure the use of self-signed certificates for cluster components and specify the domain name template for system applications using the `publicDomainTemplate` parameter:
+  `<DOCKER_CFG_BASE64>` is the contents of the Docker client config (on Linux, usually `$HOME/.docker/config.json`) for the third-party registry, encoded in Base64.
+
+  For example, for registry `harbor.example` with user `user` and password `P@ssw0rd`, the value is `eyJhdXRocyI6eyJoYXJib3IuZXhhbXBsZSI6eyJhdXRoIjoiZFhObGNqcFFRSE56ZHpCeVpBPT0ifX19` (Base64 of `{"auths":{"harbor.example":{"auth":"dXNlcjpQQHNzdzByZA=="}}}`).
+
+* In the `deckhouse` ModuleConfig, set [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) to `Stable` for the stable [update channel](../documentation/v1/reference/release-channels.html).
+* In the [global](../documentation/v1/reference/api/global.html) ModuleConfig, enable self-signed certificates for modules and set `publicDomainTemplate` for system application hostnames:
 
   ```yaml
   settings:
     modules:
-      # A template used to construct the addresses of system applications in the cluster.
-      # For example, with %s.example.com, Grafana will be available at 'grafana.example.com'.
-      # The domain MUST NOT match the value specified in the clusterDomain parameter of the ClusterConfiguration resource.
-      # You can set your own value right away, or follow the guide and change it after installation.
+      # Template for system application URLs in the cluster.
+      # With %s.test.local, Grafana is served at grafana.test.local.
+      # MUST NOT match clusterDomain in ClusterConfiguration.
+      # You may change this now or after installation.
       publicDomainTemplate: "%s.test.local"
-      # The HTTPS implementation method used by Deckhouse modules.
+      # How Deckhouse modules terminate HTTPS.
       https:
         certManager:
-          # Use self-signed certificates for Deckhouse modules.
           clusterIssuerName: selfsigned
   ```
 
-* In the `user-authn` ModuleConfig, set the [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) parameter to `FromIngressSecret`:
+  The `settings.modules.https` block in ModuleConfig/global supports several [modes](../documentation/v1/reference/api/global.html): `CertManager` (certificate from the chosen `ClusterIssuer`— not necessarily `selfsigned`; can be corporate CA, HashiCorp Vault, Venafi, etc., see [the certificate overview](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` (TLS Secret in `d8-system`); with an external TLS terminator, `OnlyInURI` is possible. Using `selfsigned` together with disabling Let's Encrypt below is a simple pattern for isolated environments without ACME.
+
+* In the `user-authn` ModuleConfig, set [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) to `FromIngressSecret`:
 
   ```yaml
   settings:
@@ -1024,7 +1174,7 @@ The configuration file for deployment in a private environment differs from the 
       dexCAMode: FromIngressSecret
   ```
 
-* Enable and configure the [cert-manager](/modules/cert-manager/) module and disable the use of Let's Encrypt:
+* Enable [`cert-manager`](/modules/cert-manager/) and disable Let's Encrypt:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -1038,7 +1188,7 @@ The configuration file for deployment in a private environment differs from the 
       disableLetsencrypt: true
   ```
 
-* In the [internalNetworkCIDRs](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) parameter of StaticClusterConfiguration, specify the subnet for the cluster nodes’ internal IP addresses. For example:
+* In StaticClusterConfiguration, set [`internalNetworkCIDRs`](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) to the subnet of the nodes’ internal IPs. For example:
 
   ```yaml
   internalNetworkCIDRs:
@@ -1068,7 +1218,7 @@ defaultCRI: "ContainerdV2"
 proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
-  noProxy: ["harbor.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+  noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
 # Initial cluster bootstrap settings for Deckhouse.
 # https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
@@ -1076,7 +1226,7 @@ apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
   # Docker registry address that hosts Deckhouse images.
-  imagesRepo: harbor.local/deckhouse/ee
+  imagesRepo: harbor.example/deckhouse/ee
   # Docker registry credentials string.
   registryDockerCfg: <DOCKER_CFG_BASE64>
   # Registry access scheme (HTTP or HTTPS).
@@ -1186,18 +1336,18 @@ The installation configuration file is ready.
 
 ## Installing DKP
 
-Copy the prepared configuration file to the Bastion host (for example, to `~/deckhouse`). Change to that directory and start the installer using the following command:
+Copy the prepared configuration file to the host from which you run the installation (for example, `~/deckhouse` on the bastion). Go to that directory and start the installer:
 
 ```bash
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.local/deckhouse/<DKP_EDITION>/install:stable bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<EDITION>/install:stable bash
 ```
 
 {% offtopic title="If you get the `509: certificate signed by unknown authority` error..." %}
-Even if the certificates are present in `/etc/docker/certs.d/harbor.local/`, Docker may still report that the certificate is signed by an unknown certificate authority (which is typical for self-signed certificates). In most cases, adding `ca.crt` to the system trusted certificate store and restarting Docker resolves the issue.
+Even if the certificates are present in `/etc/docker/certs.d/harbor.example/`, Docker may still report that the certificate is signed by an unknown certificate authority (which is typical for self-signed certificates). In most cases, adding `ca.crt` to the system trusted certificate store and restarting Docker resolves the issue.
 {% endofftopic %}
 
 {% alert level="info" %}
-If there is no local DNS server in the internal network and the domain names are configured in the Bastion host’s `/etc/hosts`, make sure to specify `--network=host` so that Docker can use those name resolutions.
+If there is no internal DNS server and hostnames are only in `/etc/hosts` on the machine where you start the installer, use `--network=host` so Docker can resolve those names.
 {% endalert %}
 
 After the image is pulled and the container starts successfully, you will see a shell prompt inside the container:
@@ -1209,12 +1359,12 @@ After the image is pulled and the container starts successfully, you will see a 
 Start the DKP installation with the following command (specify the master node’s internal IP address):
 
 ```bash
-dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
+dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
   --ask-become-pass
 ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
+> Replace `id_rsa` with the name of your private key file if it differs.
 
 The installation process may take up to 30 minutes depending on the network speed.
 
@@ -1236,9 +1386,9 @@ If the installation completes successfully, you will see the following message:
 
 ## Adding nodes to the cluster
 
-Add a node to the cluster (for details on adding a static node, see the [documentation](../modules/node-manager/examples.html#adding-a-static-node-to-a-cluster)).
+Add a worker node to the cluster.
 
-To do this, follow these steps:
+Perform the following steps:
 
 * Configure a StorageClass for [local storage](../../../modules/local-path-provisioner/cr.html#localpathprovisioner) by running the following command on the master node:
 
@@ -1279,13 +1429,7 @@ To do this, follow these steps:
   EOF
   ```
 
-* Generate an SSH key with an empty passphrase. Run the following command on the master node:
-
-  ```bash
-  ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
-  ```
-
-* Create an [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials) resource in the cluster. To do this, run the following command on the master node:
+* Create an [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials) resource in the cluster. Run on the master node:
 
   ```console
   sudo -i d8 k create -f - <<EOF
@@ -1299,46 +1443,13 @@ To do this, follow these steps:
   EOF
   ```
 
-* Print the public part of the SSH key generated earlier (you will need it in the next step). Run the following command on the master node:
+* Print the public SSH key (needed for verification). On the master node:
 
   ```console
   cat /dev/shm/caps-id.pub
   ```
 
-* On the prepared server for the worker node, create the `caps` user. Run the following command, specifying the public SSH key obtained in the previous step:
-
-  ```console
-  # Specify the public part of the user's SSH key.
-  export KEY='<SSH-PUBLIC-KEY>'
-  useradd -m -s /bin/bash caps
-  usermod -aG sudo caps
-  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-  mkdir /home/caps/.ssh
-  echo $KEY >> /home/caps/.ssh/authorized_keys
-  chown -R caps:caps /home/caps
-  chmod 700 /home/caps/.ssh
-  chmod 600 /home/caps/.ssh/authorized_keys
-  ```
-
-{% offtopic title="If you are using CentOS, Rocky Linux or ALT Linux..." %}
-On RHEL-based operating systems (Red Hat Enterprise Linux), add the `caps` user to the `wheel` group. Run the following command, specifying the public SSH key obtained in the previous step:
-
-```console
-# Specify the public part of the user's SSH key.
-export KEY='<SSH-PUBLIC-KEY>'
-useradd -m -s /bin/bash caps
-usermod -aG wheel caps
-echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/caps/.ssh
-echo $KEY >> /home/caps/.ssh/authorized_keys
-chown -R caps:caps /home/caps
-chmod 700 /home/caps/.ssh
-chmod 600 /home/caps/.ssh/authorized_keys
-```
-
-{% endofftopic %}
-
-* Create a [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) for the node being added. Run the following command on the master node, specifying the IP address of the node you want to add:
+* Create a [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) for the node to add. On the master node, set the node IP and apply:
 
   ```console
   # Specify the IP address of the node to be added to the cluster.
@@ -1467,28 +1578,51 @@ sudo -i d8 k create -f $PWD/user.yml
 
 ## Configuring DNS records
 
-To access the cluster web UIs, configure the following domain names to resolve to the master node’s internal IP address (use DNS names according to the template specified in the [publicDomainTemplate](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter). Example for the `%s.example.com` DNS name template:
+To reach the cluster web UIs, make the hostnames below resolve to the master node’s internal IP address. Names must follow the [`publicDomainTemplate`](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) you configured (here, `%s.test.local`). Replace `<MASTER_IP>` with the master’s internal IP before running:
 
 ```text
-api.example.com
-code.example.com
-commander.example.com
-console.example.com
-dex.example.com
-documentation.example.com
-grafana.example.com
-hubble.example.com
-istio.example.com
-istio-api-proxy.example.com
-kubeconfig.example.com
-openvpn-admin.example.com
-registry.example.com
-prometheus.example.com
-status.example.com
-tools.example.com
-upmeter.example.com
+export PUBLIC_IP="<MASTER_IP>"
+sudo -E bash -c "cat <<EOF >> /etc/hosts
+$PUBLIC_IP api.test.local
+$PUBLIC_IP code.test.local
+$PUBLIC_IP commander.test.local
+$PUBLIC_IP registry.test.local
+$PUBLIC_IP console.test.local
+$PUBLIC_IP dex.test.local
+$PUBLIC_IP documentation.test.local
+$PUBLIC_IP grafana.test.local
+$PUBLIC_IP hubble.test.local
+$PUBLIC_IP istio.test.local
+$PUBLIC_IP istio-api-proxy.test.local
+$PUBLIC_IP kubeconfig.test.local
+$PUBLIC_IP openvpn-admin.test.local
+$PUBLIC_IP prometheus.test.local
+$PUBLIC_IP status.test.local
+$PUBLIC_IP tools.test.local
+$PUBLIC_IP upmeter.test.local
+EOF
+"
 ```
 
-You can do this either on an internal DNS server or by adding the mappings to `/etc/hosts` on the required computers.
+To confirm the cluster is healthy, open Grafana (built from `publicDomainTemplate`, e.g. `grafana.test.local` for `%s.test.local`) and sign in with the user you created earlier.
 
-To verify that the cluster has been deployed correctly and is functioning properly, open the Grafana web UI, which shows the cluster status. The Grafana address is generated from the `publicDomainTemplate` value. For example, if `%s.example.com` is used, Grafana will be available at `grafana.example.com`. Sign in using the credentials of the user you created earlier.
+## Where to go next?
+
+Everything is installed and running. You can use the web UIs to manage the cluster:
+
+* **Deckhouse Console** — cluster and core component management. URL: **console.test.local**.
+* **Documentation** — documentation for the DKP version running in the cluster. URL: **documentation.test.local**.
+* **Monitoring** — Grafana dashboards shipped with DKP. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../documentation/v1/admin/configuration/monitoring/).
+* **Status page** — overall DKP and component status. URL: **status.test.local**.
+* **Upmeter** — SLA tracking by component and period. URL: **upmeter.test.local**.
+* **Production readiness** — follow the [production preparation guide](./production.html) before taking real traffic.
+
+### Deploying your first application
+
+* **CI/CD access** — create a ServiceAccount for deployments and grant RBAC to obtain a kubeconfig for automation. See [CI/CD access](../documentation/v1/admin/configuration/access/authorization/ci_cd.html) section. URL: **kubeconfig.test.local**.
+* **Routing traffic to an app** — create a Service and Ingress. See [Ingress and incoming traffic](../documentation/v1/user/network/ingress/) section.
+* **Application monitoring** — add annotations `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` to the Service. See [Application and infrastructure monitoring](../documentation/v1/user/monitoring/) section.
+
+### Learn more
+
+More about Deckhouse Kubernetes Platform is in the [documentation](../documentation/v1/). For questions, join the community on [Telegram](https://t.me/deckhouse).

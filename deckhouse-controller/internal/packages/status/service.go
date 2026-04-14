@@ -42,6 +42,9 @@ const (
 	ConditionSettingsValid ConditionType = "SettingsValid"
 	// ConditionWaitConverge indicates that the package wait converge
 	ConditionWaitConverge ConditionType = "WaitConverge"
+
+	// ConditionReasonManifestsApply indicates that nelm is applying manifests to the cluster
+	ConditionReasonManifestsApply ConditionReason = "ManifestsApply"
 )
 
 // Error wraps an error with associated status conditions
@@ -201,8 +204,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		return
 	}
 
-	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: "ChartUpgrade"})
-	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: "ChartUpgrade"})
+	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
+	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
 
 	for i := len(report.StageReports) - 1; i >= 0; i-- {
 		r := report.StageReports[i]
@@ -213,12 +216,10 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		completed := 0
 		remaining := 0
 		for _, op := range r.Operations {
-			if op.Type == progrep.OperationTypeTrackReadiness {
-				if op.Status == progrep.OperationStatusCompleted {
-					completed++
-				} else {
-					remaining++
-				}
+			if op.Status == progrep.OperationStatusCompleted {
+				completed++
+			} else {
+				remaining++
 			}
 		}
 
