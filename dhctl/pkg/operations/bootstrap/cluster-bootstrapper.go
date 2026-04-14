@@ -279,41 +279,6 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
-	// if govalue.IsNil(b.Params.LocalNodeInterface) {
-	// 	log.DebugLn("NodeInterface is nil")
-	// 	if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
-	// 		log.DebugLn("Hosts empty and static cluster. Use local interface")
-	// 		b.Params.LocalNodeInterface = local.NewNodeInterface(b.SSHProviderInitializer.GetSettings())
-	// 	} else {
-	// 		sshClient, err := sshclient.NewClientFromFlags(ctx)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-
-	// 		// do it for get ssh
-	// 		if err := sshClient.OnlyPreparePrivateKeys(); err != nil {
-	// 			return err
-	// 		}
-
-	// 		if metaConfig.IsStatic() {
-	// 			// aks bastion pass for SSH Client Dial() with password auth
-	// 			if err := terminal.AskBastionPassword(); err != nil {
-	// 				return err
-	// 			}
-	// 			// ask become pass for SSH Client Dial() with password auth
-	// 			if err := terminal.AskBecomePassword(); err != nil {
-	// 				return err
-	// 			}
-	// 			if err := sshClient.Start(); err != nil {
-	// 				return fmt.Errorf("unable to start ssh client: %w", err)
-	// 			}
-	// 		}
-
-	// 		log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh\n", len(app.SSHHosts), metaConfig.IsStatic())
-	// 		b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
-	// 	}
-	// }
-
 	// next init cache
 	cachePath := metaConfig.CachePath()
 	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
