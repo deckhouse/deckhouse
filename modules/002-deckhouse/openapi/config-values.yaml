@@ -22,12 +22,12 @@ properties:
 
   releaseChannel:
     type: string
-    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
+    enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid", "LTS"]
     x-examples: ["Stable"]
     description: |
       Target Deckhouse release channel (Deckhouse will [switch](/products/kubernetes-platform/documentation/v1/architecture/updating.html) to it when such an opportunity appears).
 
-      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+      The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`, `LTS`.
 
   update:
     type: object
@@ -315,6 +315,7 @@ properties:
           - `EE` — Enterprise Edition.
           - `SE` — Standard Edition.
           - `SE-plus` — Standard Edition+.
+          - `CSE` — Certified Security Edition.
         default: "CE"
 
   registry:
