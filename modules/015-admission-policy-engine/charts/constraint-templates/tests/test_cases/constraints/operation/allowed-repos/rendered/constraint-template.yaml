@@ -1,113 +1,115 @@
 apiVersion: templates.gatekeeper.sh/v1
 kind: ConstraintTemplate
 metadata:
-    annotations:
-        description: Requires container images to begin with a string from the specified list.
-        metadata.gatekeeper.sh/title: Allowed Repositories
-        metadata.gatekeeper.sh/version: 1.0.0
-    labels:
-        heritage: deckhouse
-        module: admission-policy-engine
-        security.deckhouse.io: operation-policy
-    name: d8allowedrepos
+  name: d8allowedrepos
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Allowed Repositories"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Requires container images to begin with a string from the specified list.
 spec:
-    crd:
-        spec:
-            names:
-                kind: D8AllowedRepos
-            validation:
-                openAPIV3Schema:
-                    properties:
-                        repos:
-                            description: The list of prefixes a container image is allowed to have.
-                            items:
-                                type: string
-                            type: array
-                    type: object
-    targets:
-        - code:
-            - engine: Rego
-              source:
-                libs:
-                    - |
-                      # =============================================================================
-                      # Library: lib.common
-                      # =============================================================================
-                      # Container iteration, field access helpers, and exception label utilities.
-                      # =============================================================================
-                      package lib.common
+  crd:
+    spec:
+      names:
+        kind: D8AllowedRepos
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            repos:
+              description: The list of prefixes a container image is allowed to have.
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                # =============================================================================
+                # Library: lib.common
+                # =============================================================================
+                # Container iteration, field access helpers, and exception label utilities.
+                # =============================================================================
+                package lib.common
+                
+                # Backwards-compatible container iterator (uses input.review)
+                input_containers contains c if {
+                  c := input.review.object.spec.containers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.initContainers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.ephemeralContainers[_]
+                }
+                
+                # Parameterized container iterator (uses passed object)
+                input_containers_from(obj) := containers if {
+                  base := object.get(obj, ["spec", "containers"], [])
+                  init := object.get(obj, ["spec", "initContainers"], [])
+                  eph := object.get(obj, ["spec", "ephemeralContainers"], [])
+                  containers := array.concat(array.concat(base, init), eph)
+                }
+                
+                has_field(object, field) if {
+                  object[field]
+                }
+                
+                has_path(obj, path) if {
+                  object.get(obj, path, {"__missing__": true}) != {"__missing__": true}
+                }
+                
+                get_field(obj, path, _default) := out if {
+                  out := object.get(obj, path, _default)
+                }
+                
+                # Backwards-compatible exception label lookup (uses input.review)
+                get_exception_label(container) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := input.review.object.metadata.labels[key]
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(input.review.object.metadata.labels, key, "") == ""
+                  label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+                # Parameterized exception label lookup (uses labels map)
+                get_exception_label_from_labels(container, labels) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := object.get(labels, key, "")
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(labels, key, "") == ""
+                  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+            rego: |
+              package d8.operation_policies
 
-                      # Backwards-compatible container iterator (uses input.review)
-                      input_containers contains c if {
-                        c := input.review.object.spec.containers[_]
-                      }
+              import data.lib.common.input_containers
 
-                      input_containers contains c if {
-                        c := input.review.object.spec.initContainers[_]
-                      }
-
-                      input_containers contains c if {
-                        c := input.review.object.spec.ephemeralContainers[_]
-                      }
-
-                      # Parameterized container iterator (uses passed object)
-                      input_containers_from(obj) := containers if {
-                        base := object.get(obj, ["spec", "containers"], [])
-                        init := object.get(obj, ["spec", "initContainers"], [])
-                        eph := object.get(obj, ["spec", "ephemeralContainers"], [])
-                        containers := array.concat(array.concat(base, init), eph)
-                      }
-
-                      has_field(object, field) if {
-                        object[field]
-                      }
-
-                      has_path(obj, path) if {
-                        object.get(obj, path, {"__missing__": true}) != {"__missing__": true}
-                      }
-
-                      get_field(obj, path, _default) := out if {
-                        out := object.get(obj, path, _default)
-                      }
-
-                      # Backwards-compatible exception label lookup (uses input.review)
-                      get_exception_label(container) := label if {
-                        key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
-                        label := input.review.object.metadata.labels[key]
-                        label != ""
-                      } else := label if {
-                        key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
-                        object.get(input.review.object.metadata.labels, key, "") == ""
-                        label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
-                        label != ""
-                      } else := "" if {
-                        true
-                      }
-
-                      # Parameterized exception label lookup (uses labels map)
-                      get_exception_label_from_labels(container, labels) := label if {
-                        key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
-                        label := object.get(labels, key, "")
-                        label != ""
-                      } else := label if {
-                        key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
-                        object.get(labels, key, "") == ""
-                        label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
-                        label != ""
-                      } else := "" if {
-                        true
-                      }
-                rego: |
-                    package d8.operation_policies
-
-                    import data.lib.common.input_containers
-
-                    violation contains {"msg": msg} if {
-                      not input.review.operation == "DELETE"
-                      container := input_containers[_]
-                      satisfied := [repo | repo := input.parameters.repos[_]; startswith(container.image, repo)]
-                      count(satisfied) == 0
-                      msg := sprintf("container <%v> has an invalid image repo <%v>, allowed repos are %v", [container.name, container.image, input.parameters.repos])
-                    }
-                version: v1
-          target: admission.k8s.gatekeeper.sh
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers[_]
+                satisfied := [repo | repo := input.parameters.repos[_]; startswith(container.image, repo)]
+                count(satisfied) == 0
+                msg := sprintf("container <%v> has an invalid image repo <%v>, allowed repos are %v", [container.name, container.image, input.parameters.repos])
+              }

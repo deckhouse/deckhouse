@@ -1,71 +1,71 @@
 {{- define "constraint-templates.lib.common.container-review" -}}
-{{ .Files.Get "templates/libs/common.rego" }}
+{{ .Files.Get "files/libs/common.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.exception.spe" -}}
-{{ .Files.Get "templates/libs/exception.rego" }}
+{{ .Files.Get "files/libs/exception.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.range" -}}
-{{ .Files.Get "templates/libs/range.rego" }}
+{{ .Files.Get "files/libs/range.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.set" -}}
-{{ .Files.Get "templates/libs/set.rego" }}
+{{ .Files.Get "files/libs/set.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.str" -}}
-{{ .Files.Get "templates/libs/str.rego" }}
+{{ .Files.Get "files/libs/str.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.match" -}}
-{{ .Files.Get "templates/libs/match.rego" }}
+{{ .Files.Get "files/libs/match.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.bool" -}}
-{{ .Files.Get "templates/libs/bool.rego" }}
+{{ .Files.Get "files/libs/bool.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.path" -}}
-{{ .Files.Get "templates/libs/path.rego" }}
+{{ .Files.Get "files/libs/path.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.object" -}}
-{{ .Files.Get "templates/libs/object.rego" }}
+{{ .Files.Get "files/libs/object.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.check_bool" -}}
-{{ .Files.Get "templates/libs/check_bool.rego" }}
+{{ .Files.Get "files/libs/check_bool.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.check_set" -}}
-{{ .Files.Get "templates/libs/check_set.rego" }}
+{{ .Files.Get "files/libs/check_set.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.check_range" -}}
-{{ .Files.Get "templates/libs/check_range.rego" }}
+{{ .Files.Get "files/libs/check_range.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.check_subset" -}}
-{{ .Files.Get "templates/libs/check_subset.rego" }}
+{{ .Files.Get "files/libs/check_subset.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.check_object_match" -}}
-{{ .Files.Get "templates/libs/check_object_match.rego" }}
+{{ .Files.Get "files/libs/check_object_match.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.check_path" -}}
-{{ .Files.Get "templates/libs/check_path.rego" }}
+{{ .Files.Get "files/libs/check_path.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.resolve_value" -}}
-{{ .Files.Get "templates/libs/resolve_value.rego" }}
+{{ .Files.Get "files/libs/resolve_value.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.expand_synonyms" -}}
-{{ .Files.Get "templates/libs/expand_synonyms.rego" }}
+{{ .Files.Get "files/libs/expand_synonyms.rego" }}
 {{- end -}}
 
 {{- define "constraint-templates.lib.message" -}}
-{{ .Files.Get "templates/libs/message.rego" }}
+{{ .Files.Get "files/libs/message.rego" }}
 {{- end -}}
