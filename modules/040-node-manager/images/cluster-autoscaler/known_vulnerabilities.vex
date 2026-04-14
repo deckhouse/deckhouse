@@ -86,13 +86,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
-        },
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.68.1"
-        },
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.72.1"
+          "@id": "pkg:golang/google.golang.org/grpc"
         }
       ],
       "status": "not_affected",
