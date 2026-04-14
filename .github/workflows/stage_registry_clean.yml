@@ -94,9 +94,10 @@ jobs:
     # <template: d8cli_install_step>
     - name: Install d8 CLI
       run: |
-        mkdir -p bin
-        INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
-        echo "$(pwd)/bin" >> "$GITHUB_PATH"
+        export INSTALL_DIR="${RUNNER_TEMP}/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes
+        mkdir -p ${INSTALL_DIR}
+        bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+        echo "${INSTALL_DIR}" >> "$GITHUB_PATH"
     # </template: d8cli_install_step>
 
     # <template: login_stage_registry_step>
