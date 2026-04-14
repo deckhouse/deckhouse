@@ -23,7 +23,6 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
-	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 )
@@ -31,12 +30,12 @@ import (
 // BasicService provides common registry operations with standardized logging
 type BasicService struct {
 	name   string
-	client internalRegistry.Interface
+	client registry.Client
 	logger *log.Logger
 }
 
 // NewBasicService creates a new basic service
-func NewBasicService(name string, client internalRegistry.Interface, logger *log.Logger) *BasicService {
+func NewBasicService(name string, client registry.Client, logger *log.Logger) *BasicService {
 	return &BasicService{
 		name:   name,
 		client: client,
