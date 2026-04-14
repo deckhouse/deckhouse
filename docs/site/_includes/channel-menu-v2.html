@@ -6,11 +6,12 @@
 {{- $current := index .VersionItems 0 }}
 {{- if eq $current.Version "rock-solid" }}{{ $prevVersion = "rock-solid" }}{{- end }}
 <a data-proofer-ignore href="#" class="highlight">
-  {{- if eq $current.Version "v1" }}stable{{- else }}{{ $current.Version }}{{- end }}</a>
+  {{- if eq $current.Version "v1" }}stable{{- else if hasSuffix "-cse" $current.Version }}LTS{{- else }}{{ $current.Version }}{{- end }}</a>
 </a>
 {% endraw %}
 <div class="submenu-container">
     <ul class="submenu">
+{%- if page.lang == 'ru' %}
       <li class="submenu-item">
           <a data-proofer-ignore class="submenu-item-link" href="/products/kubernetes-platform/documentation/{{ site.LTSChannel.version }}/">
               <span class="submenu-item-channel">LTS</span>
@@ -18,6 +19,7 @@
               <span class="submenu-item-release">{{ site.LTSChannel.versionName }}</span>
           </a>
       </li>
+{%- endif %}
 {% raw %}
     {{- range (slice .VersionItems 1) }}
       {{- $majMinVersion := regexReplaceAll "(v[0-9]+\\.[0-9]+)\\..+" .Version "$1" }}
