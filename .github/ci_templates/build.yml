@@ -65,7 +65,7 @@ steps:
   {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ end }!}
-  {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
   - name: Set up Go 1.25
@@ -194,7 +194,7 @@ steps:
 
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
-      IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+      IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
       export WERF_DISABLE_META_TAGS=true
     {!{- else if eq $buildType "pre-release" }!}
       # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -214,8 +214,8 @@ steps:
       IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
     {!{- end }!}
 
-      type werf && source $(werf ci-env github --verbose --as-file)
-      werf build \
+      type d8 && source $(d8 dk ci-env github --verbose --as-file)
+      d8 dk build \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
         --build-report-path images_tags_werf.json
