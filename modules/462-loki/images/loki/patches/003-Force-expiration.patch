@@ -1,15 +1,15 @@
 diff --git a/pkg/compactor/compactor.go b/pkg/compactor/compactor.go
-index 6c3871b7..ecd7197a 100644
+index 6c3871b7..27c729a9 100644
 --- a/pkg/compactor/compactor.go
 +++ b/pkg/compactor/compactor.go
-@@ -33,6 +33,7 @@ import (
+@@ -31,6 +31,7 @@ import (
+ 	"github.com/grafana/loki/v3/pkg/storage/config"
+ 	"github.com/grafana/loki/v3/pkg/storage/stores/shipper/indexshipper/storage"
  	"github.com/grafana/loki/v3/pkg/util/filter"
++	util_flagext "github.com/grafana/loki/v3/pkg/util/flagext"
  	util_log "github.com/grafana/loki/v3/pkg/util/log"
  	lokiring "github.com/grafana/loki/v3/pkg/util/ring"
-+	util_flagext "github.com/grafana/loki/v3/pkg/util/flagext"
  	"github.com/grafana/loki/v3/pkg/validation"
- )
- 
 @@ -94,6 +95,10 @@ type Config struct {
  	RunOnce                        bool                `yaml:"_" doc:"hidden"`
  	TablesToCompact                int                 `yaml:"tables_to_compact"`
