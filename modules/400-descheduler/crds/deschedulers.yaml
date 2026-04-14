@@ -679,6 +679,28 @@ spec:
                           description: |-
                             If set to `true`, the strategy will consider whether the pods can fit on other nodes
                             when balancing topology domains.
+                    removePodsHavingTooManyRestarts:
+                      type: object
+                      description: |-
+                        The strategy ensures that pods having too many restarts are removed from nodes.
+                        Pods where the sum of all container restarts (including init containers) exceeds the configured
+                        `podRestartThreshold` are evicted.
+
+                        This is useful for removing pods that are crash-looping or experiencing repeated failures,
+                        freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Makes the strategy active.
+                        podRestartThreshold:
+                          type: integer
+                          format: int32
+                          minimum: 1
+                          default: 100
+                          description: |-
+                            Number of restarts (sum of all container restarts, including init containers) after which
+                            a pod is considered to have too many restarts and becomes a candidate for eviction.
                   anyOf:
                     - required: ["lowNodeUtilization"]
                     - required: ["highNodeUtilization"]
@@ -686,6 +708,7 @@ spec:
                     - required: ["removePodsViolatingNodeAffinity"]
                     - required: ["removePodsViolatingInterPodAntiAffinity"]
                     - required: ["removePodsViolatingTopologySpreadConstraint"]
+                    - required: ["removePodsHavingTooManyRestarts"]
               required:
                 - strategies
           required:
