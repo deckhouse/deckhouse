@@ -187,17 +187,11 @@ func CreateDeckhouseManifests(
 				return manifests.DeckhouseNamespace("d8-system")
 			},
 			CreateFunc: func(manifest any) error {
-				namespace := manifest.(*apiv1.Namespace)
-				_, err := kubeCl.CoreV1().Namespaces().Get(ctx, namespace.GetName(), metav1.GetOptions{})
-				if err != nil {
-					if apierrors.IsNotFound(err) {
-						_, err = kubeCl.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
-						return err
-					}
-					return err
-				}
-				log.InfoLn("Already exists. Skip!")
-				return nil
+				_, err := kubeCl.
+					CoreV1().
+					Namespaces().
+					Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+				return err
 			},
 			UpdateFunc: func(manifest any) error {
 				_, err := kubeCl.
