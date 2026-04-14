@@ -125,11 +125,8 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.59.0"
+          "@id": "pkg:golang/google.golang.org/grpc"
         },
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.65.0"
-        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
