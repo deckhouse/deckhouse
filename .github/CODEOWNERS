@@ -116,7 +116,7 @@ deckhouse-controller/                    @ldmonster
 dhctl/                                   @name212 @090809
 docs/                                    @z9r5
 docs/documentation/pages/architecture/   @voitenkov
-helm_lib/                                @sprait
+helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
 /pkg/                                    @ldmonster
