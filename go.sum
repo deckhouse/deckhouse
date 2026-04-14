@@ -133,8 +133,8 @@ github.com/deckhouse/deckhouse/pkg/log v0.2.0 h1:6tmZQLwNb1o/hP1gzJQBjcwfA/bubbg
 github.com/deckhouse/deckhouse/pkg/log v0.2.0/go.mod h1:pbAxTSDcPmwyl3wwKDcEB3qdxHnRxqTV+J0K+sha8bw=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0 h1:xZvbKuexrSQGEw6CB4n3UC7XbOb9QNLbm8UhcGZ2R1I=
 github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0/go.mod h1:Rz++SzCLkFW03WGgftnn91TimGU2shiKb5S/YuxcBuE=
-github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260407161812-f9afe0918c6e h1:+gC4s7xV/zK3q1Qlw69Bz95j8vHU3xFBD6CouP3x+eU=
-github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260407161812-f9afe0918c6e/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa h1:dXoO1rgv3A9pjKKqSbAIk5VRZ0reSfpA2FH1F0FjgCw=
+github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
 github.com/deckhouse/lib-dhctl v0.13.0 h1:Xh7G30seic4Aa8MdXOH2ecGvO0zsn6PBGBHbJ4YNnZM=
