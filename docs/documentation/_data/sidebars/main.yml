@@ -1375,10 +1375,6 @@ entries:
                 ru: Обзор
               url: /architecture/storage/
             - title:
-                en: Csi-nfs module
-                ru: Модуль csi-nfs
-              url: /architecture/storage/csi-nfs.html
-            - title:
                 en: Local-path-provisioner module
                 ru: Модуль local-path-provisioner
               url: /architecture/storage/local-path-provisioner.html
@@ -1394,6 +1390,14 @@ entries:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
               url: /architecture/storage/sds-node-configurator.html
+            - title:
+                en: Storage system modules
+                ru: Модули системы хранения
+              folders:
+                - title:
+                    en: Csi-nfs module
+                    ru: Модуль csi-nfs
+                  url: /architecture/storage/external/csi-nfs.html
             - title:
                 en: CSI drivers
                 ru: Драйверы CSI
