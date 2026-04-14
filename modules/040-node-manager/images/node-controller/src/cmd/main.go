@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"net/http"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,6 +45,13 @@ var (
 	scheme     = runtime.NewScheme()
 	logOptions = logs.NewOptions()
 )
+
+// roundTripperFunc wraps a function as http.RoundTripper for logging API requests.
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -71,7 +80,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	cfg := ctrl.GetConfigOrDie()
+	cfg.Wrap(func(rt http.RoundTripper) http.RoundTripper {
+		return roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			resp, err := rt.RoundTrip(req)
+			status := 0
+			if resp != nil {
+				status = resp.StatusCode
+			}
+			setupLog.Info(fmt.Sprintf("API request: %s %s -> %d", req.Method, req.URL.Path, status))
+			return resp, err
+		})
+	})
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
