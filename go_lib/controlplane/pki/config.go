@@ -161,7 +161,7 @@ func newConfig(
 }
 
 // configOption is a functional option for PKI configuration.
-// It allows passing optional parameters to CreatePKIBundle without changing its signature.
+// It supplies optional parameters to CreatePKIBundle after the required arguments.
 type configOption func(*config)
 
 // WithCertTreeScheme overrides the PKI tree structure.

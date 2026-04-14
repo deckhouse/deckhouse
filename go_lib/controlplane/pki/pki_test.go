@@ -45,7 +45,7 @@ var allExpectedFiles = []string{
 func TestCreatePKIBundle_CreatesAllFiles(t *testing.T) {
 	dir := t.TempDir()
 
-	err := CreatePKIBundle(
+	rep, err := CreatePKIBundle(
 		"test-node",
 		"cluster.local",
 		net.ParseIP("10.0.0.1"),
@@ -53,6 +53,10 @@ func TestCreatePKIBundle_CreatesAllFiles(t *testing.T) {
 		WithPKIDir(dir),
 	)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 11)
+	for _, e := range rep.Entries {
+		assert.Equal(t, PKIActionWrittenCreated, e.Action, "artifact %q", e.Name)
+	}
 
 	for _, f := range allExpectedFiles {
 		path := filepath.Join(dir, f)
@@ -67,13 +71,21 @@ func TestCreatePKIBundle_Idempotent(t *testing.T) {
 	opts := []configOption{WithPKIDir(dir)}
 	args := []any{"test-node", "cluster.local", net.ParseIP("10.0.0.1"), "10.96.0.0/12"}
 
-	err := CreatePKIBundle(args[0].(string), args[1].(string), args[2].(net.IP), args[3].(string), opts...)
+	rep1, err := CreatePKIBundle(args[0].(string), args[1].(string), args[2].(net.IP), args[3].(string), opts...)
 	require.NoError(t, err)
+	require.Len(t, rep1.Entries, 11)
+	for _, e := range rep1.Entries {
+		assert.Equal(t, PKIActionWrittenCreated, e.Action, "first run: %q", e.Name)
+	}
 
 	before := readAllFiles(t, dir, allExpectedFiles)
 
-	err = CreatePKIBundle(args[0].(string), args[1].(string), args[2].(net.IP), args[3].(string), opts...)
+	rep2, err := CreatePKIBundle(args[0].(string), args[1].(string), args[2].(net.IP), args[3].(string), opts...)
 	require.NoError(t, err)
+	require.Len(t, rep2.Entries, 11)
+	for _, e := range rep2.Entries {
+		assert.Equal(t, PKIActionUnchanged, e.Action, "second run: %q", e.Name)
+	}
 
 	after := readAllFiles(t, dir, allExpectedFiles)
 
@@ -94,7 +106,7 @@ func TestCreatePKIBundle_CustomScheme_EtcdOnly(t *testing.T) {
 		},
 	}
 
-	err := CreatePKIBundle(
+	rep, err := CreatePKIBundle(
 		"test-node",
 		"cluster.local",
 		net.ParseIP("10.0.0.1"),
@@ -103,6 +115,11 @@ func TestCreatePKIBundle_CustomScheme_EtcdOnly(t *testing.T) {
 		WithCertTreeScheme(etcdOnlyScheme),
 	)
 	require.NoError(t, err)
+	// One etcd CA, three leaf certs, SA key pair.
+	require.Len(t, rep.Entries, 5)
+	for _, e := range rep.Entries {
+		assert.Equal(t, PKIActionWrittenCreated, e.Action, "artifact %q", e.Name)
+	}
 
 	// Etcd files must be present.
 	for _, f := range []string{

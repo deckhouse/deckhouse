@@ -51,30 +51,33 @@ type fileSpec struct {
 	EncryptionAlgorithm     constants.EncryptionAlgorithmType
 }
 
-func CreateKubeconfigFiles(files []File, options ...option) error {
+// On error, the returned KubeconfigApplyReport may still contain entries for files that were
+// processed successfully before the failure.
+func CreateKubeconfigFiles(files []File, options ...option) (KubeconfigApplyReport, error) {
 	logger.Info("creating kubeconfig files for control-plane")
 
 	opt, err := prepareOptions(options...)
 	if err != nil {
-		return fmt.Errorf("failed to prepare Options: %w", err)
+		return KubeconfigApplyReport{}, fmt.Errorf("failed to prepare Options: %w", err)
 	}
 
+	var rep KubeconfigApplyReport
 	for _, file := range files {
 		if file == Kubelet {
 			if err := opt.ensureNodeNameProvided(); err != nil {
-				return fmt.Errorf("failed to ensure node name for kubelet.conf: %w", err)
+				return rep, fmt.Errorf("failed to ensure node name for kubelet.conf: %w", err)
 			}
 		}
 
-		if err := createKubeConfigFile(file, opt); err != nil {
-			return fmt.Errorf("failed to create kubeconfig file %q: %w", file, err)
+		if err := createKubeConfigFile(file, opt, &rep); err != nil {
+			return rep, fmt.Errorf("failed to create kubeconfig file %q: %w", file, err)
 		}
 	}
 
-	return nil
+	return rep, nil
 }
 
-func createKubeConfigFile(file File, opt *options) error {
+func createKubeConfigFile(file File, opt *options, rep *KubeconfigApplyReport) error {
 	fileSpec, err := getFileSpec(file, opt)
 	if err != nil {
 		return fmt.Errorf("failed to get spec for %q: %w", file, err)
@@ -87,10 +90,11 @@ func createKubeConfigFile(file File, opt *options) error {
 
 	kubeConfigFilePath := filepath.Join(opt.OutDir, string(file))
 
-	if err := writeKubeConfigFileIfNeeded(kubeConfigFilePath, config); err != nil {
+	action, err := writeKubeConfigFileIfNeeded(kubeConfigFilePath, config)
+	if err != nil {
 		return err
 	}
-
+	rep.add(file, action)
 	return nil
 }
 
@@ -204,20 +208,26 @@ func newClientCertConfig(spec *fileSpec) pkiutil.CertConfig {
 	}
 }
 
-func writeKubeConfigFileIfNeeded(kubeConfigFilePath string, config *clientcmdapi.Config) error {
+func writeKubeConfigFileIfNeeded(kubeConfigFilePath string, config *clientcmdapi.Config) (KubeconfigEntryAction, error) {
+	_, statErr := os.Stat(kubeConfigFilePath)
+	fileMissing := os.IsNotExist(statErr)
+
 	err := validateCurrentKubeConfig(kubeConfigFilePath, config)
 	if err == nil {
 		logger.Info("Using existing kubeconfig file", slog.String("path", kubeConfigFilePath))
-		return nil
+		return KubeconfigActionUnchanged, nil
 	}
 
 	logger.Info("Writing new kubeconfig file", slog.String("path", kubeConfigFilePath), slog.String("reason", err.Error()))
 
 	if err := clientcmd.WriteToFile(*config, kubeConfigFilePath); err != nil {
-		return fmt.Errorf("failed to write kubeconfig %q: %w", kubeConfigFilePath, err)
+		return 0, fmt.Errorf("failed to write kubeconfig %q: %w", kubeConfigFilePath, err)
 	}
 
-	return nil
+	if fileMissing {
+		return KubeconfigActionWrittenCreated, nil
+	}
+	return KubeconfigActionWrittenRegenerated, nil
 }
 
 func validateCurrentKubeConfig(kubeConfigFilePath string, desiredConfig *clientcmdapi.Config) error {

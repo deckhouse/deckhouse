@@ -28,8 +28,11 @@ func TestCreateRootCertIfNotExists_CreatesNew(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 	spec := getRootCertSpec(CACertName)
 
-	cert, key, err := createRootCertIfNotExists(cfg, spec)
+	var rep PKIApplyReport
+	cert, key, err := createRootCertIfNotExists(cfg, spec, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
 	assert.NotNil(t, cert)
 	assert.NotNil(t, key)
 	assert.True(t, cert.IsCA)
@@ -46,12 +49,18 @@ func TestCreateRootCertIfNotExists_ReusesExisting(t *testing.T) {
 	cfg := makeTestConfig(t, dir)
 	spec := getRootCertSpec(CACertName)
 
-	cert1, _, err := createRootCertIfNotExists(cfg, spec)
+	var rep PKIApplyReport
+	cert1, _, err := createRootCertIfNotExists(cfg, spec, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
 
 	// Second call must return the same certificate without regenerating.
-	cert2, _, err := createRootCertIfNotExists(cfg, spec)
+	rep = PKIApplyReport{}
+	cert2, _, err := createRootCertIfNotExists(cfg, spec, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionUnchanged, rep.Entries[0].Action)
 	assert.Equal(t, cert1.SerialNumber, cert2.SerialNumber)
 }
 
@@ -65,7 +74,8 @@ func TestCreateRootCertIfNotExists_FailsOnInvalidCA(t *testing.T) {
 	err := writeCertAndKey(dir, "ca", expiredCert, expiredKey)
 	require.NoError(t, err)
 
-	_, _, err = createRootCertIfNotExists(cfg, spec)
+	var rep PKIApplyReport
+	_, _, err = createRootCertIfNotExists(cfg, spec, &rep)
 
 	var certErr *CertValidationError
 	require.ErrorAs(t, err, &certErr)
@@ -79,8 +89,11 @@ func TestCreateLeafCertIfNotExists_CreatesNew(t *testing.T) {
 	caCert, caKey := makeTestCACert(t, "kubernetes")
 	spec := getLeafCertSpec(ApiserverCertName)
 
-	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey)
+	var rep PKIApplyReport
+	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
 
 	cert, _, err := readCertAndKey(dir, "apiserver")
 	require.NoError(t, err)
@@ -94,15 +107,21 @@ func TestCreateLeafCertIfNotExists_SkipsValid(t *testing.T) {
 	caCert, caKey := makeTestCACert(t, "kubernetes")
 	spec := getLeafCertSpec(ApiserverCertName)
 
-	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey)
+	var rep PKIApplyReport
+	err := createLeafCertIfNotExists(cfg, spec, caCert, caKey, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenCreated, rep.Entries[0].Action)
 
 	cert1, _, err := readCertAndKey(dir, "apiserver")
 	require.NoError(t, err)
 
 	// Second call must not regenerate the certificate.
-	err = createLeafCertIfNotExists(cfg, spec, caCert, caKey)
+	rep = PKIApplyReport{}
+	err = createLeafCertIfNotExists(cfg, spec, caCert, caKey, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionUnchanged, rep.Entries[0].Action)
 
 	cert2, _, err := readCertAndKey(dir, "apiserver")
 	require.NoError(t, err)
@@ -122,8 +141,11 @@ func TestCreateLeafCertIfNotExists_RegeneratesInvalid(t *testing.T) {
 	require.NoError(t, err)
 
 	// Must regenerate without error.
-	err = createLeafCertIfNotExists(cfg, spec, caCert, caKey)
+	var rep PKIApplyReport
+	err = createLeafCertIfNotExists(cfg, spec, caCert, caKey, &rep)
 	require.NoError(t, err)
+	require.Len(t, rep.Entries, 1)
+	assert.Equal(t, PKIActionWrittenRegenerated, rep.Entries[0].Action)
 
 	newCert, _, err := readCertAndKey(dir, "apiserver")
 	require.NoError(t, err)

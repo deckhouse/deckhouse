@@ -132,20 +132,27 @@ func TestCreateKubeConfigFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := createKubeConfigFile(tt.file, opt)
+			var rep KubeconfigApplyReport
+			err := createKubeConfigFile(tt.file, opt, &rep)
 			if tt.wantErr {
 				assert.Error(t, err)
+				assert.Empty(t, rep.Entries)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
+			require.Len(t, rep.Entries, 1)
+			assert.Equal(t, tt.file, rep.Entries[0].File)
+			assert.Equal(t, KubeconfigActionWrittenCreated, rep.Entries[0].Action)
 
 			// Verify file exists
 			filePath := filepath.Join(tmpDir, string(tt.file))
 			assert.FileExists(t, filePath)
 
-			// Verify we can call it again (should not fail, should log "Using existing kubeconfig file")
-			err = createKubeConfigFile(tt.file, opt)
-			assert.NoError(t, err)
+			rep = KubeconfigApplyReport{}
+			err = createKubeConfigFile(tt.file, opt, &rep)
+			require.NoError(t, err)
+			require.Len(t, rep.Entries, 1)
+			assert.Equal(t, KubeconfigActionUnchanged, rep.Entries[0].Action)
 		})
 	}
 }
@@ -191,8 +198,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 		expiredOpt = *baseOpt
 		expiredOpt.CertProvider = expiredCertProvider
 
-		err = createKubeConfigFile(file, &expiredOpt)
+		var rep KubeconfigApplyReport
+		err := createKubeConfigFile(file, &expiredOpt, &rep)
 		require.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenCreated, rep.Entries[0].Action)
 
 		// Wait to ensure file is written and modTime is set
 		stat1, err = os.Stat(filePath)
@@ -217,8 +227,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 
 		// b) Call with long-lived cert provider. It should detect that the CURRENT file has an expiring cert and recreate it.
 		time.Sleep(100 * time.Millisecond)
-		err = createKubeConfigFile(file, baseOpt)
+		rep = KubeconfigApplyReport{}
+		err = createKubeConfigFile(file, baseOpt, &rep)
 		assert.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenRegenerated, rep.Entries[0].Action)
 
 		stat2, _ := os.Stat(filePath)
 		assert.True(t, stat2.ModTime().After(stat1.ModTime()), "File should have been recreated because the existing cert was expiring")
@@ -240,8 +253,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 		filePath := filepath.Join(tmpDir, string(file))
 
 		// 1. Create initial
-		err := createKubeConfigFile(file, baseOpt)
+		var rep KubeconfigApplyReport
+		err := createKubeConfigFile(file, baseOpt, &rep)
 		require.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenCreated, rep.Entries[0].Action)
 		stat1, _ := os.Stat(filePath)
 
 		// 2. Change API server
@@ -250,8 +266,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 
 		// 3. Recreate
 		time.Sleep(100 * time.Millisecond)
-		err = createKubeConfigFile(file, &newAddrOpt)
+		rep = KubeconfigApplyReport{}
+		err = createKubeConfigFile(file, &newAddrOpt, &rep)
 		assert.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenRegenerated, rep.Entries[0].Action)
 
 		stat2, _ := os.Stat(filePath)
 		assert.True(t, stat2.ModTime().After(stat1.ModTime()), "File should have been recreated due to API server change")
@@ -270,8 +289,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 		filePath := filepath.Join(tmpDir, string(file))
 
 		// 1. Create initial
-		err := createKubeConfigFile(file, baseOpt)
+		var rep KubeconfigApplyReport
+		err := createKubeConfigFile(file, baseOpt, &rep)
 		require.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenCreated, rep.Entries[0].Action)
 		stat1, _ := os.Stat(filePath)
 
 		// 2. Change CA
@@ -286,8 +308,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 
 		// 3. Recreate
 		time.Sleep(100 * time.Millisecond)
-		err = createKubeConfigFile(file, &newCAOpt)
+		rep = KubeconfigApplyReport{}
+		err = createKubeConfigFile(file, &newCAOpt, &rep)
 		assert.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenRegenerated, rep.Entries[0].Action)
 
 		stat2, _ := os.Stat(filePath)
 		assert.True(t, stat2.ModTime().After(stat1.ModTime()), "File should have been recreated due to CA change")
@@ -301,8 +326,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 		filePath := filepath.Join(tmpDir, string(file))
 
 		// 1. Create initial
-		err := createKubeConfigFile(file, baseOpt)
+		var rep KubeconfigApplyReport
+		err := createKubeConfigFile(file, baseOpt, &rep)
 		require.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenCreated, rep.Entries[0].Action)
 
 		// 2. Corrupt file
 		err = os.WriteFile(filePath, []byte("not a kubeconfig"), 0644)
@@ -311,8 +339,11 @@ func TestCreateKubeConfigFile_Recreation(t *testing.T) {
 
 		// 3. Recreate
 		time.Sleep(100 * time.Millisecond)
-		err = createKubeConfigFile(file, baseOpt)
+		rep = KubeconfigApplyReport{}
+		err = createKubeConfigFile(file, baseOpt, &rep)
 		assert.NoError(t, err)
+		require.Len(t, rep.Entries, 1)
+		assert.Equal(t, KubeconfigActionWrittenRegenerated, rep.Entries[0].Action)
 
 		stat2, _ := os.Stat(filePath)
 		assert.True(t, stat2.ModTime().After(stat1.ModTime()), "File should have been recreated due to corruption")

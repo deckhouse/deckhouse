@@ -35,29 +35,33 @@ import (
 //   - If a CA certificate fails validation, an error is returned — CAs are never auto-regenerated.
 //   - If a leaf certificate fails validation, it is silently regenerated.
 //   - If sa.key already exists, sa.pub is ensured to be present (restored from the key if missing).
+//
+// On error, the returned PKIApplyReport may still contain entries for artifacts that were
+// processed successfully before the failure.
 func CreatePKIBundle(
 	nodeName string,
 	dnsDomain string,
 	advertiseAddress net.IP,
 	serviceCIDR string,
 	opts ...configOption,
-) error {
+) (PKIApplyReport, error) {
 	cfg, err := newConfig(nodeName, dnsDomain, advertiseAddress, serviceCIDR, opts...)
 	if err != nil {
-		return fmt.Errorf("failed to create new config: %w", err)
+		return PKIApplyReport{}, fmt.Errorf("failed to create new config: %w", err)
 	}
 
 	return createPKIBundle(*cfg)
 }
 
-func createPKIBundle(cfg config) error {
-	if err := createCertTree(cfg); err != nil {
-		return err
+func createPKIBundle(cfg config) (PKIApplyReport, error) {
+	var rep PKIApplyReport
+	if err := createCertTree(cfg, &rep); err != nil {
+		return rep, err
 	}
 
-	if err := createSAKeysIfNotExists(cfg); err != nil {
-		return err
+	if err := createSAKeysIfNotExists(cfg, &rep); err != nil {
+		return rep, err
 	}
 
-	return nil
+	return rep, nil
 }
