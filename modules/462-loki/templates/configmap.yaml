@@ -24,13 +24,17 @@ data:
 
     limits_config:
       split_queries_by_interval: 0s
+      allow_structured_metadata: false
+      discover_service_name: []
+      max_line_size: 0
+      deletion_mode: filter-and-delete
       {{- omit $lokiConfigSnakeCase "grpc_server_max_send_msg_size" "grpc_server_max_recv_msg_size" "grpc_server_max_concurrent_streams" | toYaml | nindent 6 }}
 
     query_range:
       parallelise_shardable_queries: false
 
     common:
-      path_prefix: /loki # WARNING: other data must be stored here too for force-expiration
+      path_prefix: /loki
       storage:
         filesystem:
           chunks_directory: /loki/chunks
@@ -43,20 +47,34 @@ data:
     schema_config:
       configs:
         - from: 2020-10-24
-          store: boltdb-shipper # WARNING: do not change without testing force-expiration
+          store: boltdb-shipper
           object_store: filesystem
           schema: v11
           index:
             prefix: index_
             period: 24h
+        - from: 2024-10-25
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    storage_config:
+      tsdb_shipper:
+        active_index_directory: /loki/tsdb-index
+        cache_location: /loki/tsdb-cache
+
     ingester:
       wal:
         checkpoint_duration: 1m
+
     compactor:
-      shared_store: filesystem
+      working_directory: /loki/compactor
       retention_enabled: true
       compaction_interval: 60s
       retention_delete_delay: 1s
       retention_delete_worker_count: 150
-      deletion_mode: filter-and-delete
+      delete_request_store: filesystem
       force_expiration_threshold: {{ .Values.loki.internal.cleanupThreshold | int64 }}
