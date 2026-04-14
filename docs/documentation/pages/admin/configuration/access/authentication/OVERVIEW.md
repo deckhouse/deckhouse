@@ -8,7 +8,7 @@ description: "Configure authentication for Deckhouse Kubernetes Platform with lo
 The platform implements end-to-end authentication, allowing a unified mechanism to be applied both to internal components and user applications.
 
 The core of the authentication mechanism is a federated OpenID Connect (OIDC) provider — `Dex`.  
-Learn more about how authentication works in the [Architecture](../../../../architecture/authentication.html) section.
+Learn more about how authentication works in the [Architecture](../../../../architecture/iam/authentication.html) section.
 
 Depending on the configuration, DKP supports two authentication approaches:
 
