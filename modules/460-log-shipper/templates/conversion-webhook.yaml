@@ -24,17 +24,14 @@ conversions:
 
             md = o.get("metadata") or {}
             ann = md.get("annotations") or {}
-            if lac_key in ann:
-                spec_from_lac = decode_spec_from_last_applied(ann[lac_key])
-                if spec_from_lac is not None:
-                    out = copy.deepcopy(o)
-                    out["apiVersion"] = "deckhouse.io/v1alpha2"
-                    out["spec"] = copy.deepcopy(spec_from_lac)
-                    out.setdefault("metadata", {}).setdefault("annotations", copy.deepcopy(ann))
-                    return None, out
 
             out = copy.deepcopy(o)
             out["apiVersion"] = "deckhouse.io/v1alpha2"
+            if lac_key in ann:
+                spec_from_lac = decode_spec_from_last_applied(ann[lac_key])
+                if spec_from_lac is not None:
+                    out["spec"] = copy.deepcopy(spec_from_lac)
+
             spec = out.get("spec") or {}
             bo, bc = "{", "}"
 
@@ -66,13 +63,6 @@ conversions:
         def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
             import copy
 
-            def catch_all_group_name(rx: str):
-                pfx = "^(?P<"
-                sfx = ">.*)$"
-                if not isinstance(rx, str) or not rx.startswith(pfx) or not rx.endswith(sfx):
-                    return None
-                return rx[len(pfx) : -len(sfx)]
-
             out = copy.deepcopy(o)
             out["apiVersion"] = "deckhouse.io/v1alpha1"
             spec = out.get("spec") or {}
@@ -94,15 +84,7 @@ conversions:
                     pm.pop("targetLabel", None)
                     if pm.get("sourceFormat") == "String" and isinstance(pm.get("string"), dict):
                         st = pm["string"]
-                        rx = st.get("regex") or ""
                         sl = st.get("setLabels") or {}
-                        name = catch_all_group_name(rx)
-                        if name and isinstance(sl, dict) and len(sl) == 1 and name in sl:
-                            val = str(sl[name]).strip()
-                            bo, bc = "{", "}"
-                            if val in (bo * 2 + name + bc * 2, bo * 2 + " " + name + " " + bc * 2):
-                                pm["string"] = {"targetField": name}
-                                continue
                         if isinstance(sl, dict) and sl:
                             pm["string"] = {"targetField": next(iter(sl))}
                         else:
