@@ -95,13 +95,8 @@ TAG=""
 parse_args "$@"
 check_requirements
 
-REGISTRY_URL=${IMAGES_PATH}
 RELEASE_TAG=$(echo "$TAG" | cut -d. -f1,2 | sed 's/^v//')
-if [[ ${EDITION} == "fe" ]]; then
-  INSTALL_IMAGE_PATH=${REGISTRY_URL}/install:release-${RELEASE_TAG}
-else
-  INSTALL_IMAGE_PATH=${REGISTRY_URL}/install:release-${RELEASE_TAG}-${EDITION}
-fi
+INSTALL_IMAGE_PATH=${REGISTRY_URL}/${EDITION}/install:release-${RELEASE_TAG}
 
 if [ -n "`docker ps -a| grep d8-install-${EDITION}-${TAG}`" ]; then
   cleanup
