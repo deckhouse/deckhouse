@@ -1,9 +1,17 @@
 .github/                                                         @Nikolay1224 @himax1991
-000-common/                                                      @sprait
-**/000-common/images/alt-p11/                                    @name212 @090809
+000-common/                                                      @RomanenkoDenys
+**/000-common/images/alt-p11                                     @name212 @090809
+**/000-common/images/cni-**                                      @apolovov
+**/000-common/images/coredns                                     @apolovov
 **/000-common/images/crane                                       @sprait
+**/000-common/images/csi-**                                      @AleksZimin
+**/000-common/images/debug-container                             @apolovov
+**/000-common/images/iptables-wrapper                            @apolovov
+**/000-common/images/kube-rbac-proxy                             @AlwxSin
 **/000-common/images/kubernetes                                  @sprait
 **/000-common/images/pause                                       @sprait
+**/000-common/images/shell-operator                              @ldmonster
+**/000-common/images/vxlan-offloading-fixer                      @apolovov
 002-deckhouse/                                                   @ldmonster
 007-registrypackages/                                            @RomanenkoDenys
 **/007-registrypackages/images/containerd                        @sprait
