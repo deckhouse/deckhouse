@@ -349,7 +349,7 @@ type observabilityRulesGroupRecordingLifecycleChecker struct {
 	waitMetricPresentTimeout time.Duration
 }
 
-func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Error) {
+func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() check.Error {
 	ctx := context.Background()
 
 	if err := c.preflight(); err != nil {
@@ -367,10 +367,11 @@ func (c *observabilityRulesGroupRecordingLifecycleChecker) Check() (res check.Er
 		return check.ErrUnknown("cleaned garbage")
 	}
 
-	defer func() {
-		res = wrapCleanupResult(res, c.cleanup(ctx))
-	}()
+	result := c.doRecordingLifecycle(ctx)
+	return wrapCleanupResult(result, c.cleanup(ctx))
+}
 
+func (c *observabilityRulesGroupRecordingLifecycleChecker) doRecordingLifecycle(ctx context.Context) check.Error {
 	if err := c.createNamespace(ctx); err != nil {
 		return lifecycleStepError("creating namespace", err)
 	}
@@ -440,14 +441,14 @@ type observabilityRulesGroupAlertLifecycleChecker struct {
 	waitAlertPresentTimeout time.Duration
 }
 
-func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error) {
+func (c *observabilityRulesGroupAlertLifecycleChecker) Check() check.Error {
 	ctx := context.Background()
 
 	if err := c.preflight(); err != nil {
 		return err
 	}
 
-	if err := c.alertKubeApiAvailable(ctx); err != nil {
+	if err := c.alertKubeAPIAvailable(ctx); err != nil {
 		return err
 	}
 
@@ -462,10 +463,11 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) Check() (res check.Error)
 		return check.ErrUnknown("cleaned garbage")
 	}
 
-	defer func() {
-		res = wrapCleanupResult(res, c.cleanup(ctx))
-	}()
+	result := c.doAlertLifecycle(ctx)
+	return wrapCleanupResult(result, c.cleanup(ctx))
+}
 
+func (c *observabilityRulesGroupAlertLifecycleChecker) doAlertLifecycle(ctx context.Context) check.Error {
 	if err := c.createNamespace(ctx); err != nil {
 		return lifecycleStepError("creating namespace", err)
 	}
@@ -561,7 +563,7 @@ func (c *observabilityRulesGroupAlertLifecycleChecker) silenceExists(ctx context
 	return true, nil
 }
 
-func (c *observabilityRulesGroupAlertLifecycleChecker) alertKubeApiAvailable(ctx context.Context) check.Error {
+func (c *observabilityRulesGroupAlertLifecycleChecker) alertKubeAPIAvailable(ctx context.Context) check.Error {
 	podList, err := c.access.Kubernetes().CoreV1().
 		Pods(observabilityNamespace).
 		List(ctx, metav1.ListOptions{LabelSelector: "app=alert-kube-api"})

@@ -183,9 +183,9 @@ func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.List
 				RulesGroupName:   "alert-rules",
 				SilenceName:      "alert-rules-silence",
 
-				AlertName:            "UpmeterObservabilityMiniE2EAlert",
-				AlertLabelKey:        "upmeter_alert_id",
-				AlertLabelValue:      run.StaticIdentifier("obsv-alert"),
+				AlertName:       "UpmeterObservabilityMiniE2EAlert",
+				AlertLabelKey:   "upmeter_alert_id",
+				AlertLabelValue: run.StaticIdentifier("obsv-alert"),
 
 				RequestTimeout:                   5 * time.Second,
 				WaitPrometheusRuleCreatedTimeout: 60 * time.Second,
