@@ -1,5 +1,5 @@
 ---
-title: CSI-драйвер (csi-rbd)
+title: CSI-драйвер Ceph RBD
 permalink: ru/architecture/storage/csi-drivers/csi-driver-ceph-rbd.html
 lang: ru
 search: csi-ceph, ceph, rbd, rados block device
@@ -8,7 +8,7 @@ description: Архитектура CSI-драйвера для работы с 
 
 CSI-драйвер `csi-rbd` - реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для обеспечения работы с Ceph [RBD (RADOS Block Device)](https://docs.ceph.com/en/reef/rbd/) томами в Deckhouse Kubernetes Platform (DKP).
 
-## Архитектура CSI-драйвера (csi-rbd)
+## Архитектура CSI-драйвера
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -32,7 +32,7 @@ CSI-драйвер `csi-rbd` - реализация [Container Storage Interface
 
    * **controller** — основной контейнер, реализующий функциональность CSI-драйвера (capabilities) в виде gRPC-сервисов Identity Service и Controller Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
-   * **rbdplugin** — сайдкар-контейнер, реализующий интерфейс взаимодействия с кластером Ceph;
+   * **rbdplugin** — сайдкар-контейнер, реализующий интерфейс взаимодействия с кластером Ceph при использовании RBD-томов;
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
