@@ -121,6 +121,7 @@ func (h *NodeGroupConversionHandler) loadProviderConfig(ctx context.Context) (*P
 	config := &ProviderClusterConfiguration{}
 
 	secret := &corev1.Secret{}
+	conversionLog.V(1).Info("reading Secret", "namespace", "kube-system", "name", "d8-provider-cluster-configuration")
 	err := h.Client.Get(ctx, types.NamespacedName{
 		Namespace: "kube-system",
 		Name:      "d8-provider-cluster-configuration",
