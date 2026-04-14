@@ -39,7 +39,7 @@ func namespaceExists(ctx context.Context, access kubernetes.Access, namespace st
 	return true, nil
 }
 
-func waitNamespaceAbsent(ctx context.Context, access kubernetes.Access, namespace string, timeout, interval time.Duration) error {
+func waitNamespaceNotFound(ctx context.Context, access kubernetes.Access, namespace string, timeout, interval time.Duration) error {
 	return waitForCondition(timeout, interval, func() (bool, error) {
 		_, err := access.Kubernetes().CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {

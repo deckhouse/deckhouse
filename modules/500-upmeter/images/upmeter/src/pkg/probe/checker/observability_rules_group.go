@@ -328,7 +328,7 @@ func (b *observabilityLifecycleBase) baseCleanup(ctx context.Context) error {
 	if err := b.deleteNamespace(ctx); err != nil && !apierrors.IsNotFound(err) {
 		errs = append(errs, fmt.Errorf("delete namespace: %w", err))
 	}
-	if err := waitNamespaceAbsent(
+	if err := waitNamespaceNotFound(
 		ctx,
 		b.access,
 		b.namespace,

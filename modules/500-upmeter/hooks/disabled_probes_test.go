@@ -160,6 +160,44 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).NotTo(ContainElement("extensions/grafana-v10"))
 			})
 		})
+
+		Context("with observability module", func() {
+			f := HookExecutionConfigInit(initValues, `{}`)
+
+			It("observability probes are disabled when observability module is disabled", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Delete("observability").Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("extensions/alert-kube-api"))
+				Expect(disabledProbes).To(ContainElement("extensions/observability-controller"))
+				Expect(disabledProbes).To(ContainElement("extensions/grafana"))
+				Expect(disabledProbes).To(ContainElement("extensions/label-enforcer"))
+				Expect(disabledProbes).To(ContainElement("extensions/observability-webhook"))
+				Expect(disabledProbes).To(ContainElement("monitoring-and-autoscaling/alertmanager"))
+				Expect(disabledProbes).To(ContainElement("monitoring-and-autoscaling/observability-recording"))
+			})
+
+			It("observability probes are enabled when observability module is enabled", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("extensions/alert-kube-api"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/observability-controller"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/grafana"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/label-enforcer"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/observability-webhook"))
+				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/alertmanager"))
+				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/observability-recording"))
+			})
+		})
 	})
 
 	Context("load-balancing probes depending on deployed apps", func() {
