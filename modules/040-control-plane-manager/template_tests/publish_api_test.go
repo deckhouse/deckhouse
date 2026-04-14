@@ -80,7 +80,7 @@ const globalValues = `
 `
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: publish api", func() {
-	hec := SetupHelmConfig("")
+	hec := SetupHelmConfig(`controlPlaneManager: {}`)
 
 	BeforeEach(func() {
 		var emptyObj struct{}
@@ -104,10 +104,11 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI", emptyObj)
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress", emptyObj)
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer", emptyObj)
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https", emptyObj)
+		// hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https", emptyObj)
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.enabled", true)
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "SelfSigned")
 		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.addKubeconfigGeneratorEntry", true)
+		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer.port", 443)
 	})
 
 	Context("By default", func() {
@@ -119,6 +120,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("Issuer"))
 			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("kubernetes-api"))
 			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Service", "kube-system", "d8-control-plane-apiserver").Exists()).To(BeFalse())
 		})
 	})
 
@@ -187,6 +189,58 @@ tls.key: KEYKEYKEY
 			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))
+		})
+	})
+
+	Context("Default service loadBalancer", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.enabled", false)
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer.enabled", true)
+			hec.HelmRender()
+		})
+		It("Should render service loadBalancer", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("Service", "kube-system", "d8-control-plane-apiserver").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Service", "kube-system", "kubernetes").Exists()).To(BeFalse())
+
+			service := hec.KubernetesResource("Service", "kube-system", "d8-control-plane-apiserver")
+			port := int(service.Field("spec.ports").Array()[0].Map()["port"].Int())
+			Expect(port).To(Equal(443))
+		})
+	})
+
+	Context("Service loadBalancer with custom port, sourceRanges, annotation", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer.enabled", true)
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer.port", 4343)
+			hec.ValuesSetFromYaml("controlPlaneManager.apiserver.publishAPI.loadBalancer.sourceRanges", `
+- 1.1.1.1/32
+- 192.168.0.0/24
+`)
+			hec.ValuesSetFromYaml("controlPlaneManager.apiserver.publishAPI.loadBalancer.annotations", `
+service.beta.kubernetes.io/aws-load-balancer-type: nlb
+foo: bar
+`)
+			hec.HelmRender()
+		})
+		It("Should render custom settings for service loadBalancer", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			Expect(hec.KubernetesResource("Service", "kube-system", "d8-control-plane-apiserver").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Service", "kube-system", "kubernetes").Exists()).To(BeTrue())
+
+			service := hec.KubernetesResource("Service", "kube-system", "d8-control-plane-apiserver")
+
+			port := int(service.Field("spec.ports").Array()[0].Map()["port"].Int())
+			Expect(port).To(Equal(4343))
+
+			sourceRanges := []string{}
+			for _, r := range service.Field("spec.loadBalancerSourceRanges").Array() {
+				sourceRanges = append(sourceRanges, r.String())
+			}
+			Expect(sourceRanges).To(ContainElements("1.1.1.1/32", "192.168.0.0/24"))
+
+			Expect(service.Field("metadata.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type").String()).To(Equal("nlb"))
+			Expect(service.Field("metadata.annotations.foo").String()).To(Equal("bar"))
 		})
 	})
 })
