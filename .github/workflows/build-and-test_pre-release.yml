@@ -228,6 +228,13 @@ jobs:
       # </template: login_dev_registry_step>
 
 
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
       # <template: d8cli_install_step>
       - name: Install d8 CLI
         run: |
@@ -536,6 +543,13 @@ jobs:
       # </template: login_dev_registry_step>
 
 
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
       # <template: d8cli_install_step>
       - name: Install d8 CLI
         run: |
@@ -842,6 +856,13 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
@@ -1150,6 +1171,13 @@ jobs:
       # </template: login_dev_registry_step>
 
 
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
       # <template: d8cli_install_step>
       - name: Install d8 CLI
         run: |
@@ -1456,6 +1484,13 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
@@ -1764,6 +1799,13 @@ jobs:
       # </template: login_dev_registry_step>
 
 
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
       # <template: d8cli_install_step>
       - name: Install d8 CLI
         run: |
@@ -2070,6 +2112,13 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
 
       # <template: d8cli_install_step>
       - name: Install d8 CLI
