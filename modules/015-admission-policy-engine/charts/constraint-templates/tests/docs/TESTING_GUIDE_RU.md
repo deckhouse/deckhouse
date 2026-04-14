@@ -44,7 +44,7 @@
 
 Вся тестовая инфраструктура находится в:
 
-```
+```shell
 charts/constraint-templates/tests/
 ├── docs/                  # Документация (этот файл)
 ├── openapi/               # JSON Schema файлы для валидации
@@ -526,7 +526,7 @@ spec:
 
 ### Формула
 
-```
+```shell
 Покрытие поля     = покрытые сценарии / обязательные сценарии
 Общее покрытие %  = сумма(покрытых сценариев) / сумма(обязательных сценариев) × 100
 ```
@@ -541,7 +541,7 @@ spec:
 
 ### Пример вывода
 
-```
+```shell
 Constraint              Fields  Scenarios  Covered  %     Status
 allow-host-network      4+3     25         25       100%  OK
 allow-privilege-escal.  1+1     9          6        67%   WARN
@@ -802,6 +802,7 @@ Constraint-ы, использующие `external_data` (например, `veri
 1. **Rego-шаблон** включает параметр `isTest`. Когда `isTest: true`, шаблон вызывает `external_data_from_inventory(provider, keys)` вместо реальной функции `external_data`. Этот хелпер читает мок-ответы из inventory-объектов gator.
 
 2. **Манифест constraint** устанавливает `parameters.isTest: true`:
+
    ```yaml
    spec:
      parameters:

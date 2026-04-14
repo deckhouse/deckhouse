@@ -17,7 +17,7 @@ Before writing any test, read these files:
 
 ## Directory layout
 
-```
+```shell
 tests/
 ├── test_cases/constraints/
 │   ├── security/<constraint>/     # Security policy tests

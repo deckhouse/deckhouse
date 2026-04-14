@@ -2,13 +2,12 @@
 
 This directory contains the testing infrastructure for Gatekeeper ConstraintTemplate policies in Deckhouse.
 
-## Documentation / Документация
+## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) | **Comprehensive testing guide (EN)** — everything a newcomer needs to write tests from scratch |
-| [docs/TESTING_GUIDE.ru.md](docs/TESTING_GUIDE.ru.md) | **Полное руководство по тестированию (RU)** — всё, что нужно новичку для написания тестов с нуля |
-| [AGENTS.md](AGENTS.md) | AI agent prompt for writing constraint tests |
+| Document                                             | Description                                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)       | **Comprehensive testing guide (EN)** — everything a newcomer needs to write tests from scratch   |
+| [AGENTS.md](AGENTS.md)                               | AI agent prompt for writing constraint tests                                                     |
 
 ## OpenAPI Schemas
 

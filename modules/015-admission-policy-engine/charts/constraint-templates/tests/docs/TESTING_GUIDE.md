@@ -44,7 +44,7 @@ This guide covers everything you need to write, run, and maintain tests for Gate
 
 All test infrastructure lives under:
 
-```
+```shell
 charts/constraint-templates/tests/
 ├── docs/                  # Human documentation (this file)
 ├── openapi/               # JSON Schema files for validation
@@ -526,7 +526,7 @@ If `requiredScenarios` is omitted in `test_fields.yaml`, the tool auto-generates
 
 ### Formula
 
-```
+```shell
 Per-field coverage = scenarios covered / scenarios required
 Total coverage %   = sum(covered scenarios) / sum(required scenarios) × 100
 ```
@@ -541,7 +541,7 @@ A scenario is "covered" if at least one case in `test-matrix.yaml` declares `fie
 
 ### Example output
 
-```
+```shell
 Constraint              Fields  Scenarios  Covered  %     Status
 allow-host-network      4+3     25         25       100%  OK
 allow-privilege-escal.  1+1     9          6        67%   WARN
@@ -802,6 +802,7 @@ Constraints that use `external_data` (e.g. `verify-image-signature`, `vulnerable
 1. **Rego template** includes an `isTest` parameter. When `isTest: true`, the template calls `external_data_from_inventory(provider, keys)` instead of the real `external_data` function. This helper reads mock responses from gator inventory objects.
 
 2. **Constraint manifest** sets `parameters.isTest: true`:
+
    ```yaml
    spec:
      parameters:
