@@ -108,7 +108,7 @@ type ApplicationPackageVersionStatus struct {
 
 	// Schemas for validating settings and values passed to the package.
 	// +optional
-	PackageSchemas *ApplicationPackageVersionStatusSchema `json:"packageSchemas,omitempty"`
+	PackageSchemas *ApplicationPackageVersionStatusSchemas `json:"packageSchemas,omitempty"`
 
 	// Conditions represent the latest available observations of the package version's state.
 	// +optional
@@ -127,7 +127,7 @@ type ApplicationPackageVersionStatus struct {
 	UsedByCount int `json:"usedByCount,omitempty"`
 }
 
-type ApplicationPackageVersionStatusSchema struct {
+type ApplicationPackageVersionStatusSchemas struct {
 	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
 	// settings of the package. Stored as an opaque object because its contents
 	// form a recursive JSON schema that cannot be expressed structurally in a

@@ -298,6 +298,11 @@ func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPa
 	})
 }
 
+// setPackageMetadata projects parsed package metadata onto the ApplicationPackageVersion
+// status. It overwrites Status.PackageMetadata with the stage, localized descriptions,
+// runtime requirements, and changelog extracted from the package image, then delegates
+// to setPackageSchema for the settings and values OpenAPI schemas. A nil meta is a
+// no-op, so callers may invoke this unconditionally after a best-effort parse.
 func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion, meta *packageMetadata) error {
 	if meta == nil {
 		return nil
@@ -331,6 +336,12 @@ func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion,
 	return nil
 }
 
+// setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
+// ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
+// selected by schemaType. The schema is wrapped in a lightweight envelope that
+// recognises the x-config-version marker used by packages to version their schema
+// format. An empty rawSchema is treated as "no schema supplied" and returns nil
+// without touching the status. Unknown schemaType values are silently ignored.
 func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
 	if len(rawSchema) == 0 {
 		return nil
@@ -348,8 +359,8 @@ func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, r
 		return fmt.Errorf("invalid JSON schema: %w", err)
 	}
 
-	if apv.Status.PackageMetadata == nil {
-		apv.Status.PackageMetadata = new(v1alpha1.ApplicationPackageVersionStatusMetadata)
+	if apv.Status.PackageSchemas == nil {
+		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
 	}
 
 	switch schemaType {

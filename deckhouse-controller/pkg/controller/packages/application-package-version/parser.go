@@ -75,9 +75,11 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 	meta := new(packageMetadata)
 
 	mr := &metadataReader{
-		versionReader:    bytes.NewBuffer(nil),
-		changelogReader:  bytes.NewBuffer(nil),
-		definitionReader: bytes.NewBuffer(nil),
+		versionReader:        bytes.NewBuffer(nil),
+		changelogReader:      bytes.NewBuffer(nil),
+		definitionReader:     bytes.NewBuffer(nil),
+		valuesSchemaReader:   bytes.NewBuffer(nil),
+		settingsSchemaReader: bytes.NewBuffer(nil),
 	}
 
 	if err := mr.untarMetadata(img); err != nil {
@@ -106,6 +108,14 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 		if err := yaml.NewDecoder(mr.changelogReader).Decode(&meta.changelog); err != nil {
 			r.logger.Warn("unmarshal package changelog", log.Err(err))
 		}
+	}
+
+	if mr.settingsSchemaReader.Len() > 0 {
+		meta.rawSettingsSchema = mr.settingsSchemaReader.Bytes()
+	}
+
+	if mr.valuesSchemaReader.Len() > 0 {
+		meta.rawValuesSchema = mr.valuesSchemaReader.Bytes()
 	}
 
 	return meta, nil
@@ -151,7 +161,11 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 		}
 
 		// All metadata files found — skip remaining tar entries.
-		if r.versionReader.Len() > 0 && r.changelogReader.Len() > 0 && r.definitionReader.Len() > 0 {
+		if r.versionReader.Len() > 0 &&
+			r.changelogReader.Len() > 0 &&
+			r.definitionReader.Len() > 0 &&
+			r.valuesSchemaReader.Len() > 0 &&
+			r.settingsSchemaReader.Len() > 0 {
 			return nil
 		}
 	}
