@@ -1,27 +1,21 @@
 ---
-title: Что делать в случае проблем с заказом узлов типа spot-node (preemptible) в облачных кластерах и если переключение на заказ узлов в менее приоритетных группах занимает много времени?
+title: Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
 subsystems:
   - cluster_infrastructure
 lang: ru
 ---
 
-Если в облачном кластере используется только одна группа узлов для заказа узлов типа spot-node (preemptible) и при автоматическом масштабировании возникают проблемы с заказом таких узлов, выполните следующие действия:
+При использовании в облачном кластере нескольких групп узлов с разными приоритетами (параметр [`spec.cloudInstances.priority`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-priority)) переключение на заказ узлов из групп с меньшим приоритетом может занимать много времени. Пример такого случая — когда для групп прерываемых узлов (spot, preemptible и т. д.) установлен наивысший приоритет и при недоступности таких инстансов заказ узлов из других групп происходит очень долго.
 
-1. Создайте один или несколько ресурсов InstanceClass, которые будут использоваться при создании инстансов в кластере. В InstanceClass укажите типы узлов, отличающиеся от spot-node.
-   > В DKP объекты InstanceClass различаются в зависимости от провайдера. Примеры: [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass), [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass), [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass), [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass), [YandexInstanceClass](modules/cloud-provider-yandex/cr.html#yandexinstanceclass), [ZvirtInstanceClass](/modules/cloud-provider-zvirt/cr.html#zvirtinstanceclass).
-1. Создайте одну или несколько новых групп узлов (ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup)), в которых, в параметре [`spec.cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) укажите созданные на предыдущем шаге ресурсы InstanceClass. В параметре [`spec.cloudInstances.priority`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-priority) задайте приоритет группы узлов.
-
-#### Настройка времени переключения на заказ узлов в менее приоритетных группах
-
-При использовании нескольких групп узлов с разными приоритетами (параметр [`spec.cloudInstances.priority`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-priority)) для заказа узлов Cluster Autoscaler (CA) по очереди выбирает группу с наивысшим приоритетом, которая **не находится в состоянии backoff**. Backoff — это временная блокировка группы после неудачной попытки заказа узла (например, из-за отсутствия инстансов нужного типа в облаке).
+Для заказа узлов Cluster Autoscaler по очереди выбирает группу с наивысшим приоритетом, которая **не находится в состоянии backoff**. Backoff — это временная блокировка группы после неудачной попытки заказа узла (например, из-за отсутствия инстансов нужного типа в облаке).
 
 Логика работы при использовании нескольких групп узлов:
 
-1. CA пытается заказать узел в группе с наивысшим приоритетом.
-1. Если в течение `max-node-provision-time` узел не появился, попытка считается неудачной.
-1. Группа помечается как failed и блокируется на `initial-node-group-backoff-duration`.
-1. При повторной неудаче для той же группы время блокировки удваивается, но не превышает `max-node-group-backoff-duration`.
-1. CA выбирает следующую по приоритету группу, которая не заблокирована.
+1. Cluster Autoscaler пытается заказать узел в группе с наивысшим приоритетом.
+1. Если в течение времени, заданного в параметре `max-node-provision-time`, узел не появился, попытка считается неудачной.
+1. Группа помечается как failed и блокируется на время, заданное в параметре `initial-node-group-backoff-duration`.
+1. При повторной неудаче для той же группы время блокировки удваивается, но не превышает время, заданное в параметре `max-node-group-backoff-duration`.
+1. Cluster Autoscaler выбирает следующую по приоритету группу, которая не заблокирована.
 
 Здесь:
 
@@ -29,12 +23,12 @@ lang: ru
 |----------|----------------------|-----------|
 | `initial-node-group-backoff-duration` | 5 минут | Начальная длительность блокировки группы после первой неудачи. Удваивается после каждой неудачной попытки заказа узла|
 | `max-node-group-backoff-duration` | 30 минут | Максимальная длительность блокировки группы|
-| `max-node-provision-time` | 15 минут | Время, после которого CA считает попытку заказа узла неудачной |
+| `max-node-provision-time` | 15 минут | Время, после которого Cluster Autoscaler считает попытку заказа узла неудачной |
 
 Если для этих параметров установлены значения по умолчанию, переключение на заказ узлов в менее приоритетных группах может занимать немало времени (подробнее — в [примере](#пример-процесса-заказа-узлов-с-настройками-по-умолчанию)).
 
 Эти параметры можно изменять, чтобы ускорить переключение на заказ узлов в менее приоритетных группах.
-Чтобы установить нужные значения для параметров `initial-node-group-backoff-duration`, `max-node-group-backoff-duration`, `max-node-provision-time` отредактируйте ресурс Deployment `cluster-autoscaler` в нейсмейсе d8-cloud-instance-manager. Параметры указываются в поле `args` контейнера `cluster-autoscaler`. Пример:
+Чтобы установить нужные значения для параметров `initial-node-group-backoff-duration`, `max-node-group-backoff-duration`, `max-node-provision-time` отредактируйте объект Deployment `cluster-autoscaler` в неймспейсе `d8-cloud-instance-manager`. Параметры указываются в поле `args` контейнера `cluster-autoscaler`. Пример:
 
 ```yaml
 ...
@@ -42,11 +36,20 @@ lang: ru
       - name: cluster-autoscaler
         args:
         - --initial-node-group-backoff-duration=1m # Уменьшена начальная длительность блокировки группы после первой неудачи
-        - --max-node-provision-time=5m # Уменьшено время, после которого CA считает попытку заказа узла неудачной
+        - --max-node-provision-time=5m # Уменьшено время, после которого Cluster Autoscaler считает попытку заказа узла неудачной
 ...
 ```
 
-##### Пример процесса заказа узлов с настройками по умолчанию
+#### Если в кластере с одной группой узлов возникают проблемы с заказом узлов
+
+Если в облачном кластере используется только одна группа узлов (например, только для заказа прерываемых узлов (spot, preemptible)) и при автоматическом масштабировании возникают проблемы с заказом таких узлов, выполните следующие действия:
+
+1. Создайте один или несколько объектов InstanceClass, которые будут использоваться при создании инстансов в кластере. В InstanceClass укажите типы узлов, отличающиеся от указанных в упомянутой выше группе.
+   > В DKP объекты InstanceClass различаются в зависимости от провайдера. Примеры: [AWSInstanceClass](/modules/cloud-provider-aws/cr.html#awsinstanceclass), [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass), [YandexInstanceClass](modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+1. Создайте одну или несколько новых групп узлов (объект [NodeGroup](/modules/node-manager/cr.html#nodegroup)), в которых, в параметре [`spec.cloudInstances.classReference`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) укажите созданные на предыдущем шаге объекты InstanceClass. В параметре [`spec.cloudInstances.priority`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-priority) задайте приоритет группы узлов.
+1. При необходимости измените параметры `max-node-provision-time`, `max-node-group-backoff-duration` и `initial-node-group-backoff-duration`, влияющие на скорость переключения на заказ узлов из менее приоритетных групп.
+
+#### Пример процесса заказа узлов с настройками по умолчанию
 
 Пусть есть 3 группы узлов с разными приоритетами:
 
@@ -58,10 +61,10 @@ lang: ru
 
 | Время | Событие |
 |-------|---------|
-| 10:00 | CA заказывает узел в **A** |
+| 10:00 | Cluster Autoscaler заказывает узел в **A** |
 | 10:15 | Неудача заказа узла в **A** в течение 15 минут (`max-node-provision-time`) → блокировка **A** на 5 минут (`initial-node-group-backoff-duration`) |
-| 10:15:xx | CA заказывает узел в **B** (следующая по приоритету, не заблокирована)|
+| 10:15:xx | Cluster Autoscaler заказывает узел в **B** (следующая по приоритету, не заблокирована)|
 | 10:30 | Неудача заказа узла в **B** в течение 15 минут (`max-node-provision-time`) → блокировка **B** на 5 минут (`initial-node-group-backoff-duration`)|
-| 10:30:xx | CA снова заказывает узел в **A**, так как время блокировки (значение по умолчанию для `initial-node-group-backoff-duration` равно 5 минут) закончилось|
+| 10:30:xx | Cluster Autoscaler снова заказывает узел в **A**, так как время блокировки (значение по умолчанию для `initial-node-group-backoff-duration` равно 5 минут) закончилось|
 | 10:45 | Неудача заказа узла в **A** → блокировка **A** на 10 минут (`initial-node-group-backoff-duration` для **А** удваивается) |
 | … | И так далее, пока блокировки **A** и **B** не превысят 15 минут (`max-node-provision-time`). До группы **C** в таком случае очередь может дойти только примерно через 1.5 часа. |
