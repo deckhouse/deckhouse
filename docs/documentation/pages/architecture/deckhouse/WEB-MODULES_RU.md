@@ -24,13 +24,13 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля console](../../../images/architecture/deckhouse/c4-l2-deckhouse-console-simple.ru.png)
 
-### Компонтенты модуля
+### Компоненты модуля
 
 Модуль состоит из следующих компонент:
 
 1. **Frontend** — состоит из одного контейнера **frontend** и реализует веб-интерфейс пользователя и администратора платформы DKP.
 
-1. **Backend** — состоит из одного котнейнера **backend** и реализует API-интерфейс управления ресурсами DKP, получения метрик и логов из других модулей.
+1. **Backend** — состоит из одного контейнера **backend** и реализует API-интерфейс управления ресурсами DKP, получения метрик и логов из других модулей.
 
 1. **Nginx** — проксирует запросы к Grafana для встраивания дашбордов в основной UI платформы, а так же для работы с метриками и логами выбранного проекта.
 
@@ -74,7 +74,7 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля documentation](../../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.ru.png)
 
-### Компонтенты модуля
+### Компоненты модуля
 
 Модуль состоит из следующих компонентов:
 
@@ -124,7 +124,7 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля deckhouse-tools](../../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.ru.png)
 
-### Компонтенты модуля
+### Компоненты модуля
 
 Модуль состоит из следующих компонент:
 
