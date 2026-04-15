@@ -21,6 +21,7 @@
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
+fromCacheVersion: {{ div $context.Commit.Date.Unix (mul 60 60) }}v1
 fromImage: base/vex
 final: true
 secrets:
@@ -46,13 +47,6 @@ git:
   stageDependencies:
     install:
     - "**/*"
-  {{- if contains $imageName "terraform-manager-dvp" }}
-- add: dhctl/known_vulnerabilities.vex
-  to: /dhctl_vulnerabilities.vex
-  stageDependencies:
-    install:
-    - "**/*"
-  {{- end }}
 dependencies:
 - image: {{ $imageName }}
   before: install
@@ -71,52 +65,33 @@ shell:
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)"
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
-  - |
-    echo "DEBUG ls /:" && ls /
-    echo "DEBUG dhctl check:" && ls /dhctl_vulnerabilities.vex 2>&1 || echo "NOT FOUND"
-    echo "DEBUG known check:" && ls /known_vulnerabilities.vex 2>&1 || echo "NOT FOUND"
-  - |
-    # Merge VEX files from dhctl if it exists
-    VEX_FILES="/known_vulnerabilities.vex"
-    [ -f /dhctl_vulnerabilities.vex ] && VEX_FILES="$VEX_FILES /dhctl_vulnerabilities.vex"
-
-    # If multiple files exist, merge them using jq
-    if [ "$VEX_FILES" != "/known_vulnerabilities.vex" ]; then
-      jq -s '{
-        "@context": "https://openvex.dev/ns/v0.2.0",
-        "@id": ("merged-vex-" + (now | todate | gsub("[^0-9a-f]"; ""))),
-        "author": "Deckhouse <contact@deckhouse.io>",
-        "version": 1,
-        "statements": (
-          map(.statements // []) | add |
-          group_by(.vulnerability.name) |
-          map({
-            vulnerability: .[0].vulnerability,
-            products: (map(.products // []) | add | unique),
-            status: .[0].status,
-            justification: .[0].justification,
-            impact_statement: .[0].impact_statement,
-            timestamp: (map(.timestamp) | max)
-          })
-        ),
-        "timestamp": (now | strftime("%Y-%m-%dT%H:%M:%SZ"))
-      }' $VEX_FILES > /merged_vulnerabilities.vex
-      VEX_FILE=/merged_vulnerabilities.vex
+  - >
+    export ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" ))
+  - >
+    if [ -n "${ACTIONS_ID_TOKEN}" ]; then
+      echo "Received Actions token";
     else
-      VEX_FILE=/known_vulnerabilities.vex
+      echo "Actions token empty";
     fi
-
-    ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" )) \
-    VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${COSIGN_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \
+  - >
+    export VAULT_TOKEN="$(curl -fX POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${COSIGN_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+  - >
+    if [ -n "${VAULT_TOKEN}" ]; then
+      echo "Received Vault token";
+    else
+      echo "Vault token empty";
+    fi
+  - echo "Using predicate known_vulnerabilities.vex"
+  - |
     cosign attest \
       --replace \
       --registry-username="${REGISTRY_USER}" \
       --registry-password="${REGISTRY_PASSWORD}" \
-      --predicate "${VEX_FILE}" \
+      --predicate /known_vulnerabilities.vex \
       --type openvex \
       --key hashivault://${COSIGN_VAULT_KEY} \
       --tlog-upload=false \
-      -y \
+      -y -d \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
   {{- end }}
 {{- end }}
