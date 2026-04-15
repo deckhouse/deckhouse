@@ -399,6 +399,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -542,11 +543,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -797,6 +798,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -940,11 +942,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1195,6 +1197,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -1338,11 +1341,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1581,6 +1584,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -1724,11 +1728,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1967,6 +1971,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -2110,11 +2115,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2353,6 +2358,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -2496,11 +2502,11 @@ jobs:
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
-          IMAGE_TAG=$(d8 dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json

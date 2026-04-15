@@ -240,6 +240,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -375,8 +376,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -555,6 +556,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -690,8 +692,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -869,6 +871,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -1004,8 +1007,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1183,6 +1186,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -1318,8 +1322,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1497,6 +1501,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -1632,8 +1637,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1811,6 +1816,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -1946,8 +1952,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2125,6 +2131,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -2260,8 +2267,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
