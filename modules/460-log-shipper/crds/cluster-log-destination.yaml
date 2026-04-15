@@ -922,7 +922,9 @@ spec:
                           parseMessage:
                             sourceFormat: String
                             string:
-                              targetField: msg
+                              regex: "^(?P<msg>.*)$"
+                              setLabels:
+                                msg: "{{ msg }}"
                         ```
 
                         ```yaml
@@ -939,7 +941,9 @@ spec:
                           parseMessage:
                             sourceFormat: String
                             string:
-                              targetField: msg
+                              regex: "^(?P<msg>.*)$"
+                              setLabels:
+                                msg: "{{ msg }}"
                         ```
 
                       - `DropLabels`: Removes the specified labels.
@@ -1059,15 +1063,33 @@ spec:
                             type: string
                             enum: ["String", "JSON", "Klog", "SysLog", "CLF", "Logfmt"]
                             description: "Message format for converting into an object."
+                          targetLabel:
+                            type: string
+                            default: ".message"
+                            pattern: '^(\.|\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+)$'
+                            description: "Destination path for the parsed value."
                           string:
                             type: object
-                            required:
-                              - targetField
+                            oneOf:
+                              - required:
+                                  - targetField
+                              - required:
+                                  - regex
+                                  - setLabels
                             properties:
                               targetField:
                                 type: string
                                 pattern: '^[a-zA-Z0-9_\\\.\-]+$'
                                 description: "Target field where the structured message is placed."
+                              regex:
+                                type: string
+                                pattern: ^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,'\"|<>~#/@]+$
+                                description: Regular expression with named capture groups.
+                              setLabels:
+                                type: object
+                                description: Maps output keys to literals or `{{ group_name }}` templates.
+                                additionalProperties:
+                                  type: string
                           json:
                             type: object
                             properties:
@@ -1079,8 +1101,11 @@ spec:
                       dropLabels:
                         type: object
                         description: "Removes the specified labels."
-                        required:
-                          - labels
+                        oneOf:
+                          - required:
+                              - labels
+                          - required:
+                              - paths
                         properties:
                           labels:
                             type: array
@@ -1088,6 +1113,22 @@ spec:
                             items:
                               type: string
                               pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                          paths:
+                            type: array
+                            description: "List of path entries matching v1alpha2 dropLabels.labels."
+                            items:
+                              type: object
+                              required:
+                                - label
+                              properties:
+                                label:
+                                  type: string
+                                  pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                                keepKeys:
+                                  type: array
+                                  items:
+                                    type: string
+                                    pattern: ^[a-zA-Z0-9_.\-/]+$
                 buffer:
                   type: object
                   oneOf:

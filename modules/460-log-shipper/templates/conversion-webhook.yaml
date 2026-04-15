@@ -10,70 +10,42 @@ conversions:
     handler:
       python: |
         def v1alpha1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
-            import copy
-            import json
-
-            lac_key = "kubectl.kubernetes.io/last-applied-configuration"
-
-            def decode_spec_from_last_applied(val: str):
-                try:
-                    payload = json.loads(val)
-                except Exception:
-                    return None
-                return payload.get("spec")
-
-            md = o.get("metadata") or {}
-            ann = md.get("annotations") or {}
-
-            out = copy.deepcopy(o)
-            out["apiVersion"] = "deckhouse.io/v1alpha2"
-            if lac_key in ann:
-                spec_from_lac = decode_spec_from_last_applied(ann[lac_key])
-                if spec_from_lac is not None:
-                    out["spec"] = copy.deepcopy(spec_from_lac)
-
-            spec = out.get("spec") or {}
+            obj = DotMap(o)
+            obj.apiVersion = "deckhouse.io/v1alpha2"
+            spec = obj.spec
             bo, bc = "{", "}"
 
             for t in spec.get("transformations") or []:
                 if t.get("action") == "DropLabels":
                     dl = t["dropLabels"]
-                    dl["labels"] = [{"label": p} for p in dl.get("labels") or []]
+                    if dl.get("paths"):
+                        dl["labels"] = dl["paths"]
+                    else:
+                        dl["labels"] = [{"label": p} for p in dl.get("labels", [])]
                 if t.get("action") == "ParseMessage":
                     pm = t["parseMessage"]
                     if pm.get("sourceFormat") == "String":
                         st = dict(pm["string"])
-                        tf = st.pop("targetField")
-                        st.clear()
-                        st["regex"] = r"^(?P<%s>.*)$" % tf
-                        st["setLabels"] = {tf: (bo * 2 + " %s " % tf + bc * 2)}
-                        pm["string"] = st
-            return None, out
+                        if st.get("targetField"):
+                            tf = st.pop("targetField")
+                            st.clear()
+                            st["regex"] = r"^(?P<%s>.*)$" % tf
+                            st["setLabels"] = {tf: (bo * 2 + " %s " % tf + bc * 2)}
+                            pm["string"] = st
+            return None, obj.toDict()
 
   - from: v1alpha2
     to: v1alpha1
     handler:
       python: |
         def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
-            import copy
-
-            out = copy.deepcopy(o)
-            out["apiVersion"] = "deckhouse.io/v1alpha1"
-            spec = out.get("spec") or {}
+            obj = DotMap(o)
+            obj.apiVersion = "deckhouse.io/v1alpha1"
+            spec = obj.spec
 
             for t in spec.get("transformations") or []:
                 if t.get("action") == "DropLabels":
                     dl = t["dropLabels"]
-                    dl["labels"] = [e["label"] for e in dl.get("labels") or []]
-                if t.get("action") == "ParseMessage":
-                    pm = t["parseMessage"]
-                    pm.pop("targetLabel", None)
-                    if pm.get("sourceFormat") == "String":
-                        st = pm["string"]
-                        sl = st.get("setLabels") or {}
-                        if sl:
-                            pm["string"] = {"targetField": next(iter(sl))}
-                        else:
-                            pm["string"] = {"targetField": "msg"}
-
-            return None, out
+                    dl["paths"] = dl.get("labels", [])
+                    dl.pop("labels", None)
+            return None, obj.toDict()
