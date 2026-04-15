@@ -23,71 +23,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
 	pkiconstants "github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 )
 
-// certTreeForComponent returns the cert tree scheme for a given component
-func certTreeForComponent(c controlplanev1alpha1.OperationComponent) map[pki.RootCertName][]pki.LeafCertName {
-	switch c {
-	case controlplanev1alpha1.OperationComponentEtcd:
-		return map[pki.RootCertName][]pki.LeafCertName{
-			pki.EtcdCACertName: {
-				pki.EtcdServerCertName,
-				pki.EtcdPeerCertName,
-				pki.EtcdHealthcheckClientCertName,
-				pki.ApiserverEtcdClientCertName,
-			},
-		}
-	case controlplanev1alpha1.OperationComponentKubeAPIServer:
-		return map[pki.RootCertName][]pki.LeafCertName{
-			pki.CACertName: {
-				pki.ApiserverCertName,
-				pki.ApiserverKubeletClientCertName,
-			},
-			pki.FrontProxyCACertName: {
-				pki.FrontProxyClientCertName,
-			},
-		}
-	default:
-		return nil
-	}
-}
-
-// componentLeafCertFiles maps components to leaf cert base names (relative to pki dir, no extension).
-var componentLeafCertFiles = map[controlplanev1alpha1.OperationComponent][]string{
-	controlplanev1alpha1.OperationComponentEtcd: {
-		"etcd/server",
-		"etcd/peer",
-		"etcd/healthcheck-client",
-		"apiserver-etcd-client",
-	},
-	controlplanev1alpha1.OperationComponentKubeAPIServer: {
-		"apiserver",
-		"apiserver-kubelet-client",
-		"front-proxy-client",
-	},
-}
-
-// componentCAFiles maps components to the CA/SA file paths (relative to pki dir), derived from its cert tree.
-var componentCAFiles = map[controlplanev1alpha1.OperationComponent][]string{
-	controlplanev1alpha1.OperationComponentEtcd: {
-		"etcd/ca.crt",
-		"etcd/ca.key",
-	},
-	controlplanev1alpha1.OperationComponentKubeAPIServer: {
-		"ca.crt",
-		"ca.key",
-		"front-proxy-ca.crt",
-		"front-proxy-ca.key",
-		"sa.pub",
-		"sa.key",
-	},
-}
-
+// infrastructure CA files mapping
 var caFileMapping = map[string]string{
 	"ca.crt":             "ca.crt",
 	"ca.key":             "ca.key",

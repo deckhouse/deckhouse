@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/checksum"
+	"control-plane-manager/internal/constants"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
@@ -132,13 +132,12 @@ func writeSecretExtraFilesIfChanged(secretData map[string][]byte, extraFilesDir 
 
 // removeStaleExtraFiles removes extra-files from disk that belong to this component but no longer present in the secret
 func removeStaleExtraFiles(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) []fileWriteResult {
-	podName := component.PodComponentName()
-	if podName == "" {
+	keys := componentDepsForComponent(component).ExtraFileKeys
+	if len(keys) == 0 {
 		return nil
 	}
-	allPossibleKeys := checksum.ExtraFileKeysForPodComponent(podName)
 	var results []fileWriteResult
-	for _, key := range allPossibleKeys {
+	for _, key := range keys {
 		if _, exists := secretData[key]; exists {
 			continue
 		}
@@ -159,16 +158,11 @@ func removeStaleExtraFiles(component controlplanev1alpha1.OperationComponent, se
 }
 
 func writeExtraFilesIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) ([]fileWriteResult, error) {
-	podName := component.PodComponentName()
-	if podName == "" {
+	keys := componentDepsForComponent(component).ExtraFileKeys
+	if len(keys) == 0 {
 		return nil, nil
 	}
-	return writeSecretExtraFilesIfChanged(secretData, extraFilesDir, checksum.ExtraFileKeysForPodComponent(podName))
-}
-
-// writeHotReloadFilesIfChanged writes config files that kube-apiserver picks up without restart (see checksum.HotReloadChecksumDependsOn).
-func writeHotReloadFilesIfChanged(secretData map[string][]byte, extraFilesDir string) ([]fileWriteResult, error) {
-	return writeSecretExtraFilesIfChanged(secretData, extraFilesDir, checksum.HotReloadChecksumDependsOn)
+	return writeSecretExtraFilesIfChanged(secretData, extraFilesDir, keys)
 }
 
 func writeFileIfChanged(dst string, desired []byte, perm os.FileMode) (fileWriteResult, error) {
@@ -202,4 +196,45 @@ func readFileIfExists(path string) ([]byte, bool, error) {
 		return nil, false, nil
 	}
 	return nil, false, fmt.Errorf("read %s: %w", path, err)
+}
+
+func manifestMatchesDesired(op *controlplanev1alpha1.ControlPlaneOperation) (bool, error) {
+	podComponent := op.Spec.Component.PodComponentName()
+	if podComponent == "" {
+		return false, nil
+	}
+
+	path := filepath.Join(constants.ManifestsPath, podComponent+".yaml")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("read manifest %s: %w", path, err)
+	}
+
+	pod := &corev1.Pod{}
+	if err := yaml.Unmarshal(content, pod); err != nil {
+		return false, fmt.Errorf("unmarshal manifest %s: %w", path, err)
+	}
+
+	annotations := pod.Annotations
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+
+	if op.Spec.DesiredConfigChecksum != "" && annotations[constants.ConfigChecksumAnnotationKey] != op.Spec.DesiredConfigChecksum {
+		return false, nil
+	}
+	if op.Spec.DesiredPKIChecksum != "" && annotations[constants.PKIChecksumAnnotationKey] != op.Spec.DesiredPKIChecksum {
+		return false, nil
+	}
+	if op.Spec.DesiredCAChecksum != "" && annotations[constants.CAChecksumAnnotationKey] != op.Spec.DesiredCAChecksum {
+		return false, nil
+	}
+	if op.IsRenewalOperation() && annotations[constants.CertRenewalIDAnnotationKey] != op.CertRenewalID() {
+		return false, nil
+	}
+
+	return true, nil
 }

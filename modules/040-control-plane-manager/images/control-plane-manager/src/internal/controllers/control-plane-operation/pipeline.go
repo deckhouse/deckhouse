@@ -28,12 +28,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+type ClusterSecrets struct {
+	CPMData map[string][]byte
+	PKIData map[string][]byte
+}
+
 // CommandEnv is the input data for command execution: operation state, secrets, and node identity.
 // Commands may mutate State; the pipeline handles all status flushing.
 type CommandEnv struct {
 	State              *controlplanev1alpha1.OperationState
-	CPMSecretData      map[string][]byte
-	PKISecretData      map[string][]byte
+	Secrets            ClusterSecrets
 	Node               NodeIdentity
 	CertsRenewed       bool
 	KubeconfigsRenewed bool
@@ -42,17 +46,16 @@ type CommandEnv struct {
 // reconcilePipeline executes the command-based pipeline for component operations.
 // Completed commands (condition=True) are skipped on requeue.
 // On command failure the failed command condition stays False, so it re-executes on next reconcile.
-func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev1alpha1.OperationState, cpmSecretData, pkiSecretData map[string][]byte, logger *log.Logger) (reconcile.Result, error) {
+func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev1alpha1.OperationState, secrets ClusterSecrets, logger *log.Logger) (reconcile.Result, error) {
 	commandNames := state.Raw().Spec.Commands
 	if err := resolveCommands(r.commands, commandNames); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	env := &CommandEnv{
-		State:         state,
-		CPMSecretData: cpmSecretData,
-		PKISecretData: pkiSecretData,
-		Node:          r.node,
+		State:   state,
+		Secrets: secrets,
+		Node:    r.node,
 	}
 
 	for _, name := range commandNames {

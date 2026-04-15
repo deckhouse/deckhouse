@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -81,37 +80,31 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 // backupFilesForComponent returns the list of absolute file paths that should be backup.
 // Static pod manifest, leaf certs, CA, kubeconfigs, extra files, hot-reload files.
 func backupFilesForComponent(component controlplanev1alpha1.OperationComponent, kubeconfigDir string) []string {
+	deps := componentDepsForComponent(component)
 	var files []string
 
 	if name := component.PodComponentName(); name != "" {
 		files = append(files, filepath.Join(constants.ManifestsPath, name+".yaml"))
 	}
 
-	for _, baseName := range componentLeafCertFiles[component] {
+	for _, leafName := range deps.LeafCertFiles {
+		baseName := string(leafName)
 		files = append(files,
 			filepath.Join(constants.KubernetesPkiPath, baseName+".crt"),
 			filepath.Join(constants.KubernetesPkiPath, baseName+".key"),
 		)
 	}
 
-	for _, relPath := range componentCAFiles[component] {
+	for _, relPath := range deps.CAFiles {
 		files = append(files, filepath.Join(constants.KubernetesPkiPath, relPath))
 	}
 
-	for _, kf := range kubeconfigFilesForComponent(component) {
+	for _, kf := range deps.KubeconfigFiles {
 		files = append(files, filepath.Join(kubeconfigDir, string(kf)))
 	}
 
-	if podName := component.PodComponentName(); podName != "" {
-		for _, key := range checksum.ExtraFileKeysForPodComponent(podName) {
-			files = append(files, filepath.Join(constants.ExtraFilesPath, strings.TrimPrefix(key, "extra-file-")))
-		}
-	}
-
-	if component == controlplanev1alpha1.OperationComponentHotReload {
-		for _, key := range checksum.HotReloadChecksumDependsOn {
-			files = append(files, filepath.Join(constants.ExtraFilesPath, strings.TrimPrefix(key, "extra-file-")))
-		}
+	for _, key := range deps.ExtraFileKeys {
+		files = append(files, filepath.Join(constants.ExtraFilesPath, strings.TrimPrefix(key, "extra-file-")))
 	}
 
 	return files

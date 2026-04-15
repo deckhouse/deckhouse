@@ -45,7 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -142,7 +141,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 
 	// CertObserver is read-only, no secrets needed
 	if op.Spec.Component == controlplanev1alpha1.OperationComponentCertObserver {
-		return r.reconcilePipeline(ctx, state, nil, nil, logger)
+		return r.reconcilePipeline(ctx, state, ClusterSecrets{}, logger)
 	}
 
 	cpmSecret := &corev1.Secret{}
@@ -160,14 +159,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}, pkiSecret); err != nil {
 		return reconcile.Result{}, fmt.Errorf("get pki secret: %w", err)
 	}
+	secrets := ClusterSecrets{CPMData: cpmSecret.Data, PKIData: pkiSecret.Data}
 
 	// Renewal operation not needed isDesiredStale check
 	if op.IsRenewalOperation() {
-		return r.reconcilePipeline(ctx, state, cpmSecret.Data, pkiSecret.Data, logger)
+		return r.reconcilePipeline(ctx, state, secrets, logger)
 	}
 
 	// Verify that the secret content matches what this operation was created for.
-	if stale, reason := isDesiredStale(op, cpmSecret.Data, pkiSecret.Data); stale {
+	if stale, reason := isDesiredStale(op, secrets); stale {
 		if recoveredCmd, recovered, recoverErr := r.recoverInProgressCommitPoint(ctx, state); recoverErr != nil {
 			return reconcile.Result{}, recoverErr
 		} else if recovered {
@@ -179,16 +179,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
-	return r.reconcilePipeline(ctx, state, cpmSecret.Data, pkiSecret.Data, logger)
+	return r.reconcilePipeline(ctx, state, secrets, logger)
 }
 
 // isDesiredStale checks that secret content still matches with desired checksums in the operation spec.
 // Returns true with reason string if stale.
-func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretData, pkiSecretData map[string][]byte) (bool, string) {
+func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets ClusterSecrets) (bool, string) {
 	component := op.Spec.Component
 
 	if component == controlplanev1alpha1.OperationComponentHotReload {
-		freshConfig, err := checksum.HotReloadChecksum(cpmSecretData)
+		freshConfig, err := checksum.HotReloadChecksum(secrets.CPMData)
 		if err != nil {
 			return true, fmt.Sprintf("failed to calculate hot-reload checksum: %v", err)
 		}
@@ -201,7 +201,7 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretDat
 
 	podName := component.PodComponentName()
 
-	freshConfig, err := checksum.ComponentChecksum(cpmSecretData, podName)
+	freshConfig, err := checksum.ComponentChecksum(secrets.CPMData, podName)
 	if err != nil {
 		return true, fmt.Sprintf("failed to calculate config checksum: %v", err)
 	}
@@ -210,7 +210,7 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretDat
 			op.Spec.DesiredConfigChecksum, freshConfig)
 	}
 
-	freshPKI, err := checksum.ComponentPKIChecksum(cpmSecretData, podName)
+	freshPKI, err := checksum.ComponentPKIChecksum(secrets.CPMData, podName)
 	if err != nil {
 		return true, fmt.Sprintf("failed to calculate pki checksum: %v", err)
 	}
@@ -219,7 +219,7 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, cpmSecretDat
 			op.Spec.DesiredPKIChecksum, freshPKI)
 	}
 
-	freshCA, err := checksum.PKIChecksum(pkiSecretData)
+	freshCA, err := checksum.PKIChecksum(secrets.PKIData)
 	if err != nil {
 		return true, fmt.Sprintf("failed to calculate ca checksum: %v", err)
 	}
@@ -290,47 +290,6 @@ func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOpe
 	default:
 		return false, nil
 	}
-}
-
-func manifestMatchesDesired(op *controlplanev1alpha1.ControlPlaneOperation) (bool, error) {
-	podComponent := op.Spec.Component.PodComponentName()
-	if podComponent == "" {
-		return false, nil
-	}
-
-	path := filepath.Join(constants.ManifestsPath, podComponent+".yaml")
-	content, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("read manifest %s: %w", path, err)
-	}
-
-	pod := &corev1.Pod{}
-	if err := yaml.Unmarshal(content, pod); err != nil {
-		return false, fmt.Errorf("unmarshal manifest %s: %w", path, err)
-	}
-
-	annotations := pod.Annotations
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-
-	if op.Spec.DesiredConfigChecksum != "" && annotations[constants.ConfigChecksumAnnotationKey] != op.Spec.DesiredConfigChecksum {
-		return false, nil
-	}
-	if op.Spec.DesiredPKIChecksum != "" && annotations[constants.PKIChecksumAnnotationKey] != op.Spec.DesiredPKIChecksum {
-		return false, nil
-	}
-	if op.Spec.DesiredCAChecksum != "" && annotations[constants.CAChecksumAnnotationKey] != op.Spec.DesiredCAChecksum {
-		return false, nil
-	}
-	if op.IsRenewalOperation() && annotations[constants.CertRenewalIDAnnotationKey] != op.CertRenewalID() {
-		return false, nil
-	}
-
-	return true, nil
 }
 
 func hotReloadChecksumFromDisk(extraFilesDir string) (string, error) {

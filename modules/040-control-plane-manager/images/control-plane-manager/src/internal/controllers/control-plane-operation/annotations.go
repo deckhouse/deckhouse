@@ -16,7 +16,10 @@ limitations under the License.
 
 package controlplaneoperation
 
-import "control-plane-manager/internal/constants"
+import (
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
+)
 
 type checksumAnnotations struct {
 	ConfigChecksum      string
@@ -46,4 +49,23 @@ func desiredChecksumAnnotations(spec checksumAnnotations) map[string]string {
 	}
 
 	return result
+}
+
+func buildSyncManifestAnnotations(op *controlplanev1alpha1.ControlPlaneOperation, env *CommandEnv) checksumAnnotations {
+	certRenewalID := ""
+	if env.CertsRenewed {
+		certRenewalID = op.Name
+	}
+	kubeconfigRenewalID := ""
+	if env.KubeconfigsRenewed {
+		kubeconfigRenewalID = op.Name
+	}
+
+	return checksumAnnotations{
+		ConfigChecksum:      op.Spec.DesiredConfigChecksum,
+		PKIChecksum:         op.Spec.DesiredPKIChecksum,
+		CAChecksum:          op.Spec.DesiredCAChecksum,
+		CertRenewalID:       certRenewalID,
+		KubeconfigRenewalID: kubeconfigRenewalID,
+	}
 }

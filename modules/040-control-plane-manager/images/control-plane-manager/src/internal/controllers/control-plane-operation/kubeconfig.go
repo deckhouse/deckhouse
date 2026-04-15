@@ -28,21 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 )
 
-// kubeconfigFilesForComponent returns the kubeconfig files that belong to the given component.
-// Returns nil for components without kubeconfigs - Etcd, HotReload, PKI.
-func kubeconfigFilesForComponent(c controlplanev1alpha1.OperationComponent) []kubeconfig.File {
-	switch c {
-	case controlplanev1alpha1.OperationComponentKubeAPIServer:
-		return []kubeconfig.File{kubeconfig.Admin, kubeconfig.SuperAdmin}
-	case controlplanev1alpha1.OperationComponentKubeControllerManager:
-		return []kubeconfig.File{kubeconfig.ControllerManager}
-	case controlplanev1alpha1.OperationComponentKubeScheduler:
-		return []kubeconfig.File{kubeconfig.Scheduler}
-	default:
-		return nil
-	}
-}
-
 // renewKubeconfigsForComponent idempotentally generates kubeconfig files belonging to the given component.
 // validates existing files (CA bytes, server address, cert expiry) before writing.
 func renewKubeconfigsForComponent(
@@ -50,7 +35,7 @@ func renewKubeconfigsForComponent(
 	secretData map[string][]byte,
 	pkiDir, kubeconfigDir, advertiseIP string,
 ) (bool, error) {
-	files := kubeconfigFilesForComponent(component)
+	files := componentDepsForComponent(component).KubeconfigFiles
 	if len(files) == 0 {
 		return false, nil
 	}
@@ -88,11 +73,6 @@ func hasRegeneratedKubeconfigs(report kubeconfig.KubeconfigApplyReport) bool {
 		}
 	}
 	return false
-}
-
-// needsRootKubeconfig returns true if the component owns admin.conf (need create /root/.kube/config symlink).
-func needsRootKubeconfig(c controlplanev1alpha1.OperationComponent) bool {
-	return c == controlplanev1alpha1.OperationComponentKubeAPIServer
 }
 
 // updateRootKubeconfig ensures /root/.kube/config is a symlink to admin.conf.
