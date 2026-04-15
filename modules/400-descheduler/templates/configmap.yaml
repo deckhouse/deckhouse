@@ -43,6 +43,10 @@ data:
       {{- if dig "strategies" "lowNodeUtilization" "enabled" false $d }}
       - name: "LowNodeUtilization"
         args:
+          {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
+          metricsUtilization:
+            metricsServer: true
+          {{- end }}
           {{- $s := unset ($d.strategies.lowNodeUtilization | deepCopy) "enabled" }}
           {{- $s | toYaml | nindent 10 }}
       {{- end }}
