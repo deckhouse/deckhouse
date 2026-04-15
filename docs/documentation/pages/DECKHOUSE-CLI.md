@@ -17,22 +17,22 @@ The `d8 delivery-kit` and `d8 mirror` command groups are not available in Commun
 
 `d8` commands are grouped by purpose:
 
-| Commands | Purpose |
-|---|---|
-| [`d8 k`](../d8/reference/#d8-k) | Commands for working with Kubernetes resources. Functionally equivalent to `kubectl`. |
-| [`d8 system`](../d8/reference/#d8-system) | Commands for working with platform system settings, configuration, modules, queues, packages, and system logs. |
-| [`d8 status`](../d8/reference/#d8-status) | Command for obtaining the current platform status. |
-| [`d8 backup`](../d8/reference/#d8-backup) | Commands for creating backups of key cluster data and generating diagnostic dumps. |
-| [`d8 mirror`](../d8/reference/#d8-mirror) | Commands for copying the platform component images to the local filesystem or a third-party container registry. |
+| Commands | Purpose                                                                                                                                              |
+|---|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`d8 k`](../d8/reference/#d8-k) | Commands for managing a cluster (functionally equivalent to `kubectl`).                                                                              |
+| [`d8 system`](../d8/reference/#d8-system) | Commands for working with platform system settings, configuration, modules, queues, packages, and system logs.                                       |
+| [`d8 status`](../d8/reference/#d8-status) | Command for obtaining the current platform status.                                                                                                   |
+| [`d8 backup`](../d8/reference/#d8-backup) | Commands for creating backups of key cluster data and generating diagnostic dumps.                                                                   |
+| [`d8 mirror`](../d8/reference/#d8-mirror) | Commands for copying the platform component images to the local filesystem or a third-party container registry.                                      |
 | [`d8 delivery-kit`](../d8/reference/#d8-delivery-kit) | Commands for building, publishing, planning, and deploying applications, as well as for working with Helm, registries, SBOM, and related operations. |
-| [`d8 data`](../d8/reference/#d8-data) | Commands for managing data, as well as exporting and importing it. |
-| [`d8 v`](../d8/reference/#d8-v) | Commands for working with virtual machines created in Deckhouse Virtualization Platform. |
-| [`d8 user`](../d8/reference/#d8-user) | Commands for managing Deckhouse users. |
-| [`d8 stronghold`](../d8/reference/#d8-stronghold) | Commands related to the Deckhouse Stronghold. |
-| [`d8 network`](../d8/reference/#d8-network) | Commands for performing network-related operations in the Deckhouse ecosystem, including CNI migration. |
-| [`d8 completion`](../d8/reference/#d8-completion) | Commands for generating shell completion scripts. |
-| [`d8 tools`](../d8/reference/#d8-tools) | Auxiliary utilities. |
-| [`d8 help`](../d8/reference/#d8-help) | Built-in help. |
+| [`d8 data`](../d8/reference/#d8-data) | Commands for managing data, as well as exporting and importing it.                                                                                   |
+| [`d8 v`](../d8/reference/#d8-v) | Commands for working with virtual machines created a cluster.                                                                                        |
+| [`d8 user`](../d8/reference/#d8-user) | Commands for managing Deckhouse users.                                                                                                               |
+| [`d8 stronghold`](../d8/reference/#d8-stronghold) | Commands for managing the lifecycle of secrets (stronghold module)                                                                                                        |
+| [`d8 network`](../d8/reference/#d8-network) | Commands for performing network-related operations in the Deckhouse ecosystem, including CNI migration.                                              |
+| [`d8 completion`](../d8/reference/#d8-completion) | Commands for generating shell completion scripts.                                                                                                    |
+| [`d8 tools`](../d8/reference/#d8-tools) | Auxiliary utilities.                                                                                                                                 |
+| [`d8 help`](../d8/reference/#d8-help) | Built-in help.                                                                                                                                       |
 
 ## How do I install the Deckhouse CLI?
 
