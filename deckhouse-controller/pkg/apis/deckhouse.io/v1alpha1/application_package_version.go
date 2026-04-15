@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"slices"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -105,6 +106,10 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	PackageMetadata *ApplicationPackageVersionStatusMetadata `json:"packageMetadata,omitempty"`
 
+	// Schemas for validating settings and values passed to the package.
+	// +optional
+	PackageSchemas *ApplicationPackageVersionStatusSchema `json:"packageSchemas,omitempty"`
+
 	// Conditions represent the latest available observations of the package version's state.
 	// +optional
 	// +patchMergeKey=type
@@ -120,6 +125,11 @@ type ApplicationPackageVersionStatus struct {
 	// Number of applications using this package version.
 	// +optional
 	UsedByCount int `json:"usedByCount,omitempty"`
+}
+
+type ApplicationPackageVersionStatusSchema struct {
+	SettingsSchema *apiextensionsv1.CustomResourceValidation `json:"settingsSchema,omitempty"`
+	ValuesSchema   *apiextensionsv1.CustomResourceValidation `json:"valuesSchema,omitempty"`
 }
 
 type ApplicationPackageVersionStatusInstance struct {

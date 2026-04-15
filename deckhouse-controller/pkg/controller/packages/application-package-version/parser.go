@@ -32,6 +32,12 @@ const (
 	// versionFile is the name of the JSON file inside the image tar that contains the package version.
 	versionFile = "version.json"
 
+	// valuesSchemaFile is the OpenAPI schema validating the computed Helm values for the package.
+	valuesSchemaFile = "values.yaml"
+
+	// settingsSchemaFile is the OpenAPI schema validating user-supplied Application.spec.settings.
+	settingsSchemaFile = "config-values.yaml"
+
 	// maxMetadataFileSize limits the size of individual metadata files extracted from tar archives.
 	// This guards against OOM from malicious or corrupted images containing oversized entries.
 	maxMetadataFileSize = 1 << 20 // 1 MB
@@ -39,9 +45,11 @@ const (
 
 // packageMetadata holds all metadata extracted from a package image tar archive.
 type packageMetadata struct {
-	version    string
-	changelog  packageChangelog
-	definition dto.ApplicationDefinition
+	version           string
+	changelog         packageChangelog
+	definition        dto.ApplicationDefinition
+	rawSettingsSchema []byte
+	rawValuesSchema   []byte
 }
 
 // packageChangelog represents user-facing release notes for a package version.
@@ -53,9 +61,11 @@ type packageChangelog struct {
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
 // Each buffer may remain empty if the corresponding file is absent from the archive.
 type metadataReader struct {
-	definitionReader *bytes.Buffer
-	versionReader    *bytes.Buffer
-	changelogReader  *bytes.Buffer
+	definitionReader     *bytes.Buffer
+	versionReader        *bytes.Buffer
+	changelogReader      *bytes.Buffer
+	valuesSchemaReader   *bytes.Buffer
+	settingsSchemaReader *bytes.Buffer
 }
 
 // parseVersionMetadataByImage extracts package metadata from a tar-formatted image reader.
@@ -118,6 +128,14 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 		switch hdr.Name {
 		case versionFile:
 			if _, err = io.Copy(r.versionReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
+				return err
+			}
+		case valuesSchemaFile:
+			if _, err = io.Copy(r.valuesSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
+				return err
+			}
+		case settingsSchemaFile:
+			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
 		case "changelog.yaml", "changelog.yml":
