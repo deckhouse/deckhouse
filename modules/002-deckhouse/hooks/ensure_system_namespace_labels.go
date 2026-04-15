@@ -21,17 +21,28 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:         "d8_system_ns",
+			ApiVersion:   "v1",
+			Kind:         "Namespace",
+			NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+			FilterFunc:   filterD8SystemNamespace,
+		},
+	},
 }, enableExtendedMonitoring)
 
 func enableExtendedMonitoring(_ context.Context, input *go_hook.HookInput) error {
 	d8SystemPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
+				"heritage": "deckhouse",
 				"extended-monitoring.deckhouse.io/enabled":      "",
 				"prometheus.deckhouse.io/rules-watcher-enabled": "true",
 			},
@@ -52,6 +63,14 @@ func enableExtendedMonitoring(_ context.Context, input *go_hook.HookInput) error
 	input.PatchCollector.PatchWithMutatingFunc(removeDeprecatedAnnotation, "v1", "Namespace", "", "kube-system")
 
 	return nil
+}
+
+func filterD8SystemNamespace(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	labels := obj.GetLabels()
+	if labels["heritage"] == "deckhouse" {
+		return nil, nil
+	}
+	return obj.GetName(), nil
 }
 
 func removeDeprecatedAnnotation(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
