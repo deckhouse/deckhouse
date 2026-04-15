@@ -83,8 +83,22 @@ imageSpec:
 image: tests
 fromImage: tests-prebuild
 import:
-{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
-{{ include "installer_and_installer_standalone_opentofu_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+- image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /terraform/terraform
+  to: /dhctl-tests/bin/terraform
+  before: setup
+- image: opentofu # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
+  add: /opentofu/opentofu
+  to: /dhctl-tests/bin/opentofu
+  before: setup
+- image: {{ .TF.yandex.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ .TF.yandex.artifactBinary }}
+  to: /dhctl-tests/plugins/registry.opentofu.org/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $.TF.yandex.version }}/linux_amd64/{{ .TF.yandex.destinationBinary }}
+  before: setup
+- image: {{ .TF.gcp.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
+  add: /{{ .TF.gcp.artifactBinary }}
+  to: /dhctl-tests/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ $.TF.gcp.version }}/linux_amd64/{{ .TF.gcp.destinationBinary }}
+  before: setup
 - image: images-digests
   add: /images_digests.json
   to: /deckhouse/modules/images_digests.json
@@ -99,9 +113,4 @@ git:
   stageDependencies:
     setup:
     - "**/*"
-shell:
-  setup:
-  - mkdir /dhctl-tests
-  - ln -s -v /bin /dhctl-tests/bin
-  - ln -s -v /plugins /dhctl-tests/plugins
 {{- end }}
