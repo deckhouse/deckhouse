@@ -31,6 +31,7 @@ type ControlPlaneState struct {
 	UpToDateCount          int
 	DesiredComponentCount  int
 	UpToDateComponentCount int
+	StepsCompleted         int
 	Phase                  ControlPlanePhase
 	MasterNodes            map[string]*MasterNode
 	versions               *version.UniqueAggregator
@@ -45,7 +46,7 @@ const (
 	ControlPlaneVersionDrift ControlPlanePhase = "VersionDrift"
 )
 
-func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion string) (*ControlPlaneState, error) {
+func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion, sourceVersion string) (*ControlPlaneState, error) {
 	masterNodes, err := buildControlPlaneTopology(controlPlanePods, desiredVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get components state: %w", err)
@@ -57,13 +58,24 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion strin
 		versions:     version.NewUniqueAggregator(),
 	}
 
-	res.aggregateNodesState()
+	res.aggregateNodesState(sourceVersion, desiredVersion)
 
 	return res, nil
 }
 
-func (s *ControlPlaneState) aggregateNodesState() {
-	var desiredCount, upToDateCount, desiredComponentsCount, upToDateComponentsCount int
+func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion string) {
+	srcMinor, hasSrc := version.MinorInt(sourceVersion)
+	dstMinor, hasDst := version.MinorInt(desiredVersion)
+
+	hops := 0
+	if hasSrc && hasDst && srcMinor != dstMinor {
+		hops = dstMinor - srcMinor
+		if hops < 0 {
+			hops = -hops
+		}
+	}
+
+	var desiredCount, upToDateCount, desiredComponentsCount, upToDateComponentsCount, stepsCompleted int
 	var phase ControlPlanePhase
 
 	for _, masterNode := range s.MasterNodes {
@@ -83,6 +95,10 @@ func (s *ControlPlaneState) aggregateNodesState() {
 				updatingComponents++
 			case ControlPlaneComponentUpToDate:
 				upToDateComponentsCount++
+			}
+
+			if hops > 0 {
+				stepsCompleted += version.ComponentSteps(component.Version, srcMinor, dstMinor)
 			}
 		}
 
@@ -112,5 +128,6 @@ func (s *ControlPlaneState) aggregateNodesState() {
 	s.UpToDateCount = upToDateCount
 	s.DesiredComponentCount = desiredComponentsCount
 	s.UpToDateComponentCount = upToDateComponentsCount
+	s.StepsCompleted = stepsCompleted
 	s.Phase = phase
 }

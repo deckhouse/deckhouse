@@ -25,14 +25,26 @@ import (
 )
 
 type NodesState struct {
-	DesiredCount  int
-	UpToDateCount int
-	versions      *version.UniqueAggregator
+	DesiredCount   int
+	UpToDateCount  int
+	StepsCompleted int
+	versions       *version.UniqueAggregator
 }
 
-func GetNodesState(nodes []corev1.Node, desiredVersion string) (*NodesState, error) {
+func GetNodesState(nodes []corev1.Node, desiredVersion, sourceVersion string) (*NodesState, error) {
 	res := &NodesState{
 		versions: version.NewUniqueAggregator(),
+	}
+
+	srcMinor, hasSrc := version.MinorInt(sourceVersion)
+	dstMinor, hasDst := version.MinorInt(desiredVersion)
+
+	hops := 0
+	if hasSrc && hasDst && srcMinor != dstMinor {
+		hops = dstMinor - srcMinor
+		if hops < 0 {
+			hops = -hops
+		}
 	}
 
 	var err error
@@ -49,6 +61,10 @@ func GetNodesState(nodes []corev1.Node, desiredVersion string) (*NodesState, err
 		}
 
 		res.versions.Set(v)
+
+		if hops > 0 {
+			res.StepsCompleted += version.ComponentSteps(v, srcMinor, dstMinor)
+		}
 	}
 
 	return res, nil
