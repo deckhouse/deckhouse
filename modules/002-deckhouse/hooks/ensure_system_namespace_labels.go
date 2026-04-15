@@ -66,6 +66,10 @@ func enableExtendedMonitoring(_ context.Context, input *go_hook.HookInput) error
 }
 
 func filterD8SystemNamespace(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	labels := obj.GetLabels()
+	if labels["heritage"] == "deckhouse" {
+		return nil, nil
+	}
 	return obj.GetName(), nil
 }
 
