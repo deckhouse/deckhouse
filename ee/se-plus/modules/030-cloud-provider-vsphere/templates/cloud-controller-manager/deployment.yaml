@@ -60,7 +60,7 @@ spec:
     metadata:
       labels:
         app: cloud-controller-manager
-         {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
         security.deckhouse.io/security-policy-exception: cloud-controller-manager
         {{- end }}
       annotations:

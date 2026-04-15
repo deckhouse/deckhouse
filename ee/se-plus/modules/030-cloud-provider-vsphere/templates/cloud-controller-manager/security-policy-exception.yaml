@@ -14,6 +14,6 @@ spec:
         description: |
           Allow host network access for Cloud Controller Manager.
           The Cloud Controller Manager requires host network access to communicate
-          with the zVirt (oVirt) API for managing infrastructure resources, including
+          with the vSphere API for managing infrastructure resources, including
           node lifecycle management and storage operations.
 {{- end }}
