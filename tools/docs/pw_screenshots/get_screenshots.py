@@ -25,7 +25,17 @@ def _load_config() -> dict[str, Any]:
     return yaml.safe_load(_STEPS_PATH.read_text(encoding="utf-8"))
 
 
+def _flatten_screenshot_specs(config: dict[str, Any]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for block in config["screenshots"]:
+        group = block["group"]
+        for item in block["items"]:
+            out.append({**item, "group": group})
+    return out
+
+
 CONFIG = _load_config()
+SCREENSHOT_SPECS = _flatten_screenshot_specs(CONFIG)
 
 
 def _full_url(main_url: str, relative: str) -> str:
@@ -83,8 +93,8 @@ def capture_screenshot(page: Page, spec: dict[str, Any]) -> None:
 
 @pytest.mark.parametrize(
     "spec",
-    CONFIG["screenshots"],
-    ids=[s["filename"] for s in CONFIG["screenshots"]],
+    SCREENSHOT_SPECS,
+    ids=[f'{s["group"]}/{s["filename"]}' for s in SCREENSHOT_SPECS],
 )
 def test_screenshot_from_steps(page: Page, spec: dict[str, Any]) -> None:
     capture_screenshot(page, spec)
