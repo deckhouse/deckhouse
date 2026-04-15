@@ -56,7 +56,7 @@ check_container_in_range(container, field_path, field_name, ranges, spe_path, la
   }
 }
 
-# Check array of port values against ranges
+# Check array of numeric port values against ranges
 check_ports_in_ranges(ports, field_name, ranges, spe_ranges) := result if {
   count(ports) == 0
   result := {"allowed": true, "msg": ""}
@@ -110,3 +110,77 @@ port_in_spe(port, spe_ranges) if {
   count(spe_ranges) > 0
   is_in_any_range(port, spe_ranges)
 }
+
+# Check array of port objects {"port": int, "protocol": string} against ranges and SPE port/protocol list.
+check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) := result if {
+  count(ports) == 0
+  result := {"allowed": true, "msg": ""}
+}
+
+check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) := result if {
+  count(ports) > 0
+  spe_ports := sanitize_spe_ports(spe_ports_raw)
+  every p in ports {
+    port_object_allowed(p, ranges, spe_ports)
+  }
+  result := {"allowed": true, "msg": ""}
+}
+
+check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) := result if {
+  count(ports) > 0
+  spe_ports := sanitize_spe_ports(spe_ports_raw)
+  bad := first_disallowed_port(ports, ranges, spe_ports)
+  ctx := spe_range_ctx(bad.port, ranges, spe_ports)
+  result := {
+    "allowed": false,
+    "msg": sprintf("%v: port %v is out of allowed ranges %v. %v", [field_name, bad.port, ranges, ctx])
+  }
+}
+
+port_object_allowed(port_obj, ranges, spe_ports) if {
+  is_in_any_range(port_obj.port, ranges)
+}
+
+port_object_allowed(port_obj, ranges, spe_ports) if {
+  not is_in_any_range(port_obj.port, ranges)
+  port_object_in_spe(port_obj, spe_ports)
+}
+
+first_disallowed_port(ports, ranges, spe_ports) := bad if {
+  bad := ports[_]
+  not is_in_any_range(bad.port, ranges)
+  not port_object_in_spe(bad, spe_ports)
+}
+
+port_object_in_spe(port_obj, spe_ports) if {
+  spe := spe_ports[_]
+  spe.port == port_obj.port
+  upper(spe.protocol) == upper(port_obj.protocol)
+}
+
+sanitize_spe_ports(spe_ports_raw) := sanitized if {
+  sanitized := [
+    {"port": p.port, "protocol": normalize_protocol(object.get(p, "protocol", "TCP"))} |
+    p := spe_ports_raw[_]
+    not is_number(p)
+    object.get(p, "port", null) != null
+  ]
+}
+
+sanitize_spe_ports(spe_ports_raw) := sanitized if {
+  sanitized := [
+    {"port": p, "protocol": "TCP"} |
+    p := spe_ports_raw[_]
+    is_number(p)
+  ]
+}
+
+normalize_protocol(p) := "TCP" if {
+  p == ""
+}
+
+normalize_protocol(p) := out if {
+  p != ""
+  out := upper(p)
+}
+

@@ -66,7 +66,7 @@ spec:
               package d8.security_policies
 
               import data.lib.check_bool.check_pod_bool
-              import data.lib.check_range.check_ports_in_ranges
+              import data.lib.check_range.check_ports_with_protocol_in_ranges
               import data.lib.common.input_containers
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
@@ -85,8 +85,8 @@ spec:
                 host_network := object.get(obj.spec, "hostNetwork", false)
                 ports := collect_ports(obj, host_network)
                 spe := resolve_spe_from_labels(obj.metadata.labels, obj.metadata.namespace)
-                spe_ranges := allowed_values_or_empty(spe, ["spec", "network", "hostPorts"])
-                range_result := check_ports_in_ranges(ports, "hostPorts", input.parameters.ranges, spe_ranges)
+                spe_ports := allowed_values_or_empty(spe, ["spec", "network", "hostPorts"])
+                range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", input.parameters.ranges, spe_ports)
                 not both_allowed(bool_result, range_result)
                 msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. | %v | %v", [obj.metadata.name, bool_result.msg, range_result.msg])
               }
@@ -97,14 +97,26 @@ spec:
               }
 
               collect_ports(obj, host_network) := ports if {
-                host_ports := [hp | hp := input_containers[_].ports[_].hostPort]
-                container_ports := [cp | cp := input_containers[_].ports[_].containerPort]
+                host_ports := [
+                  {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
+                  p := input_containers[_].ports[_]
+                  object.get(p, "hostPort", null) != null
+                ]
+                container_ports := [
+                  {"port": p.containerPort, "protocol": object.get(p, "protocol", "TCP")} |
+                  p := input_containers[_].ports[_]
+                  object.get(p, "containerPort", null) != null
+                ]
                 host_network
                 ports := array.concat(host_ports, container_ports)
               }
 
               collect_ports(obj, host_network) := ports if {
-                host_ports := [hp | hp := input_containers[_].ports[_].hostPort]
+                host_ports := [
+                  {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
+                  p := input_containers[_].ports[_]
+                  object.get(p, "hostPort", null) != null
+                ]
                 not host_network
                 ports := host_ports
               }
