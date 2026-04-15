@@ -986,10 +986,26 @@ spec:
                         required:
                           - dropLabels
                           - action
+                      - properties:
+                          addLabels: {}
+                          action:
+                            enum:
+                              - AddLabels
+                        required:
+                          - addLabels
+                          - action
+                      - properties:
+                          replaceValue: {}
+                          action:
+                            enum:
+                              - ReplaceValue
+                        required:
+                          - replaceValue
+                          - action
                     properties:
                       action:
                         type: string
-                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels"]
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels", "AddLabels", "ReplaceValue"]
                         description: Type of a transformation.
                       replaceKeys:
                         type: object
@@ -1129,6 +1145,39 @@ spec:
                                   items:
                                     type: string
                                     pattern: ^[a-zA-Z0-9_.\-/]+$
+                      addLabels:
+                        type: object
+                        required:
+                          - setLabels
+                        properties:
+                          when:
+                            type: array
+                            items:
+                              type: string
+                              pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
+                          setLabels:
+                            type: object
+                            propertyNames:
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
+                            additionalProperties:
+                              type: string
+                      replaceValue:
+                        type: object
+                        required:
+                          - source
+                          - target
+                          - labels
+                        properties:
+                          source:
+                            type: string
+                            pattern: '^[a-zA-Z0-9_\s\\\[\](){}?*+.^$\-=!:,''"|<>~#/@]+$'
+                          target:
+                            type: string
+                          labels:
+                            type: array
+                            items:
+                              type: string
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-"/:'']+$'
                 buffer:
                   type: object
                   oneOf:
