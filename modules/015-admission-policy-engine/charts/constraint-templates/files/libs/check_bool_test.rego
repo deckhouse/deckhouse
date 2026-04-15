@@ -219,21 +219,3 @@ inventory_pod_allow_false := {
   }
 }
 
-inventory_pod_allow_false := {
-  "namespace": {
-    "default": {
-      "deckhouse.io/v1alpha1": {
-        "SecurityPolicyException": {
-          "spe": {
-            "metadata": {"name": "spe"},
-            "spec": {
-              "network": {
-                "hostPID": {"allowedValue": false}
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}

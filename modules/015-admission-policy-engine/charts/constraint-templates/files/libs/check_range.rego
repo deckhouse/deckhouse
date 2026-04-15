@@ -138,18 +138,29 @@ check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) :=
 }
 
 port_object_allowed(port_obj, ranges, spe_ports) if {
+  count(ranges) > 0
   is_in_any_range(port_obj.port, ranges)
+  spe_port_requirement_satisfied(port_obj, spe_ports)
 }
 
 port_object_allowed(port_obj, ranges, spe_ports) if {
-  not is_in_any_range(port_obj.port, ranges)
+  count(ranges) == 0
+  count(spe_ports) > 0
+  port_object_in_spe(port_obj, spe_ports)
+}
+
+spe_port_requirement_satisfied(_, spe_ports) if {
+  count(spe_ports) == 0
+}
+
+spe_port_requirement_satisfied(port_obj, spe_ports) if {
+  count(spe_ports) > 0
   port_object_in_spe(port_obj, spe_ports)
 }
 
 first_disallowed_port(ports, ranges, spe_ports) := bad if {
   bad := ports[_]
-  not is_in_any_range(bad.port, ranges)
-  not port_object_in_spe(bad, spe_ports)
+  not port_object_allowed(bad, ranges, spe_ports)
 }
 
 port_object_in_spe(port_obj, spe_ports) if {
@@ -159,20 +170,25 @@ port_object_in_spe(port_obj, spe_ports) if {
 }
 
 sanitize_spe_ports(spe_ports_raw) := sanitized if {
-  sanitized := [
-    {"port": p.port, "protocol": normalize_protocol(object.get(p, "protocol", "TCP"))} |
+  sanitized := [entry |
     p := spe_ports_raw[_]
-    not is_number(p)
-    object.get(p, "port", null) != null
+    entry := spe_port_entry(p)
+    entry != null
   ]
 }
 
-sanitize_spe_ports(spe_ports_raw) := sanitized if {
-  sanitized := [
-    {"port": p, "protocol": "TCP"} |
-    p := spe_ports_raw[_]
-    is_number(p)
-  ]
+spe_port_entry(p) := {"port": p, "protocol": "TCP"} if {
+  is_number(p)
+}
+
+spe_port_entry(p) := {"port": object.get(p, "port", null), "protocol": normalize_protocol(object.get(p, "protocol", "TCP"))} if {
+  not is_number(p)
+  object.get(p, "port", null) != null
+}
+
+spe_port_entry(p) := null if {
+  not is_number(p)
+  object.get(p, "port", null) == null
 }
 
 normalize_protocol(p) := "TCP" if {

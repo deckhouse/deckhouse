@@ -108,26 +108,10 @@ test_ports_with_protocol_spe_mismatch_contains_sanitized_spe if {
   result := check_range.check_ports_with_protocol_in_ranges(ports, "hostPorts", [], spe_ports)
   result.allowed == false
   contains(result.msg, "forbidden: 8086; policy allows: []")
-  contains(result.msg, "SPE allows: [{\"port\":8086,\"protocol\":\"TCP\"}]")
+  contains(result.msg, "SPE allows: [{\"port\": 8086, \"protocol\": \"TCP\"}]")
   not contains(result.msg, "metadata")
 }
 
-test_ports_with_protocol_spe_match if {
-  ports := [{"port": 8086, "protocol": "TCP"}]
-  spe_ports := [{"port": 8086, "protocol": "TCP", "metadata": {"description": "influx"}}]
-  result := check_range.check_ports_with_protocol_in_ranges(ports, "hostPorts", [], spe_ports)
-  result.allowed == true
-}
-
-test_ports_with_protocol_spe_mismatch_contains_sanitized_spe if {
-  ports := [{"port": 8086, "protocol": "UDP"}]
-  spe_ports := [{"port": 8086, "protocol": "TCP", "metadata": {"description": "influx"}}]
-  result := check_range.check_ports_with_protocol_in_ranges(ports, "hostPorts", [], spe_ports)
-  result.allowed == false
-  contains(result.msg, "forbidden: 8086; policy allows: []")
-  contains(result.msg, "SPE allows: [{\"port\":8086,\"protocol\":\"TCP\"}]")
-  not contains(result.msg, "metadata")
-}
 
 inventory_spe := {
   "namespace": {
