@@ -106,6 +106,10 @@ spe_range_ctx(actual, policy_ranges, spe_allowed) := out if {
   out := sprintf("forbidden: %v; policy allows: %v; SPE allows: %v", [actual, policy_ranges, spe_allowed])
 }
 
+spe_port_ctx(port_obj, policy_ranges, spe_allowed) := out if {
+  out := sprintf("forbidden: {\"port\": %v, \"protocol\": \"%v\"}; policy allows: %v; SPE allows: %v", [port_obj.port, upper(port_obj.protocol), policy_ranges, spe_allowed])
+}
+
 port_in_spe(port, spe_ranges) if {
   count(spe_ranges) > 0
   is_in_any_range(port, spe_ranges)
@@ -130,10 +134,10 @@ check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) :=
   count(ports) > 0
   spe_ports := sanitize_spe_ports(spe_ports_raw)
   bad := first_disallowed_port(ports, ranges, spe_ports)
-  ctx := spe_range_ctx(bad.port, ranges, spe_ports)
+  ctx := spe_port_ctx(bad, ranges, spe_ports)
   result := {
     "allowed": false,
-    "msg": sprintf("%v: port %v is out of allowed ranges %v. %v", [field_name, bad.port, ranges, ctx])
+    "msg": sprintf("%v: port %v/%v is out of allowed ranges %v. %v", [field_name, bad.port, bad.protocol, ranges, ctx])
   }
 }
 

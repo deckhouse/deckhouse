@@ -88,12 +88,20 @@ spec:
                 spe_ports := allowed_values_or_empty(spe, ["spec", "network", "hostPorts"])
                 range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", input.parameters.ranges, spe_ports)
                 not both_allowed(bool_result, range_result)
-                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. | %v | %v", [obj.metadata.name, bool_result.msg, range_result.msg])
+                msg := format_violation_message(obj.metadata.name, bool_result.msg, range_result.msg)
               }
 
               both_allowed(a, b) if {
                 a.allowed
                 b.allowed
+              }
+
+              format_violation_message(pod_name, bool_msg, range_msg) := msg if {
+                parts := [m |
+                  m := [bool_msg, range_msg][_]
+                  m != ""
+                ]
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. %v", [pod_name, concat(" | ", parts)])
               }
 
               collect_ports(obj, host_network) := ports if {
