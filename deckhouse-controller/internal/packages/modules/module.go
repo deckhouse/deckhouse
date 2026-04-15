@@ -351,7 +351,7 @@ func (m *Module) DisableHooks() {
 	kubeHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeHooks {
 		if hook.GetHookController() != nil {
-			hook.GetHookController().StopMonitors()
+			hook.GetHookController().DisableKubernetesBindings()
 		}
 	}
 
