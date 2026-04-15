@@ -29,12 +29,3 @@ extractedLinksMax: 0
   * [`csi-scsi-generic`](/modules/csi-scsi-generic/);
   * [`csi-vsphere`](/modules/csi-vsphere/);
   * [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/).
-
-В подразделе на данный момент описаны модули:
-
-* [`local-path-provisioner`](local-path-provisioner.html);
-* [`snapshot-controller`](snapshot-controller.html);
-* [`sds-local-volume`](sds-local-volume.html);
-* [`sds-node-configurator`](sds-node-configurator.html).
-
-Материалы по остальным модулям подсистемы Storage будут добавляться по мере готовности.
