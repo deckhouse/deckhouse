@@ -1413,7 +1413,23 @@ entries:
             - title:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
-              url: /architecture/storage/sds-node-configurator.html               
+              url: /architecture/storage/sds-node-configurator.html
+            - title:
+                en: Storage system modules
+                ru: Модули системы хранения
+              folders:
+                - title:
+                    en: Csi-nfs module
+                    ru: Модуль csi-nfs
+                  url: /architecture/storage/external/csi-nfs.html
+            - title:
+                en: CSI drivers
+                ru: CSI-драйверы
+              folders:
+                - title:
+                    en: NFS CSI driver
+                    ru: CSI-драйвер NFS
+                  url: /architecture/storage/csi-drivers/csi-driver-nfs.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
