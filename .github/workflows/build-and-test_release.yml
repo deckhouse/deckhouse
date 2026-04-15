@@ -44,7 +44,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_VERSION: "v0.29.20"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
   WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
@@ -403,7 +403,7 @@ jobs:
       - name: Install d8 CLI
         run: |
           mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
           mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
@@ -807,7 +807,7 @@ jobs:
       - name: Install d8 CLI
         run: |
           mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
           mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
@@ -1211,7 +1211,7 @@ jobs:
       - name: Install d8 CLI
         run: |
           mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
           mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
@@ -1603,7 +1603,7 @@ jobs:
       - name: Install d8 CLI
         run: |
           mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
           mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
@@ -1995,7 +1995,7 @@ jobs:
       - name: Install d8 CLI
         run: |
           mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
           mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
@@ -2387,7 +2387,7 @@ jobs:
       - name: Install d8 CLI
         run: |
           mkdir -p bin
-          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
           mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
