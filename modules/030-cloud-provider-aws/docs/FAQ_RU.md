@@ -136,4 +136,8 @@ title: "Cloud provider — AWS: FAQ"
 
    Примените эту политику в `Amazon ECR` > `Private registry` > `Repositories` > `{{ name }}` > `Permissions`.
 
-2. Добавьте `ecr:GetAuthorizationToken` [в additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
+1. Добавьте `ecr:GetAuthorizationToken` [в additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
+
+## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
+
+Если переключение на заказ узлов в менее приоритетных группах занимает много времени (например, когда для групп узлов со spot-инстансами установлен наивысший приоритет и при недоступности таких инстансов заказ узлов из других групп происходит очень долго), воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).
