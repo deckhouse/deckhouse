@@ -22,9 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
@@ -36,7 +34,7 @@ import (
 
 // backupCommand creates a per-component backup of files.
 // Now it is always the first command in every pipeline.
-// Write into tmpDir, promote to finalDir via rename only on success.
+// Writes directly into per-operation final directory.
 type backupCommand struct{}
 
 func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
@@ -45,20 +43,7 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 	files := backupFilesForComponent(component, env.Node.KubeconfigDir)
 
 	componentBackupDir := filepath.Join(constants.BackupBasePath, string(component))
-	tmpDir := filepath.Join(componentBackupDir, backupTmpPrefix+operationName)
-
-	// Remove any leftover tmp from a previously crashed attempt of this operation.
-	// Other operations tmp dirs not affected.
-	if err := os.RemoveAll(tmpDir); err != nil {
-		return reconcile.Result{}, fmt.Errorf("clean previous tmp backup: %w", err)
-	}
-
-	success := false
-	defer func() {
-		if !success {
-			_ = os.RemoveAll(tmpDir)
-		}
-	}()
+	finalDir := filepath.Join(componentBackupDir, operationName)
 
 	wasBackupped := false
 	for _, src := range files {
@@ -69,7 +54,7 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("relative path for %s: %w", src, err)
 		}
-		dst := filepath.Join(tmpDir, rel)
+		dst := filepath.Join(finalDir, rel)
 
 		if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
 			return reconcile.Result{}, fmt.Errorf("create backup dir: %w", err)
@@ -83,16 +68,8 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 
 	if !wasBackupped {
 		logger.Info("no files to back up for component", slog.String("component", string(component)))
-		success = true
 		return reconcile.Result{}, nil
 	}
-
-	timestamp := time.Now().UTC().Format("2006-01-02T15-04-05")
-	finalDir := filepath.Join(componentBackupDir, fmt.Sprintf("%s__%s", timestamp, operationName))
-	if err := os.Rename(tmpDir, finalDir); err != nil {
-		return reconcile.Result{}, fmt.Errorf("finalize backup: %w", err)
-	}
-	success = true
 
 	if err := rotateBackups(componentBackupDir, constants.MaxBackupsPerComponent); err != nil {
 		logger.Warn("failed to rotate backups", log.Err(err))
@@ -100,9 +77,6 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 
 	return reconcile.Result{}, nil
 }
-
-// backupTmpPrefix marks in-progress per-operation tmp directories under a component backup dir.
-const backupTmpPrefix = ".tmp-"
 
 // backupFilesForComponent returns the list of absolute file paths that should be backup.
 // Static pod manifest, leaf certs, CA, kubeconfigs, extra files, hot-reload files.
@@ -143,44 +117,7 @@ func backupFilesForComponent(component controlplanev1alpha1.OperationComponent, 
 	return files
 }
 
-// rotateBackups keeps only the N most recent completed backup directories under componentBackupDir.
-// In-progress tmp directories (prefix backupTmpPrefix) are ignored.
+// rotateBackups keeps only the N most recent backup directories under componentBackupDir.
 func rotateBackups(componentBackupDir string, keep int) error {
-	entries, err := os.ReadDir(componentBackupDir)
-	if err != nil {
-		return fmt.Errorf("read backup dir: %w", err)
-	}
-
-	type backupEntry struct {
-		name  string
-		mtime time.Time
-	}
-	var backups []backupEntry
-	for _, e := range entries {
-		if !e.IsDir() || strings.HasPrefix(e.Name(), backupTmpPrefix) {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil {
-			return fmt.Errorf("stat backup %s: %w", e.Name(), err)
-		}
-		backups = append(backups, backupEntry{name: e.Name(), mtime: info.ModTime()})
-	}
-
-	if len(backups) <= keep {
-		return nil
-	}
-
-	sort.Slice(backups, func(i, j int) bool {
-		return backups[i].mtime.After(backups[j].mtime)
-	})
-
-	for _, b := range backups[keep:] {
-		path := filepath.Join(componentBackupDir, b.name)
-		if err := os.RemoveAll(path); err != nil {
-			return fmt.Errorf("remove old backup %s: %w", b.name, err)
-		}
-	}
-
-	return nil
+	return rotateDirectories(componentBackupDir, keep)
 }

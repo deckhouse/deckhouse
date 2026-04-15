@@ -59,12 +59,7 @@ func prepareManifestBytes(component controlplanev1alpha1.OperationComponent, sec
 	return manifest, nil
 }
 
-// writeStaticPodManifest expands env vars in the template, sets checksum annotations and writes the manifest to manifestDir/<component>.yaml atomically.
-func writeStaticPodManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string) error {
-	_, err := writeStaticPodManifestIfChanged(component, secretData, annotations, manifestDir)
-	return err
-}
-
+// writeStaticPodManifestIfChanged expands env vars in the template, sets checksum annotations and writes the manifest to manifestDir/<component>.yaml atomically.
 func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations, manifestDir string) (fileWriteResult, error) {
 	manifest, err := prepareManifestBytes(component, secretData, annotations)
 	if err != nil {
@@ -75,13 +70,8 @@ func writeStaticPodManifestIfChanged(component controlplanev1alpha1.OperationCom
 	return writeFileIfChanged(filename, manifest, 0o600)
 }
 
-// updateChecksumAnnotations reads an existing manifest from disk and updates the given checksum annotations
+// updateChecksumAnnotationsIfChanged reads an existing manifest from disk and updates the given checksum annotations
 // Empty strings are not changed. Used for UpdatePKI command where only checksums change, not the template.
-func updateChecksumAnnotations(component controlplanev1alpha1.OperationComponent, annotations checksumAnnotations, manifestDir string) error {
-	_, err := updateChecksumAnnotationsIfChanged(component, annotations, manifestDir)
-	return err
-}
-
 func updateChecksumAnnotationsIfChanged(component controlplanev1alpha1.OperationComponent, annotations checksumAnnotations, manifestDir string) (fileWriteResult, error) {
 	filename := filepath.Join(manifestDir, component.PodComponentName()+".yaml")
 	existing, err := os.ReadFile(filename)
@@ -116,12 +106,6 @@ func setChecksumAnnotations(manifestBytes []byte, annotations checksumAnnotation
 	return out, nil
 }
 
-// writeSecretExtraFiles writes selected secret keys as files under extraFilesDir (names without extra-file- prefix)
-func writeSecretExtraFiles(secretData map[string][]byte, extraFilesDir string, keys []string) error {
-	_, err := writeSecretExtraFilesIfChanged(secretData, extraFilesDir, keys)
-	return err
-}
-
 func writeSecretExtraFilesIfChanged(secretData map[string][]byte, extraFilesDir string, keys []string) ([]fileWriteResult, error) {
 	if len(keys) == 0 {
 		return nil, nil
@@ -144,11 +128,6 @@ func writeSecretExtraFilesIfChanged(secretData map[string][]byte, extraFilesDir 
 		results = append(results, result)
 	}
 	return results, nil
-}
-
-func writeExtraFiles(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) error {
-	_, err := writeExtraFilesIfChanged(component, secretData, extraFilesDir)
-	return err
 }
 
 // removeStaleExtraFiles removes extra-files from disk that belong to this component but no longer present in the secret
@@ -187,12 +166,7 @@ func writeExtraFilesIfChanged(component controlplanev1alpha1.OperationComponent,
 	return writeSecretExtraFilesIfChanged(secretData, extraFilesDir, checksum.ExtraFileKeysForPodComponent(podName))
 }
 
-// writeHotReloadFiles writes config files that kube-apiserver picks up without restart (see checksum.HotReloadChecksumDependsOn).
-func writeHotReloadFiles(secretData map[string][]byte, extraFilesDir string) error {
-	_, err := writeHotReloadFilesIfChanged(secretData, extraFilesDir)
-	return err
-}
-
+// writeHotReloadFilesIfChanged writes config files that kube-apiserver picks up without restart (see checksum.HotReloadChecksumDependsOn).
 func writeHotReloadFilesIfChanged(secretData map[string][]byte, extraFilesDir string) ([]fileWriteResult, error) {
 	return writeSecretExtraFilesIfChanged(secretData, extraFilesDir, checksum.HotReloadChecksumDependsOn)
 }

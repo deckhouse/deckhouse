@@ -20,9 +20,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
@@ -30,11 +28,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pmezard/go-difflib/difflib"
 )
-
-type diffEntry struct {
-	name  string
-	mtime time.Time
-}
 
 func saveDiffResults(component controlplanev1alpha1.OperationComponent, operationName string, results []fileWriteResult, logger *log.Logger) {
 	for i := range results {
@@ -67,16 +60,12 @@ func ensureOperationDiffDir(component controlplanev1alpha1.OperationComponent, o
 		return "", fmt.Errorf("create component diff dir: %w", err)
 	}
 
-	existing, err := findExistingOperationDiffDir(componentDir, operationName)
-	if err != nil {
-		return "", err
+	opDir := filepath.Join(componentDir, operationName)
+	if _, err := os.Stat(opDir); err == nil {
+		return opDir, nil
+	} else if !os.IsNotExist(err) {
+		return "", fmt.Errorf("stat operation diff dir: %w", err)
 	}
-	if existing != "" {
-		return existing, nil
-	}
-
-	dirName := fmt.Sprintf("%s__%s", time.Now().UTC().Format("2006-01-02T15-04-05"), operationName)
-	opDir := filepath.Join(componentDir, dirName)
 	if err := os.MkdirAll(opDir, 0o700); err != nil {
 		return "", fmt.Errorf("create operation diff dir: %w", err)
 	}
@@ -88,65 +77,8 @@ func ensureOperationDiffDir(component controlplanev1alpha1.OperationComponent, o
 	return opDir, nil
 }
 
-func findExistingOperationDiffDir(componentDir, operationName string) (string, error) {
-	entries, err := os.ReadDir(componentDir)
-	if err != nil {
-		return "", fmt.Errorf("read component diff dir: %w", err)
-	}
-
-	var matches []diffEntry
-	suffix := "__" + operationName
-	for _, e := range entries {
-		if !e.IsDir() || !strings.HasSuffix(e.Name(), suffix) {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil {
-			return "", fmt.Errorf("stat diff dir %s: %w", e.Name(), err)
-		}
-		matches = append(matches, diffEntry{name: e.Name(), mtime: info.ModTime()})
-	}
-	if len(matches) == 0 {
-		return "", nil
-	}
-
-	sort.Slice(matches, func(i, j int) bool {
-		return matches[i].mtime.After(matches[j].mtime)
-	})
-	return filepath.Join(componentDir, matches[0].name), nil
-}
-
 func rotateDiffs(componentDiffDir string, keep int) error {
-	entries, err := os.ReadDir(componentDiffDir)
-	if err != nil {
-		return fmt.Errorf("read diff dir: %w", err)
-	}
-
-	var dirs []diffEntry
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		info, err := e.Info()
-		if err != nil {
-			return fmt.Errorf("stat diff dir %s: %w", e.Name(), err)
-		}
-		dirs = append(dirs, diffEntry{name: e.Name(), mtime: info.ModTime()})
-	}
-	if len(dirs) <= keep {
-		return nil
-	}
-
-	sort.Slice(dirs, func(i, j int) bool {
-		return dirs[i].mtime.After(dirs[j].mtime)
-	})
-
-	for _, d := range dirs[keep:] {
-		if err := os.RemoveAll(filepath.Join(componentDiffDir, d.name)); err != nil {
-			return fmt.Errorf("remove old diff %s: %w", d.name, err)
-		}
-	}
-	return nil
+	return rotateDirectories(componentDiffDir, keep)
 }
 
 func diffSubdirForPath(path string) string {
