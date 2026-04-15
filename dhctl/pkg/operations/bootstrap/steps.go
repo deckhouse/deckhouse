@@ -765,9 +765,13 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 }
 
 func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, infrastructureContext *infrastructure.Context) error {
-	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
-		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext)
-	})
+	if len(terraNodeGroups) > 0 {
+		return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
+			return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext)
+		})
+	}
+
+	return nil
 }
 
 func SaveBastionHostToCache(host string) {
