@@ -176,7 +176,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -241,6 +246,7 @@ jobs:
         run: |
           mkdir -p bin
           INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
           echo "$(pwd)/bin" >> "$GITHUB_PATH"
       # </template: d8cli_install_step>
 
@@ -376,8 +382,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type d8 && source $(d8 dk ci-env github --verbose --as-file)
-          d8 dk build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -491,7 +497,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -600,7 +611,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -711,7 +727,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -875,7 +896,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -988,7 +1014,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1102,7 +1133,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1215,7 +1251,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1320,7 +1361,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1581,7 +1627,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2

@@ -67,7 +67,12 @@ jobs:
       id: split
       env:
         REPO: ${{ github.repository }}
-      run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      run: |
+        if [ $REPO == "deckhouse/deckhouse" ]; then
+          echo "name=deckhouse" >> $GITHUB_OUTPUT
+        else
+          echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+        fi
     - name: Import secrets
       id: secrets
       uses: hashicorp/vault-action@v2
@@ -103,6 +108,7 @@ jobs:
       run: |
         mkdir -p bin
         INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+        mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
         echo "$(pwd)/bin" >> "$GITHUB_PATH"
     # </template: d8cli_install_step>
 
