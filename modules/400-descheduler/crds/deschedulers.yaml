@@ -682,12 +682,11 @@ spec:
                     removePodsHavingTooManyRestarts:
                       type: object
                       description: |-
-                        The strategy ensures that pods having too many restarts are removed from nodes.
-                        Pods where the sum of all container restarts (including init containers) exceeds the configured
-                        `podRestartThreshold` are evicted.
+                        The strategy evicts pods having too many restarts from nodes.
 
-                        This is useful for removing pods that are crash-looping or experiencing repeated failures,
-                        freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
+                        Pods become eviction candidates when the total number of restarts across all containers, including init containers, exceeds the `podRestartThreshold` threshold.
+                        
+                        This strategy is useful for evicting pods in the `CrashLoopBackOff` state or with repeated failures, as well as for freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
                       properties:
                         enabled:
                           type: boolean
