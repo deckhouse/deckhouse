@@ -44009,6 +44009,7 @@
       "description": "Deckhouse Stronghold commands",
       "aliases": null,
       "flags": {},
+<<<<<<< HEAD
       "subcommands": [
         {
           "name": "audit",
@@ -44820,6 +44821,9 @@
           "subcommands": null
         }
       ]
+=======
+      "subcommands": null
+>>>>>>> b36297ba1d ([candi, docs] regenerate d8 CLI documentation for v0.29.20)
     },
     {
       "name": "system",
