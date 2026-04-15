@@ -1,0 +1,23 @@
+{%- assign installer_data = site.data.getting_started.installer.screenshots -%}
+{%- assign total_slides = 0 -%}
+{%- for block in installer_data.screenshots -%}
+  {%- for item in block.items -%}
+    {%- assign total_slides = total_slides | plus: 1 -%}
+  {%- endfor -%}
+{%- endfor -%}
+{%- if total_slides > 0 -%}
+<div class="installer_box installer-carousel" data-slick>
+  {%- for block in installer_data.screenshots -%}
+    {%- for item in block.items -%}
+  <div class="installer-carousel__slide">
+    <img
+      src="/images/gs/installer/{{ item.filename }}"
+      alt=""
+      loading="lazy"
+      decoding="async"
+    />
+  </div>
+    {%- endfor -%}
+  {%- endfor -%}
+</div>
+{%- endif -%}

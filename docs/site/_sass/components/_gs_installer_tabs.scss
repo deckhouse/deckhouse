@@ -1,3 +1,22 @@
+.installer-carousel {
+  margin: 20px auto;
+  max-width: 100%;
+}
+
+.installer-carousel__slide {
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.installer-carousel__slide img {
+  display: block;
+  max-width: min(100%, 960px);
+  height: auto;
+  margin: 0 auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
 .installer_box {
   max-width: 100%;
   padding-top: 20px;
