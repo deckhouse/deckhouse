@@ -2715,6 +2715,10 @@ select#contact-select {
       list-style-type: none;
       color: #9e9e9e;
 
+      @include breakpoints.max-w(s) {
+        line-height: 16px;
+      }
+
       li {
         padding: 0;
         margin: 0;
