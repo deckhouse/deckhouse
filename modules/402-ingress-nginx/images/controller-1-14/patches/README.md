@@ -152,9 +152,6 @@ This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issu
 There is a race condition on Ingress-NGINX controller start that may result in controller forming incomplete NGINX configuration (not processing some ingress objects).
 The fix is to use registration when checking if informer has been synced.
 
-### 025-fix-forwarded-header-validation-in-srv-redirect.patch
+### 025-santize-xff-headers-when-redirecting-from-www.patch
 
-This patch validates the `X-Forwarded-Port` and `X-Forwarded-Proto` in ngx_srv_redirect.lua before using it to construct the Location.
-
-Without validation, attacker-controlled redirect headers could influence the generation of redirect URLs and lead to the creation of incorrect or attacker-controlled redirect targets, enabling open redirects and phishing attacks.
-
+This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
