@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-c2167a7b3cc90a41182606ceaec2db0b24311690a9a2f974d6190b35c543bd2e",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -23,6 +23,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T14:40:21.010201Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 связана с подменой PATH при вызове команды kenv на платформах BSD и Solaris в OpenTelemetry-Go. Образ cluster-autoscaler в Deckhouse собирается и выполняется под Linux; kenv относится к BSD/Solaris и в этом окружении не задействуется, эксплуатация в рамках поддерживаемого сценария невозможна.",
+      "timestamp": "2026-04-14T12:00:00.000000Z"
     },
     {
       "vulnerability": {
@@ -96,5 +110,5 @@
     }
   ],
   "timestamp": "2026-03-04T14:40:21Z",
-  "last_updated": "2026-03-23T09:38:11Z"
+  "last_updated": "2026-04-14T12:00:00Z"
 }
