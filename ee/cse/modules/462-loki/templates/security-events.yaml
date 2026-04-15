@@ -1,0 +1,130 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "kind" "security-events")) | nindent 2 }}
+  name: se-runtime-audit-engine
+spec:
+  type: KubernetesPods
+  destinationRefs:
+    - se-d8-loki
+  labelFilter:
+    - field: message
+      operator: Regex
+      values:
+        - '^\{.+'
+    - field: container
+      operator: In
+      values: ["falco"]
+    - field: message
+      operator: NotRegex
+      values:
+        - .*Falco metrics snapshot.*
+        - .*command=(ip6tables|iptables) .* pcmdline=cilium-agent.* # All iptables commands from cilium-agent
+        - .*command=cilium-operator --config-dir=/tmp/cilium/config-map --leader-election-lease-duration=25s --leader-election-renew-deadline=20s.*
+        - .*command=lvm.static pvs.*
+        - .*command=nginx-ingress-c.*
+        - .*command=cp -r /available_hooks/modules/140-user-authz.*
+        - .*K8s Serviceaccount (Created|Deleted).*ka\.user\.name":"system:.*
+        - .*K8s Pod (Created|Deleted) \(user=system:.*
+        - .*Service account created in kube namespace \(user=system:.*
+        - .*user=system:serviceaccount:d8-system:deckhouse pod=prometheus-(longterm|main)-\d resource=pods ns=d8-monitoring action=exec command=df.*
+        - .*upmeter-probe-namespace.*
+        - .*manager --enable-leader-election.* #proc.cmdline": "manager --enable-leader-election --metrics-addr=:8080 --health-probe-addr=:8000 --logtostderr=true --leader-election-namespace=d8-ingress-nginx --namespace=d8-ingress-nginx --v=5 --feature-gates=ResourcesDeletionProtection=true,PodWebhook=false --sync-period=0 --advancedcronjob-workers=0 --broadcastjob-workers=0 --cloneset-workers=0 --crr-workers=0 --imagepulljob-workers=0 --nodeimage-workers=0 --nodepodprobe-workers=0 --persistentpodstate-workers=0 --podprobemarker-workers=0 --podunavailablebudget-workers=0 --resourcedistribution-workers=0 --sidecarset-workers=0 --statefulset-workers=0 --uniteddeployment-workers=0 --workloadspread-workers=0 --leader-election-resource-lock=leases --leader-election-retry-period=10s --leader-election-lease-duration=35s --leader-election-renew-deadline=30s",
+        - .*filename=/tmp/.*/etc/kubernetes/deckhouse.* # new executable created in a container (user=root user_loginuid=-1 command=controller pid=895303 filename=/tmp/cac912e8605cafa636a779d728e15fe9d3b45607d2125f9503e6caab2585d2eb/etc/kubernetes/deckhouse name=<NA> mode=S_IXUSR|S_IWUSR|S_IRUSR event=fchmodat)",
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          "kubernetes.io/metadata.name": d8-runtime-audit-engine
+    labelSelector:
+      matchLabels:
+        app: runtime-audit-engine
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "kind" "security-events")) | nindent 2 }}
+  name: se-user-authn
+spec:
+  type: KubernetesPods
+  destinationRefs:
+    - se-d8-loki
+  labelFilter:
+    - field: message
+      operator: Regex
+      values:
+        - .*(failed login attempt|login successful).*
+    - field: container
+      operator: In
+      values: ["dex"]
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          "kubernetes.io/metadata.name": d8-user-authn
+    labelSelector:
+      matchLabels:
+        app: dex
+
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "kind" "security-events")) | nindent 2 }}
+  name: se-virtualization
+spec:
+  type: KubernetesPods
+  destinationRefs:
+    - se-d8-loki
+  labelFilter:
+    - field: message
+      operator: Regex
+      values:
+        - '^\{.+'
+    - field: container
+      operator: In
+      values: ["virtualization-audit"]
+  kubernetesPods:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          "kubernetes.io/metadata.name": d8-virtualization
+    labelSelector:
+      matchLabels:
+        app: virtualization-audit
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: se-containerd-verification-failed
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "kind" "security-events")) | nindent 2 }}
+spec:
+  destinationRefs:
+    - se-d8-loki
+  file:
+    include:
+      - /var/log/containerd/containerd-integrity.log
+  labelFilter:
+    - field: message
+      operator: NotRegex
+      values:
+        - .*namespace=d8-upmeter.*
+  type: File
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name "kind" "security-events")) | nindent 2 }}
+  name: se-d8-loki
+spec:
+  loki:
+    endpoint: "https://loki.d8-monitoring:3100"
+    auth:
+      strategy: "Bearer"
+      token: {{ .Values.loki.internal.logShipperToken | quote }}
+    tls:
+      verifyHostname: false
+      verifyCertificate: false
+  type: Loki
+  extraLabels:
+    deckhouse_io_type: "security-event"
