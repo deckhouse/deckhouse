@@ -6,18 +6,27 @@
   {%- endfor -%}
 {%- endfor -%}
 {%- if total_slides > 0 -%}
-<div class="installer_box installer-carousel" data-slick>
-  {%- for block in installer_data.screenshots -%}
-    {%- for item in block.items -%}
-  <div class="installer-carousel__slide">
-    <img
-      src="/images/gs/installer/{{ item.filename }}"
-      alt=""
-      loading="lazy"
-      decoding="async"
-    />
+<div class="installer_box installer-carousel" data-installer-carousel>
+  <div class="installer-carousel__viewport">
+    <div class="installer-carousel__track">
+      {%- for block in installer_data.screenshots -%}
+        {%- for item in block.items -%}
+      <div class="installer-carousel__slide">
+        <img
+          src="/images/gs/installer/{{ item.filename }}"
+          alt=""
+          decoding="async"
+        />
+      </div>
+        {%- endfor -%}
+      {%- endfor -%}
+    </div>
   </div>
-    {%- endfor -%}
-  {%- endfor -%}
+  {%- if total_slides > 1 -%}
+  <div class="installer-carousel__nav" role="group" aria-label="{% if page.lang == 'ru' %}Слайды{% else %}Slides{% endif %}">
+    <button type="button" class="installer-carousel__prev" aria-label="{% if page.lang == 'ru' %}Предыдущий слайд{% else %}Previous slide{% endif %}">←</button>
+    <button type="button" class="installer-carousel__next" aria-label="{% if page.lang == 'ru' %}Следующий слайд{% else %}Next slide{% endif %}">→</button>
+  </div>
+  {%- endif -%}
 </div>
 {%- endif -%}
