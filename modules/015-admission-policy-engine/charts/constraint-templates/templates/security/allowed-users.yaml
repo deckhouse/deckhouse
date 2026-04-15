@@ -146,6 +146,7 @@ spec:
               import data.lib.common.has_field
               import data.lib.common.input_containers
               import data.lib.exception.allowed_values_or_empty
+              import data.lib.exception.path_value_resolved
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.range.is_in_any_range
 
@@ -176,7 +177,11 @@ spec:
                 not accept_users(rule, provided_user)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := sprintf("Actual runAsUser: %v", [provided_user])
-                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [container.name, actual_value, allowed_by_policy])
+                labels := object.get(input.review.object.metadata, "labels", {})
+                namespace := object.get(input.review.object.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
+                spe_ctx := run_as_user_spe_ctx(spe, provided_user, params)
+                msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
 
               get_user_violation(params, container) := msg if {
@@ -184,7 +189,11 @@ spec:
                 params.rule == "MustRunAs"
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set"
-                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [container.name, actual_value, allowed_by_policy])
+                labels := object.get(input.review.object.metadata, "labels", {})
+                namespace := object.get(input.review.object.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
+                spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
+                msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
 
               get_user_violation(params, container) := msg if {
@@ -193,7 +202,39 @@ spec:
                 not get_field_value("runAsNonRoot", container, input.review)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set, runAsNonRoot: not set"
-                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [container.name, actual_value, allowed_by_policy])
+                labels := object.get(input.review.object.metadata, "labels", {})
+                namespace := object.get(input.review.object.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
+                spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
+                msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
+              }
+
+              build_user_violation_message(container_name, actual_value, allowed_by_policy, "") := msg if {
+                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [container_name, actual_value, allowed_by_policy])
+              }
+
+              build_user_violation_message(container_name, actual_value, allowed_by_policy, spe_ctx) := msg if {
+                spe_ctx != ""
+                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v | %v", [container_name, actual_value, allowed_by_policy, spe_ctx])
+              }
+
+              run_as_user_spe_ctx(spe, actual, params) := out if {
+                user_path := ["spec", "securityContext", "runAsUser", "allowedValues"]
+                non_root_path := ["spec", "securityContext", "runAsNonRoot", "allowedValue"]
+                has_run_as_user_spe_ctx(spe, user_path, non_root_path)
+                spe_user := allowed_values_or_empty(spe, user_path)
+                spe_non_root := allowed_values_or_empty(spe, non_root_path)
+                out := sprintf("forbidden: %v; policy allows: %v; SPE allows runAsUser: %v; SPE allows runAsNonRoot: %v", [actual, params, spe_user, spe_non_root])
+              } else := "" if {
+                true
+              }
+
+              has_run_as_user_spe_ctx(spe, user_path, _) if {
+                path_value_resolved(spe, user_path)
+              }
+
+              has_run_as_user_spe_ctx(spe, _, non_root_path) if {
+                path_value_resolved(spe, non_root_path)
               }
 
               accept_users("RunAsAny", _) := true
