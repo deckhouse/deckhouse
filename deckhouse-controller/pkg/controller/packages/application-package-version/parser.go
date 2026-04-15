@@ -33,10 +33,10 @@ const (
 	versionFile = "version.json"
 
 	// valuesSchemaFile is the OpenAPI schema validating the computed Helm values for the package.
-	valuesSchemaFile = "values.yaml"
+	valuesSchemaFile = "openapi/values.yaml"
 
 	// settingsSchemaFile is the OpenAPI schema validating user-supplied Application.spec.settings.
-	settingsSchemaFile = "config-values.yaml"
+	settingsSchemaFile = "openapi/config-values.yaml"
 
 	// maxMetadataFileSize limits the size of individual metadata files extracted from tar archives.
 	// This guards against OOM from malicious or corrupted images containing oversized entries.
