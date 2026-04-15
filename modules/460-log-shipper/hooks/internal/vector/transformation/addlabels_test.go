@@ -113,8 +113,7 @@ if err == null {
 				"exists",
 				`.pod_labels.app`,
 				map[string]string{".tag": "x"},
-				`_, err = get(., ["pod_labels", "app"])
-b_0 = err == null
+				`b_0 = exists(.pod_labels.app)
 if b_0 {
 .tag = "x"
 }`,
@@ -123,8 +122,7 @@ if b_0 {
 				"notexists",
 				`!.pod_labels.skip`,
 				map[string]string{".tag": "x"},
-				`_, err = get(., ["pod_labels", "skip"])
-b_0 = err != null
+				`b_0 = !exists(.pod_labels.skip)
 if b_0 {
 .tag = "x"
 }`,

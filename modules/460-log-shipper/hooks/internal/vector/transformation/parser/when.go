@@ -130,15 +130,3 @@ func VRLRegexFindComparisonOp(op WhenOp) (string, error) {
 		return "", fmt.Errorf("when: unsupported regex op %q", op)
 	}
 }
-
-// PresenceOpCmp returns the VRL comparison of get-error to null for exists / not-exists when clauses.
-func (o WhenOp) PresenceOpCmp() string {
-	switch o {
-	case WhenExists:
-		return "=="
-	case WhenNotExists:
-		return "!="
-	default:
-		return ""
-	}
-}

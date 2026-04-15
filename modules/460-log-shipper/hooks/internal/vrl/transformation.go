@@ -76,10 +76,9 @@ if err == null && value != null {
 }
 `
 
-// AddLabelsWhenPresenceLeaf is one addLabels when clause: path exists (opCmp ==) or missing (opCmp !=).
-const AddLabelsWhenPresenceLeaf Rule = `
-_, err = get(., {{.pathArray}})
-b_{{.i}} = err {{.opCmp}} null
+// AddLabelsWhenPresenceLeaf is one addLabels when clause: path exists or missing.
+// Uses exists() — get() returns (null, null) for a missing path, so err does not signal absence.
+const AddLabelsWhenPresenceLeaf Rule = `b_{{.i}} = {{if .negate}}!{{end}}exists({{.dotPath}})
 `
 
 // AddLabelsWhenLeaf is one addLabels when clause: compare or regex on a scalar path value.
