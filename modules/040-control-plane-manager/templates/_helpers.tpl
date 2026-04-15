@@ -35,4 +35,15 @@
     {{- end }}
   {{- end }}
 {{- end }}
+<<<<<<< HEAD
 >>>>>>> 3aeb8370db (test get values of another module)
+=======
+
+{{- define "publish_api_http_route_certificate_name" }}
+  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" }}
+{{- include "helm_lib_module_https_secret_name" (list . "kubernetes-httproute-tls") }}
+  {{- else }}
+{{- include "publish_api_certificate_name" . }}
+  {{- end }}
+{{- end }}
+>>>>>>> d5f97ee237 (add Gateway API templates)
