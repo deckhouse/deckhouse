@@ -14,3 +14,8 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/candi/openapi/cluster_configuration.yaml
+  to: /deckhouse/candi/openapi/cluster_configuration.yaml
+  stageDependencies:
+    install:
+        - '**/*'
