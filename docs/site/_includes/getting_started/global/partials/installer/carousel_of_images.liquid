@@ -1,24 +1,34 @@
 {%- assign installer_data = site.data.getting_started.installer.screenshots -%}
+{%- assign filter_group = include.group | default: '' | strip -%}
 {%- assign total_slides = 0 -%}
 {%- for block in installer_data.screenshots -%}
-  {%- for item in block.items -%}
-    {%- assign total_slides = total_slides | plus: 1 -%}
-  {%- endfor -%}
+  {%- if filter_group == '' or block.group == filter_group -%}
+    {%- for item in block.items -%}
+      {%- assign total_slides = total_slides | plus: 1 -%}
+    {%- endfor -%}
+  {%- endif -%}
 {%- endfor -%}
 {%- if total_slides > 0 -%}
 <div class="installer_box installer-carousel" data-installer-carousel>
   <div class="installer-carousel__viewport">
     <div class="installer-carousel__track">
       {%- for block in installer_data.screenshots -%}
-        {%- for item in block.items -%}
+        {%- if filter_group == '' or block.group == filter_group -%}
+          {%- for item in block.items -%}
       <div class="installer-carousel__slide">
-        <img
-          src="/images/gs/installer/{{ item.filename }}"
-          alt=""
-          decoding="async"
-        />
+        <figure class="installer-carousel__figure">
+          <img
+            src="/images/gs/installer/{{ item.filename }}"
+            alt="{{ item.title | default: '' | escape }}"
+            decoding="async"
+          />
+          {%- if item.title -%}
+          <figcaption class="installer-carousel__caption">{{ item.title | escape }}</figcaption>
+          {%- endif -%}
+        </figure>
       </div>
-        {%- endfor -%}
+          {%- endfor -%}
+        {%- endif -%}
       {%- endfor -%}
     </div>
   </div>

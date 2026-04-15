@@ -4,8 +4,10 @@ screenshots:
   - group: installer_main_page
     items:
       - filename: main_page.png
+        title: 'Главная страница'
         url: ''
       - filename: main_page_archive.png
+        title: 'Главная страница (архив)'
         url: ''
         steps:
           - click: 'Архив'
