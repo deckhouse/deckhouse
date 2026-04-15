@@ -1385,7 +1385,7 @@ entries:
             - title:
                 en: Sds-local-volume module
                 ru: Модуль sds-local-volume
-              url: /architecture/storage/sds-local-volume.html      
+              url: /architecture/storage/sds-local-volume.html
             - title:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
@@ -1400,7 +1400,7 @@ entries:
                   url: /architecture/storage/external/csi-nfs.html
             - title:
                 en: CSI drivers
-                ru: Драйверы CSI
+                ru: CSI-драйверы
               folders:
                 - title:
                     en: NFS CSI driver

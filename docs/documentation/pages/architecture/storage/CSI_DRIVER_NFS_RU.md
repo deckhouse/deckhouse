@@ -6,7 +6,7 @@ search: csi-nfs, nfs
 description: Архитектура CSI-драйвера для работы с NFS-томами в Deckhouse Kubernetes Platform.
 ---
 
-CSI-драйвер `csi-nfs` — реализация [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для управления NFS-томами в Deckhouse Kubernetes Platform (DKP).
+CSI-драйвер `csi-nfs` — это реализация стандарта [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) для управления NFS-томами в Deckhouse Kubernetes Platform (DKP).
 
 ## Архитектура драйвера
 
@@ -24,17 +24,17 @@ CSI-драйвер `csi-nfs` — реализация [Container Storage Interfa
 
 ## Компоненты драйвера
 
-CSI-драйвер состоит из следующих компонентов:
+CSI-драйвер `csi-nfs` состоит из следующих компонентов:
 
 1. **Csi-controller** (Deployment) — Controller Plugin, отвечающий за глобальные операции с томами: создание и удаление, подключение и отключение от узлов, а также управление снимками.
 
    Состоит из следующих контейнеров:
 
-   * **wait-rpcbind** — init-контейнер, ожидающий доступности Unix-сокета службы rpcbind;
+   * **wait-rpcbind** — init-контейнер, ожидающий доступности Unix-сокета службы `rpcbind`;
 
    * **ktls-enabler** — init-контейнер, выполняющий загрузку и проверку модулей ядра Linux на узле для работы в режиме RPC-with-TLS;
 
-   * **net-handshake-checker** — init-контейнер, выполняющий однократный запуск [tlshd](https://github.com/oracle/ktls-utils) для проверки работоспособности `TLS handshake` на уровне ядра ОС;
+   * **net-handshake-checker** — init-контейнер, выполняющий однократный запуск [`tlshd`](https://github.com/oracle/ktls-utils) для проверки работоспособности процедуры TLS handshake на уровне ядра ОС;
 
    * **controller** — основной контейнер, реализующий функциональность CSI-драйвера (capabilities) в виде gRPC-сервисов Identity Service и Controller Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 
@@ -62,11 +62,11 @@ CSI-драйвер состоит из следующих компонентов
 
    Состоит из следующих контейнеров:
 
-   * **wait-rpcbind** — init-контейнер, ожидающий доступности Unix-сокета службы rpcbind;
+   * **wait-rpcbind** — init-контейнер, ожидающий доступности Unix-сокета службы `rpcbind`;
 
    * **ktls-enabler** — init-контейнер, выполняющий загрузку и проверку модулей ядра Linux на узле для работы в режиме RPC-with-TLS;
 
-   * **net-handshake-checker** — init-контейнер, выполняющий однократный запуск [tlshd](https://github.com/oracle/ktls-utils) для проверки работоспособности `TLS handshake` на уровне ядра ОС;
+   * **net-handshake-checker** — init-контейнер, выполняющий однократный запуск [`tlshd`](https://github.com/oracle/ktls-utils) для проверки работоспособности процедуры TLS handshake на уровне ядра ОС;
 
    * **node** — основной контейнер, реализующий функции CSI-драйвера в виде gRPC-сервисов Identity Service и Node Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
 

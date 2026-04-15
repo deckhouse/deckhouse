@@ -5,7 +5,7 @@ search: csi-nfs, nfs
 description: Overview of the CSI driver architecture for NFS-based volumes in Deckhouse Kubernetes Platform.
 ---
 
-The CSI driver `csi-nfs` is the implementation of [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) to manage NFS-based volumes in Deckhouse Kubernetes Platform (DKP).
+The CSI driver `csi-nfs` is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage NFS-based volumes in Deckhouse Kubernetes Platform (DKP).
 
 ## Driver architecture
 
@@ -23,17 +23,17 @@ The Level 2 C4 architecture of the `csi-nfs` CSI driver and its interactions wit
 
 ## Driver components
 
-The CSI driver consists of the following components:
+The `csi-nfs` CSI driver consists of the following components:
 
 1. **Csi-controller** (Deployment): Controller Plugin responsible for global volume operations such as creating and deleting volumes, attaching and detaching volumes from nodes, and managing snapshots.
 
    It consists of the following containers:
 
-   * **wait-rpcbind**: Init-containter. It waits for `rpcbind` is ready and accept connections.
+   * **wait-rpcbind**: Init-container. It waits for when the Unix socket of the `rpcbind` service is ready and accepts connections.
 
-   * **ktls-enabler**: Init-container. It loads and checks kernel modules on the node for RPC-with-TLS support.
+   * **ktls-enabler**: Init-container. It loads and checks Linux kernel modules on the node for RPC-with-TLS support.
 
-   * **net-handshake-checker**: Init-container. It runs [tlshd](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
+   * **net-handshake-checker**: Init-container. It runs [`tlshd`](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
 
    * **controller**: Main container implementing CSI driver functionality (capabilities) through the gRPC services Identity Service and Controller Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
 
@@ -61,11 +61,11 @@ The CSI driver consists of the following components:
 
    It consists of the following containers:
 
-   * **wait-rpcbind**: Init-containter. It waits for `rpcbind` is ready and accept connections.
+   * **wait-rpcbind**: Init-container. It waits for when the Unix socket of the `rpcbind` service is ready and accepts connections.
 
-   * **ktls-enabler**: Init-container. It loads and checks kernel modules on the node for RPC-with-TLS support.
+   * **ktls-enabler**: Init-container. It loads and checks Linux kernel modules on the node for RPC-with-TLS support.
 
-   * **net-handshake-checker**: Init-container. It runs [tlshd](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
+   * **net-handshake-checker**: Init-container. It runs [`tlshd`](https://github.com/oracle/ktls-utils) one time to check kernel TLS handshake support.
 
    * **node**: Main container implementing CSI driver functionality through the gRPC services Identity Service and Node Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
 

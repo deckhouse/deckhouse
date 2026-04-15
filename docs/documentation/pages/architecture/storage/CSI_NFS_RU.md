@@ -28,16 +28,20 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий кастомные ресурсы [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). NFSStorageClass — пользовательский ресурс Kubernetes, определяющий конфигурацию для Kubernetes StorageClass. Создаваемый StorageClass использует `nfs.csi.k8s.io` provisioner. В StorageClass задаются параметры подключения к NFS-серверу, reclaim policy, volume binding mode и другие параметры. Эти параметры используются provisioner’ом CSI-драйвера `csi-nfs` при управлении NFS-томами. Также controller синхронизирует лейблы на узлах с параметром [spec.workloadNodes.nodeSelector](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) кастомного ресурса [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass).
+1. **Controller** — контроллер, обслуживающий кастомные ресурсы [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass). Ресурс NFSStorageClass определяет конфигурацию для создаваемого Kubernetes StorageClass, который использует provisioner `nfs.csi.k8s.io`.
+
+   В создаваемом StorageClass задаются параметры подключения к NFS-серверу, reclaim policy, volume binding mode и другие параметры. Эти параметры затем использует provisioner CSI-драйвера `csi-nfs` при управлении NFS-томами.
+
+   Также controller синхронизирует лейблы на узлах со значением параметра [`spec.workloadNodes.nodeSelector`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-workloadnodes-nodeselector) кастомного ресурса NFSStorageClass.
 
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер;
    * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов ModuleConfig, NFSStorageClass и стандартных ресурсов StorageClass.
 
-2. **Сsi-nfs-scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler, реализует специфичную для подов логику размещения при использовании NFS-томов. При планировании учитываются заданные в кастомном ресурсе NFSStorageClass селекторы узлов.
+2. **Сsi-nfs-scheduler-extender** — состоит из одного контейнера и представляет собой расширение (extender) для kube-scheduler. Реализует специфичную для подов логику размещения при использовании NFS-томов. При планировании подов учитываются селекторы узлов, заданные в кастомном ресурсе NFSStorageClass.
 
-3. **CSI-драйвер (`csi-nfs`)** — реализация CSI-драйвера для `nfs.csi.k8s.io` provisioner ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). С архитектурой CSI-драйвера (`csi-nfs`), используемого в DKP, можно ознакомиться [в разделе документации CSI-драйвера](../../storage/csi-drivers/csi-driver-nfs.html).
+3. **CSI-драйвер (`csi-nfs`)** — реализация CSI-драйвера для provisioner `nfs.csi.k8s.io` ([NFS CSI driver](https://github.com/kubernetes-csi/csi-driver-nfs)). С архитектурой CSI-драйвера `csi-nfs` можно ознакомиться [на странице описания CSI-драйвера](../../storage/csi-drivers/csi-driver-nfs.html).
 
 ## Взаимодействия модуля
 
@@ -51,6 +55,6 @@ description: Архитектура модуля csi-nfs в Deckhouse Kubernetes
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — валидация кастомных ресурсов ModuleConfig, NFSStorageClass, стандартных ресурсов StorageClass.
+1. **Kube-apiserver** — валидация кастомных ресурсов ModuleConfig и NFSStorageClass, а также стандартных ресурсов StorageClass.
 
 2. **Kube-scheduler** — отправка на вебхук `csi-nfs-scheduler-extender` запросов на планирование подов, использующих NFS-тома.
