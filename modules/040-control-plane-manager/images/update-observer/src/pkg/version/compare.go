@@ -79,3 +79,29 @@ func GetMin(v, w string) string {
 func majorMinor(v *semver.Version) string {
 	return fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 }
+
+func MinorInt(v string) (int, bool) {
+	sv, err := semver.NewVersion(v)
+	if err != nil {
+		return 0, false
+	}
+	return int(sv.Minor()), true
+}
+
+func ComponentSteps(componentVersion string, srcMinor, dstMinor int) int {
+	compMinor, ok := MinorInt(componentVersion)
+	if !ok {
+		return 0
+	}
+	hops := dstMinor - srcMinor
+	if hops < 0 {
+		hops = -hops
+	}
+	var steps int
+	if dstMinor > srcMinor {
+		steps = compMinor - srcMinor
+	} else {
+		steps = srcMinor - compMinor
+	}
+	return max(0, min(steps, hops))
+}
