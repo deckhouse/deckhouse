@@ -22,8 +22,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/conditions"
-
-	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -150,9 +148,9 @@ func (r *StaticInstance) ToPending() {
 	r.Status.CurrentStatus = nil
 
 	conditions.Set(r, metav1.Condition{
-		Type:               infrav1.StaticInstanceBootstrapSucceededCondition,
+		Type:               "BootstrapSucceeded",
 		Status:             metav1.ConditionFalse,
-		Reason:             infrav1.StaticInstanceWaitingForNodeRefReason,
+		Reason:             "WaitingForNodeRefToBeAssigned",
 		Message:            "StaticInstance is pending",
 		LastTransitionTime: metav1.Now(),
 	})
