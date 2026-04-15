@@ -155,6 +155,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	etcdVotingMembers := make([]string, 0, len(etcdMembersResp.Members))
 	for _, mem := range etcdMembersResp.Members {
 		if mem.IsLearner {
+			input.Logger.Warn("found learner etcd member, will be skipped", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
 			continue
 		}
 		if ip, ok := discoveredEtcdNodesMap[mem.Name]; ok {
