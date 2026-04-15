@@ -21,6 +21,7 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -86,9 +87,16 @@ func main() {
 		Cache: cache.Options{
 			DefaultTransform: cache.TransformStripManagedFields(),
 			ByObject: map[client.Object]cache.ByObject{
+				// Only cache the single secret needed by the conversion webhook.
+				// Previously all secrets in kube-system were cached, pulling in
+				// Helm release secrets and other heavy objects unnecessarily.
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
-						"kube-system": {},
+						"kube-system": {
+							FieldSelector: fields.SelectorFromSet(fields.Set{
+								"metadata.name": "d8-provider-cluster-configuration",
+							}),
+						},
 					},
 				},
 			},

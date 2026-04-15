@@ -139,7 +139,7 @@ func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
 func TestValidation_NodeTypeImmutability(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 	newNG := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
@@ -156,7 +156,7 @@ func TestValidation_NodeTypeImmutability(t *testing.T) {
 func TestValidation_NodeTypeImmutability_SameType(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 	newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
@@ -170,7 +170,7 @@ func TestValidation_NodeTypeImmutability_SameType(t *testing.T) {
 func TestValidation_MinPerZoneGreaterThanMaxPerZone(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -188,7 +188,7 @@ func TestValidation_MinPerZoneGreaterThanMaxPerZone(t *testing.T) {
 func TestValidation_MinPerZoneLessOrEqualMaxPerZone(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -206,7 +206,7 @@ func TestValidation_MinPerZoneLessOrEqualMaxPerZone(t *testing.T) {
 func TestValidation_DockerCRIForbidden(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeDocker}
@@ -220,7 +220,7 @@ func TestValidation_DockerCRIForbidden(t *testing.T) {
 func TestValidation_ContainerdCRIAllowed(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerd}
@@ -234,7 +234,7 @@ func TestValidation_ContainerdCRIAllowed(t *testing.T) {
 func TestValidation_CRIConfigMismatch_ContainerdConfigWithDockerType(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	maxDl := 10
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
@@ -252,7 +252,7 @@ func TestValidation_CRIConfigMismatch_ContainerdConfigWithDockerType(t *testing.
 func TestValidation_RollingUpdateOnlyForCloudEphemeral(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Disruptions = &v1.DisruptionsSpec{
@@ -268,7 +268,7 @@ func TestValidation_RollingUpdateOnlyForCloudEphemeral(t *testing.T) {
 func TestValidation_RollingUpdateAllowedForCloudEphemeral(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -290,7 +290,7 @@ func TestValidation_DuplicateTaints(t *testing.T) {
 
 	mc := moduleConfigGlobal([]string{"my-key"})
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects().WithRuntimeObjects(mc).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.NodeTemplate = &v1.NodeTemplate{
@@ -311,7 +311,7 @@ func TestValidation_TaintsNotInCustomTolerationKeys(t *testing.T) {
 
 	mc := moduleConfigGlobal([]string{})
 	c := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(mc).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.NodeTemplate = &v1.NodeTemplate{
@@ -329,7 +329,7 @@ func TestValidation_TaintsNotInCustomTolerationKeys(t *testing.T) {
 func TestValidation_TaintsStandardKeysAllowed(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.NodeTemplate = &v1.NodeTemplate{
@@ -350,7 +350,7 @@ func TestValidation_TaintsInCustomTolerationKeys(t *testing.T) {
 
 	mc := moduleConfigGlobal([]string{"custom-key", "another-key"})
 	c := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(mc).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.NodeTemplate = &v1.NodeTemplate{
@@ -371,7 +371,7 @@ func TestValidation_CloudNameLengthTooLong(t *testing.T) {
 	// prefix "my-long-cluster-prefix" = 22 chars → max ng name = 63-22-1-21 = 19
 	sec := clusterConfigSecret("Cloud", "my-long-cluster-prefix", "", 0)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("this-name-is-way-too-long-for-this-cluster", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -390,7 +390,7 @@ func TestValidation_CloudNameLengthOK(t *testing.T) {
 
 	sec := clusterConfigSecret("Cloud", "short", "", 0)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -410,7 +410,7 @@ func TestValidation_StaticCluster_NameLengthNotChecked(t *testing.T) {
 	// Static cluster - name length check should be skipped
 	sec := clusterConfigSecret("Static", "long-prefix-that-would-fail", "", 0)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("this-name-is-very-long-but-should-be-allowed-in-static", v1.NodeTypeStatic)
 
@@ -426,7 +426,7 @@ func TestValidation_UnknownZone(t *testing.T) {
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a", "eu-west-1b"})
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -447,7 +447,7 @@ func TestValidation_ValidZones(t *testing.T) {
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a", "eu-west-1b", "eu-west-1c"})
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -468,7 +468,7 @@ func TestValidation_ZonesValidation_NoProviderConfig(t *testing.T) {
 	// No provider config secret - zones validation is skipped (no zones to check against)
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -489,7 +489,7 @@ func TestValidation_ZonesValidation_SkippedWhenNoZonesSpecified(t *testing.T) {
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a"})
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -507,7 +507,7 @@ func TestValidation_ZonesValidation_SkippedWhenNoZonesSpecified(t *testing.T) {
 func TestValidation_TopologyManagerWithoutResourceReservation(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Kubelet = &v1.KubeletSpec{
@@ -523,7 +523,7 @@ func TestValidation_TopologyManagerWithoutResourceReservation(t *testing.T) {
 func TestValidation_TopologyManagerStaticWithoutCPU(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Kubelet = &v1.KubeletSpec{
@@ -540,7 +540,7 @@ func TestValidation_TopologyManagerStaticWithoutCPU(t *testing.T) {
 func TestValidation_TopologyManagerWithValidConfig(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	cpu := intstr.FromString("500m")
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
@@ -561,7 +561,7 @@ func TestValidation_TopologyManagerWithValidConfig(t *testing.T) {
 func TestValidation_LabelSelectorImmutability(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 	oldNG.Spec.StaticInstances = &v1.StaticInstancesSpec{
@@ -586,7 +586,7 @@ func TestValidation_LabelSelectorImmutability(t *testing.T) {
 func TestValidation_LabelSelectorCanBeAdded(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 
@@ -606,7 +606,7 @@ func TestValidation_LabelSelectorCanBeAdded(t *testing.T) {
 func TestValidation_LabelSelectorCannotBeRemoved(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
 	oldNG.Spec.StaticInstances = &v1.StaticInstancesSpec{
@@ -627,7 +627,7 @@ func TestValidation_LabelSelectorCannotBeRemoved(t *testing.T) {
 func TestValidation_DisruptionWindowsInvalidTime(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Disruptions = &v1.DisruptionsSpec{
@@ -648,7 +648,7 @@ func TestValidation_DisruptionWindowsInvalidTime(t *testing.T) {
 func TestValidation_DisruptionWindowsInvalidDay(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Disruptions = &v1.DisruptionsSpec{
@@ -669,7 +669,7 @@ func TestValidation_DisruptionWindowsInvalidDay(t *testing.T) {
 func TestValidation_ValidDisruptionWindows(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.Disruptions = &v1.DisruptionsSpec{
@@ -692,7 +692,7 @@ func TestValidation_MaxPodsWarning(t *testing.T) {
 
 	sec := clusterConfigSecret("", "", "", 24)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	maxPods := int32(500)
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
@@ -712,7 +712,7 @@ func TestValidation_MaxPodsNoWarningWhenOK(t *testing.T) {
 
 	sec := clusterConfigSecret("", "", "", 24)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	maxPods := int32(100)
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
@@ -732,7 +732,7 @@ func TestValidation_MasterCRIChangeWarning_LessThan3Endpoints(t *testing.T) {
 
 	endpoints := kubernetesEndpoints(2)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(endpoints).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	oldNG := baseNodeGroup("master", v1.NodeTypeCloudPermanent)
 	oldNG.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerd}
@@ -754,7 +754,7 @@ func TestValidation_MasterCRIChangeNoWarning_3OrMoreEndpoints(t *testing.T) {
 
 	endpoints := kubernetesEndpoints(3)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(endpoints).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	oldNG := baseNodeGroup("master", v1.NodeTypeCloudPermanent)
 	oldNG.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerd}
@@ -774,7 +774,7 @@ func TestValidation_MasterCRIChangeNoWarning_3OrMoreEndpoints(t *testing.T) {
 func TestValidation_SimpleCreateAllowed(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 
@@ -788,7 +788,7 @@ func TestValidation_ClusterConfigNotFound_UsesDefaults(t *testing.T) {
 	s := newScheme()
 	// No d8-cluster-configuration secret
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 
@@ -803,7 +803,7 @@ func TestValidation_ProviderConfigNotFound_AnyCluster(t *testing.T) {
 	// No provider config - zones validation is skipped when no provider config exists
 	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
 	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
@@ -822,7 +822,7 @@ func TestValidation_ModuleConfigNotFound_TaintsValidation(t *testing.T) {
 	s := newScheme()
 	// No ModuleConfig - custom taints should be denied
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
 	ng.Spec.NodeTemplate = &v1.NodeTemplate{
@@ -841,7 +841,7 @@ func TestLoadClusterConfig_Success(t *testing.T) {
 	s := newScheme()
 	sec := clusterConfigSecret("Cloud", "my-prefix", "Containerd", 22)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	cfg, err := w.loadClusterConfig(context.Background())
 	if err != nil {
@@ -864,7 +864,7 @@ func TestLoadClusterConfig_Success(t *testing.T) {
 func TestLoadClusterConfig_SecretNotFound(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	cfg, err := w.loadClusterConfig(context.Background())
 	if err != nil {
@@ -879,7 +879,7 @@ func TestLoadProviderClusterConfig_Success(t *testing.T) {
 	s := newScheme()
 	sec := providerConfigSecret([]string{"zone-a", "zone-b"})
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	cfg, err := w.loadProviderClusterConfig(context.Background())
 	if err != nil {
@@ -896,7 +896,7 @@ func TestLoadProviderClusterConfig_Success(t *testing.T) {
 func TestLoadProviderClusterConfig_SecretNotFound(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	cfg, err := w.loadProviderClusterConfig(context.Background())
 	if err != nil {
@@ -914,7 +914,7 @@ func TestLoadProviderClusterConfig_InvalidJSON(t *testing.T) {
 		Data:       map[string][]byte{"cloud-provider-discovery-data.json": []byte("not valid json")},
 	}
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+	w := &NodeGroupValidator{Client: c, APIReader: c, decoder: admission.NewDecoder(s)}
 
 	_, err := w.loadProviderClusterConfig(context.Background())
 	if err == nil {

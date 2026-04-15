@@ -61,8 +61,9 @@ var webhookLog = logf.Log.WithName("nodegroup-webhook")
 // NodeGroupValidator handles validation for NodeGroup resources.
 // It has access to cluster state via Client.
 type NodeGroupValidator struct {
-	Client  client.Client
-	decoder admission.Decoder
+	Client    client.Client
+	APIReader client.Reader
+	decoder   admission.Decoder
 }
 
 // SetupWithManager registers the webhooks with the manager.
@@ -73,8 +74,9 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	// Validating webhook
 	hookServer.Register("/validate-deckhouse-io-v1-nodegroup", &webhook.Admission{
 		Handler: &NodeGroupValidator{
-			Client:  mgr.GetClient(),
-			decoder: decoder,
+			Client:    mgr.GetClient(),
+			APIReader: mgr.GetAPIReader(),
+			decoder:   decoder,
 		},
 	})
 
@@ -454,13 +456,16 @@ type ProviderClusterConfig struct {
 }
 
 // loadClusterConfig reads cluster configuration from d8-cluster-configuration Secret.
+// Uses APIReader (direct API call, bypassing cache) because the cache is scoped
+// to d8-provider-cluster-configuration only. Validation is infrequent, so live
+// reads are acceptable here.
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterConfig, error) {
 	config := &ClusterConfig{PodSubnetNodeCIDRPrefix: 24}
 
 	secret := &corev1.Secret{}
 	webhookLog.Info("reading Secret", "namespace", "kube-system", "name", "d8-cluster-configuration")
-	err := w.Client.Get(ctx, types.NamespacedName{
+	err := w.APIReader.Get(ctx, types.NamespacedName{
 		Namespace: "kube-system",
 		Name:      "d8-cluster-configuration",
 	}, secret)
