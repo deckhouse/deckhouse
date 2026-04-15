@@ -34,6 +34,7 @@ AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowDeleteLogs
 allowVolumeExpansion
 amd
 AMD
@@ -1502,6 +1503,7 @@ UUIDs
 uwsgi
 v1
 ValidationWebhook
+ValidatingAdmissionPolicy
 validator
 vApp
 vApps
