@@ -77,3 +77,8 @@ screenshots:
         steps:
           - click: 'Добавить источник'
           - click: 'Свой источник'
+  - group: infrastructure
+    items:
+      - filename: infrastructure_main_page.png
+        title: 'Страница выбора инфраструктуры'
+        url: '/platforms'
