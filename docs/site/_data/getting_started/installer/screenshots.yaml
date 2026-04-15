@@ -1,0 +1,9 @@
+main_url: 'http://localhost:8080'
+
+screenshots:
+  - filename: main_page.png
+    url: ''
+  - filename: main_page_archive.png
+    url: ''
+    steps:
+      - click: 'Архив'
