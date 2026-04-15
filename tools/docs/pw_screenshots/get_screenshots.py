@@ -13,12 +13,16 @@ SCREENSHOTS_DIR = Path(__file__).resolve().parent / "screenshots"
 VIEWPORT_WIDTH = 1920
 VIEWPORT_HEIGHT = 1080
 WAIT_APP_SELECTOR = "#app > *"
-WAIT_APP_TIMEOUT_MS = 30_000
+WAIT_APP_TIMEOUT_MS = 60_000
 GOTO_WAIT_UNTIL = "load"
 AFTER_STEPS_WAIT = "domcontentloaded"
+# После появления #app и перед скриншотом — паузы для догрузки SPA (без настроек в YAML).
+SETTLE_AFTER_APP_MS = 2_500
+SETTLE_BEFORE_SCREENSHOT_MS = 1_500
 
 # После клика в SPA события load / domcontentloaded снова не приходят — ждём таймер + кадры отрисовки.
 _POST_CLICK_MS = 600
+_WAIT_POPUP_MS = 15_000
 
 
 def _load_config() -> dict[str, Any]:
@@ -45,8 +49,71 @@ def _full_url(main_url: str, relative: str) -> str:
     return urljoin(base, relative.lstrip("/"))
 
 
-def _apply_click(page: Page, text: str) -> None:
-    page.get_by_text(text).click()
+def _apply_click_step(page: Page, spec: Any) -> None:
+    """click: строка — сначала пункт меню (menuitem), иначе по тексту (скрытые h3 и т.п. не кликаются).
+    dict: testid | selector | text (+ role, exact, nth для уточнения)."""
+    if isinstance(spec, str):
+        menu = page.get_by_role("menuitem", name=spec)
+        if menu.count() > 0:
+            menu.first.click()
+        else:
+            page.get_by_text(spec).first.click()
+        return
+    if not isinstance(spec, dict):
+        raise TypeError(f"steps: click ожидает строку или dict, получено {type(spec)!r}")
+    if "testid" in spec:
+        tid = spec["testid"]
+        if not isinstance(tid, str):
+            raise TypeError("steps: click.testid ожидает строку")
+        page.get_by_test_id(tid).click()
+        return
+    if "selector" in spec:
+        sel = spec["selector"]
+        if not isinstance(sel, str):
+            raise TypeError("steps: click.selector ожидает строку")
+        page.locator(sel).first.click()
+        return
+    if "text" in spec:
+        text = spec["text"]
+        if not isinstance(text, str):
+            raise TypeError("steps: click.text ожидает строку")
+        role = spec.get("role")
+        exact = bool(spec.get("exact", False))
+        nth = int(spec.get("nth", 0))
+        if role is not None:
+            if not isinstance(role, str):
+                raise TypeError("steps: click.role ожидает строку")
+            page.get_by_role(role, name=text, exact=exact).nth(nth).click()
+        else:
+            page.get_by_text(text, exact=exact).nth(nth).click()
+        return
+    raise ValueError("steps: click — строка или dict: testid | selector | text (+ role?, exact?, nth?)")
+
+
+def _apply_hover(page: Page, text: str) -> None:
+    page.get_by_text(text).first.hover()
+
+
+def _apply_wait_visible(page: Page, spec: Any) -> None:
+    """Дождаться появления всплывающего UI: строка — по видимому тексту; dict — selector или text."""
+    if isinstance(spec, str):
+        page.get_by_text(spec, exact=False).first.wait_for(state="visible", timeout=_WAIT_POPUP_MS)
+        return
+    if not isinstance(spec, dict):
+        raise TypeError(f"steps: wait_visible ожидает строку или dict, получено {type(spec)!r}")
+    if "selector" in spec:
+        sel = spec["selector"]
+        if not isinstance(sel, str):
+            raise TypeError("steps: wait_visible.selector ожидает строку")
+        page.locator(sel).first.wait_for(state="visible", timeout=_WAIT_POPUP_MS)
+        return
+    if "text" in spec:
+        t = spec["text"]
+        if not isinstance(t, str):
+            raise TypeError("steps: wait_visible.text ожидает строку")
+        page.get_by_text(t, exact=False).first.wait_for(state="visible", timeout=_WAIT_POPUP_MS)
+        return
+    raise ValueError("steps: wait_visible — укажите строку или dict с ключом selector либо text")
 
 
 def _wait_after_click(page: Page) -> None:
@@ -63,10 +130,16 @@ def _apply_steps(page: Page, steps: list[Any]) -> None:
         if not isinstance(step, dict):
             continue
         if "click" in step:
-            label = step["click"]
+            _apply_click_step(page, step["click"])
+            _wait_after_click(page)
+        elif "hover" in step:
+            label = step["hover"]
             if not isinstance(label, str):
-                raise TypeError(f"steps: click ожидает строку (текст элемента), получено {type(label)!r}")
-            _apply_click(page, label)
+                raise TypeError(f"steps: hover ожидает строку (текст элемента), получено {type(label)!r}")
+            _apply_hover(page, label)
+            _wait_after_click(page)
+        elif "wait_visible" in step:
+            _apply_wait_visible(page, step["wait_visible"])
             _wait_after_click(page)
 
 
@@ -80,11 +153,14 @@ def capture_screenshot(page: Page, spec: dict[str, Any]) -> None:
         WAIT_APP_SELECTOR,
         timeout=WAIT_APP_TIMEOUT_MS,
     )
+    page.wait_for_timeout(SETTLE_AFTER_APP_MS)
 
     steps = spec.get("steps") or []
     _apply_steps(page, steps)
 
     page.wait_for_load_state(AFTER_STEPS_WAIT)
+
+    page.wait_for_timeout(SETTLE_BEFORE_SCREENSHOT_MS)
 
     SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
     out_path = SCREENSHOTS_DIR / spec["filename"]

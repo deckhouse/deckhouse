@@ -10,6 +10,7 @@
     var slides = root.querySelectorAll('.installer-carousel__slide');
     var prev = root.querySelector('.installer-carousel__prev');
     var next = root.querySelector('.installer-carousel__next');
+    var counterEl = root.querySelector('.installer-carousel__counter');
     if (!viewport || !track || slides.length === 0) {
       return;
     }
@@ -34,6 +35,19 @@
       next.disabled = index >= slideCount - 1;
     }
 
+    function updateCounter() {
+      if (!counterEl) {
+        return;
+      }
+      var lang = root.getAttribute('data-counter-lang') || 'ru';
+      var cur = index + 1;
+      if (lang === 'ru') {
+        counterEl.textContent = '(' + cur + ' из ' + slideCount + ')';
+      } else {
+        counterEl.textContent = '(' + cur + ' of ' + slideCount + ')';
+      }
+    }
+
     function goTo(i) {
       index = Math.max(0, Math.min(slideCount - 1, i));
       var w = viewport.clientWidth;
@@ -42,6 +56,7 @@
       }
       track.style.transform = 'translateX(' + (-index * w) + 'px)';
       syncNav();
+      updateCounter();
     }
 
     function refresh() {

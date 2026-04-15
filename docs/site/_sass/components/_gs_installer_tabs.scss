@@ -56,6 +56,15 @@
   margin-top: 12px;
 }
 
+.installer-carousel__counter {
+  min-width: 7em;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.2;
+  color: #555;
+  user-select: none;
+}
+
 .installer-carousel__prev,
 .installer-carousel__next {
   display: inline-flex;
