@@ -89,6 +89,8 @@ const moduleValues = `
   storageClass:
     topologyEnabled: true
   ignoreVolumeMicroversion: false
+  csiDriver:
+    fsGroupPolicy: ReadWriteOnceWithFSType
   internal:
     storageClasses:
       - name: fastssd

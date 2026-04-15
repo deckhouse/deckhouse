@@ -221,6 +221,16 @@
 # </template: werf_install_step>
 {!{- end -}!}
 
+{!{ define "d8cli_install_step" }!}
+# <template: d8cli_install_step>
+- name: Install d8 CLI
+  run: |
+    mkdir -p bin
+    INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+    echo "$(pwd)/bin" >> "$GITHUB_PATH"
+# </template: d8cli_install_step>
+{!{- end -}!}
+
 {!{ define "started_at_output" }!}
 # <template: started_at_output>
 - name: Job started timestamp

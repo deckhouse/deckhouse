@@ -88,12 +88,12 @@ func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "install_data")
 	if err != nil {
 		input.Logger.Error("failed to unmarshal install_data snapshot", log.Err(err))
-		return "Privileged"
+		return "Baseline"
 	}
 
 	// no map found - an old cluster
 	if len(installDataSlice) == 0 {
-		return "Privileged"
+		return "Baseline"
 	}
 
 	deckhouseVersion := installDataSlice[0]
@@ -101,16 +101,16 @@ func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 	// no version field found or invalid semver - something went wrong
 	if len(deckhouseVersion) == 0 || !semver.IsValid(deckhouseVersion) {
 		input.Logger.Warn("deckhouseVersion isn't found or invalid", slog.String("version", deckhouseVersion))
-		return "Privileged"
-	}
-
-	// if deckhouse bootstrap release >= v1.55
-	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) >= 0 {
-		input.Logger.Info("PSS default policy is set to baseline", slog.String("version", deckhouseVersion))
 		return "Baseline"
 	}
 
-	return "Privileged"
+	// if deckhouse bootstrap release < v1.55
+	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) < 0 {
+		input.Logger.Info("PSS default policy is set to privileged", slog.String("version", deckhouseVersion))
+		return "Privileged"
+	}
+
+	return "Baseline"
 }
 
 func getVersion(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {

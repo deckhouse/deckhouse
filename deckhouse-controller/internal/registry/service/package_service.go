@@ -29,10 +29,10 @@ import (
 
 	"github.com/goccy/go-yaml"
 
-	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
@@ -159,7 +159,7 @@ func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, pas
 }
 
 type PackagesService struct {
-	client internalRegistry.Interface
+	client registry.Client
 
 	*BasicService
 
@@ -168,7 +168,7 @@ type PackagesService struct {
 	logger *log.Logger
 }
 
-func NewPackagesService(client internalRegistry.Interface, logger *log.Logger) *PackagesService {
+func NewPackagesService(client registry.Client, logger *log.Logger) *PackagesService {
 	return &PackagesService{
 		client: client,
 
@@ -194,7 +194,7 @@ func (s *PackagesService) Package(packageName string) *PackageService {
 
 // PackageService provides high-level operations for Deckhouse platform management
 type PackageService struct {
-	client internalRegistry.Interface
+	client registry.Client
 
 	*BasicService
 	packageVersion *PackageVersionService
@@ -204,7 +204,7 @@ type PackageService struct {
 }
 
 // NewPackageService creates a new deckhouse service
-func NewPackageService(client internalRegistry.Interface, logger *log.Logger) *PackageService {
+func NewPackageService(client registry.Client, logger *log.Logger) *PackageService {
 	return &PackageService{
 		client: client,
 
