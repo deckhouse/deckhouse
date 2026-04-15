@@ -239,6 +239,14 @@ $(document).ready(function () {
     .on('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link', function (e) {
       e.stopPropagation();
     });
+    
+  const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+  const container = hash ? document.getElementById(hash) : null;
+  const toggleableClosedItem = container ? container.closest('li.top-level-toggleable.closed') : null;
+
+  if (toggleableClosedItem) {
+    toggleableClosedItem.classList.remove('closed');
+  }
 
   $(document)
     .off('click.resourcesToggle', '.resources__prop_name')

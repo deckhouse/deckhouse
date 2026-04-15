@@ -2,6 +2,11 @@
 @use "components/common/_mixins";
 
 .resources {
+
+  .resources__attrs {
+    padding-left: 1px;
+  }
+
   ul, ol, li {
     & p:not(.resources__attrs) {
       font-size: 14px;
