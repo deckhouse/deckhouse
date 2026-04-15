@@ -748,7 +748,6 @@ func (r *deckhouseReleaseReconciler) runReleaseDeploy(ctx context.Context, dr *v
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, dr, func() error {
 		annotations := map[string]string{
 			v1alpha1.DeckhouseReleaseAnnotationIsUpdating: "true",
-			v1alpha1.DeckhouseReleaseAnnotationNotified:   "false",
 		}
 
 		// Serialize update info to JSON and add to annotations
