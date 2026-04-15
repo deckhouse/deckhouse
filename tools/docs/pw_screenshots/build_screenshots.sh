@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-docker run --rm -it \
-  --network host \
-  -v "$PWD:/work" \
-  -w /work \
+docker run --rm -it --network host \
+  -v "$REPO_ROOT:/work" \
+  -w /work/tools/docs/pw_screenshots \
   d8_playwrite \
-  bash -lc "get_screenshots.sh -v"
+  bash -lc "pytest get_screenshots.py -v"

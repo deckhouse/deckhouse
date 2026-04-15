@@ -6,7 +6,7 @@ import yaml
 import pytest
 from playwright.sync_api import Page
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 _STEPS_PATH = _REPO_ROOT / "docs/site/_data/getting_started/installer/screenshots.yaml"
 SCREENSHOTS_DIR = Path(__file__).resolve().parent / "screenshots"
 
