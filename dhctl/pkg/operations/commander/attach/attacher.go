@@ -23,11 +23,12 @@ import (
 	"github.com/google/uuid"
 	"k8s.io/utils/ptr"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -36,16 +37,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type Params struct {
 	CommanderMode         bool
 	CommanderUUID         uuid.UUID
-	SSHClient             node.SSHClient
-	OnCheckResult         func(context.Context, *check.CheckResult) error
+	SSHProvider           libcon.SSHProvider
+	KubeProvider          libcon.KubeProvider
+	OnCheckResult         func(*check.CheckResult) error
 	InfrastructureContext *infrastructure.Context
 	OnPhaseFunc           OnPhaseFunc
 	OnProgressFunc        phases.OnProgressFunc
@@ -170,7 +170,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 		return &AttachResult{Status: StatusAttached}, nil
 	}
 
-	checkResult, err := i.check(ctx, kubeClient, scanResult)
+	checkResult, err := i.check(ctx, i.Params.KubeProvider, scanResult)
 	if err != nil {
 		// check is optional
 		log.WarnF("Can't check attached cluster: %s\n", err)
@@ -198,10 +198,12 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 	return kubeClient, metaConfig, log.ProcessCtx(ctx, "attach", "Prepare cluster attach", func(ctx context.Context) error {
 		var err error
 
-		kubeClient, err = kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(i.Params.SSHClient))
+		kubeCl, err := i.Params.KubeProvider.Client(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 		}
+
+		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
 
 		metaConfig, err = config.ParseConfigInCluster(
 			ctx,
@@ -271,8 +273,13 @@ func (i *Attacher) scan(
 		}
 		res.ProviderSpecificClusterConfiguration = string(providerConfiguration)
 
-		if len(i.Params.SSHClient.PrivateKeys()) > 0 {
-			sshPrivateKey, err := os.ReadFile(i.Params.SSHClient.PrivateKeys()[0].Key)
+		sshCl, err := i.Params.SSHProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+
+		if len(sshCl.PrivateKeys()) > 0 {
+			sshPrivateKey, err := os.ReadFile(sshCl.PrivateKeys()[0].Key)
 			if err != nil {
 				return fmt.Errorf("unable to read ssh private key: %w", err)
 			}
@@ -360,7 +367,7 @@ func (i *Attacher) capture(
 
 func (i *Attacher) check(
 	ctx context.Context,
-	kubeClient *client.KubernetesClient,
+	kubeProvider libcon.KubeProvider,
 	scanResult *ScanResult,
 ) (*check.CheckResult, error) {
 	var res *check.CheckResult
@@ -369,7 +376,7 @@ func (i *Attacher) check(
 		var err error
 
 		checker := check.NewChecker(&check.Params{
-			KubeClient:    kubeClient,
+			KubeProvider:  kubeProvider,
 			StateCache:    cache.Global(),
 			CommanderMode: i.Params.CommanderMode,
 			CommanderModeParams: commander.NewCommanderModeParams(

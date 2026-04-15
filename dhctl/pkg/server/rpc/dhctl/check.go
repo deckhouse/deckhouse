@@ -22,9 +22,10 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -41,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -242,31 +244,30 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		OnProgressFunc:        p.sendProgress,
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
-		CommanderMode: p.request.Options.CommanderMode,
-		APIServerURL:  p.request.Options.ApiServerUrl,
-		APIServerOptions: helper.APIServerOptions{
-			Token:                    p.request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
-		},
-		SchemaStore:         s.params.SchemaStore,
-		SSHConnectionConfig: p.request.ConnectionConfig,
+	var sshProvider libcon.SSHProvider
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+		var cleanup func() error
+		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		cleanuper.Add(cleanup)
+		if err != nil {
+			return fmt.Errorf("creating provider: %w", err)
+		}
+
+		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ssh provider: %w", err)
+		}
+
+		return nil
 	})
-	cleanuper.Add(cleanup)
 	if err != nil {
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	if !govalue.IsNil(sshClient) {
-		err = sshClient.Start()
-		if err != nil {
-			return &pb.CheckResult{Err: err.Error()}
-		}
-	}
-
-	checkParams.KubeClient = kubeClient
-	checkParams.SSHClient = sshClient
+	checkParams.KubeProvider = kubeProvider
+	checkParams.SSHProvider = sshProvider
 
 	checker := check.NewChecker(checkParams)
 

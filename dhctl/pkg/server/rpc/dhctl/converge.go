@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -42,7 +41,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
+	libcon "github.com/deckhouse/lib-connection/pkg"
 )
 
 type convergeParams struct {
@@ -294,34 +295,34 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		IsDebug:                    s.params.IsDebug,
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
-		CommanderMode: p.request.Options.CommanderMode,
-		APIServerURL:  p.request.Options.ApiServerUrl,
-		APIServerOptions: helper.APIServerOptions{
-			Token:                    p.request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
-		},
-		SchemaStore:         s.params.SchemaStore,
-		SSHConnectionConfig: p.request.ConnectionConfig,
+	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+	var sshProvider libcon.SSHProvider
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+		var cleanup func() error
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		cleanuper.Add(cleanup)
+		if err != nil {
+			return fmt.Errorf("creating provider: %w", err)
+		}
+
+		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ssh provider: %w", err)
+		}
+
+		return nil
 	})
-	cleanuper.Add(cleanup)
+
 	if err != nil {
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
-		err = sshClient.Start()
-		if err != nil {
-			return &pb.ConvergeResult{Err: err.Error()}
-		}
-	}
+	checkParams.KubeProvider = kubeProvider
+	checkParams.SSHProvider = sshProvider
 
-	checkParams.KubeClient = kubeClient
-	checkParams.SSHClient = sshClient
-
-	convergeParams.KubeClient = kubeClient
-	convergeParams.SSHClient = sshClient
+	convergeParams.KubeProvider = kubeProvider
+	convergeParams.SSHProviderInitializer = sshProviderInitializer
 
 	checker := check.NewChecker(checkParams)
 	convergeParams.Checker = checker

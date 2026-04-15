@@ -20,6 +20,9 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -31,8 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -64,7 +65,16 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	}
 
 	var userPassedHosts []session.Host
-	sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	if err != nil {
+		return err
+	}
+
+	sshCl, err := sshProvider.Client(ctx.Ctx())
+	if err != nil {
+		return err
+	}
+
 	if sshCl != nil {
 		userPassedHosts = append(make([]session.Host, 0), sshCl.Session().AvailableHosts()...)
 	}
@@ -74,7 +84,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
+	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
 		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
 			return true
 		}
@@ -290,8 +300,16 @@ func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, maste
 	if ctx.CommanderMode() {
 		return nil
 	}
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	if err != nil {
+		return err
+	}
 
-	sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
+	sshCl, err := sshProvider.Client(ctx.Ctx())
+	if err != nil {
+		return err
+	}
+
 	if govalue.IsNil(sshCl) {
 		return fmt.Errorf("NodeInterface is not ssh")
 	}

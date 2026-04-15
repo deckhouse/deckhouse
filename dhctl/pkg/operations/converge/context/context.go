@@ -22,6 +22,8 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -32,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type MultiMasterClientSwitcher interface {
@@ -42,8 +45,9 @@ type MultiMasterClientSwitcher interface {
 }
 
 type Context struct {
-	kubeClientMu sync.RWMutex
-	kubeClient   *client.KubernetesClient
+	kubeClientMu           sync.RWMutex
+	kubeProvider           libcon.KubeProvider
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
 
 	stateCache dstate.Cache
 	// yes we want to save context in struct,
@@ -64,13 +68,14 @@ type Context struct {
 }
 
 type Params struct {
-	KubeClient      *client.KubernetesClient
-	Cache           dstate.Cache
-	ChangeParams    infrastructure.ChangeActionSettings
-	ProviderGetter  infrastructure.CloudProviderGetter
-	Logger          log.Logger
-	ClientSwitcher  MultiMasterClientSwitcher
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	KubeProvider           libcon.KubeProvider
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	Cache                  dstate.Cache
+	ChangeParams           infrastructure.ChangeActionSettings
+	ProviderGetter         infrastructure.CloudProviderGetter
+	Logger                 log.Logger
+	ClientSwitcher         MultiMasterClientSwitcher
+	DirectoryConfig        *directoryconfig.DirectoryConfig
 }
 
 func newContext(ctx context.Context, params Params) *Context {
@@ -81,14 +86,15 @@ func newContext(ctx context.Context, params Params) *Context {
 	}
 
 	return &Context{
-		providerGetter:  params.ProviderGetter,
-		kubeClient:      params.KubeClient,
-		stateCache:      params.Cache,
-		changeParams:    params.ChangeParams,
-		ctx:             ctx,
-		logger:          logger,
-		clientSwitcher:  params.ClientSwitcher,
-		directoryConfig: params.DirectoryConfig,
+		providerGetter:         params.ProviderGetter,
+		kubeProvider:           params.KubeProvider,
+		SSHProviderInitializer: params.SSHProviderInitializer,
+		stateCache:             params.Cache,
+		changeParams:           params.ChangeParams,
+		ctx:                    ctx,
+		logger:                 logger,
+		clientSwitcher:         params.ClientSwitcher,
+		directoryConfig:        params.DirectoryConfig,
 
 		stateStore: newInSecretStateStore(),
 	}
@@ -132,11 +138,14 @@ func (c *Context) KubeClient() *client.KubernetesClient {
 	c.kubeClientMu.RLock()
 	defer c.kubeClientMu.RUnlock()
 
-	return c.kubeClient
+	kubeClient, _ := c.kubeProvider.Client(c.ctx)
+
+	return &client.KubernetesClient{KubeClient: kubeClient}
 }
 
-func (c *Context) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
-	return c.KubeClient(), nil
+func (c *Context) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
+	kubeClient, err := c.kubeProvider.Client(c.ctx)
+	return &client.KubernetesClient{KubeClient: kubeClient}, err
 }
 
 func (c *Context) ClientSwitcher() MultiMasterClientSwitcher {
@@ -208,7 +217,7 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient, c.logger, c.directoryConfig)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, c.KubeClient(), c.logger, c.directoryConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -234,11 +243,4 @@ func (c *Context) ConvergeState() (*State, error) {
 
 func (c *Context) deleteConvergeState() error {
 	return c.stateStore.Delete(c)
-}
-
-func (c *Context) setKubeClient(newKubeClient *client.KubernetesClient) {
-	c.kubeClientMu.Lock()
-	defer c.kubeClientMu.Unlock()
-
-	c.kubeClient = newKubeClient
 }

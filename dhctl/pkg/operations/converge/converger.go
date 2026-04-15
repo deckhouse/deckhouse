@@ -21,10 +21,11 @@ import (
 
 	"github.com/google/uuid"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
@@ -34,16 +35,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 // TODO(remove-global-app): Support all needed parameters in Params, remove usage of app.*
 type Params struct {
-	SSHClient  node.SSHClient
-	KubeClient *client.KubernetesClient // optional
+	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	KubeProvider           libcon.KubeProvider
 
 	OnPhaseFunc     phases.DefaultOnPhaseFunc
 	OnProgressFunc  phases.OnProgressFunc
@@ -99,18 +97,19 @@ func NewConverger(params *Params) *Converger {
 	}
 }
 
-// TODO(remove-global-app): Eliminate usage of app.* global variables,
-// TODO(remove-global-app):  use explicitly passed params everywhere instead,
-// TODO(remove-global-app):  applyParams will not be needed anymore then.
-//
-// applyParams overrides app.* options that are explicitly passed using Params struct
-func (c *Converger) applyParams() error {
-	if c.KubernetesInitParams != nil {
-		app.KubeConfigInCluster = c.KubernetesInitParams.KubeConfigInCluster
-		app.KubeConfig = c.KubernetesInitParams.KubeConfig
-		app.KubeConfigContext = c.KubernetesInitParams.KubeConfigContext
+func (c *Converger) ApplyParams() {
+	if c.KubernetesInitParams == nil {
+		kubeParams := &client.KubernetesInitParams{}
+		kubeParams.KubeConfigInCluster = app.KubeConfigInCluster
+		if len(app.KubeConfig) > 0 {
+			kubeParams.KubeConfig = app.KubeConfig
+		}
+		if len(app.KubeConfigContext) > 0 {
+			kubeParams.KubeConfigContext = app.KubeConfigContext
+		}
+
+		c.KubernetesInitParams = kubeParams
 	}
-	return nil
 }
 
 func (c *Converger) ConvergeMigration(ctx context.Context) error {
@@ -123,59 +122,33 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		c.lastState = state
 	}
 
-	if c.Params.SSHClient != nil {
-		defer c.Params.SSHClient.Stop()
-	}
-
-	if err := c.applyParams(); err != nil {
-		return err
-	}
-
-	var err error
-	var kubeCl *client.KubernetesClient
-
-	if c.KubeClient != nil {
-		kubeCl = c.KubeClient
-	} else {
-		var sshClient node.SSHClient
-
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, false)
-		if err != nil {
-			return err
-		}
-
-		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-			return err
-		}
-	}
-
 	if !c.CommanderMode {
 		cacheIdentity := ""
-		if app.KubeConfigInCluster {
+		if c.KubeConfigInCluster {
 			cacheIdentity = "in-cluster"
 		}
-		if c.SSHClient != nil {
-			cacheIdentity = c.SSHClient.Check().String()
+		if c.SSHProviderInitializer.CheckHosts() {
+			sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
+			if err != nil {
+				return err
+			}
+			sshClient, err := sshProvider.Client(ctx)
+			if err != nil {
+				return err
+			}
+			cacheIdentity = sshClient.Check().String()
 		}
-		if app.KubeConfig != "" {
+		if c.KubeConfig != "" {
 			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
-				app.KubeConfig,
-				app.KubeConfigContext,
+				c.KubeConfig,
+				c.KubeConfigContext,
 			)
 		}
 		if cacheIdentity == "" {
 			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err = cache.InitWithOptions(ctx, cacheIdentity, cache.CacheOptions{})
+		err := cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 		}
@@ -194,19 +167,21 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
 		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.Params.ProviderGetter,
-			Logger:         c.Logger,
+			KubeProvider:           c.KubeProvider,
+			SSHProviderInitializer: c.SSHProviderInitializer,
+			Cache:                  stateCache,
+			ChangeParams:           c.Params.ChangesSettings,
+			ProviderGetter:         c.Params.ProviderGetter,
+			Logger:                 c.Logger,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.Params.ProviderGetter,
-			Logger:         c.Logger,
+			KubeProvider:           c.KubeProvider,
+			SSHProviderInitializer: c.SSHProviderInitializer,
+			Cache:                  stateCache,
+			ChangeParams:           c.Params.ChangesSettings,
+			ProviderGetter:         c.Params.ProviderGetter,
+			Logger:                 c.Logger,
 		})
 	}
 
@@ -269,45 +244,33 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		c.lastState = state
 	}
 
-	if err := c.applyParams(); err != nil {
-		return nil, err
-	}
-
-	var err error
-	var kubeCl *client.KubernetesClient
-
-	if c.KubeClient != nil {
-		kubeCl = c.KubeClient
-	} else {
-		if c.SSHClient == nil {
-			return nil, fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl converge --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
-		}
-
-		kubeCl, err = kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(c.SSHClient))
-		if err != nil {
-			return nil, fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
-		}
-	}
-
 	if !c.CommanderMode {
 		cacheIdentity := ""
-		if app.KubeConfigInCluster {
+		if c.KubeConfigInCluster {
 			cacheIdentity = "in-cluster"
 		}
-		if c.SSHClient != nil {
-			cacheIdentity = c.SSHClient.Check().String()
+		if c.SSHProviderInitializer.CheckHosts() {
+			sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
+			if err != nil {
+				return nil, err
+			}
+			sshClient, err := sshProvider.Client(ctx)
+			if err != nil {
+				return nil, err
+			}
+			cacheIdentity = sshClient.Check().String()
 		}
-		if app.KubeConfig != "" {
+		if c.KubeConfig != "" {
 			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
-				app.KubeConfig,
-				app.KubeConfigContext,
+				c.KubeConfig,
+				c.KubeConfigContext,
 			)
 		}
 		if cacheIdentity == "" {
 			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err = cache.InitWithOptions(ctx, cacheIdentity, cache.CacheOptions{})
+		err := cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 		}
@@ -328,21 +291,23 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
 		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
-			KubeClient:      kubeCl,
-			Cache:           stateCache,
-			ChangeParams:    c.Params.ChangesSettings,
-			ProviderGetter:  c.ProviderGetter,
-			Logger:          c.Logger,
-			DirectoryConfig: c.DirectoryConfig,
+			KubeProvider:           c.KubeProvider,
+			SSHProviderInitializer: c.SSHProviderInitializer,
+			Cache:                  stateCache,
+			ChangeParams:           c.Params.ChangesSettings,
+			ProviderGetter:         c.ProviderGetter,
+			Logger:                 c.Logger,
+			DirectoryConfig:        c.DirectoryConfig,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
-			KubeClient:      kubeCl,
-			Cache:           stateCache,
-			ChangeParams:    c.Params.ChangesSettings,
-			ProviderGetter:  c.ProviderGetter,
-			Logger:          c.Logger,
-			DirectoryConfig: c.DirectoryConfig,
+			KubeProvider:           c.KubeProvider,
+			SSHProviderInitializer: c.SSHProviderInitializer,
+			Cache:                  stateCache,
+			ChangeParams:           c.Params.ChangesSettings,
+			ProviderGetter:         c.ProviderGetter,
+			Logger:                 c.Logger,
+			DirectoryConfig:        c.DirectoryConfig,
 		})
 	}
 
@@ -487,45 +452,18 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}, nil
 }
 
-func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
-	if err := c.applyParams(); err != nil {
-		return err
-	}
-
+func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Duration) error {
 	if app.RunningNodeName == "" {
 		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
 	}
 
-	var err error
-	var kubeCl *client.KubernetesClient
-
-	if c.KubeClient != nil {
-		kubeCl = c.KubeClient
-	} else {
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(context.Background(), false)
-		if err != nil {
-			return err
-		}
-
-		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-			return err
-		}
-	}
-
 	convergeCtx := convergectx.NewContext(context.Background(), convergectx.Params{
-		KubeClient:     kubeCl,
-		Cache:          cache.Global(),
-		ChangeParams:   c.Params.ChangesSettings,
-		Logger:         c.Logger,
-		ProviderGetter: c.ProviderGetter,
+		KubeProvider:           c.KubeProvider,
+		SSHProviderInitializer: c.SSHProviderInitializer,
+		Cache:                  cache.Global(),
+		ChangeParams:           c.Params.ChangesSettings,
+		Logger:                 c.Logger,
+		ProviderGetter:         c.ProviderGetter,
 	})
 
 	metaConfig, err := convergeCtx.MetaConfig()
