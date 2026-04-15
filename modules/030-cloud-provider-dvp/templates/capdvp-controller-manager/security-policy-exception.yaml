@@ -1,0 +1,14 @@
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: capdvp-controller-manager
+  namespace: d8-cloud-provider-dvp
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for CAPDVP controller manager.
+{{- end }}

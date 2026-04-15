@@ -63,6 +63,9 @@ spec:
         app: capdvp-controller-manager
         cluster.x-k8s.io/provider: infrastructure-dvp
         control-plane: controller-manager
+        {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+        security.deckhouse.io/security-policy-exception: capdvp-controller-manager
+        {{- end }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
