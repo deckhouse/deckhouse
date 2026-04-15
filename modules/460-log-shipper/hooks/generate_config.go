@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -67,7 +68,8 @@ func filterClusterLogDestination(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, &dst)
 	if err != nil {
-		return nil, err
+		log.Printf("log-shipper: skip ClusterLogDestination %q: unmarshal to v1alpha2: %v", obj.GetName(), err)
+		return nil, nil
 	}
 	return dst, nil
 }
