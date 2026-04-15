@@ -71,6 +71,15 @@ metadata:
 				Field(`metadata.annotations.extended-monitoring\.flant\.com/enabled`).Exists()).To(BeFalse())
 		})
 
+		It("Heritage label should be present on d8-system namespace", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ns := f.KubernetesGlobalResource("Namespace", "d8-system")
+			label := ns.Field(`metadata.labels.heritage`)
+			Expect(label.Exists()).To(BeTrue())
+			Expect(label.String()).To(Equal("deckhouse"))
+		})
+
 		It("Rules watcher label should be present on d8-system namespace", func() {
 			Expect(f).To(ExecuteSuccessfully())
 

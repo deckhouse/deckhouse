@@ -32,6 +32,7 @@ func enableExtendedMonitoring(_ context.Context, input *go_hook.HookInput) error
 	d8SystemPatch := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"labels": map[string]string{
+				"heritage": "deckhouse",
 				"extended-monitoring.deckhouse.io/enabled":      "",
 				"prometheus.deckhouse.io/rules-watcher-enabled": "true",
 			},
