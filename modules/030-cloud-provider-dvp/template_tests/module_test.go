@@ -17,8 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
-	"fmt"
 	"encoding/base64"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -215,6 +215,24 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 
 			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
+		})
+
+		It("must render SecurityPolicyException for capdvp-controller-manager", func() {
+			capdvpDeployment := f.KubernetesResource("Deployment", moduleNamespace, "capdvp-controller-manager")
+			Expect(capdvpDeployment.Exists()).To(BeTrue())
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "capdvp-controller-manager")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+
+			Expect(capdvpDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).
+				To(Equal("capdvp-controller-manager"))
+
+			Expect(capdvpDeployment.Field("spec.template.metadata.labels").Map()).
+				To(HaveKey("security\\.deckhouse\\.io/security-policy-exception"))
+
+			Expect(securityPolicyException.Field("metadata.namespace").String()).
+				To(Equal("d8-cloud-provider-dvp"))
 		})
 	})
 })
