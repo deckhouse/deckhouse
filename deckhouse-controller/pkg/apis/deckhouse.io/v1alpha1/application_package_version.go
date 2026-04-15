@@ -128,8 +128,27 @@ type ApplicationPackageVersionStatus struct {
 }
 
 type ApplicationPackageVersionStatusSchema struct {
+	// SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
+	// settings of the package. Stored as an opaque object because its contents
+	// form a recursive JSON schema that cannot be expressed structurally in a
+	// CRD; the controller validates this subtree in Go when loading package
+	// metadata.
+	// +optional
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Type=object
 	SettingsSchema *apiextensionsv1.CustomResourceValidation `json:"settingsSchema,omitempty"`
-	ValuesSchema   *apiextensionsv1.CustomResourceValidation `json:"valuesSchema,omitempty"`
+
+	// ValuesSchema is the OpenAPI v3 schema used to validate the effective
+	// values (defaults merged with settings) passed to the package's hooks and
+	// charts. Stored as an opaque object because its contents form a recursive
+	// JSON schema that cannot be expressed structurally in a CRD; the
+	// controller validates this subtree in Go when loading package metadata.
+	// +optional
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Type=object
+	ValuesSchema *apiextensionsv1.CustomResourceValidation `json:"valuesSchema,omitempty"`
 }
 
 type ApplicationPackageVersionStatusInstance struct {
