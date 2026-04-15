@@ -2,8 +2,8 @@
 cert-manager.io/disable-validation: "true"
 extended-monitoring.deckhouse.io/enabled: ""
 prometheus.deckhouse.io/rules-watcher-enabled: "true"
-security.deckhouse.io/pod-policy: "restricted"
-security.deckhouse.io/enable-security-policy-check: "true"
+# security.deckhouse.io/pod-policy: "restricted"
+# security.deckhouse.io/enable-security-policy-check: "true"
 {{- end }}
 ---
 apiVersion: v1

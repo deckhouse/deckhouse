@@ -199,7 +199,11 @@ DKP использует интерфейс `ens192`, как интерфейс 
 
 Для дальнейшей настройки vSphere потребуется CLI-утилита [govc](https://github.com/vmware/govmomi/tree/master/govc#installation).
 
-После установки задайте переменные окружения для работы с vCenter:
+После установки задайте переменные окружения для работы с vCenter.
+
+{% alert level="warning" %}
+Обязательно указывайте имя пользователя вместе с доменом, например: `username@vsphere.local`.
+{% endalert %}
 
 ```shell
 export GOVC_URL=example.com
@@ -302,7 +306,11 @@ govc role.create deckhouse \
    VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
 
-Назначьте пользователю роль на объекте vCenter:
+Назначьте пользователю роль на объекте vCenter.
+
+{% alert level="warning" %}
+Обязательно указывайте имя пользователя вместе с доменом, например: `username@vsphere.local`.
+{% endalert %}
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /

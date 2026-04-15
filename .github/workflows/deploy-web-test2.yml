@@ -46,7 +46,7 @@ on:
 env:
 
   # <template: werf_envs>
-  DECKHOUSE_CLI_VERSION: "v0.29.20"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
   WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
   WERF_TELEMETRY: "1"
@@ -223,7 +223,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
