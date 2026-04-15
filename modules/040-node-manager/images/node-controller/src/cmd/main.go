@@ -20,8 +20,6 @@ import (
 	"flag"
 	"os"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -31,8 +29,6 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -40,6 +36,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
@@ -75,6 +72,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	cacheOpts, clientOpts := common.CacheOptions()
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -84,31 +83,8 @@ func main() {
 			Port: 9443,
 		}),
 		HealthProbeBindAddress: probeAddr,
-		Cache: cache.Options{
-			DefaultTransform: cache.TransformStripManagedFields(),
-			ByObject: map[client.Object]cache.ByObject{
-				// Only cache the single secret needed by the conversion webhook.
-				// Previously all secrets in kube-system were cached, pulling in
-				// Helm release secrets and other heavy objects unnecessarily.
-				&corev1.Secret{}: {
-					Namespaces: map[string]cache.Config{
-						"kube-system": {
-							FieldSelector: fields.SelectorFromSet(fields.Set{
-								"metadata.name": "d8-provider-cluster-configuration",
-							}),
-						},
-					},
-				},
-			},
-		},
-		Client: client.Options{
-			Cache: &client.CacheOptions{
-				DisableFor: []client.Object{
-					&corev1.Node{},
-					&corev1.Endpoints{},
-				},
-			},
-		},
+		Cache:                  cacheOpts,
+		Client:                 clientOpts,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
