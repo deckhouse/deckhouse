@@ -48,11 +48,7 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
 
-	expected := checksumAnnotations{
-		ConfigChecksum: op.Spec.DesiredConfigChecksum,
-		PKIChecksum:    op.Spec.DesiredPKIChecksum,
-		CAChecksum:     op.Spec.DesiredCAChecksum,
-	}
+	expected := checksumAnnotationsFromSpec(op.Spec)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil

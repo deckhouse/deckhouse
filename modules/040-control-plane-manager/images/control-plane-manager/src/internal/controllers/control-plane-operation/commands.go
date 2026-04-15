@@ -89,7 +89,7 @@ func (c *syncCACommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 type renewPKICertsCommand struct{}
 
 func (c *renewPKICertsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
-	certTree := componentDepsForComponent(env.State.Raw().Spec.Component).CertTree
+	certTree := componentDeps(env.State.Raw().Spec.Component).CertTree
 	if certTree != nil {
 		logger.Info("renewing leaf certificates if needed")
 		params := parsePKIParams(constants.KubernetesPkiPath, env.Secrets.CPMData, env.Node)
@@ -123,7 +123,7 @@ func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, lo
 		env.KubeconfigsRenewed = true
 	}
 	// dont return error if failed to update root kubeconfig symlink, maybe return reconcile.Result{}, err later.
-	if componentDepsForComponent(component).NeedsRootKubeconfig {
+	if componentDeps(component).NeedsRootKubeconfig {
 		if err := updateRootKubeconfig(kubeconfigDir, env.Node.HomeDir); err != nil {
 			logger.Warn("failed to update root kubeconfig symlink", log.Err(err))
 		}
@@ -157,13 +157,7 @@ func (c *joinEtcdClusterCommand) Execute(_ context.Context, env *CommandEnv, log
 		return reconcile.Result{}, nil
 	}
 	logger.Info("etcd needs join, executing join flow")
-	return reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData,
-		checksumAnnotations{
-			ConfigChecksum: op.Spec.DesiredConfigChecksum,
-			PKIChecksum:    op.Spec.DesiredPKIChecksum,
-			CAChecksum:     op.Spec.DesiredCAChecksum,
-		},
-		logger)
+	return reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger)
 }
 
 // syncManifestsCommand writes the static pod manifest (or patches annotations for PKI-only updates).

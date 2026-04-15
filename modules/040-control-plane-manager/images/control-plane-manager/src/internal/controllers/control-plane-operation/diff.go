@@ -61,11 +61,6 @@ func ensureOperationDiffDir(component controlplanev1alpha1.OperationComponent, o
 	}
 
 	opDir := filepath.Join(componentDir, operationName)
-	if _, err := os.Stat(opDir); err == nil {
-		return opDir, nil
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("stat operation diff dir: %w", err)
-	}
 	if err := os.MkdirAll(opDir, 0o700); err != nil {
 		return "", fmt.Errorf("create operation diff dir: %w", err)
 	}

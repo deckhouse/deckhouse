@@ -132,7 +132,7 @@ func writeSecretExtraFilesIfChanged(secretData map[string][]byte, extraFilesDir 
 
 // removeStaleExtraFiles removes extra-files from disk that belong to this component but no longer present in the secret
 func removeStaleExtraFiles(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) []fileWriteResult {
-	keys := componentDepsForComponent(component).ExtraFileKeys
+	keys := componentDeps(component).ExtraFileKeys
 	if len(keys) == 0 {
 		return nil
 	}
@@ -158,7 +158,7 @@ func removeStaleExtraFiles(component controlplanev1alpha1.OperationComponent, se
 }
 
 func writeExtraFilesIfChanged(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, extraFilesDir string) ([]fileWriteResult, error) {
-	keys := componentDepsForComponent(component).ExtraFileKeys
+	keys := componentDeps(component).ExtraFileKeys
 	if len(keys) == 0 {
 		return nil, nil
 	}

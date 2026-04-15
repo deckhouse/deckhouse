@@ -17,6 +17,8 @@ limitations under the License.
 package controlplaneoperation
 
 import (
+	"sort"
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
 
@@ -24,16 +26,16 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 )
 
-type componentDeps struct {
+// componentDependencies holds the dependencies for control plane component as runtime configuration files.
+type componentDependencies struct {
 	CertTree            map[pki.RootCertName][]pki.LeafCertName
-	LeafCertFiles       []pki.LeafCertName
 	CAFiles             []string
 	KubeconfigFiles     []kubeconfig.File
 	ExtraFileKeys       []string
 	NeedsRootKubeconfig bool
 }
 
-var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componentDeps{
+var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componentDependencies{
 	controlplanev1alpha1.OperationComponentEtcd: {
 		CertTree: map[pki.RootCertName][]pki.LeafCertName{
 			pki.EtcdCACertName: {
@@ -43,12 +45,7 @@ var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componen
 				pki.ApiserverEtcdClientCertName,
 			},
 		},
-		LeafCertFiles: []pki.LeafCertName{
-			pki.EtcdServerCertName,
-			pki.EtcdPeerCertName,
-			pki.EtcdHealthcheckClientCertName,
-			pki.ApiserverEtcdClientCertName,
-		},
+		// TODO: remove this when we have a way to get the CA files from CertTree (pki.RootCertName)
 		CAFiles: []string{
 			string(pki.EtcdCACertName) + ".crt",
 			string(pki.EtcdCACertName) + ".key",
@@ -64,11 +61,6 @@ var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componen
 			pki.FrontProxyCACertName: {
 				pki.FrontProxyClientCertName,
 			},
-		},
-		LeafCertFiles: []pki.LeafCertName{
-			pki.ApiserverCertName,
-			pki.ApiserverKubeletClientCertName,
-			pki.FrontProxyClientCertName,
 		},
 		CAFiles: []string{
 			string(pki.CACertName) + ".crt",
@@ -95,6 +87,24 @@ var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componen
 	},
 }
 
-func componentDepsForComponent(component controlplanev1alpha1.OperationComponent) componentDeps {
+func componentDeps(component controlplanev1alpha1.OperationComponent) componentDependencies {
 	return componentDepsRegistry[component]
+}
+
+func (d componentDependencies) leafCertFiles() []pki.LeafCertName {
+	if len(d.CertTree) == 0 {
+		return nil
+	}
+
+	roots := make([]string, 0, len(d.CertTree))
+	for root := range d.CertTree {
+		roots = append(roots, string(root))
+	}
+	sort.Strings(roots)
+
+	out := make([]pki.LeafCertName, 0)
+	for _, root := range roots {
+		out = append(out, d.CertTree[pki.RootCertName(root)]...)
+	}
+	return out
 }

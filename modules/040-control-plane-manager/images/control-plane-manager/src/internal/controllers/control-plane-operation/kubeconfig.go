@@ -35,7 +35,7 @@ func renewKubeconfigsForComponent(
 	secretData map[string][]byte,
 	pkiDir, kubeconfigDir, advertiseIP string,
 ) (bool, error) {
-	files := componentDepsForComponent(component).KubeconfigFiles
+	files := componentDeps(component).KubeconfigFiles
 	if len(files) == 0 {
 		return false, nil
 	}

@@ -89,11 +89,11 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	if !component.IsStaticPodComponent() {
 		return controlplanev1alpha1.ObservedComponentState{}, false
 	}
-	deps := componentDepsForComponent(component)
+	deps := componentDeps(component)
 
 	certExpiry := make(map[string]metav1.Time)
 
-	for _, leafName := range deps.LeafCertFiles {
+	for _, leafName := range deps.leafCertFiles() {
 		baseName := string(leafName)
 		certPath := filepath.Join(constants.KubernetesPkiPath, baseName+".crt")
 		expiry, err := readCertExpiration(certPath)

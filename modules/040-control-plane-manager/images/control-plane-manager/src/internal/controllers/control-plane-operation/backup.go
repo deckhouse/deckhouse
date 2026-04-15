@@ -43,6 +43,9 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 
 	componentBackupDir := filepath.Join(constants.BackupBasePath, string(component))
 	finalDir := filepath.Join(componentBackupDir, operationName)
+	if err := os.RemoveAll(finalDir); err != nil {
+		return reconcile.Result{}, fmt.Errorf("clean previous backup dir on command re-execution: %w", err)
+	}
 
 	wasBackupped := false
 	for _, src := range files {
@@ -80,14 +83,14 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 // backupFilesForComponent returns the list of absolute file paths that should be backup.
 // Static pod manifest, leaf certs, CA, kubeconfigs, extra files, hot-reload files.
 func backupFilesForComponent(component controlplanev1alpha1.OperationComponent, kubeconfigDir string) []string {
-	deps := componentDepsForComponent(component)
+	deps := componentDeps(component)
 	var files []string
 
 	if name := component.PodComponentName(); name != "" {
 		files = append(files, filepath.Join(constants.ManifestsPath, name+".yaml"))
 	}
 
-	for _, leafName := range deps.LeafCertFiles {
+	for _, leafName := range deps.leafCertFiles() {
 		baseName := string(leafName)
 		files = append(files,
 			filepath.Join(constants.KubernetesPkiPath, baseName+".crt"),

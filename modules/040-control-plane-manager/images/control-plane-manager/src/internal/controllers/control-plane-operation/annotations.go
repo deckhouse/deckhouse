@@ -29,6 +29,14 @@ type checksumAnnotations struct {
 	KubeconfigRenewalID string
 }
 
+func checksumAnnotationsFromSpec(spec controlplanev1alpha1.ControlPlaneOperationSpec) checksumAnnotations {
+	return checksumAnnotations{
+		ConfigChecksum: spec.DesiredConfigChecksum,
+		PKIChecksum:    spec.DesiredPKIChecksum,
+		CAChecksum:     spec.DesiredCAChecksum,
+	}
+}
+
 func desiredChecksumAnnotations(spec checksumAnnotations) map[string]string {
 	result := make(map[string]string, 5)
 
@@ -52,6 +60,7 @@ func desiredChecksumAnnotations(spec checksumAnnotations) map[string]string {
 }
 
 func buildSyncManifestAnnotations(op *controlplanev1alpha1.ControlPlaneOperation, env *CommandEnv) checksumAnnotations {
+	annotations := checksumAnnotationsFromSpec(op.Spec)
 	certRenewalID := ""
 	if env.CertsRenewed {
 		certRenewalID = op.Name
@@ -61,11 +70,7 @@ func buildSyncManifestAnnotations(op *controlplanev1alpha1.ControlPlaneOperation
 		kubeconfigRenewalID = op.Name
 	}
 
-	return checksumAnnotations{
-		ConfigChecksum:      op.Spec.DesiredConfigChecksum,
-		PKIChecksum:         op.Spec.DesiredPKIChecksum,
-		CAChecksum:          op.Spec.DesiredCAChecksum,
-		CertRenewalID:       certRenewalID,
-		KubeconfigRenewalID: kubeconfigRenewalID,
-	}
+	annotations.CertRenewalID = certRenewalID
+	annotations.KubeconfigRenewalID = kubeconfigRenewalID
+	return annotations
 }
