@@ -45,7 +45,7 @@ data:
         args:
           {{- if default false $.Values.descheduler.internal.isMetricsServerEnabled }}
           metricsUtilization:
-            metricsServer: true
+            source: KubernetesMetrics
           {{- end }}
           {{- $s := unset ($d.strategies.lowNodeUtilization | deepCopy) "enabled" }}
           {{- $s | toYaml | nindent 10 }}
