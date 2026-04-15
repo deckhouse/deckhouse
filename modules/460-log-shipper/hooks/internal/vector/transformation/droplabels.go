@@ -57,7 +57,7 @@ func DropLabelsVRL(d v1alpha2.DropLabelsSpec) (string, []string, error) {
 			return "", nil, fmt.Errorf("dropLabels: %w", err)
 		}
 		pa := parser.PathSegmentsToVRLArray(segs)
-		s, err := vrl.DropLabelsKeepChildKeys.Render(vrl.Args{"pathArray": pa, "keepKeys": item.KeepKeys})
+		s, err := vrl.DropLabelsKeepKeys.Render(vrl.Args{"pathArray": pa, "keepKeys": item.KeepKeys})
 		if err != nil {
 			return "", nil, err
 		}

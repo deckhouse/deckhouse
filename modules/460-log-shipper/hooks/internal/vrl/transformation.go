@@ -38,8 +38,8 @@ if exists({{$path}}) {
 {{- end }}
 `
 
-// DropLabelsKeepChildKeys keeps only listed keys in the object at pathArray; drops the rest (dropLabels with keepChildKeys).
-const DropLabelsKeepChildKeys Rule = `
+// DropLabelsKeepKeys keeps only listed keys in the object at pathArray; drops the rest (dropLabels keepKeys).
+const DropLabelsKeepKeys Rule = `
 obj, err = get(., {{.pathArray}})
 if err == null && is_object(obj) {
   filtered = {}
