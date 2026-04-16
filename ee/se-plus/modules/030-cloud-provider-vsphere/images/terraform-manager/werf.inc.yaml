@@ -29,7 +29,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version }}-flant.2 $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-terraform-provider-vsphere.git /src
+  - git clone --depth 1 --branch v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-terraform-provider-vsphere.git /src
   - cd /src
   - rm -rf vendor
   - rm -rf .git
