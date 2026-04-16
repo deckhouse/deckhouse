@@ -32,6 +32,7 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -121,6 +122,9 @@ func main() {
 			BindAddress: metricsAddr,
 		},
 		HealthProbeBindAddress: probeAddr,
+		Cache: cache.Options{
+			DefaultTransform: common.CacheTransformWithLogging(ctx, setupLog),
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start controller manager")
@@ -150,6 +154,13 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	// Log cache contents after sync.
+	go func() {
+		if ctrlMgr.GetCache().WaitForCacheSync(ctx) {
+			common.LogCacheContents(ctx, ctrlMgr.GetCache(), setupLog)
+		}
+	}()
 
 	setupLog.Info("starting controller manager")
 	if err := ctrlMgr.Start(ctx); err != nil {
