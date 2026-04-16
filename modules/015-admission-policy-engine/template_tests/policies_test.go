@@ -77,8 +77,8 @@ admissionPolicyEngine:
 			modRoot := moduleRootDir()
 			libsDir := filepath.Join(modRoot, "charts", "constraint-templates", "tests", "test_cases", "libs")
 
-			opaPath, err := exec.LookPath("opa")
-			if err != nil {
+			opaPath, opaFound := discoverBinary("opa")
+			if !opaFound {
 				Skip("opa binary is not available")
 			}
 
@@ -94,7 +94,7 @@ admissionPolicyEngine:
 			constraintsRoot := filepath.Join(testsRoot, "constraints")
 			constraintTestgen := "./charts/constraint-templates/tests/tools/constraint_testgen"
 
-			if gatorPath, gatorFound = gatorAvailable(); !gatorFound {
+			if gatorPath, gatorFound = discoverBinary("gator"); !gatorFound {
 				Fail("required command not found: gator")
 			}
 
@@ -414,14 +414,40 @@ internal:
 	// ============================================================================
 })
 
-func gatorAvailable() (string, bool) {
-	gatorPath, err := exec.LookPath("gator")
-	if err != nil {
-		return "", false
+func discoverBinary(name string) (string, bool) {
+	if binaryPath, err := exec.LookPath(name); err == nil && isExecutableFile(binaryPath) {
+		return binaryPath, true
 	}
 
-	info, err := os.Lstat(gatorPath)
-	return gatorPath, err == nil && (info.Mode().Perm()&0o111 != 0)
+	moduleRoot := moduleRootDir()
+	repoRoot := filepath.Clean(filepath.Join(moduleRoot, "..", ".."))
+
+	candidates := []string{
+		filepath.Join(repoRoot, "bin", name),
+	}
+
+	versioned, err := filepath.Glob(filepath.Join(repoRoot, "bin", name+"-*", name))
+	if err == nil {
+		sort.Strings(versioned)
+		candidates = append(candidates, versioned...)
+	}
+
+	for _, candidate := range candidates {
+		if isExecutableFile(candidate) {
+			return candidate, true
+		}
+	}
+
+	return "", false
+}
+
+func isExecutableFile(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil || info.IsDir() {
+		return false
+	}
+
+	return info.Mode().Perm()&0o111 != 0
 }
 
 // validateYAML checks if the constraint resource has valid YAML structure
