@@ -290,6 +290,10 @@ spec:
               podSelector:
                 matchLabels:
                   app: controller
+            # ServiceWithHealthChecks agents traffic.
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: "d8-service-with-healthchecks"
       egress:
         # Traffic within the project is allowed.
         - to:
