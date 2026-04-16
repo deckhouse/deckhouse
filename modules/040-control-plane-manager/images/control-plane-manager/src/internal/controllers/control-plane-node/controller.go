@@ -857,8 +857,9 @@ func (r *Reconciler) ensureCertRenewalExists(ctx context.Context, cpn *controlpl
 		}
 
 		op := operationBase(cpn, component, certRenewalCommands(component))
-		op.ObjectMeta.GenerateName = fmt.Sprintf("%s-certrenewal-%s-",
+		op.ObjectMeta.GenerateName = fmt.Sprintf("%s%s%s-",
 			strings.ToLower(string(component)),
+			controlplanev1alpha1.CertRenewalOperationMarker,
 			time.Now().Format("20060102"))
 
 		if err := r.client.Create(ctx, op); err != nil {

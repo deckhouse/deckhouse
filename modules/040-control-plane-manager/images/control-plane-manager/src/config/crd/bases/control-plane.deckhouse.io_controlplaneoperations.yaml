@@ -17,6 +17,11 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: Target component
+      jsonPath: .spec.component
+      name: Component
+      priority: 1
+      type: string
     - description: Target node
       jsonPath: .spec.nodeName
       name: Node
@@ -28,15 +33,11 @@ spec:
     - description: Currently executing command
       jsonPath: .status.conditions[?(@.reason=="InProgress")].type
       name: CurrentStep
+      priority: 1
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - description: Target component
-      jsonPath: .spec.component
-      name: Component
-      priority: 1
-      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

@@ -38,6 +38,10 @@ const (
 	CommandCertObserve      CommandName = "CertObserve"
 )
 
+const (
+	CertRenewalOperationMarker = "-certrenewal-"
+)
+
 // OperationComponent identifies a control plane component targeted by the operation.
 // +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;HotReload;CertObserver
 type OperationComponent string
@@ -163,11 +167,11 @@ type ControlPlaneOperationStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=cpo
+// +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component",priority=1
 // +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".spec.nodeName",description="Target node"
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=`.status.conditions[?(@.type=="Completed")].reason`,description="Operation phase"
-// +kubebuilder:printcolumn:name="CurrentStep",type="string",JSONPath=`.status.conditions[?(@.reason=="InProgress")].type`,description="Currently executing command"
+// +kubebuilder:printcolumn:name="CurrentStep",type="string",JSONPath=`.status.conditions[?(@.reason=="InProgress")].type`,description="Currently executing command",priority=1
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-// +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component",priority=1
 
 // ControlPlaneOperation represents a single pending or completed action
 // that must be applied to a specific component on a control-plane node.
@@ -181,7 +185,7 @@ type ControlPlaneOperation struct {
 
 // IsRenewalOperation reports whether this CPO is a cert renewal operation (detected by name).
 func (op *ControlPlaneOperation) IsRenewalOperation() bool {
-	return strings.Contains(op.Name, "-certrenewal-")
+	return strings.Contains(op.Name, CertRenewalOperationMarker)
 }
 
 // IsObserveOnlyOperation reports whether this operation is a read-only observe for a single static-pod component.
