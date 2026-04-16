@@ -800,7 +800,7 @@ func (r *Runner) execInfrastructureUtility(ctx context.Context, executor func(ct
 	defer r.switchInfrastructureUtilityIsRunning()
 	r.infraExecutor.SetExecutorLogger(r.logger)
 	exitCode, err := executor(ctx)
-	r.logger.LogInfoF("Infrastructure runner %q process exited.\n", r.infraExecutor.Step())
+	r.logger.LogDebugF("Infrastructure runner %q process exited.\n", r.infraExecutor.Step())
 
 	return exitCode, err
 }
