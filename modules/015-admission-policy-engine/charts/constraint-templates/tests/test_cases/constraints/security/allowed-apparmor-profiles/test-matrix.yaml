@@ -48,7 +48,7 @@ spec:
                 annotations:
                   container.apparmor.security.beta.kubernetes.io/nginx: runtime/default
                 name: allowed-runtime-default-annotation
-        - name: 007-allowed-localhost-profile-securityContext
+        - name: 007-allowed-localhost-profile-securitycontext
           violations: "no"
           assertionMessage: ""
           fields:
@@ -60,7 +60,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-localhost-profile-securityContext
+                name: allowed-localhost-profile-securitycontext
               spec:
                 containers:
                   - image: nginx
@@ -69,7 +69,7 @@ spec:
                       appArmorProfile:
                         localhostProfile: localhost/my-profile
                         type: Localhost
-        - name: 008-disallowed-initContainer-unconfined
+        - name: 008-disallowed-initcontainer-unconfined
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -81,7 +81,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-initContainer-unconfined
+                name: disallowed-initcontainer-unconfined
               spec:
                 containers:
                   - image: nginx
@@ -143,7 +143,7 @@ spec:
                 annotations:
                   container.apparmor.security.beta.kubernetes.io/nginx: unconfined
                 name: disallowed-unconfined-annotation
-        - name: 011-disallowed-unconfined-securityContext
+        - name: 011-disallowed-unconfined-securitycontext
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -155,7 +155,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-unconfined-securityContext
+                name: disallowed-unconfined-securitycontext
               spec:
                 containers:
                   - image: nginx

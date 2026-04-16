@@ -42,7 +42,7 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/pss_restricted.yaml
       cases:
-        - name: 003-allowed-runAsNonRoot-true-container
+        - name: 003-allowed-runasnonroot-true-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -54,14 +54,14 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsNonRoot-true-container
+                name: allowed-runasnonroot-true-container
               spec:
                 containers:
                   - image: nginx
                     name: nginx
                     securityContext:
                       runAsNonRoot: true
-        - name: 004-allowed-runAsNonRoot-true-pod
+        - name: 004-allowed-runasnonroot-true-pod
           violations: "no"
           assertionMessage: ""
           fields:
@@ -73,11 +73,11 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsNonRoot-true-pod
+                name: allowed-runasnonroot-true-pod
               spec:
                 securityContext:
                   runAsNonRoot: true
-        - name: 005-allowed-runAsUser-non-zero-container
+        - name: 005-allowed-runasuser-non-zero-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -91,7 +91,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsUser-non-zero-container
+                name: allowed-runasuser-non-zero-container
               spec:
                 containers:
                   - image: nginx
@@ -103,7 +103,7 @@ spec:
                     name: init
                     securityContext:
                       runAsUser: 1000
-        - name: 006-allowed-runAsUser-non-zero-pod
+        - name: 006-allowed-runasuser-non-zero-pod
           violations: "no"
           assertionMessage: ""
           fields:
@@ -115,11 +115,11 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsUser-non-zero-pod
+                name: allowed-runasuser-non-zero-pod
               spec:
                 securityContext:
                   runAsUser: 1000
-        - name: 002-allowed-deployment-runAsNonRoot-true-container
+        - name: 002-allowed-deployment-runasnonroot-true-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -133,7 +133,7 @@ spec:
               apiVersion: apps/v1
               kind: Deployment
               metadata:
-                name: allowed-deployment-runAsNonRoot-true-container
+                name: allowed-deployment-runasnonroot-true-container
               spec:
                 replicas: 1
                 selector:
@@ -149,7 +149,7 @@ spec:
                         name: nginx
                         securityContext:
                           runAsNonRoot: true
-        - name: 001-allowed-daemonset-runAsNonRoot-true-container
+        - name: 001-allowed-daemonset-runasnonroot-true-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -163,7 +163,7 @@ spec:
               apiVersion: apps/v1
               kind: DaemonSet
               metadata:
-                name: allowed-daemonset-runAsNonRoot-true-container
+                name: allowed-daemonset-runasnonroot-true-container
               spec:
                 selector:
                   matchLabels:
@@ -178,7 +178,7 @@ spec:
                         name: nginx
                         securityContext:
                           runAsNonRoot: true
-        - name: 010-disallowed-no-securityContext
+        - name: 010-disallowed-no-securitycontext
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -192,7 +192,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-no-securityContext
+                name: disallowed-no-securitycontext
               spec:
                 containers:
                   - image: nginx
@@ -207,7 +207,7 @@ spec:
                   runAsGroup: 50
                   supplementalGroups:
                     - 50
-        - name: 012-disallowed-runAsUser-zero-container
+        - name: 012-disallowed-runasuser-zero-container
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -219,7 +219,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-runAsUser-zero-container
+                name: disallowed-runasuser-zero-container
               spec:
                 containers:
                   - image: nginx
@@ -235,7 +235,7 @@ spec:
                   runAsGroup: 50
                   supplementalGroups:
                     - 50
-        - name: 013-disallowed-runAsUser-zero-pod
+        - name: 013-disallowed-runasuser-zero-pod
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -247,11 +247,11 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-runAsUser-zero-pod
+                name: disallowed-runasuser-zero-pod
               spec:
                 securityContext:
                   runAsUser: 0
-        - name: 011-disallowed-runAsNonRoot-false-container
+        - name: 011-disallowed-runasnonroot-false-container
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -263,7 +263,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-runAsNonRoot-false-container
+                name: disallowed-runasnonroot-false-container
               spec:
                 containers:
                   - image: nginx
@@ -310,7 +310,7 @@ spec:
                       runAsUser: 0
                       supplementalGroups:
                         - 5
-        - name: 008-disallowed-deployment-runAsUser-zero-container
+        - name: 008-disallowed-deployment-runasuser-zero-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -324,7 +324,7 @@ spec:
               apiVersion: apps/v1
               kind: Deployment
               metadata:
-                name: disallowed-deployment-runAsUser-zero-container
+                name: disallowed-deployment-runasuser-zero-container
               spec:
                 replicas: 1
                 selector:
@@ -340,7 +340,7 @@ spec:
                         name: nginx
                         securityContext:
                           runAsUser: 0
-        - name: 007-disallowed-daemonset-runAsUser-zero-container
+        - name: 007-disallowed-daemonset-runasuser-zero-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -354,7 +354,7 @@ spec:
               apiVersion: apps/v1
               kind: DaemonSet
               metadata:
-                name: disallowed-daemonset-runAsUser-zero-container
+                name: disallowed-daemonset-runasuser-zero-container
               spec:
                 selector:
                   matchLabels:
@@ -375,7 +375,7 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/policy_1.yaml
       cases:
-        - name: 020-allowed-runAsUser-in-range-container
+        - name: 020-allowed-runasuser-in-range-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -389,7 +389,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsUser-in-range-container
+                name: allowed-runasuser-in-range-container
               spec:
                 containers:
                   - image: nginx
@@ -407,7 +407,7 @@ spec:
                   runAsUser: 5
                   supplementalGroups:
                     - 50
-        - name: 021-allowed-runAsUser-in-range-pod
+        - name: 021-allowed-runasuser-in-range-pod
           violations: "no"
           assertionMessage: ""
           fields:
@@ -419,7 +419,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsUser-in-range-pod
+                name: allowed-runasuser-in-range-pod
               spec:
                 securityContext:
                   fsGroup: 50
@@ -427,7 +427,7 @@ spec:
                   runAsUser: 5
                   supplementalGroups:
                     - 50
-        - name: 023-allowed-runAsUser-on-edge-min-container
+        - name: 023-allowed-runasuser-on-edge-min-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -439,7 +439,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsUser-on-edge-min-container
+                name: allowed-runasuser-on-edge-min-container
               spec:
                 securityContext:
                   fsGroup: 50
@@ -447,7 +447,7 @@ spec:
                   runAsUser: 1
                   supplementalGroups:
                     - 50
-        - name: 022-allowed-runAsUser-on-edge-max-container
+        - name: 022-allowed-runasuser-on-edge-max-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -459,7 +459,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-runAsUser-on-edge-max-container
+                name: allowed-runasuser-on-edge-max-container
               spec:
                 securityContext:
                   fsGroup: 50
@@ -467,7 +467,7 @@ spec:
                   runAsUser: 10
                   supplementalGroups:
                     - 50
-        - name: 019-allowed-runAsGroup-in-range-container
+        - name: 019-allowed-runasgroup-in-range-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -481,7 +481,7 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception: allow-custom-user-range
-                name: allowed-runAsGroup-in-range-container
+                name: allowed-runasgroup-in-range-container
               spec:
                 containers:
                   - image: nginx
@@ -494,7 +494,7 @@ spec:
                   runAsUser: 5
                   supplementalGroups:
                     - 50
-        - name: 018-allowed-fsGroup-in-range-pod
+        - name: 018-allowed-fsgroup-in-range-pod
           violations: "no"
           assertionMessage: ""
           fields:
@@ -508,7 +508,7 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception: allow-custom-user-range
-                name: allowed-fsGroup-in-range-pod
+                name: allowed-fsgroup-in-range-pod
               spec:
                 containers:
                   - image: nginx
@@ -521,7 +521,7 @@ spec:
                   runAsUser: 5
                   supplementalGroups:
                     - 50
-        - name: 024-allowed-supplementalGroups-in-range-pod
+        - name: 024-allowed-supplementalgroups-in-range-pod
           violations: "no"
           assertionMessage: ""
           fields:
@@ -535,7 +535,7 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception: allow-custom-user-range
-                name: allowed-supplementalGroups-in-range-pod
+                name: allowed-supplementalgroups-in-range-pod
               spec:
                 containers:
                   - image: nginx
@@ -667,7 +667,7 @@ spec:
                   runAsUser: 5
                   supplementalGroups:
                     - 50
-        - name: 017-allowed-deployment-runAsUser-in-range-container
+        - name: 017-allowed-deployment-runasuser-in-range-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -681,7 +681,7 @@ spec:
               apiVersion: apps/v1
               kind: Deployment
               metadata:
-                name: allowed-deployment-runAsUser-in-range-container
+                name: allowed-deployment-runasuser-in-range-container
               spec:
                 replicas: 1
                 selector:
@@ -701,7 +701,7 @@ spec:
                       runAsUser: 5
                       supplementalGroups:
                         - 50
-        - name: 016-allowed-daemonset-runAsUser-in-range-container
+        - name: 016-allowed-daemonset-runasuser-in-range-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -715,7 +715,7 @@ spec:
               apiVersion: apps/v1
               kind: DaemonSet
               metadata:
-                name: allowed-daemonset-runAsUser-in-range-container
+                name: allowed-daemonset-runasuser-in-range-container
               spec:
                 selector:
                   matchLabels:
@@ -734,7 +734,7 @@ spec:
                       runAsUser: 5
                       supplementalGroups:
                         - 50
-        - name: 029-disallowed-no-securityContext
+        - name: 029-disallowed-no-securitycontext
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -760,8 +760,8 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-no-securityContext
-        - name: 032-disallowed-runAsUser-out-of-range-low-container
+                name: disallowed-no-securitycontext
+        - name: 032-disallowed-runasuser-out-of-range-low-container
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -773,7 +773,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-runAsUser-out-of-range-low-container
+                name: disallowed-runasuser-out-of-range-low-container
               spec:
                 containers:
                   - image: nginx
@@ -789,7 +789,7 @@ spec:
                   runAsGroup: 50
                   supplementalGroups:
                     - 50
-        - name: 031-disallowed-runAsUser-out-of-range-high-container
+        - name: 031-disallowed-runasuser-out-of-range-high-container
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -801,7 +801,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-runAsUser-out-of-range-high-container
+                name: disallowed-runasuser-out-of-range-high-container
               spec:
                 containers:
                   - image: nginx
@@ -817,7 +817,7 @@ spec:
                   runAsGroup: 50
                   supplementalGroups:
                     - 50
-        - name: 030-disallowed-runAsGroup-out-of-range-container
+        - name: 030-disallowed-runasgroup-out-of-range-container
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -829,7 +829,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-runAsGroup-out-of-range-container
+                name: disallowed-runasgroup-out-of-range-container
               spec:
                 containers:
                   - image: nginx
@@ -839,7 +839,7 @@ spec:
                       runAsGroup: 10
                       supplementalGroups:
                         - 5
-        - name: 027-disallowed-fsGroup-out-of-range-pod
+        - name: 027-disallowed-fsgroup-out-of-range-pod
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -855,7 +855,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-fsGroup-out-of-range-pod
+                name: disallowed-fsgroup-out-of-range-pod
               spec:
                 containers:
                   - image: nginx
@@ -870,7 +870,7 @@ spec:
                   runAsGroup: 50
                   supplementalGroups:
                     - 5
-        - name: 033-disallowed-supplementalGroups-out-of-range-pod
+        - name: 033-disallowed-supplementalgroups-out-of-range-pod
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -884,7 +884,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-supplementalGroups-out-of-range-pod
+                name: disallowed-supplementalgroups-out-of-range-pod
               spec:
                 containers:
                   - image: nginx
@@ -941,7 +941,7 @@ spec:
                       runAsUser: 11
                       supplementalGroups:
                         - 5
-        - name: 026-disallowed-deployment-runAsUser-out-of-range-low-container
+        - name: 026-disallowed-deployment-runasuser-out-of-range-low-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -955,7 +955,7 @@ spec:
               apiVersion: apps/v1
               kind: Deployment
               metadata:
-                name: disallowed-deployment-runAsUser-out-of-range-low-container
+                name: disallowed-deployment-runasuser-out-of-range-low-container
               spec:
                 replicas: 1
                 selector:
@@ -980,7 +980,7 @@ spec:
                       runAsGroup: 50
                       supplementalGroups:
                         - 50
-        - name: 025-disallowed-daemonset-runAsUser-out-of-range-low-container
+        - name: 025-disallowed-daemonset-runasuser-out-of-range-low-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -994,7 +994,7 @@ spec:
               apiVersion: apps/v1
               kind: DaemonSet
               metadata:
-                name: disallowed-daemonset-runAsUser-out-of-range-low-container
+                name: disallowed-daemonset-runasuser-out-of-range-low-container
               spec:
                 selector:
                   matchLabels:
@@ -1339,7 +1339,7 @@ spec:
                       runAsUser: 1000
                       supplementalGroups:
                         - 10
-        - name: 036-043-disallowed-by-exception-runAsNonRoot-mismatch
+        - name: 036-043-disallowed-by-exception-runasnonroot-mismatch
           violations: "no"
           assertionMessage: ""
           fields:
@@ -1381,7 +1381,7 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception: allow-root-user
-                name: disallowed-by-exception-runAsNonRoot-mismatch
+                name: disallowed-by-exception-runasnonroot-mismatch
               spec:
                 containers:
                   - image: nginx

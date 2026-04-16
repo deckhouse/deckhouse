@@ -48,7 +48,7 @@ spec:
         merge:
           metadata:
             name: allowed-no-selinux-options
-    - name: 002-allowed-container-init-t-securityContext-container
+    - name: 002-allowed-container-init-t-securitycontext-container
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -60,7 +60,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-container-init-t-securityContext-container
+            name: allowed-container-init-t-securitycontext-container
           spec:
             initContainers:
             - image: busybox
@@ -68,7 +68,7 @@ spec:
               securityContext:
                 seLinuxOptions:
                   type: container_init_t
-    - name: 004-allowed-container-t-securityContext-container
+    - name: 004-allowed-container-t-securitycontext-container
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -80,7 +80,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-container-t-securityContext-container
+            name: allowed-container-t-securitycontext-container
           spec:
             containers:
             - image: nginx
@@ -88,7 +88,7 @@ spec:
               securityContext:
                 seLinuxOptions:
                   type: container_t
-    - name: 007-allowed-empty-type-securityContext-pod
+    - name: 007-allowed-empty-type-securitycontext-pod
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -100,12 +100,12 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-empty-type-securityContext-pod
+            name: allowed-empty-type-securitycontext-pod
           spec:
             securityContext:
               seLinuxOptions:
                 type: container_t
-    - name: 012-disallowed-wrong-type-securityContext-container
+    - name: 012-disallowed-wrong-type-securitycontext-container
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -117,7 +117,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-wrong-type-securityContext-container
+            name: disallowed-wrong-type-securitycontext-container
           spec:
             containers:
             - image: nginx
@@ -125,7 +125,7 @@ spec:
               securityContext:
                 seLinuxOptions:
                   type: spc_t
-    - name: 013-disallowed-wrong-type-securityContext-pod
+    - name: 013-disallowed-wrong-type-securitycontext-pod
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -137,7 +137,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-wrong-type-securityContext-pod
+            name: disallowed-wrong-type-securitycontext-pod
           spec:
             securityContext:
               seLinuxOptions:
@@ -167,7 +167,7 @@ spec:
               securityContext:
                 seLinuxOptions:
                   type: spc_t
-    - name: 014-disallowed-ephemeralcontainer-wrong-type-securityContext-container
+    - name: 014-disallowed-ephemeralcontainer-wrong-type-securitycontext-container
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -179,7 +179,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-ephemeralcontainer-wrong-type-securityContext-container
+            name: disallowed-ephemeralcontainer-wrong-type-securitycontext-container
           spec:
             ephemeralContainers:
             - name: debugger
@@ -193,7 +193,7 @@ spec:
     template: ../rendered/constraint-template.yaml
     constraint: constraints/policy_1.yaml
     cases:
-    - name: 017-allowed-exact-match-securityContext-container
+    - name: 017-allowed-exact-match-securitycontext-container
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -205,7 +205,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-exact-match-securityContext-container
+            name: allowed-exact-match-securitycontext-container
           spec:
             containers:
             - image: nginx
@@ -216,7 +216,7 @@ spec:
                   role: somerole
                   type: sometype
                   user: someuser
-    - name: 018-allowed-exact-match-securityContext-pod
+    - name: 018-allowed-exact-match-securitycontext-pod
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -228,7 +228,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-exact-match-securityContext-pod
+            name: allowed-exact-match-securitycontext-pod
           spec:
             securityContext:
               seLinuxOptions:
@@ -251,7 +251,7 @@ spec:
         merge:
           metadata:
             name: allowed-no-selinux-options
-    - name: 025-disallowed-wrong-type-securityContext-container
+    - name: 025-disallowed-wrong-type-securitycontext-container
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -263,7 +263,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-wrong-type-securityContext-container
+            name: disallowed-wrong-type-securitycontext-container
           spec:
             containers:
             - image: nginx
@@ -274,7 +274,7 @@ spec:
                   role: somerole
                   type: wrongtype
                   user: someuser
-    - name: 023-disallowed-wrong-level-securityContext-container
+    - name: 023-disallowed-wrong-level-securitycontext-container
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -286,7 +286,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-wrong-level-securityContext-container
+            name: disallowed-wrong-level-securitycontext-container
           spec:
             containers:
             - image: nginx
@@ -297,7 +297,7 @@ spec:
                   role: somerole
                   type: sometype
                   user: someuser
-    - name: 024-disallowed-wrong-role-securityContext-container
+    - name: 024-disallowed-wrong-role-securitycontext-container
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -309,7 +309,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-wrong-role-securityContext-container
+            name: disallowed-wrong-role-securitycontext-container
           spec:
             containers:
             - image: nginx
@@ -320,7 +320,7 @@ spec:
                   role: wrongrole
                   type: sometype
                   user: someuser
-    - name: 026-disallowed-wrong-user-securityContext-container
+    - name: 026-disallowed-wrong-user-securitycontext-container
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -332,7 +332,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-wrong-user-securityContext-container
+            name: disallowed-wrong-user-securitycontext-container
           spec:
             containers:
             - image: nginx

@@ -33,7 +33,7 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/policy_1.yaml
       cases:
-        - name: 012-disallowed-readOnlyRootFilesystem-true-pod-only
+        - name: 012-disallowed-readonlyrootfilesystem-true-pod-only
           violations: "yes"
           assertionMessage: ""
           fields: []
@@ -43,11 +43,11 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-readOnlyRootFilesystem-true-pod-only
+                name: disallowed-readonlyrootfilesystem-true-pod-only
               spec:
                 securityContext:
                   readOnlyRootFilesystem: true
-        - name: 011-disallowed-readOnlyRootFilesystem-false-container
+        - name: 011-disallowed-readonlyrootfilesystem-false-container
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -59,14 +59,14 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-readOnlyRootFilesystem-false-container
+                name: disallowed-readonlyrootfilesystem-false-container
               spec:
                 containers:
                   - image: nginx
                     name: nginx
                     securityContext:
                       readOnlyRootFilesystem: false
-        - name: 010-disallowed-no-readOnlyRootFilesystem-container
+        - name: 010-disallowed-no-readonlyrootfilesystem-container
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -78,7 +78,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-no-readOnlyRootFilesystem-container
+                name: disallowed-no-readonlyrootfilesystem-container
         - name: 009-disallowed-multiple-containers-one-not-readonly
           violations: "yes"
           assertionMessage: ""
@@ -203,7 +203,7 @@ spec:
                     name: nginx
                     securityContext:
                       readOnlyRootFilesystem: false
-        - name: 001-allowed-daemonset-readOnlyRootFilesystem-true-container
+        - name: 001-allowed-daemonset-readonlyrootfilesystem-true-container
           violations: "no"
           assertionMessage: ""
           fields:
@@ -217,7 +217,7 @@ spec:
               apiVersion: apps/v1
               kind: DaemonSet
               metadata:
-                name: allowed-daemonset-readOnlyRootFilesystem-true-container
+                name: allowed-daemonset-readonlyrootfilesystem-true-container
               spec:
                 selector:
                   matchLabels:

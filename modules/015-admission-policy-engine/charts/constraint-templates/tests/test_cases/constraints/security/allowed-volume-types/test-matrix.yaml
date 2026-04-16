@@ -75,7 +75,7 @@ spec:
                   - name: secret
                     secret:
                       secretName: my-secret
-        - name: 015-disallowed-hostPath-volume
+        - name: 015-disallowed-hostpath-volume
           violations: "no"
           assertionMessage: ""
           fields:
@@ -87,7 +87,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-hostPath-volume
+                name: disallowed-hostpath-volume
               spec:
                 containers:
                   - image: nginx
@@ -172,7 +172,7 @@ spec:
             merge:
               metadata:
                 name: allowed-no-volumes
-        - name: 023-allowed-hostPath-volume
+        - name: 023-allowed-hostpath-volume
           violations: "no"
           assertionMessage: ""
           fields:
@@ -184,7 +184,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-hostPath-volume
+                name: allowed-hostpath-volume
               spec:
                 containers:
                   - image: nginx
@@ -256,7 +256,7 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/pss_restricted.yaml
       cases:
-        - name: 028-031-allowed-by-exception-hostPath-volume
+        - name: 028-031-allowed-by-exception-hostpath-volume
           violations: "no"
           assertionMessage: ""
           fields:
@@ -268,7 +268,7 @@ spec:
             - base: securityPolicyException
               merge:
                 metadata:
-                  name: allow-hostPath-volume
+                  name: allow-hostpath-volume
                 spec:
                   volumes:
                     types:
@@ -279,8 +279,8 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception: allow-hostPath-volume
-                name: allowed-by-exception-hostPath-volume
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
+                name: allowed-by-exception-hostpath-volume
               spec:
                 containers:
                   - image: nginx
@@ -348,7 +348,7 @@ spec:
             - base: securityPolicyException
               merge:
                 metadata:
-                  name: allow-hostPath-volume
+                  name: allow-hostpath-volume
                 spec:
                   volumes:
                     types:
@@ -359,7 +359,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception: allow-hostPath-volume
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
                 name: allowed-by-exception-mismatch-but-constraint-allows
               spec:
                 containers:
@@ -384,7 +384,7 @@ spec:
             - base: securityPolicyException
               merge:
                 metadata:
-                  name: allow-hostPath-volume
+                  name: allow-hostpath-volume
                 spec:
                   volumes:
                     types:
@@ -395,7 +395,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception: allow-hostPath-volume
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
                 name: disallowed-by-exception-volume-type-mismatch
               spec:
                 containers:
@@ -445,7 +445,7 @@ spec:
             - base: securityPolicyException
               merge:
                 metadata:
-                  name: allow-hostPath-volume
+                  name: allow-hostpath-volume
                 spec:
                   volumes:
                     types:
@@ -456,7 +456,7 @@ spec:
             merge:
               metadata:
                 labels:
-                  security.deckhouse.io/security-policy-exception: allow-hostPath-volume
+                  security.deckhouse.io/security-policy-exception: allow-hostpath-volume
                 name: disallowed-by-exception-multiple-volumes-one-mismatch
               spec:
                 containers:

@@ -77,7 +77,7 @@ spec:
                           - NET_BIND_SERVICE
                         drop:
                           - ALL
-        - name: 008-disallowed-initContainer-disallowed-capability
+        - name: 008-disallowed-initcontainer-disallowed-capability
           violations: "yes"
           assertionMessage: ""
           fields:

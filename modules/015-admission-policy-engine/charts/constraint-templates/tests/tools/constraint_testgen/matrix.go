@@ -77,11 +77,11 @@ type matrixCase struct {
 	// Fields declares which field+scenario this case covers.
 	Fields []matrixCaseField `yaml:"fields"`
 	// Exception / ExceptionRef name a spec.namedExceptions entry: generates SPE inventory + pod label.
-	Exception    string             `yaml:"exception"`
-	ExceptionRef string             `yaml:"exceptionRef"`
-	Inventory    []interface{}      `yaml:"inventory"`
+	Exception    string              `yaml:"exception"`
+	ExceptionRef string              `yaml:"exceptionRef"`
+	Inventory    []interface{}       `yaml:"inventory"`
 	ExternalData *matrixExternalData `yaml:"externalData,omitempty"`
-	Object       interface{}        `yaml:"object"`
+	Object       interface{}         `yaml:"object"`
 }
 
 type matrixCaseField struct {
@@ -133,6 +133,9 @@ func generateFromMatrix(matrixPath, testsRoot string) error {
 	suite := suiteOut{
 		Kind:       "Suite",
 		APIVersion: "test.gatekeeper.sh/v1alpha1",
+	}
+	if err := validateRFC1123SubdomainName(doc.Spec.SuiteName); err != nil {
+		return fmt.Errorf("spec.suiteName: %w", err)
 	}
 	suite.Metadata.Name = doc.Spec.SuiteName
 
@@ -252,7 +255,7 @@ func buildExternalDataInventoryDoc(cfg *matrixExternalData) (map[string]interfac
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}{
+	doc := map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1alpha1",
 		"kind":       "ExternalDataInventory",
 		"metadata": map[string]interface{}{
@@ -262,7 +265,11 @@ func buildExternalDataInventoryDoc(cfg *matrixExternalData) (map[string]interfac
 		"spec": map[string]interface{}{
 			"providers": providers,
 		},
-	}, nil
+	}
+	if err := ensureObjectMetadataNameRFC1123StrictOrFallback(doc, "external-data", "externalData inventory"); err != nil {
+		return nil, err
+	}
+	return doc, nil
 }
 
 func matrixExternalDataProvidersToMap(cfg *matrixExternalData) (map[string]interface{}, error) {
@@ -873,17 +880,21 @@ func exceptionNameFromCase(c *matrixCase) string {
 }
 
 func applyNamedException(spec *matrixSpec, c *matrixCase) error {
-	exName := exceptionNameFromCase(c)
-	if exName == "" {
+	rawExName := exceptionNameFromCase(c)
+	if rawExName == "" {
 		return nil
 	}
 	if spec.NamedExceptions == nil {
-		return fmt.Errorf("namedExceptions undefined but case references %q", exName)
+		return fmt.Errorf("namedExceptions undefined but case references %q", rawExName)
 	}
-	def, ok := spec.NamedExceptions[exName]
+	def, ok := spec.NamedExceptions[rawExName]
 	if !ok {
-		return fmt.Errorf("unknown namedExceptions key %q", exName)
+		return fmt.Errorf("unknown namedExceptions key %q", rawExName)
 	}
+	if err := validateRFC1123SubdomainName(rawExName); err != nil {
+		return fmt.Errorf("exception %q name: %w", rawExName, err)
+	}
+	exName := rawExName
 	for _, inv := range c.Inventory {
 		m, ok := inv.(map[string]interface{})
 		if !ok {
@@ -953,11 +964,10 @@ func applyDefaultPodMetadataName(doc any, caseSlug, podName string) {
 	if has && strings.TrimSpace(nameStr) != "" {
 		return
 	}
-	chosen := caseSlug
-	if strings.TrimSpace(podName) != "" {
-		chosen = podName
+	if strings.TrimSpace(podName) == "" {
+		return
 	}
-	meta["name"] = chosen
+	meta["name"] = podName
 }
 
 func extractMergeAndContainerPatches(v map[string]interface{}) (merge map[string]interface{}, cMerges, icMerges []interface{}) {
@@ -1006,6 +1016,9 @@ func resolveMatrixInventoryItem(raw interface{}, bases map[string]matrixBase, sa
 		if err != nil {
 			return "", err
 		}
+		if err := ensureObjectMetadataNameRFC1123StrictOrFallback(merged, autoSlug, fmt.Sprintf("inventory item base=%q", baseName)); err != nil {
+			return "", err
+		}
 		rel, err := writeMatrixGeneratedYAML(pathOut, merged, samplesDir, outDir, tracker, !explicitPath)
 		if err != nil {
 			return "", err
@@ -1052,6 +1065,12 @@ func resolveMatrixObject(raw interface{}, bases map[string]matrixBase, samplesDi
 		return "", err
 	}
 	applyDefaultPodMetadataName(merged, autoSlug, podName)
+	if err := ensureObjectMetadataNameRFC1123StrictOrFallback(merged, autoSlug, fmt.Sprintf("object base=%q", baseName)); err != nil {
+		return "", err
+	}
+	if err := validatePodExceptionLabelRFC1123(merged, fmt.Sprintf("object base=%q", baseName)); err != nil {
+		return "", err
+	}
 	rel, err := writeMatrixGeneratedYAML(pathOut, merged, samplesDir, outDir, tracker, !explicitPath)
 	if err != nil {
 		return "", err

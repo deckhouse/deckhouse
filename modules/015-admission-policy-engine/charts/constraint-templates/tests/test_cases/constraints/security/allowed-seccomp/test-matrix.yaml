@@ -33,7 +33,7 @@ spec:
     template: ../rendered/constraint-template.yaml
     constraint: constraints/pss_baseline.yaml
     cases:
-    - name: 001-allowed-daemonset-runtime-default-securityContext-container
+    - name: 001-allowed-daemonset-runtime-default-securitycontext-container
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -47,7 +47,7 @@ spec:
           apiVersion: apps/v1
           kind: DaemonSet
           metadata:
-            name: allowed-daemonset-runtime-default-securityContext-container
+            name: allowed-daemonset-runtime-default-securitycontext-container
           spec:
             selector:
               matchLabels:
@@ -63,7 +63,7 @@ spec:
                   securityContext:
                     seccompProfile:
                       type: RuntimeDefault
-    - name: 002-allowed-deployment-runtime-default-securityContext-container
+    - name: 002-allowed-deployment-runtime-default-securitycontext-container
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -77,7 +77,7 @@ spec:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: allowed-deployment-runtime-default-securityContext-container
+            name: allowed-deployment-runtime-default-securitycontext-container
           spec:
             replicas: 1
             selector:
@@ -109,7 +109,7 @@ spec:
             annotations:
               container.seccomp.security.alpha.kubernetes.io/nginx: localhost/my-profile.json
             name: allowed-localhost-profile-annotation
-    - name: 004-allowed-localhost-profile-securityContext
+    - name: 004-allowed-localhost-profile-securitycontext
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -121,7 +121,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-localhost-profile-securityContext
+            name: allowed-localhost-profile-securitycontext
           spec:
             containers:
             - image: nginx
@@ -164,7 +164,7 @@ spec:
             annotations:
               seccomp.security.alpha.kubernetes.io/pod: runtime/default
             name: allowed-runtime-default-annotation
-    - name: 007-allowed-runtime-default-securityContext-container
+    - name: 007-allowed-runtime-default-securitycontext-container
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -176,7 +176,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-runtime-default-securityContext-container
+            name: allowed-runtime-default-securitycontext-container
           spec:
             containers:
             - image: nginx
@@ -184,7 +184,7 @@ spec:
               securityContext:
                 seccompProfile:
                   type: RuntimeDefault
-    - name: 008-allowed-runtime-default-securityContext-pod
+    - name: 008-allowed-runtime-default-securitycontext-pod
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -196,12 +196,12 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-runtime-default-securityContext-pod
+            name: allowed-runtime-default-securitycontext-pod
           spec:
             securityContext:
               seccompProfile:
                 type: RuntimeDefault
-    - name: 009-disallowed-daemonset-unconfined-securityContext
+    - name: 009-disallowed-daemonset-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -215,7 +215,7 @@ spec:
           apiVersion: apps/v1
           kind: DaemonSet
           metadata:
-            name: disallowed-daemonset-unconfined-securityContext
+            name: disallowed-daemonset-unconfined-securitycontext
           spec:
             selector:
               matchLabels:
@@ -231,7 +231,7 @@ spec:
                   securityContext:
                     seccompProfile:
                       type: Unconfined
-    - name: 010-disallowed-deployment-unconfined-securityContext
+    - name: 010-disallowed-deployment-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -245,7 +245,7 @@ spec:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: disallowed-deployment-unconfined-securityContext
+            name: disallowed-deployment-unconfined-securitycontext
           spec:
             replicas: 1
             selector:
@@ -302,7 +302,7 @@ spec:
             annotations:
               seccomp.security.alpha.kubernetes.io/pod: unconfined
             name: disallowed-unconfined-annotation
-    - name: 013-disallowed-unconfined-securityContext
+    - name: 013-disallowed-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -314,7 +314,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-unconfined-securityContext
+            name: disallowed-unconfined-securitycontext
           spec:
             containers:
             - image: nginx
@@ -322,7 +322,7 @@ spec:
               securityContext:
                 seccompProfile:
                   type: Unconfined
-    - name: 014-disallowed-unconfined-securityContext-pod
+    - name: 014-disallowed-unconfined-securitycontext-pod
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -334,12 +334,12 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-unconfined-securityContext-pod
+            name: disallowed-unconfined-securitycontext-pod
           spec:
             securityContext:
               seccompProfile:
                 type: Unconfined
-    - name: 015-disallowed-initcontainer-unconfined-securityContext
+    - name: 015-disallowed-initcontainer-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -351,7 +351,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-initcontainer-unconfined-securityContext
+            name: disallowed-initcontainer-unconfined-securitycontext
           spec:
             containers:
             - image: nginx
@@ -440,7 +440,7 @@ spec:
               name: nginx
             - image: redis
               name: redis
-    - name: 019-allowed-ephemeralcontainer-runtime-default-securityContext-container
+    - name: 019-allowed-ephemeralcontainer-runtime-default-securitycontext-container
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -452,7 +452,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-ephemeralcontainer-runtime-default-securityContext-container
+            name: allowed-ephemeralcontainer-runtime-default-securitycontext-container
           spec:
             ephemeralContainers:
             - name: debugger
@@ -500,7 +500,7 @@ spec:
             annotations:
               container.seccomp.security.alpha.kubernetes.io/nginx: localhost/any-profile.json
             name: allowed-localhost-profile-annotation
-    - name: 015-allowed-localhost-profile-securityContext
+    - name: 015-allowed-localhost-profile-securitycontext
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -512,7 +512,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-localhost-profile-securityContext
+            name: allowed-localhost-profile-securitycontext
           spec:
             containers:
             - image: nginx
@@ -521,7 +521,7 @@ spec:
                 seccompProfile:
                   localhostProfile: any-profile.json
                   type: Localhost
-    - name: 016-allowed-runtime-default-securityContext
+    - name: 016-allowed-runtime-default-securitycontext
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -533,7 +533,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: allowed-runtime-default-securityContext
+            name: allowed-runtime-default-securitycontext
           spec:
             containers:
             - image: nginx
@@ -554,7 +554,7 @@ spec:
         merge:
           metadata:
             name: disallowed-no-seccomp-profile
-    - name: 018-disallowed-unconfined-securityContext
+    - name: 018-disallowed-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -566,7 +566,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-unconfined-securityContext
+            name: disallowed-unconfined-securitycontext
           spec:
             containers:
             - image: nginx
@@ -580,7 +580,7 @@ spec:
     template: ../rendered/constraint-template.yaml
     constraint: constraints/policy_1.yaml
     cases:
-    - name: 021-allowed-localhost-verySpecialFile-annotation
+    - name: 021-allowed-localhost-veryspecialfile-annotation
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -594,8 +594,8 @@ spec:
           metadata:
             annotations:
               container.seccomp.security.alpha.kubernetes.io/nginx: localhost/verySpecialFile
-            name: allowed-localhost-verySpecialFile-annotation
-    - name: 025-disallowed-localhost-wrong-file-securityContext
+            name: allowed-localhost-veryspecialfile-annotation
+    - name: 025-disallowed-localhost-wrong-file-securitycontext
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -607,7 +607,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-localhost-wrong-file-securityContext
+            name: disallowed-localhost-wrong-file-securitycontext
           spec:
             containers:
             - image: nginx
@@ -655,7 +655,7 @@ spec:
         merge:
           metadata:
             name: disallowed-no-seccomp-profile
-    - name: 029-disallowed-unconfined-securityContext
+    - name: 029-disallowed-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''
       fields:
@@ -667,7 +667,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-unconfined-securityContext
+            name: disallowed-unconfined-securitycontext
           spec:
             containers:
             - image: nginx

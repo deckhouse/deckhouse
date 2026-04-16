@@ -33,7 +33,7 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/pss_restricted.yaml
       cases:
-        - name: 002-allowed-allowPrivilegeEscalation-false
+        - name: 002-allowed-allowprivilegeescalation-false
           violations: "no"
           assertionMessage: ""
           fields:
@@ -45,14 +45,14 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-allowPrivilegeEscalation-false
+                name: allowed-allowprivilegeescalation-false
               spec:
                 containers:
                   - image: nginx
                     name: nginx
                     securityContext:
                       allowPrivilegeEscalation: false
-        - name: 006-disallowed-no-securityContext
+        - name: 006-disallowed-no-securitycontext
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -64,8 +64,8 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-no-securityContext
-        - name: 003-disallowed-allowPrivilegeEscalation-true
+                name: disallowed-no-securitycontext
+        - name: 003-disallowed-allowprivilegeescalation-true
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -77,7 +77,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-allowPrivilegeEscalation-true
+                name: disallowed-allowprivilegeescalation-true
               spec:
                 containers:
                   - image: nginx
@@ -111,7 +111,7 @@ spec:
                     name: sidecar
                     securityContext:
                       allowPrivilegeEscalation: false
-        - name: 004-disallowed-initContainer-allowPrivilegeEscalation-true
+        - name: 004-disallowed-initcontainer-allowprivilegeescalation-true
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -123,7 +123,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-initContainer-allowPrivilegeEscalation-true
+                name: disallowed-initcontainer-allowprivilegeescalation-true
               spec:
                 containers:
                   - image: nginx
@@ -139,7 +139,7 @@ spec:
                     name: init
                     securityContext:
                       allowPrivilegeEscalation: true
-        - name: 007-allowed-initContainer-allowPrivilegeEscalation-false
+        - name: 007-allowed-initcontainer-allowprivilegeescalation-false
           violations: "no"
           assertionMessage: ""
           fields:
@@ -151,7 +151,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-initContainer-allowPrivilegeEscalation-false
+                name: allowed-initcontainer-allowprivilegeescalation-false
               spec:
                 containers:
                   - image: nginx
@@ -167,7 +167,7 @@ spec:
                     name: init
                     securityContext:
                       allowPrivilegeEscalation: false
-        - name: 008-disallowed-ephemeralContainer-allowPrivilegeEscalation-true
+        - name: 008-disallowed-ephemeralcontainer-allowprivilegeescalation-true
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -179,7 +179,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-ephemeralContainer-allowPrivilegeEscalation-true
+                name: disallowed-ephemeralcontainer-allowprivilegeescalation-true
               spec:
                 containers:
                   - image: nginx
@@ -201,7 +201,7 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/pss_restricted.yaml
       cases:
-        - name: 012-021-allowed-by-exception-allowPrivilegeEscalation-true
+        - name: 012-021-allowed-by-exception-allowprivilegeescalation-true
           violations: "no"
           assertionMessage: ""
           fields:
@@ -224,14 +224,14 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception: allow-privilege-escalation-true
-                name: allowed-by-exception-allowPrivilegeEscalation-true
+                name: allowed-by-exception-allowprivilegeescalation-true
               spec:
                 containers:
                   - image: nginx
                     name: nginx
                     securityContext:
                       allowPrivilegeEscalation: true
-        - name: 009-018-disallowed-by-exception-allowPrivilegeEscalation-mismatch-false
+        - name: 009-018-disallowed-by-exception-allowprivilegeescalation-mismatch-false
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -254,7 +254,7 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception: allow-privilege-escalation-false
-                name: disallowed-by-exception-allowPrivilegeEscalation-mismatch-false
+                name: disallowed-by-exception-allowprivilegeescalation-mismatch-false
               spec:
                 containers:
                   - image: nginx
@@ -314,7 +314,7 @@ spec:
       template: ../rendered/constraint-template.yaml
       constraint: constraints/pss_restricted.yaml
       cases:
-        - name: 013-022-allowed-by-container-specific-exception-allowPrivilegeEscalation-true
+        - name: 013-022-allowed-by-container-specific-exception-allowprivilegeescalation-true
           violations: "no"
           assertionMessage: ""
           fields:
@@ -337,7 +337,7 @@ spec:
               metadata:
                 labels:
                   security.deckhouse.io/security-policy-exception/nginx: allow-privilege-escalation-true-container
-                name: allowed-by-container-exception-allowPrivilegeEscalation-true
+                name: allowed-by-container-exception-allowprivilegeescalation-true
               spec:
                 containers:
                   - image: nginx

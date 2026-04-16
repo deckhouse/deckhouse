@@ -52,7 +52,7 @@ spec:
                     name: nginx
                     securityContext:
                       privileged: false
-        - name: 007-allowed-no-securityContext
+        - name: 007-allowed-no-securitycontext
           violations: "no"
           assertionMessage: ""
           fields:
@@ -64,7 +64,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-no-securityContext
+                name: allowed-no-securitycontext
         - name: 006-disallowed-privileged-true
           violations: "yes"
           assertionMessage: ""
@@ -111,7 +111,7 @@ spec:
                     name: sidecar
                     securityContext:
                       privileged: false
-        - name: 004-disallowed-initContainer-privileged-true
+        - name: 004-disallowed-initcontainer-privileged-true
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -123,7 +123,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-initContainer-privileged-true
+                name: disallowed-initcontainer-privileged-true
               spec:
                 containers:
                   - image: nginx
@@ -139,7 +139,7 @@ spec:
                     name: init
                     securityContext:
                       privileged: true
-        - name: 008-disallowed-ephemeralContainer-privileged-true
+        - name: 008-disallowed-ephemeralcontainer-privileged-true
           violations: "yes"
           assertionMessage: ""
           fields:
@@ -151,7 +151,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: disallowed-ephemeralContainer-privileged-true
+                name: disallowed-ephemeralcontainer-privileged-true
               spec:
                 containers:
                   - image: nginx
