@@ -523,13 +523,12 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 				}
 			} else {
 				report, err := r.getPlanDestructiveChanges(ctx, tmpFile.Name())
-				destructiveChanges := report.changes
 				if err != nil {
 					return err
 				}
-				if destructiveChanges != nil {
+				if report.changes != nil {
 					r.changesInPlan = plan.HasDestructiveChanges
-					r.planDestructiveChanges = destructiveChanges
+					r.planDestructiveChanges = report.changes
 					r.hasVMDestruction = report.hasVMChanges
 				}
 			}

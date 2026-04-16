@@ -18,11 +18,14 @@ package validation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
+	"github.com/flant/addon-operator/pkg/values/validation"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -58,7 +61,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			return rejectResult(res.Message)
 		}
 
-		if err = checkConstraintsByApp(ctx, cli, manager, app); err != nil {
+		if err = validateAppAgainstApv(ctx, cli, manager, app); err != nil {
 			return rejectResult(err.Error())
 		}
 
@@ -78,13 +81,18 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
 }
 
-// checkConstraintsByApp validates that the cluster meets the requirements declared by the
-// ApplicationPackageVersion that corresponds to the given Application. It fetches the APV
-// resource from the cluster, parses its requirements (Kubernetes version, Deckhouse version,
-// and module dependencies) into semver constraints, and delegates the actual check to the
-// package manager's CheckConstraints method. This is called during admission webhook
-// validation to prevent installing a package whose requirements are not satisfied.
-func checkConstraintsByApp(ctx context.Context, cli client.Client, manager packageManager, app *v1alpha1.Application) error {
+// validateAppAgainstApv validates an Application against its corresponding
+// ApplicationPackageVersion (APV). It fetches the APV once and performs two checks:
+//
+//  1. Settings schema validation — Application.spec.settings are validated against the
+//     OpenAPI schema published at APV.status.packageSchemas.settingsSchema (if present).
+//  2. Requirement constraints — the APV's requirements (Kubernetes version, Deckhouse
+//     version, and module dependencies) are parsed into semver constraints and delegated
+//     to the package manager's CheckConstraints method.
+//
+// This is called during admission webhook validation to reject Applications whose
+// settings are malformed or whose cluster requirements are not satisfied.
+func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app *v1alpha1.Application) error {
 	// Build the deterministic APV name from the Application's spec fields (repo, package, version).
 	name := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 
@@ -92,6 +100,10 @@ func checkConstraintsByApp(ctx context.Context, cli client.Client, manager packa
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := cli.Get(ctx, client.ObjectKey{Name: name}, apv); err != nil {
 		return fmt.Errorf("get application package version: %w", err)
+	}
+
+	if err := validateAppSettings(apv, app); err != nil {
+		return fmt.Errorf("validate settings: %w", err)
 	}
 
 	// Parse the APV's requirements into schedule.Constraints if metadata is present.
@@ -142,4 +154,35 @@ func checkConstraintsByApp(ctx context.Context, cli client.Client, manager packa
 
 	// Delegate to the manager which checks the parsed constraints against actual cluster state.
 	return manager.CheckConstraints(constraints)
+}
+
+// validateAppSettings validates Application.spec.settings against the OpenAPI settings
+// schema published by the ApplicationPackageVersion at status.packageSchemas.settingsSchema.
+// The schema is re-serialized to JSON, loaded into an addon-operator SchemaStorage, and the
+// user-supplied settings are wrapped under the package name (as addon-operator expects) and
+// validated. Returns nil when the APV publishes no settings schema — the webhook treats an
+// absent schema as "nothing to validate" rather than a rejection, so packages that ship
+// without a schema remain installable.
+func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.Application) error {
+	if apv.Status.PackageSchemas == nil {
+		return nil
+	}
+
+	schemas := apv.Status.PackageSchemas
+	if schemas.SettingsSchema == nil || schemas.SettingsSchema.OpenAPIV3Schema == nil {
+		return nil
+	}
+
+	schema, err := json.Marshal(schemas.SettingsSchema.OpenAPIV3Schema)
+	if err != nil {
+		return fmt.Errorf("get settings schema: %w", err)
+	}
+
+	storage, err := validation.NewSchemaStorage(schema, nil)
+	if err != nil {
+		return fmt.Errorf("create storage schema: %w", err)
+	}
+
+	values := addonutils.Values{app.Spec.PackageName: app.Spec.Settings.GetMap()}
+	return storage.ValidateConfigValues(app.Spec.PackageName, values)
 }
