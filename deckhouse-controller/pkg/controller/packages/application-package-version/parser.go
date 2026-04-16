@@ -32,6 +32,12 @@ const (
 	// versionFile is the name of the JSON file inside the image tar that contains the package version.
 	versionFile = "version.json"
 
+	// valuesSchemaFile is the OpenAPI schema validating the computed Helm values for the package.
+	valuesSchemaFile = "openapi/values.yaml"
+
+	// settingsSchemaFile is the OpenAPI schema validating user-supplied Application.spec.settings.
+	settingsSchemaFile = "openapi/config-values.yaml"
+
 	// maxMetadataFileSize limits the size of individual metadata files extracted from tar archives.
 	// This guards against OOM from malicious or corrupted images containing oversized entries.
 	maxMetadataFileSize = 1 << 20 // 1 MB
@@ -39,9 +45,11 @@ const (
 
 // packageMetadata holds all metadata extracted from a package image tar archive.
 type packageMetadata struct {
-	version    string
-	changelog  packageChangelog
-	definition dto.ApplicationDefinition
+	version           string
+	changelog         packageChangelog
+	definition        dto.ApplicationDefinition
+	rawSettingsSchema []byte
+	rawValuesSchema   []byte
 }
 
 // packageChangelog represents user-facing release notes for a package version.
@@ -53,9 +61,11 @@ type packageChangelog struct {
 // metadataReader buffers the raw content of each metadata file extracted from the tar.
 // Each buffer may remain empty if the corresponding file is absent from the archive.
 type metadataReader struct {
-	definitionReader *bytes.Buffer
-	versionReader    *bytes.Buffer
-	changelogReader  *bytes.Buffer
+	definitionReader     *bytes.Buffer
+	versionReader        *bytes.Buffer
+	changelogReader      *bytes.Buffer
+	valuesSchemaReader   *bytes.Buffer
+	settingsSchemaReader *bytes.Buffer
 }
 
 // parseVersionMetadataByImage extracts package metadata from a tar-formatted image reader.
@@ -65,9 +75,11 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 	meta := new(packageMetadata)
 
 	mr := &metadataReader{
-		versionReader:    bytes.NewBuffer(nil),
-		changelogReader:  bytes.NewBuffer(nil),
-		definitionReader: bytes.NewBuffer(nil),
+		versionReader:        bytes.NewBuffer(nil),
+		changelogReader:      bytes.NewBuffer(nil),
+		definitionReader:     bytes.NewBuffer(nil),
+		valuesSchemaReader:   bytes.NewBuffer(nil),
+		settingsSchemaReader: bytes.NewBuffer(nil),
 	}
 
 	if err := mr.untarMetadata(img); err != nil {
@@ -98,6 +110,14 @@ func (r *reconciler) parseVersionMetadataByImage(_ context.Context, img io.Reade
 		}
 	}
 
+	if mr.settingsSchemaReader.Len() > 0 {
+		meta.rawSettingsSchema = mr.settingsSchemaReader.Bytes()
+	}
+
+	if mr.valuesSchemaReader.Len() > 0 {
+		meta.rawValuesSchema = mr.valuesSchemaReader.Bytes()
+	}
+
 	return meta, nil
 }
 
@@ -120,6 +140,14 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 			if _, err = io.Copy(r.versionReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
+		case valuesSchemaFile:
+			if _, err = io.Copy(r.valuesSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
+				return err
+			}
+		case settingsSchemaFile:
+			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
+				return err
+			}
 		case "changelog.yaml", "changelog.yml":
 			if _, err = io.Copy(r.changelogReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
@@ -133,7 +161,11 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 		}
 
 		// All metadata files found — skip remaining tar entries.
-		if r.versionReader.Len() > 0 && r.changelogReader.Len() > 0 && r.definitionReader.Len() > 0 {
+		if r.versionReader.Len() > 0 &&
+			r.changelogReader.Len() > 0 &&
+			r.definitionReader.Len() > 0 &&
+			r.valuesSchemaReader.Len() > 0 &&
+			r.settingsSchemaReader.Len() > 0 {
 			return nil
 		}
 	}
