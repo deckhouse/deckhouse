@@ -12,7 +12,7 @@ index 7381590c..d9eef2e5 100644
  - [#1233](https://github.com/oauth2-proxy/oauth2-proxy/pull/1233) Extend email-domain validation with sub-domain capability (@morarucostel)
  - [#1060](https://github.com/oauth2-proxy/oauth2-proxy/pull/1060) Implement RewriteTarget to allow requests to be rewritten before proxying to upstream servers (@JoelSpeed)
 diff --git a/go.mod b/go.mod
-index 9bfa34cd..b2d9eee1 100644
+index 9bfa34cd..207ef1f6 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -29,7 +29,7 @@ index 9bfa34cd..b2d9eee1 100644
  	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 -	github.com/golang-jwt/jwt v3.2.2+incompatible
 -	github.com/google/uuid v1.3.0
-+	github.com/go-jose/go-jose/v4 v4.1.3
++	github.com/go-jose/go-jose/v4 v4.1.4
 +	github.com/golang-jwt/jwt/v5 v5.3.0
 +	github.com/google/uuid v1.6.0
  	github.com/gorilla/mux v1.8.0
@@ -74,8 +74,9 @@ index 9bfa34cd..b2d9eee1 100644
 +	github.com/cespare/xxhash/v2 v2.3.0 // indirect
  	github.com/davecgh/go-spew v1.1.1 // indirect
  	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
- 	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
+-	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
 -	github.com/go-logr/logr v1.2.3 // indirect
++	github.com/go-jose/go-jose/v3 v3.0.5 // indirect
 +	github.com/go-logr/logr v1.4.3 // indirect
  	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 -	github.com/golang/protobuf v1.5.3 // indirect
@@ -104,7 +105,7 @@ index 9bfa34cd..b2d9eee1 100644
  	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
 diff --git a/go.sum b/go.sum
-index 5bfd1e8a..7f967291 100644
+index 5bfd1e8a..a3777cd3 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,10 +1,8 @@
@@ -131,12 +132,16 @@ index 5bfd1e8a..7f967291 100644
  github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
  github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
  github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
-@@ -85,21 +83,25 @@ github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32/go.mod h1:GIjDIg/heH
+@@ -83,23 +81,27 @@ github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeME
+ github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 h1:Mn26/9ZMNWSw9C9ERFA1PUxfmGpolnw2v0bKOREu5ew=
+ github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32/go.mod h1:GIjDIg/heH5DOkXY3YJ/wNhfHsQHoXGjl8G8amsYQ1I=
  github.com/go-jose/go-jose/v3 v3.0.0/go.mod h1:RNkWWRld676jZEYoV3+XK8L2ZnNSvIsxFMht0mSX+u8=
- github.com/go-jose/go-jose/v3 v3.0.4 h1:Wp5HA7bLQcKnf6YYao/4kpRpVMp/yf6+pJKV8WFSaNY=
- github.com/go-jose/go-jose/v3 v3.0.4/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
-+github.com/go-jose/go-jose/v4 v4.1.3 h1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=
-+github.com/go-jose/go-jose/v4 v4.1.3/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
+-github.com/go-jose/go-jose/v3 v3.0.4 h1:Wp5HA7bLQcKnf6YYao/4kpRpVMp/yf6+pJKV8WFSaNY=
+-github.com/go-jose/go-jose/v3 v3.0.4/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
++github.com/go-jose/go-jose/v3 v3.0.5 h1:BLLJWbC4nMZOfuPVxoZIxeYsn6Nl2r1fITaJ78UQlVQ=
++github.com/go-jose/go-jose/v3 v3.0.5/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
++github.com/go-jose/go-jose/v4 v4.1.4 h1:moDMcTHmvE6Groj34emNPLs/qtYXRVcd6S7NHbHz3kA=
++github.com/go-jose/go-jose/v4 v4.1.4/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
  github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
  github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
  github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
