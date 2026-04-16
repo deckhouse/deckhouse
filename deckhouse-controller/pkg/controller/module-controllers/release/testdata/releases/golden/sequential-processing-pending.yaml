@@ -29,6 +29,7 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -66,6 +67,7 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
@@ -103,6 +105,7 @@ kind: ModuleRelease
 metadata:
   annotations:
     modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs

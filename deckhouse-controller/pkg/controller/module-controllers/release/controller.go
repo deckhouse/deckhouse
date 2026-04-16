@@ -1164,6 +1164,7 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 	err = ctrlutils.UpdateWithRetry(ctx, r.client, release, func() error {
 		annotations := map[string]string{
 			v1alpha1.ModuleReleaseAnnotationIsUpdating: "true",
+			v1alpha1.ModuleReleaseAnnotationNotified:   "true",
 		}
 
 		if len(release.Annotations) == 0 {
