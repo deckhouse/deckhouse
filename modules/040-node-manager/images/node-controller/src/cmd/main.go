@@ -116,6 +116,8 @@ func main() {
 
 	// Controller manager — full cache for controllers, no webhook server.
 	// Secrets are cached only from d8-cloud-instance-manager and kube-system namespaces.
+	// Machine/MachineDeployment are cached only from d8-cloud-instance-manager.
+	// Pod and Lease bypass the cache (used rarely by fencing controller).
 	ctrlMgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -123,6 +125,7 @@ func main() {
 		},
 		HealthProbeBindAddress: probeAddr,
 		Cache:                  common.ControllerCacheOptions(ctx, setupLog),
+		Client:                 common.ControllerClientOptions(),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start controller manager")

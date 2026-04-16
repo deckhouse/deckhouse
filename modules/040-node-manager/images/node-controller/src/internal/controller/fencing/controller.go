@@ -60,19 +60,6 @@ type Reconciler struct {
 	register.Base
 }
 
-func (r *Reconciler) Setup(mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Pod{}, "spec.nodeName", func(obj client.Object) []string {
-		pod, ok := obj.(*corev1.Pod)
-		if !ok {
-			return nil
-		}
-		if pod.Spec.NodeName == "" {
-			return nil
-		}
-		return []string{pod.Spec.NodeName}
-	})
-}
-
 func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		_, ok := obj.GetLabels()[fencingEnabledLabel]

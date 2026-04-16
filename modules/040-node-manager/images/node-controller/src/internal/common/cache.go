@@ -20,9 +20,12 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -84,12 +87,49 @@ func controllerSecretCacheConfig() cache.ByObject {
 	}
 }
 
+// machineNamespaceOnly returns a cache.ByObject that restricts an informer
+// to the d8-cloud-instance-manager namespace (where all MCM/CAPI machines live).
+func machineNamespaceOnly() cache.ByObject {
+	return cache.ByObject{
+		Namespaces: map[string]cache.Config{
+			MachineNamespace: {},
+		},
+	}
+}
+
+// newUnstructured creates an Unstructured object with the given GVK.
+func newUnstructured(group, version, kind string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{Group: group, Version: version, Kind: kind})
+	return u
+}
+
 // ControllerCacheOptions returns cache options for the controller manager.
 func ControllerCacheOptions(ctx context.Context, logger logr.Logger) cache.Options {
+	machineNS := machineNamespaceOnly()
 	return cache.Options{
 		DefaultTransform: CacheTransformWithLogging(ctx, logger),
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Secret{}: controllerSecretCacheConfig(),
+			// Machine/MachineDeployment only exist in d8-cloud-instance-manager.
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "Machine"):           machineNS,
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):              machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):    machineNS,
+		},
+	}
+}
+
+// ControllerClientOptions returns client options for the controller manager.
+// Pod and Lease are excluded from cache — they are only needed by the fencing
+// controller which reads them rarely via direct API calls.
+func ControllerClientOptions() client.Options {
+	return client.Options{
+		Cache: &client.CacheOptions{
+			DisableFor: []client.Object{
+				&corev1.Pod{},
+				&coordinationv1.Lease{},
+			},
 		},
 	}
 }
@@ -97,10 +137,15 @@ func ControllerCacheOptions(ctx context.Context, logger logr.Logger) cache.Optio
 // ControllerCacheOptionsWithTransform is like ControllerCacheOptions but allows
 // overriding the default transform function (e.g. for testing without logging).
 func ControllerCacheOptionsWithTransform(transform toolscache.TransformFunc) cache.Options {
+	machineNS := machineNamespaceOnly()
 	return cache.Options{
 		DefaultTransform: transform,
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Secret{}: controllerSecretCacheConfig(),
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "Machine"):           machineNS,
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):              machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):    machineNS,
 		},
 	}
 }

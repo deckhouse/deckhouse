@@ -125,7 +125,7 @@ func objectTypeName(obj interface{}) string {
 
 // CacheTransformWithLogging returns a TransformFunc that counts objects loaded into
 // the informer cache by type and periodically logs the counts.
-// It also strips managedFields to reduce memory usage.
+// It also strips managedFields and heavy Node fields to reduce memory usage.
 func CacheTransformWithLogging(ctx context.Context, logger logr.Logger) toolscache.TransformFunc {
 	counter := &cacheCounter{
 		counts: make(map[string]*atomic.Int64),
@@ -138,8 +138,30 @@ func CacheTransformWithLogging(ctx context.Context, logger logr.Logger) toolscac
 	return func(obj interface{}) (interface{}, error) {
 		key := objectTypeName(obj)
 		counter.increment(key)
+		stripNodeHeavyFields(obj)
 		return strip(obj)
 	}
+}
+
+// stripNodeHeavyFields removes fields from Node objects that no controller reads.
+// This significantly reduces memory usage: Status.Images alone can be 10-30 KB per node.
+// Fields kept: Name, Labels, Annotations, CreationTimestamp, Spec.Taints, Spec.ProviderID,
+// Spec.Unschedulable, Status.Conditions (only field used from Status).
+func stripNodeHeavyFields(obj interface{}) {
+	node, ok := obj.(*corev1.Node)
+	if !ok {
+		return
+	}
+	node.Status.Images = nil
+	node.Status.NodeInfo = corev1.NodeSystemInfo{}
+	node.Status.Addresses = nil
+	node.Status.Capacity = nil
+	node.Status.Allocatable = nil
+	node.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{}
+	node.Status.VolumesAttached = nil
+	node.Status.VolumesInUse = nil
+	node.Spec.PodCIDR = ""
+	node.Spec.PodCIDRs = nil
 }
 
 // cachedType describes a typed or unstructured object list to probe in the cache.
