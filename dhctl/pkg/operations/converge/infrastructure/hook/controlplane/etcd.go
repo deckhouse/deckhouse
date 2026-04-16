@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	flantkubeclient "github.com/flant/kube-client/client"
@@ -28,32 +29,56 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func waitEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Check the master node '%s' is listed as etcd cluster member", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
-		ok, err := isEtcdHasMember(ctx, client, nodeName, "")
+	attempt := 0
+
+	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
+		attempt++
+
+		members, err := getEtcdMembers(ctx, client, "")
 		if err != nil {
-			return fmt.Errorf("failed to check etcd cluster member: %s", err)
+			return fmt.Errorf("getting etcd members: %w", err)
 		}
 
-		if !ok {
-			return fmt.Errorf("node '%s' is not listed as etcd cluster member", nodeName)
+		names := make([]string, 0, len(members))
+		hasMember := false
+		for _, m := range members {
+			names = append(names, m.Name)
+			if m.Name == nodeName {
+				hasMember = true
+			}
 		}
 
-		return nil
+		if attempt == 1 || hasMember {
+			log.InfoF("Current members: [%s]\n", strings.Join(names, ", "))
+		}
+
+		if hasMember {
+			return nil
+		}
+
+		return fmt.Errorf("'%s' is not yet a member", nodeName)
 	})
 }
 
 func waitEtcdHasNoMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
-	return retry.NewLoop(fmt.Sprintf("Check the master node '%s' is no longer listed as etcd cluster member", nodeName), 45, 5*time.Second).RunContext(ctx, func() error {
-		// exclude the node we are checking
+	const maxAttempts = 45
+	attempt := 0
+
+	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to leave etcd", nodeName), maxAttempts, 5*time.Second).RunContext(ctx, func() error {
+		attempt++
 		fieldSelector := fields.OneTermNotEqualSelector("spec.nodeName", nodeName).String()
 
 		ok, err := isEtcdHasMember(ctx, client, nodeName, fieldSelector)
 		if err != nil {
-			return err
+			if attempt == maxAttempts {
+				return fmt.Errorf("checking etcd membership for '%s': %w", nodeName, err)
+			}
+			return fmt.Errorf("node '%s' is still listed as etcd cluster member", nodeName)
 		}
 
 		if ok {
@@ -65,22 +90,53 @@ func waitEtcdHasNoMember(ctx context.Context, client *flantkubeclient.Client, no
 }
 
 func isEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeName string, fieldSelector string) (bool, error) {
+	members, err := getEtcdMembers(ctx, client, fieldSelector)
+	if err != nil {
+		return false, err
+	}
+
+	for _, m := range members {
+		if m.Name == nodeName {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func getEtcdMembers(ctx context.Context, client *flantkubeclient.Client, fieldSelector string) ([]etcdMember, error) {
 	pods, err := client.CoreV1().Pods("kube-system").List(ctx, v1.ListOptions{
 		LabelSelector: "component=etcd,tier=control-plane",
 		FieldSelector: fieldSelector,
 	})
 	if err != nil {
-		return false, fmt.Errorf("failed to get etcd pods: %s", err)
+		return nil, fmt.Errorf("failed to get etcd pods: %w", err)
 	}
 
 	if len(pods.Items) == 0 {
-		return false, fmt.Errorf("etcd pods not found")
+		return nil, fmt.Errorf("etcd pods not found")
+	}
+
+	var pod *corev1.Pod
+	for i := range pods.Items {
+		for _, cs := range pods.Items[i].Status.ContainerStatuses {
+			if cs.Name == "etcd" && cs.State.Running != nil {
+				pod = &pods.Items[i]
+				break
+			}
+		}
+		if pod != nil {
+			break
+		}
+	}
+	if pod == nil {
+		return nil, fmt.Errorf("no etcd pod with running container found")
 	}
 
 	req := client.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Namespace("kube-system").
-		Name(pods.Items[0].Name).
+		Name(pod.Name).
 		SubResource("exec")
 
 	command := []string{
@@ -103,7 +159,7 @@ func isEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeNa
 
 	executor, err := remotecommand.NewSPDYExecutor(client.RestConfig(), "POST", req.URL())
 	if err != nil {
-		return false, fmt.Errorf("failed to create `Executor`: %v", err)
+		return nil, fmt.Errorf("failed to create executor: %w", err)
 	}
 
 	var stdout bytes.Buffer
@@ -114,27 +170,21 @@ func isEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeNa
 		Tty:    false,
 	})
 	if err != nil {
-		return false, fmt.Errorf("failed to execute in `Stream`: %v", err)
+		return nil, fmt.Errorf("failed to execute etcdctl: %w", err)
 	}
 
 	var members memberListOutput
-
-	err = json.Unmarshal(stdout.Bytes(), &members)
-	if err != nil {
-		return false, fmt.Errorf("failed to unmarshal etcd member list: %s", err)
+	if err = json.Unmarshal(stdout.Bytes(), &members); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal etcd member list: %w", err)
 	}
 
-	for _, member := range members.Members {
-		if member.Name == nodeName {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return members.Members, nil
 }
 
 type memberListOutput struct {
-	Members []struct {
-		Name string `json:"name"`
-	} `json:"members"`
+	Members []etcdMember `json:"members"`
+}
+
+type etcdMember struct {
+	Name string `json:"name"`
 }
