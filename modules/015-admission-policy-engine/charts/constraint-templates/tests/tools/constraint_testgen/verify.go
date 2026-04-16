@@ -25,8 +25,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const sampleConstraintName = "allow-host-network"
-
 type profileDoc struct {
 	Kind     string `yaml:"kind"`
 	Metadata struct {

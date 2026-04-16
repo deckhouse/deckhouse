@@ -21,16 +21,8 @@ func mergeDocFromMatrixParts(bases map[string]matrixBase, baseName string, merge
 	if !ok {
 		return nil, fmt.Errorf("unknown base %q", baseName)
 	}
-	var m any
+	m := mergeBaseDocument(b.Document, merge)
 	var err error
-	if merge == nil {
-		m, err = mergeBaseDocument(b.Document, nil)
-	} else {
-		m, err = mergeBaseDocument(b.Document, merge)
-	}
-	if err != nil {
-		return nil, err
-	}
 	cma := ifaceSliceToAny(containerMerges)
 	ima := ifaceSliceToAny(initContainerMerges)
 	if len(cma) > 0 {
@@ -53,8 +45,6 @@ func ifaceSliceToAny(s []interface{}) []any {
 		return nil
 	}
 	out := make([]any, len(s))
-	for i := range s {
-		out[i] = s[i]
-	}
+	copy(out, s)
 	return out
 }

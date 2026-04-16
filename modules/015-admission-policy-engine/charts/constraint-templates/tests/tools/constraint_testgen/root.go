@@ -22,35 +22,35 @@ import (
 
 // resolveTestsRoot returns a base root that contains constraint test sets.
 // Supports both legacy layout with profiles/ and per-constraint layout with local test_profile.yaml.
-func resolveTestsRoot(testsRoot string) (baseRoot, profilesDir string, err error) {
-	profilesDir = filepath.Join(testsRoot, "profiles")
+func resolveTestsRoot(testsRoot string) (string, error) {
+	profilesDir := filepath.Join(testsRoot, "profiles")
 	if st, e := os.Stat(profilesDir); e == nil && st.IsDir() {
-		return testsRoot, profilesDir, nil
+		return testsRoot, nil
 	}
 
 	candidate := filepath.Join(testsRoot, "constraints")
 	profilesDir = filepath.Join(candidate, "profiles")
 	if st, e := os.Stat(profilesDir); e == nil && st.IsDir() {
-		return candidate, profilesDir, nil
+		return candidate, nil
 	}
 
 	parent := filepath.Dir(testsRoot)
 	profilesDir = filepath.Join(parent, "profiles")
 	if st, e := os.Stat(profilesDir); e == nil && st.IsDir() {
-		return parent, profilesDir, nil
+		return parent, nil
 	}
 
 	if hasAnyPerConstraintProfile(testsRoot) {
-		return testsRoot, "", nil
+		return testsRoot, nil
 	}
 	if hasAnyPerConstraintProfile(candidate) {
-		return candidate, "", nil
+		return candidate, nil
 	}
 	if hasAnyPerConstraintProfile(parent) {
-		return parent, "", nil
+		return parent, nil
 	}
 
-	return "", "", fmt.Errorf("test profiles not found under %s", testsRoot)
+	return "", fmt.Errorf("test profiles not found under %s", testsRoot)
 }
 
 func hasAnyPerConstraintProfile(root string) bool {

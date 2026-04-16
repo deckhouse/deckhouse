@@ -119,7 +119,7 @@ func usage() {
 `, b, b, b)
 }
 
-func defaultTestsRoot() (dir string) {
+func defaultTestsRoot() string {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "charts/constraint-templates/tests"

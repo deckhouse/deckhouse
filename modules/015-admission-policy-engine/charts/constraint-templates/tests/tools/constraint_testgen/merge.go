@@ -73,9 +73,9 @@ func cloneYAMLSlice(s []any) []any {
 	return out
 }
 
-func mergeBaseDocument(baseDoc any, merge any) (any, error) {
+func mergeBaseDocument(baseDoc any, merge any) any {
 	if merge == nil {
-		return cloneYAMLValue(baseDoc), nil
+		return cloneYAMLValue(baseDoc)
 	}
-	return deepMerge(baseDoc, merge), nil
+	return deepMerge(baseDoc, merge)
 }

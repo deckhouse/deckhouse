@@ -95,7 +95,7 @@ type suiteCase struct {
 }
 
 func runCoverage(testsRoot, format, constraint string) error {
-	baseRoot, _, err := resolveTestsRoot(testsRoot)
+	baseRoot, err := resolveTestsRoot(testsRoot)
 	if err != nil {
 		return err
 	}
@@ -388,7 +388,8 @@ func outputCoverageMarkdown(report coverageReport) error {
 
 func outputCoverageTable(report coverageReport) error {
 	head := []string{"Constraint", "ObjFields", "SPEFields", "Scenarios", "Covered", "FieldCov%", "Functional", "SPE-Pod", "SPE-Container", "Total", "Status"}
-	rows := [][]string{head}
+	rows := make([][]string, 0, len(report.Constraints)+1)
+	rows = append(rows, head)
 	for _, c := range report.Constraints {
 		objFields, speFields, scenarios, covered, pct := fieldCoverageCells(c)
 		funcCases := trackCases(c, "functional")
@@ -496,18 +497,17 @@ func analyzeFieldCoverage(dir string) (*fieldCoverage, error) {
 	cov := &fieldCoverage{}
 	cov.ObjectTotal = len(doc.Spec.ObjectFields)
 	cov.SpeTotal = len(doc.Spec.SpeFields)
-	fieldTrack := requiredScenarioTracks(doc)
-	caseCoverage := buildCaseScenarioCoverage(cases, doc, fieldTrack)
+	caseCoverage := buildCaseScenarioCoverage(cases, doc)
 	cov.ScenarioTotal = caseCoverage.RequiredTotal
 	cov.ScenarioCovered = caseCoverage.CoveredTotal
 	cov.MissingScenarios = caseCoverage.Missing
 	for _, f := range doc.Spec.ObjectFields {
-		if caseCoverage.HasField(f.Path, false) {
+		if caseCoverage.HasField(f.Path) {
 			cov.ObjectCovered++
 		}
 	}
 	for _, f := range doc.Spec.SpeFields {
-		if caseCoverage.HasField(f.Path, true) {
+		if caseCoverage.HasField(f.Path) {
 			cov.SpeCovered++
 		}
 	}
@@ -573,21 +573,7 @@ func matchGlob(pattern, value string) bool {
 	return ok
 }
 
-func requiredScenarioTracks(doc *testFieldsDoc) map[string]string {
-	tracks := map[string]string{}
-	if doc.Spec.ApplicableTracks.Functional != nil && *doc.Spec.ApplicableTracks.Functional {
-		tracks["functional"] = "functional"
-	}
-	if doc.Spec.ApplicableTracks.SpePod != nil && *doc.Spec.ApplicableTracks.SpePod {
-		tracks["securityPolicyExceptionPod"] = "securityPolicyExceptionPod"
-	}
-	if doc.Spec.ApplicableTracks.SpeContainer != nil && *doc.Spec.ApplicableTracks.SpeContainer {
-		tracks["securityPolicyExceptionContainer"] = "securityPolicyExceptionContainer"
-	}
-	return tracks
-}
-
-func buildCaseScenarioCoverage(cases []matrixCaseCoverage, doc *testFieldsDoc, track map[string]string) caseScenarioCoverage {
+func buildCaseScenarioCoverage(cases []matrixCaseCoverage, doc *testFieldsDoc) caseScenarioCoverage {
 	required := make(map[string]struct{})
 	missing := make([]string, 0)
 	covered := make([]string, 0)
@@ -694,7 +680,7 @@ func parseScenarioKey(key string) (string, string) {
 	return key, ""
 }
 
-func (c caseScenarioCoverage) HasField(path string, isSpe bool) bool {
+func (c caseScenarioCoverage) HasField(path string) bool {
 	for key := range c.CoveredKeys {
 		p, _ := parseScenarioKey(key)
 		if p == path {

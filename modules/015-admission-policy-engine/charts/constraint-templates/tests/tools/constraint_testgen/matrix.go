@@ -28,9 +28,10 @@ import (
 	"strconv"
 	"strings"
 
-	testhelm "github.com/deckhouse/deckhouse/testing/library/helm"
 	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/releaseutil"
+
+	testhelm "github.com/deckhouse/deckhouse/testing/library/helm"
 )
 
 // ConstraintTestMatrix: bases + per-case merge fragments → gator fixtures.
@@ -119,11 +120,8 @@ func generateFromMatrix(matrixPath, testsRoot string) error {
 		return err
 	}
 	refPaths := collectMatrixRefPaths(&doc.Spec, samplesDir, baseDir)
-	tracker, err := newGeneratedSampleTracker(refPaths, baseDir, samplesDir)
-	if err != nil {
-		return err
-	}
-	if err := cleanupRenderedSamples(samplesDir, baseDir, tracker.refPaths); err != nil {
+	tracker := newGeneratedSampleTracker(refPaths, baseDir, samplesDir)
+	if err := cleanupRenderedSamples(samplesDir, tracker.refPaths); err != nil {
 		return fmt.Errorf("clean test_samples: %w", err)
 	}
 	if err := os.MkdirAll(samplesDir, 0o755); err != nil {
@@ -218,14 +216,6 @@ func generateFromMatrix(matrixPath, testsRoot string) error {
 		return fmt.Errorf("write test_suite.yaml: %w", err)
 	}
 	return nil
-}
-
-func matrixCaseExternalData(in *matrixExternalData) *externalDataOut {
-	if in == nil || len(in.Providers) == 0 {
-		return nil
-	}
-	providers := append([]interface{}(nil), in.Providers...)
-	return &externalDataOut{Providers: providers}
 }
 
 func resolveCaseExternalDataInventory(c *matrixCase, defaults *matrixExternalData, samplesDir, outDir string, seq *genSeqCounters, tracker *generatedSampleTracker) (string, error) {
@@ -337,7 +327,7 @@ func resolveRenderedConstraintPath(renderedDir, sourceDir, testsRoot, relPath st
 		}
 	}
 
-	targetRel := clean
+	var targetRel string
 	switch {
 	case strings.HasPrefix(clean, "rendered/constraints/"):
 		targetRel = strings.TrimPrefix(clean, "rendered/")
@@ -404,7 +394,7 @@ func resolveSourcePath(renderedDir, sourceDir, testsRoot, relPath string) (strin
 		)
 	}
 	if strings.TrimSpace(testsRoot) != "" {
-		if baseRoot, _, rootErr := resolveTestsRoot(testsRoot); rootErr == nil && baseRoot != "" {
+		if baseRoot, rootErr := resolveTestsRoot(testsRoot); rootErr == nil && baseRoot != "" {
 			testsDir := filepath.Join(baseRoot, "tests")
 			candidates = append(candidates,
 				filepath.Clean(filepath.Join(testsDir, filepath.FromSlash(cleanSlash))),
@@ -848,7 +838,7 @@ func resolveMatrixOutputDir(matrixDir, outputDir, testsRoot string) string {
 	if strings.TrimSpace(testsRoot) == "" {
 		return local
 	}
-	baseRoot, _, err := resolveTestsRoot(testsRoot)
+	baseRoot, err := resolveTestsRoot(testsRoot)
 	if err != nil || baseRoot == "" {
 		return local
 	}
@@ -945,7 +935,7 @@ func applyNamedException(spec *matrixSpec, c *matrixCase) error {
 	return nil
 }
 
-func applyDefaultPodMetadataName(doc any, caseSlug, podName string) {
+func applyDefaultPodMetadataName(doc any, podName string) {
 	m, ok := doc.(map[string]interface{})
 	if !ok {
 		return
@@ -970,11 +960,13 @@ func applyDefaultPodMetadataName(doc any, caseSlug, podName string) {
 	meta["name"] = podName
 }
 
-func extractMergeAndContainerPatches(v map[string]interface{}) (merge map[string]interface{}, cMerges, icMerges []interface{}) {
-	merge, _ = v["merge"].(map[string]interface{})
+func extractMergeAndContainerPatches(v map[string]interface{}) (map[string]interface{}, []interface{}, []interface{}) {
+	merge, _ := v["merge"].(map[string]interface{})
+	var cMerges []interface{}
 	if x, ok := v["containerMerges"].([]interface{}); ok {
 		cMerges = x
 	}
+	var icMerges []interface{}
 	if x, ok := v["initContainerMerges"].([]interface{}); ok {
 		icMerges = x
 	}
@@ -1064,7 +1056,7 @@ func resolveMatrixObject(raw interface{}, bases map[string]matrixBase, samplesDi
 	if err != nil {
 		return "", err
 	}
-	applyDefaultPodMetadataName(merged, autoSlug, podName)
+	applyDefaultPodMetadataName(merged, podName)
 	if err := ensureObjectMetadataNameRFC1123StrictOrFallback(merged, autoSlug, fmt.Sprintf("object base=%q", baseName)); err != nil {
 		return "", err
 	}
@@ -1138,7 +1130,7 @@ type generatedSampleTracker struct {
 	outDir     string
 }
 
-func newGeneratedSampleTracker(refPaths map[string]struct{}, outDir, samplesDir string) (*generatedSampleTracker, error) {
+func newGeneratedSampleTracker(refPaths map[string]struct{}, outDir, samplesDir string) *generatedSampleTracker {
 	refs := map[string]struct{}{}
 	for k := range refPaths {
 		refs[k] = struct{}{}
@@ -1148,19 +1140,7 @@ func newGeneratedSampleTracker(refPaths map[string]struct{}, outDir, samplesDir 
 		hashToRel:  map[string]string{},
 		samplesDir: samplesDir,
 		outDir:     outDir,
-	}, nil
-}
-
-func (t *generatedSampleTracker) registerRef(ref string) {
-	if t == nil {
-		return
 	}
-	ref = filepath.ToSlash(strings.TrimSpace(ref))
-	if ref == "" || !strings.HasPrefix(ref, "test_samples/") {
-		return
-	}
-	full := outputPathForWrite(ref, t.samplesDir, t.outDir)
-	t.refPaths[full] = struct{}{}
 }
 
 func (t *generatedSampleTracker) dedupRefPath(ref string) (string, error) {
@@ -1269,7 +1249,7 @@ func hashBytes(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func cleanupRenderedSamples(samplesDir, renderedDir string, refPaths map[string]struct{}) error {
+func cleanupRenderedSamples(samplesDir string, refPaths map[string]struct{}) error {
 	if _, err := os.Stat(samplesDir); err != nil {
 		if os.IsNotExist(err) {
 			return nil
