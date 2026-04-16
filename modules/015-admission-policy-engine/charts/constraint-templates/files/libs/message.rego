@@ -20,17 +20,17 @@ package lib.message
 
 build(violation_type, subject, actual_value, allowed_by_policy, exception_info) := msg if {
   exception_info != ""
-  msg := sprintf("%v: %v. | %v | %v | %v", [violation_type, subject, actual_value, allowed_by_policy, exception_info])
+  msg := sprintf("%v: %v | %v | %v | %v", [violation_type, subject, actual_value, allowed_by_policy, exception_info])
 }
 
 build(violation_type, subject, actual_value, allowed_by_policy, exception_info) := msg if {
   exception_info == ""
-  msg := sprintf("%v: %v. | %v | %v", [violation_type, subject, actual_value, allowed_by_policy])
+  msg := sprintf("%v: %v | %v | %v", [violation_type, subject, actual_value, allowed_by_policy])
 }
 
 violation_message(reason, context, detail) := msg if {
   not detail_has_spe_context(detail)
-  msg := sprintf("%v, %v. | %v: %v | policy allows: %v", [
+  msg := sprintf("%v, %v | %v: %v | policy allows: %v", [
     reason,
     context,
     detail_field(detail),
@@ -41,7 +41,7 @@ violation_message(reason, context, detail) := msg if {
 
 violation_message(reason, context, detail) := msg if {
   detail_has_spe_context(detail)
-  msg := sprintf("%v, %v. | %v: %v | policy allows: %v | SPE allows: %v", [
+  msg := sprintf("%v, %v | %v: %v | policy allows: %v | SPE allows: %v", [
     reason,
     context,
     detail_field(detail),
