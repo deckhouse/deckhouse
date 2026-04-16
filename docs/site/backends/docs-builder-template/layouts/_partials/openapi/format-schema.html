@@ -9,6 +9,7 @@
 {{ $resourceName := .resourceName }} {{/* A string. The name of the resource of the parameter, to build the parameter HTML id (for links). Required. */}}
 {{ $required  := .required }} {{/* Array of the required parameters. */}}
 {{ $type := .type }}  {{/* A string. "module_configuration" for ModuleConfig schema or nil */}}
+{{ $liClass := .liClass }}
 
 {{/* Checking for x-doc-skip */}}
 {{- if reflect.IsMap $data }}
@@ -58,7 +59,7 @@
 {{- end }}
 
 {{- if gt ($parameterTitle | len ) 0 }}
-  <li>
+  <li{{- if $liClass }} class="{{ $liClass }}"{{- end }}>
     <div class="resources__prop_wrap">
   {{- if and (reflect.IsMap $data) (or (index $data "x-doc-deprecated") (index $data "deprecated")) }}
     <div class="resources__prop_name anchored" data-anchor-id="{{ $linkAnchor }}"  id="{{ $linkAnchor }}">

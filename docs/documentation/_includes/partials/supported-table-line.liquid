@@ -75,9 +75,9 @@
     {% endfor %}
     {% assign commonExists = false %}
   </td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
   <td>
     <div class="icon">
       {%- assign hasNotes = false %}
@@ -95,7 +95,7 @@
         {%- endif %}
       {%- endfor %}
       {% if hasNotes %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ notesContent }}">
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
       {% endif %}
     </div>
   </td>
@@ -110,9 +110,9 @@
     {% endfor %}
     {% assign cseExists = false %}
   </td>
-  <td><div class="icon"><img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется."></div></td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><span data-tippy-content="Работоспособность в Community Edition не гарантируется.">{{ include.partially_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
   <td>
     <div class="icon">
       {%- assign hasNotes = false %}
@@ -130,7 +130,7 @@
         {%- endif %}
       {%- endfor %}
       {% if hasNotes %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ notesContent }}">
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
       {% endif %}
     </div>
   </td>
@@ -145,9 +145,9 @@
     {% endfor %}
     {% assign ceExists = false %}
   </td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
-  <td><div class="icon"><img src="{{ not_supported_img_url }}"></div></td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.not_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
   <td>
     <div class="icon">
       {%- assign hasNotes = false %}
@@ -165,7 +165,7 @@
         {%- endif %}
       {%- endfor %}
       {% if hasNotes %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ notesContent }}">
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
       {% endif %}
     </div>
   </td>
@@ -180,9 +180,9 @@
     {% endfor %}
     {% assign bePlusExists = false %}
   </td>
-  <td><div class="icon"><img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется."></div></td>
-  <td><div class="icon"><img src="{{ not_supported_img_url }}"></div></td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><span data-tippy-content="Работоспособность в Community Edition не гарантируется.">{{ include.partially_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.not_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
   <td>
     <div class="icon">
       {%- assign hasNotes = false %}
@@ -200,7 +200,7 @@
         {%- endif %}
       {%- endfor %}
       {% if hasNotes %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ notesContent }}">
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
       {% endif %}
     </div>
   </td>
@@ -218,14 +218,14 @@
   <td>
     <div class="icon">
       {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == true %}
-      <img src="{{ partially_supported_img_url }}" data-tippy-content="Работоспособность в Community Edition не гарантируется.">
+      <span data-tippy-content="Работоспособность в Community Edition не гарантируется.">{{ include.partially_supported_img_inline }}</span>
       {% else %}
-      <img src="{{ supported_img_url }}">
+      <span>{{ include.supported_img_inline }}</span>
       {% endif %}
     </div>
   </td>
-  <td><div class="icon"><img src="{{ not_supported_img_url }}"></div></td>
-  <td><div class="icon"><img src="{{ supported_img_url }}"></div></td>
+  <td><div class="icon"><span>{{ include.not_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
   <td>
     <div class="icon">
       {%- assign hasNotes = false %}
@@ -243,7 +243,7 @@
         {%- endif %}
       {%- endfor %}
       {% if hasNotes %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ notesContent }}">
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
       {% endif %}
     </div>
   </td>
@@ -271,7 +271,7 @@
   </td>
   <td style="text-align: center; width: 170px;">
     <div class="icon">
-      <img src="{{ supported_img_url }}">
+      <span>{{ include.supported_img_inline }}</span>
     </div>
   </td>
   <td style="text-align: center;">
@@ -291,7 +291,7 @@
         {%- endif %}
       {%- endfor %}
       {% if hasNotes %}
-      <img src="{{ notes_img_url }}" data-tippy-content="{{ notesContent }}">
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
       {% endif %}
     </div>
   </td>

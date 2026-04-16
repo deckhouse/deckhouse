@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-41a5cb02200a981d0e152bffdd0754addf47f69efe2db1b00812aff0a07fe3f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -31,8 +31,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в etcd в рамках Deckhouse: etcd не использует path-based авторизационные интерцепторы (grpc/authz или аналоги) с deny-правилами и fallback allow. Авторизация в etcd реализована через собственный встроенный механизм на основе mTLS и username/password, который не подвержен данной уязвимости.",
       "timestamp": "2026-03-24T10:09:40.852754Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T08:25:27.328749Z"
     }
   ],
   "timestamp": "2026-03-04T09:42:58Z",
-  "last_updated": "2026-03-24T10:09:40Z"
+  "last_updated": "2026-04-10T08:25:27Z"
 }

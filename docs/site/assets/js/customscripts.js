@@ -30,44 +30,6 @@ $(document).ready(function () {
     if (e.target.value.length > 0) $(".search__results").addClass("active");
     else $(".search__results").removeClass("active");
   });
-  $('a.lang-switcher').each(function () {
-    let pageDomain = window.location.hostname;
-    if (window.location.pathname.startsWith('/ru/')) {
-      $(this).attr('href', window.location.href.replace('/ru/', '/en/'))
-    } else if (window.location.pathname.startsWith('/en/')) {
-      $(this).attr('href', window.location.href.replace('/en/', '/ru/'))
-    } else {
-      let newHostname = null;
-      switch (pageDomain) {
-        case 'deckhouse.io':
-          newHostname = 'deckhouse.ru';
-          break;
-        case 'deckhouse.ru':
-          newHostname = 'deckhouse.io';
-          break;
-        case 'ru.localhost':
-          newHostname = 'localhost';
-          break;
-        case 'localhost':
-          newHostname = 'ru.localhost';
-          break;
-        default:
-          if (pageDomain.includes('deckhouse-ru')) {
-            newHostname = pageDomain.replace('deckhouse-ru', 'deckhouse');
-          } else if (pageDomain.includes('deckhouse')) {
-            newHostname = pageDomain.replace('deckhouse', 'deckhouse-ru');
-          }
-      }
-      if (newHostname) {
-        const currentUrl = window.location.href;
-        const newUrl = currentUrl.replace(
-          window.location.hostname,
-          newHostname
-        );
-        $(this).attr('href', newUrl);
-      }
-    }
-  });
 });
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -271,26 +233,23 @@ $(document).ready(function () {
 });
 
 $(document).ready(function () {
-  const titles = $('.resources__prop_name');
-  const links = $('.resources__prop_wrap .anchorjs-link');
-
-  links.each((i, link) => {
-    $(link).click((e) => {
+  // Use delegated handlers so toggle works for dynamically rendered docs content.
+  $(document)
+    .off('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link')
+    .on('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link', function (e) {
       e.stopPropagation();
-    })
-  })
+    });
 
-  titles.each((i, title) => {
-    $(title).click(() => {
-      const firstList = $(title).parent('.resources__prop_wrap').parent('li').parent('ul');
+  $(document)
+    .off('click.resourcesToggle', '.resources__prop_name')
+    .on('click.resourcesToggle', '.resources__prop_name', function () {
+      const parentElem = $(this).closest('li');
+      const firstList = parentElem.parent('ul');
 
-      if (firstList.hasClass('resources')) return;
-
-      const parentElem = $(title).parent('.resources__prop_wrap').parent('li');
+      if (firstList.hasClass('resources') && !parentElem.hasClass('top-level-toggleable')) return;
 
       parentElem.toggleClass('closed');
-    })
-  })
+    });
 });
 
 const openDiagram = function () {
@@ -376,4 +335,3 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener("load", function () {
   openDiagram()
 });
-

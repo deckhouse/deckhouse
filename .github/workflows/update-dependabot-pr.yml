@@ -34,7 +34,7 @@ jobs:
         github.actor == 'dependabot-preview[bot]' ||
         github.actor == 'dependabot-preview'
       )
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     permissions:
       pull-requests: write
       contents: read

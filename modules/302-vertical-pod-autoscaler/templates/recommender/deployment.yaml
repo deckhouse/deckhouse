@@ -71,9 +71,9 @@ spec:
         - --recommender-interval={{ $doubledScrapeInterval }}
         - --stderrthreshold=0
         - --memory-saver=true
-{{/*        this option is buggy. It provides some huge memory values, which are not correct (like: 3135326126080m)*/}}
-{{/*        - https://github.com/kubernetes/autoscaler/issues/7770*/}}
-        - --humanize-memory=false
+{{/*        --humanize-memory is deprecated (https://github.com/kubernetes/autoscaler/pull/8400)*/}}
+{{/*        --round-memory-bytes replaces it and rounds recommendations up to the nearest 64Mi*/}}
+        - --round-memory-bytes=67108864
         - --storage=prometheus
         - --prometheus-address=https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}
         - --prometheus-insecure=true

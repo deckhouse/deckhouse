@@ -93,6 +93,8 @@ func (svc *Service) buildHugo() error {
 		CfgDir:   filepath.Join(svc.baseDir, "config"),
 	}
 
+	svc.metrics.Grouped().ExpireGroupMetricByName(metrics.DocsBuilderModuleRenderErrorGroup, metrics.DocsBuilderModuleRenderError)
+
 	for {
 		buildErr := hugo.Build(flags, svc.logger)
 		if buildErr == nil {
@@ -118,6 +120,7 @@ func (svc *Service) buildHugo() error {
 			}
 
 			svc.logger.Warn("removed broken module", slog.String("name", moduleName), log.Err(buildErr))
+			svc.metrics.Grouped().GaugeSet(metrics.DocsBuilderModuleRenderErrorGroup, metrics.DocsBuilderModuleRenderError, 1, map[string]string{"module": moduleName})
 			continue
 		}
 

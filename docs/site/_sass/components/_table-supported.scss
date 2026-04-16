@@ -1,4 +1,28 @@
-@use "components/common/_breakpoints";
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+.supported_versions:not(.table__small) {
+    @include breakpoints.max-w(l) {
+        font-size: 14px !important;
+    }
+
+    thead {
+        th {
+            @include breakpoints.max-w(l) {
+                padding: 12px !important;
+            }
+        }
+    }
+
+    tbody {
+        td {
+            @include breakpoints.max-w(l) {
+                padding: 0 12px !important;
+            }
+        }
+    }
+}
 
 .supported_versions, .table-wrapper__shadow {
     width: auto;
@@ -72,6 +96,22 @@
         @include breakpoints.min-w(m) {
             width: 28px;
             height: 28px;
+        }
+
+        > span {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+        }
+
+        img,
+        svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            flex: 0 0 auto;
         }
     }
 }

@@ -34,6 +34,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -92,8 +93,13 @@ func ValidateOptionRequiredSSHHost(v bool) ValidateOption {
 	}
 }
 
-func NewSchemaStore(paths ...string) *SchemaStore {
+func NewSchemaStore(dc *directoryconfig.DirectoryConfig, paths ...string) *SchemaStore {
 	paths = append([]string{candiDir}, paths...)
+	if _, err := os.Stat(candiDir); err != nil {
+		if dc != nil {
+			paths = append(paths, filepath.Join(dc.DownloadDir, "deckhouse", "candi"))
+		}
+	}
 
 	pathsStr := strings.TrimSpace(os.Getenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS"))
 	if pathsStr != "" {
@@ -103,15 +109,22 @@ func NewSchemaStore(paths ...string) *SchemaStore {
 		}
 	}
 
-	return newOnceSchemaStore(paths)
+	return newOnceSchemaStore(dc, paths)
 }
 
-func newSchemaStore(schemasDir []string) *SchemaStore {
+func newSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
 	st := &SchemaStore{
 		cache:              make(map[SchemaIndex]*spec.Schema),
 		moduleConfigsCache: make(map[string]*spec.Schema),
 		modulesCache:       make(map[string]struct{}),
 	}
+	if _, err := os.Stat(deckhouseDir); err != nil {
+		if dc != nil {
+			deckhouseDir = filepath.Join(dc.DownloadDir, "deckhouse")
+			modulesDir = filepath.Join(deckhouseDir, "modules")
+		}
+	}
+	log.DebugF("deckhouse dir: %s, modulesDir: %s\n", deckhouseDir, modulesDir)
 
 	st.conversionsStore = conversion.NewConversionsStore()
 
@@ -221,9 +234,9 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 	return st
 }
 
-func newOnceSchemaStore(schemasDir []string) *SchemaStore {
+func newOnceSchemaStore(dc *directoryconfig.DirectoryConfig, schemasDir []string) *SchemaStore {
 	once.Do(func() {
-		store = newSchemaStore(schemasDir)
+		store = newSchemaStore(dc, schemasDir)
 	})
 	return store
 }
@@ -438,7 +451,7 @@ func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptio
 }
 
 func ValidateDiscoveryData(config *[]byte, paths []string, opts ...ValidateOption) (bool, error) {
-	schemaStore := NewSchemaStore(paths...)
+	schemaStore := NewSchemaStore(nil, paths...)
 
 	_, err := schemaStore.Validate(config, opts...)
 	if err != nil {

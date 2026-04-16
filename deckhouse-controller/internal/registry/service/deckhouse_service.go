@@ -28,9 +28,9 @@ import (
 
 	"github.com/goccy/go-yaml"
 
-	internalRegistry "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
 const (
@@ -42,7 +42,7 @@ const (
 
 // DeckhouseService provides high-level operations for Deckhouse platform management
 type DeckhouseService struct {
-	client internalRegistry.Interface
+	client registry.Client
 
 	*BasicService
 	deckhouseReleaseChannels *DeckhouseReleaseService
@@ -51,7 +51,7 @@ type DeckhouseService struct {
 }
 
 // NewDeckhouseService creates a new deckhouse service
-func NewDeckhouseService(client internalRegistry.Interface, logger *log.Logger) *DeckhouseService {
+func NewDeckhouseService(client registry.Client, logger *log.Logger) *DeckhouseService {
 	return &DeckhouseService{
 		client: client,
 

@@ -20,4 +20,25 @@ spec:
     kind: ClusterIssuer
     {{- end }}
   {{- end }}
+  {{- $moduleGateway := dict }}
+  {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+  {{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") (or .Values.prometheus.internal.grafana.enabled (has "console" .Values.global.enabledModules)) }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: grafana-httproute
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "grafana")) | nindent 2 }}
+spec:
+  certificateOwnerRef: true
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "grafana") | nindent 2 }}
+  dnsNames:
+    - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
+    - {{ include "helm_lib_module_public_domain" (list . "prometheus") }}
+  issuerRef:
+    name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
+    kind: ClusterIssuer
+  {{- end }}
 {{- end }}

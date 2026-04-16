@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-f80cd91b36d545749726987cea9ab19348fca2ab9f04d7af8b0d3021bd9ca032",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 4,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -31,8 +31,36 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в рамках Deckhouse: containerd не использует path-based авторизационные интерцепторы (grpc/authz или аналоги) с deny-правилами и fallback allow, что является обязательным условием для эксплуатации. Все входящие gRPC-запросы поступают от kubelet через стандартную клиентскую библиотеку, которая автоматически добавляет leading slash в :path pseudo-header, исключая возможность отправки невалидного запроса через штатный интерфейс.",
       "timestamp": "2026-03-24T09:23:21.903246Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T08:21:34.39521Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {
+          "@id": "pkg:go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Для эксплуатации уязвимости CVE-2026-39882 в containerd должен быть запущен и настроен экспортер трассировки OpenTelemetry. В поставке Deckhouse по умолчанию не заданы необходимые для этого переменные окружения, а также нет настроек, позволяющих включить данную функциональность, что исключает выполнение уязвимого кода.",
+      "timestamp": "2026-04-13T14:56:27.526756Z"
     }
   ],
   "timestamp": "2026-03-04T09:36:23Z",
-  "last_updated": "2026-03-24T09:24:38Z"
+  "last_updated": "2026-04-13T14:56:27Z"
 }
