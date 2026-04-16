@@ -29,16 +29,21 @@ This controller is node-local (`NODE_NAME` env) and processes only objects with 
 - apply checksums from latest terminal operation that is either:
 - `Completed`, or
 - has commit-point command completed (`SyncManifests` / `JoinEtcdCluster` / `SyncHotReload`)
-- apply cert dates from completed operations with `ObservedState` in monotonic `observedAt` order
-- update component conditions, `CASynced`, `CertsRenewal`, `LastObservedAt`
+- apply cert dates from completed operations that include `CertObserve` command, in monotonic `observedAt` order
+- update per-component `status.components.<component>.lastObservedAt` (and keep root `status.lastObservedAt` as latest observed timestamp)
+- update component conditions, `CASynced`, `CertsRenewal`
 4. Create missing CPOs for components where `spec != status`.
-5. Ensure periodic `CertObserver` CPO exists (interval: 7 days).
+5. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
+- `spec.component=<real component>`
+- `spec.commands=[CertObserve]`
+- `spec.approved=true`
 6. Ensure cert-renewal CPO exists for components expiring within threshold (30 days).
 
 ## Operation Creation Rules
 
 - Create only when no active operation with the same desired checksums tuple exists:
 - `DesiredConfigChecksum + DesiredPKIChecksum + DesiredCAChecksum`
+- Active-operation lookup is unified via shared predicate-based helper (used by both regular and observe-only creation paths).
 - If desired checksums changed while another operation is running, a new operation may be created for the same component.
 - CPO name uses `GenerateName` with deterministic prefix:
 - `<component>-<short desired checksums>-`

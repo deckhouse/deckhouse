@@ -30,7 +30,7 @@ Desired state comes from:
 
 Observed state comes from:
 
-- CPO command/ready conditions
+- CPO command conditions + operation `Completed` condition
 - CPO observed certificate state (`CertObserve`)
 - Static pod readiness and checksum annotations
 
