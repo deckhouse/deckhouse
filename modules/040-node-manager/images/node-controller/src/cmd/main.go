@@ -32,7 +32,6 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -116,15 +115,14 @@ func main() {
 	}()
 
 	// Controller manager — full cache for controllers, no webhook server.
+	// Secrets are cached only from d8-cloud-instance-manager and kube-system namespaces.
 	ctrlMgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
 		HealthProbeBindAddress: probeAddr,
-		Cache: cache.Options{
-			DefaultTransform: common.CacheTransformWithLogging(ctx, setupLog),
-		},
+		Cache:                  common.ControllerCacheOptions(ctx, setupLog),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start controller manager")

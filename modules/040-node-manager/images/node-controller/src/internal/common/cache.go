@@ -17,9 +17,14 @@ limitations under the License.
 package common
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -56,4 +61,46 @@ func WebhookCacheOptions() (cache.Options, client.Options) {
 	}
 
 	return cacheOpts, clientOpts
+}
+
+// controllerSecretCacheConfig returns per-namespace cache config for Secrets.
+// Only specific secrets needed by controllers are cached:
+//   - d8-cloud-instance-manager/configuration-checksums (nodegroup-status, update-approval)
+//   - kube-system/d8-node-manager-cloud-provider (nodegroup-status)
+func controllerSecretCacheConfig() cache.ByObject {
+	return cache.ByObject{
+		Namespaces: map[string]cache.Config{
+			MachineNamespace: {
+				FieldSelector: fields.SelectorFromSet(fields.Set{
+					"metadata.name": ConfigurationChecksumsSecretName,
+				}),
+			},
+			"kube-system": {
+				FieldSelector: fields.SelectorFromSet(fields.Set{
+					"metadata.name": "d8-node-manager-cloud-provider",
+				}),
+			},
+		},
+	}
+}
+
+// ControllerCacheOptions returns cache options for the controller manager.
+func ControllerCacheOptions(ctx context.Context, logger logr.Logger) cache.Options {
+	return cache.Options{
+		DefaultTransform: CacheTransformWithLogging(ctx, logger),
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Secret{}: controllerSecretCacheConfig(),
+		},
+	}
+}
+
+// ControllerCacheOptionsWithTransform is like ControllerCacheOptions but allows
+// overriding the default transform function (e.g. for testing without logging).
+func ControllerCacheOptionsWithTransform(transform toolscache.TransformFunc) cache.Options {
+	return cache.Options{
+		DefaultTransform: transform,
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Secret{}: controllerSecretCacheConfig(),
+		},
+	}
 }
