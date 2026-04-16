@@ -137,7 +137,7 @@ func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, lo
 }
 
 // joinEtcdClusterCommand checks if etcd needs to join the cluster and handles the full join flow.
-// No-op for non-etcd components. No-op if already in cluster.
+// No-op for non-etcd components.
 type joinEtcdClusterCommand struct{}
 
 func (c *joinEtcdClusterCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
@@ -159,6 +159,17 @@ func (c *joinEtcdClusterCommand) Execute(_ context.Context, env *CommandEnv, log
 		return reconcile.Result{}, fmt.Errorf("check etcd join need: %w", err)
 	}
 	if !needsJoin {
+		logger.Info("etcd already in cluster, syncing manifest to desired state")
+		annotations := buildSyncManifestAnnotations(op)
+		results, err := (&syncManifestsCommand{}).syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations)
+		if err != nil {
+			logger.Error("failed to sync manifests for joined etcd member", log.Err(err))
+			return reconcile.Result{}, err
+		}
+		saveDiffResults(op.Spec.Component, op.Name, results, logger)
+		if !hasChangedFiles(results) {
+			logger.Info("sync manifests no-op: desired content already on disk")
+		}
 		return reconcile.Result{}, nil
 	}
 	logger.Info("etcd needs join, executing join flow")

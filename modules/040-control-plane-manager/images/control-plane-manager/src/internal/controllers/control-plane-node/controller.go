@@ -423,8 +423,9 @@ func determineCommands(state componentState, pkiChanged, caChanged bool) []contr
 			)
 		}
 		commands = append(commands, controlplanev1alpha1.CommandJoinEtcdCluster)
-		// Join (empty status): JoinEtcdCluster writes manifest with correct --initial-cluster.
-		// Update (non-empty status): SyncManifests overwrites manifest from template.
+		// Join (empty status): SyncManifests is skipped in pipeline for JoinEtcdCluster only.
+		// In this mode JoinEtcdCluster must ensure manifest convergence itself, including the case when status is empty but the member is already in etcd (needsJoin=false).
+		// Update (non-empty status): SyncManifests overwrites manifest itself.
 		isJoin := state.status.Config == "" && state.status.PKI == ""
 		if !isJoin {
 			commands = append(commands, controlplanev1alpha1.CommandSyncManifests)
