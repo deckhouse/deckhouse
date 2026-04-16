@@ -52,7 +52,7 @@
       },
       "products": [
         {
-          "@id": "pkg:go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
         }
       ],
       "status": "not_affected",
