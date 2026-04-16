@@ -19,6 +19,7 @@ package operationsapprover
 import (
 	"context"
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 	"fmt"
 	"time"
 
@@ -101,27 +102,26 @@ func getPredicates() predicate.Predicate {
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger.Info("Reconcile started")
 
-	nodes := &controlplanev1alpha1.ControlPlaneNodeList{}
-	if err := r.client.List(ctx, nodes, &client.ListOptions{}); err != nil {
+	nodes, err := r.getNodeCounts(ctx)
+	if err != nil {
+		logger.Error("failed to get node count", log.Err(err))
 		return reconcile.Result{}, err
 	}
-
-	if len(nodes.Items) == 0 {
-		logger.Warn("no control plane nodes found")
-		return reconcile.Result{}, nil
+	if nodes.equalZero() {
+		logger.Warn("nodes not found, skipping reconcile")
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 
 	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
 	if err := r.client.List(ctx, operations); err != nil {
 		return reconcile.Result{}, err
 	}
-
 	if len(operations.Items) == 0 {
 		logger.Warn("no control plane operations found")
 		return reconcile.Result{}, nil
 	}
 
-	approver := newApprover(len(nodes.Items), operations.Items)
+	approver := newApprover(nodes, operations.Items)
 
 	for _, unapprovedOperation := range approver.approveQueue {
 		canApprove := approver.tryApprove(unapprovedOperation)
@@ -137,4 +137,27 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *reconciler) getNodeCounts(ctx context.Context) (nodeCounts, error) {
+	nodeList := &controlplanev1alpha1.ControlPlaneNodeList{}
+	if err := r.client.List(ctx, nodeList, &client.ListOptions{}); err != nil {
+		return nodeCounts{}, err
+	}
+
+	if len(nodeList.Items) == 0 {
+		logger.Warn("no control plane nodes found")
+		return nodeCounts{}, nil
+	}
+
+	var nodes nodeCounts
+	for _, node := range nodeList.Items {
+		if _, exists := node.Labels[constants.EtcdArbiterNodeLabelKey]; exists {
+			nodes.arbiters++
+		} else {
+			nodes.masters++
+		}
+	}
+
+	return nodes, nil
 }
