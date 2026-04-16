@@ -255,6 +255,46 @@ spec:
         team: frontend
 ```
 
+## Example of granting access to all namespaces
+
+{% alert level="info" %}
+The example refers to the [current role-based model](readme.html#current-role-based-model).
+{% endalert %}
+
+In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`userAuthz.enableMultiTenancy`), namespace-based restrictions are configured using the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) resource fields.
+
+- **All namespaces, including system namespaces** (`kube-*`, `d8-*`, `loghouse`, `default`, etc.): set `spec.namespaceSelector.matchAny: true`. In that case, `limitNamespaces` and `allowAccessToSystemNamespaces` are **ignored** if `namespaceSelector` is set.
+
+  Example:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1
+  kind: ClusterAuthorizationRule
+  metadata:
+    name: all-namespaces-including-system
+  spec:
+    subjects:
+    - kind: User
+      name: user@example.com
+    accessLevel: Editor
+    namespaceSelector:
+      matchAny: true
+  ```
+
+- **All namespaces except system namespaces** (if none of `namespaceSelector`, `limitNamespaces`, or `allowAccessToSystemNamespaces` are set): the user gets access to every non-system namespace; the list of system namespaces is given in the [CR field descriptions](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+
+The `SuperAdmin` access level **does not** lift namespace restrictions (`namespaceSelector`, `limitNamespaces`): grant the intended scope explicitly, including via `namespaceSelector.matchAny`, if access to all namespaces is required.
+
+If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **unioned**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
+
+{% alert level="warning" %}
+Namespace restrictions from `ClusterAuthorizationRule` are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](readme.html#current-role-based-model).
+{% endalert %}
+
+{% offtopic title="Experimental role-based model" %}
+`d8:use:role:*` roles must be bound with `RoleBinding` in a **specific** namespace — use one `RoleBinding` per namespace (or automate the process). `d8:manage:*` roles do not cover namespaces for user workloads; they only apply to system namespaces (`d8-*`, `kube-*`) within the subsystem.
+{% endofftopic %}
+
 ## Creating a user
 
 There are two types of users in Kubernetes:

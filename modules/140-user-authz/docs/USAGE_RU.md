@@ -255,6 +255,46 @@ spec:
         team: frontend
 ```
 
+## Пример выдачи прав на все пространства имён
+
+{% alert level="info" %}
+Пример относится к [текущей ролевой модели](readme.html#текущая-ролевая-модель).
+{% endalert %}
+
+В режиме [multi-tenancy](configuration.html#parameters-enablemultitenancy) (`userAuthz.enableMultiTenancy`) ограничение доступа по пространствам имён задаётся полями ресурса [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+
+- **Все пространства имён, включая системные** (`kube-*`, `d8-*`, `loghouse`, `default` и т. п.): укажите `spec.namespaceSelector.matchAny: true`. При этом значения `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**, если задан `namespaceSelector`.
+
+  Пример:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1
+  kind: ClusterAuthorizationRule
+  metadata:
+    name: all-namespaces-including-system
+  spec:
+    subjects:
+    - kind: User
+      name: user@example.com
+    accessLevel: Editor
+    namespaceSelector:
+      matchAny: true
+  ```
+
+- **Все пространства имён, кроме системных** (если не указаны ни `namespaceSelector`, ни `limitNamespaces`, ни `allowAccessToSystemNamespaces`): пользователь получает доступ ко всем несистемным пространствам имён; перечень системных см. в [описании полей CR](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+
+Уровень доступа `SuperAdmin` **не снимает** ограничения по пространствам имён (`namespaceSelector`, `limitNamespaces`): при необходимости доступа ко всем пространствам имён задайте область явно, в том числе через `namespaceSelector.matchAny`.
+
+Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых пространств имён **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
+
+{% alert level="warning" %}
+Ограничения по пространствам имён из `ClusterAuthorizationRule` реализованы в цепочке авторизации с webhook. Если webhook недоступен, эти ограничения **не применяются**, пока webhook снова не станет доступен. Подробнее см. [описание модуля](readme.html#текущая-ролевая-модель).
+{% endalert %}
+
+{% offtopic title="Экспериментальная ролевая модель" %}
+Роли `d8:use:role:*` назначаются только через `RoleBinding` в **конкретном** пространстве имён — отдельное `RoleBinding` нужно на каждое пространство имён (или автоматизируйте выдачу). Роли `d8:manage:*` не распространяются на пространства имён пользовательских приложений — только на системные (`d8-*`, `kube-*`) в рамках подсистемы.
+{% endofftopic %}
+
 ## Создание пользователя
 
 В Kubernetes есть две категории пользователей:
