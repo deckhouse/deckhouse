@@ -30,7 +30,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "d8-loki"
+        "uid": "${ds_loki}"
       },
       "gridPos": {
         "h": 20,
@@ -53,7 +53,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "d8-loki"
+            "uid": "${ds_loki}"
           },
           "expr": "{container=\"falco\",namespace=\"d8-runtime-audit-engine\"} |~ \"$query\"",
           "maxLines": 1500,
@@ -70,6 +70,44 @@
   "tags": [],
   "templating": {
     "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "d8-loki",
+          "value": "d8-loki"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Loki",
+        "multi": false,
+        "name": "ds_loki",
+        "options": [],
+        "query": "loki",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
       {
         "current": {
           "selected": false,
