@@ -27,7 +27,9 @@ resource "kubernetes_secret" "cloudinit-secret" {
   type = "provisioning.virtualization.deckhouse.io/cloud-init"
   lifecycle {
     ignore_changes = [
-      data
+      data,
+      metadata[0].labels,
+      metadata[0].annotations,
     ]
   }
 }
@@ -132,8 +134,6 @@ resource "kubernetes_manifest" "vm" {
   lifecycle {
     ignore_changes = [
       object.metadata.finalizers,
-      object.metadata.labels,
-      object.metadata.annotations,
     ]
   }
 }

@@ -41,8 +41,6 @@ resource "kubernetes_manifest" "ipv4_address" {
   lifecycle {
     ignore_changes = [
       object.metadata.finalizers,
-      object.metadata.labels,
-      object.metadata.annotations,
     ]
   }
 }
