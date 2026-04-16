@@ -131,7 +131,7 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 
 			logger.DebugF("Stop bashible if need")
 
-			if err := r.CleanupPreviousBashibleRunIfNeed(ctx); err != nil {
+			if err := r.cleanupPreviousBashibleIfNeed(ctx); err != nil {
 				return err
 			}
 
@@ -169,7 +169,7 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 	return nil
 }
 
-func (r *Runner) CleanupPreviousBashibleRunIfNeed(ctx context.Context) error {
+func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
 	logger := r.loggerProvider()
 	return logger.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
 		logger.DebugF("Gettting bashible pids")

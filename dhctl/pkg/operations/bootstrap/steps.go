@@ -109,27 +109,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
 
-	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
-	if err := depsChecker.Check(ctx); err != nil {
-		return err
-	}
-
-	templateController := template.NewTemplateController("")
-	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
-
 	bashible := dhbashible.NewRunner(nodeInterface, loggerProvider)
-
-	err := log.Process("bootstrap", "Preparing bootstrap", func() error {
-		if err := template.PrepareBootstrap(templateController, nodeIP, cfg, dc); err != nil {
-			return fmt.Errorf("prepare bootstrap: %v", err)
-		}
-
-		return bashible.Prepare(ctx)
-	})
-
-	if err != nil {
-		return err
-	}
 
 	ready, err := bashible.AlreadyRun(ctx)
 	if err != nil {
@@ -139,6 +119,26 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	if ready {
 		log.Success("Bashible already run! Skip bashible install\n\n")
 		return nil
+	}
+
+	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
+	if err := depsChecker.Check(ctx); err != nil {
+		return err
+	}
+
+	templateController := template.NewTemplateController("")
+	log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
+
+	err = log.Process("bootstrap", "Preparing bootstrap", func() error {
+		if err := template.PrepareBootstrap(templateController, nodeIP, cfg, dc); err != nil {
+			return fmt.Errorf("prepare bootstrap: %v", err)
+		}
+
+		return bashible.Prepare(ctx)
+	})
+
+	if err != nil {
+		return err
 	}
 
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
