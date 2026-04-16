@@ -22,7 +22,7 @@ Adding group entity to kubernetes authentication.
 This patch adds support for two-factor authentication (2FA) in Dex.
 It allows users to enable 2FA for their accounts, enhancing security by requiring a second form of verification during the login process.
 
-Upstream PR: https://github.com/dexidp/dex/pull/3712
+Upstream PR: <https://github.com/dexidp/dex/pull/3712>
 
 ### 005-password-policy.patch
 
@@ -42,7 +42,7 @@ This patch changes the Internal Error message to a human-readable 'Access Denied
 
 In the latest go versions (1.25.2, 1.24.8) the bug was fixed, and without this patch Dex fails with an error
 
-Upstream PR: https://github.com/dexidp/dex/pull/4363
+Upstream PR: <https://github.com/dexidp/dex/pull/4363>
 
 ### 008-hide-internal-500-error-details.patch
 
@@ -51,6 +51,7 @@ It replaces detailed error messages (including stack traces, database errors, an
 with safe, user-friendly messages while ensuring all error details are properly logged server-side.
 
 Key changes:
+
 - Centralized safe error messages in `server/errors.go`
 - Replaced `err.Error()` calls in HTTP responses with generic messages
 - Added proper logging for all internal errors
@@ -81,3 +82,7 @@ The flag is reset on successful password change.
 ### 013-saml-support.patch
 
 Adds refresh token support to the SAML connector. The SAML connector now implements `RefreshConnector` by caching the user identity in `ConnectorData` during initial authentication and returning it on refresh. Also persists `ConnectorData` in `OfflineSessions` for proper session management. Includes comprehensive tests.
+
+### 014-build-id-cache-invalidation.patch
+
+Added cache get parameter to main CSS file URL that gets opaque dex build identifier assigned to it. This prevents stale caches from breaking the login page.

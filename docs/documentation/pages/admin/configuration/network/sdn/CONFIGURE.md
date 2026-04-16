@@ -484,6 +484,8 @@ kind: NodeGroupConfiguration
 metadata:
   name: hugepages-for-dpdk
 spec:
+  bundles:
+    - "*"  # Apply to all OS bundles.
   nodeGroups:
     - "*"  # Apply to all node groups.
   weight: 100
@@ -700,3 +702,156 @@ Before users can request UnderlayNetwork devices in their pods, the namespace mu
 ```shell
 d8 k label namespace mydpdk direct-nic-access.network.deckhouse.io/enabled=""
 ```
+
+## Configuring and connecting system networks (service networks)
+
+System networks (service networks) are intended for internal traffic at the node level (e.g., for storage, management, etc.) and are not used as additional pod networks.
+
+Additional service networks are created on cluster nodes on top of existing underlay networks. The custom resource [SystemNetwork](/modules/sdn/cr.html#systemnetwork) is used for this purpose. System networks obtain IP addresses from the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) during IPAM configuration.
+
+Principles and features of system networks:
+
+* **Working on top of underlay networks**: A system network attaches to an underlay network ([UnderlayNetwork](/modules/sdn/cr.html#underlaynetwork)). To connect, specify the name of the underlay network to which the system network should be connected in the [`spec.underlayNetworkName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-underlaynetworkname) parameter of the SystemNetwork resource. The set of node interfaces (PF or VF) used by the system network is defined in the [`memberNodeNetworkInterfaces`](/modules/sdn/cr.html#underlaynetwork-v1alpha1-spec-membernodenetworkinterfaces)￼ parameter of the UnderlayNetwork resource.
+* **Support for different types of system network connections to the underlay network**: You can create a VLAN sub-interface (`type: VLAN`), use the underlay as-is (`type: Access`), or attach via an SR-IOV Virtual Function (`type: SRIOVVirtualFunction`) with optional tuning (MTU, MAC, spoof checking, etc.).
+* **Support for IPAM mechanism**: Optional [`spec.ipam`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam) parameter references a [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool). The controller and agent then allocate addresses from that pool and assign them to the node interfaces for this system network.
+* **Tracking the status of system networks**: The agent reports node addresses (including SystemNetwork IPs) in NodeNetworkStatus resources. Internal SystemNetworkNodeNetworkInterfaceAttachment resources track the binding of each system network to each node's parent interface.
+
+### Prerequisites for creating and using system networks
+
+To enable system networks in a cluster, the following requirements must be met:
+
+1. An [underlay network](#configuring-and-connecting-underlay-networks-for-hardware-device-passthrough) must exist. The system network will attach to it by name via [`spec.underlayNetworkName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-underlaynetworkname) parameter. The underlay’s [`memberNodeNetworkInterfaces`](/modules/sdn/cr.html#underlaynetwork-v1alpha1-spec-membernodenetworkinterfaces) selectors determine which node interfaces are used.
+1. **Optional**. To automatically assign IP addresses on interfaces belonging to a system network, [create a system network address pool](#creating-a-pool-of-ip-addresses-for-configuring-the-ipam-system-network). It must be specified in the [`spec.ipam.clusterIPAddressPoolName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam-clusteripaddresspoolname) parameter of the SystemNetwork resource when the network is created.
+
+### Creating a system network
+
+To create a system network, use the [SystemNetwork](/modules/sdn/cr.html#systemnetwork) resource. Supported system networks have the following types of connections to the underlay networks on which they will operate:
+
+* [`VLAN`](#vlan-type): VLAN interfaces are created on interfaces connected to the underlay network (underlay interfaces).
+* [`Access`](#access-type): Direct access (without VLAN) to interfaces on nodes connected to the underlay network.
+* [`SRIOVVirtualFunction`](#sriovvirtualfunction-type): Connection to a physical interface via SR-IOV.
+
+#### VLAN type
+
+Creates a VLAN sub-interface on each matched underlay interface. When creating a network, you must specify the VLAN ID (parameter [`spec.vlan.id`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-vlan-id)).
+
+Example of a system network manifest with a `VLAN` connection type to the underlay network:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: SystemNetwork
+metadata:
+  name: storage-network
+spec:
+  type: VLAN
+  underlayNetworkName: my-underlay
+  vlan:
+    id: 100
+  ipam:
+    clusterIPAddressPoolName: storage-pool
+```
+
+To check the network status after creation, use the section [Checking system network status](#checking-system-network-status).
+
+#### Access type
+
+Uses the underlay interface as-is (no VLAN tag). Useful when the underlay already represents a single L2 segment.
+
+Example of a system network manifest with a `Access` connection type to the underlay network:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: SystemNetwork
+metadata:
+  name: mgmt-network
+spec:
+  type: Access
+  underlayNetworkName: my-underlay
+  ipam:
+    clusterIPAddressPoolName: mgmt-pool
+```
+
+To check the network status after creation, use the section [Checking system network status](#checking-system-network-status).
+
+#### SRIOVVirtualFunction type
+
+Attaches via an SR-IOV Virtual Function. The underlay must be in [`Shared`](#creating-underlaynetwork-in-shared-mode) mode so that VFs exist. You can optionally tune VF settings.
+
+Example of a system network manifest with a `SRIOVVirtualFunction` connection type to the underlay network:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: SystemNetwork
+metadata:
+  name: vf-service-network
+spec:
+  type: SRIOVVirtualFunction
+  underlayNetworkName: dpdk-shared-network
+  sriovVirtualFunction:
+    vlan: 200
+    mtu: 1500
+    linkState: Auto
+  ipam:
+    clusterIPAddressPoolName: vf-pool
+```
+
+To check the network status after creation, use the section [Checking system network status](#checking-system-network-status).
+
+### Creating a pool of IP addresses for configuring the IPAM system network
+
+To create an address pool for configuring the system network IPAM, use the [ClusterIPAddressPool](/modules/sdn/cr.html#clusteripaddresspool) resource:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ClusterIPAddressPool
+metadata:
+  name: storage-pool
+spec:
+  leaseTTL: 24h
+  pools:
+    - network: 10.20.30.0/24
+      ranges:
+        - 10.20.30.10-10.20.30.250
+```
+
+When [creating a system network](#creating-a-system-network), specify this pool in the [`spec.ipam.clusterIPAddressPoolName`](/modules/sdn/cr.html#systemnetwork-v1alpha1-spec-ipam-clusteripaddresspoolname) parameter of the SystemNetwork resource.
+
+### Checking system network status
+
+To get a list of system networks, use the command:
+
+```shell
+d8 k get systemnetworks
+```
+
+To view the status of a specific system network, use the command:
+
+```shell
+d8 k get systemnetwork storage-network -o yaml
+```
+
+In `status` you will see:
+
+* `nodeAttachementsCount`: Total attachments (one per matched node interface).
+* `readyNodeAttachementsCount`: Attachments that are configured and ready.
+* `conditions` — e.g. `Ready`: When all attachments are ready.
+
+To view internal attachments (one per a "system network + parent interface" pair), use the command:
+
+```shell
+d8 k get systemnetworknodenetworkinterfaceattachments
+```
+
+To view IP addresses at the node level (including system network IPs) for all nodes, use the command (one NodeNetworkStatus is assigned to each node):
+
+```shell
+d8 k get nodenetworkstatus
+```
+
+To view information about IP addresses at the node level (including system network IPs) for a specific node, use the command:
+
+```shell
+d8 k get nodenetworkstatus -l network.deckhouse.io/node-name=worker-01 -o yaml
+```
+
+In `status.addresses` look for entries with `type: SystemNetworkIP` and `systemNetworkName` set to your system network name.

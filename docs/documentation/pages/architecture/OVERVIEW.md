@@ -21,6 +21,7 @@ The section consists of the following subsections:
   * [IAM subsystem](iam/)
   * [Security subsystem](security/)
   * [Network subsystem](network/)
+  * [Storage subsystem](storage/)
   * [Observability subsystem](observability/)
 
 {% alert level="info" %}
@@ -35,7 +36,7 @@ The platform includes:
 
 * A Kubernetes cluster.
 * The Deckhouse controller and the modules it manages.
-* [Bashible](cluster-and-infrastructure/bashible.html),
+* [Bashible](cluster-and-infrastructure/node-management/bashible.html),
   an agent running as a service on cluster nodes that executes bash scripts to manage nodes.
 
 Modules are grouped into subsystems according to their functional purpose.

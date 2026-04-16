@@ -29,7 +29,8 @@ status:
     type: Completed
   packages:
     processed:
-    - name: test-package
+    - foundVersions: 1
+      name: test-package
       type: Module
     processedOverall: 1
     total: 1

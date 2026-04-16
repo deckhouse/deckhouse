@@ -39,14 +39,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/client"
 	"caps-controller-manager/internal/controller"
 	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/pool"
 	"caps-controller-manager/internal/scope"
-
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 const (
@@ -404,7 +403,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.Logger.V(1).Info("StaticInstance is adopting")
 
 		estimated := DefaultStaticInstanceAdoptTimeout -
-			time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+			time.Since(instanceScope.MachineScope.StaticMachine.CreationTimestamp.Time)
 
 		if estimated < (10 * time.Second) {
 			instanceScope.MachineScope.Fail("UpdateError",

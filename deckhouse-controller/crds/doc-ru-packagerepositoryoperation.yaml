@@ -78,7 +78,7 @@ spec:
                               Список ошибок, возникших при обработке этого пакета.
                             items:
                               properties:
-                                error:
+                                message:
                                   description: |
                                     Сообщение об ошибке.
                                 version:
@@ -98,6 +98,9 @@ spec:
                           type:
                             description: |
                               Тип пакета.
+                          foundVersions:
+                            description: |
+                              Количество версий, найденных в рамках данной операции.
                     processedOverall:
                       description: |
                         Общее количество обработанных пакетов.

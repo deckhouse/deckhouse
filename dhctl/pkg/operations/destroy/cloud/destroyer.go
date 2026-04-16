@@ -92,7 +92,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 }
 
 func (d *Destroyer) AfterResourcesDelete(ctx context.Context) error {
-	_, err := d.params.StateLoader.PopulateMetaConfig(ctx)
+	_, err := d.params.StateLoader.PopulateMetaConfig(ctx, nil)
 	if err != nil {
 		return err
 	}

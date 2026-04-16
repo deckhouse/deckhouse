@@ -1,0 +1,3 @@
+templates/basic-auth-proxy
+crds/dex-provider.yaml
+openapi/values.yaml

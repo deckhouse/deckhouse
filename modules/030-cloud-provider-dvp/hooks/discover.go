@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"sort"
 	"strings"
@@ -37,6 +38,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+)
+
+const (
+	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
+	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -194,6 +200,7 @@ func handleDiscoveryDataStorageClasses(
 			VolumeBindingMode:    sc.VolumeBindingMode,
 			ReclaimPolicy:        sc.ReclaimPolicy,
 			AllowVolumeExpansion: sc.AllowVolumeExpansion,
+			IsDefault:            sc.IsDefault,
 		}
 		storageClasses = append(storageClasses, sc)
 	}
@@ -231,6 +238,23 @@ func getStorageClassName(value string) string {
 
 func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
 	input.Values.Set("cloudProviderDvp.internal.storageClasses", storageClasses)
+
+	// Find and set default StorageClass in module internal values
+	var defaultSC string
+	for _, sc := range storageClasses {
+		if sc.IsDefault {
+			defaultSC = sc.Name
+			break
+		}
+	}
+
+	if defaultSC != "" {
+		input.Values.Set("cloudProviderDvp.internal.defaultStorageClass", defaultSC)
+		input.Logger.Info("Discovered default storage class from DVP cloud provider", slog.String("storage_class", defaultSC))
+	} else {
+		input.Logger.Info("No default storage class found in parent DVP cluster")
+		input.Values.Remove("cloudProviderDvp.internal.defaultStorageClass")
+	}
 }
 
 type storageClass struct {
@@ -239,6 +263,7 @@ type storageClass struct {
 	VolumeBindingMode    string `json:"volumeBindingMode"`
 	ReclaimPolicy        string `json:"reclaimPolicy"`
 	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
+	IsDefault            bool   `json:"isDefault"`
 }
 
 func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
@@ -257,11 +282,21 @@ func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
 		allowVolumeExpansion = *sc.AllowVolumeExpansion
 	}
 
+	isDefault := false
+	if sc.Annotations != nil {
+		if val, ok := sc.Annotations[stableDefaultAnnotation]; ok && strings.ToLower(val) == "true" {
+			isDefault = true
+		} else if val, ok := sc.Annotations[betaDefaultAnnotation]; ok && strings.ToLower(val) == "true" {
+			isDefault = true
+		}
+	}
+
 	return storageClass{
 		Name:                 sc.Name,
 		DVPStorageClass:      sc.Parameters["dvpStorageClass"],
 		VolumeBindingMode:    string(volumeBindingMode),
 		ReclaimPolicy:        string(reclaimPolicy),
 		AllowVolumeExpansion: allowVolumeExpansion,
+		IsDefault:            isDefault,
 	}
 }

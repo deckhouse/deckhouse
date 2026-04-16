@@ -31,7 +31,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/detach"
@@ -50,7 +49,21 @@ import (
 type detachParams struct {
 	request      *pb.CommanderDetachStart
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.CommanderDetachResponse
+}
+
+func (p *detachParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *detachParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CommanderDetachResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CommanderDetachResponse {
+			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
@@ -70,21 +83,6 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 		dataFunc: func(progress phases.Progress) *pb.CommanderDetachResponse {
 			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.CommanderDetachResponse {
-			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, receiveCh, doneCh, internalErrCh)
@@ -115,10 +113,10 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderDetachSafe(ctx, detachParams{
+					result := s.commanderDetachSafe(ctx, &detachParams{
 						request:      message.Start,
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
@@ -138,7 +136,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
+func (s *Service) commanderDetachSafe(ctx context.Context, p *detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -149,19 +147,13 @@ func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (resu
 	return s.commanderDetach(ctx, p)
 }
 
-func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.CommanderDetachResult {
+func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.CommanderDetachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
@@ -181,6 +173,7 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
 			),
+			s.params.DownloadDirConfig,
 			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
 			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
 			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),

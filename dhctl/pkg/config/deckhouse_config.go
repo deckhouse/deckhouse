@@ -19,12 +19,14 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -89,11 +91,14 @@ func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
 func ReadVersionTagFromInstallerContainer() (string, bool) {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
-		log.WarnF(
-			"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
-			app.VersionFile, err,
-		)
-		return "", false
+		rawFile, err = os.ReadFile(filepath.Join(app.DownloadDirName, "deckhouse", "version"))
+		if err != nil {
+			log.WarnF(
+				"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
+				app.VersionFile, err,
+			)
+			return "", false
+		}
 	}
 
 	tag := strings.TrimSpace(string(rawFile))
@@ -147,7 +152,12 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		DeckhouseSettings.
 		ToMap()
 
-	schemasStore := NewSchemaStore()
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      metaConfig.DownloadRootDir,
+		DownloadCacheDir: metaConfig.DownloadCacheDir,
+	}
+
+	schemasStore := NewSchemaStore(dc)
 
 	var deckhouseCm *ModuleConfig
 	// find deckhouse module config for extract release

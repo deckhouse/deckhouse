@@ -1,3 +1,4 @@
+{{- if eq $.Env "FE" }}
 ---
 image: tests-prebuild
 fromImage: base-for-go
@@ -8,11 +9,12 @@ git:
     install:
     - go.mod
     - go.sum
+    setup:
+    - '**/*'
   includePaths:
   - deckhouse-controller
   - dhctl
   - candi
-  - modules
   - global-hooks
   - go_lib
   - pkg
@@ -29,17 +31,17 @@ git:
   excludePaths:
   {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
   - docs
-  - modules/*/docs
-  - modules/*/README.md
-  - modules/*/images
-  - modules/*/webhooks
-  - modules/0[1-9][1-9]-*/crds     # we need here only the 000-common/crds
-  - modules/[1-9][0-9][0-9]-*/crds
 - url: {{ .SOURCE_REPO }}/flant/shell-operator
   tag: v1.4.10
   add: /frameworks/shell
   to: /deckhouse/shell-operator/frameworks/shell
-  {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+  # we need here only the 000-common/crds
+- add: /modules/000-common/crds
+  to: /deckhouse/modules/000-common/crds
+  stageDependencies:
+    setup:
+    - '**/*'
+  {{ .Files.Get (printf "tools/build_includes/modules-tests-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
@@ -47,7 +49,7 @@ import:
   add: /out/deckhouse-controller
   to: /usr/bin/deckhouse-controller
   after: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
@@ -62,6 +64,9 @@ import:
 mount:
 {{ include "mount points for golang builds" . }}
 shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache elfutils-dev openssl-dev
   install:
   - go install github.com/onsi/ginkgo/ginkgo@latest
   - go install github.com/go-delve/delve/cmd/dlv@latest
@@ -102,3 +107,10 @@ import:
   add: /images_digests.json
   to: /deckhouse/modules/040-node-manager/images_digests.json
   after: setup
+git:
+- add: /tools/mounts/mountfile
+  to: /root/.ack-ginkgo-rc
+  stageDependencies:
+    setup:
+    - "**/*"
+{{- end }}

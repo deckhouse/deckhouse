@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -40,8 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-var logTypeDHCTL = slog.String("type", "dhctl")
-
 type Service struct {
 	pb.UnimplementedDHCTLServer
 
@@ -49,12 +48,13 @@ type Service struct {
 }
 
 type ServiceParams struct {
-	TmpDir       string
-	CacheDir     string
-	PodName      string
-	PodNamespace string
-	SchemaStore  *config.SchemaStore
-	IsDebug      bool
+	TmpDir            string
+	CacheDir          string
+	PodName           string
+	PodNamespace      string
+	SchemaStore       *config.SchemaStore
+	IsDebug           bool
+	DownloadDirConfig *directoryconfig.DirectoryConfig
 }
 
 func New(params ServiceParams) *Service {

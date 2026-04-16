@@ -1,0 +1,19 @@
+excludeNamespaces: []
+additionalNamespaces:
+  - kube-system
+  - d8-commander
+  - d8-commander-agent
+  - d8-console
+  - d8-csi-ceph
+  - d8-csi-nfs
+  - d8-csi-scsi-generic
+  - d8-csi-yadro-tatlin-unified
+  - d8-observability
+  - d8-runtime-audit-engine
+  - d8-sds-local-volume
+  - d8-sds-node-configurator
+  - d8-secrets-store-integration
+  - d8-operator-trivy
+  - d8-snapshot-controller
+  - d8-storage-volume-data-manager
+  - d8-virtualization

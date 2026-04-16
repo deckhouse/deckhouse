@@ -26,6 +26,8 @@ dkp-ce: DKP CE
 dkp-se-plus: DKP SE+
 dkp-ee: DKP EE
 dvp-ee: DVP EE
+dvp-cse: DVP CSE
+dkp-cse-pro: DKP CSE Pro
 
 common:
   of:
