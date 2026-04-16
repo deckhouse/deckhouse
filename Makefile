@@ -228,7 +228,7 @@ lint-markdown: --lint-markdown-header ## Run markdown linter.
 	  else \
 	    echo; \
 	    echo 'To run linter locally and fix common problems run: make lint-markdown-fix'; \
-	    echo; \$(GOTESTSUM)
+	    echo; \
 	    exit 1; \
 	  fi"
 
@@ -511,7 +511,7 @@ go-module-version: go-check
 
 .PHONY: tidy-all
 tidy-all: go-check
-	$(caGOTESTSUMll iterateAllGoModules,Running go mod tidy in,go mod tidy)
+	$(call iterateAllGoModules,Running go mod tidy in,go mod tidy)
 
 ##@ Dependencies
 
