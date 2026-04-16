@@ -39,6 +39,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
@@ -80,18 +81,49 @@ func main() {
 		os.Exit(1)
 	}
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	cfg := ctrl.GetConfigOrDie()
+	ctx := ctrl.SetupSignalHandler()
+
+	// Webhook manager — separate cache, no informers for Node/Endpoints.
+	webhookCacheOpts, webhookClientOpts := common.WebhookCacheOptions()
+	webhookMgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme,
+		WebhookServer: ctrlwebhook.NewServer(ctrlwebhook.Options{
+			Port: 9443,
+		}),
+		Metrics:                metricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
+		Cache:                  webhookCacheOpts,
+		Client:                 webhookClientOpts,
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to start webhook manager")
+		os.Exit(1)
+	}
+
+	if err = webhook.SetupWithManager(webhookMgr); err != nil {
+		setupLog.Error(err, "unable to setup webhooks")
+		os.Exit(1)
+	}
+
+	go func() {
+		setupLog.Info("starting webhook manager")
+		if err := webhookMgr.Start(ctx); err != nil {
+			setupLog.Error(err, "webhook manager failed")
+			os.Exit(1)
+		}
+	}()
+
+	// Controller manager — full cache for controllers, no webhook server.
+	ctrlMgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
-		WebhookServer: ctrlwebhook.NewServer(ctrlwebhook.Options{
-			Port: 9443,
-		}),
 		HealthProbeBindAddress: probeAddr,
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to start controller manager")
 		os.Exit(1)
 	}
 
@@ -103,30 +135,25 @@ func main() {
 	}
 	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
-	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+	if err = register.SetupAll(ctrlMgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
-		os.Exit(1)
-	}
-
-	if err = webhook.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)
 	}
 
 	//+kubebuilder:scaffold:builder
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err := ctrlMgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := ctrlMgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+	setupLog.Info("starting controller manager")
+	if err := ctrlMgr.Start(ctx); err != nil {
+		setupLog.Error(err, "problem running controller manager")
 		os.Exit(1)
 	}
 }
