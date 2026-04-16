@@ -127,7 +127,10 @@ base_bool_violation_msg(field_name, actual, expected) := out if {
 bool_violation_detail(field_name, actual, expected, false, _) := detail if {
   detail := {
     "msg": base_bool_violation_msg(field_name, actual, expected),
-    "spe_applied": false
+    "spe_applied": false,
+    "field": field_name,
+    "actual": actual,
+    "policy_allowed": expected
   }
 }
 
@@ -135,6 +138,10 @@ bool_violation_detail(field_name, actual, expected, true, spe_allowed) := detail
   detail := {
     "msg": base_bool_violation_msg(field_name, actual, expected),
     "spe_applied": true,
+    "field": field_name,
+    "actual": actual,
+    "policy_allowed": expected,
+    "spe_allowed": spe_allowed,
     "forbidden": actual,
     "policy_allows": expected,
     "spe_allows": spe_allowed
