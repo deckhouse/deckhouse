@@ -22,7 +22,7 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-- image: tools/util-linux
+- from: {{ index $.Images "tools/util-linux" }}
   add: /bin/lsblk
   to: /bin/lsblk
   before: setup
@@ -51,7 +51,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:

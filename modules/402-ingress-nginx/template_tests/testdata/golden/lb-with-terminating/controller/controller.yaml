@@ -39,7 +39,7 @@ kind: DaemonSet
 metadata:
   annotations:
     ingress-nginx-controller.deckhouse.io/checksum: aae2dceef3dfbb345a89425527b723dcd4e516f30d446804e8746bb70d231eeb
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.12"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
     app: controller
@@ -74,6 +74,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --enable-metrics=true
         - --publish-service=d8-ingress-nginx/wait-lb-non-default-load-balancer
         - --shutdown-grace-period=333
         - --controller-class=ingress-nginx.deckhouse.io/%!s(<nil>)
@@ -92,7 +93,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller110
+        image: registry.example.com@imageHash-ingressNginx-controller112
         lifecycle:
           preStop:
             exec:
@@ -138,6 +139,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: Unconfined
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx

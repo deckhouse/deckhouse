@@ -2,7 +2,7 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: builder/src
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -15,7 +15,7 @@ shell:
     - cd /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -65,7 +65,7 @@ shell:
     - chown 64535:64535 /cni-migration-controller
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /cni-migration-controller

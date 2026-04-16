@@ -42,7 +42,7 @@
     <div class="container">
       <div class="input-wrapper">
         <input type="text" id="search-input" placeholder='{{ T "search_placeholder_text" }}' class="input"
-        data-search-index-path="/products/kubernetes-platform/documentation/v1/search.json:2.0:{{ $cachingTime }},/modules/search-embedded-modules-index.json:1.0:{{$cachingTime}},/modules/search-external-modules-index.json:1.0:{{$cachingTime}}"
+        data-search-index-path='{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ else }}/products/kubernetes-platform/documentation/v1{{ end }}/search.json:2.0:{{ $cachingTime }},{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ end }}/modules/search-embedded-modules-index.json:1.0:{{$cachingTime}},{{ if eq site.Params.mode "module" }}/{{ $lang }}{{ end }}/modules/search-external-modules-index.json:1.0:{{$cachingTime}}'
         data-search-context='{{ T "search_context_dkpdocs_and_modules" }}'
         >
         <div id="search-results" class="results" style="display: none"></div>
@@ -85,11 +85,11 @@
 
       <div class="post-content">
 
-        {{- partial "module-stage-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel "stageFallBackLegacy" $moduleStageFallBackLegacy) }}
-
         {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
          {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
         {{- end }}
+
+        {{- partial "module-stage-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel "stageFallBackLegacy" $moduleStageFallBackLegacy) }}
 
         {{.Content}}
 

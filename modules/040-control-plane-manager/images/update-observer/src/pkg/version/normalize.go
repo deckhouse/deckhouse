@@ -18,33 +18,19 @@ package version
 
 import (
 	"fmt"
-	"strings"
 
-	"golang.org/x/mod/semver"
+	semver "github.com/Masterminds/semver/v3"
 )
 
-const (
-	SemverMajorMinorAccuracy = 2
-)
-
-func NormalizeAndTrimPatch(version string) (string, error) {
+func Normalize(version string) (string, error) {
 	if version == "" {
 		return "", nil
 	}
 
-	normalized := version
-	if !strings.HasPrefix(normalized, "v") {
-		normalized = "v" + normalized
-	}
-
-	if !semver.IsValid(normalized) {
+	nVer, err := semver.NewVersion(version)
+	if err != nil {
 		return "", fmt.Errorf("invalid semver: %s", version)
 	}
 
-	parts := strings.Split(normalized, ".")
-	if len(parts) < SemverMajorMinorAccuracy {
-		return "", fmt.Errorf("version must have at least MAJOR.MINOR: %s", version)
-	}
-
-	return fmt.Sprintf("%s.%s", parts[0], parts[1]), nil
+	return fmt.Sprintf("%d.%d", nVer.Major(), nVer.Minor()), nil
 }

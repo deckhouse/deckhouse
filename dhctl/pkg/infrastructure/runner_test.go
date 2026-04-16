@@ -16,6 +16,7 @@ package infrastructure
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -191,6 +193,75 @@ func TestCheckRunnerHandleChanges(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunnerPlan(t *testing.T) {
+	tests := []struct {
+		name                       string
+		showResp                   fakeResponse
+		planResp                   fakeResponse
+		vmResource                 string
+		expectedChangesInPlan      int
+		expectedDestructiveChanges *plan.DestructiveChanges
+		expectedHasVMDestruction   bool
+		expectedErrSubstring       string
+	}{
+		{
+			name:                       "non-destructive changes",
+			showResp:                   fakeResponse{resp: []byte("{\"format_version\":\"0.1\",\"resource_changes\":[]}")},
+			planResp:                   fakeResponse{code: infraexec.HasChangesExitCode},
+			expectedChangesInPlan:      plan.HasChanges,
+			expectedDestructiveChanges: nil,
+			expectedHasVMDestruction:   false,
+		},
+		{
+			name:                       "destructive changes",
+			showResp:                   fakeResponse{resp: mustReadFile(t, "./mocks/checkplan/destructively_changed.json")},
+			planResp:                   fakeResponse{code: infraexec.HasChangesExitCode},
+			vmResource:                 "yandex_compute_instance",
+			expectedChangesInPlan:      plan.HasDestructiveChanges,
+			expectedDestructiveChanges: destructivelyChanged,
+			expectedHasVMDestruction:   true,
+		},
+		{
+			name:                  "show error returns without panic",
+			showResp:              fakeResponse{err: errors.New("show failed")},
+			planResp:              fakeResponse{code: infraexec.HasChangesExitCode},
+			expectedChangesInPlan: plan.HasChanges,
+			expectedErrSubstring:  "show failed",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runner := newTestRunner(&fakeExecutor{
+				showResp:   tc.showResp,
+				planResp:   tc.planResp,
+				VMResource: tc.vmResource,
+			})
+
+			err := runner.Plan(context.Background(), false, false)
+			if tc.expectedErrSubstring != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.expectedErrSubstring)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.expectedChangesInPlan, runner.GetChangesInPlan())
+			require.Equal(t, tc.expectedDestructiveChanges, runner.GetPlanDestructiveChanges())
+			require.Equal(t, tc.expectedHasVMDestruction, runner.HasVMDestruction())
+		})
+	}
+}
+
+func mustReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	return data
 }
 
 type sleepExecutor struct {

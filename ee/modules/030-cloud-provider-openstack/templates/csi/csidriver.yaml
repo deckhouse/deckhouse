@@ -6,3 +6,4 @@ metadata:
 spec:
   attachRequired: true
   podInfoOnMount: false
+  fsGroupPolicy: {{ .Values.cloudProviderOpenstack.csiDriver.fsGroupPolicy | default "ReadWriteOnceWithFSType" }}

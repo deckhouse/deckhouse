@@ -130,6 +130,14 @@ internal:
 			f.HelmRender()
 		})
 
+		It("Should use default Moderate interval (15m)", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("15m"))
+		})
+
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			cm := f.KubernetesResource("ConfigMap", "d8-descheduler", "descheduler-policy")
@@ -282,6 +290,66 @@ profiles:
       - DefaultEvictor
 `))
 			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("With deschedulingInterval set to Frequent", func() {
+		BeforeEach(func() {
+			moduleValues := `
+deschedulingInterval: "Frequent"
+internal:
+  deschedulers:
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+        targetThresholds:
+          cpu: 40
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should set descheduling interval to 5m", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("5m"))
+		})
+	})
+
+	Context("With deschedulingInterval set to Rare", func() {
+		BeforeEach(func() {
+			moduleValues := `
+deschedulingInterval: "Rare"
+internal:
+  deschedulers:
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+        targetThresholds:
+          cpu: 40
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should set descheduling interval to 30m", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("30m"))
 		})
 	})
 })

@@ -17,11 +17,11 @@ lang: ru
 
 Доступные сценарии зависят от редакции платформы.
 
-Мультикластер и федерация доступны в редакциях Enterprise Edition (EE) и Certified Security Edition Pro (CSE Pro 1.67+).
+Мультикластер и федерация доступны в редакциях Enterprise Edition (EE) и Certified Security Edition Pro (CSE Pro).
 
-В редакциях Community Edition (CE), Basic Edition (BE), Standard Edition (SE), Standard Edition+ (SE+) и Certified Security Edition Lite (CSE 1.67+) можно применять сервис-меш только в рамках одного кластера, например для реализации паттернов Circuit Breaker, Canary Deployment и т.д.
+В редакциях Community Edition (CE), Basic Edition (BE), Standard Edition (SE), Standard Edition+ (SE+) и Certified Security Edition Lite (CSE Lite) можно применять сервис-меш только в рамках одного кластера, например для реализации паттернов Circuit Breaker, Canary Deployment и т.д.
 
-| Сценарий использования | CE / BE / SE / SE+ / CSE Lite (1.67+)  | EE | CSE Pro (1.67+) |
+| Сценарий использования | CE / BE / SE / SE+ / CSE Lite  | EE | CSE Pro |
 |---------------|---------------------------------------|------------------------|-----------------|
 | Сервис-меш в одном кластере | +                                     | +                      | +               |
 | Федерация     | -                                     | +                      | +               |

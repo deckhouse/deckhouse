@@ -34,6 +34,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -121,6 +122,7 @@ func NewDeckhouseController(
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
 		appsv1.AddToScheme,
+		discoveryv1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
@@ -414,7 +416,7 @@ func NewDeckhouseController(
 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
 		operator.MetricStorage,
-		config.NewSchemaStore(),
+		config.NewSchemaStore(nil),
 		settingsContainer,
 		exts,
 	)

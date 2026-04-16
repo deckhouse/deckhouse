@@ -17,7 +17,7 @@ shell:
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -38,7 +38,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -64,7 +64,17 @@ secrets:
 shell:
   beforeInstall:
   {{- include "debian packages proxy" . | nindent 2 }}
-  - apt-get update && apt-get install libbtrfs-dev -y
+  - |
+    apt-get update && apt-get install -y \
+    libbtrfs-dev \
+    apt-utils \
+    libbtrfs-dev \
+    libelf-dev \
+    libssl-dev \
+    libuv1-dev \
+    libzstd-dev \
+    file git gcc dnsutils
+  - ln -fs "$(dpkg -L libuv1-dev | grep -F '/libuv_a.a')" /usr/local/lib/libuv.a
   - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)

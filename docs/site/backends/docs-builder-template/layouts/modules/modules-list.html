@@ -22,7 +22,7 @@
     <div class="container">
       <div class="input-wrapper">
         <input type="text" id="search-input" placeholder='{{ T "search_placeholder_text" }}' class="input"
-        data-search-index-path="/products/kubernetes-platform/documentation/v1/search.json:2.0:{{ $cachingTime }},/modules/search-embedded-modules-index.json:1.0:{{ $cachingTime }},/modules/search-external-modules-index.json:1.0:{{$cachingTime}}"
+        data-search-index-path='{{ if eq site.Params.mode "module" }}/{{ .Site.Language.Lang }}{{ else }}/products/kubernetes-platform/documentation/v1{{ end }}/search.json:2.0:{{ $cachingTime }},{{ if eq site.Params.mode "module" }}/{{ .Site.Language.Lang }}{{ end }}/modules/search-embedded-modules-index.json:1.0:{{ $cachingTime }},{{ if eq site.Params.mode "module" }}/{{ .Site.Language.Lang }}{{ end }}/modules/search-external-modules-index.json:1.0:{{$cachingTime}}'
         data-search-context='{{ T "search_context_dkpdocs_and_modules" }}'
         >
         <div id="search-results" class="results" style="display: none"></div>
@@ -234,15 +234,6 @@
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
-    <script>
-      function getHeaderHeight() {
-        const header = $('header');
-        return header.outerHeight(true);
-      }
-      const headerHeight = getHeaderHeight();
-      const $navigationContainer = $('.navigation__container');
-      $navigationContainer.css("top", headerHeight);
-    </script>
     {{- if ne site.Params.mode "module" }}
       {{ "<!--noindex-->" | safeHTML }}
       {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}

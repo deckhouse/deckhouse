@@ -411,7 +411,7 @@ It sets run_{CRI}_{VERSION} outputs to use as conditionals for later jobs.
 # <template: check_e2e_labels_job>
 check_e2e_labels:
   name: Check e2e labels
-  runs-on: "regular"
+  runs-on: "ubuntu-latest"
   permissions:
     contents: read
     issues: write
@@ -560,9 +560,6 @@ check_e2e_labels:
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_stage_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
-{!{ if not (has $commanderProviders $provider) }!}
-  {!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
-{!{- end }!}
 
     - name: Setup
       id: setup
@@ -974,7 +971,6 @@ check_e2e_labels:
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_stage_registry_step" . | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_rw_registry_step" . | strings.Indent 4 }!}
-{!{ tmpl.Exec "werf_install_step" . | strings.Indent 4 }!}
 
     - name: Setup
       id: setup

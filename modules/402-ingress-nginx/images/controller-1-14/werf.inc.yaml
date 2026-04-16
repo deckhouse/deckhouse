@@ -33,7 +33,7 @@
 {{ $gccVersion := "releases/gcc-14.2.0" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: builder/src
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -133,7 +133,7 @@ shell:
   - rm -rf /src/owasp-modsecurity-crs/.git
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -160,7 +160,7 @@ shell:
     make GO111MODULE=on USE_DOCKER=false build
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
-fromImage: builder/alpine-3.21
+from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -175,83 +175,83 @@ import:
   add: /src/nginx-deps
   to: /src/nginx-deps
   before: install
-- image: libs/protobuf-{{ $protobufVersion }}
+- from: {{ index $.Images (printf "libs/protobuf-%s" $protobufVersion) }}
   add: /usr
   to: /base_images/protobuf
   before: install
-- image: libs/abseil-cpp-{{ $abseilCppVersion }}
+- from: {{ index $.Images (printf "libs/abseil-cpp-%s" $abseilCppVersion) }}
   add: /usr
   to: /base_images/abseil-cpp
   before: install
-- image: libs/grpc-{{ $grpcVersion }}
+- from: {{ index $.Images (printf "libs/grpc-%s" $grpcVersion) }}
   add: /usr
   to: /base_images/grpc
   before: install
-- image: libs/re2-{{ $re2Version }}
+- from: {{ index $.Images (printf "libs/re2-%s" $re2Version) }}
   add: /usr
   to: /base_images/re2
   before: install
-- image: libs/icu-{{ $icuVersion }}
+- from: {{ index $.Images (printf "libs/icu-%s" $icuVersion) }}
   add: /usr
   to: /base_images/icu
   before: install
-- image: libs/pcre-{{ $pcreVersion  }}
+- from: {{ index $.Images (printf "libs/pcre-%s" $pcreVersion) }}
   add: /usr
   to: /base_images/pcre
   before: install
-- image: libs/libmaxminddb-{{ $libmaxminddbVersion }}
+- from: {{ index $.Images (printf "libs/libmaxminddb-%s" $libmaxminddbVersion) }}
   add: /usr
   to: /base_images/libmaxminddb
   before: install
-- image: tools/curl-{{ $curlVersion }}
+- from: {{ index $.Images (printf "tools/curl-%s" $curlVersion) }}
   add: /usr
   to: /base_images/curl
   before: install
-- image: libs/zlib-{{ $zlibVersion }}
+- from: {{ index $.Images (printf "libs/zlib-%s" $zlibVersion) }}
   add: /usr
   to: /base_images/zlib
   before: install
-- image: libs/c-ares-{{ $cAresVersion }}
+- from: {{ index $.Images (printf "libs/c-ares-%s" $cAresVersion) }}
   add: /usr
   to: /base_images/c-ares
   before: install
-- image: tools/openssl-{{ $opensslVersion }}
+- from: {{ index $.Images (printf "tools/openssl-%s" $opensslVersion) }}
   add: /usr
   to: /base_images/openssl
   before: install
-- image: libs/brotli-{{ $brotliVersion }}
+- from: {{ index $.Images (printf "libs/brotli-%s" $brotliVersion) }}
   add: /usr
   to: /base_images/brotli
   before: install
-- image: libs/libidn2-{{ $libidn2Version }}
+- from: {{ index $.Images (printf "libs/libidn2-%s" $libidn2Version) }}
   add: /usr
   to: /base_images/libidn2
   before: install
-- image: libs/zstd-{{ $zstdVersion }}
+- from: {{ index $.Images (printf "libs/zstd-%s" $zstdVersion) }}
   add: /usr
   to: /base_images/libzstd
   before: install
-- image: libs/libpsl-{{ $libpslVersion }}
+- from: {{ index $.Images (printf "libs/libpsl-%s" $libpslVersion) }}
   add: /usr
   to: /base_images/libpsl
   before: install
-- image: libs/nghttp2-{{ $nghttp2Version }}
+- from: {{ index $.Images (printf "libs/nghttp2-%s" $nghttp2Version) }}
   add: /usr
   to: /base_images/libnghttp2
   before: install
-- image: libs/xz-{{ $xzVersion }}
+- from: {{ index $.Images (printf "libs/xz-%s" $xzVersion) }}
   add: /usr
   to: /base_images/xz
   before: install
-- image: libs/libxml2-{{ $libxml2Version }}
+- from: {{ index $.Images (printf "libs/libxml2-%s" $libxml2Version) }}
   add: /usr
   to: /base_images/libxml2
   before: install
-- image: libs/yajl-{{ $yajlVersion }}
+- from: {{ index $.Images (printf "libs/yajl-%s" $yajlVersion) }}
   add: /usr
   to: /base_images/yajl
   before: install
-- image: tools/gcc-gnu-{{ $gccVersion }}
+- from: {{ index $.Images (printf "tools/gcc-gnu-%s" $gccVersion) }}
   add: /usr
   to: /base_images/gcc
   includePaths:
@@ -665,25 +665,25 @@ shell:
   - cp -a /etc/ingress-controller/* /chroot/etc/ingress-controller/
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
-fromImage: builder/alpine-3.21
+from: {{ index $.Images "builder/alpine-3.21" }}
 final: false
 mount:
 - from: build_dir
   to: /apps
 import:
-- image: tools/libcap
+- from: {{ index $.Images "tools/libcap" }}
   add: /usr/sbin/setcap
   to: /tools/setcap
   before: install
 #/bin/sh is required for modsecurity lib to work
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr
   to: /chroot
   includePaths:
   - bin/bash
   - bin/sh
   before: install
-- image: tools/curl
+- from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl-static
   to: /chroot/usr/bin/curl
   owner: "64535"
@@ -695,7 +695,7 @@ import:
   includePaths:
   - chroot
   before: install
-- image: libs/lua-iconv-{{ $luaIconvVersion }}
+- from: {{ index $.Images (printf "libs/lua-iconv-%s" $luaIconvVersion) }}
   add: /
   to: /chroot/usr/local
   owner: "0"
@@ -703,7 +703,7 @@ import:
   includePaths:
   - lib/lua/5.1/iconv.so
   before: install
-- image: libs/lua-protobuf-{{ $luaProtobufVersion }}
+- from: {{ index $.Images (printf "libs/lua-protobuf-%s" $luaProtobufVersion) }}
   add: /
   to: /chroot/usr/local
   owner: "0"
@@ -897,7 +897,7 @@ shell:
   - cp -a /tools/setcap /apps
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/distroless
+from: {{ index $.Images "base/distroless" }}
 mount:
 - from: build_dir
   to: /apps
@@ -945,11 +945,11 @@ import:
   owner: "64535"
   group: "64535"
   before: install
-- image: tools/dumb-init
+- from: {{ index $.Images "tools/dumb-init" }}
   add: /dumb-init
   to: /usr/bin/dumb-init
   before: install
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr
   to: /
   owner: "0"
@@ -958,7 +958,7 @@ import:
   - bin/bash
   - bin/sh
   before: install
-- image: tools/procps
+- from: {{ index $.Images "tools/procps" }}
   add: /
   to: /
   owner: "0"
@@ -967,19 +967,19 @@ import:
   - bin/pkill
   - bin/pgrep
   before: install
-- image: tools/diffutils
+- from: {{ index $.Images "tools/diffutils" }}
   add: /usr/bin/diff
   to: /usr/bin/diff
   owner: "0"
   group: "0"
   before: install
-- image: tools/util-linux
+- from: {{ index $.Images "tools/util-linux" }}
   add: /usr/bin/unshare
   to: /usr/bin/unshare
   owner: "0"
   group: "0"
   before: install
-- image: tools/coreutils
+- from: {{ index $.Images "tools/coreutils" }}
   add: /
   to: /
   owner: "0"
@@ -1006,7 +1006,6 @@ shell:
 imageSpec:
   config:
     workingDir: /chroot/etc/nginx
-    user: "64535"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]

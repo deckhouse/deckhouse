@@ -65,6 +65,15 @@ metadata:
   name: configmap-installer-updater-sa
   namespace: {{ .Release.Namespace }}
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: embedded-modules-history-sync-sa
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -75,6 +84,23 @@ rules:
     resources: ["configmaps"]
     verbs: ["get", "update", "patch"]
     resourceNames: ["doc-installer-version"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: embedded-modules-history-sync-role
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "update", "patch"]
+    resourceNames: ["embedded-modules-history-data"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -88,4 +114,21 @@ subjects:
 roleRef:
   kind: Role
   name: configmap-installer-updater-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: embedded-modules-history-sync
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+subjects:
+  - kind: ServiceAccount
+    name: embedded-modules-history-sync-sa
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: Role
+  name: embedded-modules-history-sync-role
   apiGroup: rbac.authorization.k8s.io

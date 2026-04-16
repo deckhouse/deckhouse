@@ -74,12 +74,14 @@ const istioValues = `
           revision: "v1x25x2"
           fullVersion: "1.25.2"
           imageSuffix: "V1x25x2"
+          supportsAmbient: true
         "1.21.6":
           revision: "v1x21x6"
           fullVersion: "1.21.6"
           imageSuffix: "V1x21x6"
+          supportsAmbient: false
       kialiSigningKey: "kiali"
-      operatorVersionsToInstall:  []
+      operatorVersionsToInstall: []
       versionsToInstall: []
       federations: []
       multiclusters: []
@@ -129,6 +131,8 @@ const istioValues = `
       accessLog:
         type: "Text"
         textFormat: '[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%'
+      ztunnel:
+        resourcesManagement: {}
 `
 
 func getSubdirs(dir string) ([]string, error) {

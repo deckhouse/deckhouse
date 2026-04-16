@@ -1,4 +1,4 @@
-{{- $version := "v1.14.0-deckhouse.4"}}
+{{- $version := "v1.14.0-deckhouse.7"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
@@ -21,7 +21,7 @@ shell:
     - rm -rf /src/docker_auth/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
