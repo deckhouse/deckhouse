@@ -881,6 +881,13 @@ entries:
                 en: Updating Kubernetes and versioning
                 ru: Обновление Kubernetes и управление версиями
               url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+            - title:
+                en: Switching editions
+                ru: Переключение редакций (кроме CSE)
+              url: /admin/configuration/update/switching-editions.html
+            - title:
+                ru: Переключение на DKP CSE
+              url: /admin/configuration/update/switching-cse.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
@@ -1421,7 +1428,7 @@ entries:
             - title:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
-              url: /architecture/storage/sds-node-configurator.html               
+              url: /architecture/storage/sds-node-configurator.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
