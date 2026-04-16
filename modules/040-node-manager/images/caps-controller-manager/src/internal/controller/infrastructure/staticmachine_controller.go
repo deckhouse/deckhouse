@@ -122,7 +122,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, errors.Wrap(err, "failed to get Machine")
 	}
 	if machine == nil {
-		logger.Info("Machine Controller has not yet set OwnerRef")
+		logger.Info("Machine Controller has not yet set OwnerRef. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 	logger = logger.WithValues("machine", machine.Name)

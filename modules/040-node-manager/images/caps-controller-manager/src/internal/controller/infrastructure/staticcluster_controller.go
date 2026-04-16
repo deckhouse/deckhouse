@@ -80,7 +80,7 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 	if cluster == nil {
-		logger.V(1).Info("Cluster Controller has not yet set OwnerRef")
+		logger.V(1).Info("Cluster Controller has not yet set OwnerRef. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
