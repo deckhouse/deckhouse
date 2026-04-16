@@ -79,7 +79,7 @@ CSI-драйвер `csi-huawei` — реализация [Container Storage Inte
 
 С драйвером взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — валидация кастомных ресурсов StorageBackendClaim, StorageBackendContent;
+1. **Kube-apiserver** — валидация кастомных ресурсов StorageBackendClaim;
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 

@@ -2,7 +2,7 @@
 title: Модуль csi-huawei
 permalink: ru/architecture/storage/csi-huawei.html
 lang: ru
-search: csi-huawei, hpe
+search: csi-huawei, huawei
 description: Архитектура модуля csi-huawei в Deckhouse Kubernetes Platform.
 ---
 
@@ -38,7 +38,7 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
   Состоит из следующих контейнеров:
 
 * **controller** — основной контейнер;
-* **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов HPEStorageConnection и HPEStorageClass.
+* **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для валидации StorageClass.
 
 1. **CSI-драйвер (huawei)** — реализация CSI-драйвера для `csi.huawei.com` provisioner. С архитектурой CSI-драйвера `csi-huawei` можно ознакомиться [в соответствующем разделе документации](../storage/csi-drivers/csi-driver-huawei.html).
 
@@ -59,4 +59,4 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-* **Kube-apiserver** — валидация кастомных ресурсов HuaweiStorageConnection, HuaweiStorageClass, StorageBackendClaim, StorageBackendContent.
+* **Kube-apiserver** — валидация кастомных ресурсов StorageBackendClaim, а так же стандартных ресурсов StorageClass.
