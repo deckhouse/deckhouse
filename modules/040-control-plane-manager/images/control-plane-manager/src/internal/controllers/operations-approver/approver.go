@@ -232,7 +232,7 @@ type nodeCounts struct {
 	arbiters int
 }
 
-func (c nodeCounts) equalZero() bool {
+func (c nodeCounts) isZero() bool {
 	return c.masters+c.arbiters == 0
 }
 

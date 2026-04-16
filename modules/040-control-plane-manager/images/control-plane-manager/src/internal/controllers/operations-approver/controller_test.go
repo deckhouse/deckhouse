@@ -20,7 +20,10 @@ import (
 	"context"
 	"testing"
 
+	"control-plane-manager/internal/constants"
+
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -35,6 +38,7 @@ var testScheme = runtime.NewScheme()
 
 func init() {
 	utilruntime.Must(controlplanev1alpha1.AddToScheme(testScheme))
+	utilruntime.Must(corev1.AddToScheme(testScheme))
 }
 
 func TestReconciler_Reconcile(t *testing.T) {
@@ -58,6 +62,45 @@ func TestReconciler_Reconcile(t *testing.T) {
 		r := &reconciler{client: cl}
 		_, err := r.Reconcile(ctx, reconcile.Request{})
 		require.NoError(t, err)
+	})
+
+	t.Run("workload components ignore arbiters", func(t *testing.T) {
+		t.Parallel()
+		// 2 masters + 5 arbiters.
+		// For KubeAPIServer, the limit is max(1, masters-1) = max(1, 2-1) = 1.
+		// Arbiters should be ignored for workload components.
+		op1 := newOperation("op-api-1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)
+		op2 := newOperation("op-api-2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)
+
+		cl := fake.NewClientBuilder().
+			WithScheme(testScheme).
+			WithObjects(
+				testControlPlaneNode("n1"),
+				testControlPlaneNode("n2"),
+				testArbiterNode("a1"),
+				testArbiterNode("a2"),
+				testArbiterNode("a3"),
+				testArbiterNode("a4"),
+				testArbiterNode("a5"),
+				&op1,
+				&op2,
+			).
+			WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
+			Build()
+		r := &reconciler{client: cl}
+
+		_, err := r.Reconcile(ctx, reconcile.Request{})
+		require.NoError(t, err)
+
+		var updated1 controlplanev1alpha1.ControlPlaneOperation
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-api-1"}, &updated1))
+		// First one should be approved (limit is 1)
+		require.True(t, updated1.Spec.Approved)
+
+		var updated2 controlplanev1alpha1.ControlPlaneOperation
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Name: "op-api-2"}, &updated2))
+		// Second one should NOT be approved because limit is 1 (based only on 2 masters), despite 5 arbiters
+		require.False(t, updated2.Spec.Approved)
 	})
 
 	t.Run("patches Spec.Approved when approver allows", func(t *testing.T) {
@@ -128,8 +171,20 @@ func TestReconciler_Reconcile(t *testing.T) {
 	})
 }
 
-func testControlPlaneNode(name string) *controlplanev1alpha1.ControlPlaneNode {
-	return &controlplanev1alpha1.ControlPlaneNode{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+func testControlPlaneNode(name string) *corev1.Node {
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{constants.ControlPlaneNodeLabelKey: ""},
+		},
+	}
+}
+
+func testArbiterNode(name string) *corev1.Node {
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: map[string]string{constants.EtcdArbiterNodeLabelKey: ""},
+		},
 	}
 }

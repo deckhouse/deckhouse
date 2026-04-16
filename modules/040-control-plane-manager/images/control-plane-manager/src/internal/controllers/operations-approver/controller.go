@@ -25,6 +25,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -107,9 +108,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		logger.Error("failed to get node count", log.Err(err))
 		return reconcile.Result{}, err
 	}
-	if nodes.equalZero() {
-		logger.Warn("nodes not found, skipping reconcile")
-		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+	if nodes.isZero() {
+		logger.Warn("nodes not found")
+		return reconcile.Result{}, nil
 	}
 
 	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
@@ -140,24 +141,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 func (r *reconciler) getNodeCounts(ctx context.Context) (nodeCounts, error) {
-	nodeList := &controlplanev1alpha1.ControlPlaneNodeList{}
-	if err := r.client.List(ctx, nodeList, &client.ListOptions{}); err != nil {
-		return nodeCounts{}, err
-	}
-
-	if len(nodeList.Items) == 0 {
-		logger.Warn("no control plane nodes found")
-		return nodeCounts{}, nil
-	}
-
 	var nodes nodeCounts
-	for _, node := range nodeList.Items {
-		if _, exists := node.Labels[constants.EtcdArbiterNodeLabelKey]; exists {
-			nodes.arbiters++
-		} else {
-			nodes.masters++
-		}
+
+	masterList := &corev1.NodeList{}
+	if err := r.client.List(ctx, masterList, client.MatchingLabels{constants.ControlPlaneNodeLabelKey: ""}); err != nil {
+		return nodeCounts{}, fmt.Errorf("failed to list master nodes: %w", err)
 	}
+	nodes.masters = len(masterList.Items)
+
+	arbiterList := &corev1.NodeList{}
+	if err := r.client.List(ctx, arbiterList, client.MatchingLabels{constants.EtcdArbiterNodeLabelKey: ""}); err != nil {
+		return nodeCounts{}, fmt.Errorf("failed to list arbiter nodes: %w", err)
+	}
+	nodes.arbiters = len(arbiterList.Items)
 
 	return nodes, nil
 }
