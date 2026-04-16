@@ -173,3 +173,9 @@ This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issu
 
 There is a race condition on Ingress-NGINX controller start that may result in controller forming incomplete NGINX configuration (not processing some ingress objects).
 The fix is to use registration when checking if informer has been synced.
+
+### 031-fix-cve-2025-15566.patch
+
+This patch fixes CVE-2025-15566
+
+https://github.com/kubernetes/kubernetes/issues/136789

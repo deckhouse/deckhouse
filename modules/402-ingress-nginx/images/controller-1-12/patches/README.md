@@ -154,3 +154,9 @@ The fix is to use registration when checking if informer has been synced.
 ### 028-santize-xff-headers-when-redirecting-from-www.patch
 
 This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
+
+### 029-fix-cve-2025-15566.patch
+
+This patch fixes CVE-2025-15566
+
+https://github.com/kubernetes/kubernetes/issues/136789
