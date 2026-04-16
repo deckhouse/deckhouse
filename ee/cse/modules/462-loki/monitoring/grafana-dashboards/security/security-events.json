@@ -23,7 +23,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "d8-loki"
+        "uid": "${ds_loki}"
       },
       "description": "Important security events",
       "gridPos": {
@@ -47,7 +47,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "d8-loki"
+            "uid": "${ds_loki}"
           },
           "editorMode": "code",
           "expr": "{deckhouse_io_type = \"security-event\"} |~ \"$search\"",
@@ -63,6 +63,44 @@
   "tags": [],
   "templating": {
     "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "default",
+          "value": "default"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Prometheus",
+        "multi": false,
+        "name": "ds_prometheus",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "d8-loki",
+          "value": "d8-loki"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Loki",
+        "multi": false,
+        "name": "ds_loki",
+        "options": [],
+        "query": "loki",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
       {
         "current": {
           "selected": false,
