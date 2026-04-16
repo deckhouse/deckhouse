@@ -72,7 +72,7 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    dhctl bootstrap-phase base-infra --config config.yml
    ```
 
-2. Create a bastion host:
+1. Create a bastion host:
 
    ```shell
    yc compute instance create \
@@ -87,9 +87,13 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    --public-address 178.154.226.159
    ```
 
-3. Continue installing the cluster by specifying the bastion host data. Answer `y` to the question about the Terraform cache:
+1. Continue installing the cluster by specifying the bastion host data. Answer `y` to the question about the Terraform cache:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
    --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
    ```
+
+## What to do if switching to nodes in lower-priority groups takes a long time?
+
+If switching to nodes in lower-priority groups takes a long time (for example, when node groups with preemptible instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

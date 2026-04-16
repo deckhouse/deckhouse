@@ -72,7 +72,7 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    dhctl bootstrap-phase base-infra --config config.yml
    ```
 
-2. Создайте bastion-хост:
+1. Создайте bastion-хост:
 
    ```shell
    yc compute instance create \
@@ -87,9 +87,13 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    --public-address 178.154.226.159
    ```
 
-3. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кеш Terraform ответьте `y`:
+1. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кеш Terraform ответьте `y`:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
    --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
    ```
+
+## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
+
+Если переключение на заказ узлов в менее приоритетных группах занимает много времени (например, когда для групп узлов с preemptible-инстансами установлен наивысший приоритет и при недоступности таких инстансов заказ узлов из других групп происходит очень долго), воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).
