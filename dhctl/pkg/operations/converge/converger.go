@@ -127,17 +127,20 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		if c.KubeConfigInCluster {
 			cacheIdentity = "in-cluster"
 		}
-		if c.SSHProviderInitializer.CheckHosts() {
-			sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
-			if err != nil {
-				return err
+		if c.SSHProviderInitializer != nil {
+			if c.SSHProviderInitializer.CheckHosts() {
+				sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+				cacheIdentity = sshClient.Check().String()
 			}
-			sshClient, err := sshProvider.Client(ctx)
-			if err != nil {
-				return err
-			}
-			cacheIdentity = sshClient.Check().String()
 		}
+
 		if c.KubeConfig != "" {
 			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
 				c.KubeConfig,
