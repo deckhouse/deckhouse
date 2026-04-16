@@ -128,6 +128,14 @@ resource "kubernetes_manifest" "vm" {
     update = var.timeouts.update
     delete = var.timeouts.delete
   }
+
+  lifecycle {
+    ignore_changes = [
+      object.metadata.finalizers,
+      object.metadata.labels,
+      object.metadata.annotations,
+    ]
+  }
 }
 
 data "kubernetes_resource" "vm_data" {
