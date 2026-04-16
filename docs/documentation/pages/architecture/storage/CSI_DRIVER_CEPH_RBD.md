@@ -29,15 +29,15 @@ The `csi-rbd` CSI driver consists of the following components:
 
    It consists of the following containers:
 
-   * **controller**: Main container implementing CSI driver functionality (capabilities) through the gRPC services Identity Service and Controller Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface).
+   * **controller**: Main container that performs background tasks for managing Kubernetes resources related to Ceph.
 
-   * **rbdplugin**: Sidecar container that implements the interface for interacting with the Ceph cluster when using RBD volumes.
+   * **rbdplugin**: Sidecar container exposes the CSI endpoint over a Unix socket, implements Identity Service and Controller Service according to the [CSI specification](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface). It interacts with the Ceph cluster for RBD volumes.
 
    * **controller sidecar containers**: Kubernetes community-maintained external controllers.
 
-     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DKP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI driver functions in the controller container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
+     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DKP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI RPC methods exposed by the `rbdplugin` container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
 
-     External controllers communicate with the controller container over gRPC via Unix sockets.
+     External controllers communicate with the `rbdplugin` container over gRPC via Unix sockets.
 
      Csi-controller includes the following external controllers:
 

@@ -1,6 +1,6 @@
 ---
 title: Модуль csi-ceph
-permalink: ru/architecture/storage/csi-ceph.html
+permalink: ru/architecture/storage/external/csi-ceph.html
 lang: ru
 search: csi-ceph, ceph, cephfs, rbd
 description: Архитектура модуля csi-ceph в Deckhouse Kubernetes Platform.
@@ -30,12 +30,12 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
 
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-ceph/stable/cr.html):
 
-    * CephClusterAuthentication — параметры аутентификации кластера Ceph;
     * CephClusterConnection — параметры подключения к кластеру Ceph;
-    * CephMetadataBackup — резервная копия метаданных Persistent Volume;
     * CephStorageClass —  определяет конфигурацию для создаваемого Kubernetes StorageClass.
 
-    В CephStorageClass задается тип storage-класса (`CephFS`, `RBD`), reclaim policy, параметры аутентификации кластера Ceph, параметры подключения к кластеру Ceph, а так же специфичные для каждого storage-класса дополнительные параметры. В зависимости от типа storage-класса эти параметры используются provisioner’ом CSI-драйвера `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` при управлении томами.
+    В CephStorageClass задается тип storage-класса (`CephFS`, `RBD`), reclaim policy, параметры подключения к кластеру Ceph, а также специфичные для каждого storage-класса дополнительные параметры. В зависимости от типа storage-класса эти параметры используются provisioner’ом CSI-драйвера `rbd.csi.ceph.com` или `cephfs.csi.ceph.com` при управлении томами.
+
+    Кастомный ресурс `CephMetadataBackup` используется в сценариях миграции и восстановления, реализованных hook-ами модуля, а не основным runtime-контроллером.
 
    Состоит из следующих контейнеров:
 
@@ -55,7 +55,7 @@ description: Архитектура модуля csi-ceph в Deckhouse Kubernete
 * **Kube-apiserver**:
 
   * мониторинг стандартных ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment и StorageClass;
-  * работа с кастомными ресурсами CephClusterAuthentication, CephClusterConnection, CephMetadataBackup и CephStorageClass;
+  * работа с кастомными ресурсами CephClusterConnection и CephStorageClass;
   * создание ресурса StorageClass.
 
 С модулем взаимодействуют следующие внешние компоненты:

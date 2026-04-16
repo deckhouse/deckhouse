@@ -1,6 +1,6 @@
 ---
 title: Csi-ceph module
-permalink: en/architecture/storage/csi-ceph.html
+permalink: en/architecture/storage/external/csi-ceph.html
 search: csi-ceph, ceph, cephfs, rbd
 description: Architecture of the csi-ceph module in Deckhouse Kubernetes Platform.
 ---
@@ -29,12 +29,12 @@ The module consists of the following components:
 
 1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-ceph/stable/cr.html):
 
-   * CephClusterAuthentication: Ceph cluster authentication parameters.
    * CephClusterConnection: Ceph cluster connection parameters.
-   * CephMetadataBackup: PersistentVolume metadata backup.
    * CephStorageClass: Defines the configuration for the Kubernetes StorageClass that will be created.
 
-   CephStorageClass specifies the storage class type (`CephFS` or `RBD`), reclaim policy, Ceph cluster authentication parameters, Ceph cluster connection parameters, as well as additional parameters specific to each storage class type. Depending on the storage class type, these parameters are used by the provisioner of either the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` CSI driver when managing volumes.
+   CephStorageClass specifies the storage class type (`CephFS` or `RBD`), reclaim policy, Ceph cluster connection parameters, and additional parameters specific to each storage class type. Depending on the storage class type, these parameters are used by the provisioner of either the `rbd.csi.ceph.com` or `cephfs.csi.ceph.com` CSI driver when managing volumes.
+
+   The `CephMetadataBackup` custom resource is used in migration and recovery workflows implemented by module hooks, rather than by the main runtime controller.
 
    It consists of the following containers:
 
@@ -54,7 +54,7 @@ The module interacts with the following components:
 * **Kube-apiserver**:
 
   * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
-  * Reconciles CephClusterAuthentication, CephClusterConnection, CephMetadataBackup, and CephStorageClass custom resources.
+  * Reconciles CephClusterConnection and CephStorageClass custom resources.
   * Creates StorageClass resources.
 
 The following external components interact with the module:

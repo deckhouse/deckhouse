@@ -30,15 +30,15 @@ CSI-драйвер `csi-rbd` состоит из следующих компон
 
    Состоит из следующих контейнеров:
 
-   * **controller** — основной контейнер, реализующий функциональность CSI-драйвера (capabilities) в виде gRPC-сервисов Identity Service и Controller Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface);
+   * **controller** — основной контейнер, который выполняет фоновые задачи управления ресурсами Kubernetes, связанными с Ceph.
 
-   * **rbdplugin** — сайдкар-контейнер, реализующий интерфейс взаимодействия с кластером Ceph при использовании RBD-томов;
+   * **rbdplugin** — сайдкар-контейнер, предоставляющий CSI endpoint через Unix-сокет и реализующий gRPC-сервисы Identity Service и Controller Service согласно [спецификации CSI](https://github.com/container-storage-interface/spec/blob/master/spec.md#rpc-interface). Он выполняет операции с RBD-томами в кластере Ceph;
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
-     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
+     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие CSI RPC-методы, предоставляемые контейнером `rbdplugin`. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
 
-     Внешние контроллеры взаимодействуют c контейнером controller по gRPC через Unix-сокеты.
+     Внешние контроллеры взаимодействуют c контейнером `rbdplugin` по gRPC через Unix-сокеты.
 
      В csi-controller входят следующие внешние контроллеры:
 
