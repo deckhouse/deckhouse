@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-95caeb00c03a501857d0b423a0bc2296ad7048120f6cf4f12510866919a323d5",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 5,
+  "version": 6,
   "statements": [
     {
       "vulnerability": {
@@ -59,8 +59,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
       "timestamp": "2026-01-12T11:54:06.501135Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 связана с вызовом команды kenv по неабсолютному пути на операционных системах BSD и Solaris (PATH hijacking, CWE-426). Компоненты Deckhouse, включая Descheduler, собираются с GOOS=linux и выполняются в контейнерах на Linux; уязвимый путь выполнения в этой среде отсутствует.",
+      "timestamp": "2026-04-16T15:43:34.356000Z"
     }
   ],
   "timestamp": "2026-01-12T11:51:20Z",
-  "last_updated": "2026-03-23T09:21:02Z"
+  "last_updated": "2026-04-16T15:43:34Z"
 }
