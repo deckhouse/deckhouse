@@ -438,7 +438,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		staticMachine.Status.Ready = false
 		staticMachine.Status.Initialization.Provisioned = ptr.To(false)
 
-		estimated := DefaultStaticInstanceAdoptTimeout - time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time)
+		estimated := DefaultStaticInstanceAdoptTimeout - time.Since(staticMachine.CreationTimestamp.Time)
 		if estimated < (10 * time.Second) {
 			staticMachine.Status.FailureReason = ptr.To("UpdateError")
 			staticMachine.Status.FailureMessage = ptr.To(StaticMachineAdoptTimedOut.Error())
