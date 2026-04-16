@@ -110,3 +110,9 @@ This patch deletes unneeded nginx patch.
 This patch fixes rewrite-target CVE-2026-3288 in Ingress-NGINX
 
 https://github.com/kubernetes/kubernetes/issues/137560
+
+### 024-fix-cve-2025-15566.patch
+
+This patch fixes CVE-2025-15566
+
+https://github.com/kubernetes/kubernetes/issues/136789

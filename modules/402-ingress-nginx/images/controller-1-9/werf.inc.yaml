@@ -78,6 +78,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/021-cve-03022026.patch
   - patch -p1 < /patches/ingress-nginx/022-remove-patch-01.patch
   - patch -p1 < /patches/ingress-nginx/023-fix-rewrite-target-cve.patch
+  - patch -p1 < /patches/ingress-nginx/024-fix-cve-2025-15566.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
