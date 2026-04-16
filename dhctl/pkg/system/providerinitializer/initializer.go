@@ -110,9 +110,12 @@ func (i *SSHProviderInitializer) GetConfig() *sshconfig.ConnectionConfig {
 }
 
 func (i *SSHProviderInitializer) CheckHosts() bool {
-	if len(i.config.Hosts) > 0 {
-		return true
+	if i.config != nil {
+		if len(i.config.Hosts) > 0 {
+			return true
+		}
 	}
+
 	lateHosts, err := i.hostsProvider()
 	if err != nil {
 		return false
