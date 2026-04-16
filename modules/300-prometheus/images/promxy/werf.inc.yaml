@@ -56,6 +56,7 @@ shell:
     {{- include "image-build.build" $buildContext | indent 4 }}
   - chown -R 64535:64535 /src/promxy
   - chmod 0700 /src/promxy
+  - rm -rf /src/vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

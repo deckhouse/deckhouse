@@ -55,6 +55,7 @@ shell:
       {{- include "image-build.build" $buildContext | indent 6 }}
     - chown -R 64535:64535 /src/mimir
     - chmod 0700 /src/mimir
+    - rm -rf /src/vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
