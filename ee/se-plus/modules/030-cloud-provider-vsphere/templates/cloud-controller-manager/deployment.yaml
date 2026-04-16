@@ -3,7 +3,7 @@ cpu: 25m
 memory: 100Mi
 {{- end }}
 
-{{- define "vsphere_cloud_controller_manager_pod_labels" -}}
+{{- define "cloud_controller_manager_pod_labels" -}}
 {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
 security.deckhouse.io/security-policy-exception: cloud-controller-manager
 {{- end }}
@@ -66,7 +66,7 @@ spec:
     metadata:
       labels:
         app: cloud-controller-manager
-        {{- include "vsphere_cloud_controller_manager_pod_labels" . | nindent 8 }}
+        {{- include "cloud_controller_manager_pod_labels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
