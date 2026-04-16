@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
@@ -117,8 +118,9 @@ type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
-	lastState phases.DhctlState
-	logger    log.Logger
+	lastState      phases.DhctlState
+	logger         log.Logger
+	loggerProvider dhctllog.LoggerProvider
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
@@ -136,8 +138,9 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		lastState: params.InitialState,
-		logger:    logger,
+		lastState:      params.InitialState,
+		logger:         logger,
+		loggerProvider: log.ExternalLoggerProvider(logger),
 	}
 }
 
@@ -551,7 +554,17 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
+	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
+		Node:           b.NodeInterface,
+		NodeIP:         nodeIP,
+		DevicePath:     devicePath,
+		MetaConfig:     metaConfig,
+		CommanderMode:  b.CommanderMode,
+		DirsConfig:     b.DirectoryConfig,
+		LoggerProvider: b.loggerProvider,
+	})
+
+	if err != nil {
 		return err
 	}
 

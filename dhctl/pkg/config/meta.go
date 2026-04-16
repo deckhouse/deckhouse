@@ -51,6 +51,8 @@ type MetaConfig struct {
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
+	ClusterDomain string `json:"-"`
+
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
@@ -94,6 +96,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
 		}
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+
+		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
+		}
 	}
 
 	if len(m.InitClusterConfig) > 0 {
@@ -266,6 +272,10 @@ func (m *MetaConfig) GetFullUUID() (string, error) {
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
 	return m.TerraNodeGroupSpecs
+}
+
+func (m *MetaConfig) GetClusterDomain() string {
+	return m.ClusterDomain
 }
 
 func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
@@ -578,6 +588,10 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 
 	if m.ResourceManagementTimeout != "" {
 		out.ResourceManagementTimeout = m.ResourceManagementTimeout
+	}
+
+	if m.ClusterDomain != "" {
+		out.ClusterDomain = m.ClusterDomain
 	}
 
 	return out

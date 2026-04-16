@@ -577,3 +577,7 @@ func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logge
 
 	return prepareCandiDir(ctx, conf, dc)
 }
+
+func GetRPPSignCheck() bool {
+	return RppSignCheck == "true"
+}
