@@ -179,7 +179,7 @@ spec:
                         securityContext:
                           runAsNonRoot: true
         - name: 010-disallowed-no-securityContext
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -208,7 +208,7 @@ spec:
                   supplementalGroups:
                     - 50
         - name: 012-disallowed-runAsUser-zero-container
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -236,7 +236,7 @@ spec:
                   supplementalGroups:
                     - 50
         - name: 013-disallowed-runAsUser-zero-pod
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.securityContext.runAsUser
@@ -252,7 +252,7 @@ spec:
                 securityContext:
                   runAsUser: 0
         - name: 011-disallowed-runAsNonRoot-false-container
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -280,7 +280,7 @@ spec:
                   supplementalGroups:
                     - 50
         - name: 009-disallowed-multiple-containers-one-root
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -1395,7 +1395,7 @@ spec:
                   supplementalGroups:
                     - 10
         - name: 044-disallowed-no-exception-label
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.securityContext.runAsUser.allowedValues
@@ -1425,7 +1425,7 @@ spec:
                   supplementalGroups:
                     - 5
         - name: 037-045-disallowed-by-exception-empty-spec
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.securityContext.runAsUser.allowedValues

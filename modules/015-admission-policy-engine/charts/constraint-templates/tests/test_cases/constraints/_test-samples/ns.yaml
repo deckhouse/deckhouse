@@ -3,6 +3,6 @@ kind: Namespace
 metadata:
   name: testns
   labels:
-    security.deckhouse.io/pod-policy: baseline
+    security.deckhouse.io/pod-policy: restricted
     custom-policy: example
     enforce: deny-all
