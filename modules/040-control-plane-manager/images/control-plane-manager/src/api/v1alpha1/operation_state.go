@@ -99,10 +99,15 @@ func (s *OperationState) SetCondition(cond metav1.Condition) {
 }
 
 func (s *OperationState) MarkCommandInProgress(name CommandName) {
+	s.MarkCommandInProgressWithMessage(name, "")
+}
+
+func (s *OperationState) MarkCommandInProgressWithMessage(name CommandName, message string) {
 	s.SetCondition(metav1.Condition{
-		Type:   string(name),
-		Status: metav1.ConditionFalse,
-		Reason: CPOReasonCommandInProgress,
+		Type:    string(name),
+		Status:  metav1.ConditionFalse,
+		Reason:  CPOReasonCommandInProgress,
+		Message: message,
 	})
 }
 

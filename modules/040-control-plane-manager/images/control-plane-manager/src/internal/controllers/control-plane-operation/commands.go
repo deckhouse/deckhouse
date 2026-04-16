@@ -224,7 +224,7 @@ type waitPodReadyCommand struct {
 
 func (c *waitPodReadyCommand) Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	op := env.State.Raw()
-	env.State.MarkOperationInProgress(
+	env.State.MarkCommandInProgressWithMessage(controlplanev1alpha1.CommandWaitPodReady,
 		fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
 			op.Spec.Component.PodComponentName(),
 			checksum.ShortChecksum(op.Spec.DesiredConfigChecksum),

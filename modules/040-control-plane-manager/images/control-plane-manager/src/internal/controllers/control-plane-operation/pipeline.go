@@ -58,9 +58,19 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 	}
 
 	for _, name := range commandNames {
+		if state.IsCommandCompleted(name) {
+			logger.With(slog.String("command", string(name))).Info("command already completed, skipping")
+			continue
+		}
+
+		state.MarkOperationInProgress(fmt.Sprintf("executing command %s", name))
 		cmd := r.commands[name]
 		result, err := r.executeCommand(ctx, state, name, cmd, env, logger)
 		if err != nil {
+			state.MarkOperationFailed(err.Error())
+			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
+				logger.Error("failed to persist operation failure", log.Err(patchErr))
+			}
 			return result, err
 		}
 		if result.RequeueAfter > 0 {
@@ -68,26 +78,14 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 		}
 	}
 
-	// All commands completed successfully — mark operation as ready.
-	// For static pod components this is typically done by WaitPodReady,
-	// but for CA/HotReload the pipeline may not include WaitPodReady.
-	if !state.IsCompleted() {
-		state.MarkOperationCompleted()
-		return reconcile.Result{}, r.patchStatus(ctx, state)
-	}
-
-	return reconcile.Result{}, nil
+	state.MarkOperationCompleted()
+	return reconcile.Result{}, r.patchStatus(ctx, state)
 }
 
 // executeCommand runs a single pipeline command with status tracking and start/finish logging.
 func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1alpha1.OperationState, name controlplanev1alpha1.CommandName, cmd Command, env *CommandEnv, logger *log.Logger) (result reconcile.Result, err error) {
 	cmdLogger := logger.With(slog.String("command", string(name)))
 	var execErr error
-
-	if state.IsCommandCompleted(name) {
-		cmdLogger.Info("command already completed, skipping")
-		return reconcile.Result{}, nil
-	}
 
 	cmdLogger.Info("executing command")
 	defer func() {
@@ -98,10 +96,6 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 		switch {
 		case execErr != nil:
 			state.MarkCommandFailed(name, execErr.Error())
-			state.MarkOperationFailed(execErr.Error())
-			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
-				cmdLogger.Error("failed to set failed condition", log.Err(patchErr))
-			}
 			err = execErr
 		case result.RequeueAfter > 0:
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
@@ -129,7 +123,6 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 	}()
 
 	state.MarkCommandInProgress(name)
-	state.MarkOperationInProgress(fmt.Sprintf("executing command %s", name))
 	if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 		if isCommitPointCommand(name) {
 			return reconcile.Result{}, fmt.Errorf("set in-progress condition for commit-point command %s: %w", name, patchErr)

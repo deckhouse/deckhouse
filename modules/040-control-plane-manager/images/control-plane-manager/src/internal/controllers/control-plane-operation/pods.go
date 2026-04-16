@@ -43,19 +43,20 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 
 	if isPodCrashLooping(pod) {
 		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
-		state.MarkOperationInProgress(fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName))
+		state.MarkCommandInProgressWithMessage(controlplanev1alpha1.CommandWaitPodReady,
+			fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
 
 	expected := checksumAnnotationsFromSpec(op.Spec)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
+		state.MarkCommandInProgressWithMessage(controlplanev1alpha1.CommandWaitPodReady,
+			fmt.Sprintf("pod %s is not ready with expected checksums, will retry", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
 
 	logger.Info("pod ready with matching checksums", slog.String("pod", podName))
-
-	state.MarkOperationCompleted()
 	return reconcile.Result{}, nil
 }
 
