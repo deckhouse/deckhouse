@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ type testFieldsDoc struct {
 		Name string `yaml:"name"`
 	} `yaml:"metadata"`
 	Spec struct {
-		ObjectKind   string          `yaml:"objectKind"`
-		ObjectFields []testFieldSpec `yaml:"objectFields"`
-		SpeFields    []testFieldSpec `yaml:"speFields"`
+		ObjectKind       string          `yaml:"objectKind"`
+		ObjectFields     []testFieldSpec `yaml:"objectFields"`
+		SpeFields        []testFieldSpec `yaml:"speFields"`
 		ApplicableTracks struct {
 			Functional   *bool `yaml:"functional"`
 			SpePod       *bool `yaml:"spePod"`
@@ -39,7 +39,7 @@ type testFieldsDoc struct {
 	} `yaml:"spec"`
 }
 
-	type testFieldSpec struct {
+type testFieldSpec struct {
 	Path              string   `yaml:"path"`
 	Level             string   `yaml:"level"`
 	DefaultBehavior   string   `yaml:"defaultBehavior"`
@@ -162,8 +162,8 @@ func defaultRequiredScenarios(level string, isSpe bool) []string {
 }
 
 func hasApplicableTrack(tracks struct {
-	Functional  *bool `yaml:"functional"`
-	SpePod      *bool `yaml:"spePod"`
+	Functional   *bool `yaml:"functional"`
+	SpePod       *bool `yaml:"spePod"`
 	SpeContainer *bool `yaml:"speContainer"`
 }) bool {
 	if tracks.Functional != nil && *tracks.Functional {
