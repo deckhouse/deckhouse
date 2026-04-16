@@ -92,15 +92,15 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if apierrors.IsNotFound(err) {
 			logger.Info("StaticMachine is not found")
 			staticMachine = nil
+		} else {
+			return ctrl.Result{}, errors.Wrap(err, "failed to get StaticMachine")
 		}
-
-		return ctrl.Result{}, errors.Wrap(err, "failed to get StaticMachine")
 	}
 
 	if staticMachine != nil {
 		cluster, err := util.GetClusterFromMetadata(ctx, r.Client, staticMachine.ObjectMeta)
 		if err != nil {
-			logger.Info("StaticMachine is missing cluster label or cluster does not exist")
+			logger.Info("StaticMachine is missing cluster label or cluster does not exist. Won't reconcile")
 			return ctrl.Result{}, nil
 		}
 
