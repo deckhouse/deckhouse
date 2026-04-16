@@ -61,5 +61,14 @@ Updated some operator dependencies.
 ### 014-fix-cve2.patch
 
 Fixes CVEs:
+
 - CVE-2025-52881
 - CVE-2024-25621
+
+### 015-fix-cve3.patch
+
+Fixes CVEs:
+
+- CVE-2026-4660
+- CVE-2026-39883
+- CVE-2026-34986
