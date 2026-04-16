@@ -45,9 +45,9 @@
       version: v3.0.3
 
 - name: VMware vSphere Terraform provider
-  link: https://github.com/deckhouse/3p-terraform-provider-vsphere
+  link: https://github.com/hashicorp/terraform-provider-vsphere
   description: Terraform provider for VMware vSphere.
   logo: /images/logos/terraform.svg
   license: Mozilla Public License 2.0
   id: terraform-provider-vsphere
-  version: "2.0.2-flant.2"
+  version: "2.0.2"
