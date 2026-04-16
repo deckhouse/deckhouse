@@ -188,8 +188,11 @@ spe_port_requirement_satisfied(port_obj, spe_ports) if {
 }
 
 first_disallowed_port(ports, ranges, spe_ports) := bad if {
-  bad := ports[_]
-  not port_object_allowed(bad, ranges, spe_ports)
+  disallowed := [p |
+    p := ports[_]
+    not port_object_allowed(p, ranges, spe_ports)
+  ]
+  bad := disallowed[0]
 }
 
 port_object_in_spe(port_obj, spe_ports) if {

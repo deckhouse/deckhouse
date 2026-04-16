@@ -29,12 +29,6 @@ path_value_resolved(spe, path) := true if {
   true
 }
 
-path_value_resolved(spe, path) := true if {
-  object.get(spe, path, null) != null
-} else := false if {
-  true
-}
-
 allowed_values_or_empty(spe, path) := out if {
   val := object.get(spe, path, null)
   val == null

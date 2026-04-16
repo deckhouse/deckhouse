@@ -55,8 +55,8 @@ spec:
                     name: nginx
                     ports:
                       - containerPort: 80
-        - name: allowed-no-hostnetwork-multiple-containers
-          violations: "no"
+        - name: disallowed-no-hostnetwork-multiple-containers
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -71,7 +71,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-no-hostnetwork-multiple-containers
+                name: disallowed-no-hostnetwork-multiple-containers
               spec:
                 containers:
                   - image: nginx
@@ -87,7 +87,7 @@ spec:
                         hostPort: 9090
                         protocol: TCP
         - name: disallowed-hostnetwork-true
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -106,8 +106,8 @@ spec:
                     ports:
                       - containerPort: 80
                 hostNetwork: true
-        - name: allowed-initcontainer-hostport-in-range
-          violations: "no"
+        - name: disallowed-initcontainer-hostport-in-range
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.initContainers[].ports[].hostPort
@@ -122,7 +122,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-initcontainer-hostport-in-range
+                name: disallowed-initcontainer-hostport-in-range
               spec:
                 hostNetwork: false
                 initContainers:
@@ -133,7 +133,7 @@ spec:
                         hostPort: 8080
                         protocol: TCP
         - name: disallowed-initcontainer-hostport-out-of-range
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.initContainers[].ports[].hostPort
@@ -158,8 +158,8 @@ spec:
                       - containerPort: 999
                         hostPort: 999
                         protocol: TCP
-        - name: allowed-ephemeralcontainer-hostport-in-range
-          violations: "no"
+        - name: disallowed-ephemeralcontainer-hostport-in-range
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].ports[].hostPort
@@ -172,7 +172,7 @@ spec:
             base: admissionPod
             merge:
               metadata:
-                name: allowed-ephemeralcontainer-hostport-in-range
+                name: disallowed-ephemeralcontainer-hostport-in-range
               spec:
                 hostNetwork: false
                 ephemeralContainers:
@@ -215,7 +215,7 @@ spec:
                         protocol: TCP
                 hostNetwork: true
         - name: disallowed-hostnetwork-true-container-port
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -258,7 +258,7 @@ spec:
                     ports:
                       - containerPort: 80
         - name: disallowed-hostnetwork-true-port-out-of-range-low
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -284,7 +284,7 @@ spec:
                         protocol: TCP
                 hostNetwork: true
         - name: disallowed-hostnetwork-true-container-port-out-of-range
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -308,7 +308,7 @@ spec:
                       - containerPort: 10000
                 hostNetwork: true
         - name: disallowed-hostnetwork-true-port-out-of-range-high
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -334,7 +334,7 @@ spec:
                         protocol: TCP
                 hostNetwork: true
         - name: disallowed-hostnetwork-true-port-on-edge-min
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -360,7 +360,7 @@ spec:
                         protocol: TCP
                 hostNetwork: true
         - name: disallowed-hostnetwork-true-port-on-edge-max
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -425,7 +425,7 @@ spec:
                         hostPort: 21000
                         protocol: TCP
         - name: disallowed-hostnetwork-true-init-port-out-of-range
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.hostNetwork
@@ -967,7 +967,7 @@ spec:
                         protocol: UDP
                 hostNetwork: true
         - name: disallowed-no-exception-label
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.network.hostNetwork.allowedValue
@@ -1149,7 +1149,7 @@ spec:
                         protocol: TCP
                 hostNetwork: true
         - name: disallowed-no-exception-port-out-of-constraint-range
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.network.hostNetwork.allowedValue
@@ -1173,7 +1173,7 @@ spec:
                       - containerPort: 5000
                 hostNetwork: true
         - name: disallowed-no-exception-container-port
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].ports[].hostPort
