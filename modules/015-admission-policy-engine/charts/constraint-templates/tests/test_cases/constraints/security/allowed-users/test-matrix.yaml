@@ -25,6 +25,15 @@ spec:
         kind: SecurityPolicyException
         metadata:
           namespace: testns
+    restrictedNamespace:
+      document:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: testns
+          labels:
+            security.deckhouse.io/pod-policy: restricted
+            custom-policy: example
   namedExceptions: {}
   blocks:
     - name: pss-restricted
@@ -1454,3 +1463,94 @@ spec:
                   runAsGroup: 5
                   supplementalGroups:
                     - 5
+        - name: 047-disallowed-root-without-exception-in-restricted-ns
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: restrictedNamespace
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-root-without-exception-in-restricted-ns
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsUser: 0
+        - name: 048-allowed-root-with-matching-exception-in-restricted-ns
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: restrictedNamespace
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-root-user-strict
+                spec:
+                  securityContext:
+                    runAsNonRoot:
+                      allowedValue: false
+                    runAsUser:
+                      allowedValues:
+                        - 0
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-root-user-strict
+                name: allowed-root-with-matching-exception-in-restricted-ns
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsNonRoot: false
+                      runAsUser: 0
+        - name: 049-disallowed-root-with-non-matching-exception-in-restricted-ns
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: restrictedNamespace
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-root-user-mismatch
+                spec:
+                  securityContext:
+                    runAsNonRoot:
+                      allowedValue: true
+                    runAsUser:
+                      allowedValues:
+                        - 0
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-root-user-mismatch
+                name: disallowed-root-with-non-matching-exception-in-restricted-ns
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      runAsNonRoot: false
+                      runAsUser: 0

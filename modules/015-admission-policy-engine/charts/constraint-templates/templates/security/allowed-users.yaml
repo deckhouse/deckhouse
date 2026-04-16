@@ -147,6 +147,7 @@ spec:
               import data.lib.common.input_containers
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.path_value_resolved
+              import data.lib.exception.resolve_spe_for_container
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.range.is_in_any_range
 
@@ -179,7 +180,8 @@ spec:
                 actual_value := sprintf("Actual runAsUser: %v", [provided_user])
                 labels := object.get(input.review.object.metadata, "labels", {})
                 namespace := object.get(input.review.object.metadata, "namespace", "")
-                spe := resolve_spe_from_labels(labels, namespace)
+                spe := resolve_spe_for_container(container, labels, namespace)
+                not allow_user_by_spe(rule, provided_user, spe)
                 spe_ctx := run_as_user_spe_ctx(spe, provided_user, params)
                 msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
@@ -191,7 +193,7 @@ spec:
                 actual_value := "Actual runAsUser: not set"
                 labels := object.get(input.review.object.metadata, "labels", {})
                 namespace := object.get(input.review.object.metadata, "namespace", "")
-                spe := resolve_spe_from_labels(labels, namespace)
+                spe := resolve_spe_for_container(container, labels, namespace)
                 spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
                 msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
@@ -204,7 +206,7 @@ spec:
                 actual_value := "Actual runAsUser: not set, runAsNonRoot: not set"
                 labels := object.get(input.review.object.metadata, "labels", {})
                 namespace := object.get(input.review.object.metadata, "namespace", "")
-                spe := resolve_spe_from_labels(labels, namespace)
+                spe := resolve_spe_for_container(container, labels, namespace)
                 spe_ctx := run_as_user_spe_ctx(spe, "not set", params)
                 msg := build_user_violation_message(container.name, actual_value, allowed_by_policy, spe_ctx)
               }
@@ -238,6 +240,22 @@ spec:
               }
 
               accept_users("RunAsAny", _) := true
+
+              allow_user_by_spe("MustRunAsNonRoot", provided_user, spe) if {
+                user_path := ["spec", "securityContext", "runAsUser", "allowedValues"]
+                non_root_path := ["spec", "securityContext", "runAsNonRoot", "allowedValue"]
+                spe_user := allowed_values_or_empty(spe, user_path)
+                spe_non_root := allowed_values_or_empty(spe, non_root_path)
+                provided_user in spe_user
+                false in spe_non_root
+              }
+
+              allow_user_by_spe(rule, provided_user, spe) if {
+                rule != "MustRunAsNonRoot"
+                user_path := ["spec", "securityContext", "runAsUser", "allowedValues"]
+                spe_user := allowed_values_or_empty(spe, user_path)
+                provided_user in spe_user
+              }
 
               accept_users("MustRunAsNonRoot", provided_user) := res if res := provided_user != 0
 
