@@ -17,7 +17,6 @@ limitations under the License.
 package controlplaneoperation
 
 import (
-	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -31,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // readCertExpiration reads a PEM certificate file and returns its NotAfter time.
@@ -122,37 +120,4 @@ func observeCertExpirationsForStaticPod(component controlplanev1alpha1.Operation
 	return controlplanev1alpha1.ObservedComponentState{
 		CertificatesExpirationDate: certExpiry,
 	}, true
-}
-
-// certObserveCommand collects certificate expiration dates from disk and writes them to CPO status.
-type certObserveCommand struct{}
-
-func (c *certObserveCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
-	observedState := make(map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState)
-
-	kubeconfigDir := env.Node.KubeconfigDir
-	component := env.State.Raw().Spec.Component
-	if component == controlplanev1alpha1.OperationComponentCertObserver {
-		for component := range controlplanev1alpha1.ComponentRegistry() {
-			state, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
-			if !ok {
-				continue
-			}
-			if len(state.CertificatesExpirationDate) > 0 {
-				observedState[component] = state
-			}
-		}
-	} else {
-		state, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
-		if !ok {
-			logger.Warn("CertObserve skipped: not a static pod component",
-				slog.String("component", string(component)))
-		} else if len(state.CertificatesExpirationDate) > 0 {
-			observedState[component] = state
-		}
-	}
-
-	env.State.SetObservedState(observedState)
-	logger.Info("observed certificate expiration", slog.Int("components", len(observedState)))
-	return reconcile.Result{}, nil
 }

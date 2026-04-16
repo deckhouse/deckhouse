@@ -189,21 +189,17 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               observedState:
-                additionalProperties:
-                  description: ObservedComponentState holds the observed certificate
-                    state of a single control plane component.
-                  properties:
-                    certificatesExpirationDate:
-                      additionalProperties:
-                        format: date-time
-                        type: string
-                      description: CertificatesExpirationDate maps cert file names
-                        to their NotAfter timestamps.
-                      type: object
-                  type: object
                 description: |-
-                  ObservedState holds per-component observed state from completed CertObserve command (CertObserver component).
-                  For static pod components only: Etcd, KubeAPIServer, KubeControllerManager, KubeScheduler.
+                  ObservedState holds observed state from completed CertObserve command.
+                  For static pod components only.
+                properties:
+                  certificatesExpirationDate:
+                    additionalProperties:
+                      format: date-time
+                      type: string
+                    description: CertificatesExpirationDate maps cert file names to
+                      their NotAfter timestamps.
+                    type: object
                 type: object
             type: object
         type: object

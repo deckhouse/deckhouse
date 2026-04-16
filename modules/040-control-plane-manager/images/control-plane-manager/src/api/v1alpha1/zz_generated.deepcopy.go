@@ -311,10 +311,8 @@ func (in *ControlPlaneOperationStatus) DeepCopyInto(out *ControlPlaneOperationSt
 	}
 	if in.ObservedState != nil {
 		in, out := &in.ObservedState, &out.ObservedState
-		*out = make(map[OperationComponent]ObservedComponentState, len(*in))
-		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
-		}
+		*out = new(ObservedComponentState)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

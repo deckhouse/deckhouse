@@ -140,10 +140,7 @@ func desiredChecksumsForComponent(component controlplanev1alpha1.OperationCompon
 
 	switch component {
 	case controlplanev1alpha1.OperationComponentHotReload:
-		configChecksum, err := checksum.HotReloadChecksum(cpmSecretData)
-		if err != nil {
-			panic(fmt.Sprintf("failed to compute hot-reload checksum in test helper: %v", err))
-		}
+		configChecksum := checksum.HotReloadChecksum(cpmSecretData)
 		return configChecksum, "", ""
 	case controlplanev1alpha1.OperationComponentCertObserver:
 		return "", "", ""

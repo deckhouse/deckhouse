@@ -22,12 +22,12 @@ This controller is node-local (`NODE_NAME` env) and watches only CPOs for this n
 2. Skip if not approved or already terminal:
    - `Completed=True`, or
    - `Completed=False` with reason `OperationFailed` / `OperationCancelled`.
-3. For observe-only operations (`spec.commands=[CertObserve]` on static-pod component) run pipeline directly (read-only path, no secrets).
+3. For `CertObserver` component operations run pipeline directly (read-only path, no secrets).
 4. For other operations read `d8-control-plane-manager-config` and `d8-pki` into `ClusterSecrets`.
 5. Renewal operations skip stale-desired verification and execute pipeline directly.
 6. For non-renewal operations, verify desired checksums are still current.
 7. If desired is stale:
-   - try commit-point recovery for in-progress command
+   - try commit-point completion for in-progress command if desired state is already applied on disk/etcd
    - mark operation cancelled (`Completed=False, Reason=OperationCancelled`)
 8. Execute pipeline commands in declared order (completed commands are skipped on requeue/reconcile).
 9. Mark operation succeeded when all commands completed.

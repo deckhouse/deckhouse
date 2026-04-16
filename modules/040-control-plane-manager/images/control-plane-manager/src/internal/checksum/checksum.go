@@ -151,8 +151,8 @@ func PKIChecksum(pkiSecretData map[string][]byte) (string, error) {
 	return hashKeys(pkiSecretData, sortedKeysFromMap(pkiSecretData)), nil
 }
 
-func HotReloadChecksum(secretData map[string][]byte) (string, error) {
-	return hashKeys(secretData, sortedKeysFromSlice(HotReloadChecksumDependsOn, secretData)), nil
+func HotReloadChecksum(secretData map[string][]byte) string {
+	return hashKeys(secretData, sortedKeysFromSlice(HotReloadChecksumDependsOn, secretData))
 }
 
 // ComponentPKIChecksum calculates the pkiChecksum for a component based on certSANs and encryption-algorithm keys.

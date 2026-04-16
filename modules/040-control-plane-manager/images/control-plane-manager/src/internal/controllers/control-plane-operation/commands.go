@@ -19,6 +19,7 @@ package controlplaneoperation
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
@@ -256,4 +257,26 @@ func hasChangedFiles(results []fileWriteResult) bool {
 		}
 	}
 	return false
+}
+
+// certObserveCommand collects certificate expiration dates from disk and writes them to CPO status.
+type certObserveCommand struct{}
+
+func (c *certObserveCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
+	kubeconfigDir := env.Node.KubeconfigDir
+	component := env.State.Raw().Spec.Component
+	observedState, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
+	if !ok {
+		logger.Warn("CertObserve skipped: not a static pod component")
+		return reconcile.Result{}, nil
+	}
+
+	if len(observedState.CertificatesExpirationDate) == 0 {
+		logger.Info("observed certificate expiration", slog.Int("certificates", 0))
+		return reconcile.Result{}, nil
+	}
+
+	env.State.SetObservedState(&observedState)
+	logger.Info("observed certificate expiration", slog.Int("certificates", len(observedState.CertificatesExpirationDate)))
+	return reconcile.Result{}, nil
 }

@@ -163,6 +163,6 @@ func (s *OperationState) MarkOperationCompleted() {
 	})
 }
 
-func (s *OperationState) SetObservedState(state map[OperationComponent]ObservedComponentState) {
+func (s *OperationState) SetObservedState(state *ObservedComponentState) {
 	s.op.Status.ObservedState = state
 }

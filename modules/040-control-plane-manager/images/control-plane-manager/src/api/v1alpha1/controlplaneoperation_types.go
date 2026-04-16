@@ -154,10 +154,10 @@ type ControlPlaneOperationStatus struct {
 	// +patchStrategy=merge
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	// ObservedState holds per-component observed state from completed CertObserve command (CertObserver component).
-	// For static pod components only: Etcd, KubeAPIServer, KubeControllerManager, KubeScheduler.
+	// ObservedState holds observed state from completed CertObserve command.
+	// For static pod components only.
 	// +optional
-	ObservedState map[OperationComponent]ObservedComponentState `json:"observedState,omitempty"`
+	ObservedState *ObservedComponentState `json:"observedState,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -168,10 +168,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 
 	// Verify that the secret content matches what this operation was created for.
 	if stale, reason := isDesiredStale(op, secrets); stale {
-		if recoveredCmd, recovered, recoverErr := r.recoverInProgressCommitPoint(ctx, state); recoverErr != nil {
-			return reconcile.Result{}, recoverErr
-		} else if recovered {
-			logger.Info("recovered in-progress commit-point from disk state", slog.String("command", string(recoveredCmd)))
+		completion, completionErr := r.markInProgressCommitPointCompletedIfApplied(ctx, state)
+		if completionErr != nil {
+			return reconcile.Result{}, completionErr
+		} else if completion.Applied {
+			logger.Info("recovered in-progress commit-point command from disk state", slog.String("command", string(completion.Command)))
 		}
 
 		logger.Info("desired checksums stale, cancelling", slog.String("reason", reason))
@@ -188,10 +189,7 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets Clus
 	component := op.Spec.Component
 
 	if component == controlplanev1alpha1.OperationComponentHotReload {
-		freshConfig, err := checksum.HotReloadChecksum(secrets.CPMData)
-		if err != nil {
-			return true, fmt.Sprintf("failed to calculate hot-reload checksum: %v", err)
-		}
+		freshConfig := checksum.HotReloadChecksum(secrets.CPMData)
 		if op.Spec.DesiredConfigChecksum != freshConfig {
 			return true, fmt.Sprintf("hot-reload config checksum changed: desired %s, current %s",
 				op.Spec.DesiredConfigChecksum, freshConfig)
@@ -231,26 +229,31 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets Clus
 	return false, ""
 }
 
-func (r *Reconciler) recoverInProgressCommitPoint(ctx context.Context, state *controlplanev1alpha1.OperationState) (controlplanev1alpha1.CommandName, bool, error) {
+type CommitPointCompletionResult struct {
+	Command controlplanev1alpha1.CommandName
+	Applied bool
+}
+
+func (r *Reconciler) markInProgressCommitPointCompletedIfApplied(ctx context.Context, state *controlplanev1alpha1.OperationState) (CommitPointCompletionResult, error) {
 	op := state.Raw()
 	cmd, ok := inProgressCommitPoint(op)
 	if !ok {
-		return "", false, nil
+		return CommitPointCompletionResult{}, nil
 	}
 
 	matches, err := r.diskMatchesDesired(op, cmd)
 	if err != nil {
-		return "", false, fmt.Errorf("check disk state for %s: %w", cmd, err)
+		return CommitPointCompletionResult{}, fmt.Errorf("check disk state for %s: %w", cmd, err)
 	}
 	if !matches {
-		return cmd, false, nil
+		return CommitPointCompletionResult{Command: cmd, Applied: false}, nil
 	}
 
 	state.MarkCommandCompleted(cmd)
 	if err := r.patchStatus(ctx, state); err != nil {
-		return "", false, fmt.Errorf("persist recovered command %s: %w", cmd, err)
+		return CommitPointCompletionResult{}, fmt.Errorf("persist recovered command %s: %w", cmd, err)
 	}
-	return cmd, true, nil
+	return CommitPointCompletionResult{Command: cmd, Applied: true}, nil
 }
 
 func inProgressCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) (controlplanev1alpha1.CommandName, bool) {

@@ -541,7 +541,8 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 	// Apply in monotonic observedAt order to avoid rollback to stale cert dates due to list ordering.
 	type observedStateSnapshot struct {
 		observedAt metav1.Time
-		state      map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState
+		component  controlplanev1alpha1.OperationComponent
+		state      controlplanev1alpha1.ObservedComponentState
 	}
 	snapshots := make([]observedStateSnapshot, 0, len(ops))
 	for i := range ops {
@@ -553,7 +554,8 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 			}
 			snapshots = append(snapshots, observedStateSnapshot{
 				observedAt: observedAt,
-				state:      op.Status.ObservedState,
+				component:  op.Spec.Component,
+				state:      *op.Status.ObservedState,
 			})
 		}
 	}
@@ -561,7 +563,7 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 		return snapshots[i].observedAt.Before(&snapshots[j].observedAt)
 	})
 	for i := range snapshots {
-		applyCertDatesAndTimestamp(cpn, snapshots[i].state, snapshots[i].observedAt)
+		applyCertDatesAndTimestamp(cpn, snapshots[i].component, snapshots[i].state, snapshots[i].observedAt)
 	}
 	if len(snapshots) > 0 {
 		latestObservedAt := snapshots[len(snapshots)-1].observedAt
@@ -811,18 +813,16 @@ func (r *Reconciler) ensureObserveOperations(ctx context.Context, cpn *controlpl
 }
 
 // applyCertDatesAndTimestamp copies certificate expiration dates from ObservedState into CPN status and updates per-component LastObservedAt.
-func applyCertDatesAndTimestamp(cpn *controlplanev1alpha1.ControlPlaneNode, observedState map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState, observedAt metav1.Time) {
-	for comp, observed := range observedState {
-		compStatus := cpn.Status.Components.Component(comp)
-		if compStatus == nil {
-			continue
-		}
-		if len(observed.CertificatesExpirationDate) > 0 {
-			compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
-		}
-		if compStatus.LastObservedAt.IsZero() || observedAt.Time.After(compStatus.LastObservedAt.Time) {
-			compStatus.LastObservedAt = observedAt
-		}
+func applyCertDatesAndTimestamp(cpn *controlplanev1alpha1.ControlPlaneNode, component controlplanev1alpha1.OperationComponent, observed controlplanev1alpha1.ObservedComponentState, observedAt metav1.Time) {
+	compStatus := cpn.Status.Components.Component(component)
+	if compStatus == nil {
+		return
+	}
+	if len(observed.CertificatesExpirationDate) > 0 {
+		compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
+	}
+	if compStatus.LastObservedAt.IsZero() || observedAt.Time.After(compStatus.LastObservedAt.Time) {
+		compStatus.LastObservedAt = observedAt
 	}
 }
 

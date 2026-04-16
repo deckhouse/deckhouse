@@ -354,10 +354,7 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 	}
 
 	if !isArbiter {
-		hotReloadChecksum, err := checksum.HotReloadChecksum(cpmSecret.Data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to calculate hot reload checksum: %w", err)
-		}
+		hotReloadChecksum := checksum.HotReloadChecksum(cpmSecret.Data)
 		spec.HotReloadChecksum = hotReloadChecksum
 		spec.Components.KubeAPIServer = controlplanev1alpha1.ComponentSpec{
 			Checksums: controlplanev1alpha1.Checksums{
