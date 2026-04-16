@@ -4,9 +4,9 @@ memory: 50Mi
 {{- end }}
 
 {{- define "cloud_controller_manager_pod_labels" -}}
-  {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
 security.deckhouse.io/security-policy-exception: cloud-controller-manager
-  {{- end }}
+{{- end }}
 {{- end -}}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

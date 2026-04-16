@@ -4,6 +4,12 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- define "capdvp_controller_manager_pod_labels" -}}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+security.deckhouse.io/security-policy-exception: capdvp-controller-manager
+{{- end }}
+{{- end -}}
+
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -63,9 +69,7 @@ spec:
         app: capdvp-controller-manager
         cluster.x-k8s.io/provider: infrastructure-dvp
         control-plane: controller-manager
-        {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
-        security.deckhouse.io/security-policy-exception: capdvp-controller-manager
-        {{- end }}
+        {{- include "capdvp_controller_manager_pod_labels" . | nindent 8 }}
     spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
