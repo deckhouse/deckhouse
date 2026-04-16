@@ -10,6 +10,17 @@
   - IngressNginxController v1.9
   - Istio v1.19
 
+- In DKP 1.75.0–1.75.3, the `PodSecurityStandardsViolation` alert may fire immediately after cluster installation.
+  This happens when the `d8-system` namespace is missing the `heritage=deckhouse` label,
+  causing Pod Security Standards policies to be mistakenly applied to DKP system pods.
+  The issue is fixed in DKP 1.75.4.
+
+  For clusters installed on DKP 1.75.0–1.75.3, add the required label manually using the following command:
+
+  ```shell
+  d8 k --as=system:sudouser label namespace d8-system heritage=deckhouse
+  ```
+
 - Istio version support changes:
   - Support for Istio 1.19 has been discontinued.
   - Istio 1.21 is now considered deprecated, and support for this version will be discontinued in the upcoming DKP releases.
