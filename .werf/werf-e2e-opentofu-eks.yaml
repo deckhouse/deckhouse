@@ -14,29 +14,6 @@ import:
     add: /opentofu/opentofu
     to: /image/bin/opentofu
     before: setup
-    {{- range $_, $edition := $.Editions }}
-      {{- if $edition.terraformProviders }}
-        {{- range $_, $tfProvider := $edition.terraformProviders }}
-          {{- $tf := index $.TF $tfProvider }}
-            {{- if eq $tf.type "vcd" }}
-              {{- range $version := $tf.versions }}
-  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-    add: /{{ $tf.artifactBinary }}-v{{ $version }}
-    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}//linux_amd64/{{ $tf.destinationBinary }}
-    before: setup
-              {{- end }}
-            {{- else }}
-  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
-    add: /{{ $tf.artifactBinary }}
-    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
-    before: setup
-            {{- end }}
-      {{- end }}
-    {{- end }}
-    {{- if eq $.Env $edition.name }}
-      {{- break -}}
-    {{- end }}
-  {{- end }}
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-random
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5
