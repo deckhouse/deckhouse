@@ -24,16 +24,17 @@ import (
 )
 
 func (op *ControlPlaneOperation) IsCompleted() bool {
-	return op.IsConditionTrue(CPOConditionReady)
+	return op.IsConditionTrue(CPOConditionCompleted)
 }
 
 func (op *ControlPlaneOperation) IsFailed() bool {
-	return op.IsConditionTrue(CPOConditionFailed)
+	cond := op.GetCondition(CPOConditionCompleted)
+	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationFailed
 }
 
 func (op *ControlPlaneOperation) IsCancelled() bool {
-	cond := op.GetCondition(CPOConditionReady)
-	return cond != nil && cond.Reason == CPOReasonOperationCancelled
+	cond := op.GetCondition(CPOConditionCompleted)
+	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationCancelled
 }
 
 // IsTerminal reports whether the operation reached a not retryable state.
@@ -51,8 +52,8 @@ func (op *ControlPlaneOperation) IsCommandInProgress(name CommandName) bool {
 }
 
 func (op *ControlPlaneOperation) FailureMessage() string {
-	cond := op.GetCondition(CPOConditionFailed)
-	if cond != nil && cond.Status == metav1.ConditionTrue {
+	cond := op.GetCondition(CPOConditionCompleted)
+	if cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationFailed {
 		return cond.Message
 	}
 	return ""
@@ -106,10 +107,15 @@ func (s *OperationState) MarkCommandInProgress(name CommandName) {
 }
 
 func (s *OperationState) MarkCommandCompleted(name CommandName) {
+	s.MarkCommandCompletedWithMessage(name, "")
+}
+
+func (s *OperationState) MarkCommandCompletedWithMessage(name CommandName, message string) {
 	s.SetCondition(metav1.Condition{
-		Type:   string(name),
-		Status: metav1.ConditionTrue,
-		Reason: CPOReasonCommandCompleted,
+		Type:    string(name),
+		Status:  metav1.ConditionTrue,
+		Reason:  CPOReasonCommandCompleted,
+		Message: message,
 	})
 }
 
@@ -122,26 +128,33 @@ func (s *OperationState) MarkCommandFailed(name CommandName, message string) {
 	})
 }
 
-func (s *OperationState) SetReadyReason(reason, message string) {
+func (s *OperationState) setOperationCompletedFalse(reason, message string) {
 	s.SetCondition(metav1.Condition{
-		Type:    CPOConditionReady,
+		Type:    CPOConditionCompleted,
 		Status:  metav1.ConditionFalse,
 		Reason:  reason,
 		Message: message,
 	})
 }
 
-func (s *OperationState) MarkSucceeded() {
+func (s *OperationState) MarkOperationInProgress(message string) {
+	s.setOperationCompletedFalse(CPOReasonOperationInProgress, message)
+}
+
+func (s *OperationState) MarkOperationCancelled(message string) {
+	s.setOperationCompletedFalse(CPOReasonOperationCancelled, message)
+}
+
+func (s *OperationState) MarkOperationFailed(message string) {
+	s.setOperationCompletedFalse(CPOReasonOperationFailed, message)
+}
+
+func (s *OperationState) MarkOperationCompleted() {
 	s.SetCondition(metav1.Condition{
-		Type:    CPOConditionReady,
+		Type:    CPOConditionCompleted,
 		Status:  metav1.ConditionTrue,
 		Reason:  CPOReasonOperationCompleted,
 		Message: "operation completed",
-	})
-	s.SetCondition(metav1.Condition{
-		Type:   CPOConditionFailed,
-		Status: metav1.ConditionFalse,
-		Reason: CPOReasonNoFailure,
 	})
 }
 

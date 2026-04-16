@@ -89,6 +89,7 @@ func (c *syncCACommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 type renewPKICertsCommand struct{}
 
 func (c *renewPKICertsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
+	renewResult := controlplanev1alpha1.CPOCommandResultNotRenewed
 	certTree := componentDeps(env.State.Raw().Spec.Component).CertTree
 	if certTree != nil {
 		logger.Info("renewing leaf certificates if needed")
@@ -100,9 +101,10 @@ func (c *renewPKICertsCommand) Execute(_ context.Context, env *CommandEnv, logge
 		}
 		if hasRegeneratedCerts(report) {
 			logger.Info("leaf certificates were regenerated")
-			env.CertsRenewed = true
+			renewResult = controlplanev1alpha1.CPOCommandResultRenewed
 		}
 	}
+	env.State.MarkCommandCompletedWithMessage(controlplanev1alpha1.CommandRenewPKICerts, renewResult)
 	return reconcile.Result{}, nil
 }
 
@@ -113,6 +115,7 @@ type renewKubeconfigsCommand struct{}
 func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	component := env.State.Raw().Spec.Component
 	kubeconfigDir := env.Node.KubeconfigDir
+	renewResult := controlplanev1alpha1.CPOCommandResultNotRenewed
 	kubeconfigsRenewed, err := renewKubeconfigsForComponent(component, env.Secrets.CPMData, constants.KubernetesPkiPath, kubeconfigDir, env.Node.AdvertiseIP)
 	if err != nil {
 		logger.Error("failed to renew kubeconfigs", log.Err(err))
@@ -120,7 +123,7 @@ func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, lo
 	}
 	if kubeconfigsRenewed {
 		logger.Info("kubeconfigs were regenerated")
-		env.KubeconfigsRenewed = true
+		renewResult = controlplanev1alpha1.CPOCommandResultRenewed
 	}
 	// dont return error if failed to update root kubeconfig symlink, maybe return reconcile.Result{}, err later.
 	if componentDeps(component).NeedsRootKubeconfig {
@@ -128,6 +131,7 @@ func (c *renewKubeconfigsCommand) Execute(_ context.Context, env *CommandEnv, lo
 			logger.Warn("failed to update root kubeconfig symlink", log.Err(err))
 		}
 	}
+	env.State.MarkCommandCompletedWithMessage(controlplanev1alpha1.CommandRenewKubeconfigs, renewResult)
 	return reconcile.Result{}, nil
 }
 
@@ -166,7 +170,7 @@ type syncManifestsCommand struct{}
 func (c *syncManifestsCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	op := env.State.Raw()
 	component := op.Spec.Component
-	annotations := buildSyncManifestAnnotations(op, env)
+	annotations := buildSyncManifestAnnotations(op)
 	var (
 		results []fileWriteResult
 		err     error
@@ -220,7 +224,7 @@ type waitPodReadyCommand struct {
 
 func (c *waitPodReadyCommand) Execute(ctx context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
 	op := env.State.Raw()
-	env.State.SetReadyReason(controlplanev1alpha1.CPOReasonOperationInProgress,
+	env.State.MarkOperationInProgress(
 		fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
 			op.Spec.Component.PodComponentName(),
 			checksum.ShortChecksum(op.Spec.DesiredConfigChecksum),

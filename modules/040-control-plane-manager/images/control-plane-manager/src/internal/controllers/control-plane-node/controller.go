@@ -28,6 +28,7 @@ import (
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -163,7 +164,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	if err := r.ensureCertObserverExists(ctx, cpn, currentOps, logger); err != nil {
+	if err := r.ensureObserveOperations(ctx, cpn, currentOps, logger); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -285,7 +286,9 @@ func (r *Reconciler) ensureOperationsExist(
 		}
 
 		// Skip creating duplicates while an active operation with the same desired checksums exists.
-		if existing := findOperationForState(ops, state); existing != nil && !existing.IsTerminal() {
+		if existing := findActiveOperation(ops, func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+			return op.Spec.Component == state.component && matchesDesiredChecksums(op, state)
+		}); existing != nil {
 			logger.Debug("active operation with same desired checksums exists, waiting",
 				slog.String("operation", existing.Name),
 				slog.String("component", string(state.component)))
@@ -469,26 +472,19 @@ func operationGenerateNamePrefix(state componentState) string {
 
 	var parts []string
 	if state.spec.Config != "" {
-		parts = append(parts, short(state.spec.Config))
+		parts = append(parts, checksum.ShortChecksum(state.spec.Config))
 	}
 	if state.spec.PKI != "" {
-		parts = append(parts, short(state.spec.PKI))
+		parts = append(parts, checksum.ShortChecksum(state.spec.PKI))
 	}
 	if state.specCA != "" {
-		parts = append(parts, short(state.specCA))
+		parts = append(parts, checksum.ShortChecksum(state.specCA))
 	}
 
 	if len(parts) == 0 {
 		return fmt.Sprintf("%s-", compName)
 	}
 	return fmt.Sprintf("%s-%s-", compName, strings.Join(parts, "-"))
-}
-
-func short(s string) string {
-	if len(s) > 6 {
-		return s[:6]
-	}
-	return s
 }
 
 // operationBase creates a CPO with the standard ObjectMeta and base Spec.
@@ -541,8 +537,7 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 		}
 	}
 
-	// Apply cert expiration dates from any completed CPO that has ObservedState.
-	// This covers standalone CertObserver and regular operations with CertObserve as last command.
+	// Apply cert expiration dates from completed CPOs with CertObserve.
 	// Apply in monotonic observedAt order to avoid rollback to stale cert dates due to list ordering.
 	type observedStateSnapshot struct {
 		observedAt metav1.Time
@@ -551,7 +546,7 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 	snapshots := make([]observedStateSnapshot, 0, len(ops))
 	for i := range ops {
 		op := &ops[i]
-		if op.IsCompleted() && op.Status.ObservedState != nil {
+		if op.IsCompleted() && op.Status.ObservedState != nil && op.HasCommand(controlplanev1alpha1.CommandCertObserve) {
 			observedAt := operationObservedAt(op)
 			if observedAt.IsZero() {
 				continue
@@ -566,7 +561,7 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 		return snapshots[i].observedAt.Before(&snapshots[j].observedAt)
 	})
 	for i := range snapshots {
-		applyCertDates(cpn, snapshots[i].state)
+		applyCertDatesAndTimestamp(cpn, snapshots[i].state, snapshots[i].observedAt)
 	}
 	if len(snapshots) > 0 {
 		latestObservedAt := snapshots[len(snapshots)-1].observedAt
@@ -579,7 +574,7 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 	if cpn.Spec.CAChecksum != "" && cpn.Status.CAChecksum != cpn.Spec.CAChecksum {
 		allMatch := true
 		for _, state := range states {
-			if state.specCA == "" {
+			if !state.component.IsStaticPodComponent() {
 				continue
 			}
 			compStatus := cpn.Status.Components.Component(state.component)
@@ -651,6 +646,24 @@ func findOperationForState(ops []controlplanev1alpha1.ControlPlaneOperation, sta
 		return latestCompleted
 	}
 	return latestTerminal
+}
+
+// findActiveOperation returns the latest non-terminal operation matching the predicate.
+func findActiveOperation(ops []controlplanev1alpha1.ControlPlaneOperation, match func(*controlplanev1alpha1.ControlPlaneOperation) bool) *controlplanev1alpha1.ControlPlaneOperation {
+	var latest *controlplanev1alpha1.ControlPlaneOperation
+	for i := range ops {
+		op := &ops[i]
+		if op.IsTerminal() {
+			continue
+		}
+		if !match(op) {
+			continue
+		}
+		if latest == nil || op.CreationTimestamp.After(latest.CreationTimestamp.Time) {
+			latest = op
+		}
+	}
+	return latest
 }
 
 // hasCommitPoint returns true if the operation has completed a command that writes to disk
@@ -756,49 +769,65 @@ func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *contro
 	}
 }
 
-// ensureCertObserverExists creates a CertObserver CPO if needed (weekly CertObserver operation).
-func (r *Reconciler) ensureCertObserverExists(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) error {
-	if cpn.Status.LastObservedAt == nil {
-		return nil
-	}
-	if time.Since(cpn.Status.LastObservedAt.Time) <= constants.CertObserverInterval {
-		return nil
-	}
-
-	for i := range ops {
-		if ops[i].Spec.Component == controlplanev1alpha1.OperationComponentCertObserver &&
-			!ops[i].IsCompleted() && !ops[i].IsFailed() {
-			return nil
+// ensureObserveOperations creates observe-only CPOs per component when observation is due.
+func (r *Reconciler) ensureObserveOperations(ctx context.Context, cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation, logger *log.Logger) error {
+	for component := range controlplanev1alpha1.ComponentRegistry() {
+		compStatus := cpn.Status.Components.Component(component)
+		if compStatus == nil {
+			continue
 		}
+
+		// Component is not deployed(empty status) yet.
+		if compStatus.Checksums.Config == "" {
+			continue
+		}
+
+		lastObservedAt := compStatus.LastObservedAt
+		if !lastObservedAt.IsZero() && time.Since(lastObservedAt.Time) <= constants.CertObserverInterval {
+			continue
+		}
+
+		if existing := findActiveOperation(ops, func(op *controlplanev1alpha1.ControlPlaneOperation) bool {
+			return op.Spec.Component == component && op.IsObserveOnlyOperation()
+		}); existing != nil {
+			logger.Debug("active observe-only operation exists, waiting",
+				slog.String("operation", existing.Name),
+				slog.String("component", string(component)))
+			continue
+		}
+
+		op := operationBase(cpn, component, []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandCertObserve})
+		op.Spec.Approved = true
+
+		if err := r.client.Create(ctx, op); err != nil {
+			return fmt.Errorf("create observe-only operation for %s: %w", component, err)
+		}
+		logger.Info("observe-only operation created",
+			slog.String("operation", op.Name),
+			slog.String("component", string(component)))
 	}
 
-	op := operationBase(cpn,
-		controlplanev1alpha1.OperationComponentCertObserver,
-		[]controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandCertObserve})
-
-	if err := r.client.Create(ctx, op); err != nil {
-		return fmt.Errorf("create CertObserver operation: %w", err)
-	}
-	logger.Info("CertObserver operation created", slog.String("operation", op.Name))
 	return nil
 }
 
-// applyCertDates copies certificate expiration dates from ObservedState into CPN status.
-func applyCertDates(cpn *controlplanev1alpha1.ControlPlaneNode, observedState map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState) {
+// applyCertDatesAndTimestamp copies certificate expiration dates from ObservedState into CPN status and updates per-component LastObservedAt.
+func applyCertDatesAndTimestamp(cpn *controlplanev1alpha1.ControlPlaneNode, observedState map[controlplanev1alpha1.OperationComponent]controlplanev1alpha1.ObservedComponentState, observedAt metav1.Time) {
 	for comp, observed := range observedState {
-		if len(observed.CertificatesExpirationDate) == 0 {
-			continue
-		}
 		compStatus := cpn.Status.Components.Component(comp)
 		if compStatus == nil {
 			continue
 		}
-		compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
+		if len(observed.CertificatesExpirationDate) > 0 {
+			compStatus.CertificatesExpirationDate = observed.CertificatesExpirationDate
+		}
+		if compStatus.LastObservedAt.IsZero() || observedAt.Time.After(compStatus.LastObservedAt.Time) {
+			compStatus.LastObservedAt = observedAt
+		}
 	}
 }
 
 func operationObservedAt(op *controlplanev1alpha1.ControlPlaneOperation) metav1.Time {
-	ready := meta.FindStatusCondition(op.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
+	ready := meta.FindStatusCondition(op.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 	if ready != nil && ready.Status == metav1.ConditionTrue && !ready.LastTransitionTime.IsZero() {
 		return ready.LastTransitionTime
 	}

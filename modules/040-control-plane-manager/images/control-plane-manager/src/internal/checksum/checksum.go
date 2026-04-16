@@ -175,8 +175,8 @@ func ComponentHasPKIChecksum(component string) bool {
 }
 
 func ShortChecksum(checksum string) string {
-	if len(checksum) > 8 {
-		return checksum[:8]
+	if len(checksum) > 6 {
+		return checksum[:6]
 	}
 	return checksum
 }

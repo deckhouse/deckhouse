@@ -54,14 +54,18 @@ type execCall struct {
 }
 
 type mockCommand struct {
-	name   controlplanev1alpha1.CommandName
-	result reconcile.Result
-	err    error
-	calls  *[]execCall
+	name            controlplanev1alpha1.CommandName
+	result          reconcile.Result
+	err             error
+	completedResult string
+	calls           *[]execCall
 }
 
 func (m *mockCommand) Execute(_ context.Context, env *CommandEnv, _ *log.Logger) (reconcile.Result, error) {
 	*m.calls = append(*m.calls, execCall{name: m.name, component: env.State.Raw().Spec.Component})
+	if m.completedResult != "" {
+		env.State.MarkCommandCompletedWithMessage(m.name, m.completedResult)
+	}
 	return m.result, m.err
 }
 
@@ -75,6 +79,10 @@ func newMockError(calls *[]execCall, name controlplanev1alpha1.CommandName, err 
 
 func newMockRequeue(calls *[]execCall, name controlplanev1alpha1.CommandName, after time.Duration) Command {
 	return &mockCommand{name: name, result: reconcile.Result{RequeueAfter: after}, calls: calls}
+}
+
+func newMockCompleteWithMessage(calls *[]execCall, name controlplanev1alpha1.CommandName, message string) Command {
+	return &mockCommand{name: name, completedResult: message, calls: calls}
 }
 
 // helpers
@@ -257,7 +265,7 @@ func (s *ControllerTestSuite) TestReconcileAlreadyCompleted() {
 			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
 		)
 		op.Status.Conditions = []metav1.Condition{
-			{Type: controlplanev1alpha1.CPOConditionReady, Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonOperationCompleted, LastTransitionTime: metav1.Now()},
+			{Type: controlplanev1alpha1.CPOConditionCompleted, Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonOperationCompleted, LastTransitionTime: metav1.Now()},
 		}
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -275,7 +283,7 @@ func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
 			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
 		)
 		op.Status.Conditions = []metav1.Condition{
-			{Type: controlplanev1alpha1.CPOConditionFailed, Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonCommandFailed, Message: "boom", LastTransitionTime: metav1.Now()},
+			{Type: controlplanev1alpha1.CPOConditionCompleted, Status: metav1.ConditionFalse, Reason: controlplanev1alpha1.CPOReasonOperationFailed, Message: "boom", LastTransitionTime: metav1.Now()},
 		}
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -298,19 +306,22 @@ func (s *ControllerTestSuite) TestReconcileChecksumMismatch() {
 		require.Equal(s.T(), reconcile.Result{}, result)
 
 		got := s.getOp(r, "test-op")
-		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationCancelled, readyCond.Reason)
 	})
 }
 
-func (s *ControllerTestSuite) TestReconcileCertObserveNoSecrets() {
-	s.Run("CertObserver component runs CertObserve command without reading secrets", func() {
+func (s *ControllerTestSuite) TestReconcileObserveOnlyNoSecrets() {
+	s.Run("observe-only operation runs CertObserve without reading secrets", func() {
 		var calls []execCall
-		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentCertObserver,
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
 			newMockOK(&calls, controlplanev1alpha1.CommandCertObserve),
 		)
+		op.Spec.DesiredConfigChecksum = ""
+		op.Spec.DesiredPKIChecksum = ""
+		op.Spec.DesiredCAChecksum = ""
 		// No secrets in cluster — CertObserve should not need them
 		r := s.newReconciler(cmds, op)
 
@@ -343,15 +354,11 @@ func (s *ControllerTestSuite) TestPipelineAllCommandsExecuteInOrder() {
 
 		// Verify Ready condition
 		got := s.getOp(r, "test-op")
-		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionTrue, readyCond.Status)
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationCompleted, readyCond.Reason)
 
-		// Verify Failed=False
-		failedCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionFailed)
-		require.NotNil(s.T(), failedCond)
-		require.Equal(s.T(), metav1.ConditionFalse, failedCond.Status)
 	})
 }
 
@@ -431,11 +438,11 @@ func (s *ControllerTestSuite) TestPipelineErrorStopsPipeline() {
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandFailed, cmdCond.Reason)
 		require.Contains(s.T(), cmdCond.Message, "disk full")
 
-		// Ready should NOT be true
-		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
-		if readyCond != nil {
-			require.NotEqual(s.T(), metav1.ConditionTrue, readyCond.Status)
-		}
+		// Ready should reflect terminal operation failure
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), readyCond)
+		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationFailed, readyCond.Reason)
 	})
 }
 
@@ -460,7 +467,7 @@ func (s *ControllerTestSuite) TestPipelineRequeueStopsPipeline() {
 
 		// Ready should NOT be true
 		got := s.getOp(r, "test-op")
-		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		if readyCond != nil {
 			require.NotEqual(s.T(), metav1.ConditionTrue, readyCond.Status)
 		}
@@ -484,7 +491,7 @@ func (s *ControllerTestSuite) TestPipelineSingleCommand() {
 		require.Equal(s.T(), controlplanev1alpha1.OperationComponentHotReload, calls[0].component)
 
 		got := s.getOp(r, "test-op")
-		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionTrue, readyCond.Status)
 	})
@@ -516,14 +523,10 @@ func (s *ControllerTestSuite) TestConditionsAfterSuccessfulPipeline() {
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandCompleted, syncManifestsCond.Reason)
 
 		// Ready = True
-		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionTrue, readyCond.Status)
 
-		// Failed = False
-		failedCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionFailed)
-		require.NotNil(s.T(), failedCond)
-		require.Equal(s.T(), metav1.ConditionFalse, failedCond.Status)
 	})
 }
 
@@ -551,6 +554,11 @@ func (s *ControllerTestSuite) TestConditionsAfterError() {
 		require.Equal(s.T(), metav1.ConditionFalse, syncManifestsCond.Status)
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandFailed, syncManifestsCond.Reason)
 		require.Contains(s.T(), syncManifestsCond.Message, "write failed")
+
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), readyCond)
+		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationFailed, readyCond.Reason)
 	})
 }
 
@@ -579,9 +587,29 @@ func (s *ControllerTestSuite) TestConditionsAfterRequeue() {
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandInProgress, waitCond.Reason)
 
 		// Ready still false
-		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionReady)
+		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationInProgress, readyCond.Reason)
+	})
+}
+
+func (s *ControllerTestSuite) TestPipelineKeepsCommandCompletedMessage() {
+	s.Run("pipeline does not overwrite command completed message", func() {
+		var calls []execCall
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
+			newMockCompleteWithMessage(&calls, controlplanev1alpha1.CommandSyncCA, controlplanev1alpha1.CPOCommandResultRenewed),
+		)
+		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
+
+		_, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
+		require.NoError(s.T(), err)
+
+		got := s.getOp(r, "test-op")
+		syncCACond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncCA))
+		require.NotNil(s.T(), syncCACond)
+		require.Equal(s.T(), metav1.ConditionTrue, syncCACond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandCompleted, syncCACond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOCommandResultRenewed, syncCACond.Message)
 	})
 }

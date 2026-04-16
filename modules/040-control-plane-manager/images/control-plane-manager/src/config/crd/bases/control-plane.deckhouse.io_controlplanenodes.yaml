@@ -188,6 +188,11 @@ spec:
                               (certSANs, encryption-algorithm).
                             type: string
                         type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
+                        type: string
                     type: object
                   kube-apiserver:
                     description: ComponentStatus holds the observed state of a single
@@ -219,6 +224,11 @@ spec:
                               (certSANs, encryption-algorithm).
                             type: string
                         type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
+                        type: string
                     type: object
                   kube-controller-manager:
                     description: ComponentStatus holds the observed state of a single
@@ -250,6 +260,11 @@ spec:
                               (certSANs, encryption-algorithm).
                             type: string
                         type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
+                        type: string
                     type: object
                   kube-scheduler:
                     description: ComponentStatus holds the observed state of a single
@@ -281,6 +296,11 @@ spec:
                               (certSANs, encryption-algorithm).
                             type: string
                         type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
+                        type: string
                     type: object
                 type: object
               conditions:

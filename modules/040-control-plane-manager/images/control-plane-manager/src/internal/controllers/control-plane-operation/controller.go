@@ -139,8 +139,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		}
 	}()
 
-	// CertObserver is read-only, no secrets needed
-	if op.Spec.Component == controlplanev1alpha1.OperationComponentCertObserver {
+	// Observe-only operations are read-only, no secrets needed.
+	if op.IsObserveOnlyOperation() {
 		return r.reconcilePipeline(ctx, state, ClusterSecrets{}, logger)
 	}
 
@@ -175,7 +175,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		}
 
 		logger.Info("desired checksums stale, cancelling", slog.String("reason", reason))
-		state.SetReadyReason(controlplanev1alpha1.CPOReasonOperationCancelled, reason)
+		state.MarkOperationCancelled(reason)
 		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
@@ -214,7 +214,7 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets Clus
 	if err != nil {
 		return true, fmt.Sprintf("failed to calculate pki checksum: %v", err)
 	}
-	if op.Spec.DesiredPKIChecksum != freshPKI {
+	if op.Spec.DesiredPKIChecksum != "" && op.Spec.DesiredPKIChecksum != freshPKI {
 		return true, fmt.Sprintf("pki checksum changed: desired %s, current %s",
 			op.Spec.DesiredPKIChecksum, freshPKI)
 	}

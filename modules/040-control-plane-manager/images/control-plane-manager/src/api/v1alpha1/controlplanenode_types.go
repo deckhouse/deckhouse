@@ -51,6 +51,10 @@ type ComponentStatus struct {
 	// Populated via CertObserve command.
 	// +optional
 	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
+
+	// LastObservedAt is the timestamp of the last completed CertObserve for this component.
+	// +optional
+	LastObservedAt metav1.Time `json:"lastObservedAt,omitempty"`
 }
 
 // ComponentsSpec holds spec checksums for all control plane components.

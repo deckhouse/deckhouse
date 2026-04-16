@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	CPOConditionApproved = "Approved"
-	CPOConditionReady    = "Ready"
-	CPOConditionFailed   = "Failed"
+	CPOConditionApproved  = "Approved"
+	CPOConditionCompleted = "Completed"
 )
 
 const (
@@ -34,8 +33,12 @@ const (
 
 	CPOReasonOperationInProgress = "OperationInProgress"
 	CPOReasonOperationCompleted  = "OperationCompleted"
+	CPOReasonOperationFailed     = "OperationFailed"
 	CPOReasonOperationCancelled  = "OperationCancelled"
-	CPOReasonNoFailure           = "NoFailure"
+
+	// For RenewPKICerts and RenewKubeconfigs commands, used as Message for the command completed condition.
+	CPOCommandResultRenewed    = "Renewed"
+	CPOCommandResultNotRenewed = "NotRenewed"
 )
 
 func (op *ControlPlaneOperation) GetCondition(conditionType string) *metav1.Condition {

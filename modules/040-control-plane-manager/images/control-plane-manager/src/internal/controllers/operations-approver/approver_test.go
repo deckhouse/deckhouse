@@ -165,7 +165,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 		t.Parallel()
 		op := newOperation("x", "n1", controlplanev1alpha1.OperationComponentEtcd, true)
 		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
-			Type:               "Ready",
+			Type:               "Completed",
 			Status:             metav1.ConditionTrue,
 			Reason:             "Test",
 			LastTransitionTime: metav1.Now(),

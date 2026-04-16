@@ -74,13 +74,10 @@ func (c OperationComponent) PodComponentName() string {
 	return componentRegistry[c]
 }
 
-// ComponentRegistry returns a copy of the static pod component registry (OperationComponent -> pod name).
+// ComponentRegistry returns the static pod component registry (OperationComponent -> pod name).
+// DONT MODIFY the returned map, it must be treated as read-only by callers.
 func ComponentRegistry() map[OperationComponent]string {
-	result := make(map[OperationComponent]string, len(componentRegistry))
-	for k, v := range componentRegistry {
-		result[k] = v
-	}
-	return result
+	return componentRegistry
 }
 
 // SecretKey returns the main template key in d8-control-plane-manager-config secret.
@@ -167,7 +164,7 @@ type ControlPlaneOperationStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=cpo
 // +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".spec.nodeName",description="Target node"
-// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=`.status.conditions[?(@.type=="Ready")].reason`,description="Operation phase"
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=`.status.conditions[?(@.type=="Completed")].reason`,description="Operation phase"
 // +kubebuilder:printcolumn:name="CurrentStep",type="string",JSONPath=`.status.conditions[?(@.reason=="InProgress")].type`,description="Currently executing command"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component",priority=1
@@ -185,6 +182,23 @@ type ControlPlaneOperation struct {
 // IsRenewalOperation reports whether this CPO is a cert renewal operation (detected by name).
 func (op *ControlPlaneOperation) IsRenewalOperation() bool {
 	return strings.Contains(op.Name, "-certrenewal-")
+}
+
+// IsObserveOnlyOperation reports whether this operation is a read-only observe for a single static-pod component.
+func (op *ControlPlaneOperation) IsObserveOnlyOperation() bool {
+	return op.Spec.Component.IsStaticPodComponent() &&
+		len(op.Spec.Commands) == 1 &&
+		op.Spec.Commands[0] == CommandCertObserve
+}
+
+// HasCommand reports whether operation command pipeline includes cmd.
+func (op *ControlPlaneOperation) HasCommand(cmd CommandName) bool {
+	for i := range op.Spec.Commands {
+		if op.Spec.Commands[i] == cmd {
+			return true
+		}
+	}
+	return false
 }
 
 // CertRenewalID returns op.Name if this is renewal operation, otherwise "".

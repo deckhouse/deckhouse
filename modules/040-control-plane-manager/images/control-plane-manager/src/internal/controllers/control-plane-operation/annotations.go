@@ -19,6 +19,8 @@ package controlplaneoperation
 import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type checksumAnnotations struct {
@@ -59,18 +61,25 @@ func desiredChecksumAnnotations(spec checksumAnnotations) map[string]string {
 	return result
 }
 
-func buildSyncManifestAnnotations(op *controlplanev1alpha1.ControlPlaneOperation, env *CommandEnv) checksumAnnotations {
+func buildSyncManifestAnnotations(op *controlplanev1alpha1.ControlPlaneOperation) checksumAnnotations {
 	annotations := checksumAnnotationsFromSpec(op.Spec)
-	certRenewalID := ""
-	if env.CertsRenewed {
-		certRenewalID = op.Name
+
+	if commandWasRenewed(op, controlplanev1alpha1.CommandRenewPKICerts) {
+		annotations.CertRenewalID = op.Name
 	}
-	kubeconfigRenewalID := ""
-	if env.KubeconfigsRenewed {
-		kubeconfigRenewalID = op.Name
+	if commandWasRenewed(op, controlplanev1alpha1.CommandRenewKubeconfigs) {
+		annotations.KubeconfigRenewalID = op.Name
 	}
 
-	annotations.CertRenewalID = certRenewalID
-	annotations.KubeconfigRenewalID = kubeconfigRenewalID
 	return annotations
+}
+
+func commandWasRenewed(op *controlplanev1alpha1.ControlPlaneOperation, command controlplanev1alpha1.CommandName) bool {
+	cond := op.GetCondition(string(command))
+	if cond == nil {
+		return false
+	}
+	return cond.Status == metav1.ConditionTrue &&
+		cond.Reason == controlplanev1alpha1.CPOReasonCommandCompleted &&
+		cond.Message == controlplanev1alpha1.CPOCommandResultRenewed
 }

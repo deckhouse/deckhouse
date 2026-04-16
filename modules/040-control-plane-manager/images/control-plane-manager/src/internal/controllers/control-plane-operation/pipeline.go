@@ -24,6 +24,7 @@ import (
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -36,16 +37,14 @@ type ClusterSecrets struct {
 // CommandEnv is the input data for command execution: operation state, secrets, and node identity.
 // Commands may mutate State; the pipeline handles all status flushing.
 type CommandEnv struct {
-	State              *controlplanev1alpha1.OperationState
-	Secrets            ClusterSecrets
-	Node               NodeIdentity
-	CertsRenewed       bool
-	KubeconfigsRenewed bool
+	State   *controlplanev1alpha1.OperationState
+	Secrets ClusterSecrets
+	Node    NodeIdentity
 }
 
 // reconcilePipeline executes the command-based pipeline for component operations.
 // Completed commands (condition=True) are skipped on requeue.
-// On command failure the failed command condition stays False, so it re-executes on next reconcile.
+// On command failure the operation is marked failed and becomes terminal.
 func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev1alpha1.OperationState, secrets ClusterSecrets, logger *log.Logger) (reconcile.Result, error) {
 	commandNames := state.Raw().Spec.Commands
 	if err := resolveCommands(r.commands, commandNames); err != nil {
@@ -73,7 +72,7 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 	// For static pod components this is typically done by WaitPodReady,
 	// but for CA/HotReload the pipeline may not include WaitPodReady.
 	if !state.IsCompleted() {
-		state.MarkSucceeded()
+		state.MarkOperationCompleted()
 		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
@@ -99,6 +98,7 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 		switch {
 		case execErr != nil:
 			state.MarkCommandFailed(name, execErr.Error())
+			state.MarkOperationFailed(execErr.Error())
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 				cmdLogger.Error("failed to set failed condition", log.Err(patchErr))
 			}
@@ -109,7 +109,11 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 			}
 			err = nil
 		default:
-			state.MarkCommandCompleted(name)
+			// Command may already have a completed condition (with extra details in Message), don't override it.
+			cond := state.Raw().GetCondition(string(name))
+			if cond == nil || cond.Status != metav1.ConditionTrue {
+				state.MarkCommandCompleted(name)
+			}
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 				err = fmt.Errorf("set completed condition for %s: %w", name, patchErr)
 			} else {
@@ -125,7 +129,7 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 	}()
 
 	state.MarkCommandInProgress(name)
-	state.SetReadyReason(controlplanev1alpha1.CPOReasonOperationInProgress, fmt.Sprintf("executing command %s", name))
+	state.MarkOperationInProgress(fmt.Sprintf("executing command %s", name))
 	if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 		if isCommitPointCommand(name) {
 			return reconcile.Result{}, fmt.Errorf("set in-progress condition for commit-point command %s: %w", name, patchErr)

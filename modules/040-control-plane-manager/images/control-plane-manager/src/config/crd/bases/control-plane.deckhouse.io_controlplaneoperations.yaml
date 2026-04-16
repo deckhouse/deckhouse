@@ -22,7 +22,7 @@ spec:
       name: Node
       type: string
     - description: Operation phase
-      jsonPath: .status.conditions[?(@.type=="Ready")].reason
+      jsonPath: .status.conditions[?(@.type=="Completed")].reason
       name: Phase
       type: string
     - description: Currently executing command
