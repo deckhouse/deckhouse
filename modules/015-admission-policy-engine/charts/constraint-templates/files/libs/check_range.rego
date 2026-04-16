@@ -6,7 +6,7 @@
 # Usage:
 # - Container numeric: check_container_in_range(container, field_path, field_name, ranges, spe_path, labels, namespace)
 # - Ports array: check_ports_in_ranges(ports, field_name, ranges, spe_ranges)
-# Returns: {"allowed": bool, "msg": string}
+# Returns: {"allowed": bool, "msg": string, "detail": object}
 # =============================================================================
 package lib.check_range
 
@@ -21,14 +21,14 @@ import data.lib.range.is_in_any_range
 check_container_in_range(container, field_path, field_name, ranges, spe_path, labels, namespace) := result if {
   value := get_field(container, field_path, null)
   value == null
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_container_in_range(container, field_path, field_name, ranges, spe_path, labels, namespace) := result if {
   value := get_field(container, field_path, null)
   value != null
   is_in_any_range(value, ranges)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_container_in_range(container, field_path, field_name, ranges, spe_path, labels, namespace) := result if {
@@ -38,7 +38,7 @@ check_container_in_range(container, field_path, field_name, ranges, spe_path, la
   exception := resolve_spe_for_container(container, labels, namespace)
   spe_allowed := allowed_values_or_empty(exception, spe_path)
   value in spe_allowed
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_container_in_range(container, field_path, field_name, ranges, spe_path, labels, namespace) := result if {
@@ -50,16 +50,24 @@ check_container_in_range(container, field_path, field_name, ranges, spe_path, la
   not value in spe_allowed
   spe_used := path_value_resolved(exception, spe_path)
   msg := range_violation_msg(field_name, value, ranges, spe_used, spe_allowed)
+  detail := {
+    "field": field_name,
+    "actual": value,
+    "policy_allowed": ranges,
+    "spe_applied": spe_used,
+    "spe_allowed": spe_allowed,
+  }
   result := {
     "allowed": false,
-    "msg": msg
+    "msg": msg,
+    "detail": detail
   }
 }
 
 # Check array of numeric port values against ranges
 check_ports_in_ranges(ports, field_name, ranges, spe_ranges) := result if {
   count(ports) == 0
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_ports_in_ranges(ports, field_name, ranges, spe_ranges) := result if {
@@ -67,7 +75,7 @@ check_ports_in_ranges(ports, field_name, ranges, spe_ranges) := result if {
   every p in ports {
     is_in_any_range(p, ranges)
   }
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_ports_in_ranges(ports, field_name, ranges, spe_ranges) := result if {
@@ -76,9 +84,17 @@ check_ports_in_ranges(ports, field_name, ranges, spe_ranges) := result if {
   not is_in_any_range(bad_port, ranges)
   not port_in_spe(bad_port, spe_ranges)
   msg := ports_range_violation_msg(field_name, bad_port, ranges, spe_ranges)
+  detail := {
+    "field": field_name,
+    "actual": bad_port,
+    "policy_allowed": ranges,
+    "spe_applied": count(spe_ranges) > 0,
+    "spe_allowed": spe_ranges,
+  }
   result := {
     "allowed": false,
-    "msg": msg
+    "msg": msg,
+    "detail": detail
   }
 }
 
@@ -118,7 +134,7 @@ port_in_spe(port, spe_ranges) if {
 # Check array of port objects {"port": int, "protocol": string} against ranges and SPE port/protocol list.
 check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) := result if {
   count(ports) == 0
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) := result if {
@@ -127,7 +143,7 @@ check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) :=
   every p in ports {
     port_object_allowed(p, ranges, spe_ports)
   }
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) := result if {
@@ -135,9 +151,18 @@ check_ports_with_protocol_in_ranges(ports, field_name, ranges, spe_ports_raw) :=
   spe_ports := sanitize_spe_ports(spe_ports_raw)
   bad := first_disallowed_port(ports, ranges, spe_ports)
   ctx := spe_port_ctx(bad, ranges, spe_ports)
+  msg := sprintf("%v: port %v/%v is out of allowed ranges %v. %v", [field_name, bad.port, bad.protocol, ranges, ctx])
+  detail := {
+    "field": field_name,
+    "actual": sprintf("port %v/%v", [bad.port, bad.protocol]),
+    "policy_allowed": ranges,
+    "spe_applied": count(spe_ports) > 0,
+    "spe_allowed": spe_ports,
+  }
   result := {
     "allowed": false,
-    "msg": sprintf("%v: port %v/%v is out of allowed ranges %v. %v", [field_name, bad.port, bad.protocol, ranges, ctx])
+    "msg": msg,
+    "detail": detail
   }
 }
 

@@ -34,6 +34,12 @@ test_subset_denied if {
     {"case_insensitive": true}
   )
   result.allowed == false
+  result.msg == "capabilities.add must be subset of [\"NET_ADMIN\"]"
+  result.detail.field == "capabilities.add"
+  result.detail.actual == ["SYS_ADMIN"]
+  result.detail.policy_allowed == ["NET_ADMIN"]
+  result.detail.spe_applied == false
+  result.detail.spe_allowed == []
 }
 
 # Superset match
@@ -68,4 +74,10 @@ test_superset_denied if {
     {"case_insensitive": true}
   )
   result.allowed == false
+  result.msg == "capabilities.drop must contain [\"ALL\"]"
+  result.detail.field == "capabilities.drop"
+  result.detail.actual == ["NET_RAW"]
+  result.detail.policy_allowed == ["ALL"]
+  result.detail.spe_applied == false
+  result.detail.spe_allowed == []
 }

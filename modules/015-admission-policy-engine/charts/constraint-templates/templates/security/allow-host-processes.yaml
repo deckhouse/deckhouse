@@ -48,10 +48,13 @@ spec:
                 {{- include "constraint-templates.lib.check_bool" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_bool.check_pod_bool
+              import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -84,6 +87,7 @@ spec:
                   check.spe_path
                 )
                 not result.allowed
-                msg := sprintf("Sharing the %v namespace is not allowed: %v. | %v", [check.field_name, input.review.object.metadata.name, result.msg])
+                reason := sprintf("Sharing the %v namespace is not allowed", [check.field_name])
+                msg := violation_message(reason, input.review.object.metadata.name, result.detail)
               }
 

@@ -27,4 +27,10 @@ test_object_match_denied if {
   allowed := [{"level": "s1"}]
   result := check_object_match.check_partial_match_in_list(actual, allowed, ["level", "role", "type", "user"], [])
   result.allowed == false
+  result.msg == "Object {\"level\": \"s0\", \"role\": \"r\", \"type\": \"t\", \"user\": \"u\"} does not match allowed list [{\"level\": \"s1\"}]"
+  result.detail.field == "object_match"
+  result.detail.actual == {"level": "s0", "role": "r", "type": "t", "user": "u"}
+  result.detail.policy_allowed == [{"level": "s1"}]
+  result.detail.spe_applied == false
+  result.detail.spe_allowed == []
 }

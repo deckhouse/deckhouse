@@ -6,7 +6,7 @@
 # Usage:
 # - check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths)
 # allowed_paths/spe_allowed_paths items: {pathPrefix|path, readOnly}
-# Returns: {"allowed": bool, "msg": string}
+# Returns: {"allowed": bool, "msg": string, "detail": object}
 # =============================================================================
 package lib.check_path
 
@@ -16,21 +16,29 @@ import data.lib.path.path_matches
 
 check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {
   input_hostpath_allowed(allowed_paths, volume, containers)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {
   not input_hostpath_allowed(allowed_paths, volume, containers)
   input_hostpath_allowed_exact(spe_allowed_paths, volume, containers)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {
   not input_hostpath_allowed(allowed_paths, volume, containers)
   not input_hostpath_allowed_exact(spe_allowed_paths, volume, containers)
+  msg := sprintf("HostPath %v is not allowed", [volume.hostPath.path])
   result := {
     "allowed": false,
-    "msg": sprintf("HostPath %v is not allowed", [volume.hostPath.path])
+    "msg": msg,
+    "detail": {
+      "field": "hostPath.path",
+      "actual": volume.hostPath.path,
+      "policy_allowed": allowed_paths,
+      "spe_applied": count(spe_allowed_paths) > 0,
+      "spe_allowed": spe_allowed_paths,
+    }
   }
 }
 

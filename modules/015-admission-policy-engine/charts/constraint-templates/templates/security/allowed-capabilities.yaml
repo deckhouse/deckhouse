@@ -52,12 +52,15 @@ spec:
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.set" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_subset.check_container_subset
               import data.lib.check_subset.check_container_superset
               import data.lib.common.input_containers
+              import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -73,7 +76,7 @@ spec:
                   {"case_insensitive": true}
                 )
                 not result.allowed
-                msg := sprintf("container <%v> has a disallowed capability. | %v", [container.name, result.msg])
+                msg := violation_message("container has a disallowed capability", sprintf("container: %v", [container.name]), result.detail)
               }
 
               violation contains {"msg": msg, "details": {}} if {
@@ -90,5 +93,5 @@ spec:
                   {"case_insensitive": true}
                 )
                 not result.allowed
-                msg := sprintf("container <%v> is not dropping all required capabilities. | %v", [container.name, result.msg])
+                msg := violation_message("container is not dropping all required capabilities", sprintf("container: %v", [container.name]), result.detail)
               }

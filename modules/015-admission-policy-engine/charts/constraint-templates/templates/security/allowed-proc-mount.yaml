@@ -54,11 +54,14 @@ spec:
                 {{- include "constraint-templates.lib.match" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
  
               import data.lib.check_set.check_container_value_in_set
               import data.lib.common.input_containers
+              import data.lib.message.violation_message
  
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -75,7 +78,7 @@ spec:
                   input.review.object.metadata.namespace
                 )
                 not result.allowed
-                msg := sprintf("ProcMount type is not allowed, container: %v. | %v", [c.name, result.msg])
+                msg := violation_message("ProcMount type is not allowed", sprintf("container: %v", [c.name]), result.detail)
               }
  
               get_allowed_proc_mount(arg) := out if {

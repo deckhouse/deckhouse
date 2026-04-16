@@ -34,6 +34,11 @@ test_container_in_range_denied if {
   result.allowed == false
   contains(result.msg, "runAsUser has value 3000 which is out of allowed ranges")
   not contains(result.msg, "SPE allows")
+  result.detail.field == "runAsUser"
+  result.detail.actual == 3000
+  result.detail.policy_allowed == [{"min": 1000, "max": 2000}]
+  result.detail.spe_applied == false
+  result.detail.spe_allowed == []
 }
 
 # Boundary
@@ -86,6 +91,11 @@ test_container_in_range_spe_denied_with_context if {
   result.allowed == false
   contains(result.msg, "forbidden: 3000")
   contains(result.msg, "SPE allows: [2500]")
+  result.detail.field == "runAsUser"
+  result.detail.actual == 3000
+  result.detail.policy_allowed == [{"min": 1000, "max": 2000}]
+  result.detail.spe_applied == true
+  result.detail.spe_allowed == [2500]
 }
 
 # Ports in range
@@ -111,6 +121,11 @@ test_ports_with_protocol_spe_mismatch_contains_sanitized_spe if {
   contains(result.msg, "forbidden: {\"port\": 8086, \"protocol\": \"UDP\"}; policy allows: []")
   contains(result.msg, "SPE allows: [{\"port\": 8086, \"protocol\": \"TCP\"}]")
   not contains(result.msg, "metadata")
+  result.detail.field == "hostPorts"
+  result.detail.actual == "port 8086/UDP"
+  result.detail.policy_allowed == []
+  result.detail.spe_applied == true
+  result.detail.spe_allowed == [{"port": 8086, "protocol": "TCP"}]
 }
 
 

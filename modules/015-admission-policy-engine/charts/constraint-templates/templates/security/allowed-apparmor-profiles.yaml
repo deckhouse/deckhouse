@@ -56,10 +56,13 @@ spec:
                 {{- include "constraint-templates.lib.expand_synonyms" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_set.check_value_with_glob
+              import data.lib.message.violation_message
               import data.lib.common.input_containers
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
@@ -90,5 +93,5 @@ spec:
                 spe_allowed_expanded := expand(spe_allowed, apparmor_translation)
                 result := check_value_with_glob(profile, allowed, spe_allowed_expanded)
                 not result.allowed
-                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v. | %v", [input.review.object.metadata.name, container.name, result.msg])
+                msg := violation_message("AppArmor profile is not allowed", sprintf("pod: %v, container: %v", [input.review.object.metadata.name, container.name]), result.detail)
               }

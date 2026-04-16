@@ -39,11 +39,14 @@ spec:
                 {{- include "constraint-templates.lib.check_bool" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_bool.check_container_bool
               import data.lib.common.input_containers
+              import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -59,6 +62,6 @@ spec:
                   object.get(input.review.object, ["metadata", "namespace"], "")
                 )
                 not result.allowed
-                msg := sprintf("Privileged container is not allowed: %v. | %v", [c.name, result.msg])
+                msg := violation_message("Privileged container is not allowed", sprintf("container: %v", [c.name]), result.detail)
               }
 

@@ -34,6 +34,11 @@ test_container_value_in_set_denied if {
   result.allowed == false
   contains(result.msg, "procMount has value Masked which is not in allowed set")
   not contains(result.msg, "SPE allows")
+  result.detail.field == "procMount"
+  result.detail.actual == "Masked"
+  result.detail.policy_allowed == ["Default"]
+  result.detail.spe_applied == false
+  result.detail.spe_allowed == []
 }
 
 # Wildcard allows all
@@ -84,6 +89,11 @@ test_container_value_in_set_spe_denied_with_context if {
   result.allowed == false
   contains(result.msg, "forbidden: Masked")
   contains(result.msg, "SPE allows: [\"Unmasked\"]")
+  result.detail.field == "procMount"
+  result.detail.actual == "Masked"
+  result.detail.policy_allowed == ["Default"]
+  result.detail.spe_applied == true
+  result.detail.spe_allowed == ["Unmasked"]
 }
 
 # Allowlist/denylist
@@ -91,6 +101,12 @@ test_container_value_in_set_spe_denied_with_context if {
 test_allowlist_denylist_forbidden if {
   result := check_set.check_allowlist_denylist("net.ipv4.ip_forward", ["net.*"], ["net.ipv4.*"], [], {})
   result.allowed == false
+  result.detail.field == "value"
+  result.detail.actual == "net.ipv4.ip_forward"
+  result.detail.policy_allowed.allowlist == ["net.*"]
+  result.detail.policy_allowed.denylist == ["net.ipv4.*"]
+  result.detail.spe_applied == false
+  result.detail.spe_allowed == []
 }
 
 # Glob matcher

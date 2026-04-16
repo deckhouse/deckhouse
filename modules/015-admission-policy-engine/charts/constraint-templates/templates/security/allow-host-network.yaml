@@ -62,11 +62,14 @@ spec:
                 {{- include "constraint-templates.lib.check_range" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_bool.check_pod_bool
               import data.lib.check_range.check_ports_with_protocol_in_ranges
+              import data.lib.message.violation_message
               import data.lib.common.input_containers
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
@@ -87,21 +90,17 @@ spec:
                 spe := resolve_spe_from_labels(obj.metadata.labels, obj.metadata.namespace)
                 spe_ports := allowed_values_or_empty(spe, ["spec", "network", "hostPorts"])
                 range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", input.parameters.ranges, spe_ports)
-                not both_allowed(bool_result, range_result)
-                msg := format_violation_message(obj.metadata.name, bool_result.msg, range_result.msg)
+                failed := failed_result(bool_result, range_result)
+                msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("pod: %v", [obj.metadata.name]), failed.detail)
               }
 
-              both_allowed(a, b) if {
-                a.allowed
-                b.allowed
+              failed_result(bool_result, _) := bool_result if {
+                not bool_result.allowed
               }
 
-              format_violation_message(pod_name, bool_msg, range_msg) := msg if {
-                parts := [m |
-                  m := [bool_msg, range_msg][_]
-                  m != ""
-                ]
-                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. %v", [pod_name, concat(" | ", parts)])
+              failed_result(bool_result, range_result) := range_result if {
+                bool_result.allowed
+                not range_result.allowed
               }
 
               collect_ports(obj, host_network) := ports if {

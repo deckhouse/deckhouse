@@ -10,7 +10,7 @@
 # - Scalar w/ wildcards: check_value_in_set_with_wildcards(value, allowed_set, spe_allowed, opts)
 # - Glob patterns: check_value_with_glob(value, allowed_set, spe_allowed)
 # - Allow/Deny lists: check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts)
-# Returns: {"allowed": bool, "msg": string}
+# Returns: {"allowed": bool, "msg": string, "detail": object}
 # =============================================================================
 package lib.check_set
 
@@ -25,14 +25,14 @@ import data.lib.match.glob_any
 check_container_value_in_set(container, field_path, field_name, allowed_set, spe_path, labels, namespace) := result if {
   value := get_field(container, field_path, null)
   value == null
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_container_value_in_set(container, field_path, field_name, allowed_set, spe_path, labels, namespace) := result if {
   value := get_field(container, field_path, null)
   value != null
   value_in_set(value, allowed_set)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_container_value_in_set(container, field_path, field_name, allowed_set, spe_path, labels, namespace) := result if {
@@ -42,7 +42,7 @@ check_container_value_in_set(container, field_path, field_name, allowed_set, spe
   exception := resolve_spe_for_container(container, labels, namespace)
   spe_allowed := allowed_values_or_empty(exception, spe_path)
   value_in_set(value, spe_allowed)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_container_value_in_set(container, field_path, field_name, allowed_set, spe_path, labels, namespace) := result if {
@@ -54,9 +54,11 @@ check_container_value_in_set(container, field_path, field_name, allowed_set, spe
   not value_in_set(value, spe_allowed)
   spe_used := path_value_resolved(exception, spe_path)
   msg := set_violation_msg(field_name, value, allowed_set, spe_used, spe_allowed)
+  detail := set_violation_detail(field_name, value, allowed_set, spe_used, spe_allowed)
   result := {
     "allowed": false,
-    "msg": msg
+    "msg": msg,
+    "detail": detail
   }
 }
 
@@ -64,14 +66,14 @@ check_container_value_in_set(container, field_path, field_name, allowed_set, spe
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
   value := get_field(obj, field_path, null)
   value == null
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
   value := get_field(obj, field_path, null)
   value != null
   value_in_set(value, allowed_set)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
@@ -83,7 +85,7 @@ check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
   exception := resolve_spe_from_labels(labels, namespace)
   spe_allowed := allowed_values_or_empty(exception, spe_path)
   value_in_set(value, spe_allowed)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
@@ -97,9 +99,11 @@ check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
   not value_in_set(value, spe_allowed)
   spe_used := path_value_resolved(exception, spe_path)
   msg := set_violation_msg(field_name, value, allowed_set, spe_used, spe_allowed)
+  detail := set_violation_detail(field_name, value, allowed_set, spe_used, spe_allowed)
   result := {
     "allowed": false,
-    "msg": msg
+    "msg": msg,
+    "detail": detail
   }
 }
 
@@ -107,14 +111,14 @@ check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
   values := get_field(obj, field_path, [])
   count(values) == 0
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
   values := get_field(obj, field_path, [])
   count(values) > 0
   all_in_set_or_prefix(values, allowed_set)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
@@ -126,7 +130,7 @@ check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
   exception := resolve_spe_from_labels(labels, namespace)
   spe_allowed := allowed_values_or_empty(exception, spe_path)
   all_in_set_or_prefix(values, spe_allowed)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
@@ -140,29 +144,31 @@ check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
   not all_in_set_or_prefix(values, spe_allowed)
   spe_used := path_value_resolved(exception, spe_path)
   msg := array_set_violation_msg(field_name, values, allowed_set, spe_used, spe_allowed)
+  detail := set_violation_detail(field_name, values, allowed_set, spe_used, spe_allowed)
   result := {
     "allowed": false,
-    "msg": msg
+    "msg": msg,
+    "detail": detail
   }
 }
 
 # Check a scalar value in set with wildcard/prefix and optional localhost file matching
 check_value_in_set_with_wildcards(value, allowed_set, spe_allowed, opts) := result if {
   value == null
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_value_in_set_with_wildcards(value, allowed_set, spe_allowed, opts) := result if {
   value != null
   value_in_set_or_prefix(value, allowed_set)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_value_in_set_with_wildcards(value, allowed_set, spe_allowed, opts) := result if {
   value != null
   not value_in_set_or_prefix(value, allowed_set)
   value_in_set_or_prefix(value, spe_allowed)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_value_in_set_with_wildcards(value, allowed_set, spe_allowed, opts) := result if {
@@ -170,29 +176,37 @@ check_value_in_set_with_wildcards(value, allowed_set, spe_allowed, opts) := resu
   not value_in_set_or_prefix(value, allowed_set)
   not value_in_set_or_prefix(value, spe_allowed)
   msg := value_set_violation_msg(value, allowed_set, spe_allowed)
+  detail := {
+    "field": "value",
+    "actual": value,
+    "policy_allowed": allowed_set,
+    "spe_applied": count(spe_allowed) > 0,
+    "spe_allowed": spe_allowed,
+  }
   result := {
     "allowed": false,
-    "msg": msg
+    "msg": msg,
+    "detail": detail
   }
 }
 
 # Check a scalar value against glob patterns with SPE fallback
 check_value_with_glob(value, allowed_set, spe_allowed) := result if {
   value == null
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_value_with_glob(value, allowed_set, spe_allowed) := result if {
   value != null
   glob_any(allowed_set, value)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_value_with_glob(value, allowed_set, spe_allowed) := result if {
   value != null
   not glob_any(allowed_set, value)
   glob_any(spe_allowed, value)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_value_with_glob(value, allowed_set, spe_allowed) := result if {
@@ -200,37 +214,53 @@ check_value_with_glob(value, allowed_set, spe_allowed) := result if {
   not glob_any(allowed_set, value)
   not glob_any(spe_allowed, value)
   msg := value_glob_violation_msg(value, allowed_set, spe_allowed)
+  detail := {
+    "field": "value",
+    "actual": value,
+    "policy_allowed": allowed_set,
+    "spe_applied": count(spe_allowed) > 0,
+    "spe_allowed": spe_allowed,
+  }
   result := {
     "allowed": false,
-    "msg": msg
+    "msg": msg,
+    "detail": detail
   }
 }
 
 # Check allowlist/denylist with wildcard/prefix
 check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := result if {
   value == null
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := result if {
   value != null
   denied(value, denylist)
   not value_in_set_or_prefix(value, spe_allowed)
-  result := {"allowed": false, "msg": sprintf("Value %v is forbidden by %v", [value, denylist])}
+  msg := sprintf("Value %v is forbidden by %v", [value, denylist])
+  detail := {
+    "field": "value",
+    "actual": value,
+    "policy_allowed": {"allowlist": allowlist, "denylist": denylist},
+    "spe_applied": count(spe_allowed) > 0,
+    "spe_allowed": spe_allowed,
+  }
+  result := {"allowed": false, "msg": msg, "detail": detail}
 }
 
 check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := result if {
   value != null
   denied(value, denylist)
   value_in_set_or_prefix(value, spe_allowed)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := result if {
   value != null
   not denied(value, denylist)
   value_in_set_or_prefix(value, allowlist)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := result if {
@@ -238,7 +268,7 @@ check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := resul
   not denied(value, denylist)
   not value_in_set_or_prefix(value, allowlist)
   value_in_set_or_prefix(value, spe_allowed)
-  result := {"allowed": true, "msg": ""}
+  result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := result if {
@@ -246,7 +276,15 @@ check_allowlist_denylist(value, allowlist, denylist, spe_allowed, opts) := resul
   not denied(value, denylist)
   not value_in_set_or_prefix(value, allowlist)
   not value_in_set_or_prefix(value, spe_allowed)
-  result := {"allowed": false, "msg": sprintf("Value %v is not allowed by %v", [value, allowlist])}
+  msg := sprintf("Value %v is not allowed by %v", [value, allowlist])
+  detail := {
+    "field": "value",
+    "actual": value,
+    "policy_allowed": {"allowlist": allowlist, "denylist": denylist},
+    "spe_applied": count(spe_allowed) > 0,
+    "spe_allowed": spe_allowed,
+  }
+  result := {"allowed": false, "msg": msg, "detail": detail}
 }
 
 value_in_set(value, set) if {
@@ -339,6 +377,14 @@ value_set_violation_msg(value, allowed_set, spe_allowed) := out if {
 value_glob_violation_msg(value, allowed_set, spe_allowed) := out if {
   count(spe_allowed) == 0
   out := sprintf("Value %v does not match allowed patterns %v. %v", [value, allowed_set, ""])
+}
+
+set_violation_detail(field, actual, policy_allowed, spe_applied, spe_allowed) := {
+  "field": field,
+  "actual": actual,
+  "policy_allowed": policy_allowed,
+  "spe_applied": spe_applied,
+  "spe_allowed": spe_allowed,
 }
 
 value_glob_violation_msg(value, allowed_set, spe_allowed) := out if {

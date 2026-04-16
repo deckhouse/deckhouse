@@ -16,6 +16,7 @@ test_container_bool_matches_expected if {
     "default"
   )
   result.allowed == true
+  result.detail == {}
 }
 
 # Field does not match expected → not allowed
@@ -34,6 +35,8 @@ test_container_bool_violates if {
   result.allowed == false
   contains(result.msg, "privileged has value true, expected false")
   not contains(result.msg, "SPE allows")
+  result.detail.msg == "privileged has value true, expected false."
+  result.detail.spe_applied == false
 }
 
 # Default matches expected → allowed
@@ -50,6 +53,7 @@ test_container_bool_default_matches if {
     "default"
   )
   result.allowed == true
+  result.detail == {}
 }
 
 # Default does not match expected → not allowed
@@ -66,6 +70,8 @@ test_container_bool_default_violates if {
     "default"
   )
   result.allowed == false
+  result.detail.msg == "allowPrivilegeEscalation has value true, expected false."
+  result.detail.spe_applied == false
 }
 
 # SPE allows actual value
@@ -83,6 +89,7 @@ test_container_bool_spe_allows if {
     "default"
   ) with data.inventory as inventory_allow_true
   result.allowed == true
+  result.detail == {}
 }
 
 # SPE denies value
@@ -104,6 +111,11 @@ test_container_bool_spe_denies if {
   contains(result.msg, "forbidden: true")
   contains(result.msg, "policy allows: false")
   contains(result.msg, "SPE allows: [false]")
+  result.detail.msg == "privileged has value true, expected false."
+  result.detail.spe_applied == true
+  result.detail.forbidden == true
+  result.detail.policy_allows == false
+  result.detail.spe_allows == [false]
 }
 
 # Pod-level SPE denies value with context
@@ -124,6 +136,11 @@ test_pod_bool_spe_denies_with_context if {
   contains(result.msg, "forbidden: true")
   contains(result.msg, "policy allows: false")
   contains(result.msg, "SPE allows: false")
+  result.detail.msg == "hostPID has value true, expected false."
+  result.detail.spe_applied == true
+  result.detail.forbidden == true
+  result.detail.policy_allows == false
+  result.detail.spe_allows == false
 }
 
 # Pod-level boolean with SPE
@@ -141,6 +158,7 @@ test_pod_bool_spe_allows if {
     ["spec", "network", "hostPID", "allowedValue"]
   ) with data.inventory as inventory_pod_allow_true
   result.allowed == true
+  result.detail == {}
 }
 
 inventory_allow_true := {

@@ -20,6 +20,12 @@ test_hostpath_readonly_denied if {
   containers := [{"volumeMounts": [{"name": "data", "readOnly": false}]}]
   result := check_path.check_hostpath_allowed(volume, allowed, containers, [])
   result.allowed == false
+  result.msg == "HostPath /var/lib is not allowed"
+  result.detail.field == "hostPath.path"
+  result.detail.actual == "/var/lib"
+  result.detail.policy_allowed == [{"pathPrefix": "/var", "readOnly": true}]
+  result.detail.spe_applied == false
+  result.detail.spe_allowed == []
 }
 
 # SPE exact match

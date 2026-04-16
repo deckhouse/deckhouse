@@ -78,10 +78,13 @@ spec:
                 {{- include "constraint-templates.lib.match" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_set.check_value_in_set_with_wildcards
+              import data.lib.message.violation_message
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.expand_synonyms.expand
@@ -127,7 +130,7 @@ spec:
                   {"prefix_wildcard": true, "wildcard": "*"}
                 )
                 not result.allowed
-                msg := sprintf("Seccomp profile is not allowed for container '%v'. | %v", [container.name, result.msg])
+                msg := violation_message("Seccomp profile is not allowed", sprintf("container: %v", [container.name]), result.detail)
               }
 
               input_wildcard_allowed_profiles if {
