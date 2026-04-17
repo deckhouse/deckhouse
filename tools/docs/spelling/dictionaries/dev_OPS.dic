@@ -280,6 +280,8 @@ configVersion
 conntrack
 Conntrack
 Container
+ConstraintTemplate
+Constraint
 containerd
 ContainerResourcePolicy
 contraire
@@ -1191,6 +1193,7 @@ Quickstart
 RabbitMQ
 RabbitMQ’s
 Rados
+Rego
 rb
 rbac
 RBAC
@@ -1233,6 +1236,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+repos
 reprovisioning
 repurposed
 RequestAuthentication
@@ -1277,6 +1281,7 @@ SchedulingDisabled
 schemas
 SCM
 SCP
+SPE
 ScrapeConfig
 scrapeInterval
 scrapeIntervals
@@ -1290,6 +1295,7 @@ SecretStore
 securityGroups
 SecurityGroups
 SecurityPolicy
+SecurityPolicyException
 sed
 selectel
 Selectel
@@ -2031,6 +2037,8 @@ ZvirtInstanceClass
 менятьcя
 меняться
 мержит
+мержа
+мержатся
 Метадата
 метаинформацию
 мигрирована
@@ -2156,6 +2164,8 @@ ZvirtInstanceClass
 патч
 патча
 патчем
+патчах
+патчей
 патчи
 патчится
 патчить
@@ -2222,6 +2232,7 @@ ZvirtInstanceClass
 ПК
 плейсхолдер
 плейсхолдеров
+побайтово
 поддомен
 поддоменам
 поддоменами
@@ -2234,6 +2245,7 @@ ZvirtInstanceClass
 подселяться
 подсетей
 подсети
+Пошагово
 Подсети
 подсеть
 Подсеть
@@ -2297,6 +2309,7 @@ ZvirtInstanceClass
 ребут
 реверт
 Ревью
+ревьюеру
 регистри
 редиректить
 резолвинга
@@ -2374,6 +2387,7 @@ ZvirtInstanceClass
 сгенерировали
 сгенерирован
 сгенерированного
+сгенерированном
 сгенерированному
 сгенерированную
 сгенерированные
@@ -2444,6 +2458,7 @@ ZvirtInstanceClass
 сущностей
 сущностям
 сущностями
+сценарно
 СХД
 т
 таймаут

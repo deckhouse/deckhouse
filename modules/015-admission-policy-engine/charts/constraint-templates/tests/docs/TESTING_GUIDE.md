@@ -1,6 +1,6 @@
 # Constraint Templates Testing Guide (EN)
 
-This guide covers everything you need to write, run, and maintain tests for Gatekeeper ConstraintTemplates in Deckhouse. It is written for newcomers with **zero prior context**.
+This guide covers everything you need to write, run, and maintain tests for Gatekeeper `ConstraintTemplates` in Deckhouse. It is written for newcomers with **zero prior context**.
 
 > **Validation schemas** for every YAML file described below live in [`../openapi/`](../openapi/). Use them as the authoritative reference for allowed fields and values.
 
@@ -27,16 +27,16 @@ This guide covers everything you need to write, run, and maintain tests for Gate
 
 ## 1. Glossary
 
-| Term | Meaning |
-|------|---------|
-| **Constraint** | A Gatekeeper policy that validates Kubernetes objects (e.g. Pods). Each constraint has its own test directory. |
-| **ConstraintTemplate** | The Rego-based template that defines the policy logic. Lives under `charts/constraint-templates/templates/`. |
-| **SPE** | SecurityPolicyException — a Deckhouse CRD that allows exceptions for a constraint. SPE fields are defined in [`security-policy-exception.yaml`](../../../../crds/security-policy-exception.yaml). |
-| **Track** | A group of tests: *Functional*, *SPE Pod*, or *SPE Container*. |
-| **Scenario** | A specific test angle for a field (positive, negative, absent, etc.). |
-| **Block** | A named section in the generated test suite (`rendered/test_suite.yaml`), grouping cases that share a template+constraint pair. |
-| **Gator** | The OPA Gatekeeper CLI tool used to verify constraint tests offline. |
-| **constraint_testgen** | The Go-based code generator that converts `test-matrix.yaml` into rendered test artifacts. |
+| Term                 | Meaning                                                                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Constraint`         | A Gatekeeper policy that validates Kubernetes objects (e.g. Pods). Each constraint has its own test directory.                                                                                    |
+| `ConstraintTemplate` | The Rego-based template that defines the policy logic. Lives under `charts/constraint-templates/templates/`.                                                                                      |
+| `SPE`                | `SecurityPolicyException` — a Deckhouse CRD that allows exceptions for a constraint. SPE fields are defined in [`security-policy-exception.yaml`](../../../../crds/security-policy-exception.yaml). |
+| `Track`              | A group of tests: *Functional*, *SPE Pod*, or *SPE Container*.                                                                                                                                    |
+| `Scenario`           | A specific test angle for a field (positive, negative, absent, etc.).                                                                                                                             |
+| `Block`              | A named section in the generated test suite (`rendered/test_suite.yaml`), grouping cases that share a template+constraint pair.                                                                   |
+| `Gator`              | The OPA Gatekeeper CLI tool used to verify constraint tests offline.                                                                                                                              |
+| `constraint_testgen` | The Go-based code generator that converts `test-matrix.yaml` into rendered test artifacts.                                                                                                        |
 
 ---
 
@@ -77,17 +77,17 @@ Constraint groups: **`security`** and **`operation`**.
 
 Each constraint directory (e.g. `test_cases/constraints/security/allow-host-network/`) contains:
 
-| File | Purpose | Hand-written? |
-|------|---------|:---:|
-| `test_fields.yaml` | Declares what fields the policy checks and what scenarios are required. Source of truth for coverage. | ✅ |
-| `test-matrix.yaml` | Declares test cases with `fields` annotations linking each case to field+scenario pairs. | ✅ |
-| `test_profile.yaml` | Suite/quality contract: required test block names, optional quality gates. | ✅ |
-| `constraints/` | Constraint YAML manifests referenced by the matrix (e.g. `pss_baseline.yaml`, `policy_1.yaml`). | ✅ |
-| `rendered/` | **Generated artifacts — do not edit manually.** | ❌ |
-| `rendered/test_suite.yaml` | Flattened test plan consumed by gator. | ❌ |
-| `rendered/test_samples/` | Generated Pod/object YAML samples for each case. | ❌ |
-| `rendered/constraint-template.yaml` | Rendered ConstraintTemplate from Helm chart. | ❌ |
-| `rendered/constraints/` | Rendered constraint copies for gator. | ❌ |
+| File                                | Purpose                                                                                               | Hand-written? |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------- | :-----------: |
+| `test_fields.yaml`                  | Declares what fields the policy checks and what scenarios are required. Source of truth for coverage. |       ✅       |
+| `test-matrix.yaml`                  | Declares test cases with `fields` annotations linking each case to field+scenario pairs.              |       ✅       |
+| `test_profile.yaml`                 | Suite/quality contract: required test block names, optional quality gates.                            |       ✅       |
+| `constraints/`                      | Constraint YAML manifests referenced by the matrix (e.g. `pss_baseline.yaml`, `policy_1.yaml`).       |       ✅       |
+| `rendered/`                         | **Generated artifacts — do not edit manually.**                                                       |       ❌       |
+| `rendered/test_suite.yaml`          | Flattened test plan consumed by gator.                                                                |       ❌       |
+| `rendered/test_samples/`            | Generated Pod/object YAML samples for each case.                                                      |       ❌       |
+| `rendered/constraint-template.yaml` | Rendered `ConstraintTemplate` from Helm chart.                                                          |       ❌       |
+| `rendered/constraints/`             | Rendered constraint copies for gator.                                                                 |       ❌       |
 
 ### Constraint file naming conventions
 
@@ -297,7 +297,7 @@ fields:
 
 ### SPE cases
 
-For SecurityPolicyException cases, add the exception as inventory:
+For `SecurityPolicyException` cases, add the exception as inventory:
 
 ```yaml
 cases:
@@ -329,10 +329,10 @@ cases:
               name: nginx
 ```
 
-Key points for SPE cases:
+Key points for `SPE` cases:
 - The Pod must have the label `security.deckhouse.io/security-policy-exception: <exception-name>`
 - The exception name in the label must match the SPE `metadata.name`
-- SPE inventory uses `base: securityPolicyException` with a `merge` patch
+- `SPE` inventory uses `base: securityPolicyException` with a `merge` patch
 
 ### Real example (operation constraint — allowed-repos)
 
@@ -468,10 +468,10 @@ spec:
 
 ### Separation of responsibilities
 
-| File | Responsibility | Does NOT define |
-|------|---------------|-----------------|
-| `test_fields.yaml` | Field/scenario model: object/SPE fields, required scenarios, applicable tracks | Suite block names, minimum cases per block, required patterns |
-| `test_profile.yaml` | Suite/quality contract: required test blocks, minimum cases, required patterns | Field inventory and per-field scenarios |
+| File                | Responsibility                                                                 | Does NOT define                                               |
+| ------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `test_fields.yaml`  | Field/scenario model: object/`SPE` fields, required scenarios, applicable tracks | Suite block names, minimum cases per block, required patterns |
+| `test_profile.yaml` | Suite/quality contract: required test blocks, minimum cases, required patterns | Field inventory and per-field scenarios                       |
 
 ---
 
@@ -481,40 +481,40 @@ A **scenario** is a specific test angle for a field. Required scenarios define t
 
 ### Object-field scenarios (Functional track)
 
-| Scenario | Meaning | Applies to |
-|----------|---------|------------|
-| `positive` | Field set to a compliant value → no violation | All object fields |
-| `negative` | Field set to a non-compliant value → violation | All object fields |
-| `absent` | Field not set at all → depends on defaultBehavior | All object fields |
-| `multiContainer` | Multiple containers, one violating → violation | Container-level only |
-| `initContainer` | initContainer variant of the check | Container-level only |
+| Scenario             | Meaning                                                 | Applies to           |
+| -------------------- | ------------------------------------------------------- | -------------------- |
+| `positive`           | Field set to a compliant value → no violation           | All object fields    |
+| `negative`           | Field set to a non-compliant value → violation          | All object fields    |
+| `absent`             | Field not set at all → depends on defaultBehavior       | All object fields    |
+| `multiContainer`     | Multiple containers, one violating → violation          | Container-level only |
+| `initContainer`      | initContainer variant of the check                      | Container-level only |
 | `ephemeralContainer` | ephemeralContainer variant (`spec.ephemeralContainers`) | Container-level only |
 
 ### SPE scenarios (Exception tracks)
 
-| Scenario | Meaning | Applies to |
-|----------|---------|------------|
-| `speMatch` | SPE matches the violation → exception allows it | All SPE fields |
-| `speMismatch` | SPE does not match → still violated | All SPE fields |
-| `speAbsent` | No SPE label on pod → still violated | All SPE fields |
-| `speContainerSpecific` | SPE targets a specific container | Container-level SPE only |
+| Scenario               | Meaning                                         | Applies to               |
+| ---------------------- | ----------------------------------------------- | ------------------------ |
+| `speMatch`             | SPE matches the violation → exception allows it | All `SPE` fields           |
+| `speMismatch`          | SPE does not match → still violated             | All `SPE` fields           |
+| `speAbsent`            | No SPE label on pod → still violated            | All `SPE` fields           |
+| `speContainerSpecific` | SPE targets a specific container                | Container-level `SPE` only |
 
 ### Default required scenarios by level
 
 **Object fields:**
 
-| Level | Default required scenarios | Count |
-|-------|--------------------------|-------|
-| `pod` | positive, negative, absent | 3 |
-| `container` | positive, negative, absent, multiContainer, initContainer, ephemeralContainer | 6 |
-| `initContainer` | positive, negative, absent | 3 |
+| Level           | Default required scenarios                                                    | Count |
+| --------------- | ----------------------------------------------------------------------------- | ----- |
+| `pod`           | positive, negative, absent                                                    | 3     |
+| `container`     | positive, negative, absent, multiContainer, initContainer, ephemeralContainer | 6     |
+| `initContainer` | positive, negative, absent                                                    | 3     |
 
 **SPE fields:**
 
-| Level | Default required scenarios | Count |
-|-------|--------------------------|-------|
-| `pod` | speMatch, speMismatch, speAbsent | 3 |
-| `container` | speMatch, speMismatch, speAbsent, speContainerSpecific | 4 |
+| Level       | Default required scenarios                             | Count |
+| ----------- | ------------------------------------------------------ | ----- |
+| `pod`       | speMatch, speMismatch, speAbsent                       | 3     |
+| `container` | speMatch, speMismatch, speAbsent, speContainerSpecific | 4     |
 
 If `requiredScenarios` is omitted in `test_fields.yaml`, the tool auto-generates the default set based on `level`.
 
@@ -559,7 +559,7 @@ Use this when creating tests for a brand-new constraint from scratch.
 
 - Read the constraint Rego template and list every object field it reads/compares.
 - Read the template parameters and list knobs that affect policy behavior.
-- Read SPE CRD paths in [`security-policy-exception.yaml`](../../../../crds/security-policy-exception.yaml) and map only paths actually used by this constraint.
+- Read `SPE` CRD paths in [`security-policy-exception.yaml`](../../../../crds/security-policy-exception.yaml) and map only paths actually used by this constraint.
 
 ### Step 2: Create test_fields.yaml
 
