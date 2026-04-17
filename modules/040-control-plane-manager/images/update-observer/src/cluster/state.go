@@ -89,19 +89,12 @@ func (s *State) calculateProgress(sourceVersion string) {
 		src = s.CurrentVersion
 	}
 
-	srcMinor, hasSrc := version.MinorInt(src)
-	dstMinor, hasDst := version.MinorInt(s.Spec.DesiredVersion)
-
-	if !hasSrc || !hasDst || srcMinor == dstMinor {
+	hops := version.Hops(src, s.Spec.DesiredVersion)
+	if hops == 0 {
 		s.Progress = common.CalculateProgress(
 			s.ControlPlaneState.UpToDateComponentCount+s.NodesState.UpToDateCount,
 			totalComponents)
 		return
-	}
-
-	hops := dstMinor - srcMinor
-	if hops < 0 {
-		hops = -hops
 	}
 
 	totalSteps := hops * totalComponents

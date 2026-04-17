@@ -64,17 +64,6 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion, sour
 }
 
 func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion string) {
-	srcMinor, hasSrc := version.MinorInt(sourceVersion)
-	dstMinor, hasDst := version.MinorInt(desiredVersion)
-
-	hops := 0
-	if hasSrc && hasDst && srcMinor != dstMinor {
-		hops = dstMinor - srcMinor
-		if hops < 0 {
-			hops = -hops
-		}
-	}
-
 	var desiredCount, upToDateCount, desiredComponentsCount, upToDateComponentsCount, stepsCompleted int
 	var phase ControlPlanePhase
 
@@ -97,9 +86,7 @@ func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion st
 				upToDateComponentsCount++
 			}
 
-			if hops > 0 {
-				stepsCompleted += version.ComponentSteps(component.Version, srcMinor, dstMinor)
-			}
+			stepsCompleted += version.ComponentSteps(component.Version, sourceVersion, desiredVersion)
 		}
 
 		switch {

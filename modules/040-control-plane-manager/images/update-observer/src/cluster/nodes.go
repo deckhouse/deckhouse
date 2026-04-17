@@ -36,17 +36,6 @@ func GetNodesState(nodes []corev1.Node, desiredVersion, sourceVersion string) (*
 		versions: version.NewUniqueAggregator(),
 	}
 
-	srcMinor, hasSrc := version.MinorInt(sourceVersion)
-	dstMinor, hasDst := version.MinorInt(desiredVersion)
-
-	hops := 0
-	if hasSrc && hasDst && srcMinor != dstMinor {
-		hops = dstMinor - srcMinor
-		if hops < 0 {
-			hops = -hops
-		}
-	}
-
 	var err error
 	for _, node := range nodes {
 		res.DesiredCount++
@@ -61,10 +50,7 @@ func GetNodesState(nodes []corev1.Node, desiredVersion, sourceVersion string) (*
 		}
 
 		res.versions.Set(v)
-
-		if hops > 0 {
-			res.StepsCompleted += version.ComponentSteps(v, srcMinor, dstMinor)
-		}
+		res.StepsCompleted += version.ComponentSteps(v, sourceVersion, desiredVersion)
 	}
 
 	return res, nil
