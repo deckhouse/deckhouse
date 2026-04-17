@@ -36,7 +36,7 @@
 | **Scenario (сценарий)** | Конкретный ракурс тестирования поля (positive, negative, absent и т.д.).                                                                                                             |
 | **Block (блок)**        | Именованная секция в сгенерированном test suite (`rendered/test_suite.yaml`), группирующая кейсы с общей парой template+constraint.                                                  |
 | **Gator**               | CLI-инструмент OPA Gatekeeper для офлайн-проверки тестов constraint.                                                                                                                 |
-| **constraint_testgen**  | Go-инструмент, преобразующий `test-matrix.yaml` в сгенерированные тестовые артефакты.                                                                                                |
+| `constraint_testgen`    | Go-инструмент, преобразующий `test-matrix.yaml` в сгенерированные тестовые артефакты.                                                                                                |
 
 ---
 
@@ -506,15 +506,15 @@ spec:
 | Уровень         | Сценарии по умолчанию                                                         | Кол-во |
 | --------------- | ----------------------------------------------------------------------------- | ------ |
 | `pod`           | positive, negative, absent                                                    | 3      |
-| `container`     | positive, negative, absent, multiContainer, initContainer, ephemeralContainer | 6      |
+| `container`     | positive, negative, absent, `multiContainer`, `initContainer`, `ephemeralContainer` | 6      |
 | `initContainer` | positive, negative, absent                                                    | 3      |
 
 **Поля SPE:**
 
 | Уровень     | Сценарии по умолчанию                                  | Кол-во |
 | ----------- | ------------------------------------------------------ | ------ |
-| `pod`       | speMatch, speMismatch, speAbsent                       | 3      |
-| `container` | speMatch, speMismatch, speAbsent, speContainerSpecific | 4      |
+| `pod`       | `speMatch`, `speMismatch`, `speAbsent`                       | 3      |
+| `container` | `speMatch`, `speMismatch`, `speAbsent`, `speContainerSpecific` | 4      |
 
 Если `requiredScenarios` не указан в `test_fields.yaml`, инструмент автоматически подставляет набор по умолчанию на основе `level`.
 
@@ -782,7 +782,7 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 ### Необходимые инструменты
 
 Должны быть установлены:
-- `go` — компилятор Go (для запуска constraint_testgen)
+- `go` — компилятор Go (для запуска `constraint_testgen`)
 - `gator` — CLI OPA Gatekeeper (`go install github.com/open-policy-agent/gatekeeper/v3/cmd/gator@latest`)
 - `opa` — CLI Open Policy Agent (для тестов OPA-библиотек)
 - `python3` — используется скриптом запуска для парсинга покрытия

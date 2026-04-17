@@ -506,15 +506,15 @@ A **scenario** is a specific test angle for a field. Required scenarios define t
 | Level           | Default required scenarios                                                    | Count |
 | --------------- | ----------------------------------------------------------------------------- | ----- |
 | `pod`           | positive, negative, absent                                                    | 3     |
-| `container`     | positive, negative, absent, multiContainer, initContainer, ephemeralContainer | 6     |
+| `container`     | positive, negative, absent, `multiContainer`, `initContainer`, `ephemeralContainer` | 6     |
 | `initContainer` | positive, negative, absent                                                    | 3     |
 
 **SPE fields:**
 
 | Level       | Default required scenarios                             | Count |
 | ----------- | ------------------------------------------------------ | ----- |
-| `pod`       | speMatch, speMismatch, speAbsent                       | 3     |
-| `container` | speMatch, speMismatch, speAbsent, speContainerSpecific | 4     |
+| `pod`       | `speMatch`, `speMismatch`, `speAbsent`                       | 3     |
+| `container` | `speMatch`, `speMismatch`, `speAbsent`, `speContainerSpecific` | 4     |
 
 If `requiredScenarios` is omitted in `test_fields.yaml`, the tool auto-generates the default set based on `level`.
 
@@ -782,7 +782,7 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 ### Prerequisites
 
 The following tools must be installed:
-- `go` — Go compiler (for running constraint_testgen)
+- `go` — Go compiler (for running `constraint_testgen`)
 - `gator` — OPA Gatekeeper CLI (`go install github.com/open-policy-agent/gatekeeper/v3/cmd/gator@latest`)
 - `opa` — Open Policy Agent CLI (for OPA library tests)
 - `python3` — used by the test runner for coverage parsing
