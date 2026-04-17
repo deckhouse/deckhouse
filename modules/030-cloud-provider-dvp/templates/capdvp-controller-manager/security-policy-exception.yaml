@@ -12,5 +12,8 @@ spec:
       allowedValue: true
       metadata:
         description: |
-          Allow host network access for CAPDVP controller manager.
+          Permit host networking for the Cluster API DVP (CAPDVP) controller manager.
+          Host network is required to ensure the controller can operate before CNI is ready,
+          expose the admission webhook, and maintain functionality even if the pod network fails,
+          ensuring reliable cluster provisioning and node management operations.
 {{- end }}

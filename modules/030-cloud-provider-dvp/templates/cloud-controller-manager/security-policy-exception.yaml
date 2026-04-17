@@ -12,8 +12,8 @@ spec:
       allowedValue: true
       metadata:
         description: |
-          Allow host network access for Cloud Controller Manager.
-          The Cloud Controller Manager requires host network access to communicate
-          with the DVP API for managing infrastructure resources, including load
-          balancer configuration, node lifecycle management, and routing operations.
+          Permit host networking for the Cloud Controller Manager.
+          Host network is required to ensure the controller can operate before CNI is ready
+          and to maintain functionality even if the pod network fails, ensuring reliable
+          node lifecycle management and infrastructure operations.
 {{- end }}
