@@ -107,7 +107,6 @@ func generateSelfSignedCA(_ context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("cannot convert sefsigned certificate to certificate authority: failed to unmarshal 'cert_authn' snapshot: %w", err)
 		}
-		fmt.Println("applying selfsigned ca from authn to kube-system")
 	} else {
 		var err error
 		sefSignedCA, err = certificate.GenerateCA(input.Logger, "kubernetes-api-selfsigned-ca")
