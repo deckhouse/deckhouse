@@ -86,8 +86,8 @@ charts/constraint-templates/tests/
 | `rendered/`                         | **Сгенерированные артефакты — не редактировать вручную.**                                                 |    ❌    |
 | `rendered/test_suite.yaml`          | Плоский план тестов для gator.                                                                            |    ❌    |
 | `rendered/test_samples/`            | Сгенерированные YAML-примеры Pod/объектов для каждого кейса.                                              |    ❌    |
-| `rendered/constraint-template.yaml` | Отрендеренный ConstraintTemplate из Helm chart.                                                           |    ❌    |
-| `rendered/constraints/`             | Отрендеренные копии constraint для gator.                                                                 |    ❌    |
+| `rendered/constraint-template.yaml` | Сгенерированный `ConstraintTemplate` из Helm chart.                                                       |    ❌    |
+| `rendered/constraints/`             | Сгенерированные копии constraint для gator.                                                               |    ❌    |
 
 ### Соглашения по именованию файлов constraint
 
@@ -485,10 +485,10 @@ spec:
 | -------------------- | ----------------------------------------------------------- | ------------------------ |
 | `positive`           | Поле задано допустимым значением → нет нарушения            | Все поля объекта         |
 | `negative`           | Поле задано недопустимым значением → нарушение              | Все поля объекта         |
-| `absent`             | Поле не задано → зависит от defaultBehavior                 | Все поля объекта         |
+| `absent`             | Поле не задано → зависит от `defaultBehavior`               | Все поля объекта         |
 | `multiContainer`     | Несколько контейнеров, один нарушает → нарушение            | Только уровень container |
-| `initContainer`      | Вариант проверки для initContainer                          | Только уровень container |
-| `ephemeralContainer` | Вариант для ephemeralContainer (`spec.ephemeralContainers`) | Только уровень container |
+| `initContainer`      | Вариант проверки для `initContainer`                        | Только уровень container |
+| `ephemeralContainer` | Вариант для `ephemeralContainer` (`spec.ephemeralContainers`) | Только уровень container |
 
 ### SPE-сценарии (Exception tracks)
 
@@ -672,7 +672,7 @@ gator verify -v ./rendered
 go run $constraint_testgen coverage -tests-root ./ -format table
 ```
 
-### Шаг 7: Итерируйтесь
+### Шаг 7: Повторяйте итерации
 
 Повторяйте generate → проверка rendered → coverage → gator, пока:
 - Не исчезнут пропущенные обязательные сценарии

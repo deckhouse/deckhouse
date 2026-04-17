@@ -281,6 +281,7 @@ conntrack
 Conntrack
 Container
 ConstraintTemplate
+ConstraintTemplates
 Constraint
 containerd
 ContainerResourcePolicy
@@ -1402,6 +1403,7 @@ struct
 Struct
 stylesheets
 subdomains
+subdomain
 Subfolder
 subGID
 subGIDs
@@ -1765,6 +1767,8 @@ ZvirtInstanceClass
 валидирует
 валидируется
 валидируются
+валиден
+валидным
 вебхук
 вебхука
 вебхуки
@@ -1913,6 +1917,7 @@ ZvirtInstanceClass
 использов
 использовать
 ит
+итерации
 ится
 иться
 й
@@ -2159,6 +2164,7 @@ ZvirtInstanceClass
 парсить
 паттерн
 паттерна
+паттерны
 паттернов
 паттерну
 патч
@@ -2170,6 +2176,7 @@ ZvirtInstanceClass
 патчится
 патчить
 Перебалансировке
+Перегенерируйте
 Перевыкат
 перевыписывает
 перевыпуск

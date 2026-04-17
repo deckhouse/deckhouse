@@ -1,4 +1,4 @@
-# constraint_testgen
+# `constraint_testgen`
 
 `constraint_testgen` is a utility for maintaining Gatekeeper test suites for Admission Policy Engine constraints.
 

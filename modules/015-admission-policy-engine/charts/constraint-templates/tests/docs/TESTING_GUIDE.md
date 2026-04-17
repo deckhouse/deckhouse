@@ -485,10 +485,10 @@ A **scenario** is a specific test angle for a field. Required scenarios define t
 | -------------------- | ------------------------------------------------------- | -------------------- |
 | `positive`           | Field set to a compliant value → no violation           | All object fields    |
 | `negative`           | Field set to a non-compliant value → violation          | All object fields    |
-| `absent`             | Field not set at all → depends on defaultBehavior       | All object fields    |
+| `absent`             | Field not set at all → depends on `defaultBehavior`     | All object fields    |
 | `multiContainer`     | Multiple containers, one violating → violation          | Container-level only |
-| `initContainer`      | initContainer variant of the check                      | Container-level only |
-| `ephemeralContainer` | ephemeralContainer variant (`spec.ephemeralContainers`) | Container-level only |
+| `initContainer`      | `initContainer` variant of the check                    | Container-level only |
+| `ephemeralContainer` | `ephemeralContainer` variant (`spec.ephemeralContainers`) | Container-level only |
 
 ### SPE scenarios (Exception tracks)
 
