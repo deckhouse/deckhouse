@@ -47,6 +47,14 @@ func (svc *Service) Build() error {
 		return fmt.Errorf("hugo build: %w", err)
 	}
 
+	err = svc.publishPartialStaticAssets()
+	if err != nil {
+		svc.isReady.Store(false)
+		status = "fail"
+
+		return fmt.Errorf("publish partial static assets: %w", err)
+	}
+
 	for _, lang := range []string{"ru", "en"} {
 		// Sync modules folder
 		glob := filepath.Join(svc.destDir, "public", lang, "modules/*")
@@ -105,6 +113,7 @@ func (svc *Service) buildHugo() error {
 			paths := []string{
 				filepath.Join(svc.baseDir, contentDir, moduleName),
 				filepath.Join(svc.baseDir, modulesDir, moduleName),
+				filepath.Join(svc.baseDir, partialsDir, moduleName),
 			}
 
 			for _, path := range paths {
@@ -164,6 +173,34 @@ func removeGlob(path string) error {
 		err = os.RemoveAll(item)
 		if err != nil {
 			return fmt.Errorf("remove all: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (svc *Service) publishPartialStaticAssets() error {
+	sourceRoot := filepath.Join(svc.baseDir, partialsDir)
+	if _, err := os.Stat(sourceRoot); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return fmt.Errorf("stat source root: %w", err)
+	}
+
+	syncer := fsync.NewSyncer()
+	syncer.NoChmod = true
+	syncer.NoTimes = true
+
+	for _, lang := range []string{"ru", "en"} {
+		targetRoot := filepath.Join(svc.baseDir, "public", lang, "modules")
+		if err := os.MkdirAll(targetRoot, 0700); err != nil {
+			return fmt.Errorf("mkdir %s: %w", targetRoot, err)
+		}
+
+		if err := syncer.Sync(targetRoot, sourceRoot); err != nil {
+			return fmt.Errorf("sync %s to %s: %w", sourceRoot, targetRoot, err)
 		}
 	}
 

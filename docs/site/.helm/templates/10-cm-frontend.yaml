@@ -15,8 +15,10 @@ data:
     }
 
     http {
-      include       /usr/conf/mime.types;
+      include       /etc/nginx/mime.types;
       default_type  application/octet-stream;
+      lua_package_path "/etc/nginx/lua/?.lua;;";
+      lua_shared_dict reusable_content_metrics 1m;
 
       # Add MIME type for ES modules (.mjs files)
       types {
@@ -103,6 +105,10 @@ data:
             access_log  off;
             add_header Content-Type text/plain;
             return 200;
+        }
+
+        location = /reusable-content-metrics {
+            content_by_lua_file /etc/nginx/lua/metrics.lua;
         }
 
         location /downloads/deckhouse-cli-trdl {
@@ -252,6 +258,14 @@ data:
         # Requests for defaul DKP docs ../documentation/v1/...
         # This is the default URL for DKP documentation and it is indexed by search engines.
         location ~* ^/products/kubernetes-platform/documentation/v1/(.*)$ {
+            set $reusable_content_raw_uri /__raw_dkp_docs_default/$1;
+            set $reusable_content_fetch_prefix /__module_include;
+            set $reusable_content_public_prefix /modules;
+            content_by_lua_file /etc/nginx/lua/render_page.lua;
+        }
+
+        location ~* ^/__raw_dkp_docs_default/(.*)$ {
+            internal;
             # $channel_name is mapped to $channel_version (see map above)
 {{- if eq $.Values.werf.env "web-production" }}
             set $channel_name "stable";
@@ -261,9 +275,13 @@ data:
             set $doc_path "$1";
 
             # Serve doc for the stable channel.
-            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/${doc_path} break;
-            rewrite /$    /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path}index.html break;
-            rewrite [^/]$ /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path} break;
+            if ($doc_path ~* "^(images|presentations|assets)/") {
+                rewrite ^ /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/${doc_path} break;
+            }
+            if ($doc_path ~ "/$") {
+                rewrite ^ /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path}index.html break;
+            }
+            rewrite ^ /deckhouse-{{ $.Values.werf.env }}/$channel_version/docs-dkp/$lang/${doc_path} break;
 
             limit_except GET {
                 deny all;
@@ -290,15 +308,27 @@ data:
 
         # Requests for specific DKP docs version
         location ~* ^/products/kubernetes-platform/documentation/(latest|v1\.[0-9]+)/(.*)$ {
+            set $reusable_content_raw_uri /__raw_dkp_docs_versioned/$1/$2;
+            set $reusable_content_fetch_prefix /__module_include;
+            set $reusable_content_public_prefix /modules;
+            content_by_lua_file /etc/nginx/lua/render_page.lua;
+        }
+
+        location ~* ^/__raw_dkp_docs_versioned/(latest|v1\.[0-9]+)/(.*)$ {
+            internal;
             set $doc_version "$1";
             set $doc_path "$2";
             limit_except GET {
                 deny all;
             }
 
-            rewrite .+/documentation/[^/]+/(images|presentations|assets)/.+$    /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/${doc_path} break;
-            rewrite /$    /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path}index.html break;
-            rewrite [^/]$ /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path} break;
+            if ($doc_path ~* "^(images|presentations|assets)/") {
+                rewrite ^ /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/${doc_path} break;
+            }
+            if ($doc_path ~ "/$") {
+                rewrite ^ /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path}index.html break;
+            }
+            rewrite ^ /deckhouse-{{ $.Values.werf.env }}/$doc_version/docs-dkp/$lang/${doc_path} break;
 
             resolver                d8-kube-dns.kube-system.svc.cluster.local ipv6=off;
             proxy_cache             dcache;
@@ -352,6 +382,17 @@ data:
 
         location / {
             try_files /$lang/$uri /$lang/$uri/index.html /$lang/$uri/ $uri $uri/index.html $uri/ =404;
+        }
+
+        location ^~ /__module_include/ {
+            internal;
+            rewrite ^/__module_include/(.*)$ /modules/$1 break;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Original-URI $request_uri;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_pass http://moduleslibrary:8080;
         }
       }
     }

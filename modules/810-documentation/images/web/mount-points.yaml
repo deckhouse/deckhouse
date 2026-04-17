@@ -1,5 +1,5 @@
 files:
-- /opt/nginx-static/conf/nginx.conf
+- /etc/nginx/nginx.conf
 dirs:
 - /app/config
 - /app/modules/en

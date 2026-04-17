@@ -10,6 +10,7 @@
         {{- end }}
         {{- range $pages }}
           {{- if eq (strings.ToLower .File.TranslationBaseName) "readme" }}{{ continue }}{{ end }}
+          {{- if .Params.renderAsPartial }}{{ continue }}{{ end }}
           {{- template "moduleSidebarPage" (dict "ctx" $ "Page" . ) }}
         {{- end }}
       </ul>

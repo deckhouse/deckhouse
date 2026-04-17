@@ -140,6 +140,36 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			true,
 		},
 		{
+			"docs/partials/setup-guide.md",
+			"/app/hugo/content/modules/moduleName/stable/partials/setup-guide.md",
+			true,
+		},
+		{
+			"docs/partials/setup-guide_RU.md",
+			"/app/hugo/content/modules/moduleName/stable/partials/setup-guide.ru.md",
+			true,
+		},
+		{
+			"docs/partials/setup/basic-setup-v2.md",
+			"/app/hugo/content/modules/moduleName/stable/partials/setup/basic-setup-v2.md",
+			true,
+		},
+		{
+			"docs/partials/static/diagram.png",
+			"/app/hugo/partials-static/modules/moduleName/stable/partials/static/diagram.png",
+			true,
+		},
+		{
+			"docs/partials/setup/static/bad.md",
+			"",
+			false,
+		},
+		{
+			"docs/partials/BadName.md",
+			"",
+			false,
+		},
+		{
 			"module.yaml",
 			"/app/hugo/data/modules/moduleName/stable/module.yaml",
 			true,

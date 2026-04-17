@@ -35,10 +35,12 @@ build:
 ---
 # Files.Get prefix
 {{- $_ := set . "prefix" "" }}
+{{- $_ := set . "DistroPackagesProxy" "" }}
+{{- $_ := set . "GOPROXY" "https://proxy.golang.org,direct" }}
 ---
 # Base Images not cached
 {{- $_ := include "parse_base_images_map" . -}}
-
+---
 {{- $context := . }}
 {{- $_ := set $context "ModuleName" "website-docs" }}
 {{- $_ := set $context "ImageName" "builder" }}

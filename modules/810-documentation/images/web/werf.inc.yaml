@@ -9,14 +9,17 @@
 {{- else }}
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-nginx-lua.inc.yaml" .ModulePath)) . }}
 
 ---
 # Nginx for serving documentation static files
 # Image documentation/web (for website)
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/nginx-static
+fromImage: docs-nginx-lua-runtime-artifact
 git:
 {{- include "image mount points" . }}
+- add: /docs/documentation/.werf/lua
+  to: /etc/nginx/lua
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}/static
   add: /app/_site/documentation
@@ -37,7 +40,11 @@ import:
   - ru
 imageSpec:
   config:
-    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+    entrypoint: [ "/usr/local/nginx/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
+    env:
+      PATH: "$PATH:/usr/local/nginx/sbin:/usr/local/nginx/bin:/usr/local/bin"
+      LUA_PATH: "/usr/local/share/luajit-2.1.0-beta3/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
+      LUA_CPATH: "/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
 ---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}

@@ -40,7 +40,7 @@ spec:
         lifecycle:
           preStop:
             exec:
-              command: ["/opt/nginx-static/sbin/nginx", "-s", "quit"]
+              command: ["/usr/local/nginx/sbin/nginx", "-s", "quit"]
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -51,7 +51,7 @@ spec:
           - name: config
             mountPath: /app/config
           - name: nginx-config
-            mountPath: /opt/nginx-static/conf/nginx.conf
+            mountPath: /etc/nginx/nginx.conf
             subPath: nginx.conf
           - mountPath: /tmp
             name: tmp

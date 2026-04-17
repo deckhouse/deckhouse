@@ -40,6 +40,7 @@ const (
 	hugoInitDir = "/app/hugo-init/"
 	modulesDir  = "data/modules/"
 	contentDir  = "content/modules/"
+	partialsDir = "partials-static/modules/"
 )
 
 type Service struct {

@@ -11,7 +11,7 @@
       {{- $moduleSection := printf "modules/%s/%s" $moduleName $moduleChannel }}
       {{- range $.Site.Pages }}
         {{- $relPermalinkWithoutLang := replaceRE `/(ru/|en/)` "/" .RelPermalink }}
-        {{- if and (hasPrefix $relPermalinkWithoutLang (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not (hasSuffix $relPermalinkWithoutLang "/configuration.html")) (not (hasSuffix $relPermalinkWithoutLang "/cr.html")) }}
+        {{- if and (hasPrefix $relPermalinkWithoutLang (printf "/%s/" $moduleSection)) (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (not .Params.renderAsPartial) (not (hasSuffix $relPermalinkWithoutLang "/configuration.html")) (not (hasSuffix $relPermalinkWithoutLang "/cr.html")) }}
           {{- if .File }}
             {{- if not $first -}},{{- end -}}
             {{- $first = false -}}
