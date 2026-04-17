@@ -23,6 +23,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Completed')].status
       name: Completed
       type: string
+    - jsonPath: .status.conditions[?(@.type=='Completed')].reason == Succeeded
+      name: Succeeded
+      type: bool
     - jsonPath: .status.conditions[?(@.type=='Completed')].message
       name: MSG
       type: string
