@@ -7,11 +7,11 @@
 {{- end -}}
 
 {{- define "dvp_ccm_pdb_annotations" -}}
-checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
 {{- end -}}
 
 {{- define "dvp_ccm_pod_annotations" -}}
-checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registration.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registration.yaml") . | toString) (include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | toString) | sha256sum }}
 {{- end -}}
 
 {{- define "dvp_ccm_envs" -}}
@@ -46,7 +46,7 @@ checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registra
 {{- $_ := set $ccmConfig "image" (include "helm_lib_module_image" (list . "cloudControllerManager")) -}}
 {{- $_ := set $ccmConfig "containerName" "dvp-cloud-controller-manager" -}}
 {{- $_ := set $ccmConfig "additionalArgs" (include "dvp_ccm_args" (dict "controllers" $ccmEnabledControllers) | fromYamlArray) -}}
-{{- $_ := set $ccmConfig "additionalEnv" (include "dvp_ccm_envs" . | fromYamlArray) -}}
+{{- $_ := set $ccmConfig "additionalEnvs" (include "dvp_ccm_envs" . | fromYamlArray) -}}
 {{- $_ := set $ccmConfig "additionalPodAnnotations" (include "dvp_ccm_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $ccmConfig "additionalPDBAnnotations" (include "dvp_ccm_pdb_annotations" . | fromYaml) -}}
 {{- $_ := set $ccmConfig "vpaEnabled" true -}}
