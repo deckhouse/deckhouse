@@ -35,6 +35,10 @@ var (
 	emptyLogger   Logger = newExternalLogger(external.NewSilentLogger())
 )
 
+const (
+	ProcessPreflight = "preflight"
+)
+
 type Logger interface {
 	FlushAndClose() error
 
@@ -117,24 +121,30 @@ func initExternalKlog(logger *ExternalLogger) error {
 	return nil
 }
 
-func initLoggerWithOptions(loggerType string, opts LoggerOptions) error {
+func getExternalLoggerWrapper(loggerType string, opts LoggerOptions) (*ExternalLogger, error) {
 	extOpts := external.LoggerOptions{
 		OutStream:   opts.OutStream,
 		Width:       opts.Width,
 		IsDebug:     opts.IsDebug,
 		DebugStream: opts.DebugStream,
+		AdditionalProcesses: external.Processes{
+			ProcessPreflight: external.StyleEntry{
+				Title:         "🎈 ~ Preflight checks %s",
+				OptionsSetter: CommonOptions,
+			},
+		},
 	}
 
 	extLogger, err := external.NewLoggerWithOptions(external.Type(loggerType), extOpts)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	l := &ExternalLogger{logger: extLogger}
-	defaultLogger = l
 
 	err = initExternalKlog(l)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Mute Shell-Operator logs
 	log.Default().SetLevel(log.LevelFatal)
@@ -145,6 +155,17 @@ func initLoggerWithOptions(loggerType string, opts LoggerOptions) error {
 		// Wrap them with our default logger
 		log.Default().SetOutput(defaultLogger)
 	}
+
+	return l, nil
+}
+
+func initLoggerWithOptions(loggerType string, opts LoggerOptions) error {
+	l, err := getExternalLoggerWrapper(loggerType, opts)
+	if err != nil {
+		return err
+	}
+
+	defaultLogger = l
 
 	return nil
 }
@@ -337,8 +358,4 @@ func GetSilentLogger() Logger {
 	case *external.TeeLogger:
 		return ext.NewSilentLogger()
 	}
-}
-
-func NewSilentLogger() Logger {
-	return newExternalLogger(external.NewSilentLogger())
 }

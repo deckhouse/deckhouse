@@ -171,3 +171,34 @@ devenv:
 
 devstop:
 	./hack/devenv/stop.sh
+
+clean:
+	rm -f bin/dhctl
+
+set-default-k8s-version:
+	$(eval DEFAULT_KUBERNETES_VERSION := $(shell yq -r '.k8s | to_entries | map(select(.value.default == true)) | .[0].key' ../candi/version_map.yml))
+
+build/with-default-k8s: set-default-k8s-version build
+
+build/test/with-default-k8s: set-default-k8s-version build-test
+
+deploy-to-container: SHELL := /usr/bin/env bash
+deploy-to-container:
+	if [ -z "$$CONTAINER_ID" ]; then \
+        readarray -t ids < <(docker ps --format "{{.ID}}"); \
+		count="$${#ids[@]}"; \
+		if [[ "$$count" == "1" ]]; then \
+			export CONTAINER_ID="$$ids"; \
+            echo "Found container to deploy: $$ids"; \
+		else \
+			echo "Found $$count containers. Please pass CONTAINER_ID to deploy"; \
+			exit 1; \
+		fi; \
+	fi; \
+	if [ -z "$${CONTAINER_ID}" ]; then \
+	  echo "Cannot pass to container. CONTAINER_ID is not set"; \
+	  exit 1; \
+	fi; \
+	docker cp bin/dhctl "$$CONTAINER_ID:/new-dhctl"
+
+build/deploy-to-container: clean build/with-default-k8s deploy-to-container

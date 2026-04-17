@@ -101,7 +101,7 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 				retry.WithLogger(c.loggerProvider()),
 			)
 
-		return retry.NewSilentLoopWithParams(loopParams).
+		err := retry.NewSilentLoopWithParams(loopParams).
 			BreakIf(c.shellErrorBreakPredicate).
 			RunContext(ctx, func() error {
 				cmd := c.nodeInterface.Command("echo $SHELL")
@@ -121,7 +121,14 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 
 				return nil
 			})
+		if err != nil {
+			return err
+		}
+
+		c.loggerProvider().InfoF("OK!")
+		return nil
 	})
+
 }
 
 func (c *DependenciesChecker) checkDependencies(ctx context.Context) error {

@@ -117,7 +117,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	if ready {
-		log.Success("Bashible already run! Skip bashible install\n\n")
+		log.Success("Bashible already run! Skip bashible install\n")
 		return nil
 	}
 
