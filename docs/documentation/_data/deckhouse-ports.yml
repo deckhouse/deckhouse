@@ -375,8 +375,8 @@ groups:
   - ports: "4135-4199"
     protocol: TCP
     description:
-      en: "`virtualization` KubeVirt live migration tunnels between cluster nodes"
-      ru: "Туннели live migration KubeVirt модуля `virtualization` между узлами кластера"
+      en: "`virtualization` live migration tunnels between cluster nodes"
+      ru: "Туннели live migration модуля `virtualization` между узлами кластера"
   - ports: "4280"
     protocol: TCP
     description:
