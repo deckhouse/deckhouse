@@ -75,30 +75,6 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 	return static, config, values, nil
 }
 
-// readOptionalFile reads the file at path. If the file does not exist, it
-// returns (nil, nil) instead of an error. Any other read error is wrapped.
-func readOptionalFile(path string) ([]byte, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("read file '%s': %w", path, err)
-	}
-	return data, nil
-}
-
-// readSettingsSchema returns the OpenAPI schema for user-configurable values.
-// It prefers openapi/settings.yaml and silently falls back to the legacy
-// openapi/config-values.yaml when settings.yaml is absent.
-func readSettingsSchema(schemasDir string) ([]byte, error) {
-	data, err := readOptionalFile(filepath.Join(schemasDir, settingsFile))
-	if err != nil || data != nil {
-		return data, err
-	}
-	return readOptionalFile(filepath.Join(schemasDir, configValuesFile))
-}
-
 // loadPackageSchemas reads settings.yaml (or legacy config-values.yaml) and
 // values.yaml from the specified directory. Package schemas:
 //
@@ -108,14 +84,29 @@ func readSettingsSchema(schemasDir string) ([]byte, error) {
 func loadPackageSchemas(packageDir string) ([]byte, []byte, error) {
 	schemasDir := filepath.Join(packageDir, openAPIDir)
 
-	configValues, err := readSettingsSchema(schemasDir)
+	settingsPath := filepath.Join(schemasDir, settingsFile)
+	configValues, err := os.ReadFile(settingsPath)
 	if err != nil {
-		return nil, nil, err
+		if !os.IsNotExist(err) {
+			return nil, nil, fmt.Errorf("read file '%s': %w", settingsPath, err)
+		}
+		legacyPath := filepath.Join(schemasDir, configValuesFile)
+		configValues, err = os.ReadFile(legacyPath)
+		if err != nil {
+			if !os.IsNotExist(err) {
+				return nil, nil, fmt.Errorf("read file '%s': %w", legacyPath, err)
+			}
+			configValues = nil
+		}
 	}
 
-	values, err := readOptionalFile(filepath.Join(schemasDir, valuesFile))
+	valuesPath := filepath.Join(schemasDir, valuesFile)
+	values, err := os.ReadFile(valuesPath)
 	if err != nil {
-		return nil, nil, err
+		if !os.IsNotExist(err) {
+			return nil, nil, fmt.Errorf("read file '%s': %w", valuesPath, err)
+		}
+		values = nil
 	}
 
 	return configValues, values, nil
