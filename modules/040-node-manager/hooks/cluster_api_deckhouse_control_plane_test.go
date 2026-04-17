@@ -43,6 +43,8 @@ metadata:
 status:
   externalManagedControlPlane: true
   initialized: true
+  initialization:
+    controlPlaneInitialized: true
   ready: true
 `
 	)
