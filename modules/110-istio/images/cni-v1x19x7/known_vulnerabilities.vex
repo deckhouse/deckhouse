@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-7d2e8c4a1f903b5c86d7e9a2b4c6f8e1d0a3b5c7e9f2d4a6b8c0e2f4d6a8b0c2",
+  "@id": "https://openvex.dev/docs/public/vex-477ba26cfd18918cfff5cdea2bb17b214f57c82f8be10ccb682da7dc16b1d038",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
@@ -17,7 +17,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Образ Istio CNI включает бинарники istio-cni (/opt/cni/bin/istio-cni) и install-cni (/usr/local/bin/install-cni), собранные из исходников Istio 1.19.x; оба тянут google.golang.org/grpc указанной версии. Уязвимость CVE-2026-33186 проявляется только на gRPC-серверах с авторизацией по псевдо-заголовку :path (в т.ч. google.golang.org/grpc/authz), при политике с явными deny для канонических путей и разрешением остальных запросов по умолчанию. Указанные бинарники CNI не предоставляют такой конфигурации gRPC-сервера и path-based interceptors, поэтому описанный обход авторизации на исполняемом пути недоступен.",
       "timestamp": "2026-03-25T08:27:25.189905279Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.16.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Образ Istio CNI включает бинарники istio-cni (/opt/cni/bin/istio-cni) и install-cni (/usr/local/bin/install-cni), использующие go.opentelemetry.io/otel/sdk указанной версии как зависимость. Уязвимость CVE-2026-39883 связана с детектированием ресурсов в SDK: на платформах BSD и Solaris вызывается утилита kenv без абсолютного пути, что теоретически допускает подмену через PATH (CWE-426), см. GHSA-hfvc-g4fc-pqhx. Образ выполняется в контейнере на Linux; указанный путь исполнения относится к BSD/Solaris и на типовом рабочем окружении Deckhouse не задействован, поэтому эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-04-13T11:01:27.637596278Z"
     }
   ],
-  "timestamp": "2026-03-25T08:27Z"
+  "timestamp": "2026-04-13T11:02Z"
 }
