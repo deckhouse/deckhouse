@@ -27,7 +27,7 @@ status:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'get package repository: packagerepositories.deckhouse.io "deckhouse"
       not found'
-    reason: Failed
+    reason: ScanFailed
     status: "True"
     type: Completed
   startTime: "2025-10-31T12:00:00Z"

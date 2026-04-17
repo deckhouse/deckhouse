@@ -26,7 +26,7 @@ status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: ""
-    reason: Succeeded
+    reason: ScanSucceeded
     status: "True"
     type: Completed
   packages:
@@ -54,7 +54,7 @@ status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: ""
-    reason: Succeeded
+    reason: ScanSucceeded
     status: "True"
     type: LastScanSucceeded
   phase: Active

@@ -27,7 +27,7 @@ status:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'failed to list packages: failed to list tags: assert.AnError general
       error for testing'
-    reason: Failed
+    reason: ScanFailed
     status: "True"
     type: Completed
   startTime: "2025-10-31T12:00:00Z"
@@ -46,7 +46,7 @@ status:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'failed to list packages: failed to list tags: assert.AnError general
       error for testing'
-    reason: Failed
+    reason: ScanFailed
     status: "False"
     type: LastScanSucceeded
   syncTime: null
