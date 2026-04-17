@@ -51,7 +51,7 @@ spec:
 ## Балансировка gRPC
 
 {% alert level="warning" %}
-Чтобы балансировка gRPC-сервисов заработала автоматически, присвойте имя с префиксом или значением `grpc` для порта в соответствующем Service.
+Чтобы балансировка gRPC-сервисов заработала автоматически, присвойте имя с префиксом или значением `grpc` для порта в соответствующем сервисе.
 {% endalert %}
 
 ## Locality Failover
@@ -524,7 +524,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Разрешить любые запросы только кластеров foo или bar, при этом из неймспейса baz
+### Разрешить любые запросы только от сущностей из неймспейса baz кластеров foo или bar
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -658,15 +658,15 @@ annotations:
 
 ## Обновление control plane Istio
 
-* Deckhouse Kubernetes Platform позволяет инсталлировать несколько версий control plane одновременно:
-* Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
-* Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
+* Deckhouse Kubernetes Platform позволяет установить несколько версий control plane одновременно:
+  * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
+  * Остальные — дополнительные, обслуживают неймспейсы или поды с явным указанием версии (лейбл у неймспейса или пода `istio.io/rev: v1x21`). Настраиваются параметром [`additionalVersions`](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Алгоритм обновления (для примера, с версии `1.21` на версию `1.25`):
   * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.25"]`).
   * Дождаться появления соответствующего пода `istiod-v1x25-xxx-yyy` в неймспейсе `d8-istio`.
-  * Для каждого прикладного неймспейса, где включен istio:
+  * Для каждого прикладного неймспейса, где включен Istio:
     * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x25`;
     * по очереди пересоздать поды в неймспейсе, параллельно контролируя работоспособность приложения.
   * Поменять настройку `globalVersion` на `1.25` и удалить `additionalVersions`.
