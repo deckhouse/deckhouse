@@ -160,6 +160,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
+	if isMaintenanceMode(cpn) {
+		return reconcile.Result{}, nil
+	}
+
 	currentOps, err = r.ensureOperationsExist(ctx, cpn, states, currentOps, logger)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -1078,4 +1082,9 @@ func findExpiringCertsMessage(cpn *controlplanev1alpha1.ControlPlaneNode) string
 		}
 	}
 	return ""
+}
+
+func isMaintenanceMode(cpn *controlplanev1alpha1.ControlPlaneNode) bool {
+	_, exists := cpn.Labels["maintenance"]
+	return exists
 }
