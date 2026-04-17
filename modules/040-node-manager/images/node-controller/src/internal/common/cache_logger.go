@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -170,7 +169,9 @@ type cachedType struct {
 	list client.ObjectList
 }
 
-// knownCachedTypes returns the list of object types that controllers may cache.
+// knownCachedTypes returns the list of object types that controllers actually cache.
+// IMPORTANT: Do NOT add types that have DisableFor set (Pod, Lease, Endpoints) —
+// cache.List creates an informer on first call, defeating DisableFor.
 func knownCachedTypes() []cachedType {
 	unstrList := func(group, version, kind string) client.ObjectList {
 		u := &unstructured.UnstructuredList{}
@@ -180,10 +181,7 @@ func knownCachedTypes() []cachedType {
 
 	return []cachedType{
 		{"v1/Node", &corev1.NodeList{}},
-		{"v1/Pod", &corev1.PodList{}},
 		{"v1/Secret", &corev1.SecretList{}},
-		{"v1/Endpoints", &corev1.EndpointsList{}},
-		{"coordination.k8s.io/v1/Lease", &coordinationv1.LeaseList{}},
 		{"deckhouse.io/v1/NodeGroup", &v1.NodeGroupList{}},
 		{"machine.sapcloud.io/v1alpha1/Machine", unstrList("machine.sapcloud.io", "v1alpha1", "MachineList")},
 		{"machine.sapcloud.io/v1alpha1/MachineDeployment", unstrList("machine.sapcloud.io", "v1alpha1", "MachineDeploymentList")},
