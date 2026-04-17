@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 13,
+  "version": 14,
   "statements": [
     {
       "vulnerability": {
@@ -283,8 +283,80 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Использование github.com/containerd/containerd ограничено операциями с OCI-образами и манифестами, а не компонентами CRI или runtime, в которых проявляется уязвимость.",
       "timestamp": "2025-11-13T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33747"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.13.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/moby/buildkit является транзитивной, поступающей через цепочку werf. d8 delivery-kit не использует BuildKit frontend напрямую и не обрабатывает недоверенные Dockerfile через BuildKit API, что исключает возможность эксплуатации уязвимости записи файлов за пределы state directory.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33748"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.13.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/moby/buildkit является транзитивной, поступающей через цепочку werf. d8 delivery-kit не обрабатывает произвольные Git URL с фрагментами #ref:subdir через BuildKit, что исключает возможность эксплуатации уязвимости path traversal.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34165"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость связана с обработкой вредоносных .idx файлов, вызывающих асимметричное потребление памяти. В типовой модели эксплуатации deckhouse-tools web источники Git-репозиториев контролируются администратором, что не предоставляет нарушителю возможности подменить .idx файлы.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33762"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость связана с отсутствием валидации длины префикса имени пути в декодере Index v4, вызывающей panic. В типовой модели эксплуатации deckhouse-tools web источники Git-репозиториев контролируются администратором, что не предоставляет нарушителю возможности подменить индексные файлы.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/docker/docker зафиксирована на версии v25.0.6 через replace-директиву в deckhouse-cli для обеспечения совместимости с цепочкой werf. d8 delivery-kit использует docker исключительно как клиентскую библиотеку Docker API, уязвимый функционал Docker Engine не входит в исполняемый путь.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/docker/docker зафиксирована на версии v25.0.6 через replace-директиву в deckhouse-cli для обеспечения совместимости с цепочкой werf. d8 delivery-kit использует docker исключительно как клиентскую библиотеку Docker API, уязвимый функционал Docker Engine не входит в исполняемый путь.",
+      "timestamp": "2026-04-17T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-03-05T12:00:00Z"
+  "last_updated": "2026-04-17T12:00:00Z"
 }

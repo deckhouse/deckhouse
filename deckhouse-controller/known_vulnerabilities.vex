@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 14,
+  "version": 15,
   "statements": [
     {
       "vulnerability": {
@@ -161,8 +161,80 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал, связанный с шифрованием и криптографическими операциями pypi/cryptography версии 44.0.1, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду.",
       "timestamp": "2026-02-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34986"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-jose/go-jose/v4@v4.1.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/go-jose/go-jose/v4 версии 4.1.3 является транзитивной зависимостью, поступающей через delivery-kit-sdk (werf). Функционал JWE-дешифрования с использованием уязвимого кода не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35206"
+      },
+      "products": [
+        {"@id": "pkg:golang/helm.sh/helm/v3@v3.15.4"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm v3.15.4 CVE-2026-35206 — версия helm не обновляется без соответствующего повышения версии компонентов Kubernetes. Уязвимый функционал не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27459"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с pyOpenSSL версии 24.3.0, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27448"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pyOpenSSL@24.3.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с pyOpenSSL версии 24.3.0, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk), go-containerregistry и addon-operator. Уязвимый функционал Docker Engine API не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller. Обновление зависимости невозможно без синхронного обновления всей цепочки werf/delivery-kit.",
+      "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/docker@v28.5.2+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk), go-containerregistry и addon-operator. Уязвимый функционал Docker Engine API не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller. Обновление зависимости невозможно без синхронного обновления всей цепочки werf/delivery-kit.",
+      "timestamp": "2026-04-17T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-03-16T12:00:00Z"
+  "last_updated": "2026-04-17T12:00:00Z"
 }
