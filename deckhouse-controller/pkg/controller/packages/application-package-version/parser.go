@@ -38,6 +38,10 @@ const (
 	// settingsSchemaFile is the OpenAPI schema validating user-supplied Application.spec.settings.
 	settingsSchemaFile = "openapi/settings.yaml"
 
+	// legacySettingsSchemaFile is the previous name of settingsSchemaFile, retained
+	// for backward compatibility with packages built before the rename.
+	legacySettingsSchemaFile = "openapi/config-values.yaml"
+
 	// maxMetadataFileSize limits the size of individual metadata files extracted from tar archives.
 	// This guards against OOM from malicious or corrupted images containing oversized entries.
 	maxMetadataFileSize = 1 << 20 // 1 MB
@@ -144,7 +148,11 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 			if _, err = io.Copy(r.valuesSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
-		case settingsSchemaFile:
+		case settingsSchemaFile, legacySettingsSchemaFile:
+			// First entry wins — real packages contain only one of the two names.
+			if r.settingsSchemaReader.Len() > 0 {
+				continue
+			}
 			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
