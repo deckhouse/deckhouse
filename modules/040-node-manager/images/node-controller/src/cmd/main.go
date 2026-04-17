@@ -19,6 +19,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
@@ -134,6 +136,13 @@ func main() {
 	go func() {
 		if mgr.GetCache().WaitForCacheSync(ctx) {
 			common.LogCacheContents(ctx, mgr.GetCache(), setupLog)
+		}
+	}()
+
+	go func() {
+		setupLog.Info("starting pprof server", "addr", ":6060")
+		if err := http.ListenAndServe(":6060", nil); err != nil {
+			setupLog.Error(err, "pprof server failed")
 		}
 	}()
 
