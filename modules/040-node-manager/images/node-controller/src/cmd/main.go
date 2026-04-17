@@ -32,6 +32,8 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -84,51 +86,34 @@ func main() {
 	cfg := ctrl.GetConfigOrDie()
 	ctx := ctrl.SetupSignalHandler()
 
-	// Webhook manager — separate cache, no informers for Node/Endpoints.
-	webhookCacheOpts, webhookClientOpts := common.WebhookCacheOptions()
-	webhookMgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	var disableFor []client.Object
+	disableFor = append(disableFor, common.ControllerDisableFor()...)
+	disableFor = append(disableFor, webhook.DisableFor()...)
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		WebhookServer: ctrlwebhook.NewServer(ctrlwebhook.Options{
 			Port: 9443,
 		}),
-		Metrics:                metricsserver.Options{BindAddress: "0"},
-		HealthProbeBindAddress: "0",
-		Cache:                  webhookCacheOpts,
-		Client:                 webhookClientOpts,
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start webhook manager")
-		os.Exit(1)
-	}
-
-	if err = webhook.SetupWithManager(webhookMgr); err != nil {
-		setupLog.Error(err, "unable to setup webhooks")
-		os.Exit(1)
-	}
-
-	go func() {
-		setupLog.Info("starting webhook manager")
-		if err := webhookMgr.Start(ctx); err != nil {
-			setupLog.Error(err, "webhook manager failed")
-			os.Exit(1)
-		}
-	}()
-
-	// Controller manager — full cache for controllers, no webhook server.
-	// Secrets are cached only from d8-cloud-instance-manager and kube-system namespaces.
-	// Machine/MachineDeployment are cached only from d8-cloud-instance-manager.
-	// Pod and Lease bypass the cache (used rarely by fencing controller).
-	ctrlMgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: metricsAddr,
 		},
 		HealthProbeBindAddress: probeAddr,
-		Cache:                  common.ControllerCacheOptions(ctx, setupLog),
-		Client:                 common.ControllerClientOptions(),
+		Cache: cache.Options{
+			DefaultTransform: common.CacheTransformWithLogging(ctx, setupLog),
+			ByObject:         common.CacheByObject(),
+		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{DisableFor: disableFor},
+		},
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start controller manager")
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err = webhook.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)
 	}
 
@@ -140,32 +125,29 @@ func main() {
 	}
 	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
-	if err = register.SetupAll(ctrlMgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}
 
-	//+kubebuilder:scaffold:builder
-
-	if err := ctrlMgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := ctrlMgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
-	// Log cache contents after sync.
 	go func() {
-		if ctrlMgr.GetCache().WaitForCacheSync(ctx) {
-			common.LogCacheContents(ctx, ctrlMgr.GetCache(), setupLog)
+		if mgr.GetCache().WaitForCacheSync(ctx) {
+			common.LogCacheContents(ctx, mgr.GetCache(), setupLog)
 		}
 	}()
 
-	setupLog.Info("starting controller manager")
-	if err := ctrlMgr.Start(ctx); err != nil {
-		setupLog.Error(err, "problem running controller manager")
+	setupLog.Info("starting manager")
+	if err := mgr.Start(ctx); err != nil {
+		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
 }
