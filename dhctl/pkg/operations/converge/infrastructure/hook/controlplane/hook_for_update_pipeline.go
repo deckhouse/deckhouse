@@ -26,6 +26,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/settings"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -35,7 +39,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -46,6 +49,7 @@ type ClientSwitcher interface {
 type HookForUpdatePipeline struct {
 	*Checker
 	kubeGetter        kubernetes.KubeClientProviderWithCtx
+	sshProvider       libcon.SSHProvider
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
@@ -54,6 +58,8 @@ type HookForUpdatePipeline struct {
 
 func NewHookForUpdatePipeline(
 	kubeGetter kubernetes.KubeClientProviderWithCtx,
+	sshProvider libcon.SSHProvider,
+	providerSettings *settings.BaseProviders,
 	nodeToHostForChecks map[string]string,
 	clusterUUID string,
 	commanderMode bool,
@@ -64,31 +70,12 @@ func NewHookForUpdatePipeline(
 	}
 
 	if !commanderMode && !skipChecks {
-		kubeClient, err := kubeGetter.KubeClientCtx(context.Background())
-		if err != nil {
-			panic("Could not get kube client: " + err.Error())
-		}
-
-		// TODO remove it
-		cl := kubeClient.NodeInterfaceAsSSHClient()
-		if cl == nil {
-			panic("Node interface is not ssh")
-		}
-
 		checkers = append(
 			checkers,
 			NewKubeProxyChecker().
 				WithExternalIPs(nodeToHostForChecks).
 				WithClusterUUID(clusterUUID).
-				WithSSHCredentials(session.Input{
-					User:        cl.Session().User,
-					Port:        cl.Session().Port,
-					BastionHost: cl.Session().BastionHost,
-					BastionPort: cl.Session().BastionPort,
-					BastionUser: cl.Session().BastionUser,
-					ExtraArgs:   cl.Session().ExtraArgs,
-					BecomePass:  cl.Session().BecomePass,
-				}, cl.PrivateKeys()...))
+				WithSSHProvider(sshProvider, providerSettings))
 	}
 
 	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
@@ -97,6 +84,7 @@ func NewHookForUpdatePipeline(
 	return &HookForUpdatePipeline{
 		Checker:       checker,
 		kubeGetter:    kubeGetter,
+		sshProvider:   sshProvider,
 		commanderMode: commanderMode,
 	}
 }
@@ -203,9 +191,8 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	}
 
 	if !h.commanderMode {
-		cl := kubeClient.NodeInterfaceAsSSHClient()
-		// TODO remove it
-		if cl == nil {
+		cl, err := h.sshProvider.Client(context.Background())
+		if err != nil {
 			panic("Node interface is not ssh")
 		}
 

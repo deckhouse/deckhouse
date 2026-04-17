@@ -489,7 +489,12 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		}
 	}
 
-	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	if err != nil {
+		return nil
+	}
+
+	return controlplane.NewHookForUpdatePipeline(ctx, sshProvider, ctx.SSHProviderInitializer.GetSettings(), nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm).
