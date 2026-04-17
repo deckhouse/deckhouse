@@ -29,8 +29,6 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
-const clusterAPINamespace = "d8-cloud-instance-manager"
-
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		Queue: "/modules/node-manager/cluster-api",
