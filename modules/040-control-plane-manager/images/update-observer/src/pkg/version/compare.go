@@ -105,19 +105,24 @@ func Hops(sourceVersion, desiredVersion string) int {
 
 // ComponentSteps returns how many minor-version upgrade steps the given component
 // has already completed relative to the sourceVersion->desiredVersion migration.
+// When hops == 0 (versions equal or sourceVersion unparseable), returns 1 if the
+// component is at the desired version and 0 otherwise.
 func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int {
+	dstMinor, hasDst := MinorInt(desiredVersion)
+	compMinor, hasComp := MinorInt(componentVersion)
+	if !hasDst || !hasComp {
+		return 0
+	}
+
 	hops := Hops(sourceVersion, desiredVersion)
 	if hops == 0 {
+		if compMinor == dstMinor {
+			return 1
+		}
 		return 0
 	}
 
 	srcMinor, _ := MinorInt(sourceVersion)
-	dstMinor, _ := MinorInt(desiredVersion)
-	compMinor, ok := MinorInt(componentVersion)
-	if !ok {
-		return 0
-	}
-
 	var steps int
 	if dstMinor > srcMinor {
 		steps = compMinor - srcMinor

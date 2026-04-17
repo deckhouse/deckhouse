@@ -90,14 +90,7 @@ func (s *State) calculateProgress(sourceVersion string) {
 	}
 
 	hops := version.Hops(src, s.Spec.DesiredVersion)
-	if hops == 0 {
-		s.Progress = common.CalculateProgress(
-			s.ControlPlaneState.UpToDateComponentCount+s.NodesState.UpToDateCount,
-			totalComponents)
-		return
-	}
-
-	totalSteps := hops * totalComponents
+	totalSteps := max(hops, 1) * totalComponents
 	completedSteps := s.ControlPlaneState.StepsCompleted + s.NodesState.StepsCompleted
 
 	s.Progress = common.CalculateProgress(completedSteps, totalSteps)

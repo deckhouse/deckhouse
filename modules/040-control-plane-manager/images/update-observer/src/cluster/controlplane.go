@@ -27,14 +27,12 @@ import (
 )
 
 type ControlPlaneState struct {
-	DesiredCount           int
-	UpToDateCount          int
-	DesiredComponentCount  int
-	UpToDateComponentCount int
-	StepsCompleted         int
-	Phase                  ControlPlanePhase
-	MasterNodes            map[string]*MasterNode
-	versions               *version.UniqueAggregator
+	DesiredCount          int
+	DesiredComponentCount int
+	StepsCompleted        int
+	Phase                 ControlPlanePhase
+	MasterNodes           map[string]*MasterNode
+	versions              *version.UniqueAggregator
 }
 
 type ControlPlanePhase string
@@ -64,7 +62,7 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion, sour
 }
 
 func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion string) {
-	var desiredCount, upToDateCount, desiredComponentsCount, upToDateComponentsCount, stepsCompleted int
+	var desiredCount, upToDateCount, desiredComponentsCount, stepsCompleted int
 	var phase ControlPlanePhase
 
 	for _, masterNode := range s.MasterNodes {
@@ -82,11 +80,10 @@ func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion st
 				descriptions = append(descriptions, fmt.Sprintf("%s: %s", componentName, component.Description))
 			case ControlPlaneComponentUpdating:
 				updatingComponents++
+				stepsCompleted += version.ComponentSteps(component.Version, sourceVersion, desiredVersion)
 			case ControlPlaneComponentUpToDate:
-				upToDateComponentsCount++
+				stepsCompleted += version.ComponentSteps(component.Version, sourceVersion, desiredVersion)
 			}
-
-			stepsCompleted += version.ComponentSteps(component.Version, sourceVersion, desiredVersion)
 		}
 
 		switch {
@@ -112,9 +109,7 @@ func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion st
 	}
 
 	s.DesiredCount = desiredCount
-	s.UpToDateCount = upToDateCount
 	s.DesiredComponentCount = desiredComponentsCount
-	s.UpToDateComponentCount = upToDateComponentsCount
 	s.StepsCompleted = stepsCompleted
 	s.Phase = phase
 }
