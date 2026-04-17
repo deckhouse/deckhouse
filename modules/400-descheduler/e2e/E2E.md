@@ -29,57 +29,90 @@ chainsaw version
 
 - `kubectl` configured with access to a target Kubernetes cluster
 - Sufficient RBAC permissions to create/delete namespaces and resources
+- Descheduler module enabled with `deschedulingInterval: Frequent` (5m) in ModuleConfig for faster test cycles
 
 ## Running Tests
 
+The recommended way to run tests is via [go-task](https://taskfile.dev/) using the provided `Taskfile.yml`:
+
 ```bash
+# Run all tests
+task run
+
 # Run a specific test
-chainsaw test --test-dir ./low-node-utilization/
+task run:low-node-utilization
+task run:high-node-utilization
+task run:exclude-namespaces
 
-# Run all tests recursively from current directory
-chainsaw test
+# Run with verbose output
+task run:verbose
 
-# Run with verbose output (full test path in logs)
-chainsaw test --test-dir ./low-node-utilization/ --full-name
+# Dry run — validate YAML without executing (no cluster required)
+task dry-run
 
-# Dry run — validate YAML without executing
-chainsaw test --test-dir ./low-node-utilization/ --no-cluster
+# Pause on failure for debugging
+task run:debug
+
+# Generate a JSON report
+task run:report
+```
+
+Alternatively, you can use `chainsaw` directly:
+
+```bash
+# Run all tests
+chainsaw test --test-dir ./tests/
+
+# Run a specific test
+chainsaw test --test-dir ./tests/low-node-utilization/
 
 # Skip cleanup — keep created resources for debugging
-chainsaw test --test-dir ./low-node-utilization/ --skip-delete
-
-# Stop on first failure
-chainsaw test --test-dir ./low-node-utilization/ --fail-fast
+chainsaw test --test-dir ./tests/low-node-utilization/ --skip-delete
 
 # Run tests in parallel (default: unlimited)
-chainsaw test --parallel 4
+chainsaw test --test-dir ./tests/ --parallel 4
 
 # Override timeouts
-chainsaw test --test-dir ./low-node-utilization/ \
+chainsaw test --test-dir ./tests/low-node-utilization/ \
   --apply-timeout 60s \
   --assert-timeout 300s \
   --exec-timeout 300s
-
-# Generate test report
-chainsaw test --test-dir ./low-node-utilization/ \
-  --report-format JSON \
-  --report-name chainsaw-report \
-  --report-path ./reports/
-
-# Pause on failure (for interactive debugging)
-chainsaw test --test-dir ./low-node-utilization/ --pause-on-failure
 ```
 
 **Key concepts:**
 - `try` — main operations; step fails if any operation fails
 - `catch` — runs only on failure (diagnostics collection)
-- `finally` — runs always (cleanup/teardown)
+- `cleanup` — runs after step completes (resource deletion)
 - `$NAMESPACE` — auto-generated test namespace, available in scripts
+
+## Test Structure
+
+```
+e2e/
+  Taskfile.yml                  — Task runner for convenient test execution
+  e2e.yaml                      — Chainsaw configuration
+  tests/
+    common/
+      assert-descheduler-ready.yaml  — Shared assertion: descheduler deployment is ready
+    low-node-utilization/
+      chainsaw-test.yaml             — Test definition
+      files/descheduler-cr.yaml      — Descheduler CR with LowNodeUtilization strategy
+      low_node_utilization.md        — Test documentation
+    high-node-utilization/
+      chainsaw-test.yaml
+      files/descheduler-cr.yaml      — Descheduler CR with HighNodeUtilization strategy
+      high_node_utilization.md
+    exclude-namespaces-from-processing/
+      chainsaw-test.yaml
+      files/descheduler-cr.yaml      — Descheduler CR with LowNodeUtilization strategy
+      files/protected-namespace.yaml — d8-chainsaw-test namespace definition
+      exclude_namespaces_from_processing.md
+```
 
 ## Available Tests
 
-| Directory | Description |
-|-----------|-------------|
-| `low-node-utilization/` | Validates LowNodeUtilization plugin rebalances pods from overloaded nodes |
-| `high-node-utilization/` | Validates HighNodeUtilization plugin consolidates pods to fewer nodes |
-| `exclude-namespaces-from-processing/` | Validates Deckhouse patch preventing eviction of pods in `d8-*` and `kube-system` namespaces |
+| Task command | Test directory | Description |
+|--------------|----------------|-------------|
+| `task run:low-node-utilization` | `tests/low-node-utilization/` | Validates LowNodeUtilization plugin rebalances pods from overloaded nodes |
+| `task run:high-node-utilization` | `tests/high-node-utilization/` | Validates HighNodeUtilization plugin consolidates pods to fewer nodes |
+| `task run:exclude-namespaces` | `tests/exclude-namespaces-from-processing/` | Validates Deckhouse patch preventing eviction of pods in `d8-*` and `kube-system` namespaces |

@@ -47,4 +47,4 @@ chainsaw test --test-dir ./tests/low-node-utilization/
 ## Pass/Fail Criteria
 
 - **Pass:** Descheduler logs show `LowNodeUtilization` execution; pods get evicted and redistributed
-- **Fail:** Fewer than 2 nodes, descheduler not found, or plugin doesn't execute within 5 minutes
+- **Fail:** Fewer than 2 nodes, descheduler not found, or plugin doesn't execute within 15 minutes

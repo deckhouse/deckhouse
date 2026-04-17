@@ -185,19 +185,20 @@ spec:
             namespace: d8-descheduler
 
     - name: wait-for-descheduler-cycle
-      description: Wait for descheduler to execute the LowNodeUtilization plugin after restart
+      description: Wait for descheduler to execute the LowNodeUtilization plugin (descheduling-interval is 5m with Frequent preset)
       try:
         - script:
-            timeout: 120s
+            timeout: 420s
             content: |
-              for i in $(seq 1 24); do
-                if kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --since=2m 2>/dev/null | grep -q "LowNodeUtilization"; then
+              for i in $(seq 1 80); do
+                if kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --since=7m 2>/dev/null | grep -q "LowNodeUtilization"; then
                   echo "LowNodeUtilization plugin has executed"
                   exit 0
                 fi
                 sleep 5
               done
               echo "Timed out waiting for LowNodeUtilization to execute"
+              kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --since=7m 2>/dev/null | tail -30
               exit 1
             check:
               ($error == null): true
