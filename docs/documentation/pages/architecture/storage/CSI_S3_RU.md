@@ -6,7 +6,7 @@ search: csi-s3, s3
 description: Архитектура модуля csi-s3 в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`csi-s3`](/modules/csi-s3/) предназначен для управления томами на основа `S3-хранилищ`. Он использует [geeseFS](https://github.com/yandex-cloud/geesefs) — файловую систему FUSE на основе S3. Модуль позволяет создавать StorageClass в Kubernetes с помощью ресурса S3StorageClass.
+Модуль [`csi-s3`](/modules/csi-s3/) предназначен для управления томами на основе `S3-хранилищ`. Он использует [geeseFS](https://github.com/yandex-cloud/geesefs) — файловую систему FUSE на основе S3. Модуль позволяет создавать StorageClass в Kubernetes с помощью ресурса S3StorageClass.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/csi-s3/).
 
@@ -28,25 +28,27 @@ description: Архитектура модуля csi-s3 в Deckhouse Kubernetes 
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий кастомный ресурс [S3StorageClass](/modules/csi-s3/stable/cr.html). В S3StorageClass задаются параметры подключения к S3-хранилищу, такие как: URL подключения, имя используемаого bucket, регион и токены доступа.
+1. **Controller** — контроллер, обслуживающий кастомный ресурс [S3StorageClass](/modules/csi-s3/stable/cr.html). Ресурс S3StorageClass определяет  конфигурацию для создаваемого Kubernetes StorageClass, который использует provisioner `ru.yandex.s3.csi`.
 
    Состоит из следующих контейнеров:
 
    * **controller** — основной контейнер;
-   * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомного ресурса S3StorageClass.
+   * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомного ресурса ModuleConfig.
 
-1. **CSI-драйвер (s3)** — реализация CSI-драйвера для `s3.csi.k8s.io` provisioner. С архитектурой CSI-драйвера `csi-s3` можно ознакомиться [в соответствющем разделе документации](../storage/csi-drivers/csi-driver-s3.html).
+1. **CSI-драйвер (s3)** — реализация CSI-драйвера для provisioner `ru.yandex.s3.csi`. С архитектурой CSI-драйвера `csi-s3` можно ознакомиться [на странице описания CSI-драйвера](../storage/csi-drivers/csi-driver-s3.html).
 
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
-* **Kube-apiserver**:
+1. **Kube-apiserver**:
 
-  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
-  * работа с кастомными ресурсами S3StorageClass;
-  * создание ресурса StorageClass.
+  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, Secret и StorageClass;
+  * работа с кастомными ресурсами S3StorageClass и ModuleConfig;
+  * создание ресурсов StorageClass и Secret.
+
+1. **S3-хранилище** — создание и удаление томов, подключение и отключение томов от узлов.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-* **Kube-apiserver** — валидация кастомных ресурсов S3StorageClass.
+* **Kube-apiserver** — валидация кастомных ресурсов ModuleConfig.

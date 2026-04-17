@@ -48,8 +48,10 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
 
 Модуль взаимодействует со следующими компонентами:
 
-* **Kube-apiserver**:
+1. **Kube-apiserver**:
 
   * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
-  * работа с кастомными ресурсами SCSITarget, SCSIDevice, PendingResizeRequest и SCSIStorageClass;
+  * работа с кастомными ресурсами BlockDeviceFilter, SCSITarget, SCSIDevice, PendingResizeRequest и SCSIStorageClass;
   * создание ресурса StorageClass.
+
+1. **СХД с подключением по SCSI** — оркестрация использования уже доступных SCSI-устройств, их привязка/очистка и подключение на узлах.

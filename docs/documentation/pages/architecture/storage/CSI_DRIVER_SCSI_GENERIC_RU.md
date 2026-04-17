@@ -42,9 +42,9 @@ CSI-драйвер `csi-scsi-generic` — реализация [Container Storag
 
      В csi-controller входят следующие внешние контроллеры:
 
-     * **provisioner** ([external-provisioner](https://github.com/kubernetes-csi/external-provisioner)) — отслеживает ресурсы PersistentVolumeClaim и вызывает RPC `CreateVolume` или `DeleteVolume`. Также использует RPC `ValidateVolumeCapabilities` для проверки совместимости;
+     * **provisioner** ([external-provisioner](https://github.com/kubernetes-csi/external-provisioner)) — отслеживает ресурсы PersistentVolumeClaim и вызывает RPC `CreateVolume` или `DeleteVolume`;
 
-     * **attacher** ([external-attacher](https://github.com/kubernetes-csi/external-attacher)) — отслеживает ресурсы VolumeAttachment после того, как под запланирован на узел, а также подключает и отключает тома через RPC `ControllerPublishVolume` и `ControllerUnpublishVolume`;
+     * **attacher** ([external-attacher](https://github.com/kubernetes-csi/external-attacher)) — отслеживает ресурсы VolumeAttachment после того, как под запланирован на узел;
 
      * **resizer** ([external-resizer](https://github.com/kubernetes-csi/external-resizer)) — отслеживает обновления ресурсов PersistentVolumeClaim, расширяет тома с помощью RPC `ControllerExpandVolume`, если пользователь запросил больше дискового пространства для PVC и драйвер поддерживает capability `EXPAND_VOLUME`;
 
@@ -65,9 +65,9 @@ CSI-драйвер `csi-scsi-generic` — реализация [Container Storag
 
 Драйвер взаимодействует со следующими компонентами:
 
-1. **Kube-apiserver** — мониторинг ресурсов PersistentVolumeClaim, VolumeAttachment.
+1. **Kube-apiserver** — мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, SCSIDevice и SCSITarget.
 
-1. **СХД с подключением по SCSI** — создание и удаление томов, подключение и отключение томов от узлов.
+1. **СХД с подключением по SCSI** — оркестрация использования уже доступных SCSI-устройств, их привязка/очистка и подключение на узлах.
 
 С драйвером взаимодействуют следующие внешние компоненты:
 

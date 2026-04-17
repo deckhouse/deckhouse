@@ -51,11 +51,13 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 
 Модуль взаимодействует со следующими компонентами:
 
-* **Kube-apiserver**:
+1. **Kube-apiserver**:
 
   * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
   * работа с кастомными ресурсами HuaweiStorageConnection, HuaweiStorageClass, StorageBackendClaim, StorageBackendContent;
   * создание ресурса StorageClass.
+
+1. **СХД Huawei** — создание и удаление томов, подключение и отключение томов от узлов.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
