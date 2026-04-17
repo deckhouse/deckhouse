@@ -51,7 +51,7 @@ spec:
 ## gRPC balancing
 
 {% alert level="warning" %}
-Assign a name with the `grpc` prefix or value to the port in the corresponding Service to make gRPC service balancing start automatically.
+Assign a name with the `grpc` prefix or value to the port in the corresponding service to make gRPC service balancing start automatically.
 {% endalert %}
 
 ## Locality Failover
@@ -522,7 +522,7 @@ spec:
        principals: ["foo.local/*", "bar.local/*"]
 ```
 
-### Allow any requests from foo or bar clusters where the namespace is baz
+### Allow any requests only from entities in the baz namespace of the foo or bar clusters
 
 ```yaml
 apiVersion: security.istio.io/v1beta1
@@ -658,7 +658,8 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
+* A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [`globalVersion`](configuration.html#parameters-globalversion) parameter.
+* The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Upgrade algorithm (i.e. from `1.21` to `1.25`):
@@ -668,7 +669,9 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
     * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
   * Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
-  * Make sure, the old `istiod` Pod has gone.
+* Recreate the pods in namespace (one at a time), simultaneously monitoring the application's workability.
+* Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
+* Make sure, the old `istiod` pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
 To find all Pods with old Istio revision (in the example — version 21), execute the command:
