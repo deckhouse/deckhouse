@@ -155,7 +155,7 @@ func (s *ValuesTestSuite) TestLoadPackageSchemasBothFiles() {
 
 	configContent := []byte("config: schema")
 	valuesContent := []byte("values: schema")
-	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, configValuesFile), configContent, 0644))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, settingsFile), configContent, 0644))
 	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, valuesFile), valuesContent, 0644))
 
 	config, values, err := loadPackageSchemas(s.tempDir)
@@ -165,7 +165,23 @@ func (s *ValuesTestSuite) TestLoadPackageSchemasBothFiles() {
 	s.Equal(valuesContent, values)
 }
 
-// TestLoadPackageSchemasOnlyConfigValues tests loading when only config-values.yaml exists.
+// TestLoadPackageSchemasOnlySettings tests loading when only settings.yaml exists.
+func (s *ValuesTestSuite) TestLoadPackageSchemasOnlySettings() {
+	openapiDir := filepath.Join(s.tempDir, openAPIDir)
+	require.NoError(s.T(), os.MkdirAll(openapiDir, 0755))
+
+	settingsContent := []byte("settings: only")
+	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, settingsFile), settingsContent, 0644))
+
+	config, values, err := loadPackageSchemas(s.tempDir)
+
+	require.NoError(s.T(), err)
+	s.Equal(settingsContent, config)
+	s.Nil(values)
+}
+
+// TestLoadPackageSchemasOnlyConfigValues tests the legacy fallback: when only the
+// deprecated config-values.yaml exists (no settings.yaml), it must still be loaded.
 func (s *ValuesTestSuite) TestLoadPackageSchemasOnlyConfigValues() {
 	openapiDir := filepath.Join(s.tempDir, openAPIDir)
 	require.NoError(s.T(), os.MkdirAll(openapiDir, 0755))
@@ -178,6 +194,23 @@ func (s *ValuesTestSuite) TestLoadPackageSchemasOnlyConfigValues() {
 	require.NoError(s.T(), err)
 	s.Equal(configContent, config)
 	s.Nil(values)
+}
+
+// TestLoadPackageSchemasSettingsWinsOverConfigValues tests that when both files exist,
+// settings.yaml is preferred and config-values.yaml is ignored.
+func (s *ValuesTestSuite) TestLoadPackageSchemasSettingsWinsOverConfigValues() {
+	openapiDir := filepath.Join(s.tempDir, openAPIDir)
+	require.NoError(s.T(), os.MkdirAll(openapiDir, 0755))
+
+	settingsContent := []byte("source: settings")
+	legacyContent := []byte("source: legacy")
+	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, settingsFile), settingsContent, 0644))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, configValuesFile), legacyContent, 0644))
+
+	config, _, err := loadPackageSchemas(s.tempDir)
+
+	require.NoError(s.T(), err)
+	s.Equal(settingsContent, config)
 }
 
 // TestLoadPackageSchemasOnlyValues tests loading when only values.yaml exists.
@@ -221,7 +254,7 @@ func (s *ValuesTestSuite) TestLoadPackageSchemasEmptyFiles() {
 	openapiDir := filepath.Join(s.tempDir, openAPIDir)
 	require.NoError(s.T(), os.MkdirAll(openapiDir, 0755))
 
-	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, configValuesFile), []byte{}, 0644))
+	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, settingsFile), []byte{}, 0644))
 	require.NoError(s.T(), os.WriteFile(filepath.Join(openapiDir, valuesFile), []byte{}, 0644))
 
 	config, values, err := loadPackageSchemas(s.tempDir)
