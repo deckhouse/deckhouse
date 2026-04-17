@@ -16,7 +16,10 @@ limitations under the License.
 
 package constants
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	KubeSystemNamespace                 = "kube-system"
@@ -26,8 +29,12 @@ const (
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
+	EtcdArbiterNodeLabelKey             = "node.deckhouse.io/etcd-arbiter"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
+	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"
+	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
+	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
 	NodeNameEnvVar                      = "NODE_NAME"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
@@ -44,15 +51,56 @@ const (
 	ConditionAPIServerReady         = "APIServerReady"
 	ConditionControllerManagerReady = "ControllerManagerReady"
 	ConditionSchedulerReady         = "SchedulerReady"
-	ConditionPKISynced              = "PKISynced"
+	ConditionCASynced               = "CASynced"
 	ConditionHotReloadSynced        = "HotReloadSynced"
 
-	ReasonSynced        = "Synced"
-	ReasonOutOfSync     = "OutOfSync"
-	ReasonUpdating      = "Updating"
-	ReasonPendingUpdate = "PendingUpdate"
-	ReasonUpdateFailed  = "UpdateFailed"
-	ReasonUnknown       = "Unknown"
+	ReasonSynced               = "Synced"
+	ReasonOutOfSync            = "OutOfSync"
+	ReasonUpdating             = "Updating"
+	ReasonPendingUpdate        = "PendingUpdate"
+	ReasonUpdateFailed         = "UpdateFailed"
+	ReasonWaitingForComponents = "WaitingForComponents"
+	ReasonUnknown              = "Unknown"
+
+	// Built-in k8s label on static pods with the component name
+	StaticPodComponentLabelKey = "component"
+
+	// Env vars for path overrides for debug/dev
+	ManifestDirEnvVar   = "MANIFEST_DIR"
+	ExtraFilesDirEnvVar = "EXTRA_FILES_DIR"
+	PkiDirEnvVar        = "PKI_DIR"
+	KubeconfigDirEnvVar = "KUBECONFIG_DIR"
+
+	// Secret keys for PKI config in d8-control-plane-manager-config
+	SecretKeyCertSANs            = "cert-sans"
+	SecretKeyEncryptionAlgorithm = "encryption-algorithm"
+
+	// Not configurable endpoint for local control plane
+	LocalControlPlaneEndpoint = "127.0.0.1:6445"
+
+	// Backup config
+	BackupBasePath         = DeckhousePath + "/backups"
+	MaxBackupsPerComponent = 7
+
+	// Diff config
+	DiffBasePath         = DeckhousePath + "/diffs"
+	MaxDiffsPerComponent = 7
+
+	// CertObserverInterval - minimum duration between periodic CertObserver(all) operations.
+	CertObserverInterval = 7 * 24 * time.Hour
+
+	// Cert renewal
+	CertRenewalIDAnnotationKey       = "control-plane.deckhouse.io/cert-renewal-id"
+	KubeconfigRenewalIDAnnotationKey = "control-plane.deckhouse.io/kubeconfig-renewal-id"
+	CertRenewalThreshold             = 30 * 24 * time.Hour
+
+	// CertsRenewal - ControlPlaneNode condition
+	ConditionCertsRenewal = "CertsRenewal"
+	ReasonHealthy         = "Healthy"
+	ReasonCertExpiring    = "CertExpiring"
+	ReasonRenewing        = "Renewing"
+	ReasonRenewed         = "Renewed"
+	ReasonRenewalFailed   = "RenewalFailed"
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync

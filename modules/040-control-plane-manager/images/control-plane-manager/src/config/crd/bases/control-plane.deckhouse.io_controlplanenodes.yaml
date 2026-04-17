@@ -47,114 +47,261 @@ spec:
             type: object
           spec:
             properties:
+              caChecksum:
+                description: CAChecksum is the hash of d8-pki secret (CA certificates).
+                type: string
               components:
                 description: Checksums per component
                 properties:
                   etcd:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentSpec holds the desired state of a single
+                      control plane component (used in CPN spec).
                     properties:
-                      checksum:
-                        type: string
-                    required:
-                    - checksum
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
                     type: object
                   kube-apiserver:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentSpec holds the desired state of a single
+                      control plane component (used in CPN spec).
                     properties:
-                      checksum:
-                        type: string
-                    required:
-                    - checksum
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
                     type: object
                   kube-controller-manager:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentSpec holds the desired state of a single
+                      control plane component (used in CPN spec).
                     properties:
-                      checksum:
-                        type: string
-                    required:
-                    - checksum
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
                     type: object
                   kube-scheduler:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentSpec holds the desired state of a single
+                      control plane component (used in CPN spec).
                     properties:
-                      checksum:
-                        type: string
-                    required:
-                    - checksum
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
                     type: object
-                required:
-                - etcd
-                - kube-apiserver
-                - kube-controller-manager
-                - kube-scheduler
                 type: object
-              configVersion:
-                description: ConfigVersion is "[resourceVersion of cpm secret].[resourceVersion
-                  of pki secret]"
-                type: string
               hotReloadChecksum:
                 description: For reload mechanisms (e.g. in-place reload)
                 type: string
-              pkiChecksum:
-                description: Checksum of PKI secret
-                type: string
-            required:
-            - components
-            - configVersion
-            - hotReloadChecksum
-            - pkiChecksum
             type: object
           status:
             properties:
+              caChecksum:
+                type: string
               components:
-                description: ComponentChecksums holds checksums for control plane
-                  components
+                description: ComponentsStatus holds status checksums and observed
+                  state for all control plane components.
                 properties:
                   etcd:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentStatus holds the observed state of a single
+                      control plane component (used in CPN status).
                     properties:
-                      checksum:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
+                          Populated via CertObserve command.
+                        type: object
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
                         type: string
-                    required:
-                    - checksum
                     type: object
                   kube-apiserver:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentStatus holds the observed state of a single
+                      control plane component (used in CPN status).
                     properties:
-                      checksum:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
+                          Populated via CertObserve command.
+                        type: object
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
                         type: string
-                    required:
-                    - checksum
                     type: object
                   kube-controller-manager:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentStatus holds the observed state of a single
+                      control plane component (used in CPN status).
                     properties:
-                      checksum:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
+                          Populated via CertObserve command.
+                        type: object
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
                         type: string
-                    required:
-                    - checksum
                     type: object
                   kube-scheduler:
-                    description: ComponentChecksum holds checksum for a single control
-                      plane component
+                    description: ComponentStatus holds the observed state of a single
+                      control plane component (used in CPN status).
                     properties:
-                      checksum:
+                      certificatesExpirationDate:
+                        additionalProperties:
+                          format: date-time
+                          type: string
+                        description: |-
+                          CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
+                          Populated via CertObserve command.
+                        type: object
+                      checksums:
+                        description: Checksums holds config/pki/ca hashes for a single
+                          control plane component.
+                        properties:
+                          ca:
+                            description: |-
+                              CA is the hash of CA certificates applied to this component.
+                              In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+                            type: string
+                          config:
+                            description: Config is the hash of the component static
+                              pod template and extra-files.
+                            type: string
+                          pki:
+                            description: PKI is the hash of PKI-related config keys
+                              (certSANs, encryption-algorithm).
+                            type: string
+                        type: object
+                      lastObservedAt:
+                        description: LastObservedAt is the timestamp of the last completed
+                          CertObserve for this component.
+                        format: date-time
                         type: string
-                    required:
-                    - checksum
                     type: object
-                required:
-                - etcd
-                - kube-apiserver
-                - kube-controller-manager
-                - kube-scheduler
                 type: object
               conditions:
                 items:
@@ -215,13 +362,12 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              configVersion:
-                description: 'ConfigVersion that is actually applied / running on
-                  the node: "[cpm secret resourceVersion].[pki secret resourceVersion]"'
-                type: string
               hotReloadChecksum:
                 type: string
-              pkiChecksum:
+              lastObservedAt:
+                description: LastObservedAt is the timestamp of the last completed
+                  Observe operation.
+                format: date-time
                 type: string
             type: object
         type: object
