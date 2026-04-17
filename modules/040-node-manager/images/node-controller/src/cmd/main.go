@@ -84,7 +84,7 @@ func main() {
 	cfg := ctrl.GetConfigOrDie()
 	ctx := ctrl.SetupSignalHandler()
 
-	cacheOpts, clientOpts := common.CacheOptions()
+	cacheOpts, clientOpts := common.CacheOptions(ctx, setupLog)
 	clientOpts.Cache.DisableFor = append(clientOpts.Cache.DisableFor, webhook.DisableFor()...)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -130,6 +130,12 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	go func() {
+		if mgr.GetCache().WaitForCacheSync(ctx) {
+			common.LogCacheContents(ctx, mgr.GetCache(), setupLog)
+		}
+	}()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {

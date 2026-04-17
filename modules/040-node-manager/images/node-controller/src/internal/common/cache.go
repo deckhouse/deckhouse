@@ -17,6 +17,9 @@ limitations under the License.
 package common
 
 import (
+	"context"
+
+	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -28,9 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CacheOptions() (cache.Options, client.Options) {
-	stripManagedFields := cache.TransformStripManagedFields()
-
+func CacheOptions(ctx context.Context, logger logr.Logger) (cache.Options, client.Options) {
 	machineNS := cache.ByObject{
 		Namespaces: map[string]cache.Config{
 			MachineNamespace: {},
@@ -44,10 +45,7 @@ func CacheOptions() (cache.Options, client.Options) {
 	})
 
 	cacheOpts := cache.Options{
-		DefaultTransform: func(obj interface{}) (interface{}, error) {
-			stripNodeHeavyFields(obj)
-			return stripManagedFields(obj)
-		},
+		DefaultTransform: CacheTransformWithLogging(ctx, logger),
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Secret{}: {
 				Namespaces: map[string]cache.Config{
@@ -78,23 +76,6 @@ func CacheOptions() (cache.Options, client.Options) {
 	}
 
 	return cacheOpts, clientOpts
-}
-
-func stripNodeHeavyFields(obj interface{}) {
-	node, ok := obj.(*corev1.Node)
-	if !ok {
-		return
-	}
-	node.Status.Images = nil
-	node.Status.NodeInfo = corev1.NodeSystemInfo{}
-	node.Status.Addresses = nil
-	node.Status.Capacity = nil
-	node.Status.Allocatable = nil
-	node.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{}
-	node.Status.VolumesAttached = nil
-	node.Status.VolumesInUse = nil
-	node.Spec.PodCIDR = ""
-	node.Spec.PodCIDRs = nil
 }
 
 func newUnstructured(group, version, kind string) *unstructured.Unstructured {
