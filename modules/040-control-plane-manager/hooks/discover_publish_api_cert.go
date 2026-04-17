@@ -74,7 +74,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 	var (
-		secretPath     = "controlPlaneManager.internal.publishedAPIKubeconfigGeneratorMasterCA"
+		secretPath     = "controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA"
 		modePath       = "controlPlaneManager.apiserver.publishAPI.ingress.https.mode"
 		globalOptsPath = "controlPlaneManager.apiserver.publishAPI.ingress.https.global.kubeconfigGeneratorMasterCA"
 		kubeCAPath     = "global.discovery.kubernetesCA"

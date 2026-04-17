@@ -145,8 +145,8 @@ properties:
         properties:
           enableBasicAuth:
             type: boolean
-      publishedAPIKubeconfigGeneratorMasterCA:
-        type: string
+          publishedAPIKubeconfigGeneratorMasterCA:
+            type: string
       customCertificateData:
         type: object
         default: {}
