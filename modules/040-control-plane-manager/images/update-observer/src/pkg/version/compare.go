@@ -88,15 +88,36 @@ func MinorInt(v string) (int, bool) {
 	return int(sv.Minor()), true
 }
 
-func ComponentSteps(componentVersion string, srcMinor, dstMinor int) int {
+// Hops returns the absolute number of minor version steps between sourceVersion
+// and desiredVersion. Returns 0 if either version is unparseable or they are equal.
+func Hops(sourceVersion, desiredVersion string) int {
+	srcMinor, hasSrc := MinorInt(sourceVersion)
+	dstMinor, hasDst := MinorInt(desiredVersion)
+	if !hasSrc || !hasDst {
+		return 0
+	}
+	h := dstMinor - srcMinor
+	if h < 0 {
+		h = -h
+	}
+	return h
+}
+
+// ComponentSteps returns how many minor-version upgrade steps the given component
+// has already completed relative to the sourceVersion->desiredVersion migration.
+func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int {
+	hops := Hops(sourceVersion, desiredVersion)
+	if hops == 0 {
+		return 0
+	}
+
+	srcMinor, _ := MinorInt(sourceVersion)
+	dstMinor, _ := MinorInt(desiredVersion)
 	compMinor, ok := MinorInt(componentVersion)
 	if !ok {
 		return 0
 	}
-	hops := dstMinor - srcMinor
-	if hops < 0 {
-		hops = -hops
-	}
+
 	var steps int
 	if dstMinor > srcMinor {
 		steps = compMinor - srcMinor
