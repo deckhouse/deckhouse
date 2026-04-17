@@ -142,7 +142,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 
 	// Check if there is an active operation
 	for _, op := range operations.Items {
-		if op.IsCompleted() {
+		if !op.IsCompleted() {
 			logger.Debug("active operation exists, skipping creation", slog.String("operation", op.Name))
 			// Requeue to check again later
 			return ctrl.Result{RequeueAfter: scanInterval}, nil
