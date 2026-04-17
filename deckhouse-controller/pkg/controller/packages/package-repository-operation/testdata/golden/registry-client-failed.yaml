@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "5"
+  resourceVersion: "4"
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -24,14 +24,12 @@ spec:
 status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'Failed to create registry client: create package service: failed to
-      get auth from docker config: there is no authorization data'
-    reason: RegistryClientCreationFailed
-    status: "False"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'create package service: failed to get auth from docker config: there
+      is no authorization data'
+    reason: Failed
+    status: "True"
     type: Completed
-  phase: Processing
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -46,9 +44,9 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'Failed to create registry client: create package service: failed to
-      get auth from docker config: there is no authorization data'
-    reason: RegistryClientCreationFailed
+    message: 'create package service: failed to get auth from docker config: there
+      is no authorization data'
+    reason: Failed
     status: "False"
-    type: LastOperationScanFinished
+    type: LastScanSucceeded
   syncTime: null

@@ -33,7 +33,7 @@ const (
 	// PackageRepositoryOperation condition reasons
 	PackageRepositoryOperationReasonDiscover   = "Discover"
 	PackageRepositoryOperationReasonProcessing = "Processing"
-	PackageRepositoryOperationReasonCompleted  = "Completed"
+	PackageRepositoryOperationReasonSucceeded  = "Succeeded"
 	PackageRepositoryOperationReasonFailed     = "Failed"
 
 	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations

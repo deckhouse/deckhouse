@@ -193,27 +193,50 @@ func hasPackageRepositoryOwnerRef(op *v1alpha1.PackageRepositoryOperation) bool 
 	return false
 }
 
+// handleCreateOrUpdate dispatches the operation to the handler for its current phase.
+//
+// The state machine has two axes, both encoded in the "Completed" status condition.
+// Note the deliberate naming split: "Completed" is the condition *type* (the slot),
+// while "Succeeded" / "Failed" are terminal *reasons* that fill it — the type name
+// indicates presence of a terminal verdict, not success.
+//
+//	Pre-terminal (Status=False) — routed explicitly by Reason:
+//	    (no condition)           → handlePendingState    (fresh operation)
+//	    Reason=Discover          → handleDiscoverState
+//	    Reason=Processing        → handleProcessingState
+//
+//	Terminal (Status=True) — routed uniformly via op.IsCompleted():
+//	    Reason=Succeeded (OK) or Reason=Failed (KO) → handleCleanupState
+//
+// Each active pre-terminal handler advances the condition and requeues, so a full run
+// performs one state transition per reconcile — the condition IS the durable checkpoint.
+//
+// Routing terminal states through IsCompleted() (rather than listing reasons) means
+// any future terminal reason automatically participates in retention; conversely, any
+// future pre-terminal reason must be added as an explicit case or it silently no-ops.
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
 	switch op.GetStateByCondition() {
-	case "": // Initial state
+	case "": // no Completed condition yet — fresh operation
 		return r.handlePendingState(ctx, op)
 	case v1alpha1.PackageRepositoryOperationReasonDiscover:
 		return r.handleDiscoverState(ctx, op)
 	case v1alpha1.PackageRepositoryOperationReasonProcessing:
 		return r.handleProcessingState(ctx, op)
-	case v1alpha1.PackageRepositoryOperationReasonCompleted:
-		return r.handleCleanupState(ctx, op)
 	default:
-		r.logger.Warn("operation in unknown phase", slog.String("name", op.Name))
+		if op.IsCompleted() {
+			return r.handleCleanupState(ctx, op)
+		}
 
 		return ctrl.Result{}, nil
 	}
 }
 
+// handlePendingState runs once when the operation has no Completed condition yet.
+// It stamps StartTime and advances the phase to Discover, then requeues so the next
+// reconcile runs the actual discovery under a fresh object snapshot.
 func (r *reconciler) handlePendingState(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
 	r.logger.Debug("handle pending state", slog.String("name", op.Name))
 
-	// Move to Pending phase
 	original := op.DeepCopy()
 
 	r.setCompletedConditionFalse(op, v1alpha1.PackageRepositoryOperationReasonDiscover, "")
@@ -226,50 +249,26 @@ func (r *reconciler) handlePendingState(ctx context.Context, op *v1alpha1.Packag
 	return ctrl.Result{Requeue: true}, nil
 }
 
+// handleDiscoverState connects to the registry, lists packages, and records them in
+// status.Packages.Discovered. On success it advances the phase to Processing and requeues.
+// On failure it delegates to failOperation, which marks the operation terminally Failed
+// and propagates the failure to the parent PackageRepository's LastScanSucceeded condition.
 func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", op.Name))
 
 	logger.Debug("handle discover state")
 
-	original := op.DeepCopy()
-
 	svc, err := NewOperationService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
-		now := metav1.Now()
-		op.Status.CompletionTime = &now
-
-		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonFailed, err.Error())
-
-		if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		if err := r.updatePackageRepositoryCondition(ctx, op); err != nil {
-			logger.Warn("failed to update package repository condition", log.Err(err))
-		}
-
-		logger.Warn("operation failed", log.Err(err))
-		return ctrl.Result{}, nil
+		return r.failOperation(ctx, op, err)
 	}
 
 	discovered, err := svc.DiscoverPackage(ctx)
 	if err != nil {
-		now := metav1.Now()
-		op.Status.CompletionTime = &now
-
-		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonFailed, err.Error())
-
-		if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		if err := r.updatePackageRepositoryCondition(ctx, op); err != nil {
-			logger.Warn("failed to update package repository condition", log.Err(err))
-		}
-
-		logger.Warn("operation failed", log.Err(err))
-		return ctrl.Result{}, nil
+		return r.failOperation(ctx, op, err)
 	}
+
+	original := op.DeepCopy()
 
 	if op.Status.Packages == nil {
 		op.Status.Packages = new(v1alpha1.PackageRepositoryOperationStatusPackages)
@@ -295,35 +294,24 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, op *v1alpha1.Packa
 	return ctrl.Result{Requeue: true}, nil
 }
 
+// handleProcessingState drains the Discovered queue one package per reconcile.
+// Each reconcile either:
+//   - processes one package via processNextPackage (dequeues from Discovered, appends
+//     to Processed or Failed), then requeues; or
+//   - detects an empty queue, pushes the final aggregate to the PackageRepository via
+//     UpdateRepositoryStatus, marks the operation terminally Completed=True, and returns.
+//
+// Dequeueing one-at-a-time per reconcile persists progress to etcd between packages,
+// so a crash mid-processing doesn't lose work — the next leader resumes on the next
+// Discovered entry.
 func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", op.Name))
 
 	logger.Debug("handle processing state")
 
-	// no packages found
-	if op.Status.Packages == nil {
-		return ctrl.Result{}, nil
-	}
-
-	original := op.DeepCopy()
-
 	svc, err := NewOperationService(ctx, r.client, op.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
-		now := metav1.Now()
-		op.Status.CompletionTime = &now
-
-		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonFailed, err.Error())
-
-		if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
-			return ctrl.Result{}, err
-		}
-
-		if err := r.updatePackageRepositoryCondition(ctx, op); err != nil {
-			logger.Warn("failed to update package repository condition", log.Err(err))
-		}
-
-		logger.Warn("operation failed", log.Err(err))
-		return ctrl.Result{}, nil
+		return r.failOperation(ctx, op, err)
 	}
 
 	// Check if all packages have been processed
@@ -335,11 +323,13 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 			// Continue with operation completion even if repository update fails
 		}
 
+		original := op.DeepCopy()
+
 		// All packages processed, mark as completed
 		now := metav1.Now()
 		op.Status.CompletionTime = &now
 
-		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationConditionCompleted, "")
+		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonSucceeded, "")
 
 		if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -357,13 +347,24 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 	return r.processNextPackage(ctx, op, svc)
 }
 
-// handleCleanupState is used to process operations in completed phase (cleanup old operations for the same repository)
+// handleCleanupState is the terminal handler for both Completed and Failed operations.
+// It keeps the N most recent operations for this repository (cleanupOldOperationsCount)
+// and deletes the rest, regardless of whether each one succeeded or failed.
+//
+// The sibling list is filtered by the repository label, sorted newest-first, and
+// everything past index N is deleted. If a delete fails, the reconciler returns an
+// error and controller-runtime retries — the loop is idempotent because subsequent
+// runs will still see the same "newest N" prefix preserved.
+//
+// Note: this runs on every reconcile while the operation stays terminal, so the
+// no-op fast path (`len <= N`) is important for controller throughput — especially
+// for repositories stuck in a failure loop that would otherwise re-scan+re-cleanup
+// on every reconcile.
 func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", op.Name))
 
 	logger.Debug("handle completed state")
 
-	// List all operations for the same repository
 	operations := new(v1alpha1.PackageRepositoryOperationList)
 	err := r.client.List(ctx, operations, client.MatchingLabels{
 		v1alpha1.PackagesRepositoryOperationLabelRepository: op.Spec.PackageRepositoryName,
@@ -379,14 +380,14 @@ func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.Packag
 		return ctrl.Result{}, nil
 	}
 
-	// sort operations by creation timestamp descending
+	// Sort newest-first so the retention window is the prefix [0:cleanupOldOperationsCount).
 	sort.Slice(operations.Items, func(i, j int) bool {
 		return !operations.Items[i].CreationTimestamp.Before(&operations.Items[j].CreationTimestamp)
 	})
 
-	// delete all operations except the most recent
+	// Delete everything older than the retention window.
 	for _, toDelete := range operations.Items[cleanupOldOperationsCount:] {
-		logger.Debug("delete old operation", slog.String("name", op.Name))
+		logger.Debug("delete old operation", slog.String("name", toDelete.Name))
 		if err = r.client.Delete(ctx, &toDelete); err != nil {
 			return ctrl.Result{}, fmt.Errorf("delete old operation: %w", err)
 		}
@@ -419,6 +420,49 @@ func (r *reconciler) setCompletedConditionFalse(op *v1alpha1.PackageRepositoryOp
 	})
 }
 
+// failOperation marks op terminally Failed, patches status, and mirrors the failure
+// to the parent PackageRepository's LastScanSucceeded condition. All pre-terminal
+// handlers funnel errors here so the terminate-as-failed sequence has one
+// authoritative implementation.
+//
+// The patch baseline is captured inside the helper (DeepCopy of op on entry), which
+// implies callers MUST call this before mutating op — any prior mutations are in the
+// baseline and will therefore be dropped from the patch. That matches the "discard
+// in-flight work, just record the failure" semantics we want; if you ever need to
+// preserve pending mutations on failure, capture the baseline before mutating and
+// pass it in instead.
+//
+// Always returns (Result{}, nil): the failure is persisted into status rather than
+// bubbled back to controller-runtime, so there is no automatic retry — a new
+// operation must be created to retry.
+func (r *reconciler) failOperation(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, cause error) (ctrl.Result, error) {
+	logger := r.logger.With(slog.String("name", op.Name))
+
+	original := op.DeepCopy()
+
+	now := metav1.Now()
+	op.Status.CompletionTime = &now
+	r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonFailed, cause.Error())
+
+	if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.updatePackageRepositoryCondition(ctx, op); err != nil {
+		logger.Warn("failed to update package repository condition", log.Err(err))
+	}
+
+	logger.Warn("operation failed", log.Err(cause))
+	return ctrl.Result{}, nil
+}
+
+// updatePackageRepositoryCondition mirrors the operation's terminal Completed condition
+// onto the parent PackageRepository's LastScanSucceeded condition, so consumers watching
+// only the repository can tell whether the most recent scan succeeded.
+//
+// Mapping: operation Reason=Failed → LastScanSucceeded=False; any other reason → True.
+// Missing repository (NotFound) is treated as a silent no-op — the operation has
+// outlived its parent and cascade deletion will clean it up.
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) error {
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: op.Spec.PackageRepositoryName}, repo); err != nil {
