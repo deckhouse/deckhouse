@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"strings"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,10 +34,6 @@ const (
 	CommandWaitPodReady     CommandName = "WaitPodReady"
 	CommandSyncHotReload    CommandName = "SyncHotReload"
 	CommandCertObserve      CommandName = "CertObserve"
-)
-
-const (
-	CertRenewalOperationMarker = "-certrenewal-"
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
@@ -183,11 +177,6 @@ type ControlPlaneOperation struct {
 	Status ControlPlaneOperationStatus `json:"status,omitempty"`
 }
 
-// IsRenewalOperation reports whether this CPO is a cert renewal operation (detected by name).
-func (op *ControlPlaneOperation) IsRenewalOperation() bool {
-	return strings.Contains(op.Name, CertRenewalOperationMarker)
-}
-
 // IsObserveOnlyOperation reports whether this operation is a read-only observe for a single static-pod component.
 func (op *ControlPlaneOperation) IsObserveOnlyOperation() bool {
 	return op.Spec.Component.IsStaticPodComponent() &&
@@ -203,15 +192,6 @@ func (op *ControlPlaneOperation) HasCommand(cmd CommandName) bool {
 		}
 	}
 	return false
-}
-
-// CertRenewalID returns op.Name if this is renewal operation, otherwise "".
-// For cert-renewal-id annotation on the static pod manifest to force kubelet restart.
-func (op *ControlPlaneOperation) CertRenewalID() string {
-	if op.IsRenewalOperation() {
-		return op.Name
-	}
-	return ""
 }
 
 // +kubebuilder:object:root=true

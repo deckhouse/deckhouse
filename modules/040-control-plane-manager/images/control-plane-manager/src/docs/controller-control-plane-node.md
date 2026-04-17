@@ -32,19 +32,23 @@ This controller is node-local (`NODE_NAME` env) and processes only objects with 
 - apply cert dates from completed operations that include `CertObserve` command, in monotonic `observedAt` order
 - update per-component `status.components.<component>.lastObservedAt` (and keep root `status.lastObservedAt` as latest observed timestamp)
 - update component conditions, `CASynced`, `CertsRenewal`
-4. Create missing CPOs for components where `spec != status`.
-5. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
+4. Create missing drift CPOs for components where `spec != status`.
+5. Ensure cert-renewal CPO exists for components expiring within threshold (30 days):
+- only when component is in-sync (`spec/config,pki,ca == status/config,pki,ca`)
+- only when there is no active CPO for this component
+- renewal CPO is created with the same `DesiredConfig/PKI/CA` checksums tuple as current component state
+6. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
 - `spec.component=<real component>`
 - `spec.commands=[CertObserve]`
 - `spec.approved=true`
-6. Ensure cert-renewal CPO exists for components expiring within threshold (30 days).
 
 ## Operation Creation Rules
 
-- Create only when no active operation with the same desired checksums tuple exists:
+- Regular drift operations are created only when no active operation with the same desired checksums tuple exists:
 - `DesiredConfigChecksum + DesiredPKIChecksum + DesiredCAChecksum`
-- Active-operation lookup is unified via shared predicate-based helper (used by both regular and observe-only creation paths).
-- If desired checksums changed while another operation is running, a new operation may be created for the same component.
+- Active-operation lookup is unified via shared predicate-based helper (used by regular, renewal, and observe-only creation paths).
+- For regular drift operations, if desired checksums changed while another operation is running, a new operation may be created for the same component.
+- Cert-renewal operations are expiry-triggered, but still use the same desired checksums tuple and normal stale/cancel flow in CPO controller.
 - CPO name uses `GenerateName` with deterministic prefix:
 - `<component>-<short desired checksums>-`
 - Commands are selected by component and changed dimensions (`config`, `pki`, `ca`).

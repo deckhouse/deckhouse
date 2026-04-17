@@ -22,15 +22,14 @@ This controller is node-local (`NODE_NAME` env) and watches only CPOs for this n
 2. Skip if not approved or already terminal:
    - `Completed=True`, or
    - `Completed=False` with reason `OperationFailed` / `OperationCancelled`.
-3. For `CertObserver` component operations run pipeline directly (read-only path, no secrets).
-4. For other operations read `d8-control-plane-manager-config` and `d8-pki` into `ClusterSecrets`.
-5. Renewal operations skip stale-desired verification and execute pipeline directly.
-6. For non-renewal operations, verify desired checksums are still current.
-7. If desired is stale:
+3. For observe-only operations (`spec.commands=[CertObserve]`) run pipeline directly (read-only path, no secrets).
+4. For all other operations read `d8-control-plane-manager-config` and `d8-pki` into `ClusterSecrets`.
+5. Verify desired checksums are still current.
+6. If desired is stale:
    - try commit-point completion for in-progress command if desired state is already applied on disk/etcd
    - mark operation cancelled (`Completed=False, Reason=OperationCancelled`)
-8. Execute pipeline commands in declared order (completed commands are skipped on requeue/reconcile).
-9. Mark operation succeeded when all commands completed.
+7. Execute pipeline commands in declared order (completed commands are skipped on requeue/reconcile).
+8. Mark operation succeeded when all commands completed.
 
 ## Pipeline and Status Rules
 
@@ -57,7 +56,7 @@ Commit-point commands:
 
 Before cancelling stale desired state, controller can recover an in-progress commit-point if disk/etcd state already matches desired:
 
-- `manifestMatchesDesired` for static pod checksum/renewal annotations
+- `manifestMatchesDesired` for static pod checksum + renewal-id annotations
 - etcd member presence check for `JoinEtcdCluster`
 - hot-reload checksum-from-disk check for `SyncHotReload`
 

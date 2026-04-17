@@ -161,11 +161,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 	secrets := ClusterSecrets{CPMData: cpmSecret.Data, PKIData: pkiSecret.Data}
 
-	// Renewal operation not needed isDesiredStale check
-	if op.IsRenewalOperation() {
-		return r.reconcilePipeline(ctx, state, secrets, logger)
-	}
-
 	// Verify that the secret content matches what this operation was created for.
 	if stale, reason := isDesiredStale(op, secrets); stale {
 		completion, completionErr := r.markInProgressCommitPointCompletedIfApplied(ctx, state)

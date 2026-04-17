@@ -232,7 +232,8 @@ func manifestMatchesDesired(op *controlplanev1alpha1.ControlPlaneOperation) (boo
 	if op.Spec.DesiredCAChecksum != "" && annotations[constants.CAChecksumAnnotationKey] != op.Spec.DesiredCAChecksum {
 		return false, nil
 	}
-	if op.IsRenewalOperation() && annotations[constants.CertRenewalIDAnnotationKey] != op.CertRenewalID() {
+	if commandWasRenewed(op, controlplanev1alpha1.CommandRenewPKICerts) &&
+		annotations[constants.CertRenewalIDAnnotationKey] != op.Name {
 		return false, nil
 	}
 
