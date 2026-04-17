@@ -97,6 +97,10 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
 
+	if parsedProviderYAML, yamlErr := metaConfig.ProviderClusterConfigYAML(); yamlErr == nil {
+		c.logger.LogInfoF("DEBUG: commander ProviderClusterConfigYAML after ParseMetaConfig:\n%s\n", string(parsedProviderYAML))
+	}
+
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           c.TmpDir,
@@ -173,6 +177,9 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		inClusterSource = "in-cluster"
 	)
 
+	c.logger.LogInfoF("DEBUG: commander ClusterConfigurationData:\n%s\n", string(c.Params.CommanderModeParams.ClusterConfigurationData))
+	c.logger.LogInfoF("DEBUG: commander ProviderClusterConfigurationData:\n%s\n", string(c.Params.CommanderModeParams.ProviderClusterConfigurationData))
+
 	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
 		return "", err
@@ -189,6 +196,18 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}
 
+	if providerYAML, yamlErr := inClusterMetaConfig.ProviderClusterConfigYAML(); yamlErr == nil {
+		c.logger.LogInfoF("DEBUG: in-cluster ProviderClusterConfigYAML:\n%s\n", string(providerYAML))
+	} else {
+		c.logger.LogInfoF("DEBUG: in-cluster ProviderClusterConfigYAML error: %v\n", yamlErr)
+	}
+
+	if clusterYAML, yamlErr := inClusterMetaConfig.ClusterConfigYAML(); yamlErr == nil {
+		c.logger.LogInfoF("DEBUG: in-cluster ClusterConfigYAML:\n%s\n", string(clusterYAML))
+	} else {
+		c.logger.LogInfoF("DEBUG: in-cluster ClusterConfigYAML error: %v\n", yamlErr)
+	}
+
 	inClusterConfig, err := getClusterConfig(inClusterMetaConfig, inClusterSource)
 	if err != nil {
 		return "", err
@@ -202,8 +221,8 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 
 	checks := []checkFunc{
 		equalByOperatorCheck(metaConfig.UUID, inClusterMetaConfig.UUID, "cluster UUID"),
-		equalMapByDeepEqualFuncCheck(clusterConfig, inClusterConfig, clusterConfigKind),
-		equalMapByDeepEqualFuncCheck(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration"),
+		equalMapByDeepEqualFuncCheckWithLog(clusterConfig, inClusterConfig, clusterConfigKind, c.logger),
+		equalMapByDeepEqualFuncCheckWithLog(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration", c.logger),
 	}
 
 	syncStatus := CheckStatusInSync
@@ -395,6 +414,25 @@ func equalMapByDeepEqualFuncCheck(expected, data configTypeForCompare, kind stri
 	return func() error {
 		if reflect.DeepEqual(expected, data) {
 			return nil
+		}
+
+		return checkError(kind)
+	}
+}
+
+func equalMapByDeepEqualFuncCheckWithLog(expected, data configTypeForCompare, kind string, logger log.Logger) checkFunc {
+	return func() error {
+		if reflect.DeepEqual(expected, data) {
+			return nil
+		}
+
+		if logger != nil {
+			if expectedYAML, err := yaml.Marshal(expected); err == nil {
+				logger.LogInfoF("DEBUG: Commander %s:\n%s\n", kind, string(expectedYAML))
+			}
+			if dataYAML, err := yaml.Marshal(data); err == nil {
+				logger.LogInfoF("DEBUG: In-cluster %s:\n%s\n", kind, string(dataYAML))
+			}
 		}
 
 		return checkError(kind)

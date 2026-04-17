@@ -16,7 +16,10 @@ package commander
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -47,5 +50,41 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 	}
 	metaConfig.UUID = clusterUUID
 
+	// OpenAPI validation normalizes string values (e.g. strips trailing \n from block scalars).
+	// This causes sshPublicKey to differ from what was stored in cluster Secrets at deploy time,
+	// leading to different terraform resource name hashes and false destructive changes.
+	// Fix: restore original string values from raw bytes, keeping any defaults added by validation.
+	metaConfig.ProviderClusterConfig = mergeRawOverValidated(
+		params.ProviderClusterConfigurationData,
+		metaConfig.ProviderClusterConfig,
+	)
+	metaConfig.ClusterConfig = mergeRawOverValidated(
+		params.ClusterConfigurationData,
+		metaConfig.ClusterConfig,
+	)
+
 	return metaConfig, nil
+}
+
+// mergeRawOverValidated parses rawBytes directly (preserving original string values like
+// trailing \n in block scalars) and merges in any fields from validatedConfig that are
+// missing in the raw parse (i.e. defaults added by OpenAPI validation).
+func mergeRawOverValidated(rawBytes []byte, validatedConfig map[string]json.RawMessage) map[string]json.RawMessage {
+	if len(rawBytes) == 0 || len(validatedConfig) == 0 {
+		return validatedConfig
+	}
+
+	var rawConfig map[string]json.RawMessage
+	if err := yaml.Unmarshal(rawBytes, &rawConfig); err != nil || len(rawConfig) == 0 {
+		return validatedConfig
+	}
+
+	// Add fields from validatedConfig that are missing in raw (OpenAPI-added defaults).
+	for k, v := range validatedConfig {
+		if _, exists := rawConfig[k]; !exists {
+			rawConfig[k] = v
+		}
+	}
+
+	return rawConfig
 }
