@@ -1,0 +1,43 @@
+- name: d8.istio.alliance
+  rules:
+    - alert: D8IstioAllianceDiscoveryMetadataEndpointUsesDeprecatedSubdomain
+      expr: max by (alliance_kind, name, hostname) (d8_istio_metadata_exporter_endpoint_uses_deprecated_subdomain == 1)
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_metadata_exporter_endpoint_discovery_issues: D8IstioMetadataExporterEndpointDiscoveryIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_metadata_exporter_endpoint_discovery_issues: D8IstioMetadataExporterEndpointDiscoveryIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Alliance metadataEndpoint uses a host whose first DNS label is `istio` (deprecated metadata hostname).
+        description: |
+          The `metadataEndpoint` of `{{$labels.alliance_kind}}` `{{$labels.name}}` uses a hostname whose leftmost label is `istio` (for example `istio.example.com` or `istio.peer.example.net`).
+          
+          Now it uses hostname: `{{$labels.hostname}}`
+          
+          Prefer the same path on a host whose first label is `istio-metadata` (for example `istio-metadata.example.com`), regardless of the parent domain.
+          
+          Migration steps (details may be extended in documentation):
+          
+          1. Ensure DNS to resolve the target `istio-metadata.*` hostname (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).
+          2. Update `spec.metadataEndpoint` on this object to use that host; keep the path `/metadata/`.
+          3. Verify remote metadata fetch and multicluster/federation health after the change.
+    - alert: D8IstioAllianceDiscoveryMetadataEndpointAccessedViaDeprecatedSubdomain
+      expr: sum(rate(d8_istio_metadata_exporter_accessed_via_deprecated_subdomain[5m])) > 0
+      for: 5m
+      labels:
+        severity_level: "5"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_metadata_exporter_endpoint_discovery_external_issues: D8IstioMetadataExporterEndpointDiscoveryExternalIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_metadata_exporter_endpoint_discovery_external_issues: D8IstioMetadataExporterEndpointDiscoveryExternalIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: Peers still call `<federation|multicluster>.json` on this cluster using the deprecated `istio` public subdomain.
+        description: |
+          Requests to `/metadata/private/<federation|multicluster>.json` used HTTP `Host` equal to this cluster's deprecated public hostname `istio.<publicDomainTemplate>`.
+          
+          Remote clusters should switch `metadataEndpoint` to `istio-metadata.<publicDomainTemplate>/metadata/`.
+ 

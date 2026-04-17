@@ -15,6 +15,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
@@ -35,10 +37,10 @@ func httpHandlerFederationPrivateJSON(exp *Exporter) http.HandlerFunc {
 			logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path, err)
 			return
 		}
-
 		privateMetadataJSON := exp.RenderFederationPrivateMetadataJSON()
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+		checkIfAccessedViaDepricatedSubdomain(r)
 	}
 }
 
@@ -53,6 +55,7 @@ func httpHandlerMulticlusterPrivateJSON(exp *Exporter) http.HandlerFunc {
 		privateMetadataJSON := exp.RenderMulticlusterPrivateMetadataJSON()
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
+		checkIfAccessedViaDepricatedSubdomain(r)
 	}
 }
 
@@ -89,6 +92,14 @@ func main() {
 	var ctx, cancel = context.WithCancel(context.Background())
 
 	var wg sync.WaitGroup // for wait all go routine
+
+	reg := prometheus.NewRegistry()
+	registerMetadataExporterMetrics(reg)
+	metricsAddr := os.Getenv("METRICS_LISTEN_ADDR")
+	if metricsAddr == "" {
+		metricsAddr = "127.0.0.1:4225"
+	}
+	startMetadataMetricsServer(ctx, &wg, metricsAddr, reg, logger)
 
 	listenAddr := "0.0.0.0:8080"
 	logger.Println("Server is starting to listen on ", listenAddr, "...")
