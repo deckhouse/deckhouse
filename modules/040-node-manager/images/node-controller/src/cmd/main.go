@@ -32,8 +32,6 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -86,9 +84,8 @@ func main() {
 	cfg := ctrl.GetConfigOrDie()
 	ctx := ctrl.SetupSignalHandler()
 
-	var disableFor []client.Object
-	disableFor = append(disableFor, common.ControllerDisableFor()...)
-	disableFor = append(disableFor, webhook.DisableFor()...)
+	cacheOpts, clientOpts := common.CacheOptions()
+	clientOpts.Cache.DisableFor = append(clientOpts.Cache.DisableFor, webhook.DisableFor()...)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
@@ -99,13 +96,8 @@ func main() {
 			BindAddress: metricsAddr,
 		},
 		HealthProbeBindAddress: probeAddr,
-		Cache: cache.Options{
-			DefaultTransform: common.CacheTransformWithLogging(ctx, setupLog),
-			ByObject:         common.CacheByObject(),
-		},
-		Client: client.Options{
-			Cache: &client.CacheOptions{DisableFor: disableFor},
-		},
+		Cache:                  cacheOpts,
+		Client:                 clientOpts,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -138,12 +130,6 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
-
-	go func() {
-		if mgr.GetCache().WaitForCacheSync(ctx) {
-			common.LogCacheContents(ctx, mgr.GetCache(), setupLog)
-		}
-	}()
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {

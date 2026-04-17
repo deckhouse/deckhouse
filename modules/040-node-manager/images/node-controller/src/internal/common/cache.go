@@ -28,48 +28,73 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CacheByObject() map[client.Object]cache.ByObject {
+func CacheOptions() (cache.Options, client.Options) {
+	stripManagedFields := cache.TransformStripManagedFields()
+
 	machineNS := cache.ByObject{
 		Namespaces: map[string]cache.Config{
 			MachineNamespace: {},
 		},
 	}
 
-	return map[client.Object]cache.ByObject{
-		&corev1.Secret{}: secretCacheConfig(),
-		newUnstructured("machine.sapcloud.io", "v1alpha1", "Machine"):           machineNS,
-		newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
-		newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):              machineNS,
-		newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):    machineNS,
-	}
-}
-
-func ControllerDisableFor() []client.Object {
-	return []client.Object{
-		&corev1.Pod{},
-		&coordinationv1.Lease{},
-	}
-}
-
-func secretCacheConfig() cache.ByObject {
 	kubeSystemSecrets, _ := labels.NewRequirement("name", selection.In, []string{
 		"d8-node-manager-cloud-provider",
 		"d8-cluster-configuration",
 		"d8-provider-cluster-configuration",
 	})
 
-	return cache.ByObject{
-		Namespaces: map[string]cache.Config{
-			MachineNamespace: {
-				FieldSelector: fields.SelectorFromSet(fields.Set{
-					"metadata.name": ConfigurationChecksumsSecretName,
-				}),
+	cacheOpts := cache.Options{
+		DefaultTransform: func(obj interface{}) (interface{}, error) {
+			stripNodeHeavyFields(obj)
+			return stripManagedFields(obj)
+		},
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Secret{}: {
+				Namespaces: map[string]cache.Config{
+					MachineNamespace: {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"metadata.name": ConfigurationChecksumsSecretName,
+						}),
+					},
+					"kube-system": {
+						LabelSelector: labels.NewSelector().Add(*kubeSystemSecrets),
+					},
+				},
 			},
-			"kube-system": {
-				LabelSelector: labels.NewSelector().Add(*kubeSystemSecrets),
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "Machine"):           machineNS,
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):              machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):    machineNS,
+		},
+	}
+
+	clientOpts := client.Options{
+		Cache: &client.CacheOptions{
+			DisableFor: []client.Object{
+				&corev1.Pod{},
+				&coordinationv1.Lease{},
 			},
 		},
 	}
+
+	return cacheOpts, clientOpts
+}
+
+func stripNodeHeavyFields(obj interface{}) {
+	node, ok := obj.(*corev1.Node)
+	if !ok {
+		return
+	}
+	node.Status.Images = nil
+	node.Status.NodeInfo = corev1.NodeSystemInfo{}
+	node.Status.Addresses = nil
+	node.Status.Capacity = nil
+	node.Status.Allocatable = nil
+	node.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{}
+	node.Status.VolumesAttached = nil
+	node.Status.VolumesInUse = nil
+	node.Spec.PodCIDR = ""
+	node.Spec.PodCIDRs = nil
 }
 
 func newUnstructured(group, version, kind string) *unstructured.Unstructured {
