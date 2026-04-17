@@ -16,6 +16,23 @@
 */}}
 set -Eeo pipefail
 
+bootstrap_log_init() {
+  local current_file="$1"
+
+  if [[ -z ${bootstrap_log_initialized:-} ]]; then
+    mkdir -p /var/log/d8/bashible
+    exec {bootstrap_stdout_fd}>&1
+    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
+    bootstrap_log_initialized=1
+  fi
+
+  printf '\n==========================\n'
+  printf '== %s ==\n' "${current_file}"
+  printf '==========================\n'
+}
+
+bootstrap_log_init "02-base-pkgs.sh.tpl"
+
 {{- /*
 # dhctl and node-manager renders have different helm root dir and .Files.Get should use different paths:
 # '/deckhouse/candi/bashible/...' - dhctl

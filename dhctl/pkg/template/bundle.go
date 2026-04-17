@@ -90,6 +90,10 @@ func PrepareBundle(
 		return err
 	}
 
+	if err := prepareNodeGroupConfigurationSteps(ctx, templateController, metaConfig.ResourcesYAML, bashibleData); err != nil {
+		return err
+	}
+
 	if err := PrepareKubeadmConfig(ctx, templateController, kubeadmData, dc); err != nil {
 		return err
 	}
