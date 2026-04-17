@@ -3,6 +3,12 @@ cpu: 25m
 memory: 60Mi
 {{- end }}
 
+{{- define "cloud_controller_manager_pod_labels" -}}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+security.deckhouse.io/security-policy-exception: cloud-controller-manager
+{{- end }}
+{{- end -}}
+
 {{- $ccmImage := include "helm_lib_module_image_no_fail" (list .  "cloudControllerManager") }}
 {{- if $ccmImage }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
@@ -58,9 +64,7 @@ spec:
     metadata:
       labels:
         app: cloud-controller-manager
-        {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
-        security.deckhouse.io/security-policy-exception: cloud-controller-manager
-        {{- end }}
+        {{- include "cloud_controller_manager_pod_labels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
