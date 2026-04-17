@@ -278,6 +278,7 @@ func (i *Attacher) scan(
 			return err
 		}
 
+		// TODO keep keys in session instead of ReadFile
 		if len(sshCl.PrivateKeys()) > 0 {
 			sshPrivateKey, err := os.ReadFile(sshCl.PrivateKeys()[0].Key)
 			if err != nil {

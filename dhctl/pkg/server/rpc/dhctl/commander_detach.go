@@ -255,7 +255,6 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 	})
 
 	checker := check.NewChecker(&check.Params{
-		SSHProvider:   sshProvider,
 		KubeProvider:  kubeProvider,
 		StateCache:    stateCache,
 		CommanderMode: p.request.Options.CommanderMode,

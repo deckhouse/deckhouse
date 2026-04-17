@@ -297,7 +297,6 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	}
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-	var sshProvider libcon.SSHProvider
 	var kubeProvider libcon.KubeProvider
 	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		var cleanup func() error
@@ -305,11 +304,6 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
-		}
-
-		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
-		if err != nil {
-			return fmt.Errorf("getting ssh provider: %w", err)
 		}
 
 		return nil
@@ -320,7 +314,6 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	}
 
 	checkParams.KubeProvider = kubeProvider
-	checkParams.SSHProvider = sshProvider
 
 	convergeParams.KubeProvider = kubeProvider
 	convergeParams.SSHProviderInitializer = sshProviderInitializer

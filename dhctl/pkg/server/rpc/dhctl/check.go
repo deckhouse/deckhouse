@@ -42,7 +42,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -244,20 +243,13 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		OnProgressFunc:        p.sendProgress,
 	}
 
-	var sshProvider libcon.SSHProvider
 	var kubeProvider libcon.KubeProvider
 	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		var cleanup func() error
-		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
+		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
-		}
-
-		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
-		if err != nil {
-			return fmt.Errorf("getting ssh provider: %w", err)
 		}
 
 		return nil
@@ -267,7 +259,6 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	}
 
 	checkParams.KubeProvider = kubeProvider
-	checkParams.SSHProvider = sshProvider
 
 	checker := check.NewChecker(checkParams)
 

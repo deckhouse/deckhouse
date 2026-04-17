@@ -235,13 +235,18 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		nodeInternalIPList []string
 	)
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
 			output, err := operations.BootstrapAdditionalMasterNode(
 				ctx.Ctx(),
-				ctx.KubeClient(),
+				kubeClient,
 				metaConfig,
 				index,
 				c.cloudConfig,
@@ -261,7 +266,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		index++
 	}
 
-	err = entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
+	err = entity.WaitForNodesListBecomeReady(ctx.Ctx(), kubeClient, nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
 	if err != nil {
 		return err
 	}
@@ -272,7 +277,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
 		if err != nil {
 			return err
 		}
@@ -422,7 +427,12 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return global.ErrConvergeInterrupted
 	}
 
-	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), kubeClient, nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return err
 	}
@@ -458,7 +468,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		log.WarnF("No SSH IP received for master node %s, cache not updated\n", nodeName)
 	}
 
-	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
+	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
 func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string, metaConfig *config.MetaConfig) infrastructure.InfraActionHook {

@@ -45,7 +45,7 @@ type ClientSwitcher interface {
 
 type HookForUpdatePipeline struct {
 	*Checker
-	kubeGetter        kubernetes.KubeClientProvider
+	kubeGetter        kubernetes.KubeClientProviderWithCtx
 	nodeToConverge    string
 	oldMasterIPForSSH string
 	commanderMode     bool
@@ -53,7 +53,7 @@ type HookForUpdatePipeline struct {
 }
 
 func NewHookForUpdatePipeline(
-	kubeGetter kubernetes.KubeClientProvider,
+	kubeGetter kubernetes.KubeClientProviderWithCtx,
 	nodeToHostForChecks map[string]string,
 	clusterUUID string,
 	commanderMode bool,
@@ -64,7 +64,13 @@ func NewHookForUpdatePipeline(
 	}
 
 	if !commanderMode && !skipChecks {
-		cl := kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
+		kubeClient, err := kubeGetter.KubeClientCtx(context.Background())
+		if err != nil {
+			panic("Could not get kube client: " + err.Error())
+		}
+
+		// TODO remove it
+		cl := kubeClient.NodeInterfaceAsSSHClient()
 		if cl == nil {
 			panic("Node interface is not ssh")
 		}
@@ -159,12 +165,17 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 
 	h.oldMasterIPForSSH = masterIP
 
-	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge, h.commanderMode)
+	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
 
-	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToConverge)
 	if err != nil {
 		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
 	}
@@ -186,9 +197,14 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	if err != nil {
 		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
+	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
 
 	if !h.commanderMode {
-		cl := h.kubeGetter.KubeClient().NodeInterfaceAsSSHClient()
+		cl := kubeClient.NodeInterfaceAsSSHClient()
+		// TODO remove it
 		if cl == nil {
 			panic("Node interface is not ssh")
 		}
@@ -211,7 +227,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}
 
-	err = waitEtcdHasMember(ctx, h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
+	err = waitEtcdHasMember(ctx, kubeClient.KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
 	}
@@ -239,11 +255,16 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 		return manifests.SecretMasterDevicePath(h.nodeToConverge, []byte(devicePath))
 	}
 
+	kubeClient, err := h.kubeGetter.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
 		CreateFunc: func(ctx context.Context, manifest interface{}) error {
-			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
 			}
@@ -256,7 +277,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 				return err
 			}
 
-			_, err = h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Patch(
+			_, err = kubeClient.CoreV1().Secrets("d8-system").Patch(
 				ctx,
 				"d8-masters-kubernetes-data-device-path",
 				types.MergePatchType,

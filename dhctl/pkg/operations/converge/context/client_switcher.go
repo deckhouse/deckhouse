@@ -31,11 +31,9 @@ import (
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type KubeClientSwitcher struct {
@@ -202,7 +200,7 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 		return nil
 	}
 
-	_, sshClient, err := s.extractClients(ctx)
+	sshClient, err := s.extractSSHClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -267,7 +265,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	_, sshClient, err := s.extractClients(ctx)
+	sshClient, err := s.extractSSHClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -401,16 +399,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	var pkeys []session.AgentPrivateKey
 
 	appendPKey := params.appendPKey
-
-	if appendPKey != nil {
-		if sshclient.IsLegacyMode() {
-			pkeys = append(pkeys, *appendPKey)
-		} else {
-			pkeys = append(sshCl.PrivateKeys(), *appendPKey)
-		}
-	} else {
-		pkeys = sshCl.PrivateKeys()
-	}
+	pkeys = append(pkeys, *appendPKey)
 
 	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
 
@@ -475,7 +464,7 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 	}
 
 	// check ssh client
-	_, _, err = s.extractClients(ctx)
+	_, err = s.extractSSHClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -530,12 +519,7 @@ type NodeState struct {
 func (s *KubeClientSwitcher) extractStatesFromCluster(ctx context.Context) (*NodeState, []*NodeState, error) {
 	const firstMasterSuffix = "-0"
 
-	kubeCl, _, err := s.extractClients(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	states, err := infrastructurestate.GetMasterNodesStateFromCluster(ctx, kubeCl)
+	states, err := infrastructurestate.GetMasterNodesStateFromCluster(ctx, s.ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Cannot extract control-plane node states: %w", err)
 	}
@@ -604,23 +588,18 @@ func (s *KubeClientSwitcher) isSkipOrLogStart(action string, strict bool) (bool,
 	return false, nil
 }
 
-func (s *KubeClientSwitcher) extractClients(ctx context.Context) (*kclient.KubernetesClient, libcon.SSHClient, error) {
-	kubeClient, err := s.ctx.KubeClientCtx(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
+func (s *KubeClientSwitcher) extractSSHClient(ctx context.Context) (libcon.SSHClient, error) {
 	sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	sshCl, err := sshProvider.Client(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return &kclient.KubernetesClient{KubeClient: kubeClient}, sshCl, nil
+	return sshCl, nil
 }
 
 func (s *KubeClientSwitcher) debug(f string, args ...any) {

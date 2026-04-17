@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
+	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -101,7 +102,31 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
-		converger.ApplyParams()
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+		if sshProviderInitializer != nil {
+			if sshProviderInitializer.CheckHosts() {
+				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+				cacheIdentity = sshClient.Check().String()
+			}
+		}
+
+		if app.KubeConfig != "" {
+			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+		converger.CacheID = cacheIdentity
 		_, err = converger.Converge(ctx)
 
 		if err != nil {
@@ -243,8 +268,32 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			IsDebug:                               isDebug,
 			DirectoryConfig:                       app.GetDirConfig(),
 		})
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+		if sshProviderInitializer != nil {
+			if sshProviderInitializer.CheckHosts() {
+				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+				cacheIdentity = sshClient.Check().String()
+			}
+		}
 
-		converger.ApplyParams()
+		if app.KubeConfig != "" {
+			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+		converger.CacheID = cacheIdentity
+
 		if err := converger.ConvergeMigration(ctx); err != nil {
 			msg := fmt.Sprintf("ConvergeMigration failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)

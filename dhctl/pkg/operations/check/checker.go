@@ -43,7 +43,6 @@ type externalPhasedContext interface {
 }
 
 type Params struct {
-	SSHProvider    libcon.SSHProvider
 	KubeProvider   libcon.KubeProvider
 	StateCache     dhctlstate.Cache
 	OnPhaseFunc    phases.DefaultOnPhaseFunc

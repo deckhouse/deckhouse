@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
@@ -47,8 +46,6 @@ type Params struct {
 	OnProgressFunc  phases.OnProgressFunc
 	ChangesSettings infrastructure.ChangeActionSettings
 
-	*client.KubernetesInitParams
-
 	CommanderMode bool
 	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
@@ -67,6 +64,7 @@ type Params struct {
 	NoSwitchToNodeUser bool
 
 	CheckHasTerraformStateBeforeMigration bool
+	CacheID                               string
 }
 
 type Converger struct {
@@ -97,21 +95,6 @@ func NewConverger(params *Params) *Converger {
 	}
 }
 
-func (c *Converger) ApplyParams() {
-	if c.KubernetesInitParams == nil {
-		kubeParams := &client.KubernetesInitParams{}
-		kubeParams.KubeConfigInCluster = app.KubeConfigInCluster
-		if len(app.KubeConfig) > 0 {
-			kubeParams.KubeConfig = app.KubeConfig
-		}
-		if len(app.KubeConfigContext) > 0 {
-			kubeParams.KubeConfigContext = app.KubeConfigContext
-		}
-
-		c.KubernetesInitParams = kubeParams
-	}
-}
-
 func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	{
 		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
@@ -123,37 +106,14 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	}
 
 	if !c.CommanderMode {
-		cacheIdentity := ""
-		if c.KubeConfigInCluster {
-			cacheIdentity = "in-cluster"
-		}
-		if c.SSHProviderInitializer != nil {
-			if c.SSHProviderInitializer.CheckHosts() {
-				sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
-				if err != nil {
-					return err
-				}
-				sshClient, err := sshProvider.Client(ctx)
-				if err != nil {
-					return err
-				}
-				cacheIdentity = sshClient.Check().String()
-			}
-		}
 
-		if c.KubeConfig != "" {
-			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
-				c.KubeConfig,
-				c.KubeConfigContext,
-			)
-		}
-		if cacheIdentity == "" {
+		if c.CacheID == "" {
 			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err := cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
+		err := cache.InitWithOptions(c.CacheID, cache.CacheOptions{})
 		if err != nil {
-			return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
+			return fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
 	}
 
@@ -248,34 +208,13 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}
 
 	if !c.CommanderMode {
-		cacheIdentity := ""
-		if c.KubeConfigInCluster {
-			cacheIdentity = "in-cluster"
-		}
-		if c.SSHProviderInitializer.CheckHosts() {
-			sshProvider, err := c.SSHProviderInitializer.GetSSHProvider(ctx)
-			if err != nil {
-				return nil, err
-			}
-			sshClient, err := sshProvider.Client(ctx)
-			if err != nil {
-				return nil, err
-			}
-			cacheIdentity = sshClient.Check().String()
-		}
-		if c.KubeConfig != "" {
-			cacheIdentity = cache.GetCacheIdentityFromKubeconfig(
-				c.KubeConfig,
-				c.KubeConfigContext,
-			)
-		}
-		if cacheIdentity == "" {
+		if c.CacheID == "" {
 			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err := cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
+		err := cache.InitWithOptions(c.CacheID, cache.CacheOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
+			return nil, fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
 	}
 

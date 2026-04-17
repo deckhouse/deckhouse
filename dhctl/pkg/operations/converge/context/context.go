@@ -130,17 +130,8 @@ func (c *Context) WithProviderGetter(getter infrastructure.CloudProviderGetter) 
 	return c
 }
 
-func (c *Context) KubeProvider() kubernetes.KubeClientProvider {
+func (c *Context) KubeProvider() kubernetes.KubeClientProviderWithCtx {
 	return c
-}
-
-func (c *Context) KubeClient() *client.KubernetesClient {
-	c.kubeClientMu.RLock()
-	defer c.kubeClientMu.RUnlock()
-
-	kubeClient, _ := c.kubeProvider.Client(c.ctx)
-
-	return &client.KubernetesClient{KubeClient: kubeClient}
 }
 
 func (c *Context) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
@@ -217,7 +208,12 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, c.KubeClient(), c.logger, c.directoryConfig)
+	kubeClient, err := c.KubeClientCtx(c.Ctx())
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	metaConfig, err := entity.GetMetaConfig(c.ctx, kubeClient, c.logger, c.directoryConfig)
 	if err != nil {
 		return nil, err
 	}

@@ -36,13 +36,13 @@ import (
 )
 
 type HookForDestroyPipeline struct {
-	getter            kubernetes.KubeClientProvider
+	getter            kubernetes.KubeClientProviderWithCtx
 	nodeToDestroy     string
 	oldMasterIPForSSH string
 	commanderMode     bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
 		nodeToDestroy: nodeToDestroy,
@@ -72,12 +72,17 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 
 	h.oldMasterIPForSSH = masterIP
 
-	err = removeControlPlaneRoleFromNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, h.commanderMode)
+	kubeClient, err := h.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = removeControlPlaneRoleFromNode(ctx, kubeClient, h.nodeToDestroy, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
 
-	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToDestroy)
 	if err != nil {
 		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
@@ -85,12 +90,17 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	return false, nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(_ context.Context, runner infrastructure.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	if h.commanderMode {
 		return nil
 	}
 
-	cl := h.getter.KubeClient().NodeInterfaceAsSSHClient()
+	kubeClient, err := h.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	cl := kubeClient.NodeInterfaceAsSSHClient()
 	if cl == nil {
 		log.DebugLn("Node interface is not ssh")
 		return nil

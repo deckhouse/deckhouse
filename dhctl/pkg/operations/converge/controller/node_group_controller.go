@@ -63,7 +63,12 @@ func NewNodeGroupController(name string, state state.NodeGroupInfrastructureStat
 
 func (c *NodeGroupController) Run(ctx *context.Context) error {
 	// we hide deckhouse logs because we always have config
-	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
@@ -182,6 +187,11 @@ func (c *NodeGroupController) deleteRedundantNodes(
 		}
 	}
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	var allErrs *multierror.Error
 	for _, nodeToDeleteInfo := range nodesToDeleteInfo {
 		if _, ok := c.excludedNodes[nodeToDeleteInfo.name]; ok {
@@ -229,7 +239,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			return allErrs.ErrorOrNil()
 		}
 
-		if err := entity.DeleteNode(ctx.Ctx(), ctx.KubeClient(), nodeToDeleteInfo.name); err != nil {
+		if err := entity.DeleteNode(ctx.Ctx(), kubeClient, nodeToDeleteInfo.name); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -239,7 +249,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), ctx.KubeClient(), fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
+		if err := infrastructurestate.DeleteInfrastructureState(ctx.Ctx(), kubeClient, fmt.Sprintf("d8-node-terraform-state-%s", nodeToDeleteInfo.name)); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("%s: %w", nodeToDeleteInfo.name, err))
 			continue
 		}
@@ -261,8 +271,13 @@ func getNodeTemplateDiff(fromNG map[string]any, fromConfig map[string]any) strin
 
 func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTemplate map[string]any) error {
 	nodeTemplatePath := []string{"spec", "nodeTemplate"}
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	for {
-		ng, err := entity.GetNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name)
+		ng, err := entity.GetNodeGroup(ctx.Ctx(), kubeClient, c.name)
 		if err != nil {
 			return err
 		}
@@ -290,7 +305,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 			return err
 		}
 
-		err = entity.UpdateNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name, ng)
+		err = entity.UpdateNodeGroup(ctx.Ctx(), kubeClient, c.name, ng)
 
 		if err == nil {
 			return nil
@@ -316,8 +331,13 @@ func (c *NodeGroupController) tryDeleteNodeGroup(ctx *context.Context) error {
 		return nil
 	}
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	return log.Process("converge", fmt.Sprintf("Delete NodeGroup %s", c.name), func() error {
-		return entity.DeleteNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name)
+		return entity.DeleteNodeGroup(ctx.Ctx(), kubeClient, c.name)
 	})
 }
 
@@ -349,6 +369,11 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 		return err
 	}
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	for _, nodeName := range nodeNames {
 		processTitle := fmt.Sprintf("Update Node %s in NodeGroup %s (replicas: %v)", nodeName, c.name, replicas)
 
@@ -364,7 +389,7 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 			}
 
 			// we hide deckhouse logs because we always have config
-			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
+			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger())
 			if err != nil {
 				return err
 			}

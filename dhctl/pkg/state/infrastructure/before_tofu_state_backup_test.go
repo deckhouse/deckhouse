@@ -174,8 +174,8 @@ func NewFakeKubeProvider(cl *client.KubernetesClient) *FakeKubeProvider {
 	}
 }
 
-func (f *FakeKubeProvider) KubeClient() *client.KubernetesClient {
-	return f.kubeClient
+func (f *FakeKubeProvider) KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error) {
+	return f.kubeClient, nil
 }
 
 func TestBackupStates(t *testing.T) {
