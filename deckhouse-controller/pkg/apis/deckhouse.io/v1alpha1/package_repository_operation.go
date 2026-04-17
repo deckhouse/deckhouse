@@ -31,10 +31,10 @@ const (
 	PackageRepositoryOperationConditionCompleted = "Completed"
 
 	// PackageRepositoryOperation condition reasons
-	PackageRepositoryOperationReasonDiscover   = "Discover"
-	PackageRepositoryOperationReasonProcessing = "Processing"
-	PackageRepositoryOperationReasonSucceeded  = "Succeeded"
-	PackageRepositoryOperationReasonFailed     = "Failed"
+	PackageRepositoryOperationReasonDiscover      = "Discover"
+	PackageRepositoryOperationReasonProcessing    = "Processing"
+	PackageRepositoryOperationReasonScanSucceeded = "ScanSucceeded"
+	PackageRepositoryOperationReasonScanFailed    = "ScanFailed"
 
 	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations
 	// that belong to a specific PackageRepository

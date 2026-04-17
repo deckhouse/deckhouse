@@ -23,7 +23,7 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Completed')].status
       name: Completed
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Completed')].reason == Succeeded
+    - jsonPath: .status.conditions[?(@.type=='Completed')].reason == ScanSucceeded
       name: Succeeded
       type: boolean
     - jsonPath: .status.conditions[?(@.type=='Completed')].message

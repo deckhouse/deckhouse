@@ -329,7 +329,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 		now := metav1.Now()
 		op.Status.CompletionTime = &now
 
-		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonSucceeded, "")
+		r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonScanSucceeded, "")
 
 		if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
@@ -442,7 +442,7 @@ func (r *reconciler) failOperation(ctx context.Context, op *v1alpha1.PackageRepo
 
 	now := metav1.Now()
 	op.Status.CompletionTime = &now
-	r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonFailed, cause.Error())
+	r.setCompletedConditionTrue(op, v1alpha1.PackageRepositoryOperationReasonScanFailed, cause.Error())
 
 	if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, err
@@ -479,7 +479,7 @@ func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v
 	}
 
 	status := metav1.ConditionTrue
-	if cond.Reason == v1alpha1.PackageRepositoryOperationReasonFailed {
+	if cond.Reason == v1alpha1.PackageRepositoryOperationReasonScanFailed {
 		status = metav1.ConditionFalse
 	}
 
