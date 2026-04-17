@@ -29,6 +29,8 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
+const clusterAPINamespace = "d8-cloud-instance-manager"
+
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
 		Queue: "/modules/node-manager/cluster-api",
@@ -71,6 +73,9 @@ func updateControlPlane(_ context.Context, input *go_hook.HookInput) error {
 			"initialized":                 true,
 			"ready":                       true,
 			"externalManagedControlPlane": true,
+			"initialization": map[string]interface{}{
+				"controlPlaneInitialized": true,
+			},
 		},
 	}
 	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.Snapshots.Get("control_plane")) {

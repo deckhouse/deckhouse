@@ -52,6 +52,13 @@ spec:
                     for initial contact. This may occur before the control plane is
                     fully ready.
                   type: boolean
+                initialization:
+                  description: Initialization contains the initialization status of the control plane.
+                  type: object
+                  properties:
+                    controlPlaneInitialized:
+                      description: ControlPlaneInitialized is true when the control plane has been initialized.
+                      type: boolean
                 ready:
                   description: Ready is true when the control plane is ready.
                   type: boolean
