@@ -1,9 +1,11 @@
-{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
   name: capdvp-controller-manager
   namespace: d8-cloud-provider-dvp
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capdvp-controller-manager")) | nindent 2 }}
 spec:
   network:
     hostNetwork:
