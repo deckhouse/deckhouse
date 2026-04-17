@@ -197,7 +197,7 @@ func hasPackageRepositoryOwnerRef(op *v1alpha1.PackageRepositoryOperation) bool 
 //
 // The state machine has two axes, both encoded in the "Completed" status condition.
 // Note the deliberate naming split: "Completed" is the condition *type* (the slot),
-// while "Succeeded" / "Failed" are terminal *reasons* that fill it — the type name
+// while "ScanSucceeded" / "ScanFailed" are terminal *reasons* that fill it — the type name
 // indicates presence of a terminal verdict, not success.
 //
 //	Pre-terminal (Status=False) — routed explicitly by Reason:
@@ -206,7 +206,7 @@ func hasPackageRepositoryOwnerRef(op *v1alpha1.PackageRepositoryOperation) bool 
 //	    Reason=Processing        → handleProcessingState
 //
 //	Terminal (Status=True) — routed uniformly via op.IsCompleted():
-//	    Reason=Succeeded (OK) or Reason=Failed (KO) → handleCleanupState
+//	    Reason=ScanSucceeded (OK) or Reason=ScanFailed (KO) → handleCleanupState
 //
 // Each active pre-terminal handler advances the condition and requeues, so a full run
 // performs one state transition per reconcile — the condition IS the durable checkpoint.
@@ -314,6 +314,10 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 		return r.failOperation(ctx, op, err)
 	}
 
+	if op.Status.Packages == nil {
+		return ctrl.Result{}, nil
+	}
+
 	// Check if all packages have been processed
 	if len(op.Status.Packages.Discovered) == 0 {
 		r.logger.Info("all packages processed", slog.Int("total", op.Status.Packages.Total))
@@ -347,7 +351,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, op *v1alpha1.Pac
 	return r.processNextPackage(ctx, op, svc)
 }
 
-// handleCleanupState is the terminal handler for both Completed and Failed operations.
+// handleCleanupState is the terminal handler for both ScanSucceeded and ScanFailed operations.
 // It keeps the N most recent operations for this repository (cleanupOldOperationsCount)
 // and deletes the rest, regardless of whether each one succeeded or failed.
 //
@@ -396,7 +400,7 @@ func (r *reconciler) handleCleanupState(ctx context.Context, op *v1alpha1.Packag
 	return ctrl.Result{}, nil
 }
 
-// setCompletedConditionTrue sets the condition Completed to True, clearing reason and message.
+// setCompletedConditionTrue sets the condition Completed to True.
 func (r *reconciler) setCompletedConditionTrue(op *v1alpha1.PackageRepositoryOperation, reason, message string) {
 	metautils.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
 		Type:               v1alpha1.PackageRepositoryOperationConditionCompleted,
