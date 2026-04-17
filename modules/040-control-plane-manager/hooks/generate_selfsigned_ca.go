@@ -96,18 +96,19 @@ func generateSelfSignedCA(_ context.Context, input *go_hook.HookInput) error {
 	certs := input.Snapshots.Get("cert")
 	authnCerts := input.Snapshots.Get("cert_from_authn")
 
-	if len(certs) == 1 {
+	switch {
+	case len(certs) == 1:
 		err := certs[0].UnmarshalTo(&sefSignedCA)
 		if err != nil {
 			return fmt.Errorf("cannot convert sefsigned certificate to certificate authority: failed to unmarshal 'cert' snapshot: %w", err)
 		}
-		// else if for migrating CA from authn to control-plane-manager (kube-system)
-	} else if len(authnCerts) == 1 {
+		// to remove this case after migrating from authn
+	case len(authnCerts) == 1:
 		err := authnCerts[0].UnmarshalTo(&sefSignedCA)
 		if err != nil {
 			return fmt.Errorf("cannot convert sefsigned certificate to certificate authority: failed to unmarshal 'cert_authn' snapshot: %w", err)
 		}
-	} else {
+	default:
 		var err error
 		sefSignedCA, err = certificate.GenerateCA(input.Logger, "kubernetes-api-selfsigned-ca")
 		if err != nil {

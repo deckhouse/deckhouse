@@ -78,7 +78,16 @@ metadata:
 data:
   ca.crt: a3ViZXJuZXRlcy10bHMtY3VzdG9tY2VydGlmaWNhdGU=
 `
-
+	cpmCertificateConfigMap := `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-publish-api-master-ca
+  namespace: kube-system
+data:
+  publishedAPIKubeconfigGeneratorMasterCA: "controlPlaneManagerCA"
+`
 	DescribeTable("publishAPI discovery cert",
 		func(in inputPublishAPICACert, out string) {
 			f.BindingContexts.Set(f.KubeStateSet(in.manifests))
@@ -192,6 +201,14 @@ data:
 				kubeconfigMasterCA: ptr.To(""),
 			},
 			"",
+		),
+		Entry("With control-plane-manager imported CM:",
+			inputPublishAPICACert{
+				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret + cpmCertificateConfigMap,
+				publishAPIMode: "Global",
+				httpMode:       "CustomCertificate",
+			},
+			"controlPlaneManagerCA",
 		),
 	)
 
