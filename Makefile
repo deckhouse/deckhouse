@@ -443,9 +443,6 @@ set-build-envs:
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
   endif
-  ifeq ($(OBSERVABILITY_SOURCE_REPO),)
-  	export OBSERVABILITY_SOURCE_REPO=https://example.com
-  endif
   ifeq ($(DECKHOUSE_PRIVATE_REPO),)
   	export DECKHOUSE_PRIVATE_REPO=https://github.com
   endif
