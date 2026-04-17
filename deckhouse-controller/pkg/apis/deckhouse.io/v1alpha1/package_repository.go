@@ -33,7 +33,7 @@ const (
 
 	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
 
-	PackageRepositoryConditionLastOperationScanFinished = "LastOperationScanFinished"
+	PackageRepositoryConditionLastScanSucceeded = "LastScanSucceeded"
 )
 
 var (
