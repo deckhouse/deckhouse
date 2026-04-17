@@ -76,51 +76,48 @@ func RegisterController(
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	logger := r.logger.With(slog.String("name", req.Name))
 
-	logger.Debug("reconciling PackageRepository")
+	logger.Debug("reconcile resource")
 
-	packageRepository := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, req.NamespacedName, packageRepository); err != nil {
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, req.NamespacedName, repo); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Debug("package repository not found")
+			logger.Debug("resource not found")
 
-			return res, nil
+			return ctrl.Result{}, nil
 		}
 
-		logger.Warn("failed to get package repository", log.Err(err))
+		logger.Warn("failed to get resource", log.Err(err))
 
-		return res, err
+		return ctrl.Result{}, err
 	}
 
 	// handle delete event
-	if !packageRepository.DeletionTimestamp.IsZero() {
-		logger.Debug("deleting package repository")
+	if !repo.DeletionTimestamp.IsZero() {
+		logger.Debug("delete resource")
 
-		err := r.delete(ctx, packageRepository)
-		if err != nil {
-			logger.Warn("failed to delete package repository", log.Err(err))
+		if err := r.delete(ctx, repo); err != nil {
+			logger.Warn("failed to delete resource", log.Err(err))
 
-			return res, err
+			return ctrl.Result{}, err
 		}
 
-		return res, nil
+		return ctrl.Result{}, nil
 	}
 
 	// handle create/update events
-	res, err := r.handle(ctx, packageRepository)
+	res, err := r.handleCreateOrUpdate(ctx, repo)
 	if err != nil {
 		logger.Warn("failed to handle package repository", log.Err(err))
 
-		return res, err
+		return ctrl.Result{}, err
 	}
 
 	return res, nil
 }
 
-func (r *reconciler) handle(ctx context.Context, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.PackageRepository) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", repo.Name))
 
 	logger.Debug("handle resource")
@@ -143,22 +140,13 @@ func (r *reconciler) handle(ctx context.Context, repo *v1alpha1.PackageRepositor
 		return ctrl.Result{}, fmt.Errorf("list operations: %w", err)
 	}
 
-	// Check if there is an active operation (Pending or Processing)
-	hasActiveOperation := false
+	// Check if there is an active operation
 	for _, op := range operations.Items {
-		if !op.IsCompleted() {
+		if op.IsCompleted() {
 			logger.Debug("active operation exists, skipping creation", slog.String("operation", op.Name))
-			hasActiveOperation = true
-			break
+			// Requeue to check again later
+			return ctrl.Result{RequeueAfter: scanInterval}, nil
 		}
-	}
-
-	// Only create a new operation if there is no active operation
-	if hasActiveOperation {
-		logger.Debug("skipping operation creation, active operation in progress")
-
-		// Requeue to check again later
-		return ctrl.Result{RequeueAfter: scanInterval}, nil
 	}
 
 	// Determine if we should do a full scan or incremental scan
