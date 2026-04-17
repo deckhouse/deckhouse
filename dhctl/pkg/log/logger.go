@@ -645,7 +645,7 @@ func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
 }
 
 func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
-	e.logger.InfoF("%v", a...)
+	e.logger.InfoLn(a...)
 }
 
 func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
