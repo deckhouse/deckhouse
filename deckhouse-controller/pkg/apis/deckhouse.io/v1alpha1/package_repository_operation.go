@@ -123,7 +123,7 @@ type PackageRepositoryOperationStatus struct {
 	// +optional
 	Packages *PackageRepositoryOperationStatusPackages `json:"packages,omitempty"`
 
-	// Conditions represent the latest available observations of the application's state.
+	// Conditions represent the latest available observations of the operation's state.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge

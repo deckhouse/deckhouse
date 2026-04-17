@@ -114,7 +114,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// handle create/update events
 	res, err = r.handleCreateOrUpdate(ctx, op)
 	if err != nil {
-		logger.Warn("failed to handle application package version", log.Err(err))
+		logger.Warn("failed to handle package repository operation", log.Err(err))
 
 		return ctrl.Result{}, err
 	}
@@ -460,7 +460,7 @@ func (r *reconciler) failOperation(ctx context.Context, op *v1alpha1.PackageRepo
 // onto the parent PackageRepository's LastScanSucceeded condition, so consumers watching
 // only the repository can tell whether the most recent scan succeeded.
 //
-// Mapping: operation Reason=Failed → LastScanSucceeded=False; any other reason → True.
+// Mapping: operation Reason=ScanFailed → LastScanSucceeded=False; any other reason → True.
 // Missing repository (NotFound) is treated as a silent no-op — the operation has
 // outlived its parent and cascade deletion will clean it up.
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) error {

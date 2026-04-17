@@ -84,7 +84,7 @@ spec:
                 type: string
               conditions:
                 description: Conditions represent the latest available observations
-                  of the application's state.
+                  of the operation's state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
