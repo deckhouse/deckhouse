@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.29.20",
+  "version": "v0.29.28",
   "aliases": null,
   "flags": {
     "help": {
@@ -43778,6 +43778,11 @@
               "shorthand": "",
               "global": false
             },
+            "dry-run": {
+              "description": "Print what would be pulled without downloading any images. Useful for fast validation of flags and filters.",
+              "shorthand": "",
+              "global": false
+            },
             "exclude-module": {
               "description": "Blacklist specific modules from downloading. Format is \"module-name[@version]\". Use one flag per each module. Overridden by use of --include-module.\"",
               "shorthand": "e",
@@ -44709,6 +44714,11 @@
             },
             "log-level": {
               "description": "Set the log level (INFO, DEBUG, TRACE). Defaults to DEBUG.",
+              "shorthand": "",
+              "global": false
+            },
+            "object": {
+              "description": "Scan only a specific object in format \u003cnamespace\u003e/\u003cname\u003e/\u003ckind\u003e. Use 'clusterwide' namespace for cluster-scoped resources.",
               "shorthand": "",
               "global": false
             },
