@@ -149,10 +149,6 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 				return err
 			}
 		case settingsSchemaFile, legacySettingsSchemaFile:
-			// First entry wins — real packages contain only one of the two names.
-			if r.settingsSchemaReader.Len() > 0 {
-				continue
-			}
 			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
