@@ -24,7 +24,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -75,7 +74,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 	var (
-		cmName         = "publish-api-master-ca"
+		secretPath     = "controlPlaneManager.internal.publishedAPIKubeconfigGeneratorMasterCA"
 		modePath       = "controlPlaneManager.apiserver.publishAPI.ingress.https.mode"
 		globalOptsPath = "controlPlaneManager.apiserver.publishAPI.ingress.https.global.kubeconfigGeneratorMasterCA"
 		kubeCAPath     = "global.discovery.kubernetesCA"
@@ -124,19 +123,7 @@ func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	cm := &v1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmName,
-			Namespace: "d8-user-authn",
-		},
-		Data: map[string]string{"kubeconfigGeneratorMasterCA": string(cert)},
-	}
-
-	input.PatchCollector.CreateOrUpdate(cm)
+	input.Values.Set(secretPath, cert)
 	return nil
 }
 
