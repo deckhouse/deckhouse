@@ -70,9 +70,6 @@ type metadataReader struct {
 	changelogReader      *bytes.Buffer
 	valuesSchemaReader   *bytes.Buffer
 	settingsSchemaReader *bytes.Buffer
-	// settingsSchemaCanonical is true once openapi/settings.yaml has been read.
-	// It causes any subsequent legacy openapi/config-values.yaml entry to be ignored.
-	settingsSchemaCanonical bool
 }
 
 // parseVersionMetadataByImage extracts package metadata from a tar-formatted image reader.
@@ -151,16 +148,9 @@ func (r *metadataReader) untarMetadata(rc io.Reader) error {
 			if _, err = io.Copy(r.valuesSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
 				return err
 			}
-		case settingsSchemaFile:
-			// settings.yaml is canonical and overwrites any previously read legacy entry.
-			r.settingsSchemaReader.Reset()
-			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
-				return err
-			}
-			r.settingsSchemaCanonical = true
-		case legacySettingsSchemaFile:
-			// Read legacy openapi/config-values.yaml only if settings.yaml has not been seen yet.
-			if r.settingsSchemaCanonical {
+		case settingsSchemaFile, legacySettingsSchemaFile:
+			// First entry wins — real packages contain only one of the two names.
+			if r.settingsSchemaReader.Len() > 0 {
 				continue
 			}
 			if _, err = io.Copy(r.settingsSchemaReader, io.LimitReader(tr, maxMetadataFileSize)); err != nil {
