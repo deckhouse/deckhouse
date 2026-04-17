@@ -18,6 +18,15 @@ This controller is node-local (`NODE_NAME` env) and processes only objects with 
 | `ControlPlaneNode` | generation changed | self |
 | owned `ControlPlaneOperation` | status changed | owner `ControlPlaneNode` |
 
+## Maintenance Mode
+
+When a `ControlPlaneNode` has the `maintenance` label, the controller:
+- still updates `CPN.status` from current operations (preserving operation results and component state)
+- skips creation of new operations for drift or cert-renewal
+- allows manual node maintenance while preserving visibility into operation progress
+
+This mode is useful for manual node maintenance or administrative operations without automatic operation creation interference.
+
 ## Reconciliation Stages
 
 1. Load `CPN` and all CPOs for this node.
@@ -32,12 +41,13 @@ This controller is node-local (`NODE_NAME` env) and processes only objects with 
 - apply cert dates from completed operations that include `CertObserve` command, in monotonic `observedAt` order
 - update per-component `status.components.<component>.lastObservedAt` (and keep root `status.lastObservedAt` as latest observed timestamp)
 - update component conditions, `CASynced`, `CertsRenewal`
-4. Create missing drift CPOs for components where `spec != status`.
-5. Ensure cert-renewal CPO exists for components expiring within threshold (30 days):
+4. Check for maintenance mode (label `maintenance`); if present, exit reconciliation (operations remain unchanged).
+5. Create missing drift CPOs for components where `spec != status`.
+6. Ensure cert-renewal CPO exists for components expiring within threshold (30 days):
 - only when component is in-sync (`spec/config,pki,ca == status/config,pki,ca`)
 - only when there is no active CPO for this component
 - renewal CPO is created with the same `DesiredConfig/PKI/CA` checksums tuple as current component state
-6. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
+7. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
 - `spec.component=<real component>`
 - `spec.commands=[CertObserve]`
 - `spec.approved=true`
