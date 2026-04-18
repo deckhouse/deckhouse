@@ -297,41 +297,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (navTrigger && headerNavList) {
             navTrigger.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const willOpen = !headerNavList.classList.contains('active');
-                headerNavList.classList.toggle('active');
-                navTrigger.classList.toggle('rotated');
-
-                if (willOpen) {
-                    body.classList.add('sidebar-opened');
-                    ensureOverlay();
-                    window.requestAnimationFrame(updateMobileNavScrollState);
-                } else {
-                    closeNavModal();
-                }
-            });
-        }
-
-        if (activeNavMobile && cloneSidebar) {
-            const activeNavMobileLink = activeNavMobile.querySelector(':scope > a');
-            const sidebarToggleTarget = activeNavMobileLink || activeNavMobile;
-
-            sidebarToggleTarget.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                const isOpening = !cloneSidebar.classList.contains('header__sidebar-nav--show');
-                cloneSidebar.classList.toggle('header__sidebar-nav--show');
-                cloneSidebar.setAttribute('aria-hidden', !isOpening);
-                if (isOpening) {
+                const isNavOpen = headerNavList.classList.contains('active') ||
+                    (cloneSidebar && cloneSidebar.classList.contains('header__sidebar-nav--show'));
+
+                if (isNavOpen) {
+                    closeNavModal();
+                    return;
+                }
+
+                headerNavList.classList.add('active');
+                navTrigger.classList.add('rotated');
+                body.classList.add('sidebar-opened');
+                ensureOverlay();
+                window.requestAnimationFrame(updateMobileNavScrollState);
+
+                if (activeNavMobile && cloneSidebar) {
+                    cloneSidebar.classList.add('header__sidebar-nav--show');
+                    cloneSidebar.setAttribute('aria-hidden', 'false');
                     activeNavMobile.classList.add('header__navigation-item--open');
-                    if (headerNavList) headerNavList.classList.add('header__nav--doc-modal');
-                    body.classList.add('sidebar-opened');
-                    ensureOverlay();
+                    headerNavList.classList.add('header__nav--doc-modal');
                     window.requestAnimationFrame(scrollMobileSidebarToActive);
-                } else {
-                    activeNavMobile.classList.remove('header__navigation-item--open');
-                    if (headerNavList) headerNavList.classList.remove('header__nav--doc-modal');
-                    body.classList.remove('sidebar-opened');
                 }
             });
         }
