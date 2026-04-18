@@ -48,6 +48,8 @@ spec:
           fields:
             - path: spec.containers[].securityContext.runAsUser
               scenario: positive
+            - path: spec.containers[].securityContext.runAsNonRoot
+              scenario: positive
           exception: ""
           exceptionRef: ""
           object:
@@ -85,6 +87,8 @@ spec:
               scenario: positive
             - path: spec.containers[].securityContext.runAsUser
               scenario: initContainer
+            - path: spec.containers[].securityContext.runAsNonRoot
+              scenario: initContainer
           exception: ""
           exceptionRef: ""
           object:
@@ -102,6 +106,7 @@ spec:
                   - image: nginx
                     name: init
                     securityContext:
+                      runAsNonRoot: true
                       runAsUser: 1000
         - name: 006-allowed-runasuser-non-zero-pod
           violations: "no"
@@ -186,6 +191,8 @@ spec:
               scenario: absent
             - path: spec.securityContext.runAsUser
               scenario: absent
+            - path: spec.containers[].securityContext.runAsNonRoot
+              scenario: absent
           exception: ""
           exceptionRef: ""
           object:
@@ -257,6 +264,8 @@ spec:
           fields:
             - path: spec.containers[].securityContext.runAsUser
               scenario: absent
+            - path: spec.containers[].securityContext.runAsNonRoot
+              scenario: negative
           exception: ""
           exceptionRef: ""
           object:
@@ -285,6 +294,8 @@ spec:
           fields:
             - path: spec.containers[].securityContext.runAsUser
               scenario: multiContainer
+            - path: spec.containers[].securityContext.runAsNonRoot
+              scenario: multiContainer
           exception: ""
           exceptionRef: ""
           object:
@@ -299,6 +310,7 @@ spec:
                     securityContext:
                       fsGroup: 50
                       runAsGroup: 50
+                      runAsNonRoot: true
                       runAsUser: 1000
                       supplementalGroups:
                         - 50
@@ -307,6 +319,7 @@ spec:
                     securityContext:
                       fsGroup: 5
                       runAsGroup: 5
+                      runAsNonRoot: false
                       runAsUser: 0
                       supplementalGroups:
                         - 5
@@ -1030,6 +1043,8 @@ spec:
               scenario: ephemeralContainer
             - path: spec.containers[].securityContext.fsGroup
               scenario: ephemeralContainer
+            - path: spec.containers[].securityContext.runAsNonRoot
+              scenario: ephemeralContainer
           exception: ""
           exceptionRef: ""
           object:
@@ -1044,6 +1059,7 @@ spec:
                     securityContext:
                       fsGroup: 50
                       runAsGroup: 50
+                      runAsNonRoot: true
                       runAsUser: 5
                       supplementalGroups:
                         - 50
@@ -1064,6 +1080,8 @@ spec:
           assertionMessage: ""
           fields:
             - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speMatch
+            - path: spec.securityContext.runAsNonRoot.allowedValue
               scenario: speMatch
             - path: spec.securityContext.runAsGroup.allowedValues
               scenario: speMatch
@@ -1282,6 +1300,8 @@ spec:
           fields:
             - path: spec.securityContext.runAsUser.allowedValues
               scenario: speContainerSpecific
+            - path: spec.securityContext.runAsNonRoot.allowedValue
+              scenario: speContainerSpecific
             - path: spec.securityContext.runAsGroup.allowedValues
               scenario: speContainerSpecific
             - path: spec.securityContext.supplementalGroups.allowedValues
@@ -1345,6 +1365,8 @@ spec:
           fields:
             - path: spec.securityContext.runAsUser.allowedValues
               scenario: speMismatch
+            - path: spec.securityContext.runAsNonRoot.allowedValue
+              scenario: speMismatch
             - path: spec.securityContext.runAsGroup.allowedValues
               scenario: speMatch
             - path: spec.securityContext.supplementalGroups.allowedValues
@@ -1399,6 +1421,8 @@ spec:
           assertionMessage: ""
           fields:
             - path: spec.securityContext.runAsUser.allowedValues
+              scenario: speAbsent
+            - path: spec.securityContext.runAsNonRoot.allowedValue
               scenario: speAbsent
             - path: spec.securityContext.runAsGroup.allowedValues
               scenario: speAbsent

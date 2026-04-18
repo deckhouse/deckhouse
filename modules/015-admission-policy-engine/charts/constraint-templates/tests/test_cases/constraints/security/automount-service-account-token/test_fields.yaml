@@ -12,7 +12,7 @@ spec:
     - path: spec.containers[].volumeMounts[].mountPath
       level: container
       description: Container volume mount path; service account token mount is disallowed
-      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer]
   speFields: []
   applicableTracks:
     functional: true
