@@ -14,7 +14,11 @@
 
 package rpp
 
-import "github.com/deckhouse/lib-dhctl/pkg/log"
+import (
+	"strings"
+
+	"github.com/deckhouse/lib-dhctl/pkg/log"
+)
 
 type loggerWrapper struct {
 	logger log.Logger
@@ -31,6 +35,11 @@ func (w *loggerWrapper) Errorf(format string, args ...any) {
 }
 
 func (w *loggerWrapper) Infof(format string, args ...any) {
+	// suppress shutdown message it need for server, not for dhctl
+	if strings.HasPrefix(format, "graceful shutdown") {
+		return
+	}
+
 	w.logger.InfoF(format, args...)
 }
 
