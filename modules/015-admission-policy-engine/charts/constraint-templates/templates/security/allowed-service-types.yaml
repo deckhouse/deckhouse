@@ -42,17 +42,15 @@ spec:
             rego: |
               package d8.security_policies
 
-              import data.lib.set.check_fields_in_list
+              import data.lib.set.set_contains
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
                 service_name := obj.metadata.name
-                fields := [
-                  {"path": ["spec", "type"], "name": sprintf("Service %v type", [service_name]), "required": true}
-                ]
+                service_spec := object.get(obj, "spec", {})
+                service_type := object.get(service_spec, "type", "ClusterIP")
                 allowed_types := input.parameters.allowedServiceTypes
-                result := check_fields_in_list(obj, fields, allowed_types, {})
-                not result.allowed
-                msg := result.msg
+                not set_contains(allowed_types, service_type)
+                msg := sprintf("Field Service %v type has value %v which is not allowed (%v)", [service_name, service_type, allowed_types])
               }

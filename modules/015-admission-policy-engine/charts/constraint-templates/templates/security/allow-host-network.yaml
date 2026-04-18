@@ -72,29 +72,62 @@ spec:
               import data.lib.message.violation_message
               import data.lib.common.input_containers
               import data.lib.exception.allowed_values_or_empty
+              import data.lib.exception.path_value_resolved
               import data.lib.exception.resolve_spe_from_labels
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
                 allow_host_network := object.get(input.parameters, "allowHostNetwork", false)
-                bool_result := host_network_result(obj, allow_host_network)
-                host_network := object.get(obj.spec, "hostNetwork", false)
-                ports := collect_ports(obj, host_network)
                 labels := object.get(obj.metadata, "labels", {})
                 namespace := object.get(obj.metadata, "namespace", "")
                 spe := resolve_spe_from_labels(labels, namespace)
-                spe_ports := allowed_values_or_empty(spe, ["spec", "network", "hostPorts"])
-                range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", input.parameters.ranges, spe_ports)
+                bool_result := host_network_result(obj, allow_host_network, spe)
+                host_network := object.get(obj.spec, "hostNetwork", false)
+                ports := collect_ports(obj, host_network)
+                spe_ports_path := ["spec", "network", "hostPorts"]
+                spe_ports_applied := path_value_resolved(spe, spe_ports_path)
+                spe_ports := allowed_values_or_empty(spe, spe_ports_path)
+                effective_ranges := port_ranges(spe_ports_applied)
+                range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", effective_ranges, spe_ports)
                 failed := failed_result(bool_result, range_result)
                 msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("pod: %v", [obj.metadata.name]), failed.detail)
               }
 
-              host_network_result(_, true) := {"allowed": true, "msg": "", "detail": {}} if {
-                true
+              host_network_result(obj, allow_host_network, spe) := result if {
+                spe_path := ["spec", "network", "hostNetwork", "allowedValue"]
+                path_value_resolved(spe, spe_path)
+                actual := object.get(obj.spec, "hostNetwork", false)
+                spe_allowed := object.get(spe, spe_path, false)
+                actual == spe_allowed
+                result := {"allowed": true, "msg": "", "detail": {}}
               }
 
-              host_network_result(obj, false) := result if {
+              host_network_result(obj, allow_host_network, spe) := result if {
+                spe_path := ["spec", "network", "hostNetwork", "allowedValue"]
+                path_value_resolved(spe, spe_path)
+                actual := object.get(obj.spec, "hostNetwork", false)
+                spe_allowed := object.get(spe, spe_path, false)
+                actual != spe_allowed
+                result := {
+                  "allowed": false,
+                  "msg": "",
+                  "detail": {
+                    "field": "hostNetwork",
+                    "actual": actual,
+                    "policy_allowed": allow_host_network,
+                    "spe_applied": true,
+                    "spe_allowed": spe_allowed,
+                  },
+                }
+              }
+
+              host_network_result(_, true, spe) := {"allowed": true, "msg": "", "detail": {}} if {
+                not path_value_resolved(spe, ["spec", "network", "hostNetwork", "allowedValue"])
+              }
+
+              host_network_result(obj, false, spe) := result if {
+                not path_value_resolved(spe, ["spec", "network", "hostNetwork", "allowedValue"])
                 result := check_pod_bool(
                   obj,
                   ["spec", "hostNetwork"],
@@ -114,7 +147,7 @@ spec:
                 not range_result.allowed
               }
 
-              collect_ports(obj, host_network) := ports if {
+              collect_ports(_, host_network) := ports if {
                 host_ports := [
                   {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
                   p := input_containers[_].ports[_]
@@ -129,7 +162,7 @@ spec:
                 ports := array.concat(host_ports, container_ports)
               }
 
-              collect_ports(obj, host_network) := ports if {
+              collect_ports(_, host_network) := ports if {
                 host_ports := [
                   {"port": p.hostPort, "protocol": object.get(p, "protocol", "TCP")} |
                   p := input_containers[_].ports[_]
@@ -139,3 +172,7 @@ spec:
                 ports := host_ports
               }
 
+              port_ranges(true) := []
+
+              port_ranges(false) := input.parameters.ranges
+ 

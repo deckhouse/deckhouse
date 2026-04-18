@@ -58,7 +58,9 @@ spec:
                 obj := input.review.object
                 volume_fields := {x | obj.spec.volumes[_][x]; x != "name"}
                 field := volume_fields[_]
-                spe := resolve_spe_from_labels(obj.metadata.labels, obj.metadata.namespace)
+                labels := object.get(obj.metadata, "labels", {})
+                namespace := object.get(obj.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
                 spe_allowed := allowed_values_or_empty(spe, ["spec", "volumes", "types", "allowedValues"])
                 result := check_value_in_set_with_wildcards(
                   field,

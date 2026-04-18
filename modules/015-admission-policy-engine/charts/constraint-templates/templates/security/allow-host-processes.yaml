@@ -53,16 +53,21 @@ spec:
             rego: |
               package d8.security_policies
 
-              import data.lib.check_bool.check_pod_bool
+              import data.lib.common.get_field
+              import data.lib.exception.path_value_resolved
+              import data.lib.exception.resolve_spe_from_labels
               import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
+                obj := input.review.object
+                labels := object.get(obj.metadata, "labels", {})
+                namespace := object.get(obj.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
                 checks := [
                   {
                     "field_path": ["spec", "hostPID"],
                     "field_name": "hostPID",
-                    "expected": false,
                     "default_val": false,
                     "spe_path": ["spec", "network", "hostPID", "allowedValue"],
                     "param_field": "allowHostPID"
@@ -70,24 +75,64 @@ spec:
                   {
                     "field_path": ["spec", "hostIPC"],
                     "field_name": "hostIPC",
-                    "expected": false,
                     "default_val": false,
                     "spe_path": ["spec", "network", "hostIPC", "allowedValue"],
                     "param_field": "allowHostIPC"
                   }
                 ]
                 check := checks[_]
-                not object.get(input.parameters, check.param_field, false)
-                result := check_pod_bool(
-                  input.review.object,
-                  check.field_path,
-                  check.field_name,
-                  check.expected,
-                  check.default_val,
-                  check.spe_path
-                )
-                not result.allowed
+                actual := get_field(obj, check.field_path, check.default_val)
+                param_allow := object.get(input.parameters, check.param_field, false)
+                spe_applied := path_value_resolved(spe, check.spe_path)
+                expected := object.get(spe, check.spe_path, false)
+                spe_applied
+                actual != expected
+                detail := {
+                  "field": check.field_name,
+                  "actual": actual,
+                  "policy_allowed": param_allow,
+                  "spe_applied": spe_applied,
+                  "spe_allowed": expected,
+                }
                 reason := sprintf("Sharing the %v namespace is not allowed", [check.field_name])
-                msg := violation_message(reason, input.review.object.metadata.name, result.detail)
+                msg := violation_message(reason, obj.metadata.name, detail)
+              }
+
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                obj := input.review.object
+                labels := object.get(obj.metadata, "labels", {})
+                namespace := object.get(obj.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
+                checks := [
+                  {
+                    "field_path": ["spec", "hostPID"],
+                    "field_name": "hostPID",
+                    "default_val": false,
+                    "spe_path": ["spec", "network", "hostPID", "allowedValue"],
+                    "param_field": "allowHostPID"
+                  },
+                  {
+                    "field_path": ["spec", "hostIPC"],
+                    "field_name": "hostIPC",
+                    "default_val": false,
+                    "spe_path": ["spec", "network", "hostIPC", "allowedValue"],
+                    "param_field": "allowHostIPC"
+                  }
+                ]
+                check := checks[_]
+                actual := get_field(obj, check.field_path, check.default_val)
+                param_allow := object.get(input.parameters, check.param_field, false)
+                not path_value_resolved(spe, check.spe_path)
+                not param_allow
+                actual != false
+                detail := {
+                  "field": check.field_name,
+                  "actual": actual,
+                  "policy_allowed": false,
+                  "spe_applied": false,
+                }
+                reason := sprintf("Sharing the %v namespace is not allowed", [check.field_name])
+                msg := violation_message(reason, obj.metadata.name, detail)
               }
 
