@@ -158,7 +158,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     ensureLineNumbers(code);
 
-    code.classList.add('wrap');
+    const isNowrapDefault = pre.closest('.nowrap-default') !== null;
+    if (!isNowrapDefault) {
+      code.classList.add('wrap');
+    }
 
     let button = pre.querySelector(':scope > .wrap__button');
     let wrapIcon;
