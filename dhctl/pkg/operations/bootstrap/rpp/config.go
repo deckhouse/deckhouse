@@ -17,9 +17,8 @@ package rpp
 import (
 	"strings"
 
-	
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
-	
+
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 )
 
@@ -27,7 +26,7 @@ type ClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func NewClientConfigGetter(config registry_config.Data) (*ClientConfigGetter) {
+func NewClientConfigGetter(config registry_config.Data) *ClientConfigGetter {
 	return &ClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
 			Repository: config.ImagesRepo,

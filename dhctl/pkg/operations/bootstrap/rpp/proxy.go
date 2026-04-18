@@ -21,10 +21,12 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/name212/govalue"
+
+	"github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
-	"github.com/deckhouse/lib-dhctl/pkg/log"
-	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"

@@ -27,8 +27,9 @@ import (
 	"strings"
 	"time"
 
-	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/name212/govalue"
+
+	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -130,7 +131,6 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	if err != nil {
 		return err
 	}
-
 
 	ready, err := bashible.AlreadyRun(ctx)
 	if err != nil {

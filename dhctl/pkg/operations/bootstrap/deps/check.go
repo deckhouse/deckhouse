@@ -27,10 +27,11 @@ import (
 	tplt "text/template"
 	"time"
 
-	"github.com/deckhouse/lib-dhctl/pkg/log"
-	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
+
+	"github.com/deckhouse/lib-dhctl/pkg/log"
+	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )

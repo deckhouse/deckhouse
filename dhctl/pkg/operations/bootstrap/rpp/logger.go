@@ -45,4 +45,3 @@ func (w *loggerWrapper) Debugf(format string, args ...any) {
 func (w *loggerWrapper) Error(msg string, args ...any) {
 	w.Errorf(msg, args...)
 }
-

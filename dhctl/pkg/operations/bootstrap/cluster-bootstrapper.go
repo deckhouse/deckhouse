@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
+
+	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"

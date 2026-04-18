@@ -18,8 +18,9 @@ import (
 	"bytes"
 	"io"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
