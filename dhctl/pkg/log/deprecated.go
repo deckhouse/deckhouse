@@ -19,8 +19,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 // WARNING! This loggers is deprecated and saved

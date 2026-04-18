@@ -27,6 +27,9 @@ TEST_PACKAGES := $(shell go list ./... | grep -Ev '/pkg/preflight(/|$$)')
 
 DHCTL_BIN_NAME=bin/dhctl
 
+ADDITIONAL_BUILD_ARGS=
+DEV_IMAGES_DIGESTS=./pkg/config/digests/images_digests_dev.json
+
 DHCTL_TESTS_OPENSSH_IMAGE=lscr.io/linuxserver/openssh-server:10.0_p1-r9-ls209
 
 OS_NAME := $(shell uname)
@@ -120,11 +123,17 @@ generate-preflight-checks:
 	@go generate hack/gen_preflight_checks/main.go
 
 build: check-vars
-	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
-build-test: check-vars
-	@echo "Warning! Make sure that correct version of images_digests.json is placed into ./pkg/config/digests, otherwise dhctl bootstrap command may fail"
-	CGO_ENABLED=0 GOOS="linux" GOARCH="$(GOARCH)" go build -ldflags="-s -w" -o "bin/dhctl-linux-amd64-test" ./cmd/dhctl
+build/test/check-digests:
+	@if [ ! -f "$(DEV_IMAGES_DIGESTS)" ]; then \
+		echo "$(DEV_IMAGES_DIGESTS) not found for test build!"; \
+		exit 1; \
+	fi;
+
+build/test: DHCTL_BIN_NAME = bin/dhctl-linux-amd64-test
+build/test: ADDITIONAL_BUILD_ARGS = -tags dev
+build/test: check-vars build/test/check-digests build
 
 test: check-vars
 	@echo "Warning! For passing ./pkg/infrastructureprovider/ you should prepare /dhctl-tests dir with opentofu and terraform binaries and yandex and gcp plugins and /deckhouse dir with cloud providers config. Or add SKIP_PROVIDER_TEST=true env for skip. Or use make test-skip-cloud-providers "
@@ -174,31 +183,59 @@ devstop:
 
 clean:
 	rm -f bin/dhctl
+	rm -f bin/dhctl-linux-amd64-test
 
 set-default-k8s-version:
 	$(eval DEFAULT_KUBERNETES_VERSION := $(shell yq -r '.k8s | to_entries | map(select(.value.default == true)) | .[0].key' ../candi/version_map.yml))
 
 build/with-default-k8s: set-default-k8s-version build
 
-build/test/with-default-k8s: set-default-k8s-version build-test
+build/test/with-default-k8s: set-default-k8s-version build/test
 
-deploy-to-container: SHELL := /usr/bin/env bash
-deploy-to-container:
-	if [ -z "$$CONTAINER_ID" ]; then \
-        readarray -t ids < <(docker ps --format "{{.ID}}"); \
-		count="$${#ids[@]}"; \
-		if [[ "$$count" == "1" ]]; then \
-			export CONTAINER_ID="$$ids"; \
-            echo "Found container to deploy: $$ids"; \
-		else \
-			echo "Found $$count containers. Please pass CONTAINER_ID to deploy"; \
-			exit 1; \
-		fi; \
-	fi; \
-	if [ -z "$${CONTAINER_ID}" ]; then \
-	  echo "Cannot pass to container. CONTAINER_ID is not set"; \
-	  exit 1; \
-	fi; \
-	docker cp bin/dhctl "$$CONTAINER_ID:/new-dhctl"
+TARGET_CONTAINER_ID=
 
-build/deploy-to-container: clean build/with-default-k8s deploy-to-container
+define GET_CONTAINER_ID
+if [ -z "$(1)" ]; then \
+	readarray -t ids < <(docker ps --format "{{.ID}}"); \
+	count="$${#ids[@]}"; \
+	if [[ "$$count" == "1" ]]; then \
+		GOT_TARGET_CONTAINER_ID="$$ids"; \
+	else \
+		echo "Found $$count containers. Please pass CONTAINER_ID to deploy"; \
+		exit 1; \
+	fi; \
+else \
+	GOT_TARGET_CONTAINER_ID="$(1)"; \
+fi; \
+if [ -z "$${GOT_TARGET_CONTAINER_ID}" ]; then \
+	echo "Cannot pass to container. CONTAINER_ID is not set"; \
+	exit 1; \
+fi; \
+echo -n "$$GOT_TARGET_CONTAINER_ID"
+endef
+
+deploy-to-container/get-id: SHELL := /usr/bin/env bash
+deploy-to-container/get-id:
+	$(eval TARGET_CONTAINER_ID := $(shell $(call GET_CONTAINER_ID,$(CONTAINER_ID))))
+	@if [ "$(.SHELLSTATUS)" -ne 0 ]; then \
+		echo "Get id failed with status $(.SHELLSTATUS)"; \
+		exit 1; \
+	fi
+
+deploy-to-container/check-id: SHELL := /usr/bin/env bash
+deploy-to-container/check-id:
+	@if [ -z "$(TARGET_CONTAINER_ID)" ]; then \
+		echo "Not found target container id"; \
+		exit 1; \
+	else \
+		echo "Target id $(TARGET_CONTAINER_ID)"; \
+		exit 0; \
+	fi
+
+deploy-to-container/extract-images-digests: SHELL := /usr/bin/env bash
+deploy-to-container/extract-images-digests: deploy-to-container/check-id
+	docker exec $(TARGET_CONTAINER_ID) cat /deckhouse/candi/images_digests.json > $(DEV_IMAGES_DIGESTS)
+
+deploy-to-container/deploy: SHELL := /usr/bin/env bash
+deploy-to-container/deploy: clean deploy-to-container/get-id deploy-to-container/extract-images-digests build/test/with-default-k8s deploy-to-container/check-id
+	docker cp bin/dhctl-linux-amd64-test $(TARGET_CONTAINER_ID):/new-dhctl

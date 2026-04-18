@@ -12,17 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !dev
-
 package digests
 
 import (
-	"embed"
+	"encoding/json"
+	"fmt"
 )
 
-//go:embed images_digests.json
-var imagesDigestsEmbeddedJSON embed.FS
+type imagesDigests map[string]any
 
-func ImagesDigestsBytes() ([]byte, error) {
-	return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
+func GetImage(section, name string) (string, error) {
+	var digests imagesDigests
+	digest, err := ImagesDigestsBytes()
+	if err != nil {
+		return "", fmt.Errorf("could not load images digests: %w", err)
+	}
+
+	if err := json.Unmarshal(digest, &digests); err != nil {
+		return "", fmt.Errorf("could not unmarshal: %w", err)
+	}
+
+	if digests[section] != nil {
+		sec := digests[section].(map[string]interface{})
+		img, ok := sec[name]
+		if ok {
+			return img.(string), nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find image %s in section %s", name, section)
 }
