@@ -19,26 +19,43 @@ import (
 	"fmt"
 )
 
-type imagesDigests map[string]any
+type ImagesDigests = map[string]map[string]any
+
+func GetAllDigests() (ImagesDigests, error) {
+	content, err := imagesDigestsContent()
+	if err != nil {
+		return nil, fmt.Errorf("Could not load images digests: %w", err)
+	}
+
+	var digests ImagesDigests
+
+	if err := json.Unmarshal(content, &digests); err != nil {
+		return nil, fmt.Errorf("Could not unmarshal images digests: %w", err)
+	}
+
+	return digests, nil
+}
 
 func GetImage(section, name string) (string, error) {
-	var digests imagesDigests
-	digest, err := ImagesDigestsBytes()
+	digests, err := GetAllDigests()
 	if err != nil {
-		return "", fmt.Errorf("could not load images digests: %w", err)
+		return "", err
 	}
 
-	if err := json.Unmarshal(digest, &digests); err != nil {
-		return "", fmt.Errorf("could not unmarshal: %w", err)
+	sec, ok := digests[section]
+	if !ok || len(sec) == 0 {
+		return "", fmt.Errorf("Not found images digests section '%s' or empty", section)
 	}
 
-	if digests[section] != nil {
-		sec := digests[section].(map[string]interface{})
-		img, ok := sec[name]
-		if ok {
-			return img.(string), nil
-		}
+	imgRaw, ok := sec[name]
+	if !ok {
+		return "", fmt.Errorf("Not found image '%s' in section '%s'", name, section)
 	}
 
-	return "", fmt.Errorf("could not find image %s in section %s", name, section)
+	img, ok := imgRaw.(string)
+	if !ok {
+		return "", fmt.Errorf("image '%s' in section '%s' is not string. It is %T", name, section, imgRaw)
+	}
+
+	return img, nil
 }

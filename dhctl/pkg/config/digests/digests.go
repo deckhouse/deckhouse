@@ -23,6 +23,6 @@ import (
 //go:embed images_digests.json
 var imagesDigestsEmbeddedJSON embed.FS
 
-func ImagesDigestsBytes() ([]byte, error) {
+func imagesDigestsContent() ([]byte, error) {
 	return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
 }

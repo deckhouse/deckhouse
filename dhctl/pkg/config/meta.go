@@ -31,6 +31,7 @@ import (
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -665,12 +666,11 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
-	var imagesDigests imagesDigests
+func (m *MetaConfig) LoadImagesDigests() error {
+	imagesDigests, err := digests.GetAllDigests()
 
-	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %v", err)
+		return fmt.Errorf("Cannot get images digests: %w", err)
 	}
 
 	m.Images = imagesDigests

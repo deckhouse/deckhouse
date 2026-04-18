@@ -57,10 +57,6 @@ var (
 )
 
 func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig, opts ...ValidateOption) (*MetaConfig, error) {
-	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
-	if err != nil {
-		return nil, err
-	}
 	if dc == nil {
 		return nil, fmt.Errorf("directory config is nil")
 	}
@@ -104,7 +100,7 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		return nil, err
 	}
 
-	if err := metaConfig.LoadImagesDigests(imagesDigestsJSONFIle); err != nil {
+	if err := metaConfig.LoadImagesDigests(); err != nil {
 		return nil, err
 	}
 

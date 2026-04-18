@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -57,23 +56,12 @@ type DeckhouseDeploymentParams struct {
 
 type imagesDigests map[string]map[string]interface{}
 
-func loadImagesDigests(imagesDigestsJSONFile []byte) (imagesDigests, error) {
+func getDeckhouseInitImage() (string, error) {
 	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
-		return map[string]map[string]interface{}{
-			"deckhouse": {
-				"init": "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882",
-			},
-		}, nil
+		return "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882", nil
 	}
 
-	var imagesDigestsDict imagesDigests
-
-	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
-	if err != nil {
-		return imagesDigestsDict, fmt.Errorf("unmarshal: %v", err)
-	}
-
-	return imagesDigestsDict, nil
+	return digests.GetImage("deckhouse", "init")
 }
 
 func GetDeckhouseDeployTime(deployment *appsv1.Deployment) time.Time {
@@ -166,17 +154,13 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	initContainerImage := params.Registry
-	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
-	if err != nil {
-		log.ErrorLn(err)
-	}
 
-	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSONFIle)
+	initImage, err := getDeckhouseInitImage()
 	if err != nil {
-		log.ErrorLn(err)
+		log.ErrorF("Cannot get init image: %v\n", err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["deckhouse"]["init"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], initImage)
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
