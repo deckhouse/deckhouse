@@ -541,7 +541,7 @@ spec:
               securityContext:
                 seccompProfile:
                   type: RuntimeDefault
-    - name: 017-disallowed-no-seccomp-profile
+    - name: 017-allowed-no-seccomp-profile
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -553,7 +553,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-no-seccomp-profile
+            name: allowed-no-seccomp-profile
     - name: 018-disallowed-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''
@@ -642,7 +642,7 @@ spec:
               securityContext:
                 seccompProfile:
                   type: RuntimeDefault
-    - name: 027-disallowed-no-seccomp-profile
+    - name: 027-allowed-no-seccomp-profile
       violations: 'no'
       assertionMessage: ''
       fields:
@@ -654,7 +654,7 @@ spec:
         base: admissionPod
         merge:
           metadata:
-            name: disallowed-no-seccomp-profile
+            name: allowed-no-seccomp-profile
     - name: 029-disallowed-unconfined-securitycontext
       violations: 'yes'
       assertionMessage: ''

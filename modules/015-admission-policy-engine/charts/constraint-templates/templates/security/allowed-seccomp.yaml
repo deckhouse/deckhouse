@@ -117,12 +117,13 @@ spec:
                 profile := normalize_seccomp_profile(profile_raw, container, input.review.object)
                 allowed_base := expand(input.parameters.allowedProfiles, naming_translation)
                 allowed := allowed_with_localhost_files(
-                  allowed_base,
+                  normalize_empty_undefined_values(allowed_base),
                   object.get(input.parameters, "allowedLocalhostFiles", [])
                 )
                 labels := object.get(input.review.object.metadata, "labels", {})
                 exception := resolve_spe_for_container(container, labels, input.review.object.metadata.namespace)
-                spe_allowed := allowed_values_or_empty(exception, ["spec", "securityContext", "seccompProfile", "allowedValues"])
+                spe_allowed_base := allowed_values_or_empty(exception, ["spec", "securityContext", "seccompProfile", "allowedValues"])
+                spe_allowed := normalize_empty_undefined_values(spe_allowed_base)
                 result := check_value_in_set_with_wildcards(
                   profile,
                   allowed,
@@ -176,12 +177,21 @@ spec:
 
               normalize_seccomp_profile(profile_raw, container, obj) := profile if {
                 profile_raw == null
-                profile := "undefined"
+                profile := ""
+              } else := profile if {
+                profile_raw == "undefined"
+                profile := ""
               } else := profile if {
                 profile_raw == "Localhost"
                 profile := resolve_localhost_profile(container, obj)
               } else := profile if {
                 profile := profile_raw
+              }
+
+              normalize_empty_undefined_values(values) := out if {
+                out := {v | v := values[_]}
+                  | {"" | values[_] == "undefined"}
+                  | {"undefined" | values[_] == ""}
               }
 
               resolve_localhost_profile(container, obj) := out if {
