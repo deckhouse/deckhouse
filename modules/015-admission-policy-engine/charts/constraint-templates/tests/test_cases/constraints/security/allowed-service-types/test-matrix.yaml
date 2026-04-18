@@ -94,7 +94,7 @@ spec:
                   app: MyApp
                 type: NodePort
         - name: 004-allowed_default_clusterip
-          violations: "yes"
+          violations: "no"
           assertionMessage: ""
           fields:
             - path: spec.type

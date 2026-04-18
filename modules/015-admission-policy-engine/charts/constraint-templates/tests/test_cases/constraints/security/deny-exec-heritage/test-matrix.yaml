@@ -132,7 +132,7 @@ spec:
                   - image: debian:stable-slim
                     name: test
         - name: 005-disallowed-heritage-pod-unauthorized
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: metadata.labels.heritage

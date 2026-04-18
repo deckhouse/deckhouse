@@ -76,7 +76,7 @@ spec:
                     secret:
                       secretName: my-secret
         - name: 015-disallowed-hostpath-volume
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.volumes[].type
@@ -100,7 +100,7 @@ spec:
                       path: /var/lib
                     name: hostpath
         - name: 017-disallowed-nfs-volume
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.volumes[].type
@@ -125,7 +125,7 @@ spec:
                       path: /exports
                       server: nfs-server.example.com
         - name: 016-disallowed-multiple-volumes-one-disallowed
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.volumes[].type
@@ -410,7 +410,7 @@ spec:
                       path: /exports
                       server: nfs-server.example.com
         - name: 036-disallowed-no-exception-label
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.volumes.types.allowedValues

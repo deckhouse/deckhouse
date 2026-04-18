@@ -329,7 +329,7 @@ spec:
                 hostIPC: false
                 hostPID: false
         - name: disallowed-by-exception-hostpid-mismatch
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.network.hostIPC.allowedValue
@@ -358,7 +358,7 @@ spec:
                 hostIPC: true
                 hostPID: false
         - name: disallowed-by-exception-hostipc-mismatch
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.network.hostPID.allowedValue
@@ -387,7 +387,7 @@ spec:
                 hostIPC: false
                 hostPID: true
         - name: disallowed-exception-allows-false-constraint-allows-true
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.network.hostPID.allowedValue

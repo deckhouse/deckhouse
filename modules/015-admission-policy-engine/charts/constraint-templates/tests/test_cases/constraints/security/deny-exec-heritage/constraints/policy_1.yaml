@@ -7,9 +7,7 @@ spec:
   match:
     kinds:
       - apiGroups: [""]
-        kinds: ["PodExecOptions", "PodAttachOptions"]
+        kinds: ["Pod"]
+    name: test-pod-heritage
     scope: Namespaced
-    namespaces:
-      - "d8-*"
-      - "kube-*"
 

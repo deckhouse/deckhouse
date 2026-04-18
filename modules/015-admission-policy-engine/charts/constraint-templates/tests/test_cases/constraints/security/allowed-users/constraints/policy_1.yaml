@@ -8,6 +8,8 @@ spec:
     kinds:
       - apiGroups: [""]
         kinds: ["Pod"]
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "DaemonSet"]
     namespaceSelector:
       matchLabels:
         custom-policy: example

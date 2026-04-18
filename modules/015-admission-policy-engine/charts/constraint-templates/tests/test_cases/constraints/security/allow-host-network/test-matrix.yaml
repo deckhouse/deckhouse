@@ -659,7 +659,7 @@ spec:
                         protocol: UDP
                 hostNetwork: true
         - name: allowed-by-exception-hostport-only-without-hostnetwork
-          violations: "yes"
+          violations: "no"
           assertionMessage: ""
           fields:
             - path: spec.network.hostPorts[].port
@@ -733,7 +733,7 @@ spec:
                         protocol: TCP
                 hostNetwork: true
         - name: allowed-by-exception-port-out-of-constraint-range
-          violations: "yes"
+          violations: "no"
           assertionMessage: ""
           fields:
             - path: spec.network.hostPorts[].port
@@ -1271,7 +1271,7 @@ spec:
                         protocol: TCP
                 hostNetwork: true
         - name: allowed-exception-container-port
-          violations: "yes"
+          violations: "no"
           assertionMessage: ""
           fields:
             - path: spec.network.hostPorts[].port

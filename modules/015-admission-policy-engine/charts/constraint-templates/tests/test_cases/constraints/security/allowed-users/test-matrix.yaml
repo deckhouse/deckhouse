@@ -311,7 +311,7 @@ spec:
                       supplementalGroups:
                         - 5
         - name: 008-disallowed-deployment-runasuser-zero-container
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -341,7 +341,7 @@ spec:
                         securityContext:
                           runAsUser: 0
         - name: 007-disallowed-daemonset-runasuser-zero-container
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -942,7 +942,7 @@ spec:
                       supplementalGroups:
                         - 5
         - name: 026-disallowed-deployment-runasuser-out-of-range-low-container
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -981,7 +981,7 @@ spec:
                       supplementalGroups:
                         - 50
         - name: 025-disallowed-daemonset-runasuser-out-of-range-low-container
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.containers[].securityContext.runAsUser
@@ -1340,7 +1340,7 @@ spec:
                       supplementalGroups:
                         - 10
         - name: 036-043-disallowed-by-exception-runasnonroot-mismatch
-          violations: "no"
+          violations: "yes"
           assertionMessage: ""
           fields:
             - path: spec.securityContext.runAsUser.allowedValues
