@@ -54,7 +54,7 @@ func GetImage(section, name string) (string, error) {
 
 	img, ok := imgRaw.(string)
 	if !ok {
-		return "", fmt.Errorf("image '%s' in section '%s' is not string. It is %T", name, section, imgRaw)
+		return "", fmt.Errorf("Image '%s' in section '%s' is not string. It is %T", name, section, imgRaw)
 	}
 
 	return img, nil
