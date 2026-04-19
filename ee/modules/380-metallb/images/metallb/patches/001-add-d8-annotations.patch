@@ -1,0 +1,27 @@
+diff --git a/controller/service.go b/controller/service.go
+index f26bad08..13579ca6 100644
+--- a/controller/service.go
++++ b/controller/service.go
+@@ -304,8 +304,10 @@ func (c *controller) isServiceAllocated(key string) bool {
+ 
+ func getDesiredLbIPs(svc *v1.Service) ([]net.IP, ipfamily.Family, error) {
+ 	var desiredLbIPs []net.IP
+-	desiredLbIPsStr := valueForAnnotation(svc.Annotations, AnnotationLoadBalancerIPs, DeprecatedAnnotationLoadBalancerIPs)
+-
++	desiredLbIPsStr, ok := svc.Annotations["network.deckhouse.io/load-balancer-ips"]
++	if !ok {
++		desiredLbIPsStr = valueForAnnotation(svc.Annotations, AnnotationLoadBalancerIPs, DeprecatedAnnotationLoadBalancerIPs)
++	}
+ 	if desiredLbIPsStr == "" && svc.Spec.LoadBalancerIP == "" {
+ 		return nil, "", nil
+ 	} else if desiredLbIPsStr != "" && svc.Spec.LoadBalancerIP != "" {
+@@ -350,6 +352,9 @@ func isEqualIPs(ipsA, ipsB []net.IP) bool {
+ 
+ // SharingKey extracts the sharing key for a service.
+ func SharingKey(svc *v1.Service) string {
++	if _, ok := svc.Annotations["network.deckhouse.io/load-balancer-shared-ip-key"]; ok {
++		return svc.Annotations["network.deckhouse.io/load-balancer-shared-ip-key"]
++	}
+ 	if _, ok := svc.Annotations[AnnotationAllowSharedIP]; ok {
+ 		return svc.Annotations[AnnotationAllowSharedIP]
+ 	}

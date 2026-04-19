@@ -28,10 +28,11 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: "Multiple default StorageClasses found in the cluster"
+      summary: Multiple default StorageClasses found in the cluster.
       description: |-
-        More than one StorageClass in the cluster annotated as a default.
-        Probably manually deployed StorageClass exists, that overlaps with cloud-provider module default Storage configuration.
+        Deckhouse has detected that more than one StorageClass in the cluster is annotated as default.
+        
+        This may have been caused by a manually deployed StorageClass that is overlapping with the default storage configuration provided by the `cloud-provider` module.
 
         {{ include "cloud-provider-storage-documentation-url" . }}
 
@@ -45,9 +46,11 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: "Manually deployed StorageClass `{{`{{ $labels.name }}`}}` found in the cluster"
+      summary: Manually deployed StorageClass `{{`{{ $labels.name }}`}}` found in the cluster.
       description: |-
-        StorageClass having a cloud-provider provisioner shouldn't be deployed manually.
-        They are managed by the cloud-provider module, you only need to change the module configuration to fit your needs.
+        A StorageClass using a `cloud-provider` provisioner shouldn't be deployed manually.
+        Such StorageClasses are managed by the `cloud-provider` module.
+        
+        Instead of the manual deployment, modify the `cloud-provider` module configuration as needed.
 
         {{ include "cloud-provider-storage-documentation-url" . }}

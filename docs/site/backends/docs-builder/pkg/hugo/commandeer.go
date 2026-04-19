@@ -15,41 +15,47 @@
 package hugo
 
 import (
+	"errors"
 	"fmt"
 	"io"
-	"log"
+	stdlog "log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/bep/clocks"
 	"github.com/bep/lazycache"
 	"github.com/bep/logg"
 	"github.com/bep/overlayfs"
 	"github.com/gohugoio/hugo/common/htime"
+	"github.com/gohugoio/hugo/common/hugo"
 	"github.com/gohugoio/hugo/common/loggers"
 	"github.com/gohugoio/hugo/common/paths"
 	"github.com/gohugoio/hugo/config"
 	"github.com/gohugoio/hugo/config/allconfig"
 	"github.com/gohugoio/hugo/deps"
-	"github.com/gohugoio/hugo/helpers"
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/hugolib"
 	"github.com/spf13/afero"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func (c *command) Run() error {
-	b := newHugoBuilder(c)
+	b := newHugoBuilder(c, c.logger)
 
-	if err := b.loadConfig(); err != nil {
-		return err
+	err := b.loadConfig()
+	if err != nil {
+		return fmt.Errorf("load config: %w", err)
 	}
 
-	err := b.build()
+	err = b.build()
 	if err != nil {
-		return err
+		return fmt.Errorf("build: %w", err)
 	}
 
 	return nil
@@ -61,7 +67,7 @@ func (c *command) PreRun() error {
 		c.Out = io.Discard
 	}
 	// Used by mkcert (server).
-	log.SetOutput(c.Out)
+	stdlog.SetOutput(c.Out)
 
 	c.Printf = func(format string, v ...interface{}) {
 		if !c.flags.Quiet {
@@ -74,26 +80,31 @@ func (c *command) PreRun() error {
 		}
 	}
 	var err error
-	c.logger, err = c.createLogger(false)
+	c.hugologger, err = c.createLogger(false)
 	if err != nil {
 		return err
 	}
 
-	c.commonConfigs = lazycache.New[int32, *commonConfig](lazycache.Options{MaxEntries: 5})
-	c.hugoSites = lazycache.New[int32, *hugolib.HugoSites](lazycache.Options{MaxEntries: 5})
+	c.commonConfigs = lazycache.New(lazycache.Options[int32, *commonConfig]{MaxEntries: 5})
+	c.hugoSites = lazycache.New(lazycache.Options[int32, *hugolib.HugoSites]{MaxEntries: 5})
 
 	return nil
 }
 
-func Build(flags Flags) error {
-	cmd := &command{flags: flags}
+func Build(flags *Flags, logger *log.Logger) error {
+	cmd := &command{flags: flags, logger: logger}
 
 	err := cmd.PreRun()
 	if err != nil {
 		return fmt.Errorf("pre run: %w", err)
 	}
 
-	return cmd.Run()
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+
+	return nil
 }
 
 type commonConfig struct {
@@ -103,13 +114,29 @@ type commonConfig struct {
 	fs      *hugofs.Fs
 }
 
+func (c *commonConfig) validate() error {
+	if c == nil {
+		return errors.New("commonConfig is nil")
+	}
+
+	if c.fs == nil {
+		return errors.New("commonConfig: no fs provided")
+	}
+
+	if c.configs == nil {
+		return errors.New("commonConfig: no config provided")
+	}
+
+	return nil
+}
+
 // This is the root command.
 type command struct {
 	Printf  func(format string, v ...interface{})
 	Println func(a ...interface{})
 	Out     io.Writer
 
-	logger loggers.Logger
+	hugologger loggers.Logger
 
 	// The main cache busting key for the caches below.
 	configVersionID atomic.Int32
@@ -119,7 +146,9 @@ type command struct {
 	commonConfigs *lazycache.Cache[int32, *commonConfig]
 	hugoSites     *lazycache.Cache[int32, *hugolib.HugoSites]
 
-	flags Flags
+	flags *Flags
+
+	logger *log.Logger
 }
 
 type Flags struct {
@@ -138,14 +167,15 @@ type Flags struct {
 }
 
 func (c *command) isVerbose() bool {
-	return c.logger.Level() <= logg.LevelInfo
+	return c.hugologger.Level() <= logg.LevelInfo
 }
 
 func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonConfig, error) {
 	if cfg == nil {
 		panic("cfg must be set")
 	}
-	cc, _, err := c.commonConfigs.GetOrCreate(key, func(key int32) (*commonConfig, error) {
+
+	cc, _, err := c.commonConfigs.GetOrCreate(key, func(_ int32) (*commonConfig, error) {
 		var dir string
 		if c.flags.Source != "" {
 			dir, _ = filepath.Abs(c.flags.Source)
@@ -160,6 +190,7 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 		if !cfg.IsSet("renderToDisk") {
 			cfg.Set("renderToDisk", true)
 		}
+
 		if !cfg.IsSet("workingDir") {
 			cfg.Set("workingDir", dir)
 		} else {
@@ -176,7 +207,7 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 				Filename:    c.flags.CfgFile,
 				ConfigDir:   c.flags.CfgDir,
 				Environment: c.flags.Environment,
-				Logger:      c.logger,
+				Logger:      c.hugologger,
 			},
 		)
 		if err != nil {
@@ -230,7 +261,6 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 				},
 			)
 			fs.PublishDirStatic = staticFs
-
 		}
 
 		if !base.C.Clock.IsZero() {
@@ -255,15 +285,32 @@ func (c *command) ConfigFromProvider(key int32, cfg config.Provider) (*commonCon
 	})
 
 	return cc, err
-
 }
 
 func (c *command) HugFromConfig(conf *commonConfig) (*hugolib.HugoSites, error) {
-	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(key int32) (*hugolib.HugoSites, error) {
-		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, LogOut: c.logger.Out(), LogLevel: c.logger.Level()}
+	err := conf.validate()
+	if err != nil {
+		return nil, fmt.Errorf("validate: %w", err)
+	}
+
+	h, _, err := c.hugoSites.GetOrCreate(c.configVersionID.Load(), func(_ int32) (*hugolib.HugoSites, error) {
+		depsCfg := deps.DepsCfg{Configs: conf.configs, Fs: conf.fs, StdOut: c.hugologger.StdOut(), LogLevel: c.hugologger.Level()}
 		return hugolib.NewHugoSites(depsCfg)
 	})
-	return h, err
+	if err != nil {
+		return nil, fmt.Errorf("get or create: %w", err)
+	}
+
+	h.Log = c.hugologger
+
+	return h, nil
+}
+
+func duration(key string, d time.Duration) slog.Attr {
+	return slog.Attr{
+		Key:   key,
+		Value: slog.StringValue(d.String()),
+	}
 }
 
 func (c *command) createLogger(running bool) (loggers.Logger, error) {
@@ -284,22 +331,48 @@ func (c *command) createLogger(running bool) (loggers.Logger, error) {
 		}
 	} else {
 		if c.flags.Verbose {
-			helpers.Deprecated("--verbose", "use --logLevel info", false)
+			hugo.Deprecate("--verbose", "use --logLevel", "v0.119.0")
 			level = logg.LevelInfo
 		}
 
 		if c.flags.Debug {
-			helpers.Deprecated("--debug", "use --logLevel debug", false)
+			hugo.Deprecate("--debug", "use --logLevel", "v0.119.0")
 			level = logg.LevelDebug
 		}
 	}
 
 	optsLogger := loggers.Options{
-		Distinct:    true,
-		Level:       level,
-		Stdout:      c.Out,
-		Stderr:      c.Out,
-		StoreErrors: running,
+		DistinctLevel: level,
+		Level:         level,
+		StdOut:        c.Out,
+		StdErr:        c.Out,
+		StoreErrors:   running,
+		HandlerPost: func(e *logg.Entry) error {
+			opts := make([]any, 0, len(e.Fields))
+
+			for _, f := range e.Fields {
+				switch f.Name {
+				case "__h_field__cmd":
+					f.Name = "hugo_command"
+				case "duration":
+					opts = append(opts, duration(f.Name, f.Value.(time.Duration)))
+					continue
+				}
+				opts = append(opts, slog.Any(f.Name, f.Value))
+			}
+
+			switch e.Level {
+			case logg.LevelDebug:
+				c.logger.Debug(e.Message, opts...)
+			case logg.LevelError:
+				c.logger.Error(e.Message, opts...)
+			case logg.LevelWarn:
+				c.logger.Warn(e.Message, opts...)
+			case logg.LevelInfo:
+				c.logger.Info(e.Message, opts...)
+			}
+			return nil
+		},
 	}
 
 	return loggers.New(optsLogger), nil

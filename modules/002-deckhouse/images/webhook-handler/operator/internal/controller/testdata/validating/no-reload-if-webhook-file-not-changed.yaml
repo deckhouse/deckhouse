@@ -1,0 +1,28 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  labels:
+    app.kubernetes.io/name: operator
+    app.kubernetes.io/managed-by: kustomize
+  name: validationwebhook-sample
+validationObject: # as-is as validationwebhookconfiguration
+  name: service.apps.kubernetes.io
+  group: main
+  rules:
+  - apiGroups:   ["*"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
+    resources:   ["services"]
+    scope:       "*"
+context:
+  - name: services
+    kubernetes:
+      apiVersion: v1
+      kind: Service
+handler:
+  python: |
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+        resource = ctx.review.request.name
+        if "test" in resource:
+            return "TEST: service with \"test\" in .metadata.name", False
+        return None, True

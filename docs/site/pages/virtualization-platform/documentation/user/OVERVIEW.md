@@ -1,5 +1,5 @@
 ---
-title: "Overview of the user's guide"
+title: "Deckhouse Virtualization Platform user guide"
 permalink: en/virtualization-platform/documentation/user/overview.html
 ---
 

@@ -20,10 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(deschedulerConfigMigration))
 
-func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Container) error {
+func deschedulerConfigMigration(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
@@ -58,10 +58,10 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 
 	_, err = kubeCl.CoreV1().ConfigMaps(migrationNS).Get(context.TODO(), migrationCM, metav1.GetOptions{})
 	if err != nil && !errors.IsNotFound(err) {
-		return err
+		return fmt.Errorf("get: %w", err)
 	}
 	if !errors.IsNotFound(err) {
-		input.Logger.Infof("Migration cm %s already exists, skipping migration", migrationCM)
+		input.Logger.Info("Migration cm already exists, skipping migration", slog.String("name", migrationCM))
 		return nil
 	}
 
@@ -69,7 +69,7 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 	if errors.IsNotFound(err) {
 		input.Logger.Info("ModuleConfig for descheduler does not exists, migrating with default config")
 	} else if err != nil {
-		return err
+		return fmt.Errorf("get: %w", err)
 	}
 
 	deschedulerSettings, exists, err := extractDeschedulerSettingsFromMC(moduleConfig)
@@ -81,7 +81,7 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 	if exists && len(deschedulerSettings) > 0 {
 		deschedulerConfigJSON, err = json.Marshal(deschedulerSettings)
 		if err != nil {
-			return err
+			return fmt.Errorf("marshal: %w", err)
 		}
 	} else {
 		deschedulerConfigJSON = []byte(defaultLegacyDeschedulerConfigJSON)
@@ -99,7 +99,7 @@ func deschedulerConfigMigration(input *go_hook.HookInput, dc dependency.Containe
 		Data: map[string]string{"config": string(deschedulerConfigJSON)},
 	}
 
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(cm)
 
 	return nil
 }
@@ -111,7 +111,7 @@ func extractDeschedulerSettingsFromMC(mc *unstructured.Unstructured) (map[string
 
 	moduleEnabled, exists, err := unstructured.NestedBool(mc.UnstructuredContent(), "spec", "enabled")
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("nested bool: %w", err)
 	}
 	if exists && !moduleEnabled {
 		return nil, false, nil
@@ -119,7 +119,7 @@ func extractDeschedulerSettingsFromMC(mc *unstructured.Unstructured) (map[string
 
 	deschedulerSettings, _, err := unstructured.NestedMap(mc.UnstructuredContent(), "spec", "settings")
 	if err != nil {
-		return deschedulerSettings, false, err
+		return deschedulerSettings, false, fmt.Errorf("nested map: %w", err)
 	}
 
 	return deschedulerSettings, true, nil

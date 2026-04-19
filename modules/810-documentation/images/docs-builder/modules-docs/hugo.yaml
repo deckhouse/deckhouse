@@ -1,6 +1,10 @@
 relativeURLs: false
 params:
  mode: module
+markup:
+  defaultMarkdownHandler: goldmark
+  goldmark:
+    duplicateResourceFiles: true
 
 languages:
   en:

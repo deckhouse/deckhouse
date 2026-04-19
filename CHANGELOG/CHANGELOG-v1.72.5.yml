@@ -1,0 +1,15 @@
+cloud-provider-vsphere:
+  fixes:
+    - summary: cloud-data-discoverer fixes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15507
+cni-cilium:
+  fixes:
+    - summary: Fixed 1.14 -> 1.17 migration mechanism
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15642
+    - summary: improved migration to 1.17 logic
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15602
+node-manager:
+  fixes:
+    - summary: capi crd served version fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15639
+

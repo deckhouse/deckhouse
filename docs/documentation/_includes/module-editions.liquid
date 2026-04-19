@@ -1,0 +1,77 @@
+{% comment %}This partial is included onto the module page in the custom_hooks.rb{% endcomment %}
+{%- assign moduleKebabName = page['module-kebab-name'] %}
+{%- assign editions = site.data['modules']['all'][moduleKebabName]['editions'] %}
+{%- assign editionsWithRestrictions = site.data['modules']['all'][moduleKebabName]['editionsWithRestrictions'] %}
+{%- assign editionsWithRestrictionsComments = site.data['modules']['all'][moduleKebabName]['editionsWithRestrictionsComments'] %}
+{%- assign editionsWithoutRestrictions = "#" |  split: "#" %}
+
+{% unless page.module-kebab-name contains "/installing/configuration.html" %}
+<div class="info alert__wrap">
+  <svg class="alert__icon icon--info">
+    <use xlink:href="/images/sprite.svg#info-icon"></use>
+  </svg>
+  <div markdown="0">
+{%- if editionsWithRestrictions %}
+<p>
+{%- if editionsWithRestrictionsComments['all'] -%}
+  <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ editionsWithRestrictionsComments['all'][page.lang] }}'>
+    {{- site.data.i18n.common['module_available_with_limitations_prefix'][page.lang] -}}
+  </span>: 
+{%- else -%}
+  {{- site.data.i18n.common['module_available_with_limitations_prefix'][page.lang] }}: 
+{%- endif -%}
+<strong>
+{%- for edition in editions %}
+  {%- if edition == "fe" %}{% continue %}{% endif -%}
+  {%- if site.data.modules.editions-addition[edition]['languages'] %}
+    {%- unless site.data.modules.editions-addition[edition]['languages'] contains page.lang %}{% continue %}{% endunless -%}
+  {%- endif %}
+  {%- if editionsWithRestrictions contains edition %}{% continue %}{%- endif -%}
+  {%- assign editionsWithoutRestrictions = editionsWithoutRestrictions | push: edition %}
+{%- endfor %}
+{%- for edition in editionsWithRestrictions %}
+   {%- if editionsWithRestrictionsComments[edition] -%}
+     <span style='border-bottom: 1px dotted #000' data-tippy-content='{{ editionsWithRestrictionsComments[edition][page.lang] }}'>
+         {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif -%}
+     </span>
+   {%- else -%}
+         {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif %}
+   {%- endif -%}
+{%- unless forloop.last %}, {% endunless %}
+{%- endfor %}
+</strong>
+</p>
+  {% if editionsWithoutRestrictions.size > 0 %}
+  <p>
+    {{- site.data.i18n.common['module_available_without_limitations_prefix'][page.lang] }}: 
+    <strong>
+    {%- for edition in editionsWithoutRestrictions %}
+           {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif -%}
+    {%- unless forloop.last %}, {% endunless %}
+    {%- endfor %}
+    </strong>
+  </p>
+  {% endif %}
+{%- else %}
+  {%- for edition in editions %}
+    {%- if edition == "fe" %}{%  continue %}{% endif -%}
+    {%- if site.data.editions[edition]['languages'] %}
+      {%- unless site.data.editions[edition]['languages'] contains page.lang %}{% continue %}{% endunless -%}
+    {%- endif %}
+    {%- if editionsWithoutRestrictions contains edition %}{% continue %}{%- endif -%}
+    {%- assign editionsWithoutRestrictions = editionsWithoutRestrictions | push: edition %}
+  {%- endfor %}
+  {% if editionsWithoutRestrictions.size > 0 %}
+    <p>{{ site.data.i18n.common['module_available_editions_prefix'][page.lang] }}: 
+    <strong>
+      {%- for edition in editionsWithoutRestrictions %}
+        {%- if site.data.editions[edition]['name_version'] %}{{ site.data.editions[edition]['name_version'] }}{% else %}{{ site.data.editions[edition]['name'] }}{% endif %}
+        {%- unless forloop.last %}, {% endunless %}
+      {%- endfor %}
+    </strong>
+    </p>
+    {%- endif %}
+  {%- endif %}
+</div>
+</div>
+{% endunless %}

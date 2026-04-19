@@ -1,5 +1,0 @@
-name: runtime-audit-engine
-weight: 650
-
-requirements:
-  bootstrapped: true

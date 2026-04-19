@@ -1,3 +1,4 @@
+{{ $gatekeeperVersion := include "get_oss_version_by_id" (list "gatekeeper" $ ) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -6,9 +7,11 @@ import:
     add: /gatekeeper
     to: /bin/gatekeeper
     before: setup
-docker:
-  ENTRYPOINT: [ "/bin/gatekeeper" ]
-  USER: deckhouse:deckhouse
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: [ "/bin/gatekeeper" ]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -19,16 +22,30 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/crds
+  to: /module_crds
+  includePaths:
+  - gatekeeper/*.yaml
+  stageDependencies:
+    install:
+    - '**/*'    
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v3.18.1 {{ .SOURCE_REPO }}/open-policy-agent/gatekeeper.git /src
+  - git clone --depth 1 --branch v{{ $gatekeeperVersion }} $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
   - cd /src
-  - git apply /patches/*.patch --verbose
+  - git apply /patches/*.patch --verbose --allow-empty
   - rm -rf website
   - rm -rf .git
+  # check if module crds/gatekeeper are the same as gatekeeper crds
+  - | 
+    echo "Checking if module crds/gatekeeper are the same as gatekeeper crds"
+    diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper" 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" ) }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -36,13 +53,18 @@ import:
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-  - export GOPROXY={{ .GOPROXY }}
   - cd /src
-  - go mod vendor
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -mod vendor -ldflags="-s -w" -o /gatekeeper .
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -mod vendor -ldflags="-s -w" -o /gatekeeper .`) | indent 6 }}
   - chown 64535:64535 /gatekeeper
   - chmod 0700 /gatekeeper
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -17,10 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	dsv1alpha2 "github.com/deckhouse/deckhouse/modules/400-descheduler/hooks/internal/v1alpha2"
 )
@@ -67,13 +73,17 @@ type InternalValuesDeschedulerSpec struct {
 	PodLabelSelector       *metav1.LabelSelector              `json:"podLabelSelector,omitempty" yaml:"podLabelSelector,omitempty"`
 	NamespaceLabelSelector *metav1.LabelSelector              `json:"namespaceLabelSelector,omitempty" yaml:"namespaceLabelSelector,omitempty"`
 	PriorityClassThreshold *dsv1alpha2.PriorityClassThreshold `json:"priorityClassThreshold,omitempty" yaml:"priorityClassThreshold,omitempty"`
+	EvictLocalStoragePods  *dsv1alpha2.EvictLocalStoragePods  `json:"evictLocalStoragePods,omitempty" yaml:"evictLocalStoragePods,omitempty"`
 	Strategies             dsv1alpha2.Strategies              `json:"strategies" yaml:"strategies"`
 }
 
-func getCRDsHandler(input *go_hook.HookInput) error {
-	internalValues := make([]InternalValuesDeschedulerSpec, 0, len(input.Snapshots["deschedulers"]))
-	for _, v := range input.Snapshots["deschedulers"] {
-		item := v.(DeschedulerSnapshotItem)
+func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
+	internalValues := make([]InternalValuesDeschedulerSpec, 0, len(input.Snapshots.Get("deschedulers")))
+	for item, err := range sdkobjectpatch.SnapshotIter[DeschedulerSnapshotItem](input.Snapshots.Get("deschedulers")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'deschedulers' snapshots: %w", err)
+		}
+
 		ds := &InternalValuesDeschedulerSpec{
 			Name:       item.Name,
 			Strategies: item.Spec.Strategies,
@@ -92,6 +102,15 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 		}
 		if item.Spec.PriorityClassThreshold != nil {
 			ds.PriorityClassThreshold = item.Spec.PriorityClassThreshold
+		}
+		if item.Spec.EvictLocalStoragePods != nil {
+			ds.EvictLocalStoragePods = item.Spec.EvictLocalStoragePods
+		}
+
+		if !item.Spec.Strategies.HasValidStrategies() {
+			input.Logger.Warn("Descheduler CR has no valid v1alpha2 strategies, skipping",
+				slog.String("name", item.Name))
+			continue
 		}
 
 		internalValues = append(internalValues, *ds)

@@ -1,0 +1,195 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ConversionWebhook
+metadata:
+  name: deschedulers.deckhouse.io
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+conversions:
+  - from: v1alpha1
+    to: v1alpha2
+    handler:
+      python: |
+        @staticmethod
+        def _parse_label_selector(selector_str):
+            """Convert equality-based label selector string to structured matchLabels/matchExpressions."""
+            match_labels = {}
+            match_expressions = []
+
+            parts = []
+            current = ""
+            depth = 0
+            for ch in selector_str:
+                if ch == '(':
+                    depth += 1
+                    current += ch
+                elif ch == ')':
+                    depth -= 1
+                    current += ch
+                elif ch == ',' and depth == 0:
+                    parts.append(current.strip())
+                    current = ""
+                else:
+                    current += ch
+            if current.strip():
+                parts.append(current.strip())
+
+            for part in parts:
+                if not part:
+                    continue
+                if " in (" in part:
+                    key, rest = part.split(" in (", 1)
+                    values = [v.strip() for v in rest.rstrip(")").split(",")]
+                    match_expressions.append({"key": key.strip(), "operator": "In", "values": values})
+                elif " notin (" in part:
+                    key, rest = part.split(" notin (", 1)
+                    values = [v.strip() for v in rest.rstrip(")").split(",")]
+                    match_expressions.append({"key": key.strip(), "operator": "NotIn", "values": values})
+                elif "!=" in part:
+                    key, value = part.split("!=", 1)
+                    match_expressions.append({"key": key.strip(), "operator": "NotIn", "values": [value.strip()]})
+                elif "==" in part:
+                    key, value = part.split("==", 1)
+                    match_labels[key.strip()] = value.strip()
+                elif "=" in part:
+                    key, value = part.split("=", 1)
+                    match_labels[key.strip()] = value.strip()
+                elif part.startswith("!"):
+                    match_expressions.append({"key": part[1:].strip(), "operator": "DoesNotExist"})
+                else:
+                    match_expressions.append({"key": part, "operator": "Exists"})
+
+            result = {}
+            if match_labels:
+                result["matchLabels"] = match_labels
+            if match_expressions:
+                result["matchExpressions"] = match_expressions
+            return result
+
+        @staticmethod
+        def _format_label_selector(selector):
+            """Convert structured matchLabels/matchExpressions to equality-based string."""
+            parts = []
+            for key, value in (selector.get("matchLabels") or {}).items():
+                parts.append(f"{key}={value}")
+            for expr in (selector.get("matchExpressions") or []):
+                key = expr["key"]
+                op = expr["operator"]
+                values = expr.get("values", [])
+                if op == "In":
+                    parts.append(f"{key} in ({','.join(values)})")
+                elif op == "NotIn":
+                    parts.append(f"{key} notin ({','.join(values)})")
+                elif op == "Exists":
+                    parts.append(key)
+                elif op == "DoesNotExist":
+                    parts.append(f"!{key}")
+            return ",".join(parts)
+
+        def v1alpha1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
+            if o.get("apiVersion") != "deckhouse.io/v1alpha1":
+                return None, o
+
+            obj = DotMap(o)
+            obj.apiVersion = "deckhouse.io/v1alpha2"
+
+            spec = o.get("spec", {})
+            policy = spec.get("deschedulerPolicy", {})
+            global_params = policy.get("globalParameters", {})
+            old_strategies = policy.get("strategies", {})
+
+            node_selector = global_params.get("nodeSelector")
+            if node_selector:
+                obj.spec.nodeLabelSelector = self._parse_label_selector(node_selector)
+
+            s = old_strategies.get("removePodsViolatingTopologySpreadConstraint", {})
+            if s.get("enabled"):
+                obj.spec.strategies.removePodsViolatingTopologySpreadConstraint.enabled = s["enabled"]
+                obj.spec.strategies.removePodsViolatingTopologySpreadConstraint.constraints = ["DoNotSchedule"]
+
+            s = old_strategies.get("removePodsHavingTooManyRestarts", {})
+            if s.get("enabled"):
+                obj.spec.strategies.removePodsHavingTooManyRestarts.enabled = s["enabled"]
+                obj.spec.strategies.removePodsHavingTooManyRestarts.podRestartThreshold = 100
+
+            s = old_strategies.get("removeDuplicates", {})
+            if s.get("enabled"):
+                obj.spec.strategies.removeDuplicates.enabled = s["enabled"]
+
+            s = old_strategies.get("removePodsViolatingNodeAffinity", {})
+            if s.get("enabled"):
+                obj.spec.strategies.removePodsViolatingNodeAffinity.enabled = s["enabled"]
+                obj.spec.strategies.removePodsViolatingNodeAffinity.nodeAffinityType = ["requiredDuringSchedulingIgnoredDuringExecution"]
+
+            s = old_strategies.get("removePodsViolatingInterPodAntiAffinity", {})
+            if s.get("enabled"):
+                obj.spec.strategies.removePodsViolatingInterPodAntiAffinity.enabled = s["enabled"]
+
+            s = old_strategies.get("highNodeUtilization", {})
+            if s.get("enabled"):
+                obj.spec.strategies.highNodeUtilization.enabled = s["enabled"]
+                obj.spec.strategies.highNodeUtilization.thresholds = {"cpu": 20, "memory": 20, "pods": 20}
+
+            s = old_strategies.get("lowNodeUtilization", {})
+            if s.get("enabled"):
+                obj.spec.strategies.lowNodeUtilization.enabled = s["enabled"]
+                obj.spec.strategies.lowNodeUtilization.thresholds = {"cpu": 20, "memory": 20, "pods": 20}
+                obj.spec.strategies.lowNodeUtilization.targetThresholds = {"cpu": 70, "memory": 70, "pods": 70}
+
+            if "deploymentTemplate" in spec:
+                del obj.spec.deploymentTemplate
+            if "deschedulerPolicy" in spec:
+                del obj.spec.deschedulerPolicy
+
+            return None, obj.toDict()
+
+  - from: v1alpha2
+    to: v1alpha1
+    handler:
+      python: |
+        def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
+            if o.get("apiVersion") != "deckhouse.io/v1alpha2":
+                return None, o
+
+            obj = DotMap(o)
+            obj.apiVersion = "deckhouse.io/v1alpha1"
+
+            spec = o.get("spec", {})
+            strategies = spec.get("strategies", {})
+
+            node_label_selector = spec.get("nodeLabelSelector")
+            if node_label_selector:
+                obj.spec.deschedulerPolicy.globalParameters.nodeSelector = self._format_label_selector(node_label_selector)
+                del obj.spec.nodeLabelSelector
+
+            s = strategies.get("removeDuplicates", {})
+            if s.get("enabled"):
+                obj.spec.deschedulerPolicy.strategies.removeDuplicates.enabled = s["enabled"]
+
+            s = strategies.get("removePodsViolatingNodeAffinity", {})
+            if s.get("enabled"):
+                obj.spec.deschedulerPolicy.strategies.removePodsViolatingNodeAffinity.enabled = s["enabled"]
+
+            s = strategies.get("removePodsViolatingInterPodAntiAffinity", {})
+            if s.get("enabled"):
+                obj.spec.deschedulerPolicy.strategies.removePodsViolatingInterPodAntiAffinity.enabled = s["enabled"]
+
+            s = strategies.get("highNodeUtilization", {})
+            if s.get("enabled"):
+                obj.spec.deschedulerPolicy.strategies.highNodeUtilization.enabled = s["enabled"]
+
+            s = strategies.get("lowNodeUtilization", {})
+            if s.get("enabled"):
+                obj.spec.deschedulerPolicy.strategies.lowNodeUtilization.enabled = s["enabled"]
+
+            s = strategies.get("removePodsViolatingTopologySpreadConstraint", {})
+            if s.get("enabled"):
+                obj.spec.deschedulerPolicy.strategies.removePodsViolatingTopologySpreadConstraint.enabled = s["enabled"]
+
+            s = strategies.get("removePodsHavingTooManyRestarts", {})
+            if s.get("enabled"):
+                obj.spec.deschedulerPolicy.strategies.removePodsHavingTooManyRestarts.enabled = s["enabled"]
+
+            if "strategies" in spec:
+                del obj.spec.strategies
+
+            return None, obj.toDict()

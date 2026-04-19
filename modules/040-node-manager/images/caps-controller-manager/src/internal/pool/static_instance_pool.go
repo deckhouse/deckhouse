@@ -25,7 +25,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"caps-controller-manager/internal/event"
 	"caps-controller-manager/internal/scope"
 )
@@ -70,12 +70,12 @@ func (p *StaticInstancePool) PickStaticInstance(
 		return nil, false, errors.Wrap(err, "failed to create scope")
 	}
 
-	instanceScope, err := scope.NewInstanceScope(newScope, &staticInstance)
+	instanceScope, err := scope.NewInstanceScope(newScope, &staticInstance, ctx)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to create instance scope")
 	}
 
-	instanceScope.MachineScope = machineScope
+	instanceScope.AttachMachineScope(machineScope)
 
 	err = instanceScope.LoadSSHCredentials(ctx, p.recorder)
 	if err != nil {

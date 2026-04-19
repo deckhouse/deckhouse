@@ -35,7 +35,7 @@ const globalValues = `
   modules:
     placement: {}
   discovery:
-    kubernetesVersion: 1.29.1
+    kubernetesVersion: 1.31.1
     d8SpecificNodeCountByRole:
       master: 3
 `
@@ -109,11 +109,33 @@ internal:
           cpu: 14
           memory: 23
           pods: 3
+  - name: test4
+    evictLocalStoragePods: true
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+          memory: 20
+          pods: 30
+        targetThresholds:
+          cpu: 40
+          memory: 50
+          pods: 50
+          gpu: "gpuNode"
 `
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("descheduler", moduleValues)
 			f.HelmRender()
+		})
+
+		It("Should use default Moderate interval (15m)", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("15m"))
 		})
 
 		It("Everything must render properly", func() {
@@ -236,8 +258,98 @@ profiles:
     preEvictionFilter:
       enabled:
       - DefaultEvictor
+- name: test4
+  pluginConfig:
+  - args:
+      evictFailedBarePods: true
+      evictLocalStoragePods: true
+      evictSystemCriticalPods: false
+      ignorePvcPods: false
+      nodeFit: true
+    name: DefaultEvictor
+  - args:
+      targetThresholds:
+        cpu: 40
+        gpu: gpuNode
+        memory: 50
+        pods: 50
+      thresholds:
+        cpu: 10
+        memory: 20
+        pods: 30
+    name: LowNodeUtilization
+  plugins:
+    balance:
+      enabled:
+      - LowNodeUtilization
+    filter:
+      enabled:
+      - DefaultEvictor
+    preEvictionFilter:
+      enabled:
+      - DefaultEvictor
 `))
 			Expect(f.KubernetesResource("Deployment", "d8-descheduler", "descheduler").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("With deschedulingInterval set to Frequent", func() {
+		BeforeEach(func() {
+			moduleValues := `
+deschedulingInterval: "Frequent"
+internal:
+  deschedulers:
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+        targetThresholds:
+          cpu: 40
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should set descheduling interval to 5m", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("5m"))
+		})
+	})
+
+	Context("With deschedulingInterval set to Rare", func() {
+		BeforeEach(func() {
+			moduleValues := `
+deschedulingInterval: "Rare"
+internal:
+  deschedulers:
+  - name: test1
+    strategies:
+      lowNodeUtilization:
+        enabled: true
+        thresholds:
+          cpu: 10
+        targetThresholds:
+          cpu: 40
+`
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("descheduler", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should set descheduling interval to 30m", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			deploy := f.KubernetesResource("Deployment", "d8-descheduler", "descheduler")
+			Expect(deploy.Exists()).To(BeTrue())
+			args := deploy.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("30m"))
 		})
 	})
 })

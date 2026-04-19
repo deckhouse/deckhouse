@@ -7,8 +7,10 @@ package ee
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"strings"
 	"time"
 
@@ -90,7 +92,7 @@ status:
   metadataCache:
     private:
       publicServices:
-      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123}]}
+      - {"hostname": "aaa", "ports": [{"name": "ppp", "port": 123, "protocol": TCP}]}
     public:
       clusterUUID: aaa-bbb-f2
       rootCA: abc-f2
@@ -109,7 +111,7 @@ status:
       ingressGateways:
       - {"address": "bbb", "port": 222}
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123, "protocol": TCP},{"name": "zzz", "port": 777, "protocol": TCP},{"name": "https-xxx", "port": 555, "protocol": TLS}]}
     public:
       clusterUUID: aaa-bbb-f3
       rootCA: abc-f3
@@ -128,8 +130,12 @@ status:
       ingressGateways:
       - {"address": "ccc", "port": 222}
       publicServices:
-      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123}]}
-      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555}]}
+      - {"hostname": "ccc", "ports": [{"name": "ppp", "port": 123, "protocol": TCP}]}
+      - {"hostname": "ddd", "ports": [{"name": "xxx", "port": 555, "protocol": TCP}]}
+      - {"hostname": "eee", "ports": [{"name": "http-xxx", "port": 555, "protocol": HTTP}]}
+      - {"hostname": "fff", "ports": [{"name": "https-xxx", "port": 555, "protocol": TLS}]}
+      - {"hostname": "ggg", "ports": [{"name": "grpc-xxx", "port": 555, "protocol": HTTP2}]}
+      - {"hostname": "hhh", "ports": [{"name": "tls-xxx", "port": 555, "protocol": TLS}]}
     public:
       clusterUUID: aaa-bbb-f4
       rootCA: abc-f4
@@ -147,7 +153,7 @@ status:
     private:
       ingressGateways: []
       publicServices:
-      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]}
+      - {"hostname": "bbb", "ports": [{"name": "ppp", "port": 123, "protocol": TCP},{"name": "zzz", "port": 777, "protocol": TCP},{"name": "grpc-xxx", "port": 555, "protocol": HTTP2},{"name": "tls-xxx", "port": 555, "protocol": TLS}]}
     public:
       clusterUUID: aaa-bbb-f5
       rootCA: abc-f5
@@ -310,7 +316,7 @@ status:
             "publicServices": [
               {
                 "hostname": "bbb",
-                "ports": [{"name": "ppp", "port": 123},{"name": "zzz", "port": 777}]
+                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP" },{"name": "zzz", "port": 777, "protocol": "TCP"},{"name": "https-xxx", "port": 555, "protocol": "TLS"}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",
@@ -329,11 +335,27 @@ status:
             "publicServices": [
               {
                 "hostname": "ccc",
-                "ports": [{"name": "ppp", "port": 123}]
+                "ports": [{"name": "ppp", "port": 123, "protocol": "TCP"}]
               },
               {
                 "hostname": "ddd",
-                "ports": [{"name": "xxx", "port": 555}]
+                "ports": [{"name": "xxx", "port": 555, "protocol": "TCP"}]
+              },
+              {
+                "hostname": "eee",
+                "ports": [{"name": "http-xxx", "port": 555, "protocol": "HTTP"}]
+              },
+              {
+                "hostname": "fff",
+                "ports": [{"name": "https-xxx", "port": 555, "protocol": "TLS"}]
+              },
+              {
+                "hostname": "ggg",
+                "ports": [{"name": "grpc-xxx", "port": 555, "protocol": "HTTP2"}]
+              },
+              {
+                "hostname": "hhh",
+                "ports": [{"name": "tls-xxx", "port": 555, "protocol": "TLS"}]
               }
             ],
             "spiffeEndpoint": "https://some-proper-host/public/spiffe-bundle-endpoint",
@@ -408,19 +430,326 @@ status:
 		  "aaa-bbb-m6": {"clusterUUID": "aaa-bbb-m6", "rootCA": "abc-m6", "authnKeyPub": "xyz-m6"}
 		}
 `))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-empty wasn't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-full-empty-ig-0 wasn't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioFederation federation-only-ingress wasn't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioFederation federation-only-services wasn't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-empty-ig weren't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-apiHost wasn't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("ingressGateways for IstioMulticluster multicluster-no-ig weren't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-no-networkname wasn't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("public metadata for IstioMulticluster multicluster-no-public wasn't fetched yet"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("private metadata for IstioMulticluster multicluster-only-public wasn't fetched yet"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioFederation wasn't fetched yet\",\"name\":\"federation-empty\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioFederation wasn't fetched yet\",\"name\":\"federation-full-empty-ig-0\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioFederation wasn't fetched yet\",\"name\":\"federation-only-ingress\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioFederation wasn't fetched yet\",\"name\":\"federation-only-services\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"ingressGateways for IstioMulticluster weren't fetched yet\",\"name\":\"multicluster-empty-ig\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-no-apiHost\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"ingressGateways for IstioMulticluster weren't fetched yet\",\"name\":\"multicluster-no-ig\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-no-networkname\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"public metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-no-public\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"private metadata for IstioMulticluster wasn't fetched yet\",\"name\":\"multicluster-only-public\""))
 
-			// there should be 10 log messages
-			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(10))
+			// there should be 16 log messages (including 2 new "starting token reuse logic" messages)
+			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(16))
+		})
+	})
+
+	Context("JWT Token Integration Tests", func() {
+		It("Check whether a new token is being created when no secret exists.", func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that a new token was generated
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(BeEmpty())
+
+			// Verify the token is valid
+			validationResult := validateJWTToken(apiJWT)
+			Expect(validationResult.NeedReissue).To(BeFalse())
+		})
+
+		It("Checking the reuse of an existing valid secret token.", func() {
+			// Create a valid JWT token (expires in 35 days, i.e. more than expiresSoonThreshold)
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			futureTime := time.Now().Add(35 * 24 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   futureTime,
+				"iat":   time.Now().Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "test-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			validToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Create kubeconfig with valid token
+			validKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, validToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that the existing token was reused
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).To(Equal(validToken))
+		})
+
+		It("Check whether a new token is being created when the existing token expires.", func() {
+			// Create an expired JWT token
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			pastTime := time.Now().Add(-1 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   pastTime,
+				"iat":   time.Now().Add(-2 * time.Hour).Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "test-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			expiredToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			// Create kubeconfig with expired token
+			expiredKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, expiredToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(expiredKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that a new token was generated (different from expired one)
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(Equal(expiredToken))
+			Expect(apiJWT).ToNot(BeEmpty())
+
+			// Verify the new token is valid
+			validationResult := validateJWTToken(apiJWT)
+			Expect(validationResult.NeedReissue).To(BeFalse())
+		})
+
+		It("Check whether a new token is created when existing token expires in less than 30 days (proactive refresh).", func() {
+			// Create a valid JWT token that expires in 20 days (less than expiresSoonThreshold)
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			futureTime := time.Now().Add(20 * 24 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   futureTime,
+				"iat":   time.Now().Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "test-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			expiringSoonToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			validKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, expiringSoonToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that a new token was generated (proactive refresh before expiration)
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(Equal(expiringSoonToken))
+			Expect(apiJWT).ToNot(BeEmpty())
+
+			// Verify the new token is valid and has sufficient TTL
+			validationResult := validateJWTToken(apiJWT)
+			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 	})
 })

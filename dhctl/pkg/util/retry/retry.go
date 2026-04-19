@@ -18,15 +18,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
+
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-const attemptMessage = `Attempt #%d of %d |
-	%s failed, next attempt will be in %v"
+const (
+	attemptMessage = `Attempt #%d of %d |
+	%s check attempt, retry in %v"
 `
+	NotSetName = "Name not set"
+)
 
 var InTestEnvironment = false
 
@@ -45,6 +51,138 @@ func IsErr(err error) BreakPredicate {
 	}
 }
 
+type Params interface {
+	WithName(n string) Params
+	WithAttempts(attempts int) Params
+	WithWait(wait time.Duration) Params
+
+	Name() string
+	Attempts() int
+	Wait() time.Duration
+
+	Clone() Params
+	Fill(c Params) Params
+}
+
+type params struct {
+	name     string
+	attempts int
+	wait     time.Duration
+}
+
+type ParamsBuilderOpt func(Params)
+
+func WithName(name string) ParamsBuilderOpt {
+	return func(p Params) {
+		p.WithName(name)
+	}
+}
+
+func WithAttempts(attempts int) ParamsBuilderOpt {
+	return func(p Params) {
+		p.WithAttempts(attempts)
+	}
+}
+
+func AttemptsWithWaitOpts(attempts int, wait time.Duration) []ParamsBuilderOpt {
+	return []ParamsBuilderOpt{
+		WithAttempts(attempts),
+		WithWait(wait),
+	}
+}
+
+func WithWait(wait time.Duration) ParamsBuilderOpt {
+	return func(p Params) {
+		p.WithWait(wait)
+	}
+}
+
+func NewParams(name string, attempts int, wait time.Duration) Params {
+	return NewEmptyParams().
+		WithName(name).
+		WithAttempts(attempts).
+		WithWait(wait)
+}
+
+func NewEmptyParams(opts ...ParamsBuilderOpt) Params {
+	p := &params{
+		name:     NotSetName,
+		attempts: 1,
+		wait:     1 * time.Second,
+	}
+
+	for _, opt := range opts {
+		opt(p)
+	}
+
+	return p
+}
+
+func (p *params) WithName(n string) Params {
+	if n != "" {
+		p.name = n
+	}
+
+	return p
+}
+
+func (p *params) WithAttempts(attempts int) Params {
+	if attempts > 0 {
+		p.attempts = attempts
+	}
+
+	return p
+}
+
+func (p *params) WithWait(wait time.Duration) Params {
+	if wait > 0 {
+		p.wait = wait
+	}
+	return p
+}
+
+func (p *params) Name() string {
+	return p.name
+}
+
+func (p *params) Attempts() int {
+	return p.attempts
+}
+
+func (p *params) Wait() time.Duration {
+	return p.wait
+}
+
+func (p *params) Clone() Params {
+	if govalue.IsNil(p) {
+		return nil
+	}
+
+	return NewParams(p.Name(), p.Attempts(), p.Wait())
+}
+
+func (p *params) Fill(c Params) Params {
+	if govalue.IsNil(p) {
+		return nil
+	}
+
+	if govalue.IsNil(c) {
+		return p
+	}
+
+	return p.WithName(c.Name()).
+		WithAttempts(c.Attempts()).
+		WithWait(c.Wait())
+}
+
+func SafeCloneOrNewParams(p Params, opts ...ParamsBuilderOpt) Params {
+	if !govalue.IsNil(p) {
+		return p.Clone()
+	}
+
+	return NewEmptyParams(opts...)
+}
+
 // Loop retries a task function until it succeeded with number of attempts and delay between runs are adjustable.
 type Loop struct {
 	name             string
@@ -54,7 +192,7 @@ type Loop struct {
 	logger           log.Logger
 	interruptable    bool
 	showError        bool
-	ctx              context.Context
+	prefix           string
 }
 
 // NewLoop create Loop with features:
@@ -71,6 +209,19 @@ func NewLoop(name string, attemptsQuantity int, wait time.Duration) *Loop {
 	}
 }
 
+func NewLoopWithParams(params Params) *Loop {
+	p := params
+	if govalue.IsNil(p) {
+		p = NewEmptyParams()
+	}
+
+	return NewLoop(p.Name(), p.Attempts(), params.Wait())
+}
+
+func NewLoopWithParamsOpts(opts ...ParamsBuilderOpt) *Loop {
+	return NewLoopWithParams(NewEmptyParams(opts...))
+}
+
 // NewSilentLoop create Loop with features:
 // - it is "silent" loop — no messages are printed through logboek.
 // - this loop is not interruptable by the signal watcher in tomb package.
@@ -83,7 +234,21 @@ func NewSilentLoop(name string, attemptsQuantity int, wait time.Duration) *Loop 
 		// - this loop is not interruptable by the signal watcher in tomb package.
 		interruptable: false,
 		showError:     true,
+		prefix:        fmt.Sprintf("[%s][%d] ", name, rand.Int()),
 	}
+}
+
+func NewSilentLoopWithParams(params Params) *Loop {
+	p := params
+	if govalue.IsNil(p) {
+		p = NewEmptyParams()
+	}
+
+	return NewSilentLoop(p.Name(), p.Attempts(), p.Wait())
+}
+
+func NewSilentLoopWithParamsOpts(opts ...ParamsBuilderOpt) *Loop {
+	return NewSilentLoopWithParams(NewEmptyParams(opts...))
 }
 
 func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
@@ -93,11 +258,6 @@ func (l *Loop) BreakIf(pred BreakPredicate) *Loop {
 
 func (l *Loop) WithInterruptable(flag bool) *Loop {
 	l.interruptable = flag
-	return l
-}
-
-func (l *Loop) WithContext(ctx context.Context) *Loop {
-	l.ctx = ctx
 	return l
 }
 
@@ -111,9 +271,21 @@ func (l *Loop) WithShowError(flag bool) *Loop {
 	return l
 }
 
-// Run retries a task function until it succeeded or break task retries if break predicate returns true
 func (l *Loop) Run(task func() error) error {
+	return l.run(context.Background(), task)
+}
+
+// RunContext retries a task like Run but breaks if context done.
+func (l *Loop) RunContext(ctx context.Context, task func() error) error {
+	return l.run(ctx, task)
+}
+
+func (l *Loop) run(ctx context.Context, task func() error) error {
 	setupTests(&l.attemptsQuantity, &l.waitTime)
+
+	if l.attemptsQuantity < 1 {
+		return fmt.Errorf("Attempts quantity must be greater than zero for loop '%s'", l.name)
+	}
 
 	loopBody := func() error {
 		var err error
@@ -126,37 +298,33 @@ func (l *Loop) Run(task func() error) error {
 			// Run task and return if everything is ok.
 			err = task()
 			if err == nil {
-				l.logger.LogSuccess("Succeeded!\n")
+				l.logger.LogSuccess(l.prefix + "Succeeded!\n")
 				return nil
 			}
 
 			if l.breakPredicate != nil && l.breakPredicate(err) {
-				l.logger.LogDebugF("Client break loop with %v\n", err)
+				l.logger.LogDebugF(l.prefix+"Client break loop with %v\n", err)
 				return err
 			}
 
-			l.logger.LogFailRetry(fmt.Sprintf(attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
+			l.logger.LogFailRetry(fmt.Sprintf(l.prefix+attemptMessage, i, l.attemptsQuantity, l.name, l.waitTime))
 			errorMsg := "\t%v\n\n"
 			if l.showError {
-				errorMsg = "\tError: %v\n\n"
+				errorMsg = "\tStatus: %v\n\n"
 			}
-			l.logger.LogInfoF(errorMsg, err)
+			l.logger.LogInfoF(l.prefix+errorMsg, err)
 
 			// Do not waitTime after the last iteration.
 			if i < l.attemptsQuantity {
-				if l.ctx != nil {
-					select {
-					case <-l.ctx.Done():
-						return fmt.Errorf("timeout while %q: last error: %v", l.name, l.ctx.Err())
-					case <-time.After(l.waitTime):
-					}
-				} else {
-					time.Sleep(l.waitTime)
+				select {
+				case <-time.After(l.waitTime):
+				case <-ctx.Done():
+					return fmt.Errorf("Loop was canceled: %w", ctx.Err())
 				}
 			}
 		}
 
-		return fmt.Errorf("Timeout while %q: last error: %v", l.name, err)
+		return fmt.Errorf("Timeout while %q: last error: %w", l.name, err)
 	}
 
 	return l.logger.LogProcess("default", l.name, loopBody)

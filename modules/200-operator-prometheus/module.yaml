@@ -1,7 +1,8 @@
 name: operator-prometheus
-weight: 200
-description: |
-  This module installs the prometheus operator for creating Prometheus installations
-
-requirements:
-  bootstrapped: true
+stage: General Availability
+subsystems:
+- observability
+namespace: d8-operator-prometheus
+descriptions:
+  en: Manages the lifecycle of the monitoring system in the cluster.
+  ru: Управляет жизненным циклом системы мониторинга в кластере.

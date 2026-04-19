@@ -1,53 +1,55 @@
-<div class="breadcrumbs-container">
-  <div class="breadcrumbs__left">
+<!--noindex-->
+<div class="navigation__container">
+  {%- if page.product_code == 'kubernetes-platform' %}
+  <div class="navigation__container--versions">
+    <div>
+      {%- if site.mode == 'module' %}
+        <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong>
+      {%- else if page.sidebar == 'embedded-modules' %}
+        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong>
+      {%- else %}
+        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong>
+      {%- endif %}
+    </div>
+
+    <!-- module-version-badge -->
+    <div id="doc-versions-menu" class="channel-menu submenu-parent">
+        {%- unless site.mode == 'module' %}
+          {%- if page.sidebar == 'embedded-modules' %}
+            <!--#include virtual="/includes/channel-menu-module.html" -->
+          {%- else %}
+            <!--#include virtual="/includes/channel-menu-v2.html" -->
+          {%- endif %}
+        {%- endunless -%}
+      </div>
+  </div>
+  {%- else %}
+  <div class="navigation__container--versions"></div>
+  {%- endif %}
+  <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.documentation[page.lang] }}</li>
+      {% include nav-breadcrumbs-pagepath.html %}
     </ol>
   </div>
-  <div class="breadcrumbs__right">
-    <ol class="breadcrumbs">
-      <li class="breadcrumbs__item">{{ site.data.i18n.common.platform[page.lang] }}</li>
-      <!--#include virtual="/includes/group-menu.html" -->
-      {%- assign page_url_parts = page.url | split: '/' -%}
-      {%- assign max_ind = page_url_parts.size | minus: 1 -%}
-      {% if max_ind == 1 %}{%- assign max_ind = 2 -%}{% endif %}
-
-      {%- for i in (2..max_ind) %}
-      {%- if forloop.last %}
-      <li class="breadcrumbs__item">{{ page.title }}</li>
-      {% else %}
-      {% unless page_url_parts[i].title %}
-        {% continue %}
-      {% endunless -%}
-      {%- capture current_breadcrumb_url %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
-      {%- capture next_prepender %}{{ next_prepender }}/{{ page_url_parts[i] }}{% endcapture -%}
-
-      {%- assign breadcrumb = site.data.breadcrumbs[current_breadcrumb_url] %}
-      {%- if breadcrumb %}
-          <li class="breadcrumbs__item">
-             <a href="{{ breadcrumb.url | true_relative_url }}">{%- if breadcrumb.title[page.lang] %}{{ breadcrumb.title[page.lang] }}{% else %}{{ breadcrumb.title }}{% endif -%}</a>
-          </li>
-      {% else %}
-          {%- assign breadcrumb_err = "Check breadcrumbs.yml: " | append: current_breadcrumb_url | append: " not defined" %}
-          {% comment %}{{ breadcrumb_err | raise_error }}{% endcomment %}
-      {%- endif -%}
-      {%- endif -%}
-      {%- endfor %}
-    </ol>
-  </div>
-
-  {% if page.search_bage_enabled %}
-  <!--start search-->
-  <div class="search">
-      <form action='{{ "search.html" | prepend: '/documentation/' | prepend: page.product_code | true_relative_url }}' method="get">
-      <input type="text" class="search__input" id="search-box" name="query" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}">
-      </form>
-  </div>
-  <!--end search-->
-  {% endif %}
-  {% unless site.mode == 'module' %}
-  <div id="doc-versions-menu" class="channel-menu submenu-parent">
-    <!-- #include virtual="/includes/channel-menu.html" -->
-  </div>
-  {% endunless %}
+  {% if page.searchBageEnabled %}
+    <!--start search-->
+    <div class="searchV3">
+      <div class="container">
+        <div class="input-wrapper">
+          <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
+          data-search-index-path="/products/{{ page.product_code | default: 'kubernetes-platform' }}/documentation/search.json:1.0:1440"
+          data-search-context="{{ site.data.i18n.common.search_context_only_product_docs[page.lang] }}"
+          >
+          <div id="search-results" class="results" style="display: none"></div>
+        </div>
+      </div>
+    </div>
+    <!--end search-->
+    <!--loading search JS-->
+    {%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+    <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
+    <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
+    <!--end loading search JS-->
+  {%- endif %}
 </div>
+<!--/noindex-->

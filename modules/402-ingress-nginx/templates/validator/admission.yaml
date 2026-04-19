@@ -1,0 +1,85 @@
+{{- $context := . }}
+{{- $kubernetesVersion := $context.Values.global.discovery.kubernetesVersion }}
+
+{{- if and $context.Values.ingressNginx.internal $context.Values.ingressNginx.internal.ingressControllers }}
+  {{- if gt (len $context.Values.ingressNginx.internal.ingressControllers) 0 }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: d8-ingress-nginx-admission
+  {{ include "helm_lib_module_labels" (list . ) | nindent 2 }}
+webhooks:
+    {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
+    {{- $controllerVersion := ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
+    {{- if $crd.spec.validationEnabled }}
+  - name: {{ $crd.name }}.validate.d8-ingress-nginx
+    matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+      - key: heritage
+        operator: NotIn
+        values:
+        - deckhouse
+    rules:
+      - apiGroups:
+          - networking.k8s.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - ingresses
+        scope: Namespaced
+    matchConditions:
+      - name: 'exclude-ingress-class-name'
+        expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName == '{{ $crd.spec.ingressClass }}') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class' in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class'] == '{{ $crd.spec.ingressClass }}')
+    failurePolicy: Fail
+    sideEffects: None
+    timeoutSeconds: 28
+    admissionReviewVersions:
+    - v1
+    clientConfig:
+      service:
+        namespace: d8-ingress-nginx
+        name: {{ $crd.name }}-admission
+        path: /networking/v1/ingresses
+      caBundle: {{ $context.Values.ingressNginx.internal.admissionCertificate.ca | b64enc }}
+  - name: {{ $crd.name }}.validate.d8-ingress-nginx-deckhouse
+    matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+      - key: heritage
+        operator: In
+        values:
+        - deckhouse
+    rules:
+      - apiGroups:
+          - networking.k8s.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - ingresses
+        scope: Namespaced
+    matchConditions:
+      - name: 'exclude-ingress-class-name'
+        expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName == '{{ $crd.spec.ingressClass }}') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class' in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class'] == '{{ $crd.spec.ingressClass }}')
+    failurePolicy: Ignore
+    sideEffects: None
+    timeoutSeconds: 5
+    admissionReviewVersions:
+    - v1
+    clientConfig:
+      service:
+        namespace: d8-ingress-nginx
+        name: {{ $crd.name }}-admission
+        path: /networking/v1/ingresses
+      caBundle: {{ $context.Values.ingressNginx.internal.admissionCertificate.ca | b64enc }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}

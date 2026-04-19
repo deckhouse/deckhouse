@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-empty-spec
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: empty-spec
+spec:
+  hostPID: true
+  containers:
+    - name: nginx
+      image: nginx

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -25,7 +27,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 15},
 }, removeKubeDNSRBACAndConfigMap)
 
-func removeKubeDNSRBACAndConfigMap(input *go_hook.HookInput) error {
+func removeKubeDNSRBACAndConfigMap(_ context.Context, input *go_hook.HookInput) error {
 	input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", "system:coredns")
 	input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", "system:coredns")
 	input.PatchCollector.Delete("v1", "ServiceAccount", "kube-system", "coredns")

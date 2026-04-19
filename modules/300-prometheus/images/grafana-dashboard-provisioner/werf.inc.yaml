@@ -1,44 +1,38 @@
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/bin
-    to: /usr/bin
-    before: setup
-    includePaths:
-    - python3
-    - python3.12
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib/python3
-    to: /usr/lib/python3
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3
-    to: /usr/lib64/python3
-    before: setup
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-    add: /usr/lib64/python3.12
-    to: /usr/lib64/python3.12
-    before: setup
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+  add: /
+  to: /
+  before: install
+  includePaths:
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
+  excludePaths:
+  - usr/lib/python3.12/site-packages/pip-25.3*
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/hooks
+- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
-  stageDependencies:
-    install:
-    - '**/*'
-
+{{- include "image mount points" . }}  
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_P11 }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
+from: {{ index $.Images "base/python" }}
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/requirements.txt
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
   to: /requirements.txt
   stageDependencies:
     install:
     - '**/*'
+import:
+- image: common/wheel-artifact
+  add: /wheels
+  to: /wheels
+  before: install
 shell:
-  beforeInstall:
-    - apt-get update
-    - apt-get install -y python3 python3-module-pip-run
   install:
-    - pip3 install -r /requirements.txt
+  - pip3 install -f file:///wheels --no-index --upgrade pip
+  - pip3 install -f file:///wheels --no-index -r /requirements.txt

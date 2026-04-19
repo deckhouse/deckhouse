@@ -55,6 +55,7 @@ spec:
                         - ZvirtInstanceClass
                         - DynamixInstanceClass
                         - HuaweiCloudInstanceClass
+                        - DVPInstanceClass
                     name:
                       description: |
                         The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -109,7 +110,7 @@ spec:
                   properties:
                     logsEndpoint:
                       type: string
-                      description: IP address for getting bootstrap logs.
+                      description: http endpoint for getting bootstrap logs.
                     description:
                       type: string
                       description: Description about getting logs.

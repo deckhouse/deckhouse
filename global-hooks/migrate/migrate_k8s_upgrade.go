@@ -23,6 +23,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -35,8 +36,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	dhctlconfig "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
 const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
@@ -59,7 +60,7 @@ func k8sUpgradeHookTriggerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	version, ok := secret.Data["maxUsedControlPlaneKubernetesVersion"]
 	if !ok {
@@ -72,7 +73,7 @@ type clusterConfig struct {
 	KubernetesVersion string `yaml:"kubernetesVersion"`
 }
 
-func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
+func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
@@ -103,13 +104,13 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		return fmt.Errorf("unmarshal 'cluster-configuration.yaml' failed: %w", err)
 	}
 
-	var kubernetesVersion = dhctlconfig.DefaultKubernetesVersion
+	var kubernetesVersion = hooks.DefaultKubernetesVersion
 
 	if config.KubernetesVersion != "Automatic" {
 		kubernetesVersion = config.KubernetesVersion
 	}
 
-	input.Logger.Infof("kubernetesVersion: %s", kubernetesVersion)
+	input.Logger.Info("detected Kubernetes version", slog.String("version", kubernetesVersion))
 
 	c, err := semver.NewConstraint("< 1.29")
 	if err != nil {
@@ -148,7 +149,7 @@ func k8sPostUpgrade(input *go_hook.HookInput, dc dependency.Container) error {
 		},
 	}
 
-	input.Logger.Infof("create clusterrolebinding: %s", clusterAdminsGroupAndClusterRoleBinding)
+	input.Logger.Info("creating clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding))
 
 	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
 	if err != nil {

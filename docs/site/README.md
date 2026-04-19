@@ -1,16 +1,185 @@
-# Deckhouse documentation website 
+# Deckhouse documentation website
 
-> May contain incomplete information. It is being updated.
+> This README is a work in progress. Some information may be incomplete or outdated.
 
-This document describes Deckhouse documentation architecture and how to run the documentation website locally.
+This document describes the architecture of Deckhouse documentation and explains how to run the documentation website locally.
 
-## Architecture
+## Running the documentation site locally
 
-There following parts of the Deckhouse website:
-- The main part of the site. Includes all sections except that not described below.
-- The non-versioned documentation part.
-   
-  Includes the following sections:
+### Requirements
+
+- Clone this repository.
+- Ensure that port `80` is available for binding.
+
+### Running the documentation site (option 1: watch mode)
+
+Runs documentation containers in a werf watch mode — documentation will rebuild on a new commit (on `make up`) or any changes (on `make dev`).
+
+#### Starting the documentation site
+
+To start the documentation site follow these steps:
+
+1. Run documentation:
+
+   ```shell
+   cd docs/site
+   make up
+   ```
+
+   By default, local Docker images store is used (no registry required).
+
+   If you want to use a local Docker registry at `localhost:4999` instead, set `USE_LOCALHOST_REPO=1`.
+   In that case, the registry is started automatically if it is not already running:
+
+   ```shell
+   cd docs/site
+   USE_LOCALHOST_REPO=1 make up
+   ```
+
+   If you want to work with uncommitted files, use `make dev` instead of `make up`.
+
+1. Open the DKP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+
+#### Stopping the documentation site
+
+To stop the documentation site, cancel the running process and run the following command:
+
+```shell
+make down
+```
+
+This also stops and removes the local Docker registry if it was started.
+
+### Running the documentation site with an external module
+
+Use this mode when you want to preview documentation from an external module repository together with the local portal.
+
+1. Run the following command from `docs/site`:
+
+   ```bash
+   make external-module MODULE_PATH=/path/to/module
+   ```
+
+1. Optional arguments:
+
+   - `CHANNEL` — defaults to `alpha`;
+   - `MODULE_VERSION` — defaults to `v0.1.0`.
+
+   Example:
+
+   ```bash
+   make external-module \
+     MODULE_PATH=/home/kar/fox/platform-security/operator-trivy \
+     CHANNEL=stable \
+     MODULE_VERSION=v1.2.3
+   ```
+
+1. Open the DKP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+
+The external module pages are available under `/modules/<module-name>/<channel>/`.
+
+If you edit files in the external module repository, Hugo rebuilds the generated files automatically and the portal picks up the changes.
+
+The workflow watches:
+
+- `docs/`;
+- `module.yaml`;
+- `oss.yaml`;
+- `openapi/config-values.yaml`;
+- `openapi/doc-ru-config-values.yaml`;
+- root-level files in `crds/`.
+
+YAML files from subdirectories inside `crds/` are ignored.
+
+#### Stopping the external module workflow
+
+To stop the workflow, cancel the running process and then run:
+
+```bash
+make down
+```
+
+### Running the documentation site (option 2: just run containers)
+
+Just runs documentation containers.
+
+#### Starting the documentation site
+
+To start the documentation site, open a terminal and follow these steps:
+
+1. Run the following command in the repository root:
+
+   ```shell
+   make docs
+   ```
+
+1. Open the documentation site in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+
+If you cloned the Deckhouse repository and made uncommitted changes, trying to run the documentation site will result in an error from werf stating that the changes must be committed first.
+
+To bypass that restriction and run the documentation site with uncommitted changes, run the following command:
+
+```shell
+make docs-dev
+```
+
+#### Stopping the documentation site
+
+To stop the documentation site, cancel the running process and run the following command in the terminal:
+
+```shell
+make docs-down
+```
+
+## Debugging (WIP)
+
+The [Delve](https://github.com/go-delve/delve) debugger is used for debugging the documentation site's backend.
+
+Files available for debugging:
+
+- `docs/site/werf-debug.yaml`: Used for compiling the backend.
+- `docs/site/docker-compose-debug.yml`: Used for running the backend.
+
+To run the debugger:
+
+1. Navigate to the `docs/site` directory and run the following command:
+
+   ```shell
+   werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'
+   ```
+
+   Alternatively, run `docs/site/backend/debug.sh`.
+
+1. Once the process is running, connect to `localhost:2345`.
+
+## Working with spellchecker
+
+> Run the following commands from the root of the repository.
+
+Spellchecking commands:
+
+- `make docs-spellcheck`: Check all documentation in the repository for spelling errors.
+- `file=<PATH_TO_FILE> make docs-spellcheck`: Check a specific file for spelling errors.
+
+  Example:
+
+  ```shell
+  file=ee/se-plus/modules/cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
+  ```
+
+- `make docs-spellcheck-generate-dictionary`: Generate a word dictionary. Run it after adding new words to the `tools/docs/spelling/wordlist` file.
+- `make docs-spellcheck-get-typos-list`: Get a sorted list of typos from the documentation.
+- `make lint-doc-spellcheck-pr`: Used in CI to check the spelling of documentation in a PR.
+
+## Architecture (WIP)
+
+> ![NOTE] Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
+
+The Deckhouse website consists of the following parts:
+
+- **Main website**. Includes all sections except those specifically described below.
+- **Non-versioned documentation**. Includes the following sections:
+
   - `/products/kubernetes-platform/gs/`
   - `/products/kubernetes-platform/guides/`
   - `/assets/`
@@ -21,35 +190,39 @@ There following parts of the Deckhouse website:
   - `/products/virtualization-platform/guides/`
   - `/products/virtualization-platform/reference/`
   
-  Content is generated using Jekyll from the `docs/site` directory.
+  The content is generated using Jekyll from the `docs/site` directory.
   
-- The versioned documentation part. 
-
-  Includes the following sections:
+- **Versioned documentation**. Includes the following sections:
+  
   - `/products/kubernetes-platform/documentation/`
 
-  Content is generated using Jekyll from the `docs/documentation` directory.
+  The content is generated using Jekyll from the `docs/documentation` directory.
+  Contains documentation for Deckhouse Kubernetes Platform (DKP) and built-in modules.
 
-  Contains documentation for Deckhouse Kubernetes Platform and built-in modules.
+- **Documentation for DKP modules**. Includes the following sections:
 
-- Documentation for Deckhouse Kubernetes Platform modules.
-
-  Includes the following sections:
   - `/products/kubernetes-platform/modules/`
 
-  Content is generated using HuGo:
-  - Project files for HuGo is in the `docs/site/backends/docs-builder-template` directory.
-  - The builder, which generates the documentation, is in the `docs/site/backends/docs-builder` directory (written in Go).
+  The content is generated using Hugo:
+  
+  - Project files for Hugo are located in the `docs/site/backends/docs-builder-template` directory.
+  - The documentation builder (written in Go) is located in the `docs/site/backends/docs-builder` directory.
 
 ### Structure of the Jekyll-based projects
 
-Project uses [werf](werf.io) to build and deploy documentation.
+> Some information is outdated.
 
-Some tips:
-- `_tool` directory contains scripts used for build;
-- `_assets` directory stores assets (styles and scripts), which are used by Jekyll Asset Pipeline plugin. Assets are compiled and minified into the `/assets` directory (yeah, the absolute path) and have a digest in the path. If you don't need a digest in the path, you may use `/css` or `/js` directory (assets will be processed by Jekyll as usual).  
+The project uses [werf](werf.io) to build and deploy documentation.
+
+Things to note:
+
+- The `_tool` directory contains scripts used for building the documentation.
+- The `_assets` directory stores assets (styles and scripts), which are used by Jekyll Asset Pipeline plugin.
+  Assets are compiled and minified into the `/assets` directory (absolute path) and include a digest in their path.
+  If you don't need a digest in the path, use the `/css` or `/js` directory instead.
+  In this case, assets will be processed by Jekyll as usual.
   
-  Here is an example of how to include a JavaScript assets:
+  Example of including JavaScript assets:
 
   ```liquid
   <script type="text/javascript" src="
@@ -60,7 +233,7 @@ Some tips:
   "></script>
   ```
 
-- Here is an example of how to include a CSS assets:
+  Example of including CSS assets:
 
   ```liquid
   <link href='
@@ -71,7 +244,7 @@ Some tips:
   ' rel='stylesheet' type='text/css' crossorigin="anonymous" />
   ```
 
-- If you need to include assets and use a relative link, you can use the following syntax:
+- If you need to include assets and use a relative link, use the following syntax:
 
   ```liquid
   {% capture asset_url %}{%- css_asset_tag supported_versions %}[_assets/css/supported_versions.css]{% endcss_asset_tag %}{% endcapture %}
@@ -79,92 +252,373 @@ Some tips:
   ```
 
 ### Dependencies
+
 - Jekyll 4+
 - [Jekyll Asset Pipeline](https://github.com/matthodan/jekyll-asset-pipeline)
-- [Jekyll Regex Replace](https://github.com/joshdavenport/jekyll-regex-replace]
+- [Jekyll Regex Replace](https://github.com/joshdavenport/jekyll-regex-replace)
 - [Jekyll Include Plugin](https://github.com/flant/jekyll_include_plugin)
 
-## Running a site with the documentation locally
+### Jekyll data
 
-### Requirements
+> Some information is outdated.
 
-- Clone repo firstly.
-- Free 80 port to bind.
-- Install [werf](https://werf.io/getting_started/).
+Some data is stored in the `_data` directory of the Jekyll project,
+while other data is generated from the repo by the scripts or Jekyll hooks.
+Below are some data structures used in the Jekyll projects.
 
-### Starting and stopping a site with the documentation locally — the first method
+- (documentation) `site.data.bundles.raw.[<EDITION>]`. Added in `werf.yaml` to build the followings data in `docs/documentation/_plugins/custom_hooks.rb`:
+  - `site.data.bundles.byModule`: A list of bundles for each module. Example:
 
-- To start documentation, open two separate consoles and follow the steps:
+    ```json
+    {
+      "node-local-dns": {
+        "Default": "true"
+      },
+      "admission-policy-engine": {
+        "Default": "true",
+        "Managed": "true"
+      }
+    }
+    ```
 
-  1. In the first console run:
+  - `site.data.bundles.bundleNames`: A list of available bundles. Example: `["Default", "Managed", "Minimal"]`.
+  - `site.data.bundles.bundleModules`: A list of modules for each bundle. Example:
 
-     ```shell
-     cd docs/documentation
-     make up
-     ```
+    ```json
+    {
+      "Default": [
+        "node-local-dns",
+        "admission-policy-engine"
+      ],
+      "Managed": [
+        "admission-policy-engine",
+        "cert-manager"
+      ],
+      "Minimal": [
+        "deckhouse"
+      ]
+    }
+    ```
 
-  1. In the second console run:
+- `site.data.modules.internal`: A list of embedded modules with the following structure:
 
-     ```shell
-     cd docs/site
-     make up
-     ```
-
-  1. Open <http://localhost>
-
-- To stop documentation, cancel the process in the consoles and run:
-
-  ```shell
-  make down
+  ```text
+  {
+    "module-name": {
+      "path": "A path to the documentation on the site",  <-- null, if the module doesn't have documentation
+      "editionMinimumAvailable": "<EDITION>" <-- the "smallest" edition, where module is available. It is computed from the repo folder structure. **Don't use it in logic.** It seems to be deprecated in the future.
+    }
+  }
   ```
 
-### Starting and stopping a site with the documentation locally — the second method
-
-- To start documentation, open console and follow the steps:
-
-  1. In the console run:
-
-     ```shell
-     make docs
-     ```
-
-  1. Open <http://localhost>
-
-- To stop documentation, cancel the process in the console and run:
-
-  ```shell
-  make docs-down
+  The data is generated by the `docs/documentation/_tools/modules_list.sh` script.
+  
+  Example:
+  
+  ```json
+  {
+    "admission-policy-engine": {
+      "path": "modules/admission-policy-engine/",
+      "editionMinimumAvailable": "ce"
+    },
+    "chrony": {
+      "path": "modules/chrony/",
+      "editionMinimumAvailable": "ce"
+    },
+    "cloud-provider-dynamix": {
+      "path": "modules/cloud-provider-dynamix/",
+      "editionMinimumAvailable": "ee"
+    },
+    "node-local-dns": {
+      "path": "modules/node-local-dns/",
+      "editionMinimumAvailable": "be"
+    }
+  }
   ```
 
-## How to debug
+- `site.data.modules.all`: A list of all modules.
 
-> Instructions may be outdated!
+  The data is defined by `werf-web.inc.yaml`.
+  
+  - `editionFullyAvailable`: A list of editions where the module available without restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). The `editionFullyAvailable` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file. It's recommended that you don't use it in logic (but you can use it for adding editions to the module).
+  - `editionsWithRestrictions`: A list of editions where the module is available with restrictions. Used for overriding computed values. Takes precedence over `excludeModules` and `includeModules` from the `site.data.editions` file (see below). Takes precedence over `editionFullyAvailable`. The `editionsWithRestrictions` for a module can be set in the `docs/documentation/_data/modules/modules-addition.json` file.
+  - `editions`: A list of editions where the module is available **with or without** restrictions.
+  
+  ```text
+  {
+    "<module-kebab-name>": {
+    "editionMinimumAvailable": "<EDITION>",  <-- the "smallest" edition according to the edition weight (_data/modules/editions-weight.yml) where a module is available. It is computed from the module folder of the repo (_tools/modules_list.sh), can be specified in the `_data/modules/modules-addition.json`. **Don't use it in logic.** It seems to be deprecated in the future. Use editions array instead. 
+    "editions": [],  <-- a list of editions where the module is available with or without restrictions
+    "external": "true|false", <-- Optional, true if the module is installed from the modulesource
+    "path": "modules/<module-kebab-name>/",  <-- Optional, path to the module documentation on the site.
+    "editionsWithRestrictions": [ <-- editions where the module is available with restrictions
+      "se",
+      "se-plus",
+      "cse-lite"
+    ],
+    "editionsWithRestrictionsComments": { <-- comments for restrictions. `all` - for all editions
+      "all": {
+        "en": "Restriction on working with BGP",
+        "ru": "Restriction on working with BGP"
+      }
+    },
+    "editionFullyAvailable": [ <-- a list of editions, where the module is available without restrictions. Used for overriding computed values.
+      "be",
+      "se",
+      "se-plus"
+    ],  
+    "parameters-ee": {  <-- deprecated. A list of parameters for EE
+      "some uniq key name": {
+        "linkAnchor": "securitypolicy-v1alpha1-spec-policies-verifyimagesignatures",  <-- anchor to the CRD field
+        "resourceType": "crd",
+        "title": "SecurityPolicy: verifyImageSignatures"
+      }
+    }
+  }
+  ```
 
-There is the `docs/site/werf-debug.yaml` file to compile and the `docs/site/docker-compose-debug.yml` file to run the backend with [delve](https://github.com/go-delve/delve) debugger.
+- `site.data.editions`
 
-Run from the docs/site directory of the project (or run docs/site/backend/debug.sh):
+  - `docs/documentation/_data/modules/editions-addition.json`: Merged with the data from the `/editions.yaml` file.
+  - Each edition in the file can include both `excludeModules` and `includeModules` filters. In this case, the module will be added to the edition if its name is in `includeModules` and not in `excludeModules`.
+  - `docs/documentation/_data/modules-addition.json`
+  
+  ```json
+  {
+    "ce": {
+      "name": "CE",
+      "versionMapFile": "candi/version_map.yml",
+      "modulesDir": "modules",
+      "terraformProviders": [
+        "aws",
+        "azure",
+        "gcp",
+        "yandex"
+      ],
+      "skipFixingImports": true,
+      "buildIncludes": {
+        "skipCandi": true,
+        "skipModules": true
+      }
+    },
+    "be": {
+      "name": "BE",
+      "versionMapFile": "ee/be/candi/version_map.yml",
+      "modulesDir": "ee/be/modules",
+      "excludeModules": [
+        "openvpn",
+        ...,
+        "csi-nfs"
+      ]
+    },
+    "se": {
+      "name": "SE",
+      "modulesDir": "ee/se/modules",
+      "excludeModules": [
+        "dashboard"
+      ]
+    },
+    "se-plus": {
+      "name": "SE+",
+      "modulesDir": "ee/se-plus/modules",
+      "terraformProviders": [
+        "vsphere",
+        "ovirt"
+      ],
+      "excludeModules": [
+        "cloud-provider-dynamix",
+        ...,
+        "virtualization"
+      ],
+      "languages": [
+        "ru"
+      ],
+      "includeModules": [
+        "cloud-provider-vsphere",
+        "cloud-provider-zvirt"
+      ]
+    },
+    "ee": {
+      "name": "EE",
+      "modulesDir": "ee/modules",
+      "terraformProviders": [
+        "huaweicloud"
+      ]
+    },
+    "fe": {
+      "name": "FE",
+      "modulesDir": "ee/fe/modules"
+    },
+    "cse-lite": {
+      "name": "CSE Lite",
+      "languages": [
+        "ru"
+      ],
+      "excludeModules": [
+        "basic-auth",
+        ...,
+        "virtualization"
+      ]
+    },
+    "cse-pro": {
+      "name": "CSE Pro",
+      "languages": [
+        "ru"
+      ],
+      "excludeModules": [
+        "basic-auth",
+        ...,
+        "virtualization"
+      ]
+    }
+  }
+  ```
 
-```shell
-werf compose up --config werf-debug.yaml --follow --docker-compose-command-options='-d --force-recreate' --docker-compose-options='-f docker-compose-debug.yml'
+## Search
+
+This feature allows you to display a contextual message above the "ready" search message to inform users about what they're searching in.
+
+### Usage
+
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/path/to/search.json"
+       data-search-context="Searching in modules documentation"> 
 ```
 
-Connect to localhost:2345
+### Examples
 
-## Working with spellchecker
+#### Modules Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search modules..." 
+       class="input"
+       data-search-index-path="/modules/search-embedded-modules-index.json"
+       data-search-context="Searching in modules documentation">
+```
 
-Commands below assume that you are run them from the root of the repository.
+#### Platform Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/search.json"
+       data-search-context="Searching in platform documentation and modules">
+```
 
-Use the following commands:
-- `make docs-spellcheck` — to check all the documentation for spelling errors.
-- `file=<PATH_TO_FILE> make docs-spellcheck` — to check the specified file for spelling errors.
+#### Product-Specific Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/products/kubernetes-platform/documentation/search.json"
+       data-search-context="Searching in Kubernetes Platform documentation">
+```
 
-  Example:
+### Behavior
 
-  ```shell
-  file=ee/se-plus/modules/cloud-provider-vsphere/docs/CONFIGURATION_RU.md make docs-spellcheck`
-  ```
+- The context message only appears when the search is ready and no query has been entered
+- It appears above the "What are we looking for?" message
+- If no `data-search-context` attribute is provided, the normal ready message is displayed
+- The context message is hidden when search results are shown
 
-- `make docs-spellcheck-generate-dictionary` — to generate a dictionary of words. Run it after adding new words to the tools/docs/spelling/wordlist file.
-- `make docs-spellcheck-get-typos-list` — to get the sorted list of typos from the documentation.
+### Internationalization
 
-The `make lint-doc-spellcheck-pr` command is used in CI to check the spelling of the documentation in a PR.
+Jekyll/Liquid:
+
+```html
+data-search-context="{{ site.data.i18n.search.context[page.lang] }}"
+```
+
+Hugo:
+
+```html
+data-search-context="{{ T "search_context" }}"
+```
+
+## Markup (external modules documentation)
+
+[Hugo](gohugo.io) SSG is used for rendering.
+
+The documentation content is written in Markdown with some custom shortcodes.
+
+### OpenAPI Specifications rendering
+
+TODO
+
+### Page parameters (front matter)
+
+#### Related links
+
+```yaml
+params:
+  relatedLinks:
+    - title: "Link"
+      url: link.html
+    - title: "External link"
+      url: "http://domain/external/link.html"
+    - url: /modules/monitoring-kubernetes/
+```
+
+### Shortcodes
+
+<div id="alert-details"></div>
+
+#### Alert
+
+There are following levels of alerts: `info`, `warning`, `danger`. The default level is `info`.
+
+```go
+{{< alert level="warning" >}}
+The warning message...
+{{< /alert >}}
+```
+
+#### Tabs
+
+```go
+{{< tabs name="tabs_uniq_name" >}}
+{{% tab name="Tab caption 1" %}}Tab 1 Content {{% /tab %}}
+{{% tab name="Tab caption 2" %}}Tab 2 Content {{% /tab %}}
+{{< /tabs >}}
+```
+
+#### Translate
+
+Translates content based on the current language using the translations defined in the `i18n` folder.
+
+```go
+{{< translate "version_of_module" >}}
+```
+
+<div id="shortcode-details"></div>
+
+#### Details
+
+```go
+{{% details "Summary..."%}}
+## Markdown content
+
+Markdown content...
+{{% /details %}}
+```
+
+### Partials
+
+#### Details
+
+The same as the [details shortcode](#user-content-shortcode-details), but used in templates.
+
+```
+{{ partial "details" ( dict "summary" "Summary..." "content" "Markdown content..." ) }}
+```
+
+#### Alert
+
+The same as the [alert shortcode](#user-content-alert-details), but used in templates.
+
+```
+{{ partial "alert" ( dict "level" "warning" "content" "Markdown content..." ) }}
+```

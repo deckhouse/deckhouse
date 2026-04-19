@@ -8,6 +8,7 @@ package hooks
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"sort"
 
@@ -15,6 +16,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -68,17 +72,16 @@ func applyMetalLoadBalancerClassLabelFilter(obj *unstructured.Unstructured) (go_
 	}, nil
 }
 
-func handleLabelsUpdate(input *go_hook.HookInput) error {
-	actualLabeledNodes := getLabeledNodes(input.Snapshots["nodes"])
+func handleLabelsUpdate(_ context.Context, input *go_hook.HookInput) error {
+	actualLabeledNodes := getLabeledNodes(input.Snapshots.Get("nodes"))
 	desiredLabeledNodes := make([]NodeInfo, 0, 4)
 
-	for _, mlbcSnap := range input.Snapshots["mlbc"] {
-		mlbcInfo, ok := mlbcSnap.(MetalLoadBalancerClassInfo)
-		if !ok {
+	for mlbcInfo, err := range sdkobjectpatch.SnapshotIter[MetalLoadBalancerClassInfo](input.Snapshots.Get("mlbc")) {
+		if err != nil {
 			continue
 		}
 
-		nodes := getNodesByMLBC(mlbcInfo, input.Snapshots["nodes"])
+		nodes := getNodesByMLBC(mlbcInfo, input.Snapshots.Get("nodes"))
 		if len(nodes) == 0 {
 			// There is no node that matches the specified node selector.
 			continue
@@ -96,27 +99,27 @@ func handleLabelsUpdate(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(labelsPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(labelsPatch, "v1", "Node", "", node.Name)
 	}
 
 	for _, node := range nodesToLabel {
-		node.Labels[memberLabelKey] = ""
 		labelsPatch := map[string]any{
 			"metadata": map[string]any{
-				"labels": node.Labels,
+				"labels": map[string]any{
+					memberLabelKey: "",
+				},
 			},
 		}
-		input.PatchCollector.MergePatch(labelsPatch, "v1", "Node", "", node.Name)
+		input.PatchCollector.PatchWithMerge(labelsPatch, "v1", "Node", "", node.Name)
 	}
 
 	return nil
 }
 
-func getLabeledNodes(snapshot []go_hook.FilterResult) []NodeInfo {
+func getLabeledNodes(snapshots []sdkpkg.Snapshot) []NodeInfo {
 	result := make([]NodeInfo, 0, 4)
-	for _, nodeSnap := range snapshot {
-		nodeInfo, ok := nodeSnap.(NodeInfo)
-		if !ok {
+	for nodeInfo, err := range sdkobjectpatch.SnapshotIter[NodeInfo](snapshots) {
+		if err != nil {
 			continue
 		}
 
@@ -124,16 +127,19 @@ func getLabeledNodes(snapshot []go_hook.FilterResult) []NodeInfo {
 			result = append(result, nodeInfo)
 		}
 	}
+
 	return result
 }
 
-func getNodesByMLBC(lb MetalLoadBalancerClassInfo, snapshot []go_hook.FilterResult) []NodeInfo {
+func getNodesByMLBC(lb MetalLoadBalancerClassInfo, snapshots []sdkpkg.Snapshot) []NodeInfo {
 	nodes := make([]NodeInfo, 0, 4)
-	for _, nodeSnap := range snapshot {
-		if node, ok := nodeSnap.(NodeInfo); ok {
-			if nodeMatchesNodeSelector(node.Labels, lb.NodeSelector) {
-				nodes = append(nodes, node)
-			}
+	for node, err := range sdkobjectpatch.SnapshotIter[NodeInfo](snapshots) {
+		if err != nil {
+			continue
+		}
+
+		if nodeMatchesNodeSelector(node.Labels, lb.NodeSelector) {
+			nodes = append(nodes, node)
 		}
 	}
 

@@ -58,9 +58,14 @@ You have to set the `additionalSecurityGroups` parameter for all OpenStackInstan
 
 A hybrid cluster combines bare metal and OpenStack nodes. To create such a cluster, you need an L2 network between all nodes of the cluster.
 
+{% alert level="info" %}
+The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
+To do this, use the [`instancePrefix`](../node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
+{% endalert %}
+
 To set up a hybrid cluster, follow these steps:
 
-1. Delete flannel from kube-system: `kubectl -n kube-system delete ds flannel-ds`.
+1. Delete flannel from kube-system: `d8 k -n kube-system delete ds flannel-ds`.
 2. Enable and [configure](configuration.html#parameters) the module.
 3. Create one or more [OpenStackInstanceClass](cr.html#openstackinstanceclass) custom resources.
 4. Create one or more [NodeManager](../../modules/node-manager/cr.html#nodegroup) custom resources for specifying the number of machines and managing the provisioning process in the cloud.
@@ -198,14 +203,13 @@ username = {{ nova_service_user_name }}
 
 ### Disks in OpenStack
 
-The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). The first one is deleted along with the VM, and the second one remains in the cloud when the VM is deleted.
+The node disk can be local or network. A local disk in OpenStack, is an ephemeral disk, and a network disk is a persistent disk (cinder storage). Nodes with local disks cannot migrate between hypervisors.
 
 * A network disk is preferred for the master node so that the node can migrate between hypervisors.
 * A local disk is preffered for the ephemeral node to save on cost. Not all cloud providers support the use of local disks. If local disks are not supported, you have to use network disks for ephemeral nodes.
 
 | Local disk (ephemeral)        | Network disk (persistent)                    |
 | ----------------------------- | -------------------------------------------- |
-| Is removed along with the VM  | Stays in the cloud and can be reused         |
 | Cheaper                       | More expensive                               |
 | Suitable for ephemeral nodes  | Suitable for master nodes                    |
 
@@ -218,17 +222,19 @@ The `OpenStackInstanceClass` has a `rootDiskSize` parameter, and OpenStack flavo
 | **`rootDiskSize` is not specified** | ❗️*You need to set the size*. Without specifying the size, there will be an error creating a VM. | Local disk with size according to the flavor    |
 | **`rootDiskSize` is specified**     | Network disk with the `rootDiskSize` size                                         | ❗ Network disk (rootDiskSize) and local disk (according to the flavor). Avoid using this option, as the cloud provider will charge for both disks. |
 
+> Please note, that to create a node with the `CloudEphemeral` type in a zone other than zone A, you must first create a flavor with a disk of the required size. The [rootDiskSize](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-rootdisksize) parameter does not need to be specified.
+
 #### Network disk is recommended for master nodes and bastion host
 
-- Use flavor with a zero disk size.
-- Set the `rootDiskSize` in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
+* Use flavor with a zero disk size.
+* Set the `rootDiskSize` in the `OpenStackInstanceClass`.
+* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the disk type will be taken from [volumeTypeMap](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-volumetypemap).
 
 #### Local disk is recommended for ephemeral nodes
 
-- Use flavor with the specified disk size.
-- Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
-- Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
+* Use flavor with the specified disk size.
+* Do not use the `rootDiskSize` parameter in the `OpenStackInstanceClass`.
+* Check the disk type. The disk type will be taken from the OS image if it is [set](#how-to-override-a-default-volume-type-of-cloud-provider). If it is not set, the default disk type of the cloud provider will be used.
 
 ### How do I check the disk volume in a flavor?
 
@@ -268,3 +274,7 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
+## What to do if switching to nodes in lower-priority groups takes a long time?
+
+If switching to nodes in lower-priority groups takes a long time, follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

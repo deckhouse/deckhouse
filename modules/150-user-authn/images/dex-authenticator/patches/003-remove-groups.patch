@@ -1,0 +1,21 @@
+diff --git i/pkg/apis/options/legacy_options.go w/pkg/apis/options/legacy_options.go
+index 7dfe64e6..4e55a305 100644
+--- i/pkg/apis/options/legacy_options.go
++++ w/pkg/apis/options/legacy_options.go
+@@ -420,16 +420,6 @@ func getXAuthRequestHeaders() []Header {
+ 				},
+ 			},
+ 		},
+-		{
+-			Name: "X-Auth-Request-Groups",
+-			Values: []HeaderValue{
+-				{
+-					ClaimSource: &ClaimSource{
+-						Claim: "groups",
+-					},
+-				},
+-			},
+-		},
+ 	}
+ 
+ 	return headers

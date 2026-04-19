@@ -17,41 +17,288 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
-	"runtime/pprof"
-	"runtime/trace"
 	"strings"
-	"time"
 
-	terminal "golang.org/x/term"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func main() {
-	_ = os.Mkdir(app.TmpDirName, 0o755)
+const (
+	oneShotDhctlServerCmd = "_server"
+	grpcServerCmd         = "server"
+	autoConvergeCmd       = "converge-periodical"
+	terraformGroupCmd     = "terraform"
+	exporterCmd           = "converge-exporter"
+)
 
+var (
+	commandList = []Command{
+		{
+			Name:       grpcServerCmd,
+			Help:       "Start dhctl as GRPC server.",
+			DefineFunc: commands.DefineServerCommand,
+		},
+		{
+			Name:       oneShotDhctlServerCmd,
+			Help:       "Start dhctl as GRPC server. Single threaded version.",
+			DefineFunc: commands.DefineSingleThreadedServerCommand,
+		},
+		{
+			Name:       "bootstrap",
+			Help:       "Bootstrap cluster.",
+			DefineFunc: bootstrap.DefineBootstrapCommand,
+		},
+		{
+			Name: "bootstrap-phase",
+			Help: "Commands to run a single phase of the bootstrap process.",
+		},
+		{
+			Name:       "execute-bashible-bundle",
+			Help:       "Prepare Master node and install Kubernetes.",
+			DefineFunc: bootstrap.DefineBootstrapExecuteBashibleCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "create-resources",
+			Help:       "Create resources in Kubernetes cluster.",
+			DefineFunc: bootstrap.DefineCreateResourcesCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "install-deckhouse",
+			Help:       "Install deckhouse and wait for its readiness.",
+			DefineFunc: bootstrap.DefineBootstrapInstallDeckhouseCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "abort",
+			Help:       "Delete every node, which was created during bootstrap process.",
+			DefineFunc: bootstrap.DefineBootstrapAbortCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "base-infra",
+			Help:       "Create base infrastructure for Cloud Kubernetes cluster.",
+			DefineFunc: bootstrap.DefineBaseInfrastructureCommand,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "exec-post-bootstrap",
+			Help:       "Test scp upload and ssh run uploaded script.",
+			DefineFunc: bootstrap.DefineExecPostBootstrapScript,
+			Parrent:    "bootstrap-phase",
+		},
+		{
+			Name:       "converge",
+			Help:       "Converge kubernetes cluster.",
+			DefineFunc: commands.DefineConvergeCommand,
+		},
+		{
+			Name:       autoConvergeCmd,
+			Help:       "Start service for periodical run converge.",
+			DefineFunc: commands.DefineAutoConvergeCommand,
+		},
+		{
+			Name:       "converge-migration",
+			Help:       "Migrate state from terraform to opentofu. Starting converge if cluster has not infrastructure changes.",
+			DefineFunc: commands.DefineConvergeMigrationCommand,
+		},
+		{
+			Name: "lock",
+			Help: "Converge cluster lock",
+		},
+		{
+			Name:       "release",
+			Help:       "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful",
+			DefineFunc: commands.DefineReleaseConvergeLockCommand,
+			Parrent:    "lock",
+		},
+		{
+			Name:       "destroy",
+			Help:       "Destroy Kubernetes cluster.",
+			DefineFunc: commands.DefineDestroyCommand,
+		},
+		{
+			Name:       "session",
+			Help:       "SSH tunnel proxy to Kubernetes cluster and save local kubeconfig for kubectl.",
+			DefineFunc: commands.DefineSessionCommand,
+		},
+		{
+			Name: terraformGroupCmd,
+			Help: "Infrastructure commands.",
+		},
+		{
+			Name:       exporterCmd,
+			Help:       "Run infrastructure converge exporter.",
+			DefineFunc: commands.DefineInfrastructureConvergeExporterCommand,
+			Parrent:    "terraform",
+		},
+		{
+			Name:       "check",
+			Help:       "Check differences between state of Kubernetes cluster and infrastructure state.",
+			DefineFunc: commands.DefineInfrastructureCheckCommand,
+			Parrent:    "terraform",
+		},
+		{
+			Name: "config",
+			Help: "Load, edit and save various dhctl configurations.",
+		},
+		{
+			Name:    "parse",
+			Help:    "Parse, validate and output configurations.",
+			Parrent: "config",
+		},
+		{
+			Name:       "cluster-configuration",
+			Help:       "Parse configuration and print it.",
+			DefineFunc: commands.DefineCommandParseClusterConfiguration,
+			Parrent:    "parse",
+		},
+		{
+			Name:       "cloud-discovery-data",
+			Help:       "Parse cloud discovery data and print it.",
+			DefineFunc: commands.DefineCommandParseCloudDiscoveryData,
+			Parrent:    "parse",
+		},
+		{
+			Name:    "render",
+			Help:    "Render transitional configurations.",
+			Parrent: "config",
+		},
+		{
+			Name:       "bashible-bundle",
+			Help:       "Render bashible bundle.",
+			DefineFunc: commands.DefineRenderBashibleBundle,
+			Parrent:    "render",
+		},
+		{
+			Name:       "kubeadm-config",
+			Help:       "Render kubeadm config.",
+			DefineFunc: commands.DefineRenderKubeadmConfig,
+			Parrent:    "render",
+		},
+		{
+			Name:       "master-bootstrap-scripts",
+			Help:       "Render master bootstrap scripts.",
+			DefineFunc: commands.DefineRenderMasterBootstrap,
+			Parrent:    "render",
+		},
+		{
+			Name:    "edit",
+			Help:    "Change configuration files in Kubernetes cluster conveniently and safely.",
+			Parrent: "config",
+			DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+				commands.DefineEditCommands(cmd /* wConnFlags */, true)
+				return nil
+			},
+		},
+		{
+			Name: "test",
+			Help: "Commands to test the parts of bootstrap and converge process.",
+		},
+		{
+			Name:       "ssh-connection",
+			Help:       "Test connection via ssh.",
+			DefineFunc: commands.DefineTestSSHConnectionCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "kubernetes-api-connection",
+			Help:       "Test connection to kubernetes api via ssh or directly.",
+			DefineFunc: commands.DefineTestKubernetesAPIConnectionCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "scp",
+			Help:       "Test scp file operations.",
+			DefineFunc: commands.DefineTestSCPCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "upload-exec",
+			Help:       "Test scp upload and ssh run uploaded script.",
+			DefineFunc: commands.DefineTestUploadExecCommand,
+			Parrent:    "test",
+		},
+		{
+			Name:       "bashible-bundle",
+			Help:       "Test upload and execute a bundle.",
+			DefineFunc: commands.DefineTestBundle,
+			Parrent:    "test",
+		},
+		{
+			Name:    "control-plane",
+			Help:    "Commands to test control plane nodes.",
+			Parrent: "test",
+		},
+		{
+			Name:       "manager",
+			Help:       "Test control plane manager is ready.",
+			DefineFunc: commands.DefineTestControlPlaneManagerReadyCommand,
+			Parrent:    "control-plane",
+		},
+		{
+			Name:       "node",
+			Help:       "Test control plane node is ready.",
+			DefineFunc: commands.DefineTestControlPlaneNodeReadyCommand,
+			Parrent:    "control-plane",
+		},
+		{
+			Name:    "deckhouse",
+			Help:    "Install and uninstall deckhouse.",
+			Parrent: "test",
+		},
+		{
+			Name:       "create-deployment",
+			Help:       "Install deckhouse after infrastructure is applied successful.",
+			DefineFunc: commands.DefineDeckhouseCreateDeployment,
+			Parrent:    "deckhouse",
+		},
+		{
+			Name:       "remove-deployment",
+			Help:       "Delete deckhouse deployment.",
+			DefineFunc: commands.DefineDeckhouseRemoveDeployment,
+			Parrent:    "deckhouse",
+		},
+		{
+			Name:       "deployment-ready",
+			Help:       "Wait while deployment is ready.",
+			DefineFunc: commands.DefineWaitDeploymentReadyCommand,
+			Parrent:    "deckhouse",
+		},
+	}
+)
+
+func registerOnShutdown(title string, action onShutdownFunc) {
+	tomb.RegisterOnShutdown(title, action)
+}
+
+func main() {
 	initGlobalVars()
 
-	tomb.RegisterOnShutdown("Trace", EnableTrace())
-	tomb.RegisterOnShutdown("Restore terminal if needed", restoreTerminal())
-	tomb.RegisterOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
-	tomb.RegisterOnShutdown("Clear dhctl temporary directory", cache.ClearTemporaryDirs)
-	tomb.RegisterOnShutdown("Clear terraform data temporary directory", cache.ClearTerraformDir)
+	tracesShutdownFn, err := enableTrace()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 
-	go tomb.WaitForProcessInterruption()
+	registerOnShutdown("Trace", tracesShutdownFn)
+	registerOnShutdown("Restore terminal if needed", restoreTerminal())
+	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
+
+	go tomb.WaitForProcessInterruption(tomb.BeforeInterrupted{
+		disableCleanupOnInterrupted,
+	})
 
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
@@ -62,121 +309,31 @@ func main() {
 		return nil
 	})
 
-	commands.DefineServerCommand(kpApp)
-	commands.DefineSingleThreadedServerCommand(kpApp)
-
-	bootstrap.DefineBootstrapCommand(kpApp)
-	bootstrapPhaseCmd := kpApp.Command("bootstrap-phase", "Commands to run a single phase of the bootstrap process.")
-	{
-		bootstrap.DefineBootstrapExecuteBashibleCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBootstrapInstallDeckhouseCommand(bootstrapPhaseCmd)
-		bootstrap.DefineCreateResourcesCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBootstrapAbortCommand(bootstrapPhaseCmd)
-		bootstrap.DefineBaseInfrastructureCommand(bootstrapPhaseCmd)
-		bootstrap.DefineExecPostBootstrapScript(bootstrapPhaseCmd)
-	}
-
-	commands.DefineConvergeCommand(kpApp)
-	commands.DefineAutoConvergeCommand(kpApp)
-
-	lockCmd := kpApp.Command("lock", "Converge cluster lock")
-	{
-		commands.DefineReleaseConvergeLockCommand(lockCmd)
-	}
-
-	commands.DefineDestroyCommand(kpApp)
-
-	terraformCmd := kpApp.Command("terraform", "Terraform commands.")
-	{
-		commands.DefineTerraformConvergeExporterCommand(terraformCmd)
-		commands.DefineTerraformCheckCommand(terraformCmd)
-	}
-
-	configCmd := kpApp.Command("config", "Load, edit and save various dhctl configurations.")
-	{
-		parseCmd := configCmd.Command("parse", "Parse, validate and output configurations.")
-		{
-			commands.DefineCommandParseClusterConfiguration(kpApp, parseCmd)
-			commands.DefineCommandParseCloudDiscoveryData(kpApp, parseCmd)
-		}
-
-		renderCmd := configCmd.Command("render", "Render transitional configurations.")
-		{
-			commands.DefineRenderBashibleBundle(renderCmd)
-			commands.DefineRenderKubeadmConfig(renderCmd)
-			commands.DefineRenderMasterBootstrap(renderCmd)
-		}
-
-		editCmd := configCmd.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
-		{
-			commands.DefineEditCommands(editCmd /* wConnFlags */, true)
-		}
-	}
-
-	testCmd := kpApp.Command("test", "Commands to test the parts of bootstrap and converge process.")
-	{
-		commands.DefineTestSSHConnectionCommand(testCmd)
-		commands.DefineTestKubernetesAPIConnectionCommand(testCmd)
-		commands.DefineTestSCPCommand(testCmd)
-		commands.DefineTestUploadExecCommand(testCmd)
-		commands.DefineTestBundle(testCmd)
-
-		controlPlaneCmd := testCmd.Command("control-plane", "Commands to test control plane nodes.")
-		{
-			commands.DefineTestControlPlaneManagerReadyCommand(controlPlaneCmd)
-			commands.DefineTestControlPlaneNodeReadyCommand(controlPlaneCmd)
-		}
-	}
-
-	deckhouseCmd := testCmd.Command("deckhouse", "Install and uninstall deckhouse.")
-	{
-		commands.DefineDeckhouseCreateDeployment(deckhouseCmd)
-		commands.DefineDeckhouseRemoveDeployment(deckhouseCmd)
-		commands.DefineWaitDeploymentReadyCommand(deckhouseCmd)
+	if err := registerCommands(kpApp); err != nil {
+		panic(err)
 	}
 
 	runApplication(kpApp)
 }
 
 func runApplication(kpApp *kingpin.Application) {
+	initer := newActionIniter()
+
 	kpApp.Action(func(c *kingpin.ParseContext) error {
-		log.InitLogger(app.LoggerType)
-		if app.DoNotWriteDebugLogFile {
-			return nil
-		}
+		initer.setParams(actionIniterParams{
+			tmpDirName:        app.TmpDirName,
+			stateCacheDirName: app.CacheDir,
 
-		if c.SelectedCommand == nil {
-			return nil
-		}
+			isDebug: app.IsDebug,
 
-		logPath := app.DebugLogFilePath
-
-		if logPath == "" {
-			cmdStr := strings.Join(strings.Fields(c.SelectedCommand.FullCommand()), "")
-			logFile := cmdStr + "-" + time.Now().Format("20060102150405") + ".log"
-			logPath = path.Join(app.TmpDirName, logFile)
-		}
-
-		outFile, err := os.Create(logPath)
-		if err != nil {
-			return err
-		}
-
-		err = log.WrapWithTeeLogger(outFile, 1024)
-		if err != nil {
-			return err
-		}
-
-		log.InfoF("Debug log file: %s\n", logPath)
-
-		tomb.RegisterOnShutdown("Finalize logger", func() {
-			if err := log.FlushAndClose(); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to flush and close log file: %v\n", err)
-				return
-			}
+			loggerType:          app.LoggerType,
+			doNotWriteDebugFile: app.DoNotWriteDebugLogFile,
+			debugLogFilePath:    app.DebugLogFilePath,
 		})
 
-		return nil
+		initer.setRegisterOnShutdown(registerOnShutdown)
+
+		return initer.init(c)
 	})
 
 	kpApp.Version(app.AppVersion).Author("Flant")
@@ -186,7 +343,14 @@ func runApplication(kpApp *kingpin.Application) {
 		errorCode := 0
 		if err != nil {
 			log.DebugLn(command)
-			log.ErrorLn(err)
+
+			msg := err.Error()
+
+			if logFile := initer.getLoggerPath(); logFile != "" {
+				msg = fmt.Sprintf("%s\nDebug log file: %s", msg, logFile)
+			}
+
+			log.ErrorLn(msg)
 			errorCode = 1
 		}
 		tomb.Shutdown(errorCode)
@@ -197,109 +361,37 @@ func runApplication(kpApp *kingpin.Application) {
 	os.Exit(exitCode)
 }
 
-func EnableTrace() func() {
-	traceFileName := os.Getenv("DHCTL_TRACE")
-	cpuProfileFileName := traceFileName + ".prof.cpu"
+func initGlobalVars() {
+	dhctlPath := ""
 
-	if traceFileName == "" || traceFileName == "0" || traceFileName == "no" {
-		return func() {}
-	}
-	if traceFileName == "1" || traceFileName == "yes" {
-		traceFileName = "trace.out"
-		cpuProfileFileName = "pprof.cpu"
-	}
+	if val, ok := os.LookupEnv("DHCTL_SKIP_LOOKUP_EXEC_PATH"); !ok || val != "yes" {
+		// get current location of called binary
+		var err error
+		dhctlPath, err = os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
+		if err != nil {
+			panic(err)
+		}
+		dhctlPath = filepath.Dir(dhctlPath)
+		if dhctlPath == "/" {
+			dhctlPath = "" // All our paths are already absolute by themselves
+		}
 
-	fns := make([]func(), 0)
-
-	traceF, err := os.Create(traceFileName)
-	if err != nil {
-		log.InfoF("failed to create trace output file '%s': %v", traceFileName, err)
-		os.Exit(1)
-	}
-
-	fns = append([]func(){
-		func() {
-			if err := traceF.Close(); err != nil {
-				log.InfoF("failed to close trace file '%s': %v", traceFileName, err)
-				os.Exit(1)
-			}
-		},
-	}, fns...)
-
-	profCPU, err := os.Create(cpuProfileFileName)
-	if err != nil {
-		log.InfoF("failed to create pprof cpu file '%s': %v", cpuProfileFileName, err)
-		os.Exit(1)
-	}
-
-	fns = append([]func(){
-		func() {
-			if err := profCPU.Close(); err != nil {
-				log.InfoF("failed to close pprof cpu file '%s': %v", cpuProfileFileName, err)
-				os.Exit(1)
-			}
-		},
-	}, fns...)
-
-	if err := trace.Start(traceF); err != nil {
-		log.InfoF("failed to start trace to '%s': %v", traceFileName, err)
-		os.Exit(1)
-	}
-	fns = append([]func(){
-		trace.Stop,
-	}, fns...)
-
-	if err := pprof.StartCPUProfile(profCPU); err != nil {
-		log.InfoF("failed to start profile cpu to '%s': %v", cpuProfileFileName, err)
-		os.Exit(1)
-	}
-
-	fns = append([]func(){
-		pprof.StopCPUProfile,
-	}, fns...)
-
-	return func() {
-		for _, fn := range fns {
-			fn()
+		// set path to ssh and terraform binaries
+		if err = os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", dhctlPath, os.Getenv("PATH"))); err != nil {
+			panic(err)
 		}
 	}
-}
 
-func restoreTerminal() func() {
-	fd := int(os.Stdin.Fd())
-	if !terminal.IsTerminal(fd) {
-		return func() {}
-	}
+	commandsEnv := os.Getenv("DHCTL_CLI_ALLOWED_COMMANDS")
 
-	state, err := terminal.GetState(fd)
-	if err != nil {
-		panic(err)
-	}
-
-	return func() { _ = terminal.Restore(fd, state) }
-}
-
-func initGlobalVars() {
-	// get current location of called binary
-	dhctlPath, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", os.Getpid()))
-	if err != nil {
-		panic(err)
-	}
-	dhctlPath = filepath.Dir(dhctlPath)
-	if dhctlPath == "/" {
-		dhctlPath = "" // All our paths are already absolute by themselves
-	}
-
-	// set path to ssh and terraform binaries
-	if err = os.Setenv("PATH", fmt.Sprintf("%s/bin:%s", dhctlPath, os.Getenv("PATH"))); err != nil {
-		panic(err)
+	if len(commandsEnv) > 0 {
+		allowedCommands = strings.Split(commandsEnv, ", ")
 	}
 
 	// set relative path to config and template files
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
 	app.InitGlobalVars(dhctlPath)
-	terraform.InitGlobalVars(dhctlPath)
-	manifests.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
+	infrastructure.InitGlobalVars(dhctlPath)
 }

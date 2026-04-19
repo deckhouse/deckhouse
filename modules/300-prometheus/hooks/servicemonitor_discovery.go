@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +26,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // This hook scans ServiceMonitors in a cluster and find deprecated relabelings based on the `__meta_kubernetes_endpoints_` labels
@@ -59,13 +63,15 @@ func filterServiceMonitor(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	return sm, nil
 }
 
-func serviceMonitorHandler(input *go_hook.HookInput) error {
+func serviceMonitorHandler(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_servicemonitors")
 
-	snap := input.Snapshots["servicemonitors"]
+	snaps := input.Snapshots.Get("servicemonitors")
 
-	for _, sn := range snap {
-		serviceMon := sn.(serviceMonitor)
+	for serviceMon, err := range sdkobjectpatch.SnapshotIter[serviceMonitor](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'servicemonitors' snapshots: %w", err)
+		}
 
 	serviceMonitorLoop:
 		for _, endpoint := range serviceMon.Spec.Endpoints {

@@ -6,5 +6,6 @@ import:
   add: /recommender
   to: /recommender
   before: setup
-docker:
-  ENTRYPOINT: ["/recommender"]
+imageSpec:
+  config:
+    entrypoint: ["/recommender"]

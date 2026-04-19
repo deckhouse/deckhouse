@@ -3,7 +3,7 @@
 > В данном руководстве приводится минимальная конфигурация кластера `kind`, необходимая для установки Deckhouse. Конфигурация предусматривает установку кластера Kubernetes с одним узлом и проброс в кластер двух портов, необходимых для работы Ingress-контроллера. Вы можете использовать свою конфигурацию кластера в kind, [увеличить](https://kind.sigs.k8s.io/docs/user/configuration/#nodes) количество узлов или [настроить](https://kind.sigs.k8s.io/docs/user/local-registry/) локальный container registry.
 
 Создайте файл конфигурации кластера kind:
-{% snippetcut selector="create-kind-cfg" %}
+
 ```shell
 cat <<EOF > kind.cfg
 apiVersion: kind.x-k8s.io/v1alpha4
@@ -21,16 +21,14 @@ nodes:
     protocol: TCP
 EOF
 ```
-{% endsnippetcut %}
 
 > Перед созданием кластера убедитесь, что у вас не заняты порты 80 и 443.
 
 Создайте кластер kind:
-{% snippetcut selector="create-kind-cluster" %}
+
 ```shell
 kind create cluster --image "kindest/node:v1.23.6@sha256:51d988ac40b04965b5379e251a113cdd44150b758ae339b0e941769e584040f5" --config kind.cfg
 ```
-{% endsnippetcut %}
 
 Пример вывода команды создания кластера:
 

@@ -17,7 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -26,14 +28,19 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/encoding"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-type expirePatch struct {
-	ExpireAt string   `json:"expireAt,omitempty"`
-	Groups   []string `json:"groups"`
+type userStatusPatch struct {
+	ExpireAt string      `json:"expireAt,omitempty"`
+	Groups   []string    `json:"groups"`
+	Lock     DexUserLock `json:"lock"`
 }
 
 type DexUserInternalValues struct {
@@ -62,7 +69,22 @@ type DexUserSpec struct {
 }
 
 type DexUserStatus struct {
-	ExpireAt string `json:"expireAt,omitempty"`
+	ExpireAt string      `json:"expireAt,omitempty"`
+	Lock     DexUserLock `json:"lock"`
+}
+
+type DexUserLockReason string
+
+const (
+	PasswordPolicyLockout = DexUserLockReason("PasswordPolicyLockout")
+	LockedByAdministrator = DexUserLockReason("LockedByAdministrator")
+)
+
+type DexUserLock struct {
+	State   bool               `json:"state"`
+	Reason  *DexUserLockReason `json:"reason,omitempty"`
+	Message *string            `json:"message,omitempty"`
+	Until   *string            `json:"until,omitempty"`
 }
 
 type DexGroup struct {
@@ -92,6 +114,20 @@ type DexGroupStatus struct {
 	} `json:"errors,omitempty"`
 }
 
+const (
+	PasswordAnnotationLockedByAdministrator = "deckhouse.io/locked-by-administrator"
+)
+
+type Password struct {
+	metav1.TypeMeta                 `json:",inline"`
+	metav1.ObjectMeta               `json:"metadata,omitempty"`
+	Username                        string     `json:"username"`
+	Email                           string     `json:"email"`
+	Hash                            string     `json:"hash"`
+	RequireResetHashOnNextSuccLogin bool       `json:"requireResetHashOnNextSuccLogin"`
+	LockedUntil                     *time.Time `json:"lockedUntil"`
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Queue:        "/modules/user-authn",
@@ -111,23 +147,43 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Group",
 			FilterFunc: applyDexGroupFilter,
 		},
+		{
+			Name:       "passwords",
+			ApiVersion: "dex.coreos.com/v1",
+			Kind:       "Password",
+			FilterFunc: applyPasswordFilter,
+		},
 	},
 }, getDexUsers)
 
-func getDexUsers(input *go_hook.HookInput) error {
-	users := make([]DexUserInternalValues, 0, len(input.Snapshots["users"]))
+func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
+	users := make([]DexUserInternalValues, 0, len(input.Snapshots.Get("users")))
 	mapOfUsersToGroups := map[string]map[string]bool{}
 
-	groupsSnap := input.Snapshots["groups"]
-	for _, obj := range groupsSnap {
-		group := obj.(*DexGroup)
-		makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups)
+	// Build a username -> Password map once.
+	userNameToPassword := make(map[string]Password)
+	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'passwords' snapshot: %v", err)
+		}
+		userNameToPassword[password.Username] = password
 	}
 
-	for _, user := range input.Snapshots["users"] {
-		dexUser, ok := user.(*DexUser)
-		if !ok {
-			return fmt.Errorf("cannot convert user to dex user")
+	groupsSnap := input.Snapshots.Get("groups")
+	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](groupsSnap) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'groups' snapshot: %v", err)
+		}
+
+		err = makeUserGroupsMap(groupsSnap, group.Spec.Name, []string{}, mapOfUsersToGroups, make(map[string]bool))
+		if err != nil {
+			return fmt.Errorf("error while make user groups map for group %s: %v", group.Spec.Name, err)
+		}
+	}
+
+	for dexUser, err := range sdkobjectpatch.SnapshotIter[DexUser](input.Snapshots.Get("users")) {
+		if err != nil {
+			return fmt.Errorf("cannot convert user to dex user: cannot iterate over 'users' snapshot: %v", err)
 		}
 
 		var groups []string
@@ -139,6 +195,19 @@ func getDexUsers(input *go_hook.HookInput) error {
 		dexUser.Spec.Groups = groups
 
 		dexUser.Spec.UserID = dexUser.Name
+
+		// IMPORTANT:
+		// Dex updates Password objects when a user changes password in the UI.
+		// Deckhouse renders Password objects from dexUsersCRDs values on every reconcile.
+		// If we always take the hash from User.spec.password, we may overwrite the real updated password
+		// back to the old one (e.g. after logout/login).
+		//
+		// To keep password changes persistent, prefer the current Password.hash as the render source
+		// when a Password object already exists for the user. User.spec.password is used only for
+		// the initial Password creation.
+		if p, ok := userNameToPassword[dexUser.Name]; ok && p.Hash != "" {
+			dexUser.Spec.Password = p.Hash
+		}
 
 		var expireAt string
 
@@ -154,6 +223,37 @@ func getDexUsers(input *go_hook.HookInput) error {
 			expireAt = dexUser.Status.ExpireAt
 		}
 
+		lock := DexUserLock{}
+		password, ok := userNameToPassword[dexUser.Name]
+		if ok && password.LockedUntil != nil && password.LockedUntil.After(time.Now()) {
+			lock = DexUserLock{
+				State:   true,
+				Reason:  ptr.To(PasswordPolicyLockout),
+				Message: ptr.To("Locked due to too many failed login attempts"),
+				Until:   ptr.To(password.LockedUntil.Format(time.RFC3339)),
+			}
+
+			// If this annotation exists - we consider lock was set by administrator.
+			if _, ok := password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+				lock.Reason = ptr.To(LockedByAdministrator)
+				lock.Message = ptr.To("Locked by administrator")
+			}
+		} else if _, ok = password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
+			// In this case we have expired or unexisted lock and saved from previous lock annotation.
+			// For sure we need to delete it (and persist the change to the cluster).
+			input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+				annotations := obj.GetAnnotations()
+				if annotations == nil {
+					return obj, nil
+				}
+				delete(annotations, PasswordAnnotationLockedByAdministrator)
+				obj.SetAnnotations(annotations)
+				return obj, nil
+			}, "dex.coreos.com/v1", "Password", password.Namespace, password.Name)
+			delete(password.Annotations, PasswordAnnotationLockedByAdministrator)
+		}
+		dexUser.Status.Lock = lock
+
 		users = append(users, DexUserInternalValues{
 			Name:        dexUser.Name,
 			EncodedName: encoding.ToFnvLikeDex(strings.ToLower(dexUser.Spec.Email)),
@@ -162,24 +262,19 @@ func getDexUsers(input *go_hook.HookInput) error {
 			ExpireAt:    expireAt,
 		})
 
-		var patch map[string]interface{}
-		if expireAt == "" {
-			patch = map[string]interface{}{
-				"status": expirePatch{
-					Groups: groups,
-				},
-			}
-		} else {
-			patch = map[string]interface{}{
-				"status": expirePatch{
-					ExpireAt: expireAt,
-					Groups:   groups,
-				},
-			}
+		patch := userStatusPatch{
+			Groups: groups,
+			Lock:   lock,
+		}
+		if expireAt != "" {
+			patch.ExpireAt = expireAt
+		}
+		patchMap := map[string]any{
+			"status": patch,
 		}
 
-		input.Logger.Infof("Update groups in user status %s. Groups: %v", dexUser.Name, patch["status"].(expirePatch).Groups)
-		input.PatchCollector.MergePatch(patch, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
+		input.Logger.Info("Sync user status", slog.Any("patch", patch))
+		input.PatchCollector.PatchWithMerge(patchMap, "deckhouse.io/v1", "User", "", dexUser.Name, object_patch.WithSubresource("/status"))
 	}
 
 	input.Values.Set("userAuthn.internal.dexUsersCRDs", users)
@@ -204,24 +299,52 @@ func applyDexUserFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	return user, nil
 }
 
-func findGroup(groups []go_hook.FilterResult, groupName string) *DexGroup {
-	for _, obj := range groups {
-		group := obj.(*DexGroup)
-		if group.Spec.Name == groupName {
-			return group
-		}
+func applyPasswordFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var password = &Password{}
+	err := sdk.FromUnstructured(obj, password)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
 	}
-	return nil
+	return password, nil
 }
 
-func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumulatedGroupList []string, mapOfUsersToGroups map[string]map[string]bool) {
+func findGroup(groups []pkg.Snapshot, groupName string) (*DexGroup, error) {
+	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](groups) {
+		if err != nil {
+			return nil, fmt.Errorf("cannot iterate over 'groups' snapshot: %v", err)
+		}
+
+		if group.Spec.Name == groupName {
+			return &group, err
+		}
+	}
+	return nil, nil
+}
+
+func makeUserGroupsMap(
+	groups []pkg.Snapshot,
+	targetGroup string,
+	accumulatedGroupList []string,
+	mapOfUsersToGroups map[string]map[string]bool,
+	visited map[string]bool,
+) error {
 	if len(groups) == 0 {
-		return
+		return nil
 	}
-	group := findGroup(groups, targetGroup)
+	// If this group has already been visited, exit to prevent infinite recursion
+	if visited[targetGroup] {
+		return nil
+	}
+	visited[targetGroup] = true
+
+	group, err := findGroup(groups, targetGroup)
+	if err != nil {
+		return fmt.Errorf("error while find group %s: %v", targetGroup, err)
+	}
 	if group == nil {
-		return
+		return nil
 	}
+
 	skipAddGroup := false
 	for _, g := range accumulatedGroupList {
 		if g == targetGroup {
@@ -232,15 +355,20 @@ func makeUserGroupsMap(groups []go_hook.FilterResult, targetGroup string, accumu
 		accumulatedGroupList = append(accumulatedGroupList, targetGroup)
 	}
 	for _, member := range group.Spec.Members {
-		if member.Kind == "User" {
+		switch member.Kind {
+		case "User":
 			if mapOfUsersToGroups[member.Name] == nil {
 				mapOfUsersToGroups[member.Name] = map[string]bool{}
 			}
 			for _, g := range accumulatedGroupList {
 				mapOfUsersToGroups[member.Name][g] = true
 			}
-		} else if member.Kind == "Group" {
-			makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups)
+		case "Group":
+			err := makeUserGroupsMap(groups, member.Name, accumulatedGroupList, mapOfUsersToGroups, visited)
+			if err != nil {
+				return fmt.Errorf("error while make user groups map for group %s: %v", member.Name, err)
+			}
 		}
 	}
+	return nil
 }

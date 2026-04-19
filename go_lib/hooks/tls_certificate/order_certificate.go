@@ -33,6 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	csrutil "k8s.io/client-go/util/certificate/csr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -110,17 +112,18 @@ func ApplyCertificateSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	cc := ParseSecret(secret)
 
-	return cc, err
+	return cc, nil
 }
 
 func RegisterOrderCertificateHook(requests []OrderCertificateRequest) bool {
-	var namespaces []string
-	var secretNames []string
+	namespaces := make([]string, 0, len(requests))
+	secretNames := make([]string, 0, len(requests))
+
 	for _, request := range requests {
 		namespaces = append(namespaces, request.Namespace)
 		secretNames = append(secretNames, request.SecretName)
@@ -148,13 +151,13 @@ func RegisterOrderCertificateHook(requests []OrderCertificateRequest) bool {
 	}, dependency.WithExternalDependencies(certificateHandler(requests)))
 }
 
-func certificateHandler(requests []OrderCertificateRequest) func(input *go_hook.HookInput, dc dependency.Container) error {
-	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		return certificateHandlerWithRequests(input, dc, requests)
+func certificateHandler(requests []OrderCertificateRequest) func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	return func(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+		return certificateHandlerWithRequests(ctx, input, dc, requests)
 	}
 }
 
-func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Container, requests []OrderCertificateRequest) error {
+func certificateHandlerWithRequests(_ context.Context, input *go_hook.HookInput, dc dependency.Container, requests []OrderCertificateRequest) error {
 	publicDomain := input.Values.Get("global.modules.publicDomainTemplate").String()
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
@@ -173,18 +176,21 @@ func certificateHandlerWithRequests(input *go_hook.HookInput, dc dependency.Cont
 		}
 
 		valueName := fmt.Sprintf("%s.%s", request.ModuleName, request.ValueName)
-		if snaps, ok := input.Snapshots["certificateSecrets"]; ok {
-			var secret *CertificateSecret
+		secrets, err := sdkobjectpatch.UnmarshalToStruct[CertificateSecret](input.Snapshots, "certificateSecrets")
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal certificateSecrets snapshot: %w", err)
+		}
+		if len(secrets) != 0 {
+			var secret CertificateSecret
 
-			for _, snap := range snaps {
-				snapSecret := snap.(*CertificateSecret)
-				if snapSecret.Name == request.SecretName {
-					secret = snapSecret
+			for _, secretSnap := range secrets {
+				if secretSnap.Name == request.SecretName {
+					secret = secretSnap
 					break
 				}
 			}
 
-			if secret != nil && len(secret.Crt) > 0 && len(secret.Key) > 0 {
+			if len(secret.Crt) > 0 && len(secret.Key) > 0 {
 				// Check that certificate is not expired and has the same order request
 				genNew, err := shouldGenerateNewCert(secret.Crt, request, time.Hour*24*15)
 				if err != nil {

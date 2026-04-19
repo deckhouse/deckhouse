@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +26,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -42,35 +46,47 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleSP)
 
-func handleSP(input *go_hook.HookInput) error {
-	result := make([]*securityPolicy, 0)
-	refs := make(map[string]set.Set, 0)
+func handleSP(_ context.Context, input *go_hook.HookInput) error {
+	policies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.Snapshots, "security-policies")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal security-policies snapshot: %w", err)
+	}
 
-	snap := input.Snapshots["security-policies"]
+	refs := make(map[string]set.Set)
 
-	for _, sn := range snap {
-		sp := sn.(*securityPolicy)
+	for i := range policies {
+		sp := &policies[i]
 		// set observed status
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(sn, filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
-		sp.preprocesSecurityPolicy()
-		result = append(result, sp)
-		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
-			if keys, ok := refs[v.Reference]; ok {
-				for _, key := range v.PublicKeys {
-					if !keys.Has(key) {
-						keys.Add(key)
+		input.PatchCollector.PatchWithMutatingFunc(
+			set_cr_statuses.SetObservedStatus(sp, filterSP),
+			"deckhouse.io/v1alpha1",
+			"securitypolicy",
+			"",
+			sp.Metadata.Name,
+			object_patch.WithSubresource("/status"),
+			object_patch.WithIgnoreHookError(),
+		)
+		preprocesSecurityPolicy(sp)
+
+		if sp.Spec.Policies.VerifyImageSignatures != nil {
+			for _, v := range *sp.Spec.Policies.VerifyImageSignatures {
+				if keys, ok := refs[v.Reference]; ok {
+					for _, key := range v.PublicKeys {
+						if !keys.Has(key) {
+							keys.Add(key)
+						}
 					}
+				} else {
+					refs[v.Reference] = set.New(v.PublicKeys...)
 				}
-			} else {
-				refs[v.Reference] = set.New(v.PublicKeys...)
 			}
 		}
 	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Metadata.Name < result[j].Metadata.Name
-	})
 
-	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", result)
+	sort.Slice(policies, func(i, j int) bool {
+		return policies[i].Metadata.Name < policies[j].Metadata.Name
+	})
+	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", policies)
 
 	imageReferences := make([]ratifyReference, 0, len(refs))
 	for k, v := range refs {
@@ -89,14 +105,13 @@ func handleSP(input *go_hook.HookInput) error {
 }
 
 func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var sp securityPolicy
-
+	var sp *securityPolicy
 	err := sdk.FromUnstructured(obj, &sp)
 	if err != nil {
 		return nil, err
 	}
 
-	return &sp, nil
+	return sp, nil
 }
 
 func hasItem(slice []string, value string) bool {
@@ -108,14 +123,33 @@ func hasItem(slice []string, value string) bool {
 	return false
 }
 
-func (sp *securityPolicy) preprocesSecurityPolicy() {
+func hasItemPtr(slice *[]string, value string) bool {
+	if slice == nil {
+		return false
+	}
+	for _, v := range *slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func sliceLenPtr[T any](slice *[]T) int {
+	if slice == nil {
+		return 0
+	}
+	return len(*slice)
+}
+
+func preprocesSecurityPolicy(sp *securityPolicy) {
 	// Check if we really need to create a constraint
 	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
+	if hasItemPtr(sp.Spec.Policies.AllowedCapabilities, "ALL") && sliceLenPtr(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
 		sp.Spec.Policies.AllowedCapabilities = nil
 	}
 	// AllowedUnsafeSysctls with '*' and empty ForbiddenSysctls list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && len(sp.Spec.Policies.ForbiddenSysctls) == 0 {
+	if hasItemPtr(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && sliceLenPtr(sp.Spec.Policies.ForbiddenSysctls) == 0 {
 		sp.Spec.Policies.AllowedUnsafeSysctls = nil
 	}
 	// The rules set to 'RunAsAny' should be ignored
@@ -148,16 +182,21 @@ func (sp *securityPolicy) preprocesSecurityPolicy() {
 		sp.Spec.Policies.AllowedProcMount = ""
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedVolumes, "*") {
+	if hasItemPtr(sp.Spec.Policies.AllowedVolumes, "*") {
 		sp.Spec.Policies.AllowedVolumes = nil
 	}
 	// Having all seccomp profiles allowed also isn't worth creating a constraint
-	if hasItem(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItem(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
-		sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
-		sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
+	if sp.Spec.Policies.SeccompProfiles != nil {
+		if hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
+			sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
+			sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
+		}
+		if sp.Spec.Policies.SeccompProfiles.AllowedProfiles == nil && sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles == nil {
+			sp.Spec.Policies.SeccompProfiles = nil
+		}
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedClusterRoles, "*") {
+	if hasItemPtr(sp.Spec.Policies.AllowedClusterRoles, "*") {
 		sp.Spec.Policies.AllowedClusterRoles = nil
 	}
 }

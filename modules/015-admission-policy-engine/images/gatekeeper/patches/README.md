@@ -1,4 +1,5 @@
 ## Patches
 
-### Go mod
-This patch updates dependencies' versions to meet security concerns.
+### 001-fix-cve.patch
+
+Empty file (stub)

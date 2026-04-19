@@ -17,7 +17,6 @@ limitations under the License.
 package template
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -42,8 +41,8 @@ type StepsRenderer struct {
 	stepsStorage *StepsStorage
 }
 
-// Render renders single script content by name which is expected to be of form {os}.{target}
-func (s StepsRenderer) Render(name string, ng ...string) (map[string]string, error) {
+// Render renders single script content by name which is expected to be of form {target}
+func (s StepsRenderer) Render(name string) (map[string]string, error) {
 	templateContext, err := s.getContext(name)
 	if err != nil {
 		return nil, err
@@ -53,11 +52,7 @@ func (s StepsRenderer) Render(name string, ng ...string) (map[string]string, err
 		return nil, err
 	}
 
-	bundle, ok := templateContext["bundle"].(string)
-	if !ok {
-		return nil, errors.New("expected string in templateContext[\"bundle\"]")
-	}
-	return s.stepsStorage.Render(s.target, bundle, providerType, templateContext, ng...)
+	return s.stepsStorage.Render(s.target, providerType, templateContext, name)
 }
 
 func (s StepsRenderer) getContext(name string) (map[string]interface{}, error) {

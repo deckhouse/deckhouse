@@ -17,7 +17,7 @@
 			"stream"
 		],
 		"inputs": [
-			"transform/prefix/testit/00_multiline"
+			"transform/File/prefix/testit/00_multiline"
 		],
 		"merge_strategies": {
 			"message": "concat"
@@ -32,7 +32,7 @@
 			"stream"
 		],
 		"inputs": [
-			"transform/prefix/testit/01_multiline"
+			"transform/File/prefix/testit/01_multiline"
 		],
 		"merge_strategies": {
 			"message": "concat"
@@ -46,7 +46,7 @@
 			"stream"
 		],
 		"inputs": [
-			"transform/prefix/testit/02_multiline"
+			"transform/File/prefix/testit/02_multiline"
 		],
 		"merge_strategies": {
 			"message": "concat"

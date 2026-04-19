@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 )
@@ -52,38 +54,15 @@ var patchServiceData = []patchServiceStruct{
 			},
 		},
 	},
-	{
-		module:    "kube-dns",
-		namespace: "kube-system",
-		name:      "d8-kube-dns-redirect",
-		patch: map[string]interface{}{
-			"spec": map[string]interface{}{
-				"ports": []interface{}{
-					map[string]interface{}{
-						"name":       "dns",
-						"port":       53,
-						"targetPort": "dns",
-						"protocol":   "UDP",
-					},
-					map[string]interface{}{
-						"name":       "dns-tcp",
-						"port":       53,
-						"targetPort": "dns-tcp",
-						"protocol":   "TCP",
-					},
-				},
-			},
-		},
-	},
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 1},
 }, patchServiceWithManyPorts)
 
-func patchServiceWithManyPorts(input *go_hook.HookInput) error {
+func patchServiceWithManyPorts(_ context.Context, input *go_hook.HookInput) error {
 	for _, service := range patchServiceData {
-		input.PatchCollector.MergePatch(
+		input.PatchCollector.PatchWithMerge(
 			service.patch,
 			"v1",
 			"Service",

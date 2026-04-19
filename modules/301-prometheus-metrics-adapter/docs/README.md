@@ -1,6 +1,7 @@
 ---
 title: The prometheus-metrics-adapter module
-search: autoscaler, HorizontalPodAutoscaler 
+search: autoscaler, HorizontalPodAutoscaler
+description: "Ensuring the operation of horizontal and vertical autoscaling based on any metrics in the cluster of the Deckhouse Kubernetes Platform."
 ---
 
 This module allows [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) and [VPA](../../modules/vertical-pod-autoscaler/) autoscalers base their decisions on various metrics.

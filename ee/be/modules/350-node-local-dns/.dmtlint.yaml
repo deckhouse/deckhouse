@@ -1,0 +1,29 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  container:
+    exclude-rules:
+      host-network-ports:
+        - kind: DaemonSet
+          name: node-local-dns
+          container: coredns
+      ports:
+        - kind: DaemonSet
+          name: node-local-dns
+          container: coredns
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: node-local-dns
+          container: coredns
+        - kind: DaemonSet
+          name: node-local-dns
+          container: iptables-loop
+      liveness-probe:
+        - kind: DaemonSet
+          name: node-local-dns
+          container: iptables-loop
+      readiness-probe:
+        - kind: DaemonSet
+          name: node-local-dns
+          container: iptables-loop

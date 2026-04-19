@@ -1,5 +1,0 @@
-module: loki
-namespace: d8-monitoring
-subsystems:
-  - infrastructure
-

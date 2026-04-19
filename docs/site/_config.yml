@@ -16,11 +16,19 @@ site_description:
   en: "Deckhouse. An operator which creates homogeneous Kubernetes clusters anywhere and fully manages them. Manages all necessary addons to provide observability, security and service mesh."
   ru: "Deckhouse. Позволяет создавать идентичные Kubernetes-кластеры в любой инфраструктуре и полностью, «автомагически» управляет ими."
 github_repo_path: /deckhouse/deckhouse
-d8Revision: FE
+d8Revision: EE
+LTSChannel:
+  version: v1.73-cse
+  versionName: v1.73 (CSE)
 
 metrics:
   google: G-4X28CEP7W2
-  yandex: 78422802
+  yandex:
+    ru: 78422802
+    en: 100410448
+
+sass:
+    style: compressed
 
 chat_script_url:
   en: "https://crm.flant.ru/upload/crm/site_button/loader_2_qurrbf.js"
@@ -69,6 +77,8 @@ kramdown:
  auto_ids: true
  hard_wrap: false
  syntax_highlighter: rouge
+ syntax_highlighter_opts:
+  default_lang: plaintext
  parse_block_html: true
 
 defaults:
@@ -87,8 +97,16 @@ defaults:
       multilang: true
       comparable: true
       product_code: kubernetes-platform
-      search_bage_enabled: true
+      searchBageEnabled: true
       lang: en
+      showPrevNextButton: true
+      feedback: true
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has NO defined relative_links
+      extractedLinksOnlyMax: 6
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has defined relative_links
+      extractedLinksMax: 2
   - scope:
       path: "pages/includes"
       type: "pages"
@@ -97,6 +115,8 @@ defaults:
       searchable: false
       sitemap_include: false
       layout: none
+      # Maximum number of related links to display
+      relatedLinksMax: 0
   - scope:
       path: "pages/guides"
       type: "pages"
@@ -104,7 +124,17 @@ defaults:
       toc_in_sidebar: true
       toc: false
       layout: guide
-      search_bage_enabled: false
+      searchBageEnabled: false
+  - scope:
+      path: "pages/code"
+    values:
+      toc_in_sidebar: false
+      toc: false
+      product_code: code
+      documentation_state: develop
+      searchBageEnabled: true
+      sidebar: code
+      sitemap_include: false
   - scope:
       path: "pages/virtualization-platform"
     values:
@@ -112,7 +142,7 @@ defaults:
       toc: false
       product_code: virtualization-platform
       documentation_state: develop
-      search_bage_enabled: true
+      searchBageEnabled: true
       sidebar: virtualization-platform
       sitemap_include: false
   - scope:
@@ -124,100 +154,13 @@ defaults:
       sitemap_include: false
       layout: guide
   - scope:
-      path: "modules_ru"
-      type: "pages"
+      path: "pages/stronghold"
     values:
-      lang: ru
-  - scope:
-      path: "*/030-cloud-provider-openstack"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
-      path: "*/030-cloud-provider-vsphere"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
-      path: "*/030-cloud-provider-dynamix"
-      type: "pages"
-    values:
-      d8Revision: ee
-      featureStatus: experimental
-  - scope:
-      path: "*/030-cloud-provider-vcd"
-      type: "pages"
-    values:
-      d8Revision: ee
-      featureStatus: experimental
-  - scope:
-      path: "*/462-loki"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/031-ceph-csi"
-      type: "pages"
-    values:
-      featureStatus: deprecated
-  - scope:
-      path: "*/500-operator-trivy"
-      type: "pages"
-    values:
-      d8Revision: ee
-      featureStatus: experimental
-  - scope:
-      path: "*/350-node-local-dns"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
-      path: "*/025-static-routing-manager"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
-      path: "*/380-metallb"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
-      path: "*/450-keepalived"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
-      path: "*/450-network-gateway"
-      type: "pages"
-    values:
-      d8Revision: ee
-  - scope:
-      path: "*/650-runtime-audit-engine"
-      type: "pages"
-    values:
-      d8Revision: ee
-      featureStatus: experimental
-  - scope:
-      path: "*/500-okmeter"
-      type: "pages"
-    values:
-      featureStatus: proprietaryOkmeter
-  - scope:
-      path: "*/500-openvpn"
-      type: "pages"
-    values:
-      featureStatus: experimental
-  - scope:
-      path: "*/610-service-with-healthchecks"
-      type: "pages"
-    values:
-      featureStatus: experimental
-      d8Revision: ee
-  - scope:
-      path: "*/160-multitenancy-manager"
-      type: "pages"
-    values:
-      d8Revision: ee
-      featureStatus: experimental
+      toc_in_sidebar: false
+      toc: false
+      product_code: stronghold
+      documentation_state: develop
+      searchBageEnabled: true
+      sidebar: stronghold
+      sitemap_include: false
 timezone: Europe/Moscow
-

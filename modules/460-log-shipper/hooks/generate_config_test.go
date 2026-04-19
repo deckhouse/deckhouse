@@ -113,7 +113,6 @@ spec:
 				err := os.WriteFile(filepath.Join(folder, "result.json"), d, 0600)
 				Expect(err).To(BeNil())
 			}
-
 			assert.JSONEq(GinkgoT(), string(goldenFileData), string(d))
 
 			f.BindingContexts.Set(f.KubeStateSet(namespaceManifest))
@@ -124,6 +123,7 @@ spec:
 			Expect(f.KubernetesResource("Secret", "d8-log-shipper", "d8-log-shipper-config").Exists()).To(BeFalse())
 		},
 		Entry("Simple pair", "simple-pair"),
+		Entry("Elasticsearch tls from secretRef", "elasticsearch-tls"),
 		Entry("One source with multiple dests", "multiple-dest"),
 		Entry("Multinamespace source with one destination", "one-dest"),
 		Entry("Namespaced source", "namespaced-source"),
@@ -143,5 +143,6 @@ spec:
 		Entry("File to Splunk", "file-to-splunk"),
 		Entry("Two sources to single destination", "many-to-one"),
 		Entry("Throttle Transform with filter", "throttle-with-filter"),
+		Entry("Transform mods to kafka", "transform-mods"),
 	)
 })

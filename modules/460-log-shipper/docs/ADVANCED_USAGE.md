@@ -23,14 +23,19 @@ Then in logs, you will find a lot of helpful information about HTTP requests, co
 
 ## How to get aware of logs pipelines?
 
-To begin with, go to the command shell of the Pod on a desired node.
+To begin with, retrieve the list of pods on the desired node.
 
 ```bash
-kubectl -n d8-log-shipper get pods -o wide | grep $node
-kubectl -n d8-log-shipper exec $pod -it -c vector -- bash
+d8 k -n d8-log-shipper get pods -o wide | grep $node
 ```
 
-All following commands are assumed to be executed from the Pod's shell.
+Select the appropriate pod and execute commands directly from the container.
+
+```bash
+d8 k -n d8-log-shipper exec $pod -c vector -- COMMAND_NAME
+```
+
+All subsequent commands are assumed to be executed within the container.
 
 ### See pipelines as a graph
 
@@ -69,7 +74,7 @@ There is the `vector top` command to help you see how much data is going through
 
 Example of the output:
 
-![Vector TOP output](../../images/log-shipper/vector_top.png)
+![Vector TOP output](images/vector_top.png)
 
 ### Get raw log samples
 

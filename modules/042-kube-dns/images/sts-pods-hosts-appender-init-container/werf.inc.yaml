@@ -10,18 +10,27 @@ git:
     - '**/*'
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
+mount:
+{{ include "mount points for golang builds" . }}
 import:
   - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-    - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd src/
-    - go build -ldflags="-s -w" -o render-etc-hosts-with-cluster-domain-aliases main.go
+    - |
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o render-etc-hosts-with-cluster-domain-aliases main.go` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -30,6 +39,6 @@ import:
     add: /src/render-etc-hosts-with-cluster-domain-aliases
     to: /render-etc-hosts-with-cluster-domain-aliases
     before: setup
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/render-etc-hosts-with-cluster-domain-aliases"]
+imageSpec:
+  config:
+    entrypoint: ["/render-etc-hosts-with-cluster-domain-aliases"]

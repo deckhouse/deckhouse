@@ -15,33 +15,40 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
+	"sync"
+
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	terrastate "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) Abort(forceAbortFromCache bool) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
+	restore := b.applyParams()
+	defer restore()
 
 	if !app.SanityCheck {
 		log.WarnLn(bootstrapAbortCheckMessage)
 	}
 
-	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(forceAbortFromCache) })
+	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(ctx, forceAbortFromCache) })
 }
 
 func (b *ClusterBootstrapper) initSSHClient() error {
@@ -50,18 +57,24 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 		return nil // Local runs don't use ssh client.
 	}
 
-	sshClient := wrapper.Client()
-	if _, err := sshClient.Start(); err != nil {
-		return fmt.Errorf("unable to start ssh client: %w", err)
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
 	}
 
-	if len(sshClient.Settings.AvailableHosts()) == 0 {
-		mastersIPs, err := GetMasterHostsIPs()
+	sshClient := wrapper.Client()
+
+	if len(sshClient.Session().AvailableHosts()) == 0 {
+		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
 		if err != nil {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
 		}
-		sshClient.Settings.SetAvailableHosts(mastersIPs)
+		if len(mastersIPs) > 0 {
+			sshClient.Session().SetAvailableHosts(mastersIPs)
+		}
 	}
 
 	bastionHost, err := GetBastionHostFromCache()
@@ -71,17 +84,37 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	}
 
 	if bastionHost != "" {
-		sshClient.Settings.BastionHost = bastionHost
+		sshClient.Session().BastionHost = bastionHost
 	}
 
 	return nil
 }
 
-func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) error {
-	metaConfig, err := config.ParseConfig(app.ConfigPaths)
+func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
+	metaConfig, err := config.LoadConfigFromFile(
+		ctx,
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(b.logger),
+		),
+		b.DirectoryConfig,
+	)
 	if err != nil {
 		return err
 	}
+
+	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(
+		phases.OperationDestroy, b.Params.OnPhaseFunc, b.Params.OnProgressFunc,
+	)
+
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
@@ -89,6 +122,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}
 	stateCache := cache.Global()
+
+	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return err
+	}
+	defer func() {
+		_ = b.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	hasUUID, err := stateCache.InCache("uuid")
 	if err != nil {
@@ -116,32 +156,52 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		return err
 	}
 
+	// init ssh client is safe if master hosts not found (error in base infra)
+	if err := b.initSSHClient(); err != nil {
+		return err
+	}
+
+	staticSSHClientProvider := sync.OnceValues(func() (node.SSHClient, error) {
+		wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+		if !ok {
+			return nil, fmt.Errorf("destroy operations are not supported for local execution contexts")
+		}
+
+		client := wrapper.Client()
+		if err := client.Start(); err != nil {
+			return nil, err
+		}
+		return client, nil
+	})
+
 	var destroyer destroy.Destroyer
 
+	loggerProvider := log.SimpleLoggerProvider(b.Logger)
+
+	bootstrapState := NewBootstrapState(stateCache)
+
 	err = log.Process("common", "Choice abort type", func() error {
-		ok, err := stateCache.InCache(ManifestCreatedInClusterCacheKey)
+		ok, err := bootstrapState.IsManifestsCreated()
 		if err != nil {
 			return err
 		}
+		log.DebugF("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache)
 		if !ok || forceAbortFromCache {
-			log.DebugF(fmt.Sprintf("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache))
-			if metaConfig.ClusterType == config.CloudClusterType {
-				terraStateLoader := terrastate.NewFileTerraStateLoader(stateCache, metaConfig)
-				destroyer = infrastructure.NewClusterInfraWithOptions(
-					terraStateLoader, stateCache, b.TerraformContext,
-					infrastructure.ClusterInfraOptions{
-						PhasedExecutionContext: b.PhasedExecutionContext,
-					},
-				)
-			} else {
-				wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
-				if !ok {
-					return fmt.Errorf("destroy operations are not supported for local execution contexts")
-				}
-				if err := b.initSSHClient(); err != nil {
-					return err
-				}
-				destroyer = destroy.NewStaticMastersDestroyer(wrapper.Client())
+			destroyer, err = destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
+				MetaConfig:             metaConfig,
+				StateCache:             stateCache,
+				InfrastructureContext:  b.InfrastructureContext,
+				PhasedExecutionContext: b.PhasedExecutionContext,
+
+				SSHClientProvider: sshclient.NewDefaultSSHProviderWithFunc(staticSSHClientProvider).WithLoggerProvider(loggerProvider),
+				LoggerProvider:    loggerProvider,
+
+				TmpDir:        b.TmpDir,
+				IsDebug:       b.IsDebug,
+				CommanderMode: b.CommanderMode,
+			})
+			if err != nil {
+				return err
 			}
 
 			logMsg := "Deckhouse installation was not started before. Abort from cache"
@@ -152,13 +212,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			log.InfoLn(logMsg)
 
 			return nil
-		}
-
-		if err := b.initSSHClient(); err != nil {
-			return err
-		}
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
 		}
 
 		if !b.CommanderMode {
@@ -174,7 +227,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
-			TerraformContext:       b.TerraformContext,
+			InfrastructureContext:  b.InfrastructureContext,
+			DirectoryConfig:        b.DirectoryConfig,
 		}
 
 		if b.CommanderMode {
@@ -190,7 +244,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 			destroyParams.CommanderModeParams = commander.NewCommanderModeParams(clusterConfigurationData, providerClusterConfigurationData)
 		}
 
-		destroyer, err = destroy.NewClusterDestroyer(destroyParams)
+		destroyParams.LoggerProvider = loggerProvider
+		destroyParams.IsDebug = b.IsDebug
+		destroyParams.TmpDir = b.TmpDir
+
+		destroyer, err = destroy.NewClusterDestroyer(ctx, destroyParams)
 		if err != nil {
 			return err
 		}
@@ -198,21 +256,44 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(forceAbortFromCache bool) erro
 		log.InfoLn("Deckhouse installation was started before. Destroy cluster")
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
 
-	if destroyer == nil {
+	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
+	if metaConfig.IsStatic() {
+		deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
+		if err != nil {
+			return err
+		}
+
+		if b.CommanderMode {
+			deckhouseInstallConfig.CommanderMode = b.CommanderMode
+			deckhouseInstallConfig.CommanderUUID = b.CommanderUUID
+		}
+		// start client todo refactor it
+		if _, err = staticSSHClientProvider(); err != nil {
+			return err
+		}
+
+		staticAbortSuite := suites.NewStaticAbortSuite(suites.StaticAbortDeps{Node: b.NodeInterface})
+		preflightRunner := preflight.New(staticAbortSuite)
+		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.SetCacheSalt(state.ConfigHash(app.ConfigPaths))
+		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
+			return err
+		}
+
+	}
+
+	if govalue.IsNil(destroyer) {
 		return fmt.Errorf("Destroyer not initialized")
 	}
 
-	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return err
-	}
-	defer b.PhasedExecutionContext.Finalize(stateCache)
-
-	if err := destroyer.DestroyCluster(app.SanityCheck); err != nil {
+	// destroy cluster cleanup provider
+	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err
 	}

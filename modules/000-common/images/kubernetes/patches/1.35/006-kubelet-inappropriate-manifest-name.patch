@@ -1,0 +1,70 @@
+diff --git a/pkg/kubelet/config/file.go b/pkg/kubelet/config/file.go
+index bf48553acbc..e09ba872610 100644
+--- a/pkg/kubelet/config/file.go
++++ b/pkg/kubelet/config/file.go
+@@ -44,6 +44,24 @@ const (
+ 	eventBufferLen = 10
+ )
+ 
++// manifestAllowedExtensions lists filename extensions that are allowed as pod manifests.
++// Only files with these extensions are processed (e.g. kube-apiserver.backup is ignored).
++var manifestAllowedExtensions = []string{".yaml", ".yml"}
++
++// shouldIgnoreManifestFile returns true if the manifest file should be ignored
++// (hidden files or files without an allowed extension).
++func shouldIgnoreManifestFile(baseName string) bool {
++	if strings.HasPrefix(baseName, ".") {
++		return true
++	}
++	for _, ext := range manifestAllowedExtensions {
++		if strings.HasSuffix(strings.ToLower(baseName), ext) {
++			return false
++		}
++	}
++	return true
++}
++
+ type watchEvent struct {
+ 	fileName  string
+ 	eventType podEventType
+@@ -181,6 +199,9 @@ func (s *sourceFile) extractFromDir(logger klog.Logger, name string) ([]*v1.Pod,
+ 		case statInfo.Mode().IsDir():
+ 			logger.Error(nil, "Provided manifest path is a directory, not recursing into manifest path", "path", path)
+ 		case statInfo.Mode().IsRegular():
++			if shouldIgnoreManifestFile(filepath.Base(path)) {
++				continue
++			}
+ 			pod, err := s.extractFromFile(logger, path)
+ 			if err != nil {
+ 				if !os.IsNotExist(err) {
+diff --git a/pkg/kubelet/config/file_linux.go b/pkg/kubelet/config/file_linux.go
+index f05010f8ec0..096e474b581 100644
+--- a/pkg/kubelet/config/file_linux.go
++++ b/pkg/kubelet/config/file_linux.go
+@@ -23,13 +23,12 @@ import (
+ 	"fmt"
+ 	"os"
+ 	"path/filepath"
+-	"strings"
+ 	"time"
+ 
+ 	"github.com/fsnotify/fsnotify"
++	v1 "k8s.io/api/core/v1"
+ 	"k8s.io/klog/v2"
+ 
+-	"k8s.io/api/core/v1"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	"k8s.io/client-go/util/flowcontrol"
+ 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
+@@ -101,9 +100,8 @@ func (s *sourceFile) doWatch(logger klog.Logger) error {
+ }
+ 
+ func (s *sourceFile) produceWatchEvent(logger klog.Logger, e *fsnotify.Event) error {
+-	// Ignore file start with dots
+-	if strings.HasPrefix(filepath.Base(e.Name), ".") {
+-		logger.V(4).Info("Ignored pod manifest, because it starts with dots", "eventName", e.Name)
++	if shouldIgnoreManifestFile(filepath.Base(e.Name)) {
++		klog.V(4).InfoS("Ignored pod manifest, because of inappropriate filename", "eventName", e.Name)
+ 		return nil
+ 	}
+ 	var eventType podEventType

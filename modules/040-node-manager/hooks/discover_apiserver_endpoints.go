@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -26,8 +27,11 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -55,9 +59,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: apiserverPodFilter,
 		},
 		{
-			Name:       "apiserver_endpoints",
-			ApiVersion: "v1",
-			Kind:       "Endpoints",
+			Name:       "apiserver_endpointSlice",
+			ApiVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"default"},
@@ -92,38 +96,41 @@ func apiserverPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 }
 
 func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var endpoints corev1.Endpoints
+	var endpointSlice discoveryv1.EndpointSlice
 
-	err := sdk.FromUnstructured(obj, &endpoints)
+	err := sdk.FromUnstructured(obj, &endpointSlice)
 	if err != nil {
 		return nil, err
 	}
 
 	addresses := make([]string, 0)
 
-	for _, s := range endpoints.Subsets {
-		ports := make([]int32, 0)
-		for _, port := range s.Ports {
-			if port.Name == "https" {
-				ports = append(ports, port.Port)
-			}
+	ports := make([]int32, 0)
+	for _, port := range endpointSlice.Ports {
+		if *port.Name == "https" {
+			ports = append(ports, *port.Port)
 		}
-
-		for _, addrObj := range s.Addresses {
+	}
+	for _, endpoint := range endpointSlice.Endpoints {
+		for _, addrObj := range endpoint.Addresses {
 			for _, port := range ports {
-				addr := net.JoinHostPort(addrObj.IP, strconv.Itoa(int(port)))
+				addr := net.JoinHostPort(addrObj, strconv.Itoa(int(port)))
 				addresses = append(addresses, addr)
 			}
 		}
 	}
+
 	return addresses, nil
 }
 
-func handleAPIEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.Snapshots["kube_apiserver"])
+func handleAPIEndpoints(_ context.Context, input *go_hook.HookInput) error {
+	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("kube_apiserver"))
 
-	for _, ep := range input.Snapshots["apiserver_endpoints"] {
-		endpointsSet.Add(ep.([]string)...)
+	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.Snapshots.Get("apiserver_endpointSlice")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'apiserver_endpointSlice' snapshot: %w", err)
+		}
+		endpointsSet.Add(ep...)
 	}
 	endpointsSet.Delete("") // clean faulty pods
 

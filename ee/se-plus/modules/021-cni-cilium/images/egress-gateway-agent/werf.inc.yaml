@@ -1,42 +1,52 @@
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
     add: /egress-gateway-agent
     to: /egress-gateway-agent
     before: setup
-docker:
-  ENTRYPOINT: ["/egress-gateway-agent"]
+imageSpec:
+  config:
+    entrypoint: ["/egress-gateway-agent"]
 ---
-{{ $discovererAbsPath := "/deckhouse/ee/se-plus/modules/021-cni-cilium/images/egress-gateway-agent" }}
-  {{ $discovererRelPath := printf "%s/modules/021-cni-cilium/images/egress-gateway-agent" .ModulePath }}
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromCacheVersion: 20241021-1
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to:  /src
+  # Forces a rebuild when source files are modified.
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-    - cd {{ $discovererAbsPath }}
-    - export GOPROXY={{ $.GOPROXY }}
-    - go mod download
+  - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
-    - cd {{ $discovererAbsPath }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go
+    - cd /src
+    - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+    - | 
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o /egress-gateway-agent cmd/main.go` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 /egress-gateway-agent
     - chmod 0755 /egress-gateway-agent
-
-git:
-  - add: /{{ $discovererRelPath }}
-    to:  {{ $discovererAbsPath }}
-    excludePaths:
-      - "**/*.md"
-      - "**/*.yaml"
-      - hack
-    stageDependencies:
-      install:
-        - go.mod
-        - go.sum
-      setup:
-        - "**/*.go"
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg

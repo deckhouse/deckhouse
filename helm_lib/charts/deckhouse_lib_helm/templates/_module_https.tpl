@@ -108,7 +108,7 @@ certManager:
 {{- end -}}
 
 {{- /* Usage: {{ if (include "helm_lib_module_https_ingress_tls_enabled" .) }} */ -}}
-{{- /* returns not empty string if tls should enable for ingress  */ -}}
+{{- /* returns not empty string if tls should be enabled for the ingress  */ -}}
 {{- define "helm_lib_module_https_ingress_tls_enabled" -}}
   {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
 
@@ -119,8 +119,20 @@ certManager:
   {{- end -}}
 {{- end -}}
 
+{{- /* Usage: {{ if (include "helm_lib_module_https_route_tls_enabled" .) }} */ -}}
+{{- /* returns not empty string if tls should be enabled for the route  */ -}}
+{{- define "helm_lib_module_https_route_tls_enabled" -}}
+  {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+
+  {{- $mode := include "helm_lib_module_https_mode" $context -}}
+
+  {{- if or (eq "CertManager" $mode) (eq "CustomCertificate" $mode) -}}
+    not empty string
+  {{- end -}}
+{{- end -}}
+
 {{- /* Usage: {{ include "helm_lib_module_https_copy_custom_certificate" (list . "namespace" "secret_name_prefix") }} */ -}}
-{{- /* Renders secret with [custom certificate](https://deckhouse.io/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) */ -}}
+{{- /* Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate) */ -}}
 {{- /* in passed namespace with passed prefix */ -}}
 {{- define "helm_lib_module_https_copy_custom_certificate" -}}
   {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
@@ -129,6 +141,27 @@ certManager:
   {{- $mode := include "helm_lib_module_https_mode" $context -}}
   {{- if eq $mode "CustomCertificate" -}}
     {{- $module_values := (index $context.Values (include "helm_lib_module_camelcase_name" $context)) -}}
+    {{- $customCertificateData := $module_values.internal.customCertificateData -}}
+    {{- if not $customCertificateData -}}
+      {{- fail (printf "internal.customCertificateData is required to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- if not (kindIs "map" $customCertificateData) -}}
+      {{- fail (printf "internal.customCertificateData must be a map to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- $tlsCrt := index $customCertificateData "tls.crt" -}}
+    {{- $tlsKey := index $customCertificateData "tls.key" -}}
+    {{- if not $tlsCrt -}}
+      {{- fail (printf "internal.customCertificateData.tls.crt is required to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- if not $tlsKey -}}
+      {{- fail (printf "internal.customCertificateData.tls.key is required to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- if not (kindIs "string" $tlsCrt) -}}
+      {{- fail (printf "internal.customCertificateData.tls.crt must be a string to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
+    {{- if not (kindIs "string" $tlsKey) -}}
+      {{- fail (printf "internal.customCertificateData.tls.key must be a string to copy custom certificate for secret prefix '%s'" $secret_name_prefix) -}}
+    {{- end -}}
     {{- $secret_name := include "helm_lib_module_https_secret_name" (list $context $secret_name_prefix) -}}
 ---
 apiVersion: v1
@@ -138,7 +171,15 @@ metadata:
   namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 type: kubernetes.io/tls
-data: {{ $module_values.internal.customCertificateData | toJson }}
+data:
+{{- if (hasKey $customCertificateData "ca.crt") }}
+  {{- $caCrt := index $customCertificateData "ca.crt" -}}
+  {{- if and $caCrt (kindIs "string" $caCrt) }}
+  ca.crt: {{ $caCrt | b64enc }}
+  {{- end }}
+{{- end }}
+  tls.crt: {{ $tlsCrt | b64enc }}
+  tls.key: {{ $tlsKey | b64enc }}
   {{- end -}}
 {{- end -}}
 

@@ -1,0 +1,214 @@
+---
+title: "Восстановление и отладка control plane"
+permalink: ru/virtualization-platform/documentation/admin/platform-management/platform-scaling/control-plane/control-plane-recovery-and-debugging.html
+lang: ru
+---
+
+## Восстановление при ошибках
+
+В процессе работы DVP автоматически создает резервные копии конфигурации и данных, которые могут пригодиться в случае возникновения проблем. Эти резервные копии сохраняются в директории `/etc/kubernetes/deckhouse/backup`. Если в процессе работы возникли ошибки или непредвиденные ситуации, вы можете использовать эти резервные копии для восстановления до предыдущего исправного состояния.
+
+## Восстановление работоспособности кластера etcd
+
+Если кластер etcd не функционирует и не удается восстановить его из резервной копии, вы можете попытаться восстановить его с нуля, следуя шагам ниже.
+
+1. Сначала на всех узлах, которые являются частью вашего кластера etcd, **кроме одного**, удалите манифест `etcd.yaml`, который находится в директории `/etc/kubernetes/manifests/`. После этого только один узел останется активным, и с него будет происходить восстановление состояния мультимастерного кластера.
+1. На оставшемся узле откройте файл манифеста `etcd.yaml` и укажите параметр `--force-new-cluster` в `spec.containers.command`.
+1. После успешного восстановления кластера, удалите параметр `--force-new-cluster`.
+
+ {% alert level="danger" %}
+ Эта операция является деструктивной, так как она полностью уничтожает текущие данные и инициализирует кластер с состоянием, которое сохранено на узле. Все pending-записи будут утеряны.
+ {% endalert %}
+
+## Восстановление master-узла при ошибке загрузки компонентов control plane через kubelet
+
+Ситуация, когда kubelet не может загрузить компоненты control plane, может возникнуть, если в кластере с одним master-узлом был удалён каталог с образами (например, `/var/lib/containerd`).
+В этом случае после перезапуска kubelet не сможет загрузить образы компонентов control plane, поскольку параметры авторизации для доступа к `registry.deckhouse.ru` на master-узле отсутствуют.
+
+Далее приведена инструкция по восстановлению master-узла.
+
+### containerd
+
+1. Для восстановления работоспособности master-узла нужно в любом рабочем кластере под управлением DVP выполнить команду:
+
+   ```shell
+   d8 k -n d8-system get secrets deckhouse-registry -o json |
+   jq -r '.data.".dockerconfigjson"' | base64 -d |
+   jq -r '.auths."registry.deckhouse.ru".auth'
+   ```
+
+1. Скопируйте вывод команды и присвойте переменной `AUTH` на поврежденном master-узле.
+
+1. Далее на поврежденном master-узле загрузите образы компонентов control plane:
+
+   ```shell
+   for image in $(grep "image:" /etc/kubernetes/manifests/* | awk '{print $3}'); do
+     crictl pull --auth $AUTH $image
+   done
+   ```
+
+1. После загрузки образов перезапустите kubelet.
+
+## Восстановление etcd
+
+### Просмотр списка узлов кластера в etcd
+
+### Вариант 1
+
+Используйте команду `etcdctl member list`.
+
+Пример:
+
+```shell
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
+```
+
+**Внимание.** Последний параметр в таблице вывода показывает, что узел находится в состоянии [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии `leader`.
+
+### Вариант 2
+
+Используйте команду `etcdctl endpoint status`. Для лидера в столбце `IS LEADER` будет указано значение `true`.
+
+Пример:
+
+```shell
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
+```
+
+### Восстановление кластера etcd при полной недоступности
+
+1. Остановите все узлы etcd, кроме одного, удалив манифест `etcd.yaml` на остальных.
+1. На оставшемся узле добавьте в команду etcd параметр `--force-new-cluster`.
+1. После восстановления удалите этот флаг.
+
+{% alert level="danger" %}
+Будьте осторожны: эти действия полностью уничтожают предыдущие данные и формируют новый кластер etcd.
+{% endalert %}
+
+### Восстановление etcd при ошибке panic: unexpected removal of unknown remote peer
+
+1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
+
+   ```shell
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
+1. Создайте новый снимок базы etcd на основе текущего локального снимка (`/var/lib/etcd/member/snap/db`):
+
+   ```shell
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
+   --skip-hash-check=true --data-dir /var/lib/etcdtest
+   ```
+
+   где:
+
+   - `<HOSTNAME>` — имя master-узла;
+   - `<ADDRESS>` — адрес master-узла.
+
+1. Выполните следующие команды для использования нового снимка:
+
+   ```shell
+   cp -r /var/lib/etcd /tmp/etcd-backup
+   rm -rf /var/lib/etcd
+   mv /var/lib/etcdtest /var/lib/etcd
+   ```
+
+1. Найдите контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl ps -a | egrep "etcd|apiserver"
+   ```
+
+1. Удалите найденные контейнеры `etcd` и `api-server`:
+
+   ```shell
+   crictl rm <CONTAINER-ID>
+   ```
+
+1. Перезапустите master-узел.
+
+### Действия при переполнении базы данных etcd (превышение quota-backend-bytes)
+
+Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится read-only. Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
+
+```shell
+d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+--cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+--endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
+```
+
+{% alert level="info" %}
+В данной команде используется подстановка: `$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p)`. Она автоматически подставит имя первого пода, соответствующего нужным лейблам.
+{% endalert %}
+
+Если в поле `ERRORS` вы видите подобное сообщение `alarm:NOSPACE`, значит вам нужно предпринять следующие шаги:
+
+1. Найдите строку с `--quota-backend-bytes` в файле манифеста пода etcd, расположенного по пути `/etc/kubernetes/manifests/etcd.yaml` и увеличьте значение, умножив указанный параметр в этой строке на два. Если такой строки нет — добавьте, например: `- --quota-backend-bytes=8589934592`. Эта настройка задает лимит на 8 ГБ.
+1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
+
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
+   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+   --endpoints https://127.0.0.1:2379/ alarm disarm
+   ```
+
+1. Измените параметр [`maxDbSize`](/modules/control-plane-manager/configuration.html#parameters-etcd-maxdbsize) в настройках модуля `control-plane-manager` на тот, который был задан в манифесте.
+
+## Отказоустойчивость
+
+Если какой-либо компонент control plane становится недоступным, кластер временно сохраняет текущее состояние, но не может обрабатывать новые события. Например:
+
+- При сбое `kube-controller-manager` перестаёт работать масштабирование deployment'ов.
+- При недоступности `kube-apiserver` невозможны любые запросы к Kubernetes API, но уже запущенные приложения продолжают функционировать.
+
+Однако при продолжительной недоступности компонентов нарушается обработка новых объектов, реакция на сбои узлов и другие процессы. Со временем это может привести к деградации работы кластера и повлиять на пользовательские приложения.
+
+Чтобы снизить такие риски, следует масштабировать control plane до отказоустойчивой конфигурации — минимум трёх узлов. Это особенно критично для etcd, так как он требует наличия кворума для выбора лидера. Кворум работает по принципу большинства (N/2 + 1) от общего числа узлов.
+
+Пример:
+
+| Размер кластера | Большинство | Максимальные потери |
+|------------------|-------------|----------------------|
+| 1                | 1           | 0                    |
+| 3                | 2           | 1                    |
+| 5                | 3           | 2                    |
+| 7                | 4           | 3                    |
+| 9                | 5           | 4                    |
+
+{% alert level="info" %}
+Чётное число узлов не даёт преимущества по отказоустойчивости, но увеличивает накладные расходы на репликацию.
+{% endalert %}
+
+В большинстве случаев достаточно трёх узлов etcd, пять — если критична устойчивость. Более семи — крайне редко и не рекомендуется из-за высокой нагрузки.
+
+После добавления новых узлов control plane:
+
+- Устанавливается лейбл `node-role.kubernetes.io/control-plane=""`.
+- DaemonSet запускает поды на новых узлах.
+- DVP создает или обновляет файлы в `/etc/kubernetes`: манифесты, конфигурации, сертификаты и т.д.
+- Все модули DVP с поддержкой отказоустойчивости автоматически включают её, если значение глобальной настройки `highAvailability` не переопределено вручную.
+
+Удаление узлов control plane выполняется в обратном порядке:
+
+- Удаляются лейблы `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`.
+- DVP удаляет свои поды с этих узлов.
+- Члены etcd, расположенные на этих узлах, удаляются автоматически.
+- Если число узлов уменьшается с двух до одного, etcd может перейти в статус `readonly`. В этом случае требуется запуск с параметром `--force-new-cluster`, который следует убрать после успешного запуска.

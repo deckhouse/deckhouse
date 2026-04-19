@@ -29,7 +29,7 @@ import (
 
 // NewTempStateCache creates new cache instance in tmp directory
 func NewTempStateCache(identity string) (*StateCache, error) {
-	cacheDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
+	cacheDir := filepath.Join(app.GetCacheDir(), stringsutil.Sha256Encode(identity))
 	return NewStateCache(cacheDir)
 }
 
@@ -43,7 +43,7 @@ func NewStateCache(dir string) (*StateCache, error) {
 		return nil, fmt.Errorf("can't create cache directory: %w", err)
 	}
 
-	_, err := os.Stat(filepath.Join(dir, ".tombstone"))
+	_, err := os.Stat(filepath.Join(dir, state.TombstoneKey))
 	if os.IsNotExist(err) {
 		return &StateCache{dir: dir}, nil
 	}
@@ -55,6 +55,14 @@ func NewStateCache(dir string) (*StateCache, error) {
 func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (*StateCache, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
+	}
+
+	// Check for tombstone BEFORE cleaning the directory
+	tombstonePath := filepath.Join(dir, state.TombstoneKey)
+	log.InfoF("Checking for tombstone file before cleaning: %s\n", tombstonePath)
+	if _, err := os.Stat(tombstonePath); err == nil {
+		log.InfoF("Tombstone file found at %s - the cluster was already bootstrapped\n", tombstonePath)
+		return nil, fmt.Errorf("The cluster was already bootstrapped")
 	}
 
 	// prepare dir to be fresh for given initial state
@@ -81,9 +89,12 @@ func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (
 
 // SaveStruct saves bytes to a file
 func (s *StateCache) Save(name string, content []byte) error {
-	if err := os.WriteFile(s.GetPath(name), content, 0o600); err != nil {
-		log.ErrorF("Can't save terraform state in cache: %v", err)
+	path := s.GetPath(name)
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		return err
 	}
+
+	log.DebugF("Saved infrastructure state in cache: %s\n", path)
 
 	return nil
 }
@@ -111,6 +122,7 @@ func (s *StateCache) InCache(name string) (bool, error) {
 func (s *StateCache) Clean() {
 	_ = os.RemoveAll(s.dir)
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
+		log.ErrorF("Failed to recreate cache directory %s: %v\n", s.dir, err)
 		return
 	}
 
@@ -151,9 +163,12 @@ func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
 }
 
 func (s *StateCache) Delete(name string) {
+	path := s.GetPath(name)
 	ok, _ := s.InCache(name)
 	if ok {
-		_ = os.Remove(s.GetPath(name))
+		if err := os.Remove(path); err != nil {
+			log.ErrorF("Failed to delete cache file %s: %v\n", path, err)
+		}
 	}
 }
 
@@ -199,12 +214,12 @@ func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
 }
 
 func (s *StateCache) NeedIntermediateSave() bool {
-	// cache use one file with terraform
+	// cache use one file with infrastructure state
 	return false
 }
 
 func (s *StateCache) Dir() string {
-	// cache use one file with terraform
+	// cache use one file with infrastructure state
 	return s.dir
 }
 
@@ -223,3 +238,81 @@ func (d *DummyCache) GetPath(n string) string                  { return "" }
 func (d *DummyCache) Iterate(func(string, []byte) error) error { return nil }
 func (d *DummyCache) NeedIntermediateSave() bool               { return false }
 func (d *DummyCache) Dir() string                              { return "" }
+
+type TestCache struct {
+	Store map[string][]byte
+}
+
+func NewTestCache() *TestCache {
+	return &TestCache{
+		Store: make(map[string][]byte),
+	}
+}
+
+func (d *TestCache) Save(n string, c []byte) error {
+	d.Store[n] = c
+	return nil
+}
+
+func (d *TestCache) InCache(n string) (bool, error) {
+	_, ok := d.Store[n]
+	return ok, nil
+}
+
+func (d *TestCache) Clean() {
+	d.Store = make(map[string][]byte)
+}
+
+func (d *TestCache) CleanWithExceptions(e ...string) {
+	n := make(map[string][]byte, 0)
+
+	for _, v := range e {
+		n[v] = d.Store[v]
+	}
+
+	d.Store = n
+}
+
+func (d *TestCache) Delete(n string) {
+	delete(d.Store, n)
+}
+
+func (d *TestCache) Load(n string) ([]byte, error) {
+	return d.Store[n], nil
+}
+
+func (d *TestCache) LoadStruct(n string, v interface{}) error {
+	data, err := d.Load(n)
+	if err != nil {
+		return fmt.Errorf("can't load struct for key %s: %v", n, err)
+	}
+
+	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(v)
+}
+
+func (d *TestCache) SaveStruct(n string, v interface{}) error {
+	b := new(bytes.Buffer)
+	err := gob.NewEncoder(b).Encode(v)
+	if err != nil {
+		return err
+	}
+
+	return d.Save(n, b.Bytes())
+}
+
+func (d *TestCache) GetPath(n string) string {
+	return n
+}
+
+func (d *TestCache) Iterate(action func(string, []byte) error) error {
+	for k, v := range d.Store {
+		err := action(k, v)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (d *TestCache) NeedIntermediateSave() bool { return false }
+
+func (d *TestCache) Dir() string { return "" }

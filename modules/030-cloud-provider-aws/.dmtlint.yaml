@@ -1,0 +1,84 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.storageClass.properties.provision.items.properties.type"
+        - "properties.storageClass.properties.provision.items.oneOf[*].properties.type"
+        - "properties.internal.properties.storageClasses.items.oneOf[*].properties.type"
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+      dns-policy:
+        - kind: Deployment
+          name: cloud-controller-manager
+      liveness-probe:
+        - kind: Deployment
+          name: csi-controller
+          container: provisioner
+        - kind: Deployment
+          name: csi-controller
+          container: attacher
+        - kind: Deployment
+          name: csi-controller
+          container: resizer
+        - kind: Deployment
+          name: csi-controller
+          container: livenessprobe
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+        - kind: Deployment
+          name: csi-controller
+          container: snapshotter
+        - kind: DaemonSet
+          name: node-termination-handler
+          container: node-termination-handler
+      readiness-probe:
+        - kind: Deployment
+          name: csi-controller
+          container: provisioner
+        - kind: Deployment
+          name: csi-controller
+          container: attacher
+        - kind: Deployment
+          name: csi-controller
+          container: resizer
+        - kind: Deployment
+          name: csi-controller
+          container: livenessprobe
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+        - kind: Deployment
+          name: csi-controller
+          container: snapshotter
+        - kind: Deployment
+          name: csi-controller
+          container: controller
+        - kind: DaemonSet
+          name: node-termination-handler
+          container: node-termination-handler
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: Deployment
+          name: cloud-data-discoverer
+        - kind: DaemonSet
+          name: node-termination-handler
+        - kind: DaemonSet
+          name: csi-node

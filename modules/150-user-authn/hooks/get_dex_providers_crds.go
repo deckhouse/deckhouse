@@ -17,11 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type DexProvider map[string]interface{}
@@ -51,13 +55,65 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, getDexProviders)
 
-func getDexProviders(input *go_hook.HookInput) error {
-	providers, ok := input.Snapshots["providers"]
-	if !ok {
+func getDexProviders(_ context.Context, input *go_hook.HookInput) error {
+	providers, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.Snapshots, "providers")
+
+	if err != nil {
 		input.Values.Set("userAuthn.internal.providers", []interface{}{})
 		return nil
 	}
 
-	input.Values.Set("userAuthn.internal.providers", providers)
+	// Filter out providers with spec.enabled == false. Absence of the field is treated as enabled=true.
+	filtered := make([]map[string]interface{}, 0, len(providers))
+	for _, p := range providers {
+		// p corresponds to the .spec map with injected "id"
+		if enabledRaw, ok := p["enabled"]; ok {
+			if enabledBool, ok := enabledRaw.(bool); ok && !enabledBool {
+				// skip disabled provider
+				continue
+			}
+		}
+
+		// Sanitize LDAP filter values to remove trailing whitespace/newlines
+		// that may appear when users use YAML literal block scalars (|) in CRDs.
+		sanitizeLDAPFilters(p)
+
+		// Keep 'enabled' field in internal values for transparency and debugging
+		filtered = append(filtered, p)
+	}
+
+	input.Values.Set("userAuthn.internal.providers", filtered)
 	return nil
+}
+
+// sanitizeLDAPFilters trims whitespace from LDAP filter fields in userSearch and groupSearch.
+// This prevents issues when users specify filters using YAML literal block scalars (|),
+// which add a trailing newline that breaks LDAP search queries.
+func sanitizeLDAPFilters(provider map[string]interface{}) {
+	ldapRaw, ok := provider["ldap"]
+	if !ok {
+		return
+	}
+	ldapMap, ok := ldapRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	trimFilterInSearchSection(ldapMap, "userSearch")
+	trimFilterInSearchSection(ldapMap, "groupSearch")
+}
+
+// trimFilterInSearchSection trims whitespace from the "filter" field
+// within a given LDAP search section (userSearch or groupSearch).
+func trimFilterInSearchSection(ldapMap map[string]interface{}, section string) {
+	sectionRaw, ok := ldapMap[section]
+	if !ok {
+		return
+	}
+	sectionMap, ok := sectionRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+	if filter, ok := sectionMap["filter"].(string); ok {
+		sectionMap["filter"] = strings.TrimSpace(filter)
+	}
 }

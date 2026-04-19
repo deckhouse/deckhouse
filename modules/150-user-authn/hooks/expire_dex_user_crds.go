@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type DexUserExpire struct {
@@ -76,13 +79,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, expireDexUsers)
 
-func expireDexUsers(input *go_hook.HookInput) error {
+func expireDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	now := time.Now()
 
-	for _, user := range input.Snapshots["users"] {
-		dexUserExpire, ok := user.(DexUserExpire)
-		if !ok {
-			return fmt.Errorf("cannot convert user to dex expire")
+	for dexUserExpire, err := range sdkobjectpatch.SnapshotIter[DexUserExpire](input.Snapshots.Get("users")) {
+		if err != nil {
+			return fmt.Errorf("cannot convert user to dex expire: cannot iterate over 'users' snapshot: %v", err)
 		}
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {

@@ -1,12 +1,5 @@
-{{- $bgpPoolExists := false }}
-{{- range $ipaddressPool := .Values.metallb.addressPools }}
-  {{- if eq $ipaddressPool.protocol "bgp" }}
-    {{- $bgpPoolExists = true }}
-  {{- end }}
-{{- end }}
-
-{{- if $bgpPoolExists }}
-{{- if (.Values.global.enabledModules | has "operator-prometheus") }}
+{{- if eq (include "is_bgp_pool_exists" .) "true" }}
+  {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
@@ -38,5 +31,5 @@ spec:
   namespaceSelector:
     matchNames:
       - d8-{{ .Chart.Name }}
-{{- end }}
+  {{- end }}
 {{- end }}

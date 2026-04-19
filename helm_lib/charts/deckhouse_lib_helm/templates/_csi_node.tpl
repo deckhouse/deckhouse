@@ -17,19 +17,31 @@ memory: 25Mi
   {{- $nodeImage := $config.nodeImage | required "$config.nodeImage is required" }}
   {{- $driverFQDN := $config.driverFQDN | required "$config.driverFQDN is required" }}
   {{- $serviceAccount := $config.serviceAccount | default "" }}
+  {{- $additionalNodeVPA := $config.additionalNodeVPA }}
   {{- $additionalNodeEnvs := $config.additionalNodeEnvs }}
   {{- $additionalNodeArgs := $config.additionalNodeArgs }}
   {{- $additionalNodeVolumes := $config.additionalNodeVolumes }}
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
+  {{- $livenessProbePort := $config.livenessProbePort }}
   {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
+  {{- $customNodeSelector := $config.customNodeSelector }}
+  {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
+  {{- $setSysAdminCapability := $config.setSysAdminCapability | default false }}
+  {{- $additionalContainers := $config.additionalContainers }}
   {{- $initContainers := $config.initContainers }}
-
+  {{- $additionalPullSecrets := $config.additionalPullSecrets }}
+  {{- $csiNodeLifecycle := $config.csiNodeLifecycle | default false }}
+  {{- $csiNodeDriverRegistrarLifecycle := $config.csiNodeDriverRegistrarLifecycle | default false }}
+  {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
+  {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
+  {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
+  {{- $dnsPolicy := $config.dnsPolicy | default "ClusterFirstWithHostNet" }}
+  {{- $securityPolicyExceptionEnabled := $config.securityPolicyExceptionEnabled | default false }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
-  {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
+  {{- $driverRegistrarImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiNodeDriverRegistrar" $kubernetesSemVer) }}
   {{- if $driverRegistrarImage }}
-    {{- if or (include "_helm_lib_cloud_or_hybrid_cluster" $context) ($context.Values.global.enabledModules | has "ceph-csi") ($context.Values.global.enabledModules | has "csi-nfs") ($context.Values.global.enabledModules | has "csi-ceph") ($context.Values.global.enabledModules | has "csi-yadro") ($context.Values.global.enabledModules | has "csi-scsi-generic") ($context.Values.global.enabledModules | has "csi-hpe") ($context.Values.global.enabledModules | has "csi-s3") ($context.Values.global.enabledModules | has "csi-huawei") }}
+    {{- if or $forceCsiNodeAndStaticNodesDepoloy (include "_helm_lib_cloud_or_hybrid_cluster" $context) }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -37,7 +49,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ $fullname }}
   namespace: d8-{{ $context.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $context (dict "app" "csi-node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -47,6 +59,9 @@ spec:
     updateMode: "Auto"
   resourcePolicy:
     containerPolicies:
+    {{- if $additionalNodeVPA }}
+    {{- $additionalNodeVPA | toYaml | nindent 4 }}
+    {{- end }}
     - containerName: "node-driver-registrar"
       minAllowed:
         {{- include "node_driver_registrar_resources" $context | nindent 8 }}
@@ -77,7 +92,23 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
+        {{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+        security.deckhouse.io/security-policy-exception: {{ $fullname }}
+        {{- end }}
+      {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiNodePodAnnotations) }}
+      annotations:
+      {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
+        cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
+      {{- end }}
+      {{- if $additionalCsiNodePodAnnotations }}
+        {{- $additionalCsiNodePodAnnotations | toYaml | nindent 8 }}
+      {{- end }}
+      {{- end }}
     spec:
+      {{- if $customNodeSelector }}
+      nodeSelector:
+        {{- $customNodeSelector | toYaml | nindent 8 }}
+      {{- else }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -89,27 +120,37 @@ spec:
                 - CloudEphemeral
                 - CloudPermanent
                 - CloudStatic
-                {{- if or (eq $fullname "csi-node-rbd") (eq $fullname "csi-node-cephfs") (eq $fullname "csi-nfs") (eq $fullname "csi-yadro") (eq $fullname "csi-scsi-generic") (eq $fullname "csi-hpe") (eq $fullname "csi-s3") (eq $fullname "csi-huawei") }}
+                {{- if $forceCsiNodeAndStaticNodesDepoloy }}
                 - Static
                 {{- end }}
               {{- if $additionalNodeSelectorTerms }}
               {{- $additionalNodeSelectorTerms | toYaml | nindent 14 }}
               {{- end }}
+      {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
+      {{- if $additionalPullSecrets }}
+      {{- $additionalPullSecrets | toYaml | nindent 6 }}
+      {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: {{ $csiNodeHostNetwork }}
+      hostPID: {{ $csiNodeHostPID }}
+      {{- if eq $csiNodeHostNetwork "true" }}
+      dnsPolicy: {{ $dnsPolicy | quote }}
+      {{- end }}
       containers:
       - name: node-driver-registrar
-        {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true "uid" "0" "runAsNonRoot" false) | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
         - "--csi-address=$(CSI_ENDPOINT)"
         - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
+        {{- if $livenessProbePort }}
+        - "--http-endpoint=:{{ $livenessProbePort }}"
+        {{- end }}
         env:
         - name: CSI_ENDPOINT
           value: "/csi/csi.sock"
@@ -119,6 +160,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+      {{- if $csiNodeDriverRegistrarLifecycle }}
+        lifecycle:
+          {{- $csiNodeDriverRegistrarLifecycle | toYaml | nindent 10 }}
+      {{- end }}
       {{- if $additionalNodeLivenessProbesCmd }}
         livenessProbe:
           initialDelaySeconds: 3
@@ -139,7 +184,18 @@ spec:
   {{- end }}
       - name: node
         securityContext:
+          allowPrivilegeEscalation: true
           privileged: true
+          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
+          capabilities:
+            drop:
+              - ALL
+        {{- if $setSysAdminCapability }}
+            add:
+            - SYS_ADMIN
+        {{- end }}
         image: {{ $nodeImage }}
         args:
       {{- if $additionalNodeArgs }}
@@ -149,6 +205,18 @@ spec:
         env:
         {{- $additionalNodeEnvs | toYaml | nindent 8 }}
       {{- end }}
+      {{- if $csiNodeLifecycle }}
+        lifecycle:
+          {{- $csiNodeLifecycle | toYaml | nindent 10 }}
+      {{- end }}
+      {{- if $livenessProbePort }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ $livenessProbePort }}
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+      {{- end }}
         volumeMounts:
         - name: kubelet-dir
           mountPath: /var/lib/kubelet
@@ -157,15 +225,19 @@ spec:
           mountPath: /csi
         - name: device-dir
           mountPath: /dev
-    {{- if $additionalNodeVolumeMounts }}
-        {{- $additionalNodeVolumeMounts | toYaml | nindent 8 }}
-      {{- end }}
+        {{- if $additionalNodeVolumeMounts }}
+          {{- $additionalNodeVolumeMounts | toYaml | nindent 8 }}
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
   {{- if not ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
             {{- include "node_resources" $context | nindent 12 }}
   {{- end }}
+
+      {{- if $additionalContainers }}
+        {{- $additionalContainers | toYaml | nindent 6 }}
+      {{- end }}
 
   {{- if $initContainers }}
       initContainers:
@@ -179,6 +251,7 @@ spec:
 
       serviceAccount: {{ $serviceAccount | quote }}
       serviceAccountName: {{ $serviceAccount | quote }}
+      automountServiceAccountToken: true
       volumes:
       - name: registration-dir
         hostPath:
@@ -196,9 +269,129 @@ spec:
         hostPath:
           path: /dev
           type: Directory
+
+      {{- if $additionalNodeVolumes }}
+        {{- $additionalNodeVolumes | toYaml | nindent 6 }}
+      {{- end }}
+
+{{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: {{ $fullname }}
+  namespace: d8-{{ $context.Chart.Name }}
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow privileged mode for CSI Node Driver.
+          The CSI Node Driver requires privileged access to perform critical storage operations such as mounting/unmounting volumes, formatting block devices, and interacting directly with the host kernel for disk management.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Allow running as root for CSI Node Driver.
+          The CSI Node Driver requires root access to perform privileged storage operations on the host, including device management and filesystem mounting.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow privilege escalation for CSI Node Driver.
+          The node plugin may need to escalate privileges during mount, unmount, and device operations that rely on setuid helpers or additional capabilities beyond the container's initial security context.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          Allow running as root user (UID 0) for CSI Node Driver.
+          The CSI Node Driver and node-driver-registrar require root privileges to perform storage operations, interact with host devices, and manage volume mounts.
+  {{- if $setSysAdminCapability }}
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_ADMIN
+      metadata:
+        description: |
+          Allow SYS_ADMIN capability for CSI Node Driver.
+          The CSI Node Driver requires SYS_ADMIN capability to perform privileged filesystem operations such as mounting, unmounting, and managing block devices on the host.
+  {{- end }}
+
+  {{- if or (eq $csiNodeHostNetwork "true") (ne $csiNodeHostPID "false") }}
+  network:
+  {{- if eq $csiNodeHostNetwork "true" }}
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for CSI Node Driver.
+          The CSI Node Driver requires host network access to communicate with the CSI Controller, coordinate volume attachment operations, and synchronize storage metadata across the cluster.
+  {{- end }}
+  {{- if ne $csiNodeHostPID "false" }}
+    hostPID:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host PID namespace access for CSI Node Driver.
+          The CSI Node Driver requires host PID namespace access to interact with host processes for storage operations such as detecting mount points and managing device attachments.
+  {{- end }}
+  {{- end }}
+
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          Allow hostPath volume type for CSI Node.
+          The CSI Node Driver requires hostPath volumes to access host filesystem paths for proper operation, including communication with the container runtime and access to block devices.
+    hostPath:
+      allowedValues:
+        - path: /var/lib/kubelet/plugins_registry/
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to the CSI plugin registry directory.
+              CSI Node Driver registers itself in this directory to enable dynamic discovery and communication with the kubelet.
+        - path: /var/lib/kubelet
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to the kubelet root directory.
+              Required for CSI Node Driver to manage volume mounts and access kubelet data structures.
+        - path: /var/lib/kubelet/csi-plugins/{{ $driverFQDN }}/
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to the CSI plugin directory.
+              This directory contains the CSI driver socket and persistent data required for volume attachment and mounting operations.
+        - path: /dev
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to host device directory.
+              CSI Node Driver requires access to /dev to manage block devices and perform disk operations for persistent volumes.
     {{- if $additionalNodeVolumes }}
-      {{- $additionalNodeVolumes | toYaml | nindent 6 }}
+      {{- range $volume := $additionalNodeVolumes }}
+        {{- if $volume.hostPath }}
+          {{- $readOnly := false }}
+          {{- range $volumeMount := $additionalNodeVolumeMounts }}
+            {{- if eq $volumeMount.name $volume.name }}
+              {{- $readOnly = (default false $volumeMount.readOnly) }}
+            {{- end }}
+          {{- end }}
+        - path: {{ $volume.hostPath.path }}
+          readOnly: {{ $readOnly }}
+          metadata:
+            description: |
+              Allow access to additional hostPath volume at {{ $volume.hostPath.path }}.
+              This additional hostPath volume is required by the CSI Node Driver for extended storage operations specific to the cloud provider implementation.
+        {{- end }}
       {{- end }}
     {{- end }}
-  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

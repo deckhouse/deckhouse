@@ -17,7 +17,10 @@ limitations under the License.
 package copy_custom_certificate
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -27,7 +30,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/module"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type CustomCertificate struct {
@@ -39,7 +45,7 @@ func applyCustomCertificateFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	cs := &CustomCertificate{}
@@ -47,7 +53,7 @@ func applyCustomCertificateFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	cs.Name = secret.GetName()
 	cs.Data, err = yaml.Marshal(secret.Data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal: %w", err)
 	}
 	return cs, nil
 }
@@ -74,17 +80,20 @@ func RegisterHook(moduleName string) bool {
 	}, copyCustomCertificatesHandler(moduleName))
 }
 
-func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
-		snapshots, ok := input.Snapshots["custom_certificates"]
-		if !ok {
+func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
+		snapshots := input.Snapshots.Get("custom_certificates")
+		if len(snapshots) == 0 {
 			input.Logger.Info("No custom certificates received, skipping setting values")
 			return nil
 		}
 
 		customCertificates := make(map[string][]byte, len(snapshots))
-		for _, snapshot := range snapshots {
-			cs := snapshot.(*CustomCertificate)
+		for cs, err := range sdkobjectpatch.SnapshotIter[CustomCertificate](snapshots) {
+			if err != nil {
+				continue
+			}
+
 			customCertificates[cs.Name] = cs.Data
 		}
 
@@ -97,30 +106,74 @@ func copyCustomCertificatesHandler(moduleName string) func(input *go_hook.HookIn
 
 		rawsecretName, _ := module.GetValuesFirstDefined(input, fmt.Sprintf("%s.https.customCertificate.secretName", moduleName), "global.modules.https.customCertificate.secretName")
 		secretName := rawsecretName.String()
+		path := fmt.Sprintf("%s.internal.customCertificateData", moduleName)
 
 		if secretName == "" {
 			return nil
 		}
 
+		var c dataCert
+		cNone := dataCert{
+			CA:      "<none>",
+			TLSKey:  "<none>",
+			TLSCert: "<none>",
+		}
+
 		secretData, ok := customCertificates[secretName]
 		if !ok {
-			return fmt.Errorf("custom certificate secret name is configured, but secret with this name doesn't exist")
+			input.Logger.Warn("custom certificate secret name is configured, but secret with this name doesn't exist")
+			input.Values.Set(path, cNone)
+			return nil
 		}
 
-		var c cert
 		err := yaml.Unmarshal(secretData, &c)
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshal: %w", err)
 		}
 
-		path := fmt.Sprintf("%s.internal.customCertificateData", moduleName)
-		input.Values.Set(path, c)
+		vc := valuesCert{}
+
+		ca, err := base64.StdEncoding.DecodeString(c.CA)
+		if err != nil {
+			input.Logger.Debug("decode ca", log.Err(err))
+		}
+
+		if len(ca) > 0 {
+			vc.CA = strings.TrimSpace(string(ca))
+		}
+
+		tlsKey, err := base64.StdEncoding.DecodeString(c.TLSKey)
+		if err != nil {
+			input.Logger.Warn("decode tls", log.Err(err))
+		}
+
+		if len(tlsKey) > 0 {
+			vc.TLSKey = strings.TrimSpace(string(tlsKey))
+		}
+
+		tlsCert, err := base64.StdEncoding.DecodeString(c.TLSCert)
+		if err != nil {
+			input.Logger.Warn("decode tls cert", log.Err(err))
+		}
+
+		if len(tlsCert) > 0 {
+			vc.TLSCert = strings.TrimSpace(string(tlsCert))
+		}
+
+		input.Values.Set(path, vc)
+
 		return nil
 	}
 }
 
-type cert struct {
+type dataCert struct {
 	CA      string `json:"ca.crt,omitempty"`
 	TLSKey  string `json:"tls.key,omitempty"`
 	TLSCert string `json:"tls.crt,omitempty"`
+}
+
+type valuesCert struct {
+	CA      string `json:"ca.crt,omitempty" yaml:"ca.crt,omitempty"`
+	TLSKey  string `json:"tls.key,omitempty" yaml:"tls.key,omitempty"`
+	TLSCert string `json:"tls.crt,omitempty" yaml:"tls.crt,omitempty"`
 }

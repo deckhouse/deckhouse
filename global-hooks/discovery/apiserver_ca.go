@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -28,7 +29,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 5},
 }, discoverApiserverCA)
 
-func discoverApiserverCA(input *go_hook.HookInput) error {
+func discoverApiserverCA(_ context.Context, input *go_hook.HookInput) error {
 	caPath := "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
 	content, err := os.ReadFile(caPath)

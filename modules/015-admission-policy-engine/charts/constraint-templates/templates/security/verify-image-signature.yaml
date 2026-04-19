@@ -49,6 +49,7 @@ spec:
 
         # Base Gatekeeper violation
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           general_violation[{"result": msg}]
         }
 

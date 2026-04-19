@@ -26,7 +26,7 @@ import (
 func TestLoadDHCTLConfigSchema(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi/dhctl"
 
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(nil, []string{schemasDir})
 
 	require.NotEmpty(t, newStore.Get(&SchemaIndex{
 		Kind:    "SSHConfig",
@@ -40,7 +40,7 @@ func TestLoadDHCTLConfigSchema(t *testing.T) {
 
 func TestParseConnectionConfig(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi/dhctl"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(nil, []string{schemasDir})
 
 	configFunc := func(config, keyPath1, keyPath2 string) string {
 		return fmt.Sprintf(
@@ -80,6 +80,8 @@ func TestParseConnectionConfig(t *testing.T) {
 					SSHBastionHost: "158.160.111.65",
 					SSHBastionPort: ptr.To(int32(22)),
 					SSHBastionUser: "ubuntu",
+					SudoPassword:   "gfhjkm",
+					LegacyMode:     true,
 				},
 				SSHHosts: []SSHHost{
 					{
@@ -142,7 +144,8 @@ func TestParseConnectionConfig(t *testing.T) {
 				"./mocks/id_passphrase_rsa",
 			),
 			opts: []ValidateOption{ValidateOptionCommanderMode(true)},
-			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 1 error occurred:
+			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 2 errors occurred:
+	* "" must validate at least one schema (anyOf)
 	* .sshUser is required
 
 `,
@@ -150,7 +153,8 @@ func TestParseConnectionConfig(t *testing.T) {
 		"invalid config: no agent private keys": {
 			config: invalidSSHConfigNoKeys,
 			opts:   []ValidateOption{ValidateOptionCommanderMode(true)},
-			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 1 error occurred:
+			errContains: `ValidationFailed: [0] dhctl.deckhouse.io/v1, Kind=SSHConfig: "SSHConfig, dhctl.deckhouse.io/v1" document validation failed: 2 errors occurred:
+	* "" must validate at least one schema (anyOf)
 	* .sshAgentPrivateKeys is required
 
 `,
@@ -182,7 +186,6 @@ func TestParseConnectionConfig(t *testing.T) {
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			config, err := ParseConnectionConfig(tt.config, newStore, tt.opts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
@@ -212,6 +215,8 @@ sshAgentPrivateKeys:
 sshBastionHost: 158.160.111.65
 sshBastionPort: 22
 sshBastionUser: ubuntu
+sudoPassword: gfhjkm
+legacyMode: true
 ---
 apiVersion: dhctl.deckhouse.io/v1
 kind: SSHHost

@@ -10,7 +10,7 @@ properties:
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     x-examples:
-    - { "has-gpu": "true" }
+      - { "has-gpu": "true" }
 
   tolerations:
     description: |
@@ -33,7 +33,13 @@ properties:
         value:
           type: string
     x-examples:
-    - [{"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}]
+      - [
+          {
+            "key": "dedicated.deckhouse.io",
+            "operator": "Equal",
+            "value": "cert-manager",
+          },
+        ]
 
   cloudflareAPIToken:
     type: string
@@ -93,7 +99,10 @@ properties:
     description: |
       The Service Account for [Google Cloud](usage.html#issuing-a-dns-wildcard-certificate-using-google)
       for the same project that has the DNS Administrator role.
-    x-examples: ["eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="]
+    x-examples:
+      [
+        "eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0=",
+      ]
 
   email:
     type: string
@@ -130,3 +139,170 @@ properties:
     description: |
       Enable CAInjector. It only needs to inject CA certs into `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` and `APIService`.
       Deckhouse does not use CAInjector, so you have to enable it only if you use custom CA injections in your services.
+
+  ingressClassHttp01:
+    type: string
+    x-examples: ["nginx"]
+    description: |
+      The name of the `ingressClass` used to confirm ownership of domain using the [ACME HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/) challenges method.
+      If the parameter is omitted, the default `ingressClass` is used.
+
+  recursiveSettings:
+    type: object
+    description: |
+      Parameters for using recursive DNS servers, which are used to check the existence of a DNS record, before initiating the domain ownership verification process using the [ACME DNS-01](https://cert-manager.io/docs/configuration/acme/dns01/) method.
+    x-examples:
+      - nameservers: ["8.8.8.8:53", "https://1.1.1.1"]
+        useOnlyRecursive: true
+    x-kubernetes-validations:
+      - rule: "self.useOnlyRecursive == false || size(self.nameservers) >= 1"
+        message: "At least one nameserver must be specified when useOnlyRecursive is true"
+    properties:
+      nameservers:
+        type: array
+        description: |
+          List of recursive DNS servers (IP:port or HTTPS URLs).
+        items:
+          type: string
+          pattern: "^(?:[0-9]{1,3}(?:\\.[0-9]{1,3}){3}:\\d{1,5}|https?://[^\\s]+)$"
+      useOnlyRecursive:
+        type: boolean
+        description: |
+          When set to true, only the specified recursive DNS servers will be used to check for the existence of a record in the DNS before starting the domain ownership verification process.
+        default: false
+  letsencrypt:
+    type: object
+    default: {}
+    description: |
+      Settings for the `letsencrypt` ClusterIssuer.
+    properties:
+      resources:
+        type: object
+        default: {}
+        description: |
+          Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
+        properties:
+          requests:
+            type: object
+            default: {}
+            required:
+              - cpu
+              - memory            
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                type: string
+                default: "10m"
+              memory:
+                description: |
+                  The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                default: "32Mi"
+            description: |
+              Resource requests and limits (CPU and memory) for pods that create the `letsencrypt` ClusterIssuer for http01 challenges
+          limits:
+            type: object
+            default: {}
+            required:
+              - cpu
+              - memory            
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  The same as in the pods' `spec.containers.resources.limits.cpu` parameter in Kubernetes.
+                type: string
+                default: "50m"
+              memory:
+                description: |
+                  The same as in the pods' `spec.containers.resources.limits.memory` parameter in Kubernetes.
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                default: "64Mi"      
+        x-examples:
+          - requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+  letsencryptStaging:
+    type: object
+    default: {}
+    description: |
+      Settings for the `letsencrypt-staging` ClusterIssuer.
+    properties:
+      resources:
+        type: object
+        default: {}
+        description: |
+          Resource requests and limits (CPU and memory) for pods that create the `letsencrypt-staging` ClusterIssuer for http01 challenges.
+        properties:
+          requests:
+            type: object
+            default: {}
+            required:
+              - cpu
+              - memory            
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                type: string
+                default: "10m"
+              memory:
+                description: |
+                  The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                default: "32Mi"
+          limits:
+            type: object
+            default: {}
+            required:
+              - cpu
+              - memory            
+            properties:
+              cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+                description: |
+                  The same as in the pods' `spec.containers.resources.limits.cpu` parameter in Kubernetes.
+                type: string
+                default: "50m"
+              memory:
+                description: |
+                  The same as in the pods' `spec.containers.resources.limits.memory` parameter in Kubernetes.
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                default: "64Mi"    
+        x-examples:
+          - requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"

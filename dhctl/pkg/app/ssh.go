@@ -21,11 +21,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
+
+type PrivateKeyFileToPassphrase map[string]string
 
 var (
 	SSHPrivateKeys = make([]string, 0)
@@ -35,6 +38,7 @@ var (
 	SSHBastionHost       = ""
 	SSHBastionPort       = ""
 	SSHBastionUser       = os.Getenv("USER")
+	SSHBastionPass       = ""
 	SSHUser              = os.Getenv("USER")
 	SSHHosts             = make([]session.Host, 0)
 	sshHostsRaw          = make([]string, 0)
@@ -43,6 +47,14 @@ var (
 
 	AskBecomePass = false
 	BecomePass    = ""
+
+	AskBastionPass = false
+
+	SSHLegacyMode = false
+	SSHModernMode = false
+
+	// todo ugly solution need refact
+	PrivateKeysToPassPhrasesFromConfig = make(PrivateKeyFileToPassphrase)
 )
 
 type connectionConfigParser interface {
@@ -56,11 +68,12 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_AGENT_PRIVATE_KEYS")).
 		StringsVar(&SSHAgentPrivateKeys)
-	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by terraform and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
+	cmd.Flag("ssh-bastion-host", "Jumper (bastion) host to connect to servers (will be used both by infrastructure creation utility and ansible). Only IPs or hostnames are supported, name from ssh-config will not work.").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_HOST")).
 		StringVar(&SSHBastionHost)
 	cmd.Flag("ssh-bastion-port", "SSH destination port").
+		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_BASTION_PORT")).
 		StringVar(&SSHBastionPort)
@@ -79,6 +92,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		Envar(configEnvName("SSH_HOSTS")).
 		StringsVar(&sshHostsRaw)
 	cmd.Flag("ssh-port", "SSH destination port").
+		Default("22").
 		IsSetByUser(&sshFlagSetByUser).
 		Envar(configEnvName("SSH_PORT")).
 		StringVar(&SSHPort)
@@ -89,6 +103,15 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 	cmd.Flag("connection-config", "SSH connection config file path").
 		Envar(configEnvName("CONNECTION_CONFIG")).
 		StringVar(&ConnectionConfigPath)
+	cmd.Flag("ssh-legacy-mode", "Force legacy SSH mode").
+		Envar(configEnvName("SSH_LEGACY_MODE")).
+		BoolVar(&SSHLegacyMode)
+	cmd.Flag("ssh-modern-mode", "Force modern SSH mode").
+		Envar(configEnvName("SSH_MODERN_MODE")).
+		BoolVar(&SSHModernMode)
+	cmd.Flag("ask-bastion-pass", "Ask for bastion password before the installation process.").
+		Envar(configEnvName("ASK_BASTION_PASS")).
+		BoolVar(&AskBastionPass)
 
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if !sshBastionUserFlagSetByUser && sshUserFlagSetByUser {
@@ -106,18 +129,29 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		return nil
 	})
 
-	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+	cmd.Action(func(c *kingpin.ParseContext) error {
 		if len(ConnectionConfigPath) == 0 {
 			return nil
 		}
-		return processConnectionConfigFile(sshFlagSetByUser, parser)
+
+		if sshFlagSetByUser {
+			return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
+		}
+
+		return parser.ParseConnectionConfigFromFile()
 	})
 
-	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if len(SSHPrivateKeys) != 0 {
 			return nil
 		}
 		return processConnectionConfigFlags()
+	})
+	cmd.PreAction(func(c *kingpin.ParseContext) error {
+		if SSHLegacyMode && (AskBecomePass && len(SSHPrivateKeys) == 0) {
+			return fmt.Errorf("SSH legacy mode does not support password-based SSH authentication. If you are using `--ask-become-pass`, please either specify `--ssh-modern-mode`, or leave the SSH mode unset to allow automatic detection of the appropriate method.")
+		}
+		return nil
 	})
 }
 
@@ -142,6 +176,14 @@ func ParseSSHPrivateKeyPaths(pathSets []string) ([]string, error) {
 			if err != nil {
 				return nil, fmt.Errorf("get absolute path for '%s': %v", k, err)
 			}
+
+			_, err = os.Stat(keyPath)
+			if err != nil {
+				if pathSet == DefaultSSHAgentPrivateKeys {
+					continue
+				}
+				return nil, fmt.Errorf("cannot stat file %s", keyPath)
+			}
 			res = append(res, keyPath)
 		}
 	}
@@ -154,14 +196,6 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("ASK_BECOME_PASS")).
 		Short('K').
 		BoolVar(&AskBecomePass)
-}
-
-func processConnectionConfigFile(sshFlagSetByUser bool, parser connectionConfigParser) error {
-	if sshFlagSetByUser {
-		return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
-	}
-
-	return parser.ParseConnectionConfigFromFile()
 }
 
 func processConnectionConfigFlags() error {

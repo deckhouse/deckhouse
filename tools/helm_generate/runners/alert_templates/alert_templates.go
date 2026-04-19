@@ -28,12 +28,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"tools/helm_generate/helper"
+
+	"github.com/yuin/goldmark"
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
-	"github.com/yuin/goldmark"
-	"gopkg.in/yaml.v3"
+
+	"tools/helm_generate/helper"
 )
 
 // ../deckhouse/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
@@ -127,13 +129,20 @@ func run() error {
 		}
 
 		if len(tplTemplates) > 0 {
-			renderContent, err := renderHelmTemplate(module, helper.GetMapKeys(tplTemplates))
+			tplRelativePaths := helper.GetMapKeys(tplTemplates)
+			renderContent, err := renderHelmTemplate(module, tplRelativePaths)
 			if err != nil {
 				return err
 			}
-			for templatePath, templateContent := range renderContent {
-				_, templateName := filepath.Split(templatePath)
-				templateAlerts, err := getAlertsFromTemplate([]byte(templateContent), moduleName, moduleUrlName, string(module.Edition), filepath.Join(module.Path, prometheusRules, templateName))
+
+			for _, templatePath := range tplRelativePaths {
+				// templatePath may contains subdirectory or not, e.g. "image-availability/image-checks.tpl", "nat-instance.tpl"
+				pathSegments := strings.Split(templatePath, "/")
+				name := pathSegments[len(pathSegments)-1]
+
+				templateContent := renderContent[fmt.Sprintf("renderdir/templates/%s", name)]
+
+				templateAlerts, err := getAlertsFromTemplate([]byte(templateContent), moduleName, moduleUrlName, string(module.Edition), filepath.Join(module.Path, prometheusRules, templatePath))
 				if err != nil {
 					return err
 				}
@@ -147,7 +156,7 @@ func run() error {
 	}
 
 	slices.SortFunc(d8Alerts, func(a, b moduleAlert) int {
-		return cmp.Compare(strings.ToLower(fmt.Sprintf("%s %s %s %s", a.Name, a.Module, a.Severity, a.Description)), strings.ToLower(fmt.Sprintf("%s %s %s %s", b.Name, b.Module, b.Severity, b.Description)))
+		return cmp.Compare(strings.ToLower(fmt.Sprintf("%s %s %s %s %s", a.Name, a.Module, a.Severity, a.Description, a.SourceFile)), strings.ToLower(fmt.Sprintf("%s %s %s %s %s", b.Name, b.Module, b.Severity, b.Description, b.SourceFile)))
 	})
 	sort.Strings(d8ModulesWithAlerts)
 
@@ -199,7 +208,7 @@ func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, ed
 				} else {
 					var buf bytes.Buffer
 					if err := goldmark.Convert([]byte(strings.ReplaceAll(summary, "\n", " ")), &buf); err == nil {
-						summary = stripHTMLTags(string(buf.Bytes()))
+						summary = stripHTMLTags(buf.String())
 						// summary = strings.TrimLeft(summary,"<p>")
 						// summary = strings.TrimRight(summary,"</p>\n")
 					}

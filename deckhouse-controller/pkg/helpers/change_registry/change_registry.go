@@ -22,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,9 +36,13 @@ import (
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/yaml"
 
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -49,63 +54,77 @@ import (
 // (waiting for new "go-containerregistry" version)
 
 const (
-	d8SystemNS = "d8-system"
-	caKey      = "ca"
+	d8SystemNS         = "d8-system"
+	caKey              = "ca"
+	registryModuleName = "registry"
 )
 
 func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTag, scheme string, dryRun bool, logger *log.Logger) error {
 	ctx := context.Background()
 	logEntry := logger.With("operator.component", "ChangeRegistry")
 
+	kubeCl, err := newKubeClient()
+	if err != nil {
+		return fmt.Errorf("new kube client: %w", err)
+	}
+
+	logEntry.Info("Checking registry module")
+
+	enabled, err := moduleEnabled(ctx, kubeCl, registryModuleName)
+	if err != nil {
+		return fmt.Errorf("failed to check if %q module is enabled: %w", registryModuleName, err)
+	}
+
+	if enabled {
+		return fmt.Errorf("the %q module is enabled; please configure the registry using 'moduleConfig/deckhouse'", registryModuleName)
+	}
+
 	authConfig := newAuthConfig(username, password)
 
 	caContent, err := getCAContent(caFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("get ca content: %w", err)
 	}
 
+	// !! Convert scheme to lowercase to avoid case-sensitive issues
+	scheme = strings.ToLower(scheme)
 	nameOpts := newNameOptions(scheme)
 	newRepo, err := name.NewRepository(strings.TrimRight(newRegistry, "/"), nameOpts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("new repository: %w", err)
 	}
 
 	caTransport := cr.GetHTTPTransport(caContent)
 
 	if err := checkAuthSupport(ctx, newRepo.Registry, caTransport); err != nil {
-		return err
-	}
-
-	kubeCl, err := newKubeClient()
-	if err != nil {
-		return err
+		return fmt.Errorf("check auth support: %w", err)
 	}
 
 	logEntry.Info("Retrieving deckhouse deployment...")
 	deckhouseDeploy, err := deckhouseDeployment(ctx, kubeCl)
 	if err != nil {
-		return err
+		return fmt.Errorf("deckhouse deployment: %w", err)
 	}
 
 	remoteOpts, err := newRemoteOptions(ctx, newRepo, authConfig, caTransport)
 	if err != nil {
-		return err
+		return fmt.Errorf("new remote options: %w", err)
 	}
 
 	// Check that all images for deckhouse deploy exist in the new repo before
 	// updating image pull secret and prepare deployment with updated images.
 	if err := updateDeployContainersImagesToNewRepo(deckhouseDeploy, newRepo, nameOpts, remoteOpts, newDeckhouseImageTag); err != nil {
-		return err
+		return fmt.Errorf("update deploy containers images to new repo: %w", err)
 	}
 
 	imagePullSecretData, err := newImagePullSecretData(newRepo, authConfig, caContent, scheme)
 	if err != nil {
-		return err
+		return fmt.Errorf("new image pull secret data: %w", err)
 	}
 
 	deckhouseSecret, err := modifyPullSecret(ctx, kubeCl, imagePullSecretData)
 	if err != nil {
-		return err
+		return fmt.Errorf("modify pull secret: %w", err)
 	}
 
 	if dryRun {
@@ -113,18 +132,18 @@ func ChangeRegistry(newRegistry, username, password, caFile, newDeckhouseImageTa
 		secretYaml, _ := yaml.Marshal(deckhouseSecret)
 		deploymentYaml, _ := yaml.Marshal(deckhouseDeploy)
 		logEntry.Info("------------------------------")
-		logEntry.Infof("New Secret will be applied:\n%s\n", secretYaml)
+		logEntry.Info(fmt.Sprintf("New Secret will be applied:\n%s\n", secretYaml))
 		logEntry.Info("------------------------------")
-		logEntry.Infof("New Deployment will be applied:\n%s\n", deploymentYaml)
+		logEntry.Info(fmt.Sprintf("New Deployment will be applied:\n%s\n", deploymentYaml))
 	} else {
 		logEntry.Info("Updating deckhouse image pull secret...")
 		if err := updateImagePullSecret(ctx, kubeCl, deckhouseSecret); err != nil {
-			return err
+			return fmt.Errorf("update image pull secret: %w", err)
 		}
 
 		logEntry.Info("Updating deckhouse deployment...")
 		if err := updateDeployment(ctx, kubeCl, deckhouseDeploy); err != nil {
-			return err
+			return fmt.Errorf("update deployment: %w", err)
 		}
 	}
 
@@ -162,13 +181,17 @@ func newTransport(ctx context.Context, repo name.Repository, authConfig authn.Au
 	authorizer := authn.FromConfig(authConfig)
 
 	scopes := []string{repo.Scope(transport.PullScope)}
-	return transport.NewWithContext(ctx, repo.Registry, authorizer, caTransport, scopes)
+	t, err := transport.NewWithContext(ctx, repo.Registry, authorizer, caTransport, scopes)
+	if err != nil {
+		return nil, fmt.Errorf("new with context: %w", err)
+	}
+	return t, nil
 }
 
 func newKubeClient() (*kclient.KubernetesClient, error) {
 	kubeCl := kclient.NewKubernetesClient()
 	if err := kubeCl.Init(kclient.AppKubernetesInitParams()); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("init: %w", err)
 	}
 	return kubeCl, nil
 }
@@ -177,7 +200,7 @@ func modifyPullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient, new
 	secretClient := kubeCl.KubeClient.CoreV1().Secrets(d8SystemNS)
 	deckhouseRegSecret, err := secretClient.Get(ctx, "deckhouse-registry", metav1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get: %w", err)
 	}
 	deckhouseRegSecret.StringData = newSecretData
 
@@ -191,7 +214,7 @@ func updateImagePullSecret(ctx context.Context, kubeCl *kclient.KubernetesClient
 
 	updateOpts := metav1.UpdateOptions{FieldValidation: metav1.FieldValidationStrict}
 	if _, err := secretClient.Update(ctx, newSecret, updateOpts); err != nil {
-		return err
+		return fmt.Errorf("update: %w", err)
 	}
 	return nil
 }
@@ -205,7 +228,7 @@ func newImagePullSecretData(newRepo name.Repository, authConfig authn.AuthConfig
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
 	scheme := specScheme
@@ -233,7 +256,7 @@ func getCAContent(caFile string) (string, error) {
 
 	caBytes, err := os.ReadFile(caFile)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read file: %w", err)
 	}
 
 	keyBlock, _ := pem.Decode(caBytes)
@@ -243,14 +266,18 @@ func getCAContent(caFile string) (string, error) {
 
 	// Check that file content is a certificate
 	if _, err := x509.ParseCertificate(keyBlock.Bytes); err != nil {
-		return "", err
+		return "", fmt.Errorf("parse certificate: %w", err)
 	}
 	return strings.TrimSpace(string(caBytes)), nil
 }
 
 func deckhouseDeployment(ctx context.Context, kubeCl *kclient.KubernetesClient) (*appsv1.Deployment, error) {
 	deployClient := kubeCl.KubeClient.AppsV1().Deployments(d8SystemNS)
-	return deployClient.Get(ctx, "deckhouse", metav1.GetOptions{})
+	deploy, err := deployClient.Get(ctx, "deckhouse", metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("get: %w", err)
+	}
+	return deploy, nil
 }
 
 func updateDeployContainersImagesToNewRepo(deploy *appsv1.Deployment, newRepo name.Repository, nameOpts []name.Option, remoteOpts []remote.Option, newDeckhouseTag string) error {
@@ -278,7 +305,7 @@ func updateDeployment(ctx context.Context, kubeCl *kclient.KubernetesClient, dep
 	deployClient := kubeCl.KubeClient.AppsV1().Deployments(deploy.Namespace)
 	updateOpts := metav1.UpdateOptions{FieldValidation: metav1.FieldValidationStrict}
 	if _, err := deployClient.Update(ctx, deploy, updateOpts); err != nil {
-		return err
+		return fmt.Errorf("update: %w", err)
 	}
 	return nil
 }
@@ -287,7 +314,7 @@ func updateImageRepoForContainers(containers []v1.Container, newRepository strin
 	for i, container := range containers {
 		oldImage, err := name.ParseReference(container.Image)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse reference: %w", err)
 		}
 
 		tagOrDigestref := oldImage.Identifier()
@@ -307,7 +334,7 @@ func updateImageRepoForContainers(containers []v1.Container, newRepository strin
 
 		newRef, err := name.ParseReference(newRepository+delim+tagOrDigestref, nameOpts...)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse reference: %w", err)
 		}
 
 		// Check that new reference exists in the new repo before applying changes.
@@ -325,11 +352,11 @@ func updateImageRepoForContainers(containers []v1.Container, newRepository strin
 func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
 	img, err := remote.Image(imageRef, opts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("image: %w", err)
 	}
 
 	if _, err := img.Digest(); err != nil {
-		return err
+		return fmt.Errorf("digest: %w", err)
 	}
 	return nil
 }
@@ -364,32 +391,38 @@ func checkAuthSupport(ctx context.Context, reg name.Registry, roundTripper http.
 		errs = multierror.Append(errs, fmt.Errorf("check auth support with %q scheme failed: %w", scheme, err))
 	}
 
-	return errs.ErrorOrNil()
+	if err := errs.ErrorOrNil(); err != nil {
+		return fmt.Errorf("error or nil: %w", err)
+	}
+	return nil
 }
 
 func makeRequestWithScheme(ctx context.Context, client *http.Client, scheme, registryName string) (*http.Response, error) {
 	u, err := url.Parse(fmt.Sprintf("%s://%s/v2/", scheme, registryName))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new request with context: %w", err)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("do: %w", err)
 	}
 
 	// Close body, because we only need headers
-	return resp, resp.Body.Close()
+	if err := resp.Body.Close(); err != nil {
+		return resp, fmt.Errorf("close: %w", err)
+	}
+	return resp, nil
 }
 
 func checkResponseForAuthSupport(resp *http.Response, registryHost string) error {
 	if resp.StatusCode != http.StatusUnauthorized {
-		return transport.CheckError(resp, http.StatusUnauthorized)
+		return fmt.Errorf("check error: %w", transport.CheckError(resp, http.StatusUnauthorized))
 	}
 
 	if authHeader(resp.Header) {
@@ -413,7 +446,7 @@ func authHeader(headers http.Header) bool {
 			return true
 		}
 	}
-	log.Infof("WWW-Authenticate header has an incorrect value: %s", authHeader)
+	log.Info("WWW-Authenticate header has an incorrect value", slog.String("value", authHeader))
 	return false
 }
 
@@ -433,4 +466,34 @@ func encodeDockerCfgAuthEntryFromAuthConfig(authConfig authn.AuthConfig) *docker
 		Password: authConfig.Password,
 		Auth:     base64.StdEncoding.EncodeToString([]byte(authConfig.Username + ":" + authConfig.Password)),
 	}
+}
+
+func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, moduleName string) (bool, error) {
+	moduleUnstructured, err := kubeCl.
+		Dynamic().
+		Resource(deckhousev1alpha1.ModuleGVR).
+		Namespace("").
+		Get(ctx, moduleName, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get module: %w", err)
+	}
+
+	moduleJSON, err := moduleUnstructured.MarshalJSON()
+	if err != nil {
+		return false, fmt.Errorf("failed to marshal unstructured module: %w", err)
+	}
+
+	var module deckhousev1alpha1.Module
+	decoder := serializer.
+		NewCodecFactory(runtime.NewScheme()).
+		UniversalDeserializer()
+	if _, _, err := decoder.Decode(moduleJSON, nil, &module); err != nil {
+		return false, fmt.Errorf("failed to decode module JSON: %w", err)
+	}
+
+	enabled := module.IsCondition(deckhousev1alpha1.ModuleConditionEnabledByModuleManager, v1.ConditionTrue)
+	return enabled, nil
 }

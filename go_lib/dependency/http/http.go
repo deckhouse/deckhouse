@@ -26,6 +26,9 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Client interface
@@ -68,6 +71,7 @@ func NewClient(options ...Option) Client {
 	}
 
 	tr := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
 		TLSClientConfig:       tlsConf,
 		IdleConnTimeout:       5 * time.Minute,
 		TLSHandshakeTimeout:   5 * time.Second,
@@ -76,9 +80,20 @@ func NewClient(options ...Option) Client {
 		Dial:                  dialer.Dial,
 	}
 
+	otr := otelhttp.NewTransport(
+		tr,
+		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+			return fmt.Sprintf("HTTP %s %s", operation, r.URL.String())
+		}),
+		otelhttp.WithFilter(func(request *http.Request) bool {
+			span := trace.SpanFromContext(request.Context())
+			return span.IsRecording()
+		}),
+	)
+
 	return &http.Client{
 		Timeout:   opts.timeout,
-		Transport: tr,
+		Transport: otr,
 	}
 }
 
@@ -128,7 +143,7 @@ func GetKubeToken() (string, error) {
 
 	content, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("read file: %w", err)
 	}
 
 	return string(content), nil

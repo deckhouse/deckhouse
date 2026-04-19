@@ -19,16 +19,27 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync/atomic"
+	"time"
 
-	"k8s.io/klog/v2"
+	"github.com/spf13/fsync"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	"github.com/flant/docs-builder/internal/metrics"
 )
 
-var docConfValuesRegexp = regexp.MustCompile(`^openapi/doc-.*-config-values\.yaml$`)
-var assembleErrorRegexp = regexp.MustCompile(`error building site: assemble: (\x1b\[1;36m)?"(?P<path>.+):(?P<line>\d+):(?P<column>\d+)"(\x1b\[0m)?:`)
+var docConfValuesRegexp = regexp.MustCompile(`^openapi/(doc-.*-config-values\.yaml|conversions/v\d+\.yaml)$`)
+
+// /app/hugo/{data||content}/modules/{module}/{channel}/{brokenFile}:53:1
+// $1 - Module dir path /app/hugo/{data||content}/modules/{module}
+// $2 - {module}
+var assembleErrorRegexp = regexp.MustCompile(`"(?P<base>.+?/modules/(?P<module>[^/]+))/(?P<path>.+?):(?P<line>\d+):(?P<column>\d+)"`)
 
 const (
-	modulesDir = "data/modules/"
-	contentDir = "content/modules/"
+	hugoInitDir = "/app/hugo-init/"
+	modulesDir  = "data/modules/"
+	contentDir  = "content/modules/"
 )
 
 type Service struct {
@@ -36,13 +47,18 @@ type Service struct {
 	destDir              string
 	isReady              atomic.Bool
 	channelMappingEditor *channelMappingEditor
+
+	logger  *log.Logger
+	metrics *metricsstorage.MetricStorage
 }
 
-func NewService(baseDir, destDir string, highAvailability bool) *Service {
+func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logger, ms *metricsstorage.MetricStorage) *Service {
 	svc := &Service{
 		baseDir:              baseDir,
 		destDir:              destDir,
 		channelMappingEditor: newChannelMappingEditor(baseDir),
+		logger:               logger,
+		metrics:              ms,
 	}
 
 	if !highAvailability {
@@ -52,8 +68,35 @@ func NewService(baseDir, destDir string, highAvailability bool) *Service {
 	// prepare module directory
 	err := os.MkdirAll(filepath.Join(baseDir, modulesDir), 0700)
 	if err != nil {
-		klog.Error(err)
+		svc.logger.Error("mkdir all", log.Err(err))
 	}
+
+	syncer := fsync.NewSyncer()
+	syncer.NoChmod = true
+	syncer.NoTimes = true
+	// do not delete files in baseDir
+	syncer.DeleteFilter = func(_ fsync.FileInfo) bool {
+		return false
+	}
+
+	oldLocation := hugoInitDir
+	newLocation := svc.baseDir
+	err = syncer.Sync(newLocation, oldLocation)
+	if err != nil {
+		svc.logger.Error("sync init folder with base dir", log.Err(err))
+	}
+
+	t := time.NewTicker(30 * time.Second)
+	go func() {
+		for range t.C {
+			modulesCount, err := svc.channelMappingEditor.getModulesCount()
+			if err != nil {
+				svc.logger.Warn("can not read modules count from channel mapping editor", log.Err(err))
+			}
+
+			ms.GaugeSet(metrics.DocsBuilderCachedModules, float64(modulesCount), nil)
+		}
+	}()
 
 	return svc
 }

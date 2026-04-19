@@ -18,7 +18,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
-    release.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/apply-now: "true"
     a: b
   finalizers:
     - modules.deckhouse.io/exist-on-fs
@@ -46,3 +46,8 @@ status:
   pullDuration: 307.070601ms
   size: 3087774
   transitionTime: "2024-05-05T10:41:06Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: deckhouse-commander

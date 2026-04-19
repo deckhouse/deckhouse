@@ -25,6 +25,7 @@ message BootstrapRequest {
   oneof message {
     BootstrapStart start = 1;
     BootstrapContinue continue = 2;
+    BootstrapCancel cancel = 3;
   }
 }
 
@@ -33,6 +34,7 @@ message BootstrapResponse {
     BootstrapResult result = 1;
     BootstrapPhaseEnd phase_end = 2;
     Logs logs = 3;
+    Progress progress = 4;
   }
 }
 
@@ -59,6 +61,8 @@ message BootstrapContinue {
   Continue continue = 1;
   string err = 2;
 }
+
+message BootstrapCancel {}
 
 message BootstrapStartOptions {
   bool commander_mode = 1;

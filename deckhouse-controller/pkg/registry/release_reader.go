@@ -19,6 +19,7 @@ package registry
 import (
 	"archive/tar"
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -26,6 +27,7 @@ import (
 type releaseReader struct {
 	versionReader   *bytes.Buffer
 	changelogReader *bytes.Buffer
+	moduleReader    *bytes.Buffer
 }
 
 func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
@@ -39,7 +41,7 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("next: %w", err)
 		}
 
 		if strings.HasPrefix(hdr.Name, ".werf") {
@@ -50,12 +52,17 @@ func (rr *releaseReader) untarMetadata(rc io.ReadCloser) error {
 		case "version.json":
 			_, err = io.Copy(rr.versionReader, tr)
 			if err != nil {
-				return err
+				return fmt.Errorf("copy: %w", err)
 			}
 		case "changelog.yaml", "changelog.yml":
 			_, err = io.Copy(rr.changelogReader, tr)
 			if err != nil {
-				return err
+				return fmt.Errorf("copy: %w", err)
+			}
+		case "module.yaml":
+			_, err := io.Copy(rr.moduleReader, tr)
+			if err != nil {
+				return fmt.Errorf("copy: %w", err)
 			}
 		default:
 			continue

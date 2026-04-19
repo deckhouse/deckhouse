@@ -3,6 +3,8 @@ title: "VM Publishing"
 permalink: en/virtualization-platform/documentation/user/network/vm-publishing.html
 ---
 
+{% raw %}
+
 ## Providing public access using services
 
 It is often necessary to enable access to virtual machines from outside the cluster, for example, for remote administration or connecting to services hosted on the virtual machine. For these purposes, Kubernetes provides special services that route traffic from external networks to the internal resources of the cluster. Let's explore a few options.
@@ -44,7 +46,7 @@ spec:
 EOF
 ```
 
-![NodePort](/images/virtualization-platform/lb-nodeport.png)
+![NodePort](/../../../../images/virtualization-platform/lb-nodeport.png)
 
 ### Using a LoadBalancer service
 
@@ -68,13 +70,11 @@ spec:
 EOF
 ```
 
-![LoadBalancer](/images/virtualization-platform/lb-loadbalancer.png)
+![LoadBalancer](/../../../../images/virtualization-platform/lb-loadbalancer.png)
 
 ### Using services with active health checks
 
-{% alert level="warning" %}
-This feature is in testing phase and will be available in upcoming versions.
-{% endalert %}
+> **Warning.** This feature is in testing phase and will be available in upcoming versions.
 
 The `ServiceWithHealthchecks` resource allows you to configure active health checks for a service on specified TCP ports. If the health checks for virtual machines are unsuccessful, those machines will not be included in the traffic balancing.
 
@@ -246,7 +246,7 @@ To publish a virtual machine service via Ingress, you need to create the followi
 
 To enable authentication through `Dex` for your application, follow these steps:
 
-1. Create a custom resource [DexAuthenticator](../../../reference/cr/dexauthenticator.html). This will create an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) connected to `Dex`. After the `DexAuthenticator` custom resource is created, the required objects such as Deployment, Service, Ingress, and Secret will appear in the specified `namespace`.
+1. Create a custom resource [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator). This will create an instance of [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) connected to `Dex`. After the `DexAuthenticator` custom resource is created, the required objects such as Deployment, Service, Ingress, and Secret will appear in the specified `namespace`.
 
    Example of a `DexAuthenticator` resource:
 
@@ -313,3 +313,5 @@ DexAuthenticator does not have a built-in system for managing authentication per
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
+
+{% endraw %}

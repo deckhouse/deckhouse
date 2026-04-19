@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-multiple-containers-one-disallowed
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seccompProfile:
+          type: Localhost
+          localhostProfile: verySpecialFile
+    - name: redis
+      image: redis
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+

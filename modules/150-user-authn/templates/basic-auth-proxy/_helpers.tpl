@@ -11,6 +11,11 @@
           not empty string
         {{- end }}
       {{- end }}
+      {{- if eq $provider.type "LDAP" }}
+        {{- if $provider.ldap.enableBasicAuth }}
+          not empty string
+        {{- end }}
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

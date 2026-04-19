@@ -1,18 +1,18 @@
-x-config-version: 2
+x-config-version: 3
 type: object
 properties:
   globalVersion:
     type: string
     pattern: '^[0-9]+\.[0-9]+$'
     description: Specific version of Istio control-plane which handles unspecific versions of data plane (namespaces with `istio-injection=enabled` label, not `istio.io/rev=`).
-    examples: ["1.19"]
+    examples: ["1.21"]
     default: "1.21"
   additionalVersions:
     type: array
     description: |
       Additional versions of Istio control plane to install. You can use specific namespace labels (`istio.io/rev=`) to switch between installed revisions.
     examples:
-    - ["1.19"]
+    - ["1.21"]
     default: []
     items:
       type: string
@@ -33,15 +33,11 @@ properties:
       The class of the Ingress controller used for Kiali, metadata-exporter and proxy-api.
 
       Optional. By default, the `modules.ingressClass` global value is used.
-  enableHTTP10:
-    type: boolean
-    default: false
-    x-examples: [true]
-    description: |
-      Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
   federation:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Parameters for federating with other clusters.
     default: {}
     properties:
@@ -52,7 +48,9 @@ properties:
         x-examples: [true]
   multicluster:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Multicluster parameters.
     default: {}
     properties:
@@ -63,21 +61,51 @@ properties:
         x-examples: [true]
   alliance:
     type: object
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-pro
     description: Common options both for federation and multicluster.
     default: {}
     properties:
       ingressGateway:
         type: object
         description: ingressgateway settings.
-        x-doc-d8Revision: ee
+        x-doc-d8Editions:
+          - ee
+          - cse-pro
         default: {}
         properties:
+          advertise:
+            type: array
+            description: The actual addresses that will be announced to remote clusters for organizing intercluster application requests. If not specified, the addresses will be discovered automatically.
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
+            default: []
+            x-examples: [[{"address": "172.16.0.5", "port": 15443}],[{"address": "somehost.example.com", "port": 15443}]]
+            items:
+              type: object
+              required: ["address", "port"]
+              properties:
+                address:
+                  anyOf:
+                  - type: string
+                    example: "somehost.example.com"
+                    pattern: '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$'
+                  - type: string
+                    example: "172.16.0.5"
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                port:
+                  type: integer
+                  minimum: 1024
+                  maximum: 65535
           inlet:
             type: string
             enum: [LoadBalancer, NodePort]
             x-examples: [LoadBalancer]
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             description: |
               The method for exposing ingressgateway.
               - `LoadBalancer` — is a recommended method if you have a cloud-based cluster and it supports Load Balancing.
@@ -86,7 +114,9 @@ properties:
           nodePort:
             type: object
             description: Special settings for NodePort inlet.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             default: {}
             x-examples: [{}, {"port": 30001}]
             properties:
@@ -100,7 +130,9 @@ properties:
             additionalProperties:
               type: string
             description: Additional service annotations. They can be used, e.g., for configuring a local LB in the Yandex Cloud (using the `yandex.cpi.flant.com/listener-subnet-id` annotation).
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             example:
               yandex.cpi.flant.com/listener-subnet-id: xyz-123
           nodeSelector:
@@ -112,14 +144,18 @@ properties:
               ingressgateway DaemonSet nodeSelector.
 
               The same as the `spec.nodeSelector` pod parameter in Kubernetes.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
           tolerations:
             type: array
             description: |
               ingressgateway DaemonSet tolerations.
 
               The same as `spec.tolerations` for the Kubernetes pod.
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - ee
+              - cse-pro
             items:
               type: object
               properties:
@@ -333,7 +369,9 @@ properties:
                       Configuring memory limits.
   ca:
     type: object
-    description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+    description: |
+      Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+      To create a certificate, you can use the [example](/products/kubernetes-platform/documentation/v1/user/security/tls.html#certificate-generation-example), in which `basicConstraints = CA:FALSE` needs to be replaced with `basicConstraints = CA:TRUE`.
     default: {}
     properties:
       cert:
@@ -348,36 +386,6 @@ properties:
       root:
         type: string
         description: The root certificate in PEM format if `cert` is an intermediate certificate.
-  proxyConfig:
-    type: object
-    description: |
-      Mesh-wide defaults for [ProxyConfig configurations](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
-    default: {}
-    properties:
-      holdApplicationUntilProxyStarts:
-        type: boolean
-        x-examples: [true]
-        default: false
-        description: |
-          With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
-
-          This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
-      idleTimeout:
-        type: string
-        pattern: '^[0-9]+(s|m|h)$'
-        x-examples: [24h]
-        default: 1h
-        description: |
-          Timeout for connections without application activity established between the client's istio-sidecar and the service. When the timeout expires, the connection between the sidecar and the service is closed, but the connection between the application and the sidecar is not closed. If set to `0s`, the timeout is disabled.
-
-          This global flag can be overriden per Pod by an annotation:
-            ```yaml
-              proxy.istio.io/config: |-
-                proxyMetadata:
-                  ISTIO_META_IDLE_TIMEOUT: "12h"
-            ```
-          > **Warning!** Disabling this timeout (setting the value to `0s`) is very likely to result in leaky connections due to TCP FIN packet loss, etc.
-          > **Warning!** After changing this setting, a restart of the client pods is required.
   controlPlane:
     type: object
     description: istiod specific settings.
@@ -457,7 +465,7 @@ properties:
             type: string
             description: |
               Replicas management mode:
-              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter);
+              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter);
               - `Static` — the mode, where the number of replicas is specified explicitly (the [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas) parameter);
               - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-controlplane-replicasmanagement-hpa) parameter section.
             enum: ['Standard', 'Static', 'HPA']
@@ -517,7 +525,7 @@ properties:
         x-examples:
         - mode: VPA
           vpa:
-            mode: Auto
+            mode: "InPlaceOrRecreate"
             cpu:
               min: "50m"
               max: 2
@@ -534,6 +542,17 @@ properties:
             limits:
               cpu: "2"
               memory: "2Gi"
+        - mode: VPA
+          vpa:
+            mode: Auto
+            cpu:
+              min: "50m"
+              max: 2
+              limitRatio: 1.5
+            memory:
+              min: "256Mi"
+              max: "2Gi"
+              limitRatio: 1.5
         properties:
           mode:
             type: string
@@ -553,8 +572,19 @@ properties:
                 type: string
                 description: |
                   VPA operating mode.
-                enum: ['Initial', 'Auto']
-                default: 'Auto'
+
+                  - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                    Resource values are not changed automatically afterwards.
+
+                  - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                    If in-place updates are not possible, the pod will be recreated.
+
+                  - `Auto` — VPA automatically recreates pods to apply updated resource values.
+
+                    > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                    > It is recommended to use `InPlaceOrRecreate` instead.
+                enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
+                default: 'InPlaceOrRecreate'
               cpu:
                 type: object
                 default: {}
@@ -646,7 +676,7 @@ properties:
                 properties:
                   cpu:
                     type: string
-                    attern: "^[0-9]+m?$"
+                    pattern: "^[0-9]+m?$"
                     description: |
                       Configuring CPU limits.
                   memory:
@@ -660,6 +690,36 @@ properties:
     type: object
     default: {}
     properties:
+      accessLog:
+        type: object
+        default: {}
+        properties:
+          type:
+            type: string
+            enum: [Text, JSON]
+            default: Text
+          textFormat:
+            type: string
+            description: Sidecar's access log format template. Template operators are described in [envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+            default: '[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%'
+          jsonLabels:
+            type: object
+            additionalProperties:
+              type: string
+            description: Structured access log format using key-value pairs. Template operators are described in [envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+            default:
+              start_time: "%START_TIME%"
+              method: "%REQ(:METHOD)%"
+              path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+              protocol: "%PROTOCOL%"
+              response_code: "%RESPONSE_CODE%"
+              response_flags: "%RESPONSE_FLAGS%"
+              bytes_received: "%BYTES_RECEIVED%"
+              bytes_sent: "%BYTES_SENT%"
+              duration: "%DURATION%"
+              user_agent: "%REQ(USER-AGENT)%"
+              authority: "%REQ(:AUTHORITY)%"
+              upstream_host: "%UPSTREAM_HOST%"
       trafficRedirectionSetupMode:
         type: string
         description: |
@@ -669,6 +729,218 @@ properties:
         default: "InitContainer"
         enum: ["CNIPlugin", "InitContainer"]
         x-examples: ["CNIPlugin", "InitContainer"]
+      enableHTTP10:
+        type: boolean
+        default: false
+        x-examples: [ true ]
+        description: |
+          Whether to handle HTTP/1.0 requests in istio-sidecars or deny them with `426 Upgrade Required` response.
+      proxyConfig:
+        type: object
+        description: |
+          Mesh-wide defaults for [ProxyConfig configurations](https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#ProxyConfig).
+        default: { }
+        properties:
+          holdApplicationUntilProxyStarts:
+            type: boolean
+            x-examples: [ true ]
+            default: false
+            description: |
+              With this feature, the sidecar-injector injects the sidecar at the first place of Pod's container list and adds a postStart hook to be sure if the Envoy proxy is initialized before the application. So the Envoy is able to handle requests without application network errors.
+
+              This global flag can be overriden per Pod by an annotation — `proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'`.
+          idleTimeout:
+            type: string
+            pattern: '^[0-9]+(s|m|h)$'
+            x-examples: [ 24h ]
+            default: 1h
+            description: |
+              Timeout for connections without application activity established between the client's istio-sidecar and the service. When the timeout expires, the connection between the sidecar and the service is closed, but the connection between the application and the sidecar is not closed. If set to `0s`, the timeout is disabled.
+
+              This global flag can be overriden per Pod by an annotation:
+                ```yaml
+                  proxy.istio.io/config: |-
+                    proxyMetadata:
+                      ISTIO_META_IDLE_TIMEOUT: "12h"
+                ```
+              > **Warning!** Disabling this timeout (setting the value to `0s`) is very likely to result in leaky connections due to TCP FIN packet loss, etc.
+              > **Warning!** After changing this setting, a restart of the client pods is required.
+      ztunnel:
+        type: object
+        description: |
+          ztunnel specific settings.
+        default: {}
+        x-experimental: true
+        properties:
+          resourcesManagement:
+            description: |
+              Settings for CPU and memory requests and limits by istiod pods.
+            type: object
+            default: {}
+            x-examples:
+            - mode: VPA
+              vpa:
+                mode: InPlaceOrRecreate
+                cpu:
+                  min: "50m"
+                  max: 2
+                  limitRatio: 1.5
+                memory:
+                  min: "256Mi"
+                  max: "2Gi"
+                  limitRatio: 1.5
+            - mode: Static
+              static:
+                requests:
+                  cpu: "55m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+            - mode: VPA
+              vpa:
+                mode: Auto
+                cpu:
+                  min: "50m"
+                  max: 2
+                  limitRatio: 1.5
+                memory:
+                  min: "256Mi"
+                  max: "2Gi"
+                  limitRatio: 1.5
+            properties:
+              mode:
+                type: string
+                description: |
+                  Resource management mode:
+                  - `Static` — allows you to specify requests/limits. The parameters of this mode are defined in the [static](#parameters-dataplane-ztunnel-resourcesmanagement-static) parameter section;
+                  - `VPA` — uses [VPA](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md). You can configure this mode by modifying parameters in the [vpa](#parameters-dataplane-ztunnel-resourcesmanagement-vpa) parameter section.
+                enum: ['VPA', 'Static']
+                default: 'VPA'
+              vpa:
+                type: object
+                default: {}
+                description: |
+                  Resource management options for the `VPA` mode.
+                properties:
+                  mode:
+                    type: string
+                    description: |
+                      VPA operating mode.
+
+                      - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                        Resource values are not changed automatically afterwards.
+
+                      - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                        If in-place updates are not possible, the pod will be recreated.
+
+                      - `Auto` — VPA automatically recreates pods to apply updated resource values.
+
+                        > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                        > It is recommended to use `InPlaceOrRecreate` instead.
+                    enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
+                    default: 'InPlaceOrRecreate'
+                  cpu:
+                    type: object
+                    default: {}
+                    description: |
+                      CPU-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum value that the VPA can set for the CPU requests.
+                        default: 2
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      min:
+                        description: |
+                          The minimum value that the VPA can set for the CPU requests.
+                        default: '50m'
+                        oneOf:
+                        - type: string
+                          pattern: "^[0-9]+m?$"
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The CPU limits/requests ratio.
+
+                          This ratio is used for calculating the initial CPU limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the CPU limits while maintaining the specified limits/requests ratio.
+                  memory:
+                    type: object
+                    default: {}
+                    description: |
+                      Memory-related VPA settings.
+                    properties:
+                      max:
+                        description: |
+                          The maximum memory requests the VPA can set.
+                        default: '2Gi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      min:
+                        description: |
+                          The minimum memory requests the VPA can set.
+                        default: '256Mi'
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                      limitRatio:
+                        type: number
+                        examples: [1.5]
+                        description: |
+                          The memory limits/requests ratio.
+
+                          This ratio is used for calculating the initial memory limits for a pod.
+
+                          If this parameter is set, the VPA will recalculate the memory limits while maintaining the specified limits/requests ratio.
+              static:
+                type: object
+                description: |
+                  Resource management options for the `Static` mode.
+                properties:
+                  requests:
+                    type: object
+                    description: |
+                      Resource requests settings for pods.
+                    properties:
+                      cpu:
+                        type: string
+                        pattern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU requests.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory requests.
+                  limits:
+                    type: object
+                    description: |
+                      Configuring CPU and memory limits.
+                    properties:
+                      cpu:
+                        type: string
+                        pattern: "^[0-9]+m?$"
+                        description: |
+                          Configuring CPU limits.
+                      memory:
+                        oneOf:
+                        - type: string
+                          pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                        - type: number
+                        description: |
+                          Configuring memory limits.
   nodeSelector:
     type: object
     additionalProperties:
@@ -752,7 +1024,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   auth:
     type: object
     default: {}
@@ -767,9 +1039,9 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -782,6 +1054,14 @@ properties:
             type: string
             x-examples: ["https://example.com/dex/sign_in"]
             description: The URL to redirect the user for authentication (if the authentication service returned a non-200 HTTP response code).
+      allowedUserEmails:
+        type: array
+        items:
+          type: string
+        description: |
+          An array of emails of users that can access module's public web interfaces.
+
+          This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
       allowedUserGroups:
         type: array
         items:
@@ -791,7 +1071,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:

@@ -19,18 +19,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -39,13 +38,34 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+type bootstrapParams struct {
+	request      *pb.BootstrapStart
+	switchPhase  phases.DefaultOnPhaseFunc
+	sendProgress phases.OnProgressFunc
+	sendCh       chan *pb.BootstrapResponse
+}
+
+func (p *bootstrapParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *bootstrapParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.BootstrapResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.BootstrapResponse {
+			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
+}
+
 func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -58,11 +78,12 @@ func (s *Service) Bootstrap(server pb.DHCTL_BootstrapServer) error {
 	phaseSwitcher := &fsmPhaseSwitcher[*pb.BootstrapResponse, any]{
 		f: f, dataFunc: s.bootstrapSwitchPhaseData, sendCh: sendCh, next: make(chan error),
 	}
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
-		func(lines []string) *pb.BootstrapResponse {
-			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+	pt := progressTracker[*pb.BootstrapResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.BootstrapResponse {
+			return &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	)
+	}
 
 	startReceiver[*pb.BootstrapRequest, *pb.BootstrapResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.BootstrapRequest, *pb.BootstrapResponse](server, sendCh, internalErrCh)
@@ -92,7 +113,12 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.bootstrapSafe(ctx, message.Start, phaseSwitcher.switchPhase, logWriter)
+					result := s.bootstrapSafe(ctx, &bootstrapParams{
+						request:      message.Start,
+						switchPhase:  phaseSwitcher.switchPhase(ctx),
+						sendProgress: pt.sendProgress(),
+						sendCh:       sendCh,
+					})
 					sendCh <- &pb.BootstrapResponse{Message: &pb.BootstrapResponse_Result{Result: result}}
 				}()
 
@@ -109,10 +135,13 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
+
+			case *pb.BootstrapRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -123,70 +152,64 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) bootstrapSafe(
-	ctx context.Context,
-	request *pb.BootstrapStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) (result *pb.BootstrapResult) {
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) bootstrapSafe(ctx context.Context, p *bootstrapParams) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.BootstrapResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.BootstrapResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
-	return s.bootstrap(ctx, request, switchPhase, logWriter)
+	return s.bootstrap(ctx, p)
 }
 
-func (s *Service) bootstrap(
-	_ context.Context,
-	request *pb.BootstrapStart,
-	switchPhase phases.DefaultOnPhaseFunc,
-	logWriter io.Writer,
-) *pb.BootstrapResult {
+func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.BootstrapResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
-	})
+	loggerFor := initDhctlLogger(ctx, p)
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.SetCacheDir(s.params.CacheDir)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var (
+		configPaths             []string
 		configPath              string
-		resourcesPath           string
 		postBootstrapScriptPath string
 		cleanup                 func() error
 	)
-	err = log.Process("default", "Preparing configuration", func() error {
-		configPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.ClusterConfig, request.InitConfig, request.ProviderSpecificClusterConfig,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write init configuration: %w", err)
+	err = loggerFor.LogProcess("default", "Preparing configuration", func() error {
+		for _, cfg := range []string{
+			p.request.ClusterConfig,
+			p.request.InitConfig,
+			p.request.ProviderSpecificClusterConfig,
+			p.request.InitResources,
+			p.request.Resources,
+		} {
+			if len(cfg) == 0 {
+				continue
+			}
+
+			configPath, cleanup, err = util.WriteDefaultTempFile([]byte(cfg))
+			cleanuper.Add(cleanup)
+			if err != nil {
+				return fmt.Errorf("failed to write configuration: %w", err)
+			}
+
+			configPaths = append(configPaths, configPath)
 		}
 
-		resourcesPath, cleanup, err = util.WriteDefaultTempFile([]byte(input.CombineYAMLs(
-			request.InitResources, request.Resources,
-		)))
-		cleanuper.Add(cleanup)
-		if err != nil {
-			return fmt.Errorf("failed to write resources: %w", err)
-		}
-
-		postBootstrapScriptPath, cleanup, err = util.WriteDefaultTempFile([]byte(request.PostBootstrapScript))
+		postBootstrapScriptPath, cleanup, err = util.WriteDefaultTempFile([]byte(p.request.PostBootstrapScript))
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("failed to write post bootstrap script: %w", err)
@@ -207,9 +230,9 @@ func (s *Service) bootstrap(
 	}
 
 	var initialState phases.DhctlState
-	err = log.Process("default", "Preparing DHCTL state", func() error {
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -220,24 +243,32 @@ func (s *Service) bootstrap(
 		return &pb.BootstrapResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
+	var sshClient node.SSHClient
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
-			s.schemaStore,
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			p.request.ConnectionConfig,
+			s.params.SchemaStore,
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
 		}
+
+		if !govalue.IsNil(sshClient) && len(connectionConfig.SSHHosts) > 0 {
+			err = sshClient.Start()
+			if err != nil {
+				return fmt.Errorf("cannot start sshClient: %w", err)
+			}
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -245,8 +276,8 @@ func (s *Service) bootstrap(
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.BootstrapResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
@@ -257,26 +288,28 @@ func (s *Service) bootstrap(
 		InitialState:               initialState,
 		ResetInitialState:          true,
 		DisableBootstrapClearCache: true,
-		OnPhaseFunc:                switchPhase,
-		CommanderMode:              request.Options.CommanderMode,
+		OnPhaseFunc:                p.switchPhase,
+		OnProgressFunc:             p.sendProgress,
+		CommanderMode:              p.request.Options.CommanderMode,
 		CommanderUUID:              commanderUUID,
-		TerraformContext:           terraform.NewTerraformContext(),
-		ConfigPaths:                []string{configPath},
-		ResourcesPath:              resourcesPath,
-		ResourcesTimeout:           request.Options.ResourcesTimeout.AsDuration(),
-		DeckhouseTimeout:           request.Options.DeckhouseTimeout.AsDuration(),
+		ConfigPaths:                configPaths,
+		ResourcesTimeout:           p.request.Options.ResourcesTimeout.AsDuration(),
+		DeckhouseTimeout:           p.request.Options.DeckhouseTimeout.AsDuration(),
 		PostBootstrapScriptPath:    postBootstrapScriptPath,
 		UseTfCache:                 ptr.To(true),
 		AutoApprove:                ptr.To(true),
 		KubernetesInitParams:       nil,
+		TmpDir:                     s.params.TmpDir,
+		Logger:                     loggerFor,
+		IsDebug:                    s.params.IsDebug,
+		DirectoryConfig:            s.params.DownloadDirConfig,
 	})
 
-	bootstrapErr := bootstrapper.Bootstrap()
-	state := bootstrapper.GetLastState()
-	stateData, marshalErr := json.Marshal(state)
-	err = errors.Join(bootstrapErr, marshalErr)
+	bootstrapErr := bootstrapper.Bootstrap(ctx)
+	state, stateErr := extractLastState()
+	err = errors.Join(bootstrapErr, stateErr)
 
-	return &pb.BootstrapResult{State: string(stateData), Err: util.ErrToString(err)}
+	return &pb.BootstrapResult{State: string(state), Err: util.ErrToString(err)}
 }
 
 func (s *Service) bootstrapServerTransitions() []fsm.Transition {
@@ -299,20 +332,14 @@ func (s *Service) bootstrapServerTransitions() []fsm.Transition {
 	}
 }
 
-func (s *Service) bootstrapSwitchPhaseData(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	_ any,
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
-) (*pb.BootstrapResponse, error) {
+func (s *Service) bootstrapSwitchPhaseData(onPhaseData phases.OnPhaseFuncData[any]) (*pb.BootstrapResponse, error) {
 	return &pb.BootstrapResponse{
 		Message: &pb.BootstrapResponse_PhaseEnd{
 			PhaseEnd: &pb.BootstrapPhaseEnd{
-				CompletedPhase:      string(completedPhase),
-				CompletedPhaseState: completedPhaseState,
-				NextPhase:           string(nextPhase),
-				NextPhaseCritical:   nextPhaseCritical,
+				CompletedPhase:      string(onPhaseData.CompletedPhase),
+				CompletedPhaseState: onPhaseData.CompletedPhaseState,
+				NextPhase:           string(onPhaseData.NextPhase),
+				NextPhaseCritical:   onPhaseData.NextPhaseCritical,
 			},
 		},
 	}, nil

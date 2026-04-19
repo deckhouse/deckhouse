@@ -23,8 +23,6 @@ import (
 )
 
 func TestValidateClusterSettingsChanges(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		phase       phases.OperationPhase
 		oldConfig   string
@@ -210,7 +208,7 @@ masterNodeGroup:
 			schema:      testSchemaStore(t),
 			errContains: `ChangesValidationFailed: validation rule failed: can't delete zone if .masterNodeGroup.replicas < 3 (1)`,
 		},
-		"unsafe rule, failed: updateMasterImage 1": {
+		"unsafe rule, ok: updateMasterImage multi-master": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
 apiVersion: deckhouse.io/v1
@@ -228,10 +226,9 @@ masterNodeGroup:
   replicas: 3
   instanceClass:
     imageID: bar`,
-			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: validation rule failed: can't update .masterNodeGroup.imageID in multi-master cluster, functionality will be available in future versions`,
+			schema: testSchemaStore(t),
 		},
-		"unsafe rule, failed: updateMasterImage 2": {
+		"unsafe rule, ok: updateMasterImage single-master": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
 apiVersion: deckhouse.io/v1
@@ -249,8 +246,7 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     urn: bar`,
-			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: validation rule failed: can't update .masterNodeGroup.urn in single-master cluster, functionality will be available in future versions`,
+			schema: testSchemaStore(t),
 		},
 		"change number of docs": {
 			phase: phases.FinalizationPhase,
@@ -325,7 +321,6 @@ masterNodeGroup:
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			err := ValidateClusterSettingsChanges(tt.phase, tt.oldConfig, tt.newConfig, tt.schema, validateOpts...)
 			if tt.errContains == "" {
 				require.NoError(t, err)
@@ -337,7 +332,7 @@ masterNodeGroup:
 }
 
 func testSchemaStore(t *testing.T) *SchemaStore {
-	schemaStore := newSchemaStore([]string{"/tmp"})
+	schemaStore := newSchemaStore(nil, []string{"/tmp"})
 
 	clusterConfigSchema := []byte(`
 kind: ClusterConfiguration

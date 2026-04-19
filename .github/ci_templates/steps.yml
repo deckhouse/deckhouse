@@ -37,21 +37,43 @@
 - name: Check dev registry credentials
   id: check_dev_registry
   env:
-    HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
+    HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
   run: |
     if [[ -n $HOST ]]; then
       echo "has_credentials=true" >> $GITHUB_OUTPUT
-      echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
     fi
 - name: Login to dev registry
   uses: {!{ index (ds "actions") "docker/login-action" }!}
   if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
   with:
-    registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-    username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-    password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+    registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+    username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+    password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
     logout: false
 # </template: login_dev_registry_step>
+{!{- end -}!}
+
+{!{ define "login_dev_cse_registry_step" }!}
+# <template: login_dev_cse_registry_step>
+- name: Check dev cse registry credentials
+  id: check_dev_cse_registry
+  env:
+    HOST: ${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to dev cse registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_dev_cse_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ secrets.DECKHOUSE_DEV_CSE_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_CSE_DEV_REGISTRY_PASSWORD }}
+    logout: false
+# </template: login_dev_cse_registry_step>
 {!{- end -}!}
 
 {!{ define "login_readonly_registry_step" }!}
@@ -74,6 +96,58 @@
     password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
     logout: false
 # </template: login_readonly_registry_step>
+{!{- end -}!}
+
+{!{ define "login_stage_registry_step" }!}
+# <template: login_stage_registry_step>
+- name: Check stage registry credentials
+  id: check_stage_registry
+  env:
+    HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to stage registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+    password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+    logout: false
+# </template: login_stage_registry_step>
+{!{- end -}!}
+
+{!{ define "login_rw_cse_registry_step" }!}
+# <template: login_rw_registry_step>
+- name: Check rw cse registry credentials
+  id: check_rw_cse_registry
+  env:
+    HOST: ${{secrets.DECKHOUSE_CSE_REGISTRY_HOST}}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_CSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to rw cse registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_rw_cse_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ secrets.DECKHOUSE_CSE_REGISTRY_HOST }}
+    username: ${{ secrets.DECKHOUSE_CSE_REGISTRY_USER }}
+    password: ${{ secrets.DECKHOUSE_CSE_REGISTRY_PASSWORD }}
+    logout: false
+- name: Login to Github Container Registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+  with:
+    registry: ghcr.io
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
+    logout: false
+# </template: login_rw_registry_step>
 {!{- end -}!}
 
 {!{ define "login_rw_registry_step" }!}
@@ -100,8 +174,8 @@
   if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
   with:
     registry: ghcr.io
-    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
     logout: false
 # </template: login_rw_registry_step>
 {!{- end -}!}
@@ -132,8 +206,8 @@
   if: ${{ steps.check_flant_registry.outputs.has_flant_credentials != 'true' }}
   with:
     registry: ghcr.io
-    username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-    password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+    username: ${{ github.actor }}
+    password: ${{ secrets.GITHUB_TOKEN }}
     logout: false
 # </template: login_flant_registry_step>
 {!{- end -}!}
@@ -143,8 +217,19 @@
 - name: Install werf CLI
   uses: {!{ index (ds "actions") "werf/actions/install" }!}
   with:
-    channel: ${{env.WERF_CHANNEL}}
+    version: ${{env.WERF_VERSION}}
 # </template: werf_install_step>
+{!{- end -}!}
+
+{!{ define "d8cli_install_step" }!}
+# <template: d8cli_install_step>
+- name: Install d8 CLI
+  run: |
+    mkdir -p bin
+    INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+    mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+    echo "$(pwd)/bin" >> "$GITHUB_PATH"
+# </template: d8cli_install_step>
 {!{- end -}!}
 
 {!{ define "started_at_output" }!}
@@ -176,13 +261,14 @@
 # </template: unlink_bin_step>
 {!{- end -}!}
 
-{!{ define "login_git_step" }!}
-# <template: login_git_step>
+{!{ define "add_ssh_keys" }!}
+# <template: add_ssh_keys>
 - name: Start ssh-agent
   uses: {!{ index (ds "actions") "ssh-agent" }!}
   with:
     ssh-private-key: |
       ${{secrets.SOURCE_REPO_SSH_KEY}}
+      ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
 - name: Add ssh_known_hosts
   run: |
     HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
@@ -200,5 +286,129 @@
         echo "$KEY_LINE" >> ~/.ssh/known_hosts
       fi
     done <<< "$HOST_KEYS"
-# </template: login_git_step>
+- name: Add svace analyze server to ssh_known_hosts
+  continue-on-error: true
+  run: |
+    host=${{ secrets.SVACE_ANALYZE_HOST }}
+    host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+    echo "::add-mask::$host_ip"
+    mkdir -p ~/.ssh
+    touch ~/.ssh/known_hosts
+    HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+    while IFS= read -r KEY_LINE; do
+        CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+        if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+            ssh-keygen -R $host
+            ssh-keygen -R $host_ip
+        fi
+        echo "$KEY_LINE" >> ~/.ssh/known_hosts
+    done <<< "$HOST_KEYS"
+# </template: add_ssh_keys>
+{!{- end -}!}
+
+
+{!{ define "send_fail_report" }!}
+# <template: send_fail_report>
+- name: Send fail report
+  if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+  env:
+    LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+    JOB_NAME: ${{ github.job }}
+    WORKFLOW_NAME: ${{ github.workflow }}
+    WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+  run: |
+    bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+# </template: send_fail_report>
+{!{- end -}!}
+
+
+{!{ define "import_secrets" }!}
+# <template: import_secrets>
+- name: Split repository name
+  id: split
+  env:
+    REPO: ${{ github.repository }}
+  run: |
+    if [ $REPO == "deckhouse/deckhouse" ]; then
+      echo "name=deckhouse" >> $GITHUB_OUTPUT
+    else
+      echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+    fi
+- name: Import secrets
+  id: secrets
+  uses: hashicorp/vault-action@v2
+  with:
+    url: https://seguro.flant.com
+    path: github
+    role: "${{ steps.split.outputs.name }}"
+    method: jwt
+    jwtGithubAudience: github-access-aud
+    secrets: |
+      {!{ range . }!}
+      {!{- index . 0 }!} {!{ index . 1 }!} | {!{ index . 2 }!} ;
+      {!{ end }!}
+# </template: import_secrets>
+{!{- end -}!}
+
+
+{!{ define "check_tag_for_release_branch" }!}
+# </template: check-tag-for-release-branch>
+- name: Check tag for release branch
+  id: check-tag-for-release-branch
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  with:
+    result-encoding: string
+    script: |
+      const branch = context.ref.replace('refs/heads/', '');
+      const match = branch.match(/^release-(\d+\.\d+)/);
+      const version = match[1];
+
+      const { data: tags } = await github.rest.repos.listTags({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        per_page: 100
+      });
+
+      const prefix = `v${version}.`;
+      const versionTags = tags.filter(tag => tag.name.startsWith(prefix));
+      console.log(`Filtered tags: ${versionTags.map(t => t.name).join(', ')}`);
+
+      if (versionTags.length === 0) {
+        console.log('No tags found for this version, skipping');
+        return false;
+      }
+
+      const compareTags = (a, b) => {
+        const aVersion = a.name.split('.').map(Number);
+        const bVersion = b.name.split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+          if (aVersion[i] !== bVersion[i]) {
+            return bVersion[i] - aVersion[i];
+          }
+        }
+        return 0;
+      };
+
+      versionTags.sort(compareTags);
+      const latestTag = versionTags[0];
+      console.log(`Latest tag for ${version}: ${latestTag.name}`);
+
+      const patchVersion = latestTag.name.split('.')[2];
+      const patchNumber = parseInt(patchVersion);
+      console.log(`Patch version: ${patchNumber}`);
+      return patchNumber >= 1;
+# example use ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
+# </template: check-tag-for-release-branch>
+{!{- end -}!}
+
+
+{!{ define "docker_config_isolation" }!}
+# </template: docker-config-isolation>
+- name: Isolate docker config
+  id: docker-config-isolation
+  run: |
+    mkdir -p $RUNNER_TEMP/.docker
+    echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+# </template: docker_config_isolation>
 {!{- end -}!}

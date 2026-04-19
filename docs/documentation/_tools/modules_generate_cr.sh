@@ -32,9 +32,15 @@ for schema_path in $(find $MODULES_DIR -regex '^.*/crds/.*.yaml$' -print | grep 
   grep -q '<!-- SCHEMA -->' ${module_path}/docs/CR.md &> /dev/null
   if [ $? -eq 0 ]; then
     # Apply schema
-    echo "   ...${module_name}/${module_file_name}"
     sed -i "/<!-- SCHEMA -->/i\{\{ site.data.schemas.${module_name}.${schema_path_relative} \| format_crd: \"${module_name}\" \}\}" ${module_path}/docs/CR.md
   else
-    echo "WARN: Found ${module_file_name} for ${module_name} module, but there is no '<!-- SCHEMA -->' placeholder in the CR.md file."
+    echo "Skip (no placeholder): ${module_file_name}"
   fi
 done
+
+MODULES_DIR=${MODULES_DIR:-/src}
+OUTPUT_DIR="_data/schemas/crds"
+
+mkdir -p "$OUTPUT_DIR"
+
+find "$MODULES_DIR" -regex '^.*/crds/.*\.yaml$' -exec cp -f {} "$OUTPUT_DIR/" \;

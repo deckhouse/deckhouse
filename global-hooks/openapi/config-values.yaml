@@ -44,30 +44,43 @@ properties:
     default: {}
     type: object
     properties:
+      gatewayAPIGateway:
+        type: object
+        properties:
+          name:
+            type: string
+          namespace:
+            type: string
+        required:
+          - name
+          - namespace
+        description: |
+          Name of the Gateway object from the Gateway API used by modules of the Deckhouse ecosystem.
       ingressClass:
         type: string
         default: nginx
         description: |
-          The class of the Ingress controller ([Ingress class](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
+          The class name of the Ingress controller ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)) used for Deckhouse modules.
+
+          If the IngressClass name is set to `nginx`, the corresponding Ingress controller is automatically considered the default IngressClass for all modules. If any other Ingress controller name is used, it will not be used by default.
         x-examples: [ "nginx" ]
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
         type: string
         pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
-          The template with the `%s` key as the dynamic string parameter.
+          A DNS name template with the `%s` key used as a dynamic part of the string.
 
-          Deckhouse modules use this template for creating Ingress resources.
+          Deckhouse modules use this template when creating Ingress resources.
 
-          E.g., if the template is `%s.kube.company.my`, the prometheus module will create an Ingress resource for the `grafana.kube.company.my` hosts to  access Grafana.
-
-          **Do not use** DNS names (nor do create Ingress resources) that match this template to avoid conflicts with the Ingress resources created by Deckhouse.
+          For example, given the template `%s.kube.company.my`, the `prometheus` module will create an Ingress resource at the address `grafana.kube.company.my` to provide access to Grafana.
 
           **Pay attention to the following:**
-          - Domain must be different from [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain)!**
-          - Domain used in the template must not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter. For example, if `clusterDomain` is set to `cluster.local` (the default value), `publicDomainTemplate` cannot be set to `%s.cluster.local`.
-          - Domain used in the template should not match the domain specified in the [clusterDomain](https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration-clusterdomain) parameter and the internal service network zone. For example, if clusterDomain is set to cluster.local (default value) and the service network zone is ru-central1.internal, then publicDomainTemplate cannot be %s.cluster.local or %s.ru-central1.internal.
-          - If this parameter is omitted, no Ingress resources will be created.
+          - If this parameter is not specified, Ingress resources will not be created.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
+          - For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
+          - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.
+          For example, if the nodes are registered under the `company.my` zone and the template is `%s.company.my`.
         x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
         x-examples: [ "%s.kube.company.my" ]
       placement:
@@ -113,7 +126,7 @@ properties:
               The HTTPS usage mode:
               * `CertManager` — Deckhouse modules use HTTPS and get a certificate from the ClusterIssuer defined in the `certManager.clusterIssuerName` parameter;
               * `CustomCertificate` — Deckhouse modules use HTTPS using the certificate from the `d8-system` namespace;
-              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/));
+              * `Disabled` — Deckhouse modules use HTTP only (some modules may not work, e.g., [user-authn](https://deckhouse.io/modules/user-authn/));
               * `OnlyInURI` — Deckhouse modules use HTTP in the expectation that an HTTPS load balancer runs in front of them and terminates HTTPS. Load balancer should provide a redirect from HTTP to HTTPS.
             default: CertManager
             enum:
@@ -133,7 +146,7 @@ properties:
                 description: |
                   Name of a `ClusterIssuer` to use for Deckhouse modules.
 
-                  The [cert-manager](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
+                  The [cert-manager](https://deckhouse.io/modules/cert-manager/) module offers the following `ClusterIssuer`: `letsencrypt`, `letsencrypt-staging`, `selfsigned`, `clouddns`, `cloudflare`, `digitalocean`, `route53`. Also, you can use your own `ClusterIssuer`.
           customCertificate:
             type: object
             additionalProperties: false
@@ -147,7 +160,7 @@ properties:
                 default: "false"
       resourcesRequests:
         description: |
-          The amount of resources (CPU and memory) allocated to Deckhouse components running on each node of the cluster (usually these are DaemonSets, for example, `cni-flannel`, `monitoring-ping`).
+          The amount of resources (CPU and memory) allocated to some components.
 
           [More](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) about resource units in Kubernetes.
         type: object
@@ -159,7 +172,9 @@ properties:
             default: {}
             additionalProperties: false
             description: |
-              The amount of resources (CPU and memory) allocated to control-plane components on each master node. Do not work in clouds with not-managed control-plane (GKE for example).
+              Amount of resources (CPU and memory) allocated to control plane components on each master node.
+
+              These settings do not apply if the cluster control plane is managed by a cloud provider (for example, Google Kubernetes Engine or Azure Kubernetes Service).
             x-examples:
               - cpu: 1000m
                 memory: 500M

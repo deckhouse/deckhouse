@@ -47,7 +47,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(handleGrafanaDashboardCRDs))
 
-func handleGrafanaDashboardCRDs(input *go_hook.HookInput, dc dependency.Container) error {
+func handleGrafanaDashboardCRDs(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(outdatedGrafanaDashboardsDeprecationMetricGroup)
 
 	client, err := dc.GetK8sClient()

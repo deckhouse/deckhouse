@@ -17,13 +17,13 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,14 +81,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, ensureEncryptionSecretKey)
 
-func ensureEncryptionSecretKey(input *go_hook.HookInput) error {
-	keys, ok := input.Snapshots["secret_encryption_key"]
+func ensureEncryptionSecretKey(_ context.Context, input *go_hook.HookInput) error {
+	keys := input.Snapshots.Get("secret_encryption_key")
 
-	var secretKey []byte
-	if ok && len(keys) > 0 {
-		secretKey, ok = keys[0].([]byte)
-		if !ok {
-			return fmt.Errorf("cannot convert Kubernetes Secret to SecretEncryptionKey")
+	secretKey := make([]byte, 0)
+	if len(keys) > 0 {
+		err := keys[0].UnmarshalTo(&secretKey)
+
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'secret_encryption_key' snapshot: %w", err)
 		}
 	}
 
@@ -128,7 +129,7 @@ func ensureEncryptionSecretKey(input *go_hook.HookInput) error {
 			break
 		}
 
-		input.PatchCollector.Create(newCM, object_patch.UpdateIfExists())
+		input.PatchCollector.CreateOrUpdate(newCM)
 	}
 
 	input.Values.Set(secretEncryptionKeyValuePath, base64.StdEncoding.EncodeToString(secretKey))

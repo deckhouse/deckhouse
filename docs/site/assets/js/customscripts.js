@@ -1,0 +1,345 @@
+$('#mysidebar').height($(".nav").height());
+
+function safeGetLocalStorage(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeSetLocalStorage(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function safeParseJSON(value, fallback) {
+  try {
+    return JSON.parse(value || fallback);
+  } catch (e) {
+    return JSON.parse(fallback);
+  }
+}
+
+$(document).ready(function () {
+  $('#search-input').on("keyup", function (e) {
+    if (e.target.value.length > 0) $(".search__results").addClass("active");
+    else $(".search__results").removeClass("active");
+  });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  /**
+   * AnchorJS
+   */
+  if ((typeof anchors !== 'undefined') && (typeof anchors.add !== 'undefined') && (window.anchors_disabled != true)) {
+    anchors.add('h2,h3,h4,h5');
+    anchors.add('.anchored');
+  }
+});
+
+$(document).ready(function () {
+  //this script says, if the height of the viewport is greater than 800px, then insert affix class, which makes the nav bar float in a fixed
+  // position as your scroll. if you have a lot of nav items, this height may not work for you.
+  var h = $(window).height();
+  if (h > 800) {
+    // $( "#mysidebar" ).attr("class", "nav affix");
+    // $( "#mysidebar" ).attr("class", "nav");
+  }
+  // activate tooltips. although this is a bootstrap js function, it must be activated this way in your theme.
+  if ($.fn && typeof $.fn.tooltip === 'function') {
+    $('[data-toggle="tooltip"]').tooltip({
+      placement: 'top'
+    });
+  }
+
+});
+
+// needed for nav tabs on pages. See Formatting > Nav tabs for more details.
+// script from http://stackoverflow.com/questions/10523433/how-do-i-keep-the-current-tab-active-with-twitter-bootstrap-after-a-page-reload
+$(function () {
+  var json, tabsState;
+  $('a[data-toggle="pill"], a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+    var href, json, parentId, tabsState;
+
+    tabsState = safeGetLocalStorage("tabs-state");
+    json = safeParseJSON(tabsState, "{}");
+    parentId = $(e.target).parents("ul.nav.nav-pills, ul.nav.nav-tabs").attr("id");
+    href = $(e.target).attr('href');
+    json[parentId] = href;
+
+    safeSetLocalStorage("tabs-state", JSON.stringify(json));
+    return;
+  });
+
+  tabsState = safeGetLocalStorage("tabs-state");
+  json = safeParseJSON(tabsState, "{}");
+
+  $.each(json, function (containerId, href) {
+    const container = document.getElementById(containerId);
+
+    if (!container) {
+      return;
+    }
+
+    const tab = $(container).find('a').filter(function () {
+      return $(this).attr('href') === href;
+    }).first();
+
+    if (tab.length) {
+      tab.tab('show');
+    }
+  });
+
+  $("ul.nav.nav-pills, ul.nav.nav-tabs").each(function () {
+    var $this = $(this);
+    if (!json[$this.attr("id")]) {
+      return $this.find("a[data-toggle=tab]:first, a[data-toggle=pill]:first").tab("show");
+    }
+  });
+});
+
+$(document).ready(function () {
+  var $notice = $('#notice');
+  var $notice_collapse = $('#notice-collapse');
+  var $notice_expand = $('#notice-expand');
+  var notice_state = safeGetLocalStorage('notice-state') || 'expanded';
+
+  function switchNotice(state) {
+    $notice.attr('data-state', state);
+    safeSetLocalStorage('notice-state', state);
+  }
+
+  switchNotice(notice_state);
+
+  $notice_collapse.on('click', (e) => {
+    e.preventDefault();
+    switchNotice('collapsed');
+  })
+  $notice_expand.on('click', (e) => {
+    e.preventDefault();
+    switchNotice('expanded')
+  })
+});
+
+/* features tabs */
+
+$(document).ready(function () {
+  $('[data-features-tabs-trigger]').on('click', function () {
+    var name = $(this).attr('data-features-tabs-trigger');
+    var $parent = $(this).closest('[data-features-tabs]');
+    var $triggers = $parent.find('[data-features-tabs-trigger]');
+    var $contents = $parent.find('[data-features-tabs-content]');
+    var $content = $contents.filter(function () {
+      return $(this).attr('data-features-tabs-content') === name;
+    });
+
+    $triggers.removeClass('active');
+    $contents.removeClass('active');
+
+    $(this).addClass('active');
+    $content.addClass('active');
+  })
+});
+
+// Clipbord copy functionality
+var action_toast_timeout;
+
+function showActionToast(text) {
+  clearTimeout(action_toast_timeout);
+  var action_toast = $('.action-toast');
+  action_toast.text(text).fadeIn()
+  action_toast_timeout = setTimeout(function () {
+    action_toast.fadeOut()
+  }, 5000);
+}
+
+$(document).ready(function () {
+  if (typeof ClipboardJS === 'undefined') {
+    return;
+  }
+
+  new ClipboardJS('[data-snippetcut-btn-name-ru]', {
+    text: function (trigger) {
+      showActionToast('Скопировано в буфер обмена')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-name]').text();
+    }
+  });
+  new ClipboardJS('[data-snippetcut-btn-name-en]', {
+    text: function (trigger) {
+      showActionToast('Has been copied to clipboard')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-name]').text();
+    }
+  });
+  new ClipboardJS('[data-snippetcut-btn-text-en]', {
+    text: function (trigger) {
+      showActionToast('Has been copied to clipboard')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-text]').text();
+    }
+  });
+  new ClipboardJS('[data-snippetcut-btn-text-ru]', {
+    text: function (trigger) {
+      showActionToast('Скопировано в буфер обмена')
+      return $(trigger).closest('[data-snippetcut]').find('[data-snippetcut-text]').text();
+    }
+  });
+
+});
+
+// GDPR
+
+$(document).ready(function () {
+  const $gdpr = $('.gdpr');
+  const $gdpr_button = $('.gdpr__button');
+  const hasCookiePlugin = typeof $.cookie === 'function';
+  const gdpr_status = hasCookiePlugin ? $.cookie('gdpr-status') : null;
+  const cmplz_banner_status = hasCookiePlugin ? $.cookie('cmplz_banner-status') : null;
+
+  if ((!gdpr_status || gdpr_status !== 'accepted') && cmplz_banner_status !== 'dismissed') {
+    $gdpr.css('display', 'flex');
+  }
+
+  $gdpr_button.on('click', function () {
+    $gdpr.hide();
+    if (hasCookiePlugin) {
+      $.cookie('gdpr-status', 'accepted', {path: '/', expires: 3650});
+    }
+  })
+});
+
+$(document).ready(function () {
+  const tables = $('table');
+
+  if (tables.length === 0) {
+    return;
+  };
+
+  tables.each((_, table) => {
+    if ($(table).hasClass('table__small')) {
+      $(table).addClass('fixed-header-table');
+      $(table).wrap("<div class='table-wrapper table-wrapper__small table-wrapper__versions'><div></div></div>");
+    } else if ($(table).hasClass('supported_versions')) {
+      $(table).addClass('fixed-header-table');
+      $(table).wrap("<div class='table-wrapper table-wrapper__versions'><div></div></div>");
+    } else {
+      $(table).addClass('table-wrapper__shadow fixed-header-table');
+      $(table).wrap("<div class='table-wrapper table-wrapper__versions'><div></div></div>");
+    }
+  });
+});
+
+$(document).ready(function () {
+  // Use delegated handlers so toggle works for dynamically rendered docs content.
+  $(document)
+    .off('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link')
+    .on('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link', function (e) {
+      e.stopPropagation();
+    });
+    
+  const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+  const container = hash ? document.getElementById(hash) : null;
+  const toggleableClosedItem = container ? container.closest('li.top-level-toggleable.closed') : null;
+
+  if (toggleableClosedItem) {
+    toggleableClosedItem.classList.remove('closed');
+  }
+
+  $(document)
+    .off('click.resourcesToggle', '.resources__prop_name')
+    .on('click.resourcesToggle', '.resources__prop_name', function () {
+      const parentElem = $(this).closest('li');
+      const firstList = parentElem.parent('ul');
+
+      if (firstList.hasClass('resources') && !parentElem.hasClass('top-level-toggleable')) return;
+
+      parentElem.toggleClass('closed');
+    });
+});
+
+const openDiagram = function () {
+  const button = $('[data-open-scheme]');
+  const wrap = $('.functionality-block__diagram-wrap')
+  const wrapHeight = wrap.height()
+  const imageHeight = $('.functionality-block__diagram-wrap img').height();
+
+  $(button).click(() => {
+    if (wrap.hasClass('open')) {
+      wrap.removeClass('open');
+      wrap.height(wrapHeight);
+      button.attr('data-open-scheme') === 'ru' ? button.text('Подробнее') : button.text('Show');
+    } else {
+      wrap.addClass('open');
+      wrap.height(imageHeight);
+      button.attr('data-open-scheme') === 'ru' ? button.text('Скрыть') : button.text('Hide');
+    }
+  })
+}
+
+function changeHandler(e) {
+  e.style.color = "#02003E";
+  if (e.value === "telegram") {
+    $('.nickname.hidden').removeClass('hidden');
+    $('.nickname input').attr('required', 'required');
+  } else {
+    $('.nickname').addClass('hidden');
+    $('.nickname.hidden input').removeAttr('required');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  let top;
+  let header = document.querySelector('header');
+  let lastScrollTop = 0;
+  let topOffsetToTransform = 25;
+
+  if (!header) {
+    return;
+  }
+
+  const calcScroll = () => {
+    top = window.scrollY
+    lastScrollTop = top
+  }
+
+  window.addEventListener('scroll', calcScroll)
+  window.addEventListener('scroll', () => changeOffset(top))
+
+  if (!header.classList.contains('header_float')) {
+    window.addEventListener('scroll', () => changeShadow(top))
+  }
+
+  const changeShadow = (top) => {
+    if (!header.classList.contains('header_float') && top >=
+      topOffsetToTransform) {
+      header.classList.add('header_float')
+    } else if (header.classList.contains('header_float') && top <
+      topOffsetToTransform) {
+      header.classList.remove('header_float')
+    }
+  }
+
+  const changeOffset = (top) => {
+    const notificationBar = header.querySelector('.notification-bar')
+
+    if (notificationBar === null) {
+      return
+    }
+
+    if (lastScrollTop < top && !header.classList.contains('header_small') && top >
+      topOffsetToTransform) {
+      header.classList.add('header_small')
+      header.style.transform = `translateY(-${notificationBar.offsetHeight}px)`
+    } else if (lastScrollTop > top && header.classList.contains('header_small')) {
+      header.classList.remove('header_small')
+      header.removeAttribute('style')
+    }
+  }
+})
+
+window.addEventListener("load", function () {
+  openDiagram()
+});

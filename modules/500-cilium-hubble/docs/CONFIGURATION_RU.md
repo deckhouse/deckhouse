@@ -6,25 +6,35 @@ title: "Модуль cilium-hubble: настройки"
 
 {% include module-bundle.liquid %}
 
-Модуль останется отключенным вне зависимости от параметра `ciliumHubbleEnabled:`, если не включен модуль `cni-cilium`.
+Если модуль `cni-cilium` выключен, параметр `ciliumHubbleEnabled:` не повлияет на включение модуля `cilium-hubble`.
+
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}
+
+{% include module-conversion.liquid %}
 
 {% include module-settings.liquid %}
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
-Если эти варианты отключены, модуль включит basic auth со сгенерированным паролем.
+По умолчанию используется модуль [user-authn](/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication`.
+Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
-Посмотреть сгенерированный пароль можно командой:
-
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
-```
-
-Чтобы сгенерировать новый пароль, нужно удалить Secret:
+Чтобы просмотреть сгенерированный пароль, выполните команду:
 
 ```shell
-kubectl -n d8-cni-cilium delete secret/hubble-basic-auth
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values cilium-hubble -o json | jq '.ciliumHubble.internal.auth.password'
 ```
 
-> **Внимание!** Параметр `auth.password` больше не поддерживается.
+Чтобы сгенерировать новый пароль, удалите Secret:
+
+```shell
+d8 k -n d8-cni-cilium delete secret/hubble-basic-auth
+```
+
+{% alert level="info" %}
+Параметр `auth.password` больше не поддерживается.
+{% endalert %}

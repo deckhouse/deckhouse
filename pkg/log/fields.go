@@ -16,7 +16,9 @@ package log
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"unsafe"
 
 	"gopkg.in/yaml.v3"
 )
@@ -28,14 +30,35 @@ const (
 	yamlFormatter = "yaml"
 )
 
-func Err(err error) slog.Attr {
+func Type(key string, t any) slog.Attr {
 	return slog.Attr{
-		Key:   "error",
-		Value: slog.StringValue(err.Error()),
+		Key:   key,
+		Value: slog.StringValue(fmt.Sprintf("%T", t)),
 	}
 }
 
-var _ slog.LogValuer = (*Raw)(nil)
+// optimized check for nil pointer
+func isNilPtr(v any) bool {
+	return (*[2]uintptr)(unsafe.Pointer(&v))[1] == 0
+}
+
+// using for any error interface to avoid panic on nil pointer
+func unsafeCheck(err error) string {
+	if isNilPtr(err) {
+		return "nil"
+	} else {
+		return err.Error()
+	}
+}
+
+func Err(err error) slog.Attr {
+	return slog.Attr{
+		Key:   "error",
+		Value: slog.StringValue(unsafeCheck(err)),
+	}
+}
+
+var _ slog.LogValuer = (*raw)(nil)
 
 func RawJSON(key, text string) slog.Attr {
 	return slog.Attr{
@@ -52,26 +75,26 @@ func RawYAML(key, text string) slog.Attr {
 }
 
 // made them public to use without slog.Attr
-func NewJSONRaw(text string) *Raw {
-	return &Raw{
+func NewJSONRaw(text string) *raw {
+	return &raw{
 		formatter: jsonFormatter,
 		text:      text,
 	}
 }
 
-func NewYAMLRaw(text string) *Raw {
-	return &Raw{
+func NewYAMLRaw(text string) *raw {
+	return &raw{
 		formatter: yamlFormatter,
 		text:      text,
 	}
 }
 
-type Raw struct {
+type raw struct {
 	formatter formatter
 	text      string
 }
 
-func (r *Raw) LogValue() slog.Value {
+func (r *raw) LogValue() slog.Value {
 	raw := make(map[string]any, 1)
 
 	switch r.formatter {

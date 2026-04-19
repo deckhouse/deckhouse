@@ -84,6 +84,8 @@ properties:
         type: object
         default: {}
         properties:
+          disabled:
+            type: boolean
           subnetID:
             type: string
           floatingNetworkID:
@@ -142,7 +144,7 @@ properties:
           additionalSecurityGroups:
             type: array
             description: |
-              Security groups that will be applied to VM's network ports in addition to security groups set in a cloud provider configuration.
+              Security groups that will be applied to VM's network ports. Default group should also be added to this list.
 
               They allow you to set firewall rules for provisioned instances.
 
@@ -207,3 +209,7 @@ properties:
             minItems: 1
             description: Availability zones.
             uniqueItems: true
+      hybridMode:
+        type: boolean
+        description: |
+          Tells whether the OpenStack cloud provider is used in hybrid mode.

@@ -19,9 +19,10 @@ package client
 import (
 	"time"
 
-	"caps-controller-manager/internal/event"
-
 	"k8s.io/client-go/util/workqueue"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	"caps-controller-manager/internal/event"
 )
 
 // Client is a client that executes commands on hosts using the OpenSSH client.
@@ -30,8 +31,9 @@ type Client struct {
 	checkTaskManager     *taskManager
 	bootstrapTaskManager *taskManager
 	cleanupTaskManager   *taskManager
+	adoptTaskManager     *taskManager
 	tcpCheckTaskManager  *taskManager
-	tcpCheckRateLimiter  workqueue.RateLimiter
+	tcpCheckRateLimiter  workqueue.TypedRateLimiter[string]
 
 	recorder *event.Recorder
 }
@@ -39,11 +41,12 @@ type Client struct {
 // NewClient creates a new Client.
 func NewClient(recorder *event.Recorder) *Client {
 	return &Client{
-		checkTaskManager:     newTaskManager(),
-		bootstrapTaskManager: newTaskManager(),
-		cleanupTaskManager:   newTaskManager(),
-		tcpCheckTaskManager:  newTaskManager(),
-		tcpCheckRateLimiter:  workqueue.NewItemExponentialFailureRateLimiter(250*time.Millisecond, time.Minute),
+		checkTaskManager:     newTaskManager(ctrl.Log.WithName("checkTaskManager")),
+		bootstrapTaskManager: newTaskManager(ctrl.Log.WithName("bootstrapTaskManager")),
+		cleanupTaskManager:   newTaskManager(ctrl.Log.WithName("cleanupTaskManager")),
+		adoptTaskManager:     newTaskManager(ctrl.Log.WithName("adoptTaskManager")),
+		tcpCheckTaskManager:  newTaskManager(ctrl.Log.WithName("tcpCheckTaskManager")),
+		tcpCheckRateLimiter:  workqueue.NewTypedItemExponentialFailureRateLimiter[string](250*time.Millisecond, time.Minute),
 		recorder:             recorder,
 	}
 }

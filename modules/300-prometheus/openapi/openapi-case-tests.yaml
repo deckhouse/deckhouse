@@ -50,7 +50,7 @@ positive:
             orgId: 1
             type: loki
             url: http://loki.loki:3100
-            uuid: loki
+            uid: loki
             version: 1
           - access: proxy
             basicAuth: false
@@ -63,7 +63,7 @@ positive:
             orgId: 1
             type: prometheus
             url: http://my.domain.com:9091
-            uuid: promscale-production
+            uid: promscale-production
             version: 1
           - access: proxy
             basicAuth: true
@@ -78,7 +78,7 @@ positive:
               basicAuthPassword: secret
             type: prometheus
             url: http://my.domain.com/prometheus/
-            uuid: external-prometheus
+            uid: external-prometheus
             version: 1
 
 negative:

@@ -16,36 +16,68 @@ package docs
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/fsync"
-	"k8s.io/klog/v2"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/pkg/hugo"
 )
 
 func (svc *Service) Build() error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		dur := time.Since(start).Seconds()
+		svc.metrics.CounterAdd(metrics.DocsBuilderBuildTotal, 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve(metrics.DocsBuilderBuildDurationSeconds, dur, map[string]string{"status": status}, nil)
+	}()
+
 	err := svc.buildHugo()
 	if err != nil {
 		svc.isReady.Store(false)
+		status = "fail"
 
 		return fmt.Errorf("hugo build: %w", err)
 	}
 
 	for _, lang := range []string{"ru", "en"} {
+		// Sync modules folder
 		glob := filepath.Join(svc.destDir, "public", lang, "modules/*")
 		err = removeGlob(glob)
 		if err != nil {
 			return fmt.Errorf("clear %s: %w", svc.destDir, err)
 		}
 
+		syncer := fsync.NewSyncer()
+		syncer.NoChmod = true
+		syncer.NoTimes = true
+
 		oldLocation := filepath.Join(svc.baseDir, "public", lang, "modules")
 		newLocation := filepath.Join(svc.destDir, "public", lang, "modules")
-		err = fsync.Sync(newLocation, oldLocation)
+		err = syncer.Sync(newLocation, oldLocation)
 		if err != nil {
 			return fmt.Errorf("move %s to %s: %w", oldLocation, newLocation, err)
+		}
+
+		// Sync search index folder
+		searchGlob := filepath.Join(svc.destDir, "public", lang, "search/*")
+		err = removeGlob(searchGlob)
+		if err != nil {
+			return fmt.Errorf("clear %s: %w", svc.destDir, err)
+		}
+
+		searchOldLocation := filepath.Join(svc.baseDir, "public", lang, "search")
+		searchNewLocation := filepath.Join(svc.destDir, "public", lang, "search")
+		err = syncer.Sync(searchNewLocation, searchOldLocation)
+		if err != nil {
+			return fmt.Errorf("move %s to %s: %w", searchOldLocation, searchNewLocation, err)
 		}
 	}
 
@@ -55,58 +87,67 @@ func (svc *Service) Build() error {
 }
 
 func (svc *Service) buildHugo() error {
-	flags := hugo.Flags{
+	flags := &hugo.Flags{
 		LogLevel: "debug",
 		Source:   svc.baseDir,
 		CfgDir:   filepath.Join(svc.baseDir, "config"),
 	}
 
+	svc.metrics.Grouped().ExpireGroupMetricByName(metrics.DocsBuilderModuleRenderErrorGroup, metrics.DocsBuilderModuleRenderError)
+
 	for {
-		err := hugo.Build(flags)
-		if err == nil {
+		buildErr := hugo.Build(flags, svc.logger)
+		if buildErr == nil {
 			return nil
 		}
 
-		if path, ok := getAssembleErrorPath(err.Error()); ok {
-			modulePath := filepath.Dir(path)
-			err = os.RemoveAll(modulePath)
-			if err != nil {
-				return fmt.Errorf("remove module: %w", err)
+		if moduleName, ok := getModuleNameFromErrorPath(buildErr.Error()); ok {
+			paths := []string{
+				filepath.Join(svc.baseDir, contentDir, moduleName),
+				filepath.Join(svc.baseDir, modulesDir, moduleName),
 			}
 
-			moduleName, channel := parseModulePath(modulePath)
-			err = svc.removeModuleFromChannelMapping(moduleName, channel)
+			for _, path := range paths {
+				err := os.RemoveAll(path)
+				if err != nil {
+					return fmt.Errorf("remove module: %w", err)
+				}
+			}
+
+			err := svc.removeModuleFromChannelMapping(moduleName)
 			if err != nil {
 				return fmt.Errorf("remove module from channel mapping: %w", err)
 			}
 
-			klog.Warningf("removed broken module %q", modulePath)
+			svc.logger.Warn("removed broken module", slog.String("name", moduleName), log.Err(buildErr))
+			svc.metrics.Grouped().GaugeSet(metrics.DocsBuilderModuleRenderErrorGroup, metrics.DocsBuilderModuleRenderError, 1, map[string]string{"module": moduleName})
 			continue
 		}
 
-		return err
+		return buildErr
 	}
 }
 
-func (svc *Service) removeModuleFromChannelMapping(moduleName, channel string) error {
+func (svc *Service) removeModuleFromChannelMapping(moduleName string) error {
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
-		delete(m[moduleName]["channels"], channel)
+		delete(m, moduleName)
 	})
 }
 
-func getAssembleErrorPath(errorMessage string) (string, bool) {
+func getModuleNameFromErrorPath(errorMessage string) (string, bool) {
 	match := assembleErrorRegexp.FindStringSubmatch(errorMessage)
 	if len(match) == 6 {
+		// return only module name
 		return match[2], true
 	}
 
 	return "", false
 }
 
-func parseModulePath(modulePath string) (moduleName, channel string) {
+func (svc *Service) parseModulePath(modulePath string) ( /*moduleName*/ string /*channel*/, string) {
 	s := strings.Split(modulePath, "/")
 	if len(s) < 2 {
-		klog.Error("failed to parse", modulePath)
+		svc.logger.Error("failed to parse", slog.String("path", modulePath))
 		return "", ""
 	}
 

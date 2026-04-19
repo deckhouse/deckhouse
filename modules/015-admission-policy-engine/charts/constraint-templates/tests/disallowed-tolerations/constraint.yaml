@@ -1,0 +1,22 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DisallowedTolerations
+metadata:
+  name: test
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  parameters:
+    tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: Exists
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: Exists
+      - key: "dedicated"
+        operator: Equal
+        value: "gpu"
+      - operator: Exists
+        effect: NoExecute
+

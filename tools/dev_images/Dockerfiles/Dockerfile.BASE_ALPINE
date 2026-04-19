@@ -1,5 +1,0 @@
-ARG DISTRO
-FROM $DISTRO
-RUN apk update &&\
-    apk add --no-cache alpine-sdk asciidoctor autoconf automake binutils bison build-base ca-certificates clang cmake coreutils curl file-dev gcc git glib-dev ipset-dev iptables-dev libcap-dev libcap-static libmnl-dev libmnl-static libnftnl-dev libnl3-dev libssh2-dev libssh2-static libtool linux-headers make musl-dev net-snmp-dev nghttp2-dev nghttp2-static openssl-dev openssl-libs-static patch pcre2 pcre2-dev rsync tini-static tzdata zlib-static &&\
-    update-ca-certificates

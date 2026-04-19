@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/x509"
@@ -50,15 +51,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateKeypair)
 
-func generateKeypair(input *go_hook.HookInput) error {
-	var keypair lib.Keypair
+func generateKeypair(_ context.Context, input *go_hook.HookInput) error {
+	var keypair = new(lib.Keypair)
 
-	secrets := input.Snapshots["secret"]
-	if len(secrets) == 1 {
-		var ok bool
-		keypair, ok = secrets[0].(lib.Keypair)
-		if !ok {
-			return fmt.Errorf("cannot convert keypair in secret to struct")
+	snaps := input.Snapshots.Get("secret")
+	if len(snaps) == 1 {
+		err := snaps[0].UnmarshalTo(keypair)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal keypair: %v", err)
 		}
 	} else {
 		pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -86,7 +86,7 @@ func generateKeypair(input *go_hook.HookInput) error {
 		}
 		pubPEM := pem.EncodeToMemory(pubBlock)
 
-		keypair = lib.Keypair{
+		keypair = &lib.Keypair{
 			Pub:  string(pubPEM),
 			Priv: string(privPEM),
 		}

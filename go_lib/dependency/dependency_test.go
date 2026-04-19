@@ -35,7 +35,7 @@ import (
 )
 
 // nolint: govet
-func ExampleMockedHTTPClient() {
+func Test_ExampleMockedHTTPClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 
@@ -44,14 +44,14 @@ func ExampleMockedHTTPClient() {
 		Status:     "Im teapot",
 	}, nil)
 
-	_ = dependency.WithExternalDependencies(someHandlerWithHTTP)(nil)
+	_ = dependency.WithExternalDependencies(someHandlerWithHTTP)(nil, nil)
 	// Output: 418
 
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
 
 // nolint: govet
-func ExampleK8sClient() {
+func Test_ExampleK8sClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dependency.TestDC.SetK8sVersion(k8s.V117)
@@ -60,45 +60,45 @@ func ExampleK8sClient() {
 		v1.CreateOptions{},
 	)
 
-	_ = dependency.WithExternalDependencies(handlerWithK8S)(nil)
+	_ = dependency.WithExternalDependencies(handlerWithK8S)(nil, nil)
 	// Output: default
 
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
 
 // nolint: govet
-func ExampleVersionedK8sClient() {
+func Test_ExampleVersionedK8sClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 
 	dependency.TestDC.SetK8sVersion(k8s.V116)
-	_ = dependency.WithExternalDependencies(handlerWithVersionedK8S)(nil)
+	_ = dependency.WithExternalDependencies(handlerWithVersionedK8S)(nil, nil)
 
 	dependency.TestDC.SetK8sVersion(k8s.V120)
-	_ = dependency.WithExternalDependencies(handlerWithVersionedK8S)(nil)
+	_ = dependency.WithExternalDependencies(handlerWithVersionedK8S)(nil, nil)
 
 	// Output:
-	// 19
-	// 22
+	// 32
+	// 38
 
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
 
 // nolint: govet
-func ExampleEtcdClient() {
+func Test_ExampleEtcdClient(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dependency.TestDC.EtcdClient.GetMock.
 		Expect(context.TODO(), "foo").
 		Return(&clientv3.GetResponse{Kvs: []*mvccpb.KeyValue{{Key: []byte("foo"), Value: []byte("bar")}}}, nil)
 
-	_ = dependency.WithExternalDependencies(handlerWithEtcd)(nil)
+	_ = dependency.WithExternalDependencies(handlerWithEtcd)(nil, nil)
 	// Output: bar
 
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
 
-func TestRace(_ *testing.T) {
+func Test_Race(_ *testing.T) {
 	prev := os.Getenv("D8_IS_TESTS_ENVIRONMENT")
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", "true")
 	dc := dependency.NewDependencyContainer()
@@ -115,7 +115,7 @@ func TestRace(_ *testing.T) {
 	os.Setenv("D8_IS_TESTS_ENVIRONMENT", prev)
 }
 
-func someHandlerWithHTTP(_ *go_hook.HookInput, dc dependency.Container) error {
+func someHandlerWithHTTP(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
 	ht := dc.GetHTTPClient()
 
 	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
@@ -125,7 +125,7 @@ func someHandlerWithHTTP(_ *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-func handlerWithK8S(_ *go_hook.HookInput, dc dependency.Container) error {
+func handlerWithK8S(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
 	k8 := dc.MustGetK8sClient()
 	ns, _ := k8.CoreV1().Namespaces().Get(context.TODO(), "default", v1.GetOptions{})
 	fmt.Println(ns.Name)
@@ -133,7 +133,7 @@ func handlerWithK8S(_ *go_hook.HookInput, dc dependency.Container) error {
 	return nil
 }
 
-func handlerWithVersionedK8S(_ *go_hook.HookInput, dc dependency.Container) error {
+func handlerWithVersionedK8S(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
 	k8 := dc.MustGetK8sClient()
 	_, res, _ := k8.Discovery().ServerGroupsAndResources()
 	fmt.Println(len(res))
@@ -141,7 +141,7 @@ func handlerWithVersionedK8S(_ *go_hook.HookInput, dc dependency.Container) erro
 	return nil
 }
 
-func handlerWithEtcd(_ *go_hook.HookInput, dc dependency.Container) error {
+func handlerWithEtcd(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
 	cl := dc.MustGetEtcdClient([]string{"http://192.168.1.104:2379"})
 	v, _ := cl.Get(context.TODO(), "foo")
 	fmt.Println(string(v.Kvs[0].Value))

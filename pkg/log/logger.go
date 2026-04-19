@@ -29,13 +29,29 @@ import (
 	"time"
 
 	"github.com/DataDog/gostackparse"
+
 	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
 const KeyComponent = "component"
 
 type logger = slog.Logger
-type handlerOptions = *slog.HandlerOptions
+
+type Handler interface {
+	Enabled(context.Context, slog.Level) bool
+	Handle(ctx context.Context, r slog.Record) error
+	Named(name string) slog.Handler
+	SetOutput(w io.Writer)
+	WithAttrs(attrs []slog.Attr) slog.Handler
+	WithGroup(name string) slog.Handler
+}
+
+type HandlerType int
+
+const (
+	JSONHandlerType HandlerType = iota
+	TextHandlerType
+)
 
 type Logger struct {
 	*logger
@@ -44,33 +60,62 @@ type Logger struct {
 	level        *slog.LevelVar
 	name         string
 
-	slogHandler *SlogHandler
+	slogHandler Handler
 }
 
+type Option func(*Options)
+
 type Options struct {
-	handlerOptions
+	Level       slog.Level
+	Output      io.Writer
+	HandlerType HandlerType
+	TimeFunc    func(t time.Time) time.Time
+}
 
-	Level  slog.Level
-	Output io.Writer
+// WithLevel sets the logging level
+func WithLevel(level slog.Level) Option {
+	return func(o *Options) {
+		o.Level = level
+	}
+}
 
-	TimeFunc func(t time.Time) time.Time
+// WithOutput sets the output writer
+func WithOutput(output io.Writer) Option {
+	return func(o *Options) {
+		o.Output = output
+	}
+}
+
+// WithHandlerType sets the handler type
+func WithHandlerType(handlerType HandlerType) Option {
+	return func(o *Options) {
+		o.HandlerType = handlerType
+	}
+}
+
+// WithTimeFunc sets the time function
+func WithTimeFunc(timeFunc func(t time.Time) time.Time) Option {
+	return func(o *Options) {
+		o.TimeFunc = timeFunc
+	}
 }
 
 func NewNop() *Logger {
-	return NewLogger(Options{
-		Output: io.Discard,
-	})
+	return NewLogger(WithOutput(io.Discard))
 }
 
-func NewLogger(opts Options) *Logger {
-	if opts.Output == nil {
-		opts.Output = os.Stdout
+func NewLogger(opts ...Option) *Logger {
+	options := Options{
+		Level:       slog.LevelInfo,
+		Output:      os.Stdout,
+		HandlerType: JSONHandlerType,
+		TimeFunc: func(t time.Time) time.Time {
+			return t
+		},
 	}
 
-	if opts.TimeFunc == nil {
-		opts.TimeFunc = func(t time.Time) time.Time {
-			return t
-		}
+	for _, opt := range opts {
+		opt(&options)
 	}
 
 	l := &Logger{
@@ -78,7 +123,7 @@ func NewLogger(opts Options) *Logger {
 		level:        new(slog.LevelVar),
 	}
 
-	l.SetLevel(Level(opts.Level))
+	l.SetLevel(Level(options.Level))
 
 	// getting absolute binary path
 	binaryPath := filepath.Dir(os.Args[0])
@@ -124,7 +169,14 @@ func NewLogger(opts Options) *Logger {
 		},
 	}
 
-	l.slogHandler = NewHandler(opts.Output, handlerOpts, opts.TimeFunc)
+	switch options.HandlerType {
+	case JSONHandlerType:
+		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
+	case TextHandlerType:
+		l.slogHandler = NewTextHandler(options.Output, handlerOpts, options.TimeFunc)
+	default:
+		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
+	}
 
 	l.logger = slog.New(l.slogHandler.WithAttrs(nil))
 
@@ -142,12 +194,12 @@ func (l *Logger) SetLevel(level Level) {
 }
 
 func (l *Logger) SetOutput(w io.Writer) {
-	l.slogHandler.w = w
+	l.slogHandler.SetOutput(w)
 }
 
 func (l *Logger) Named(name string) *Logger {
 	return &Logger{
-		logger:       slog.New(l.Handler().(*SlogHandler).Named(name)),
+		logger:       slog.New(l.Handler().(Handler).Named(name)),
 		addSourceVar: l.addSourceVar,
 		level:        l.level,
 		name:         l.name,
@@ -172,30 +224,6 @@ func (l *Logger) WithGroup(name string) *Logger {
 	}
 }
 
-// Deprecated: use Log instead
-func (l *Logger) Logf(ctx context.Context, level Level, format string, args ...any) {
-	ctx = logContext.SetCustomKeyContext(ctx)
-	l.Log(ctx, level.Level(), fmt.Sprintf(format, args...))
-}
-
-// Deprecated: use Debug instead
-func (l *Logger) Debugf(format string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	l.Log(ctx, LevelDebug.Level(), fmt.Sprintf(format, args...))
-}
-
-// Deprecated: use Info instead
-func (l *Logger) Infof(format string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	l.Log(ctx, LevelInfo.Level(), fmt.Sprintf(format, args...))
-}
-
-// Deprecated: use Warn instead
-func (l *Logger) Warnf(format string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	l.Log(ctx, LevelWarn.Level(), fmt.Sprintf(format, args...))
-}
-
 func (l *Logger) Error(msg string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	ctx = logContext.SetStackTraceContext(ctx, getStack())
@@ -203,29 +231,11 @@ func (l *Logger) Error(msg string, args ...any) {
 	l.Log(ctx, LevelError.Level(), msg, args...)
 }
 
-// Deprecated: use Error instead
-func (l *Logger) Errorf(format string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	ctx = logContext.SetStackTraceContext(ctx, getStack())
-
-	l.Log(ctx, LevelError.Level(), fmt.Sprintf(format, args...))
-}
-
 func (l *Logger) Fatal(msg string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
 	ctx = logContext.SetStackTraceContext(ctx, getStack())
 
 	l.Log(ctx, LevelFatal.Level(), msg, args...)
-
-	os.Exit(1)
-}
-
-// Deprecated: use Fatal instead
-func (l *Logger) Fatalf(format string, args ...any) {
-	ctx := logContext.SetCustomKeyContext(context.Background())
-	ctx = logContext.SetStackTraceContext(ctx, getStack())
-
-	l.Log(ctx, LevelFatal.Level(), fmt.Sprintf(format, args...))
 
 	os.Exit(1)
 }

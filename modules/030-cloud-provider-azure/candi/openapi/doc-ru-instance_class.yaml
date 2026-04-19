@@ -1,0 +1,69 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema: &schema
+        openAPIV3Schema:
+          description: |
+            Параметры группы Azure Instances, которые будет использовать `machine-controller-manager` (модуль [node-manager](https://deckhouse.ru/modules/node-manager/)).
+
+            На этот ресурс ссылается ресурс `CloudInstanceClass` модуля `node-manager`.
+          properties:
+            spec:
+              properties:
+                machineSize:
+                  description: |
+                    Тип заказываемых инстансов.
+
+                    Список всех доступных типов в регионе можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    ```shell
+                    az vm list-sizes --location westeurope -o table
+                    ```
+                capacity:
+                  description: |
+                    Устарело: параметр больше не используется. Для переданного типа инстанса Deckhouse использует параметры, полученные из облака.
+
+                    Емкость инстанса для *нестандартных* типов инстансов (параметр `machineSize`).
+
+                    Используется cluster-autoscaler'ом при планировании, только когда в NodeGroup'е еще нет узлов (при minPerZone равном 0). Если в NodeGroup уже есть узлы, cluster-autoscaler использует при планировании фактические данные (CPU, memory) о мощности узла и не использует данные параметра `capacity`.
+
+                    Параметр необходимо указывать только для *нестандартных* типов инстансов. Параметры *стандартных* типов инстансов (`Standard_A1_v2`, `Standard_B16ms` и т. п.) заложены в Deckhouse.
+                  properties:
+                    cpu:
+                      description: Количество vCPU узла.
+                    memory:
+                      description: Количество памяти узла.
+                urn:
+                  description: |
+                    Образ виртуальной машины, который будет использоваться для инстанса.
+
+                    Подробнее про образы виртуальных машин можно посмотреть [в официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+
+                    Последнюю доступную версию образа можно получить c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                      - `az vm image show --urn Canonical:UbuntuServer:18.04-LTS:latest --location westeurope`;
+                      - `az vm image show --urn Canonical:0001-com-ubuntu-server-focal:20_04-lts:latest --location westeurope`.
+
+                    По умолчанию используется образ из `AzureCloudDiscoveryData` (образ, из которого был создан мастер-узел при развертывании кластера).
+
+                    Список поддерживаемых ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                diskSizeGb:
+                  description: |
+                    Размер root-диска. Значение указывается в `ГиБ`.
+                diskType:
+                  description: |
+                    Тип созданного диска.
+
+                    Список доступных типов дисков можно посмотреть с помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli):
+                    ```shell
+                    az vm list-skus -l westeurope --zone`
+                    ```
+                etcdDiskSizeGb:
+                  description: |
+                    Размер диска для etcd. Значение указывается в `ГиБ`.
+                additionalTags:
+                  description: |
+                    Дополнительные теги, которые будут присвоены созданным инстансам.
+                acceleratedNetworking:
+                  description: |
+                    Accelerated Networking обеспечивает пропускную способность сети до 30 Гбит/с.
+    - name: v1
+      schema: *schema

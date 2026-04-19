@@ -15,13 +15,13 @@
 package main
 
 import (
-	"exporter/app"
 	"os"
-
-	"github.com/sirupsen/logrus"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"exporter/app"
 	"exporter/internal/server"
 	"exporter/internal/yandex"
 )
@@ -49,7 +49,7 @@ func main() {
 
 	_, err := kpApp.Parse(os.Args[1:])
 	if err != nil {
-		logrus.Error(err)
+		log.Error("failed to parse command-line arguments", err)
 		os.Exit(1)
 	}
 }

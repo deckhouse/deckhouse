@@ -135,7 +135,9 @@ func (c *crowdClient) MakeRequest(url, method string, jsonPayload interface{}) (
 
 func (c *crowdClient) GetGroups(body string) ([]string, error) {
 	var crowdGroups struct {
-		Groups []struct{ Name string } `json:"groups"`
+		Groups []struct {
+			Name string `json:"name"`
+		} `json:"groups"`
 	}
 	var groups []string
 

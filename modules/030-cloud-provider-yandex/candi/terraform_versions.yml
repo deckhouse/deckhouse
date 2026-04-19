@@ -1,0 +1,12 @@
+opentofu: 1.9.4
+
+yandex:
+  namespace: yandex-cloud
+  cloudName: Yandex
+  type: yandex
+  version: 0.174.0
+  artifact: terraform-provider-yandex
+  artifactBinary: terraform-provider-yandex
+  destinationBinary: terraform-provider-yandex
+  vmResourceType: yandex_compute_instance
+  useOpentofu: true

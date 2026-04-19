@@ -15,32 +15,48 @@
 package bootstrap
 
 import (
+	"context"
+	"fmt"
+
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func DefineBootstrapCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
-	cmd := kpApp.Command("bootstrap", "Bootstrap cluster.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
 	app.DefineResourcesFlags(cmd, false)
+	app.DefineTFResourceManagementTimeout(cmd)
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDontUsePublicImagesFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
 	app.DefinePreflight(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TerraformContext: terraform.NewTerraformContext(),
+			TmpDir:            app.TmpDirName,
+			Logger:            logger,
+			IsDebug:           app.IsDebug,
+			ResetInitialState: false,
+			DirectoryConfig:   app.GetDirConfig(),
 		})
-		return bootstraper.Bootstrap()
+		err := bootstraper.Bootstrap(context.Background())
+		if err != nil {
+			msg := fmt.Sprintf("Bootstrap failed with error: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd

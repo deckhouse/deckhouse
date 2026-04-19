@@ -1,0 +1,16 @@
+{{- $version := $.Values.istio.internal.globalVersion }}
+{{- $versionInfo := get .Values.istio.internal.versionMap $version }}
+{{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+
+{{- if and ($.Values.istio.internal.enableAmbientMode) ($supportsAmbient) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ztunnel
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list $ (dict 
+      "app" "ztunnel"
+  )) | nindent 2 }}
+---
+{{- end }}

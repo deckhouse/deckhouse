@@ -14,14 +14,14 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cloud-controller-manager
   namespace: d8-cloud-provider-azure
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
     name: cloud-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "azure-cloud-controller-manager"
@@ -70,12 +70,13 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: Default
       serviceAccountName: cloud-controller-manager
       containers:
         - name: azure-cloud-controller-manager
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ $ccmImage }}
           command:
           - /usr/local/bin/azure-cloud-controller-manager

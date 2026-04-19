@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-func initHttpTransport() http.RoundTripper {
+func initHTTPTransport() http.RoundTripper {
 	httpTransport := http.RoundTripper(&http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -63,7 +63,7 @@ func NewServer() *Server {
 	}
 
 	promURL, _ := url.Parse(os.Getenv("PROMETHEUS_URL"))
-	transport := initHttpTransport()
+	transport := initHTTPTransport()
 
 	proxy := httputil.NewSingleHostReverseProxy(promURL)
 	proxy.Transport = transport
@@ -112,7 +112,7 @@ func (s *Server) router(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlerCustomMetric(w http.ResponseWriter, r *http.Request) {
-	reqID := r.Context().Value("id").(string)
+	reqID := r.Context().Value(contextKeyRequestID{}).(string)
 
 	const queryArgsNumber = 5
 
@@ -149,12 +149,12 @@ func (s *Server) handlerCustomMetric(w http.ResponseWriter, r *http.Request) {
 	newURL.RawQuery = q.Encode()
 
 	resp, err := s.Client.Get(newURL.String())
-	defer resp.Body.Close()
-
 	if err != nil {
 		errLog.Printf("%s -- %s\n", reqID, err)
 		http.Error(w, "Internal error. "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	defer resp.Body.Close()
 
 	if len(resp.Header.Get("Content-Type")) > 0 {
 		w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
@@ -163,5 +163,5 @@ func (s *Server) handlerCustomMetric(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", resp.Header.Get("Content-Length"))
 	}
 
-	io.Copy(w, resp.Body)
+	_, _ = io.Copy(w, resp.Body)
 }

@@ -6,7 +6,9 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -15,6 +17,8 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -39,14 +43,16 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleAllMasterNodes)
 
-func handleAllMasterNodes(input *go_hook.HookInput) error {
-	nodesSnap := input.Snapshots["nodes"]
+func handleAllMasterNodes(_ context.Context, input *go_hook.HookInput) error {
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[uninitializedNode](input.Snapshots, "nodes")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal nodes snapshot: %w", err)
+	}
 
-	totalCount := len(nodesSnap)
+	totalCount := len(nodes)
 	var initializedCount int
 
-	for _, nodeS := range nodesSnap {
-		node := nodeS.(uninitializedNode)
+	for _, node := range nodes {
 		if node.Uninitialized {
 			continue
 		}

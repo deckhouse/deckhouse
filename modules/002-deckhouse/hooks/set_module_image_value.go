@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +27,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 func getDeploymentImage(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -59,17 +62,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, parseDeckhouseImage)
 
-func parseDeckhouseImage(input *go_hook.HookInput) error {
+func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		deckhouseImagePath = "deckhouse.internal.currentReleaseImageName"
 		deckhouseBasePath  = "global.modulesImages.registry.base"
 	)
 
-	deckhouseSnapshot := input.Snapshots["deckhouse"]
-	if len(deckhouseSnapshot) != 1 {
+	deckhouseImages, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "deckhouse")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal deckhouse snapshot: %w", err)
+	}
+
+	if len(deckhouseImages) != 1 {
 		return fmt.Errorf("deckhouse was not able to find an image of itself")
 	}
-	image := deckhouseSnapshot[0].(string)
+	image := deckhouseImages[0]
 
 	imageRepoTag, err := gcr.NewTag(image)
 	if err != nil {
@@ -85,5 +92,6 @@ func parseDeckhouseImage(input *go_hook.HookInput) error {
 		base := input.Values.Get(deckhouseBasePath).String()
 		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, tag))
 	}
+
 	return nil
 }

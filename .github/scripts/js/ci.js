@@ -17,22 +17,15 @@ const {
   labelsSrv,
   knownProviders,
   knownChannels,
-  knownCRINames,
   knownKubernetesVersions,
   knownEditions,
   e2eDefaults,
-  skipE2eLabel,
+  skipE2eLabel
 } = require('./constants');
 
 const e2eStatus = require('./e2e-commit-status');
 
-const {
-  parseGitRef,
-  matchReleaseTag,
-  fullMatchReleaseTag,
-  fullMatchTestTag,
-  fullMatchReleaseBranch
-} = require('./git-ref');
+const { parseGitRef, matchReleaseTag, fullMatchReleaseTag, fullMatchTestTag, fullMatchReleaseBranch } = require('./git-ref');
 
 const { dumpError } = require('./error');
 
@@ -48,13 +41,11 @@ const {
   renderJobStatusOneLine,
   renderJobStatusSeparate,
   renderWorkflowStatusFinal,
-  releaseIssueHeader,
-} = require("./comments");
+  releaseIssueHeader, renderDocumentationComments
+} = require('./comments');
 
-const {
-  buildFailedE2eTestAdditionalInfo
-} = require("./e2e/cleanup");
-const {tryParseAbortE2eCluster} = require("./e2e/slash_workflow_command");
+const { buildFailedE2eTestAdditionalInfo } = require('./e2e/cleanup');
+const { tryParseAbortE2eCluster } = require('./e2e/slash_workflow_command');
 
 /**
  * Update a comment in "release" issue or pull request when workflow is started.
@@ -148,7 +139,7 @@ module.exports.updateCommentOnFinish = async ({
   needsContext,
   jobContext,
   stepsContext,
-  jobNames,
+  jobNames
 }) => {
   const repo_url = context.payload.repository.html_url;
   const run_id = context.runId;
@@ -196,7 +187,7 @@ module.exports.updateCommentOnFinish = async ({
     } else if (statusConfig.includes(',separate')) {
       statusReport = renderJobStatusSeparate(status, name, startedAt);
     } else if (statusConfig.includes(',final')) {
-      const addInfo = buildFailedE2eTestAdditionalInfo({needsContext, core, context});
+      const addInfo = buildFailedE2eTestAdditionalInfo({ needsContext, core, context });
       core.debug(`Additional info: ${addInfo}`);
       statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt, addInfo);
     }
@@ -257,7 +248,7 @@ module.exports.updateCommentOnFinish = async ({
 
     core.info(`Status for workflow report is ${status}`);
 
-    const addInfo = buildFailedE2eTestAdditionalInfo({needsContext, core, context});
+    const addInfo = buildFailedE2eTestAdditionalInfo({ needsContext, core, context });
     core.debug(`Additional info: ${addInfo}`);
 
     statusReport = renderWorkflowStatusFinal(status, name, ref, build_url, startedAt, addInfo);
@@ -285,10 +276,16 @@ module.exports.updateCommentOnFinish = async ({
       comment = `${header}\n\n${statusReport}${workflowDetails}`;
     } else {
       // No split marker: wrap entire comment with 'details' tag.
-      comment = `${statusReport}\n\n<details><summary>Workflow details${failedInfo}</summary>${comment}\n${nonReportedJobs || ''}</details>`;
+      comment = `${statusReport}\n\n<details><summary>Workflow details${failedInfo}</summary>${comment}\n${
+        nonReportedJobs || ''
+      }</details>`;
     }
   } else {
     comment = `${comment}\n${statusReport}`;
+  }
+
+  if (statusConfig.includes(',docs')) {
+    comment = `${comment}\n${renderDocumentationComments(name)}`;
   }
 
   const updateResponse = await github.rest.issues.updateComment({
@@ -342,7 +339,9 @@ const checkLabel = async ({ github, context, core, labelType, labelSubject, onSu
   const expectedLabel = labelsSrv.findLabel({ labelType, labelSubject });
   if (expectedLabel === '') {
     core.setOutput('should_run', 'false');
-    return core.notice(`Skip next jobs: label for type='${labelType}' subject='${labelSubject}' in unknown. Check constants.js if new label was added to repository.`);
+    return core.notice(
+      `Skip next jobs: label for type='${labelType}' subject='${labelSubject}' in unknown. Check constants.js if new label was added to repository.`
+    );
   }
 
   const issue_number = context.payload.inputs.issue_number;
@@ -360,9 +359,7 @@ const checkLabel = async ({ github, context, core, labelType, labelSubject, onSu
 
   if (!labels) {
     core.setOutput('should_run', 'false');
-    return core.notice(
-      ` Skip next jobs: no labels on ${isPR ? 'PR' : 'issue'} #${issue_number}.`
-    );
+    return core.notice(` Skip next jobs: no labels on ${isPR ? 'PR' : 'issue'} #${issue_number}.`);
   }
 
   core.info(
@@ -409,17 +406,17 @@ const removeLabel = async ({ github, context, core, issue_number, label }) => {
       name: label
     });
     if (response.status !== 204) {
-      core.info(`Bad response on remove label: ${JSON.stringify(response)}`)
+      core.info(`Bad response on remove label: ${JSON.stringify(response)}`);
     } else {
       core.info(`Removed.`);
     }
   } catch (error) {
     core.info(`Ignore error when removing label: may be it was removed by another workflow. Error: ${dumpError(error)}.`);
   } finally {
-    core.endGroup()
+    core.endGroup();
   }
 };
-
+exports.removeLabel = removeLabel;
 /**
  * Set outputs to enable e2e jobs from workflow_dispatch inputs.
  *
@@ -431,13 +428,13 @@ const removeLabel = async ({ github, context, core, issue_number, label }) => {
 const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }) => {
   const defaultCRI = e2eDefaults.criName.toLowerCase();
   const defaultVersion = kubernetesDefaultVersion.replace(/\./g, '_');
-  const defaultMultimaster = e2eDefaults.multimaster
+  const defaultMultimaster = e2eDefaults.multimaster;
 
   let cri = [defaultCRI];
   let ver = [defaultVersion];
   let multimaster = [defaultMultimaster];
 
-  let test_config = JSON.parse(context.payload.inputs.test_config)
+  let test_config = JSON.parse(context.payload.inputs.test_config);
 
   if (!!test_config.cri) {
     const requested_cri = test_config.cri.toLowerCase();
@@ -453,7 +450,9 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
   }
 
   core.info(`e2e inputs: '${JSON.stringify(context.payload.inputs)}'`);
-  core.info(`workflow_dispatch is release related. e2e parsed inputs: cri='${test_config.cri}' and version='${test_config.ver}'.`);
+  core.info(
+    `workflow_dispatch is release related. e2e parsed inputs: cri='${test_config.cri}' and version='${test_config.ver}'.`
+  );
   core.setOutput(`multimaster`, `${multimaster}`);
 
   for (const out_cri of cri) {
@@ -474,11 +473,19 @@ const setCRIAndVersionsFromInputs = ({ context, core, kubernetesDefaultVersion }
  */
 const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion }) => {
   core.startGroup(`Detect e2e/use labels ...`);
-  core.info(`Input labels: ${JSON.stringify(labels.map((l) => l.name), null, '  ')}`);
+  core.info(
+    `Input labels: ${JSON.stringify(
+      labels.map((l) => l.name),
+      null,
+      '  '
+    )}`
+  );
   let ver = [];
   let cri = [];
   let multimaster = e2eDefaults.multimaster;
-  let edition = "";
+  let edition = '';
+  let cis = e2eDefaults.cis;
+  let autoscaler = false
 
   for (const label of labels) {
     const info = knownLabels[label.name];
@@ -501,6 +508,14 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
       core.info(`Detect '${label.name}': use Kubernetes multimaster configuration`);
       multimaster = true;
     }
+    if (info.cis) {
+      core.info(`Detect '${label.name}': use operator-trivy to get CIS Benchmark report`);
+      cis = true;
+    }
+    if (info.autoscaler) {
+      core.info(`Detect '${label.name}': enable autoscaler tests`);
+      autoscaler = true;
+    };
   }
 
   if (ver.length === 0) {
@@ -519,6 +534,8 @@ const setCRIAndVersionsFromLabels = ({ core, labels, kubernetesDefaultVersion })
   core.setCommandEcho(true);
   core.setOutput(`edition`, `${edition}`);
   core.setOutput(`multimaster`, `${multimaster}`);
+  core.setOutput(`cis`, `${cis}`);
+  core.setOutput(`autoscaler`, `${autoscaler}`);
   for (const out_cri of cri) {
     for (const out_ver of ver) {
       core.setOutput(`run_${out_cri}_${out_ver}`, 'true');
@@ -582,26 +599,25 @@ module.exports.checkE2ELabels = async ({ github, context, core, provider, kubern
  * @returns {Promise<void|*>}
  */
 module.exports.checkValidationLabels = ({ core, labels }) => {
-  core.startGroup(`Detect skipped validations from labels`)
-  core.info(`Labels: ${labels ? JSON.stringify(labels.map((l) => l.name)) : 'no labels'}`)
+  core.startGroup(`Detect skipped validations from labels`);
+  core.info(`Labels: ${labels ? JSON.stringify(labels.map((l) => l.name)) : 'no labels'}`);
 
   // Disable validation if related 'skip-validation' label is set on PR.
-  core.setCommandEcho(true)
-  Object.entries(knownLabels)
-    .map(([name, info]) => {
-      if (info.type !== 'skip-validation') {
-        return
-      }
-      const shouldSkip = labels ? labels.some((l) => l.name === name) : false;
-      const { validation_name } = info;
-      if (shouldSkip) {
-        core.notice(`Skip '${validation_name}'`)
-        core.setOutput(`run_${validation_name}`, 'false');
-      } else {
-        core.setOutput(`run_${validation_name}`, 'true');
-      }
-      core.setOutput(`label_${validation_name}`, name);
-    });
+  core.setCommandEcho(true);
+  Object.entries(knownLabels).map(([name, info]) => {
+    if (info.type !== 'skip-validation') {
+      return;
+    }
+    const shouldSkip = labels ? labels.some((l) => l.name === name) : false;
+    const { validation_name } = info;
+    if (shouldSkip) {
+      core.notice(`Skip '${validation_name}'`);
+      core.setOutput(`run_${validation_name}`, 'false');
+    } else {
+      core.setOutput(`run_${validation_name}`, 'true');
+    }
+    core.setOutput(`label_${validation_name}`, name);
+  });
   core.setCommandEcho(false);
   core.endGroup();
 };
@@ -614,20 +630,20 @@ module.exports.checkValidationLabels = ({ core, labels }) => {
  */
 const extractCommandFromComment = (comment) => {
   // Split comment to lines.
-  const lines = comment.split(/\r\n|\n|\r/).filter(l => l.startsWith('/'));
+  const lines = comment.split(/\r\n|\n|\r/).filter((l) => l.startsWith('/'));
   if (lines.length < 1) {
-    return {'err': 'first line is not a slash command'}
+    return { err: 'first line is not a slash command' };
   }
 
   // Search for user command in the first line of the comment.
   // User command is a command and a tag name.
   const argv = lines[0].split(/\s+/);
 
-  if ( ! /^\/[a-z\d_\-\/.,]+$/.test(argv[0])) {
-    return {'err': 'not a slash command in the first line'};
+  if (!/^\/[a-z\d_\-\/.,]+$/.test(argv[0])) {
+    return { err: 'not a slash command in the first line' };
   }
 
-  return {argv, lines}
+  return { argv, lines };
 };
 
 module.exports.extractCommandFromComment = extractCommandFromComment;
@@ -655,7 +671,7 @@ const parseCommandArgumentAsRef = (cmdArg) => {
   if (ref) {
     return parseGitRef(ref);
   }
-  return {notFoundMsg: `git_ref ${cmdArg} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.`};
+  return { notFoundMsg: `git_ref ${cmdArg} not allowed. Only main, release-X.Y, vX.Y.Z or test-vX.Y.Z.` };
 };
 
 /**
@@ -675,10 +691,10 @@ const parseCommandArgumentAsRef = (cmdArg) => {
  * @param {object} inputs.core - A reference to the '@actions/core' package.
  * @returns {object}
  */
-const detectSlashCommand = ({ comment , context, core}) => {
+const detectSlashCommand = ({ comment, context, core }) => {
   const arg = extractCommandFromComment(comment);
-  if(arg.err) {
-    return {notFoundMsg: arg.err}
+  if (arg.err) {
+    return { notFoundMsg: arg.err };
   }
 
   const parts = arg.argv;
@@ -686,38 +702,36 @@ const detectSlashCommand = ({ comment , context, core}) => {
   const command = parts[0];
 
   // Initial ref for e2e/run with 2 args.
-  let initialRef = null
+  let initialRef = null;
   // A ref for workflow and a target ref for e2e release update test.
-  let targetRef = null
+  let targetRef = null;
 
-  const abortRes = tryParseAbortE2eCluster({argv: arg.argv, context, core})
+  const abortRes = tryParseAbortE2eCluster({ argv: arg.argv, context, core });
   if (abortRes !== null) {
-    return {...abortRes, command}
+    return { ...abortRes, command };
   }
 
-
   if (parts[1] && parts[2]) {
-    initialRef = parseCommandArgumentAsRef(parts[1])
-    targetRef = parseCommandArgumentAsRef(parts[2])
+    initialRef = parseCommandArgumentAsRef(parts[1]);
+    targetRef = parseCommandArgumentAsRef(parts[2]);
   } else if (parts[1]) {
-    targetRef = parseCommandArgumentAsRef(parts[1])
+    targetRef = parseCommandArgumentAsRef(parts[1]);
   }
 
   if (initialRef && initialRef.notFoundMsg) {
-    return initialRef
+    return initialRef;
   }
   if (targetRef && targetRef.notFoundMsg) {
-    return targetRef
+    return targetRef;
   }
 
   let workflow_id = '';
   let inputs = null;
 
   // Detect /e2e/run/* commands and /e2e/use/* arguments.
-  const isE2E = Object.entries(knownLabels)
-    .some(([name, info]) => {
-      return info.type.startsWith('e2e') && command.startsWith('/'+name)
-    })
+  const isE2E = Object.entries(knownLabels).some(([name, info]) => {
+    return info.type.startsWith('e2e') && command.startsWith('/' + name);
+  });
   if (isE2E) {
     for (const provider of knownProviders) {
       if (command.includes(provider)) {
@@ -731,7 +745,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
       let ver = [];
       let cri = [];
       let multimaster;
-      let edition = "fe";
+      let edition = 'fe';
       for (const line of lines) {
         let useParts = line.split('/e2e/use/cri/');
         if (useParts[1]) {
@@ -747,27 +761,27 @@ const detectSlashCommand = ({ comment , context, core}) => {
         }
         useParts = line.split('/e2e/use/edition/');
         if (useParts[1]) {
-          edition = useParts[1]
+          edition = useParts[1];
         }
       }
 
       inputs = {
         test_config: JSON.stringify({ cri: cri.join(','), ver: ver.join(','), edition: edition }),
-        multimaster: multimaster,
-      }
+        multimaster: multimaster
+      };
 
       // Add initial_ref_slug input when e2e command has two args.
       if (initialRef) {
-        inputs.initial_ref_slug = initialRef.refSlug
+        inputs.initial_ref_slug = initialRef.refSlug;
       }
     }
   }
 
   // Detect /deploy/* commands.
-  const isDeploy = knownSlashCommands.deploy.some(c => command.startsWith('/'+c));
+  const isDeploy = knownSlashCommands.deploy.some((c) => command.startsWith('/' + c));
   if (isDeploy) {
     for (const channel of knownChannels) {
-      if (command.includes('/'+channel)) {
+      if (command.includes('/' + channel)) {
         workflow_id = `deploy-${channel}.yml`;
         break;
       }
@@ -776,13 +790,13 @@ const detectSlashCommand = ({ comment , context, core}) => {
     const cmdParts = command.split('/');
     if (workflow_id && cmdParts[3]) {
       inputs = {
-        editions: cmdParts[3],
-      }
+        editions: cmdParts[3]
+      };
     }
   }
 
   // Detect /suspend/* commands.
-  const isSuspend = knownSlashCommands.suspend.some(c => command.startsWith('/'+c));
+  const isSuspend = knownSlashCommands.suspend.some((c) => command.startsWith('/' + c));
   if (isSuspend) {
     for (const channel of knownChannels) {
       if (command.includes(channel)) {
@@ -800,13 +814,13 @@ const detectSlashCommand = ({ comment , context, core}) => {
     const cmdParts = command.split('/');
     if (cmdParts[2]) {
       inputs = {
-        editions: cmdParts[2],
-      }
+        editions: cmdParts[2]
+      };
     }
   }
 
   if (workflow_id === '') {
-    return {notFoundMsg: `workflow for '${command}' not found`};
+    return { notFoundMsg: `workflow for '${command}' not found` };
   }
 
   return {
@@ -817,7 +831,7 @@ const detectSlashCommand = ({ comment , context, core}) => {
     isSuspend,
     isDeploy,
     isE2E,
-    isBuild,
+    isBuild
   };
 };
 
@@ -831,12 +845,12 @@ const detectSlashCommand = ({ comment , context, core}) => {
  * @param {object} inputs.content - Reaction type: (+1, -1, rocket, confused, ...).
  * @returns {Promise<void|*>}
  */
-const reactToComment = async ({github, context, comment_id, content}) => {
+const reactToComment = async ({ github, context, comment_id, content }) => {
   return await github.rest.reactions.createForIssueComment({
     owner: context.repo.owner,
     repo: context.repo.repo,
     comment_id,
-    content,
+    content
   });
 };
 module.exports.reactToComment = reactToComment;
@@ -869,21 +883,21 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
   if (slashCommand.isE2E || slashCommand.isBuild) {
     // Check if Git ref is allowed.
     if (!slashCommand.targetRef) {
-      failedMsg = `Command '${slashCommand.command}' requires an argument with a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y'.`
+      failedMsg = `Command '${slashCommand.command}' requires an argument with a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y'.`;
     } else {
-      workflow_ref = slashCommand.targetRef.ref
+      workflow_ref = slashCommand.targetRef.ref;
       if (slashCommand.targetRef.tagVersion) {
         // Version in Git tag should relate to the milestone.
         if (!milestoneTitle.includes(slashCommand.targetRef.tagVersion)) {
-          failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${workflow_ref}.`
+          failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${workflow_ref}.`;
         }
       } else if (slashCommand.targetRef.isReleaseBranch) {
         // Major.Minor in release branch should relate to the milestone.
         if (!milestoneTitle.includes(slashCommand.targetRef.branchMajorMinor)) {
-          failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${workflow_ref}.`
+          failedMsg = `Git ref for command '${slashCommand.command}' should relate to the milestone ${milestoneTitle}: got ${workflow_ref}.`;
         }
       } else if (!slashCommand.targetRef.isMain) {
-        failedMsg = `Command '${slashCommand.command}' requires a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y', got ${workflow_ref}.`
+        failedMsg = `Command '${slashCommand.command}' requires a tag in form vX.Y.Z, test-vX.Y.Z* or branch 'main' or 'release-X.Y', got ${workflow_ref}.`;
       }
     }
   } else if (slashCommand.isDeploy || slashCommand.isSuspend) {
@@ -892,22 +906,22 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
     if (matches) {
       workflow_ref = `refs/tags/${matches[0]}`;
     } else {
-      failedMsg = `Command '${slashCommand.command}' requires issue to relate to milestone with version in title. Got milestone '${event.issue.milestone.title}'.`
+      failedMsg = `Command '${slashCommand.command}' requires issue to relate to milestone with version in title. Got milestone '${event.issue.milestone.title}'.`;
     }
-  } else if(slashCommand.isDestroyFailedE2e) {
+  } else if (slashCommand.isDestroyFailedE2e) {
     workflow_ref = slashCommand.targetRef;
   }
 
   // Git ref is malformed.
   if (failedMsg) {
     core.setFailed(failedMsg);
-    return await reactToComment({github, context, comment_id, content: 'confused'});
+    return await reactToComment({ github, context, comment_id, content: 'confused' });
   }
 
   core.info(`Use ref '${workflow_ref}' for workflow.`);
 
   // React with rocket emoji!
-  await reactToComment({github, context, comment_id, content: 'rocket'});
+  await reactToComment({ github, context, comment_id, content: 'rocket' });
 
   // Add new issue comment and start the requested workflow.
   core.info('Add issue comment to report workflow status.');
@@ -925,23 +939,26 @@ module.exports.runSlashCommandForReleaseIssue = async ({ github, context, core }
   let commentInfo = {
     issue_id: '' + event.issue.id,
     issue_number: '' + event.issue.number,
-    comment_id: '' + response.data.id,
+    comment_id: '' + response.data.id
   };
 
   // todo remove this crutch after refact
   if (slashCommand.isDestroyFailedE2e) {
     commentInfo = {
       comment_id: commentInfo.comment_id
-    }
+    };
   }
 
-  return await startWorkflow({github, context, core,
+  return await startWorkflow({
+    github,
+    context,
+    core,
     workflow_id: slashCommand.workflow_id,
     ref: workflow_ref,
     inputs: {
       ...commentInfo,
       ...slashCommand.inputs
-    },
+    }
   });
 };
 
@@ -1009,29 +1026,19 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       command.workflows = ['build-and-test_dev.yml', 'validation.yml'];
       command.rerunWorkflow = true;
     }
-    // Rerun build workflow if edition label is added or all edition labels are removed.
-    if (labelType === 'edition') {
-      // Gather other edition labels on PR.
-      let removeEditions = [];
-      prLabels.map((l) => {
-        const info = knownLabels[l.name];
-        if (info && info.type === 'edition' && l.name !== label) {
-          removeEditions.push(l.name);
-        }
-      });
-
-      if (event.action === 'labeled' && removeEditions.length > 0) {
-        // If edition/ce label is set, edition/ee label should be removed and vice versa.
-        for (const edition of removeEditions) {
-          core.notice(`Remove label '${edition}' from PR#${prNumber}`);
-          await removeLabel({ github, context, core, issue_number, label: edition });
-        }
-      }
-
-      // Re-run workflow if labeled with edition label or no edition labels left on PR.
-      if (event.action === 'labeled' || (event.action === 'unlabeled' && removeEditions.length === 0)) {
+    // Rerun build workflow if edition label is added, ignore 'unlabeled' action.
+    if (labelType === 'edition' && event.action === 'labeled') {
+      command.workflows = ['build-and-test_dev.yml'];
+      command.rerunWorkflow = true;
+    }
+    if (labelType === 'security') {
+      if (labelInfo.security === 'rootless' && event.action === 'labeled') {
         command.workflows = ['build-and-test_dev.yml'];
         command.rerunWorkflow = true;
+      }
+      if (labelInfo.security == 'cve' && event.action === 'labeled') {
+        command.workflows = ['cve-pr.yml'];
+        command.triggerWorkflowDispatch = true;
       }
     }
   } finally {
@@ -1044,7 +1051,7 @@ module.exports.runWorkflowForPullRequest = async ({ github, context, core, ref }
       context,
       core,
       labeled: command.setE2eShouldSkipped,
-      commitSha: context.payload.pull_request.head.sha,
+      commitSha: context.payload.pull_request.head.sha
     });
   }
 
@@ -1159,7 +1166,7 @@ const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
 
   core.startGroup(`Retry workflow ${workflow_id} run ${lastRun.id} ...`);
   try {
-    const response = await github.rest.actions.retryWorkflow({
+    const response = await github.rest.actions.reRunWorkflow({
       owner: context.repo.owner,
       repo: context.repo.repo,
       run_id: lastRun.id
@@ -1170,7 +1177,12 @@ const findAndRerunWorkflow = async ({ github, context, core, workflow_id }) => {
       core.info(`Bad status code from retryWorkflow: ${JSON.stringify(response)}`);
     }
   } catch (error) {
-    core.info(`Ignore error from retryWorkflow: ${dumpError(error)}`);
+    if (error instanceof Error) {
+      core.error(`Error from retryWorkflow: ${error.message}`);
+      core.error(`Stack trace: ${error.stack}`);
+    } else {
+      core.error(`Unknown error from retryWorkflow: ${JSON.stringify(error)}`);
+    }
   } finally {
     core.endGroup();
   }
@@ -1200,7 +1212,6 @@ module.exports.createReleaseIssueForMilestone = async ({ github, context, core }
   const availableChannels = knownChannels.map((ch) => ch.toLowerCase()).join(' | ');
   const availableEditions = knownEditions.map((e) => e.toLowerCase()).join(' | ');
   const availableProviders = knownProviders.map((p) => p.toLowerCase()).join(' | ');
-  const availableCRI = knownCRINames.map((cri) => cri.toLowerCase()).join(' | ');
   const availableKubernetesVersions = knownKubernetesVersions.join(' | ');
   const possibleGitRefs = `a tag \`${milestoneVersion} | test-${milestoneVersion}*\` or a branch \`main | release-${majorMinor}\``;
 
@@ -1242,8 +1253,8 @@ Put \`/e2e/use\` options below \`/e2e/run\` command to set specific CRI and Kube
 
 \`\`\`
 /e2e/run/aws main
-/e2e/use/k8s/1.27
-/e2e/use/k8s/1.29
+/e2e/use/k8s/1.30
+/e2e/use/k8s/1.34
 
 This comment will run 2 e2e jobs on AWS with containerd
 and with Kubernetes version 1.20 and 1.23 using image built from main branch.
@@ -1321,10 +1332,10 @@ const findMilestoneForGitRef = async ({ github, context, core, gitRefInfo }) => 
   } catch (error) {
     if (error.name === 'GraphqlResponseError') {
       core.log('Request:', error.request);
-      return {notFoundMsg: error.message}
+      return { notFoundMsg: error.message };
     } else {
       // handle non-GraphQL error
-      return {notFoundMsg: `List milestones failed: ${dumpError(error)}`}
+      return { notFoundMsg: `List milestones failed: ${dumpError(error)}` };
     }
   }
 
@@ -1350,12 +1361,14 @@ const findMilestoneForGitRef = async ({ github, context, core, gitRefInfo }) => 
 
   if (!milestone) {
     core.info(`Milestones: ${JSON.stringify(result)}`);
-    return {notFoundMsg: `No related milestone found for ref '${context.ref}'. You should create milestone related to a tag and restart build.`}
+    return {
+      notFoundMsg: `No related milestone found for ref '${context.ref}'. You should create milestone related to a tag and restart build.`
+    };
   }
 
   core.info(`Found milestone related to ref '${context.ref}': '${milestone.title}' with number ${milestone.number}`);
   return milestone;
-}
+};
 
 /**
  * Find first issue related to the milestone and labeled as release issue.
@@ -1370,11 +1383,11 @@ const findReleaseIssueForMilestone = async ({ github, context, core, milestone }
     labels: [releaseIssueLabel]
   });
   if (response.status !== 200 || response.data.length < 1) {
-    return {notFoundMsg: `List milestone issues failed: ${JSON.stringify(response)}`};
+    return { notFoundMsg: `List milestone issues failed: ${JSON.stringify(response)}` };
   }
 
   return response.data[0];
-}
+};
 
 /**
  * Add comment for build workflow.
@@ -1425,24 +1438,28 @@ const addReleaseIssueComment = async ({ github, context, core, issue, gitRefInfo
 const startWorkflow = async ({ github, context, core, workflow_id, ref, inputs }) => {
   core.info(`Start workflow '${workflow_id}' using ref '${ref}' and inputs ${JSON.stringify(inputs)}.`);
 
-  let response = null
+  let response = null;
   try {
     response = await github.rest.actions.createWorkflowDispatch({
       owner: context.repo.owner,
       repo: context.repo.repo,
       workflow_id,
       ref,
-      inputs: inputs || {},
+      inputs: inputs || {}
     });
-  } catch(error) {
-    return core.setFailed(`Error triggering workflow_dispatch event: ${dumpError(error)}`)
+  } catch (error) {
+    return core.setFailed(`Error triggering workflow_dispatch event: ${dumpError(error)}`);
   }
 
   core.debug(`status: ${response.status}`);
   core.debug(`workflow dispatch response: ${JSON.stringify(response)}`);
 
-  if (response.status !== 204) {
-    return core.setFailed(`Error triggering workflow_dispatch event for '${workflow_id}'. createWorkflowDispatch response: ${JSON.stringify(response)}`);
+  if (response.status !== 200 && response.status !== 204) {
+    return core.setFailed(
+      `Error triggering workflow_dispatch event for '${workflow_id}'. createWorkflowDispatch response: ${JSON.stringify(
+        response
+      )}`
+    );
   }
   return core.info(`Workflow '${workflow_id}' started successfully`);
 };
@@ -1462,35 +1479,33 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
 
   // Run workflow without commenting on release issue.
   if (gitRefInfo.isDeveloperTag) {
-    return await startWorkflow({github, context, core,
-      workflow_id: 'build-and-test_release.yml',
-      ref: context.ref});
+    return await startWorkflow({ github, context, core, workflow_id: 'build-and-test_release.yml', ref: context.ref });
   }
 
-  if (gitRefInfo.isMain || gitRefInfo.tagVersion) {
+  if (gitRefInfo.tagVersion) {
     // Add a comment on the release issue for main branch
     // and tags with specified version:
     // - find milestone
     // - find release issue
     // - add comment and start the workflow.
-    const milestone = await findMilestoneForGitRef({github, context, core,
-      gitRefInfo});
+    const milestone = await findMilestoneForGitRef({ github, context, core, gitRefInfo });
     if (milestone.notFoundMsg) {
       return core.setFailed(milestone.notFoundMsg);
     }
 
-    const releaseIssue = await findReleaseIssueForMilestone({github, context, core,
-      milestone});
+    const releaseIssue = await findReleaseIssueForMilestone({ github, context, core, milestone });
     if (releaseIssue.notFoundMsg) {
       return core.setFailed(releaseIssue.notFoundMsg);
     }
 
-    const commentInfo = await addReleaseIssueComment({github, context, core,
-      issue: releaseIssue, gitRefInfo});
+    const commentInfo = await addReleaseIssueComment({ github, context, core, issue: releaseIssue, gitRefInfo });
 
     core.info(`Start build-and-test for ${gitRefInfo.description} '${context.ref}'...`);
 
-    return await startWorkflow({github, context, core,
+    return await startWorkflow({
+      github,
+      context,
+      core,
       workflow_id: 'build-and-test_release.yml',
       ref: context.ref,
       inputs: {
@@ -1499,5 +1514,7 @@ module.exports.runBuildForRelease = async ({ github, context, core }) => {
     });
   }
 
-  return core.setFailed(`Git ref '${context.ref}' is not an auto-build tag or main branch. Ignore running build-and-test_release workflow.`);
+  return core.setFailed(
+    `Git ref '${context.ref}' is not an auto-build tag. Ignore running build-and-test_release workflow.`
+  );
 };

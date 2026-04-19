@@ -10,14 +10,15 @@
   {{- end -}}
 - name: chown-volume-{{ $volume_name }}
   image: {{ include "helm_lib_module_common_image" (list $context $image) }}
-  command: ["sh", "-c", "chown -R 65534:65534 /tmp/{{ $volume_name }}"]
+  command: ["sh", "-c", "chown -R 65534:65534 /tmp/data"]
   securityContext:
     runAsNonRoot: false
+    readOnlyRootFilesystem: true
     runAsUser: 0
     runAsGroup: 0
   volumeMounts:
   - name: {{ $volume_name }}
-    mountPath: /tmp/{{ $volume_name }}
+    mountPath: /tmp/data
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
@@ -34,14 +35,15 @@
   {{- end -}}
 - name: chown-volume-{{ $volume_name }}
   image: {{ include "helm_lib_module_common_image" (list $context $image) }}
-  command: ["sh", "-c", "chown -R 64535:64535 /tmp/{{ $volume_name }}"]
+  command: ["sh", "-c", "chown -R 64535:64535 /tmp/data"]
   securityContext:
     runAsNonRoot: false
+    readOnlyRootFilesystem: true
     runAsUser: 0
     runAsGroup: 0
   volumeMounts:
   - name: {{ $volume_name }}
-    mountPath: /tmp/{{ $volume_name }}
+    mountPath: /tmp/data
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 6 }}
@@ -54,11 +56,44 @@
   {{- $semver_constraint := index . 1  -}} {{- /* Semver constraint */ -}}
 - name: check-linux-kernel
   image: {{ include "helm_lib_module_common_image" (list $context "checkKernelVersion") }}
-  {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 2 }}
+  {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true) | nindent 2 }}
   env:
   - name: KERNEL_CONSTRAINT
     value: {{ $semver_constraint | quote }}
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 6 }}
+{{- end }}
+
+{{- /* Usage: {{ include "helm_lib_module_init_container_iptables_wrapper" . }} */ -}}
+{{- /* returns initContainer with iptables-wrapper */ -}}
+{{- define "helm_lib_module_init_container_iptables_wrapper" -}}
+  {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  - name: iptables-wrapper-init
+  {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 2 }}
+    runAsNonRoot: false
+    runAsUser: 0
+    runAsGroup: 0
+  image: {{ include "helm_lib_module_image" (list $context  "iptablesWrapperInit") }}
+  command:
+  - /bin/bash
+  - -ec
+  - |
+    /usr/bin/cp /iptables-wrapper /sbin/ -rv
+    /usr/bin/cp /_sbin/* /sbin/ -rv
+    /usr/bin/cp /relocate/sbin/* /sbin/ -rv
+    /sbin/iptables --version
+    /usr/bin/rm /sbin/iptables-wrapper -v
+  volumeMounts:
+  - mountPath: /sbin
+    name: sbin
+  - name: xtables-lock
+    mountPath: /run/xtables.lock      
+  resources:
+    requests:
+      {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 6 }}
+  {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+      cpu: 10m
+      memory: 10Mi
+  {{- end }}
 {{- end }}

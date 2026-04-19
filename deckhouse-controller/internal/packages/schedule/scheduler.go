@@ -1,0 +1,369 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package schedule
+
+import (
+	"errors"
+	"sync"
+	"sync/atomic"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/version"
+)
+
+const (
+	// packageGlobal is the sentinel node that all other nodes implicitly depend on.
+	// It acts as the root of the dependency graph and must complete before any scheduling begins.
+	packageGlobal = "global"
+
+	// FunctionalOrder is the Order value assigned to functional (non-critical) packages.
+	// It is higher than any critical package order, ensuring functional packages are
+	// scheduled only after all critical packages have been processed.
+	FunctionalOrder = 999
+
+	// defaultBufferSize is the capacity of the scheduler's notification channel
+	// used to signal enable/disable events to consumers without blocking callers.
+	defaultBufferSize = 1000
+
+	reasonRequirementsKubernetes = "KubernetesRequirementsUnmet"
+	reasonRequirementsDeckhouse  = "DeckhouseRequirementsUnmet"
+	reasonRequirementsBootstrap  = "BootstrapRequirementsUnmet"
+)
+
+// Scheduler manages a dependency graph of packages and their lifecycle.
+// Each scheduling pass recomputes eligibility, cascade-disables nodes
+// that lost it, and advances newly-eligible nodes — all in topological order.
+// All exported methods are safe for concurrent use.
+type Scheduler struct {
+	mu    sync.RWMutex
+	nodes map[string]*node
+
+	eventCh chan Event
+
+	dependencyGetter       dependency.Getter
+	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
+	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
+	bootstrapCondition     condition.Condition // Bootstrap readiness check
+
+	pause atomic.Bool // When true, no state changes are processed
+}
+
+// Option configures a Scheduler during construction.
+type Option func(*Scheduler)
+
+// WithKubeVersionGetter sets the provider for the current Kubernetes version.
+func WithKubeVersionGetter(kubeVersionGetter version.Getter) Option {
+	return func(s *Scheduler) {
+		s.kubeVersionGetter = kubeVersionGetter
+	}
+}
+
+// WithDeckhouseVersionGetter sets the provider for the current Deckhouse version.
+func WithDeckhouseVersionGetter(deckhouseVersionGetter version.Getter) Option {
+	return func(s *Scheduler) {
+		s.deckhouseVersionGetter = deckhouseVersionGetter
+	}
+}
+
+// WithBootstrapCondition sets the predicate that gates scheduling until bootstrap is ready.
+func WithBootstrapCondition(cond condition.Condition) Option {
+	return func(s *Scheduler) {
+		s.bootstrapCondition = cond
+	}
+}
+
+// WithDependencyGetter sets the provider for the current dependency version.
+func WithDependencyGetter(getter dependency.Getter) Option {
+	return func(s *Scheduler) {
+		s.dependencyGetter = getter
+	}
+}
+
+// NewScheduler creates a Scheduler with an empty dependency graph and a
+// buffered event channel. Use functional options to configure version
+// providers and conditions. Call [Scheduler.Ch] to consume lifecycle events.
+func NewScheduler(opts ...Option) *Scheduler {
+	s := &Scheduler{
+		nodes:   make(map[string]*node),
+		eventCh: make(chan Event, defaultBufferSize),
+	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	s.pause.Store(true) // Start paused - no state changes until Resume()
+
+	return s
+}
+
+// Pause prevents any state changes from being processed.
+func (s *Scheduler) Pause() {
+	s.pause.Store(true)
+}
+
+// Resume enables state change processing and re-evaluates all packages.
+// For each package whose state changed, the appropriate callback is invoked.
+func (s *Scheduler) Resume() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Only process if transitioning from paused to running
+	if !s.pause.CompareAndSwap(true, false) {
+		return // Already running, no-op
+	}
+
+	s.schedule()
+}
+
+// CheckConstraints evaluates the given constraints against the current cluster state
+// and returns an error describing the first unsatisfied constraint, or nil if all are met.
+func (s *Scheduler) CheckConstraints(constraints Constraints) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var checkers []checker.Checker
+
+	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
+	}
+
+	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
+	}
+
+	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
+		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
+	}
+
+	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
+		deps := make(map[string]dependency.Dependency)
+		for name, dep := range constraints.Dependencies {
+			deps[name] = dependency.Dependency{
+				Constraint: dep.Constraint,
+				Optional:   dep.Optional,
+			}
+		}
+
+		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, deps))
+	}
+
+	if res := checker.Check(checkers...); !res.Enabled {
+		return errors.New(res.Message)
+	}
+
+	return nil
+}
+
+// AddNode registers a single package, wires its dependency edges into the
+// existing graph, and triggers a full scheduling pass. Newly-eligible
+// dependents are advanced automatically.
+func (s *Scheduler) AddNode(pkg Package) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.addNode(pkg)
+
+	s.schedule()
+}
+
+// RemoveNode removes a package from the graph, cleans up all dependency
+// edges that reference it, and triggers a full reschedule.
+func (s *Scheduler) RemoveNode(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	n, ok := s.nodes[name]
+	if !ok {
+		return
+	}
+
+	// Remove this node from the followers set of every node it depends on.
+	for dep := range n.followees {
+		if parent, ok := s.nodes[dep]; ok {
+			delete(parent.followers, name)
+		}
+	}
+
+	delete(s.nodes, name)
+
+	s.schedule()
+}
+
+// Complete marks the named package as active (processing finished) and
+// runs a scheduling pass to advance any newly-eligible dependents.
+func (s *Scheduler) Complete(completed string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if n, ok := s.nodes[completed]; ok && n.state == nodeStateScheduled {
+		n.state = nodeStateActive
+	}
+
+	if completed == packageGlobal {
+		var enabled []string
+		for _, n := range s.compute() {
+			if n.name == packageGlobal || !n.status.Enabled {
+				continue
+			}
+
+			enabled = append(enabled, n.name)
+		}
+
+		s.send(Event{Kind: EventGlobalDone, Enabled: enabled})
+	}
+
+	s.schedule()
+}
+
+// Trigger resets a node's direct followers to idle, then runs a full
+// scheduling pass so they are re-evaluated and potentially rescheduled.
+func (s *Scheduler) Trigger(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.trigger(name)
+	s.schedule()
+}
+
+// trigger resets a node's direct followers to idle.
+func (s *Scheduler) trigger(name string) {
+	n, ok := s.nodes[name]
+	if !ok {
+		return
+	}
+
+	for follower := range n.followers {
+		if fn, ok := s.nodes[follower]; ok {
+			fn.state = nodeStateIdle
+		}
+	}
+}
+
+// reconverge resets all nodes to idle
+// forcing the entire graph to re-converge from scratch.
+func (s *Scheduler) reconverge() {
+	for _, n := range s.nodes {
+		n.state = nodeStateIdle
+	}
+}
+
+// Reschedule reverts the named package to idle and runs a full scheduling
+// pass, causing it (and potentially its dependents) to be rescheduled.
+// It is a no-op if the package does not exist.
+func (s *Scheduler) Reschedule(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if n, ok := s.nodes[name]; ok {
+		n.state = nodeStateIdle
+	}
+
+	s.schedule()
+}
+
+// Schedule forces a full scheduling pass without changing any node state.
+// Use when external conditions (e.g. Kubernetes version) have changed
+// and the graph needs re-evaluation.
+func (s *Scheduler) Schedule() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.schedule()
+}
+
+// schedule recomputes enabled status and advances idle nodes that are
+// eligible to the scheduled state, emitting an [EventSchedule] for each.
+func (s *Scheduler) schedule() {
+	if s.pause.Load() {
+		return
+	}
+
+	for _, n := range s.compute() {
+		if n.state != nodeStateIdle {
+			continue
+		}
+
+		if s.canSchedule(n) {
+			n.state = nodeStateScheduled
+			s.send(Event{Name: n.name, Kind: EventSchedule})
+		}
+	}
+}
+
+// compute recomputes the enabled status for all nodes in topological order,
+// guaranteeing that dependencies are resolved before dependents. Nodes that
+// lose eligibility emit an [EventDisable]. If any status changed, reconverge
+// is called to reset the graph for a fresh scheduling pass.
+func (s *Scheduler) compute() []*node {
+	var changed bool
+	sorted := topoSort(s.nodes)
+	for _, n := range sorted {
+		current := n.status.Enabled
+		n.status = checker.Check(n.checkers...)
+		if current != n.status.Enabled {
+			changed = true
+
+			if !n.status.Enabled {
+				s.send(Event{Name: n.name, Kind: EventDisable, Reason: n.status.Reason, Message: n.status.Message})
+			}
+		}
+	}
+
+	if changed {
+		s.reconverge()
+	}
+
+	// Disabled nodes have nothing to wait for — mark them active so they
+	// do not block higher-order or dependent nodes. If a node later becomes
+	// enabled, the status change above triggers reconverge (resetting all
+	// states to idle), so it will go through normal scheduling.
+	for _, n := range sorted {
+		if n.state == nodeStateIdle && !n.status.Enabled {
+			n.state = nodeStateActive
+		}
+	}
+
+	return sorted
+}
+
+// canSchedule returns true if a node is eligible to transition from idle to scheduled.
+// Three conditions must hold:
+//  1. The node must be enabled (all dependency checks passed).
+//  2. All direct dependencies (followees) must be active.
+//  3. All nodes with a strictly lower Order must be active.
+func (s *Scheduler) canSchedule(n *node) bool {
+	if !n.status.Enabled {
+		return false
+	}
+
+	for dep := range n.followees {
+		if existing, ok := s.nodes[dep]; ok {
+			if existing.state != nodeStateActive {
+				return false
+			}
+		}
+	}
+
+	for _, other := range s.nodes {
+		if other.order < n.order && other.state != nodeStateActive {
+			return false
+		}
+	}
+
+	return true
+}

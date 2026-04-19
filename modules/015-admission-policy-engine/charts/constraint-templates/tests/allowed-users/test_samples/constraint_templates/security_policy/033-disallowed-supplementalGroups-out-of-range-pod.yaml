@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-supplementalGroups-out-of-range-pod
+  namespace: testns
+spec:
+  securityContext:
+    supplementalGroups:
+    - 50
+    - 5
+  containers:
+    - name: nginx
+      image: nginx
+

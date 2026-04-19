@@ -1,0 +1,164 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+from: {{ index $.Images "builder/alpine" }}
+final: false
+import:
+- image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+  add: /
+  to: /usr/bin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  before: install
+shell:
+  install:
+  - cd /usr/bin
+  - |
+    for mode in legacy nft; do
+      for base in iptables ip6tables; do
+        for cmd in ${base}-${mode} ${base}-${mode}-save ${base}-${mode}-restore; do
+          ln -sf xtables-${mode}-multi "${cmd}"
+        done
+      done
+    done
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "base/distroless" }}
+import:
+- from: {{ index $.Images "libs/musl" }}
+  add: /usr/lib/libc.so
+  to: /usr/lib/libc.so
+  before: install
+- from: {{ index $.Images "libs/musl" }}
+  add: /lib/ld-musl-x86_64.so.1
+  to: /lib/ld-musl-x86_64.so.1
+  before: install
+- from: {{ index $.Images "tools/curl" }}
+  add: /usr/bin/curl
+  to: /usr/bin/curl
+  before: install
+- from: {{ index $.Images "tools/bash" }}
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: install
+- from: {{ index $.Images "tools/jq" }}
+  add: /usr/bin/jq
+  before: install
+- from: {{ index $.Images "tools/yq" }}
+  add: /usr/bin/yq
+  before: install
+- from: {{ index $.Images "tools/sed" }}
+  add: /usr/bin/sed
+  before: install
+- from: {{ index $.Images "tools/grep" }}
+  add: /usr/bin/grep
+  before: install
+- from: {{ index $.Images "tools/gawk" }}
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - awk
+  - gawk
+  before: install
+- from: {{ index $.Images "tools/procps" }}
+  add: /bin
+  to: /bin
+  includePaths:
+  - free
+  - pgrep
+  - pidof
+  - pidwait
+  - pkill
+  - ps
+  - top
+  - uptime
+  - vmstat
+  - watch
+  before: install
+- from: {{ index $.Images "tools/iproute2" }}
+  add: /sbin
+  to: /sbin
+  includePaths:
+  - bridge
+  - ip
+  - ss
+  - tc
+  before: install
+- from: {{ index $.Images "tools/findutils" }}
+  add: /usr/bin/find
+  before: install
+- from: {{ index $.Images "tools/coreutils" }}
+  add: /usr/bin/*
+  to: /usr/bin
+  before: install
+- from: {{ index $.Images "tools/openssl" }}
+  add: /usr/lib
+  to: /usr/lib
+  includePaths:
+  - libcrypto.so*
+  - libssl.so*
+  - engines-3
+  - ossl-modules
+  before: install
+- from: {{ index $.Images "tools/openssl" }}
+  add: /usr/bin/openssl
+  to: /usr/bin/openssl
+  before: install
+- from: {{ index $.Images "tools/vim" }}
+  add: /usr
+  to: /usr
+  includePaths:
+  - bin/vim
+  - share/vim
+  before: install
+- from: {{ index $.Images "tools/less" }}
+  add: /usr/bin/less
+  to: /usr/bin/less
+  before: install
+- from: {{ index $.Images "tools/ethtool" }}
+  add: /usr/sbin/ethtool
+  to: /usr/bin/ethtool
+  before: install
+- from: {{ index $.Images "tools/pwru" }}
+  add: /usr/bin/pwru
+  to: /usr/bin/pwru
+  before: install
+- image: control-plane-manager/etcd
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - etcdctl
+  - etcdutl
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+  add: /usr/bin
+  to: /usr/bin
+  includePaths:
+  - xtables-legacy-multi
+  - xtables-nft-multi
+  - iptables-*
+  - ip6tables-*
+  before: install
+- from: {{ index $.Images "tools/util-linux" }}
+  add: /usr/bin/nsenter
+  to: /usr/bin/nsenter
+  before: install
+shell:
+  install:
+  - /usr/bin/ln -s /var/run /run
+  - /usr/bin/ln -s /bin/bash /bin/sh
+imageSpec:
+  config:
+    env:
+      "LANG": "C.UTF-8"
+      "LANGUAGE": "C.UTF-8"
+      "LC_ALL": "C.UTF-8"
+      "CRYPTOGRAPHY_OPENSSL_NO_LEGACY": "true"
+      "EDITOR": "/usr/bin/vim"
+      "KUBE_EDITOR": "/usr/bin/vim"
+      "PS1": '\\[\\033[01;30m\\][debug]\\[\\033[00m\\] \\[\\033[01;33m\\]\\u@\\h\\[\\033[01;34m\\] \\w \\$\\[\\033[00m\\] '
+    workingDir: "/"
+    user: "root:root"
+    cmd: ["/bin/bash"]

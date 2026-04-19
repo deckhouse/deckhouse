@@ -1,8 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/nginx-static
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 git:
 - add: /{{ $.ModulePath }}modules/800-{{ $.ModuleName }}/images/{{ $.ImageName }}/nginx.conf
   to: /opt/nginx-static/conf/nginx.conf
@@ -14,8 +11,9 @@ import:
     add: /app
     to: /app
     before: setup
-docker:
-  ENTRYPOINT: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
+imageSpec:
+  config:
+    entrypoint: [ "/opt/nginx-static/sbin/nginx", "-g", "daemon off;" ]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
@@ -31,9 +29,12 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} {{ $.SOURCE_REPO }}/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
   - cd /src/deckhouse-cli
   - git describe --tags > VERSION
   - sed -i "s|sh:\ git describe --tags|sh:\ cat VERSION|" Taskfile.yml
@@ -41,7 +42,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_BULLSEYE }}
+from: {{ index $.Images "builder/golang-bookworm" }}
 import:
   - image: {{ .ModuleName }}/{{ .ImageName }}-frontend-artifact
     add: /app/dist
@@ -59,16 +60,38 @@ import:
     add: /task
     to: /usr/local/bin/task
     before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: DECKHOUSE_PRIVATE_REPO
+  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 shell:
   beforeInstall:
     {{- include "debian packages proxy" . | nindent 4 }}
-    - apt-get install -y libbtrfs-dev jq
+    - |
+      apt-get update && apt-get install -y \
+      libbtrfs-dev \
+      apt-utils \
+      libbtrfs-dev \
+      libelf-dev \
+      libssl-dev \
+      libuv1-dev \
+      libzstd-dev \
+      file git gcc dnsutils jq
+    - ln -fs "$(dpkg -L libuv1-dev | grep -F '/libuv_a.a')" /usr/local/lib/libuv.a
+    - find /var/lib/apt/ /var/cache/apt/ -type f -delete
   install:
-    - export GOPROXY={{ $.GOPROXY }}
-    - export PRIVATE_REPO={{ $.DECKHOUSE_PRIVATE_REPO }}
-    - export PRIVATE_REPO_TOKEN={{ $.STRONGHOLD_PULL_TOKEN }}
-    - export GOPRIVATE={{ $.DECKHOUSE_PRIVATE_REPO }}
-    - git config --global url."https://gitlab-ci-token:${PRIVATE_REPO_TOKEN}@${PRIVATE_REPO}/".insteadOf https://${PRIVATE_REPO}/
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - export PRIVATE_REPO=$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO)
+    - export GOPRIVATE="flant.internal"
+    - git config --global url."ssh://git@${PRIVATE_REPO}/".insteadOf "https://flant.internal/"
+    - git config --global --add safe.directory '*'
+    - mkdir -p ~/.ssh
+    - touch ~/.ssh/known_hosts
+    - ssh-keyscan -H ${PRIVATE_REPO} >> ~/.ssh/known_hosts
+
     - cd /src
     - task build:dist:all
     - mkdir -p /app/files/d8-cli
@@ -85,9 +108,19 @@ import:
   add: /src/src
   to: /app
   before: setup
+mount:
+- from: tmp_dir
+  to: /app/node_modules
+- from: tmp_dir
+  to: /root/.npm/_cacache
+- from: tmp_dir
+  to: /tmp/node-complile-cache
 shell:
   setup:
   {{- include "node packages proxy" . | nindent 2 }}
   - cd /app
   - npm install
   - npm run build
+  - chown 64535:64535 /app
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

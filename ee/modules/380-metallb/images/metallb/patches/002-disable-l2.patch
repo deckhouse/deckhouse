@@ -1,0 +1,12 @@
+diff --git a/speaker/main.go b/speaker/main.go
+index 68b8b66e..66c7ca63 100644
+--- a/speaker/main.go
++++ b/speaker/main.go
+@@ -310,6 +310,7 @@ func newController(cfg controllerConfig) (*controller, error) {
+ 	protocols := []config.Proto{config.BGP}
+ 
+ 	layer2StatusFetcher := func(types.NamespacedName) []layer2.IPAdvertisement { return nil }
++	cfg.DisableLayer2 = true
+ 	if !cfg.DisableLayer2 {
+ 		a, err := layer2.New(cfg.Logger, cfg.InterfaceExcludeRegexp)
+ 		layer2StatusFetcher = a.GetStatus

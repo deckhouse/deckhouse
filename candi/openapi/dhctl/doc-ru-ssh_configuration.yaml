@@ -1,0 +1,37 @@
+kind: SSHConfig
+apiVersions:
+- apiVersion: dhctl.deckhouse.io/v1
+  openAPISpec:
+    description: |
+      Конфигурация SSH для dhctl.
+    properties:
+      apiVersion:
+        description: Версия Deckhouse API.
+      sshUser:
+        description: Имя пользователя SSH.
+      sshPort:
+        description: Порт SSH.
+      sshExtraArgs:
+        description: Дополнительные параметры соединения SSH.
+      sshAgentPrivateKeys:
+        items:
+          properties:
+            key:
+              description: Приватный SSH-ключ.
+            passphrase:
+              description: Пароль SSH-ключа.
+      sshBastionHost:
+        description: Хост SSH-бастиона.
+      sshBastionPort:
+        description: Порт SSH-бастиона.
+      sshBastionUser:
+        description: Имя пользователя бастиона.
+      sudoPassword:
+        description: |
+          Пароль sudo пользователя.
+      legacyMode:
+        description: |
+          Использовать легаси режим SSH (clissh).
+      modernMode:
+        description: |
+          Использовать актуальный режим SSH (gossh).

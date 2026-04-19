@@ -16,16 +16,20 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-
 	"testing"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 func TestGetDNSAddress(t *testing.T) {
@@ -72,7 +76,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.31"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
@@ -89,26 +93,29 @@ proxy:
     {{- end }}
   {{- end }}
 {{- end }}
+{{- with .initConfiguration }}
 ---
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-  releaseChannel: Stable
-  # address of the registry where the installer image is located; in this case, the default value for Deckhouse CE is set
-{{- if .imagesRepo }}
-  imagesRepo: {{ .imagesRepo }}
+	{{- with .imagesRepo }}
+  imagesRepo: {{ . }}
+	{{- end }}
+	{{- with .registryDockerCfg }}
+  registryDockerCfg: {{ . | b64enc }}
+	{{- end }}
 {{- end }}
-
-{{- if .dockerCfg }}
-  # a special string with parameters to access Docker registry
-  registryDockerCfg: {{ .dockerCfg | b64enc }}
-{{- end }}
-  configOverrides:
-    prometheusMadisonIntegrationEnabled: false
-    global:
-      modules:
-        publicDomainTemplate: "%s.example.com"
-    nginxIngressEnabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  version: 2
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.example.com"
 ---
 apiVersion: deckhouse.io/v1
 kind: YandexClusterConfiguration
@@ -147,7 +154,12 @@ provider:
        "public_key": "publicKey",
        "private_key": "privateKey"
     }
+{{- with .manifests }}
+	{{- range . }}
 ---
+		{{- . }}
+	{{- end }}
+{{- end }}
 `
 
 func renderTestConfig(data map[string]interface{}, config string) string {
@@ -207,8 +219,12 @@ func generateOldDockerCfg(host string, username, password *string) string {
 
 func generateMetaConfig(t *testing.T, template string, data map[string]interface{}, hasErr bool) *MetaConfig {
 	configData := renderTestConfig(data, template)
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 
-	cfg, err := ParseConfigFromData(configData)
+	cfg, err := ParseConfigFromData(context.TODO(), configData, DummyPreparatorProvider(), dc)
 	f := require.NoError
 	if hasErr {
 		f = require.Error
@@ -223,169 +239,66 @@ func generateMetaConfigForMetaConfigTest(t *testing.T, data map[string]interface
 	return generateMetaConfig(t, metaConfigTestsTemplate, data, false)
 }
 
+// Registry
 func TestPrepareRegistry(t *testing.T) {
-	t.Run("Has imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-			"dockerCfg":  generateDockerCfg("r.example.com", "a", "b"),
-			"imagesRepo": "r.example.com/deckhouse/ce/",
-		})
-
-		t.Run("Trim right slash for imagesRepo", func(t *testing.T) {
-			require.Equal(t, cfg.DeckhouseConfig.ImagesRepo, "r.example.com/deckhouse/ce")
-		})
-
-		t.Run("Correct prepare registry object", func(t *testing.T) {
-			expectedData := RegistryData{
-				Address:   "r.example.com",
-				Path:      "/deckhouse/ce",
-				Scheme:    "https",
-				CA:        "",
-				DockerCfg: "eyJhdXRocyI6eyJyLmV4YW1wbGUuY29tIjp7ImF1dGgiOiJZVHBpIn19fQ==",
-			}
-
-			require.Equal(t, cfg.Registry, expectedData)
-		})
-	})
-
-	t.Run("Has not imagesRepo and dockerCfg", func(t *testing.T) {
-		cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
-
-		t.Run("Registry object for CE edition", func(t *testing.T) {
-			expectedData := RegistryData{
-				Address:   "registry.deckhouse.io",
-				Path:      "/deckhouse/ce",
-				Scheme:    "https",
-				CA:        "",
-				DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
-			}
-
-			require.Equal(t, cfg.Registry, expectedData)
-		})
-	})
-
-	t.Run("Validate registryDockerCfg", func(t *testing.T) {
-		t.Run("Expect successful validation", func(t *testing.T) {
-			creds := map[string]string{
-				"registry.deckhouse.io":                `{"auths": { "registry.deckhouse.io": {}}}`,
-				"regi-stry.deckhouse.io":               `{"auths": { "regi-stry.deckhouse.io": {}}}`,
-				"registry.io":                          `{"auths": { "registry.io": {}}}`,
-				"1.io":                                 `{"auths": { "1.io": {}}}`,
-				"1.s.io":                               `{"auths": { "1.s.io": {}}}`,
-				"regi.stry:5000":                       `{"auths": { "regi.stry:5000": {}}}`,
-				"1.2.3":                                `{"auths": { "1.2.3": {}}}`,
-				"1.2:5000":                             `{"auths": { "1.2:5000": {}}}`,
-				"reg.dec.io1":                          `{"auths": { "reg.dec.io1": {}}}`,
-				"one.two.three.four.five.six.whatever": `{"auths": { "one.two.three.four.five.six.whatever": {}}}`,
-				"1.2.3.4.5.6.0":                        `{"auths": { "1.2.3.4.5.6.0": {}}}`,
-			}
-
-			for host, cred := range creds {
-				dockerCfg := base64.StdEncoding.EncodeToString([]byte(cred))
-
-				err := validateRegistryDockerCfg(dockerCfg, host)
-				require.NoError(t, err)
-			}
-		})
-
-		t.Run("Expect failed validation", func(t *testing.T) {
-			hosts := []string{
-				"some-bad-host:1434/deckhouse",
-				"some-bad/deckhouse",
-				".some-bad/deckhouse",
-				"-some.bad",
-				"somebad.",
-				"some--ba",
-				"some..ba",
-				"14214.ba1::1554",
-				"some.bad:host",
-				"some-bad:host1",
-			}
-
-			for _, host := range hosts {
-				creds := fmt.Sprintf("{\"auths\": { \"%s\": {}}}", host)
-				dockerCfg := base64.StdEncoding.EncodeToString([]byte(creds))
-
-				err := validateRegistryDockerCfg(dockerCfg, host)
-				require.EqualErrorf(t,
-					err,
-					fmt.Sprintf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", host),
-					err.Error())
-			}
-		})
-	})
-}
-
-func TestParseRegistryData(t *testing.T) {
-	t.Run("dockerCfg in current format (has auth)", func(t *testing.T) {
-		t.Run("sets auth key from auth string", func(t *testing.T) {
-			user, password := "user", "password"
-			cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-				"dockerCfg":  generateDockerCfg("r.example.com", user, password),
-				"imagesRepo": "r.example.com/deckhouse/ce/",
+	t.Run("With CRI (module enable)", func(t *testing.T) {
+		t.Run("InitConfig -> unmanaged && legacy", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"initConfiguration": map[string]any{
+					"imagesRepo":        "r.example.com/test/",
+					"registryDockerCfg": generateDockerCfg("r.example.com", "a", "b"),
+				},
 			})
-
-			m, err := cfg.ParseRegistryData()
-			require.NoError(t, err)
-
-			require.Equal(t, m["auth"], dockerCfgAuth(user, password))
+			require.Equal(t, true, cfg.Registry.LegacyMode)
+			require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
+			registry := cfg.Registry.Settings.RemoteData
+			require.Equal(t, "r.example.com/test", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "a", registry.Username)
+			require.Equal(t, "b", registry.Password)
+			require.Equal(t, "", registry.CA)
 		})
-	})
-
-	t.Run("dockerCfg in old format (has username and password)", func(t *testing.T) {
-		t.Run("correct", func(t *testing.T) {
-			t.Run("sets auth key as base64 concatenation username and password with ':' separator", func(t *testing.T) {
-				user, password := "old_user", "old_password"
-				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, &password),
-					"imagesRepo": "r.example.com/deckhouse/ce/",
-				})
-
-				m, err := cfg.ParseRegistryData()
-				require.NoError(t, err)
-
-				require.Equal(t, m["auth"], dockerCfgAuth(user, password))
+		t.Run("Default -> CE edition registry && direct && not legacy", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{})
+			require.Equal(t, false, cfg.Registry.LegacyMode)
+			require.Equal(t, registry_const.ModeDirect, cfg.Registry.Settings.Mode)
+			registry := cfg.Registry.Settings.RemoteData
+			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "", registry.Password)
+			require.Equal(t, "", registry.Username)
+			require.Equal(t, "", registry.CA)
+		})
+		t.Run("ModuleConfig Deckhouse -> from moduleConfig && not legacy", func(t *testing.T) {
+			cfg := generateMetaConfigForMetaConfigTest(t, map[string]any{
+				"manifests": []string{`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test
+        username: test-user
+        password: test-password
+        scheme: HTTPS
+        ca: "-----BEGIN CERTIFICATE-----"
+  version: 1
+`,
+				},
 			})
-		})
-
-		t.Run("does not have username", func(t *testing.T) {
-			t.Run("sets empty auth key", func(t *testing.T) {
-				password := "old_password"
-				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-					"dockerCfg":  generateOldDockerCfg("r.example.com", nil, &password),
-					"imagesRepo": "r.example.com/deckhouse/ce/",
-				})
-
-				m, err := cfg.ParseRegistryData()
-				require.NoError(t, err)
-
-				require.Equal(t, m["auth"], "")
-			})
-		})
-
-		t.Run("does not have password", func(t *testing.T) {
-			t.Run("sets empty auth key", func(t *testing.T) {
-				user := "old_user"
-				cfg := generateMetaConfigForMetaConfigTest(t, map[string]interface{}{
-					"dockerCfg":  generateOldDockerCfg("r.example.com", &user, nil),
-					"imagesRepo": "r.example.com/deckhouse/ce/",
-				})
-
-				m, err := cfg.ParseRegistryData()
-				require.NoError(t, err)
-
-				require.Equal(t, m["auth"], "")
-			})
-		})
-	})
-
-	t.Run("default dockerCfg", func(t *testing.T) {
-		t.Run("sets empty auth key", func(t *testing.T) {
-			cfg := generateMetaConfigForMetaConfigTest(t, make(map[string]interface{}))
-
-			m, err := cfg.ParseRegistryData()
-			require.NoError(t, err)
-
-			require.Equal(t, m["auth"], "")
+			require.Equal(t, false, cfg.Registry.LegacyMode)
+			require.Equal(t, registry_const.ModeUnmanaged, cfg.Registry.Settings.Mode)
+			registry := cfg.Registry.Settings.RemoteData
+			require.Equal(t, "r.example.com/test", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "test-user", registry.Username)
+			require.Equal(t, "test-password", registry.Password)
+			require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
 		})
 	})
 }

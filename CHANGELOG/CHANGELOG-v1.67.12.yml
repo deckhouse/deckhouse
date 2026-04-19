@@ -1,0 +1,5 @@
+metallb:
+  fixes:
+    - summary: Fixed race condition in migration hook.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12176
+

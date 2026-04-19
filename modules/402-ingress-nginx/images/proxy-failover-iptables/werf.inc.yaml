@@ -1,65 +1,45 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
-artifact: {{ .ModuleName }}/distroless-proxy-failover-iptables-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
-shell:
-  install:
-    - mkdir -p /relocate/sbin
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        ln -f -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /sbin/iptables-wrapper
-    - |
-      for mode in legacy nft; do
-        for basecmd in iptables ip6tables; do
-          for cmd in ${basecmd}-${mode} ${basecmd}-${mode}-save ${basecmd}-${mode}-restore; do
-            ln -sf /sbin/xtables-${mode}-multi "/relocate/sbin/${cmd}"
-          done
-        done
-      done
----
-artifact: {{ .ModuleName }}/failover-artifact
-from: {{ .Images.BASE_GOLANG_21_ALPINE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+from: {{ index $.Images "builder/src" }}
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/402-ingress-nginx/images/proxy-failover-iptables/failover/
-  to: /workdir
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/failover/
+  to: /src
   stageDependencies:
     install:
     - '**/*.go'
     - '**/*.sum'
     - '**/*.mod'
+---
+image: {{ .ModuleName }}/failover-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
-    - cd /workdir
-    - GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o failover main.go
+  - chown -R 0:0 failover
+  - chmod 0700 failover
 ---
-image: {{ $.ModuleName }}/proxy-failover-iptables
-fromImage: common/distroless
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "base/distroless" }}
 import:
-- artifact: {{ $.ModuleName }}/distroless-proxy-failover-iptables-artifact
-  add: /relocate
-  to: /
-  before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
-  before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
-  before: setup
-- artifact: {{ .ModuleName }}/failover-artifact
-  add: /workdir/failover
+- image: {{ .ModuleName }}/failover-artifact
+  add: /src/failover
   to: /failover
   before: setup
-docker:
-  ENTRYPOINT: ["/failover"]
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/failover"]

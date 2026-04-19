@@ -1,0 +1,5 @@
+cloud-provider-vsphere:
+  fixes:
+    - summary: fix cloud-data-discoverer (SPBM)
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16589
+

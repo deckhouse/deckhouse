@@ -16,14 +16,13 @@ package proxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
-
-	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -37,6 +36,7 @@ type Proxy struct {
 	registryClient registry.Client
 	cache          cache.Cache
 	logger         log.Logger
+	config         Config
 }
 
 func NewProxy(server *http.Server,
@@ -44,7 +44,6 @@ func NewProxy(server *http.Server,
 	clientConfigGetter registry.ClientConfigGetter,
 	logger log.Logger,
 	registryClient registry.Client, opts ...ProxyOption) *Proxy {
-
 	p := &Proxy{
 		server:         server,
 		listener:       listener,
@@ -64,9 +63,19 @@ func NewProxy(server *http.Server,
 	return p
 }
 
-func (p *Proxy) Serve() {
+type Config struct {
+	SignCheck bool
+}
+
+func (p *Proxy) Serve(cfg *Config) {
+	// Initialize runtime config (use zero values if nil)
+	if cfg != nil {
+		p.config = *cfg
+	} else {
+		p.config = Config{}
+	}
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "HEAD" && r.Method != "GET" {
+		if r.Method != http.MethodHead && r.Method != http.MethodGet {
 			p.logger.Error("method not allowed")
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -118,7 +127,7 @@ func (p *Proxy) Serve() {
 		w.Header().Set("Cache-Control", `public, max-age=31536000`)
 		w.Header().Set("ETag", "\""+digest+"\"")
 
-		if r.Method == "HEAD" {
+		if r.Method == http.MethodHead {
 			return
 		}
 		_, err = io.Copy(w, packageReader)
@@ -137,6 +146,15 @@ func (p *Proxy) Serve() {
 	}
 }
 
+// StopProxy stops proxy server but does not call os.Exit
+func (p *Proxy) StopProxy() {
+	p.logger.Infof("graceful shutdown packages proxy listener: %s", p.listener.Addr())
+	err := p.server.Shutdown(context.Background())
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		p.logger.Error(err.Error())
+	}
+}
+
 func (p *Proxy) Stop() {
 	p.logger.Infof("graceful shutdown listener: %s", p.listener.Addr())
 	err := p.server.Shutdown(context.Background())
@@ -150,7 +168,8 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	// if cache is nil, return digest directly from registry
 	if p.cache == nil {
 		p.logger.Infof("Digest %q not found in local cache, trying to fetch package from registry", digest)
-		return p.getPackageFromRegistry(ctx, digest, repository, path)
+		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+		return size, reader, err
 	}
 
 	// otherwise try to find digest in the cache
@@ -161,11 +180,12 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	// if any error other than item in the cache not found, get digest directly from the registry
 	if !errors.Is(err, cache.ErrEntryNotFound) {
 		p.logger.Errorf("Get package from cache: %v", err)
-		return p.getPackageFromRegistry(ctx, digest, repository, path)
+		size, _, reader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+		return size, reader, err
 	}
 
 	// if digest is not found in the cache, get digest from registry and add digest to the cache
-	size, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
+	size, layerDigest, registryReader, err := p.getPackageFromRegistry(ctx, digest, repository, path)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -183,7 +203,7 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 		defer registryReader.Close()
 		defer pipeWriter.Close()
 
-		err := p.cache.Set(digest, size, teeReader)
+		err := p.cache.Set(digest, layerDigest, teeReader)
 		if err == nil {
 			return
 		}
@@ -199,17 +219,18 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 	return size, pipeReader, nil
 }
 
-func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, io.ReadCloser, error) {
+func (p *Proxy) getPackageFromRegistry(ctx context.Context, digest string, repository string, path string) (int64, string, io.ReadCloser, error) {
 	registryConfig, err := p.getter.Get(repository)
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
+	registryConfig.SignCheck = p.config.SignCheck
 
-	size, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
+	size, layerDigest, registryReader, err := p.registryClient.GetPackage(ctx, p.logger, registryConfig, digest, path)
 	if err != nil {
-		return 0, nil, err
+		return 0, "", nil, err
 	}
-	return size, registryReader, nil
+	return size, layerDigest, registryReader, nil
 }
 
 type ProxyOption func(*Proxy)

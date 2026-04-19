@@ -28,6 +28,8 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/pbm"
+	pbmTypes "github.com/vmware/govmomi/pbm/types"
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vapi/rest"
 	"github.com/vmware/govmomi/vapi/tags"
@@ -39,6 +41,8 @@ import (
 
 type Client interface {
 	GetZonesDatastores() (*Output, error)
+	ListPolicies() ([]StoragePolicy, error)
+	RefreshClient() error
 }
 
 type client struct {
@@ -58,6 +62,7 @@ const (
 type ProviderClusterConfiguration struct {
 	Provider          Provider `json:"provider"`
 	Region            string   `json:"region"`
+	Zones             []string `json:"zones"`
 	RegionTagCategory string   `json:"regionTagCategory"`
 	ZoneTagCategory   string   `json:"zoneTagCategory"`
 }
@@ -83,37 +88,38 @@ type Output struct {
 	ZonedDataStores []ZonedDataStore `json:"datastores"`
 }
 
+type StoragePolicy struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
 var (
 	dnsLabelRegex   = regexp.MustCompile(`^(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9]*[a-zA-Z0-9])$`)
 	dnsLabelMaxSize = 150
 )
 
 func NewClient(config *ProviderClusterConfiguration) (Client, error) {
+	c, err := createVsphereClient(config)
+	if err != nil {
+		return nil, err
+	}
+
 	r := &client{
-		config: config,
+		config:     config,
+		client:     c.client,
+		restClient: c.restClient,
 	}
 
 	return r, nil
 }
 
 func (v *client) GetZonesDatastores() (*Output, error) {
-	c, err := createVsphereClient(v.config)
+	dc, err := v.getDCByRegion(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 
-	var (
-		regionTagName         = v.config.Region
-		regionTagCategoryName = v.config.RegionTagCategory
-		zoneTagCategoryName   = v.config.ZoneTagCategory
-	)
-
-	dc, err := getDCByRegion(context.TODO(), c, regionTagName, regionTagCategoryName)
-	if err != nil {
-		return nil, err
-	}
-
-	zonedDataStores, err := getDataStoresInDC(context.TODO(), c, dc, zoneTagCategoryName)
+	zonedDataStores, err := v.getDataStoresInDC(context.TODO(), dc)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +127,7 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 		panic("no zonedDataStores returned")
 	}
 
-	zones, err := getZonesInDC(context.TODO(), c, dc, zoneTagCategoryName)
+	zones, err := v.getZonesInDC(context.TODO(), dc)
 	if err != nil {
 		return nil, err
 	}
@@ -133,6 +139,58 @@ func (v *client) GetZonesDatastores() (*Output, error) {
 	}
 
 	return &output, nil
+}
+
+// PolicyIDByName finds a SPBM storage policy by name and returns its ID.
+func (v *client) ListPolicies() ([]StoragePolicy, error) {
+	pc, err := pbm.NewClient(context.TODO(), v.client.Client)
+	if err != nil {
+		return nil, err
+	}
+
+	ids, err := pc.QueryProfile(
+		context.TODO(),
+		pbmTypes.PbmProfileResourceType{
+			ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
+		},
+		string(pbmTypes.PbmProfileCategoryEnumREQUIREMENT),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// RetrieveContent returns error if ids are empty.
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	profiles, err := pc.RetrieveContent(context.TODO(), ids)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]StoragePolicy, 0, len(profiles))
+	for _, profile := range profiles {
+		base := profile.GetPbmProfile()
+		result = append(result, StoragePolicy{
+			Name: base.Name,
+			ID:   base.ProfileId.UniqueId,
+		})
+	}
+
+	return result, nil
+}
+
+func (v *client) RefreshClient() error {
+	c, err := createVsphereClient(v.config)
+	if err != nil {
+		return err
+	}
+
+	v.client = c.client
+	v.restClient = c.restClient
+
+	return nil
 }
 
 func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
@@ -169,12 +227,12 @@ func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {
 	}, nil
 }
 
-func getDCByRegion(ctx context.Context, client client, regionTagName, regionTagCategoryName string) (*object.Datacenter, error) {
+func (v *client) getDCByRegion(ctx context.Context) (*object.Datacenter, error) {
 	var datacenter *object.Datacenter
 
-	tagsClient := tags.NewManager(client.restClient)
+	tagsClient := tags.NewManager(v.restClient)
 
-	regionTag, err := tagsClient.GetTagForCategory(ctx, regionTagName, regionTagCategoryName)
+	regionTag, err := tagsClient.GetTagForCategory(ctx, v.config.Region, v.config.RegionTagCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +249,7 @@ func getDCByRegion(ctx context.Context, client client, regionTagName, regionTagC
 		return nil, fmt.Errorf("only one DC should match \"region\" tag, insted matched: %v", dcRefs)
 	}
 
-	finder := find.NewFinder(client.client.Client)
+	finder := find.NewFinder(v.client.Client)
 
 	dcRef, err := finder.ObjectReference(ctx, dcRefs[0].Reference())
 	if err != nil {
@@ -203,8 +261,8 @@ func getDCByRegion(ctx context.Context, client client, regionTagName, regionTagC
 	return datacenter, nil
 }
 
-func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacenter, zoneTagCategoryName string) ([]string, error) {
-	finder := find.NewFinder(client.client.Client, true)
+func (v *client) getZonesInDC(ctx context.Context, datacenter *object.Datacenter) ([]string, error) {
+	finder := find.NewFinder(v.client.Client, true)
 
 	clusters, err := finder.ClusterComputeResourceList(ctx, path.Join(datacenter.InventoryPath, "..."))
 	if err != nil {
@@ -215,9 +273,9 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 		clusterReferences[i] = clusters[i]
 	}
 
-	tagsClient := tags.NewManager(client.restClient)
+	tagsClient := tags.NewManager(v.restClient)
 
-	zoneTagCategory, err := tagsClient.GetCategory(ctx, zoneTagCategoryName)
+	zoneTagCategory, err := tagsClient.GetCategory(ctx, v.config.ZoneTagCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -238,16 +296,25 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 		return nil, err
 	}
 
+	allowedZones := make(map[string]any, len(v.config.Zones))
+	for _, z := range v.config.Zones {
+		allowedZones[z] = struct{}{}
+	}
+
 	var matchingZonesMap = make(map[string]struct{})
 	for _, clusterTags := range clustersWithTags {
 		for _, clusterTag := range clusterTags.Tags {
-			if _, ok := tagsInCategoryMap[clusterTag.Name]; ok {
+			if _, ok := tagsInCategoryMap[clusterTag.Name]; !ok {
+				continue
+			}
+
+			if isZoneAllowed(allowedZones, clusterTag.Name) {
 				matchingZonesMap[clusterTag.Name] = struct{}{}
 			}
 		}
 	}
 
-	var matchingZones []string
+	matchingZones := make([]string, 0, len(matchingZonesMap))
 	for zone := range matchingZonesMap {
 		matchingZones = append(matchingZones, zone)
 	}
@@ -259,8 +326,8 @@ func getZonesInDC(ctx context.Context, client client, datacenter *object.Datacen
 	return matchingZones, nil
 }
 
-func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Datacenter, zoneTagCategoryName string) ([]ZonedDataStore, error) {
-	finder := find.NewFinder(client.client.Client, true)
+func (v *client) getDataStoresInDC(ctx context.Context, datacenter *object.Datacenter) ([]ZonedDataStore, error) {
+	finder := find.NewFinder(v.client.Client, true)
 
 	datastores, dsNotFoundErr := finder.DatastoreList(ctx, path.Join(datacenter.InventoryPath, "..."))
 
@@ -270,7 +337,7 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 		return nil, fmt.Errorf("not a single Datastore or DatastoreCluster found in the cluster:\n%s\n%s", dsNotFoundErr, dscNotFoundErr)
 	}
 
-	var datastoreReferences []mo.Reference
+	datastoreReferences := make([]mo.Reference, 0, len(datastores))
 	for _, ds := range datastores {
 		datastoreReferences = append(datastoreReferences, ds)
 	}
@@ -280,7 +347,7 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 	}
 
 	var datastoreMo []mo.Datastore
-	pc := property.DefaultCollector(client.client.Client)
+	pc := property.DefaultCollector(v.client.Client)
 	props := []string{"info", "summary"}
 
 	if len(datastores) > 0 {
@@ -298,9 +365,9 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 		datastoreMoByRef[o.Reference()] = o
 	}
 
-	tagsClient := tags.NewManager(client.restClient)
+	tagsClient := tags.NewManager(v.restClient)
 
-	zoneTagCategory, err := tagsClient.GetCategory(ctx, zoneTagCategoryName)
+	zoneTagCategory, err := tagsClient.GetCategory(ctx, v.config.ZoneTagCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -310,14 +377,24 @@ func getDataStoresInDC(ctx context.Context, client client, datacenter *object.Da
 		return nil, err
 	}
 
-	var zds []ZonedDataStore
+	allowedZones := make(map[string]any, len(v.config.Zones))
+	for _, z := range v.config.Zones {
+		allowedZones[z] = struct{}{}
+	}
+
+	zds := make([]ZonedDataStore, 0)
 	for _, attachedTags := range datastoresWithTags {
 		var dsZones []string
 		for _, tag := range attachedTags.Tags {
-			if tag.CategoryID == zoneTagCategory.ID {
+			if tag.CategoryID != zoneTagCategory.ID {
+				continue
+			}
+
+			if isZoneAllowed(allowedZones, tag.Name) {
 				dsZones = append(dsZones, tag.Name)
 			}
 		}
+
 		if len(dsZones) == 0 {
 			continue
 		}
@@ -456,4 +533,14 @@ func murmurHash(args ...string) string {
 
 func prepareHashArgs(args ...string) string {
 	return strings.Join(args, ":::")
+}
+
+func isZoneAllowed(allowedZones map[string]any, zone string) bool {
+	// If no allowed zones are specified, then we assume that all zones are allowed
+	if len(allowedZones) == 0 {
+		return true
+	}
+
+	_, allowed := allowedZones[zone]
+	return allowed
 }

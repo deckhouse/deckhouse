@@ -14,8 +14,6 @@
 
 package check
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
-
 type CheckStatus string
 
 const (
@@ -41,12 +39,14 @@ func (status CheckStatus) CombineStatus(anotherStatus CheckStatus) CheckStatus {
 }
 
 type StatusDetails struct {
-	ConfigurationStatus CheckStatus `json:"configuration_status"`
-	converge.Statistics `json:",inline"`
+	ConfigurationStatus     CheckStatus `json:"configuration_status"`
+	OpentofuMigrationStatus CheckStatus `json:"opentofu_migration_status,omitempty"`
+	Statistics              `json:",inline"`
 }
 
 type CheckResult struct {
 	Status              CheckStatus   `json:"status"`
 	StatusDetails       StatusDetails `json:"status_details"`
 	DestructiveChangeID string        `json:"destructive_change_id,omitempty"`
+	HasTerraformState   bool          `json:"-"`
 }

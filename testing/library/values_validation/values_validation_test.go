@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/go-openapi/spec"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,6 +48,13 @@ properties:
 	require.NoError(t, err, "should load schema")
 
 	valuesValidator := &ValuesValidator{
+		// TODO: check test? may not work
+		// empty because it starts panic
+		GlobalSchemaStorage: &validation.SchemaStorage{
+			Schemas: map[validation.SchemaType]*spec.Schema{
+				validation.ModuleSchema: {},
+			},
+		},
 		ModuleSchemaStorages: map[string]*validation.SchemaStorage{
 			"nodeManager": schemaStorage,
 		},

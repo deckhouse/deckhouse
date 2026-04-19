@@ -1,0 +1,46 @@
+---
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-21" $ ) }}
+{{- $kialiVersion := printf "v%s" (include "get_oss_version_by_id" (list "kiali-for-istio-1-21" $ )) }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/istio.git
+  tag: {{ $istioVersion }}
+  add: /
+  to: /src/istio
+  excludePaths:
+  - samples
+  - security/samples
+  - security/tools/jwt/samples
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/kiali.git
+  tag: {{ $kialiVersion }}
+  add: /
+  to: /src/kiali
+  excludePaths:
+  - frontend
+  stageDependencies:
+    install:
+    - '**/*'
+- url: {{ .SOURCE_REPO }}/istio/kiali-frontend-assets.git
+  tag: {{ $kialiVersion }}
+  add: /
+  to: /src/kial-frontend-assets
+  stageDependencies:
+    install:
+    - '**/*'
+shell:
+  install:
+  - cd /src/istio/ && git apply --verbose /patches/001-istio-apply_go.patch
+  - cd /src/istio/ && git apply --verbose /patches/002-istio-gomod_gosum.patch
+  - cd /src/istio/ && git apply --verbose /patches/003-istio-server_fmtText.patch
+  - cd /src/kiali/ && git apply --verbose /patches/001-kiali-go-mod.patch

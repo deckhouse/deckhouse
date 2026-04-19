@@ -1,0 +1,43 @@
+{{- $version := include "get_oss_version_by_id" (list "yq" $ )  -}}
+{{- $image_version := $version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+  add: /
+  to: /
+  includePaths:
+  - yq
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "yq": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ $.Images.BASE_ALPINE }}
+git:
+- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  includePaths:
+  - install
+  - uninstall
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- from: {{ index $.Images (printf "tools/yq-v%s" $version) }}
+  add: /usr/bin/yq
+  to: /yq
+  before: setup
+shell:
+  setup:
+  - chmod +x /yq /install /uninstall

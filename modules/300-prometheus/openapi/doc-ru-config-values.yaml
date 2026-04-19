@@ -5,7 +5,7 @@ properties:
     description: |-
       Имя StorageClass, который будет использоваться по умолчанию в кластере.
 
-      Если не указано, используется StorageClass существующей PVC Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+      Если не указано, используется StorageClass существующей PVC Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
@@ -18,7 +18,7 @@ properties:
     description: |-
       Имя StorageClass, который будет использован для Longterm Prometheus.
 
-      Если значение не указано, используется StorageClass существующей PVC Longterm Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+      Если значение не указано, используется StorageClass существующей PVC Longterm Prometheus. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 
@@ -32,21 +32,26 @@ properties:
     properties:
       externalAuthentication:
         description: |
-          Параметры для подключения внешней аутентификации (используется механизм NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
+          Параметры для подключения внешней аутентификации (используется механизм Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/), работающий на основе модуля NGINX [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html).
 
-          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          > Внешняя аутентификация включается автоматически, если включен модуль [user-authn](https://deckhouse.io/modules/user-authn/).
         properties:
           authURL:
             description: URL сервиса аутентификации. Если пользователь прошел аутентификацию, сервис должен возвращать код ответа HTTP 200.
           authSignInURL:
             description: URL, куда будет перенаправлен пользователь для прохождения аутентификации (если сервис аутентификации вернул код ответа HTTP, отличный от 200).
+      allowedUserEmails:
+        description: |
+          Массив адресов электронной почты, пользователям которых разрешен доступ к веб-интерфейсу.
+
+          Используется, если включен модуль [`user-authn`](../../modules/user-authn/) или задан параметр `externalAuthentication`.
       allowedUserGroups:
         description: |
           Массив групп, пользователям которых позволен доступ в Grafana и Prometheus.
 
-          Используется, если включен модуль [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) или параметр `externalAuthentication`.
+          Используется, если включен модуль [user-authn](https://deckhouse.ru/modules/user-authn/) или параметр `externalAuthentication`.
 
-          **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider) DexProvider.
+          **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider) DexProvider.
       whitelistSourceRanges:
         description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в Grafana и Prometheus.
       satisfyAny:
@@ -57,6 +62,8 @@ properties:
   grafana:
     description: Настройки для инсталляции Grafana.
     properties:
+      enabled:
+        description: Включить установку Grafana в кластер.
       useDarkTheme:
         description: Использование по умолчанию пользовательской темной темы.
       customPlugins:
@@ -88,9 +95,9 @@ properties:
       Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   externalLabels:
     description: |
-      Набор внешних меток для маркировки метрик.
+      Набор внешних лейблов для маркировки метрик.
 
-      Допускается использование значений переменных окружения контейнера `config-reloader` в качестве значений меток,
+      Допускается использование значений переменных окружения контейнера `config-reloader` в качестве значений лейблов,
       например:
       * `HOSTNAME`/`POD_NAME` — содержит наименование пода (например, `prometheus-main-0`, `prometheus-main-1` и т. д.);
       * `SHARD` — содержит номер [шарда](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md).
@@ -106,7 +113,7 @@ properties:
           - `Disabled` — Grafana/Prometheus будут работать только по HTTP;
           - `CertManager` — Grafana/Prometheus будут работать по HTTPS и заказывать сертификат с помощью ClusterIssuer, заданного в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — Grafana/Prometheus будут работать по HTTPS, используя сертификат из namespace `d8-system`.
-          - `OnlyInURI` — Grafana/Prometheus будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — Grafana/Prometheus будут работать по HTTP (подразумевая, что перед ними стоит внешний балансировщик, который терминирует HTTPS) и все ссылки в [user-authn](https://deckhouse.ru/modules/user-authn/) будут генерироваться с HTTPS-схемой. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         properties:
           clusterIssuerName:
@@ -152,7 +159,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   scrapeInterval:
     description: |
       Как часто Prometheus должен собирать метрики с target'ов.
@@ -192,8 +199,6 @@ properties:
   mainMaxDiskSizeGigabytes:
     description: |
       Устарел и будет удален. Ни на что не влияет.
-      Максимальный размер в гигабайтах, до которого автоматически может ресайзиться диск Prometheus.
   longtermMaxDiskSizeGigabytes:
     description: |
       Устарел и будет удален. Ни на что не влияет.
-      Максимальный размер в гигабайтах, до которого автоматически может ресайзиться диск Longterm Prometheus.

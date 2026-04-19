@@ -1,0 +1,16 @@
+docs:
+  fixes:
+    - summary: >-
+        Added the Local path provisioner storage section to the documentation sidebar, including
+        Overview, Examples, Reference, and FAQ entries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15438
+ingress-nginx:
+  fixes:
+    - summary: Fixed nginx segfaults when opentelemetry is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15466
+      impact: The ingress-nginx pods of 1.10 will be restarted.
+node-manager:
+  fixes:
+    - summary: Fix node update approval hook for CAPI nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15429
+

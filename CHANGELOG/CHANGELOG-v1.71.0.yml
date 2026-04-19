@@ -1,0 +1,438 @@
+admission-policy-engine:
+  features:
+    - summary: Add label to skip PodSecurityStandards for some pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14194
+    - summary: Added SecurityPolicy with ability to check images, signed with cosign (for SE+).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13699
+  fixes:
+    - summary: remove redundant namespace from RoleBinding
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13695
+candi:
+  features:
+    - summary: Add bashible step to check for upgrade k8s to 1.31 and ask for approval.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14390
+      impact: Upgrade process on the node will be stopped  until it's not approved.
+    - summary: contained configuration && new registry bashible context model
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14147
+    - summary: Added support for Kubernetes 1.33 and discontinued support for Kubernetes 1.28.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13357
+      impact: >-
+        The minimum supported version of Kubernetes is now 1.29. All control plane components will
+        restart.
+    - summary: Added support for containerd V2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12674
+  fixes:
+    - summary: Resolved the issue with downloading packages for external modules using ctr for bb-rp-fetch.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14236
+    - summary: Fixed double preview version in candi/version_map.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13670
+    - summary: Added audit rules for containerd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13560
+    - summary: Removed influence of root user settings on execution of bashible scripts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13559
+chrony:
+  fixes:
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+ci:
+  features:
+    - summary: Ensure all required versions are tested when automatically updating k8s.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13981
+    - summary: Add listing of changed modules for release branch changes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13711
+    - summary: Make E2E clusters delete when closing or merging a pull request.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13683
+    - summary: Add wait for image build in CVE scans.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13616
+    - summary: Add automatic vulnerability checks to pull requests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13601
+    - summary: Add jobs for comparing external and internal modules between editions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12377
+  fixes:
+    - summary: Fix legacy E2E test script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14262
+    - summary: add envsubst bash replacement to the install image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14200
+    - summary: fix install image
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14166
+    - summary: Ensure latest image is used by adding explicit docker pull before docker run
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14143
+    - summary: Update trivy-db version to improve BDU download reliability
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14131
+    - summary: Removed unused `--bundle-name` flag from validation script.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14102
+    - summary: This PR updates the trigger conditions for the **Trivy CVE scan on PR** workflow.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13975
+    - summary: Fix typo in e2e parameters vsphere.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13880
+    - summary: Change deckhouse version variable generation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13793
+    - summary: Add a check for successful application of manifests in e2e.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13660
+    - summary: Enable saving e2e state on cancel.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13565
+cilium-hubble:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+cloud-provider-dynamix:
+  fixes:
+    - summary: Fixed `sshPublicKey` absence on CloudEphemeral nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13907
+cloud-provider-huaweicloud:
+  fixes:
+    - summary: Fixed documentation and examples for huaweicloud provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14225
+cloud-provider-vsphere:
+  fixes:
+    - summary: Added /tmp emptyDir for csi-node-legacy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14208
+cni-cilium:
+  features:
+    - summary: Added optional least-conn load-balancing algorithm for Services.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13867
+    - summary: Added a traffic encryption mode using WireGuard (`pod-to-pod` and `node-to-node`).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13749
+    - summary: >-
+        Cni-cilium is updated to consider Virtualization Nesting Level when discovering tunnel-port
+        value.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9996
+  fixes:
+    - summary: EgressGateway controller optimized for large setups with lot's of EgressGateways.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14288
+    - summary: Fixed CiliumLocalRedirectPolicy working if bpf-lb-algorithm-annotation parameter is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14179
+    - summary: Fixed build in private environments.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14094
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+    - summary: fFxed bug in cilium 1.17 operator priority filter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13734
+control-plane-manager:
+  fixes:
+    - summary: Fix `lock_main_queue` hook when daemonset pods have not yet been updated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14261
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+    - summary: etcd alert fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13889
+    - summary: Used last_over_time to fetch the last available etcd DB size metric if it's missing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13682
+deckhouse:
+  fixes:
+    - summary: Set resource requests even if VPA is enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14246
+    - summary: Remove checksum log.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14045
+deckhouse-controller:
+  features:
+    - summary: add options pattern to logger
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14302
+    - summary: Added user notify when module config has conflict.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14296
+    - summary: Optimized ModuleRelease update flow.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14144
+    - summary: Added readiness probe hook support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13748
+    - summary: change deckhouse version checker validation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13713
+    - summary: convert MPU CRD v1alpha2 storage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13710
+    - summary: Added LTS release channel.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13546
+  fixes:
+    - summary: multi source warn cli fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14344
+    - summary: change log level to warn for check/cleanup functions
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14295
+    - summary: remove v1alpha1 module update policy using from code
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14274
+    - summary: handle new module config finalizer
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14263
+    - summary: Introduced a new mechanism for handling module readiness probes in Deckhouse.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14226
+    - summary: >-
+        Fixed a bug where the MPO controller would crash during validation because no values were
+        provided for a module, making it impossible to create working MPOs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14209
+    - summary: bump addon operator with fix hook names and helm error handling
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14170
+    - summary: Added handling required module empty version for module dependency.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14157
+    - summary: fixes logs output
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14022
+    - summary: Prevented module configuration errors from blocking the entire Deckhouse queue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13730
+    - summary: fix deckhouse crds mechanism
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13708
+    - summary: convert MUP CRD v1alpha2 storage
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13646
+deckhouse-tools:
+  features:
+    - summary: yq
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14147
+  fixes:
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+descheduler:
+  fixes:
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+dhctl:
+  features:
+    - summary: new registry bashible context model
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14147
+    - summary: >-
+        Added detailed phase/sub-phase progress reporting with JSONL file output or RPC updates from
+        dhctl-server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13412
+  fixes:
+    - summary: Added local registry configuration check to installation process.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13645
+docs:
+  features:
+    - summary: add instructions for disabling IPv6 on cluster nodes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14191
+    - summary: Add logs for modules processing
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13763
+    - summary: Added documentation for integrating with the DVP cloud provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13380
+    - summary: Add the Picking resources for a bare-metal cluster guide
+      pull_request: https://github.com/deckhouse/deckhouse/pull/10700
+  fixes:
+    - summary: Update MFA information.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14360
+    - summary: >-
+        Correct line spacing in guides, remove copy of wrap button and correct block code in step 4
+        of GS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14282
+    - summary: Fixed typo in deckhouse module docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14265
+    - summary: Increased the resource limits for documentation pods.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14257
+    - summary: Updates hugo image in the script for local run modules docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14168
+    - summary: Added `which` to system requirements for RED OS on the second page of GS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14023
+    - summary: Show the full document path in the breadcrumbs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13864
+    - summary: Reverted
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13735
+    - summary: Added notice about resources in cloud pages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13733
+    - summary: Added notice about creating VMs in the RED virtualization.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13729
+    - summary: Added link to GS to upload images into private registry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13585
+extended-monitoring:
+  fixes:
+    - summary: Fixed CVEs vulnerabilities x509-certificate-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13804
+    - summary: Fixed CVEs vulnerabilities image-availability-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13802
+    - summary: Fixed CVEs vulnerabilities events-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13801
+    - summary: Fixed CVEs vulnerabilities extended-monitoring-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13798
+istio:
+  features:
+    - summary: Images for 1.21 were refactored to achieve distroless.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14228
+    - summary: Added Istio version `1.25` (1.25.2). Ambient mesh isn't supported yet.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12356
+  fixes:
+    - summary: Patch for delete unused functions in source code
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14312
+      impact: The build fails due to incorrect application of changes to the source code
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+kube-dns:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+kube-proxy:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+log-shipper:
+  features:
+    - summary: Added the additional log transformations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13460
+      impact: log-shipper module. Destination-log config
+  fixes:
+    - summary: Add required AWS authentication support for managed Elasticsearch
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14183
+loki:
+  fixes:
+    - summary: Refactor file size evaluator using st_blocks in disk-based retention.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14112
+      impact: Avoid force-expiration checker reaching size threshold too lately.
+    - summary: Fixed CVEs vulnerabilities loki.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13796
+    - summary: Lower Loki retention disk threshold to 92%
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13570
+metallb:
+  fixes:
+    - summary: Fixed import logic of MetalLB dashboards.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13478
+monitoring-deckhouse:
+  fixes:
+    - summary: Fix the alert description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14363
+multitenancy-manager:
+  fixes:
+    - summary: fix incorrect labels.module value
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13824
+node-local-dns:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+node-manager:
+  features:
+    - summary: Implement monitoring of GPU nodes.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14227
+    - summary: new registry bashible context model && registry-bashible-config secret
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14147
+    - summary: Add NVidia GPU features.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13686
+    - summary: >-
+        Added capiEmergencyBrake setting to node-manager ModuleConfig, what can disable CAPI if set
+        to true.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13614
+    - summary: Added version v1alpha2 to SSHCredential, with field sudoPasswordEncoded.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13346
+    - summary: >-
+        Added systemd shutdown inhibitors to delay system shutdown until Pods with the specific
+        label are gone from the Node.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12241
+  fixes:
+    - summary: Fix unschedulable status after reboot.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14370
+    - summary: Fix mig-manager behavior related to update.node.deckhouse.io/disruption-approved annotation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14341
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+    - summary: Add CAPS v1alpha2 webhooks.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13834
+    - summary: >-
+        Fix sshcredentials_crd_cabundle_injection hook behavior - watching for Services as well as
+        Secrets, do not run injection if service still doesn't exist.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13814
+    - summary: Fix caps validation webhooks naming.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13810
+    - summary: Added support scaling from zero to CAPI node groups.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13744
+openvpn:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+operator-prometheus:
+  fixes:
+    - summary: Fixed CVEs vulnerabilities operator-prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13792
+operator-trivy:
+  fixes:
+    - summary: Added startup probe to trivy-server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13731
+pod-reloader:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy` in pod-reloader components.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13874
+prometheus:
+  features:
+    - summary: >-
+        Deckhouse Prom++ is now the default metrics-collecting software in the Deckhouse Kubernetes
+        Platform
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14330
+      impact: >-
+        Prometheus is replaced by the Deckhouse Prom++ by default in all editions of the Deckhouse
+        Kubernetes Platform
+  fixes:
+    - summary: Fixed CVEs vulnerabilities mimir.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14287
+    - summary: Increased target samples limit for aggregation-proxy
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14187
+    - summary: Fix KSM error logs for VPAs without resourcePolicy.containerPolicies
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14152
+    - summary: Remove Grafana v8 name from Certificate
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13988
+    - summary: Fixed CVEs vulnerabilities grafana.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13947
+    - summary: Fixed CVEs vulnerabilities prometheus.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13751
+    - summary: Fixed CVEs vulnerabilities aggregatio-proxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13746
+    - summary: Fixed CVEs vulnerabilities trickster.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13745
+    - summary: Fixed CVEs vulnerabilities promxy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13743
+    - summary: Fixed CVEs vulnerabilities memcached-exporter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13742
+    - summary: Fixed CVEs vulnerabilities  alerts receiver.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13740
+    - summary: Fixed CVEs vulnerabilities alertmanager.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13739
+prometheus-metrics-adapter:
+  fixes:
+    - summary: >-
+        Improved handling of newly created and non-running Pods in metrics; replaced misleading log
+        errors with informative messages.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14232
+    - summary: Fixed CVEs vulnerabilities prometheus-metrics-adapter.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13794
+registry-packages-proxy:
+  fixes:
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+runtime-audit-engine:
+  fixes:
+    - summary: Added falco build fixes for CSE.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14160
+service-with-healthchecks:
+  fixes:
+    - summary: Added probes for `kube-rbac-proxy`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13877
+    - summary: >-
+        Fixed handling of pods without IP addresses and corrected initial readiness threshold
+        evaluation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12390
+terraform-manager:
+  fixes:
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+testing:
+  fixes:
+    - summary: >-
+        improved struct export validation logic for filter functions to handle early returns,
+        pointer returns, and variable assignments.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14123
+    - summary: use current release version for cloud testing
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13671
+tools:
+  fixes:
+    - summary: Fix audit policy generator
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14111
+upmeter:
+  features:
+    - summary: Added automatic detection of frozen or growing deckhouse queue in upmeter-agent.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13179
+user-authn:
+  fixes:
+    - summary: Add TOTP support for static users (can be enabled through the module config).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14366
+    - summary: The logic of label transfer and annotation to secret has been changed for DexClient.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14055
+    - summary: Fixed Dex CVE vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13309
+user-authz:
+  fixes:
+    - summary: Fixed user-authz hook, rolebinding empty subject namespace.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13756
+      impact: low
+vertical-pod-autoscaler:
+  fixes:
+    - summary: Fix apiVersion detection for ValidatingAdmissionPolicy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14419
+    - summary: Added module stage in module manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13890
+

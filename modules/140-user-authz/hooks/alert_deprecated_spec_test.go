@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -107,7 +107,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_deprecated_car_spec",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 		})
 	})
@@ -125,7 +125,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_deprecated_car_spec",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 		})
 	})
@@ -143,12 +143,12 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_deprecated_car_spec",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",
@@ -171,12 +171,12 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_deprecated_car_spec",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",
@@ -199,12 +199,12 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 			Expect(m).To(HaveLen(3))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_deprecated_car_spec",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",
@@ -214,7 +214,7 @@ var _ = Describe("User-authz hooks :: alert_deprecated_car_spec ::", func() {
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_deprecated_car_spec",
 				Group:  "d8_deprecated_car_spec",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"kind": "ClusterAuthorizationRule",

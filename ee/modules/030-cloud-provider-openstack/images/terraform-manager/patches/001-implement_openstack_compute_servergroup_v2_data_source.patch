@@ -1,0 +1,88 @@
+diff --git a/openstack/data_source_openstack_compute_servergroup_v2.go b/openstack/data_source_openstack_compute_servergroup_v2.go
+new file mode 100644
+index 00000000..b20c48ee
+--- /dev/null
++++ b/openstack/data_source_openstack_compute_servergroup_v2.go
+@@ -0,0 +1,69 @@
++package openstack
++
++import (
++	"fmt"
++	"log"
++
++	"github.com/gophercloud/gophercloud/openstack/compute/v2/extensions/servergroups"
++	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
++)
++
++func dataSourceComputeServerGroupV2() *schema.Resource {
++	return &schema.Resource{
++		Read: dataSourceComputeServerGroupV2Read,
++		Schema: map[string]*schema.Schema{
++			"region": {
++				Type:     schema.TypeString,
++				Optional: true,
++				Computed: true,
++			},
++
++			"name": {
++				Type:     schema.TypeString,
++				Required: true,
++			},
++		},
++	}
++}
++
++func dataSourceComputeServerGroupV2Read(d *schema.ResourceData, meta interface{}) error {
++	config := meta.(*Config)
++	computeClient, err := config.ComputeV2Client(GetRegion(d, config))
++	if err != nil {
++		return fmt.Errorf("Error creating OpenStack compute client: %s", err)
++	}
++
++	allPages, err := servergroups.List(computeClient, nil).AllPages()
++	if err != nil {
++		return fmt.Errorf("Error retrieving openstack_compute_servergroup_v2: %s", err)
++	}
++
++	allServerGroups, err := servergroups.ExtractServerGroups(allPages)
++	if err != nil {
++		return fmt.Errorf("Error extracting openstack_compute_servergroup_v2 from response: %s", err)
++	}
++
++	var sg *servergroups.ServerGroup
++
++	for i, serverGroup := range allServerGroups {
++		if serverGroup.Name == d.Get("name").(string) {
++			sg = &allServerGroups[i]
++			d.SetId(serverGroup.ID)
++			break
++		}
++	}
++
++	if sg == nil {
++		return fmt.Errorf("Server group not found")
++	}
++
++	log.Printf("[DEBUG] Retrieved openstack_compute_servergroup_v2 %s: %#v", d.Id(), sg)
++
++	d.Set("name", sg.Name)
++	d.Set("policies", sg.Policies)
++	d.Set("members", sg.Members)
++
++	d.Set("region", GetRegion(d, config))
++
++	return nil
++}
+diff --git a/openstack/provider.go b/openstack/provider.go
+index 03a3193b..bd457a04 100644
+--- a/openstack/provider.go
++++ b/openstack/provider.go
+@@ -280,6 +280,7 @@ func Provider() *schema.Provider {
+ 			"openstack_compute_keypair_v2":                       dataSourceComputeKeypairV2(),
+ 			"openstack_compute_quotaset_v2":                      dataSourceComputeQuotasetV2(),
+ 			"openstack_compute_limits_v2":                        dataSourceComputeLimitsV2(),
++			"openstack_compute_servergroup_v2":                   dataSourceComputeServerGroupV2(),
+ 			"openstack_containerinfra_nodegroup_v1":              dataSourceContainerInfraNodeGroupV1(),
+ 			"openstack_containerinfra_clustertemplate_v1":        dataSourceContainerInfraClusterTemplateV1(),
+ 			"openstack_containerinfra_cluster_v1":                dataSourceContainerInfraCluster(),
+

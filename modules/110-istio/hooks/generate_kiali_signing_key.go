@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 
@@ -63,10 +64,15 @@ func applyKialiSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	}, nil
 }
 
-func generateKialiSigningKey(input *go_hook.HookInput) error {
+func generateKialiSigningKey(_ context.Context, input *go_hook.HookInput) error {
 	kialiSigningKey := ""
-	if len(input.Snapshots["kiali_signing_key_secret"]) == 1 {
-		secret := input.Snapshots["kiali_signing_key_secret"][0].(kialiSecret)
+	snapshots := input.Snapshots.Get("kiali_signing_key_secret")
+	if len(snapshots) == 1 {
+		var secret kialiSecret
+		err := snapshots[0].UnmarshalTo(&secret)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'kiali_signing_key_secret' snapshot: %w", err)
+		}
 		kialiSigningKey = secret.SigningKey
 	}
 	if len(kialiSigningKey) != 32 {

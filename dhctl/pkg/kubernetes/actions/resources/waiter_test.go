@@ -15,6 +15,7 @@
 package resources
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -57,8 +58,8 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 2) // ready resources for all
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
 	})
 
 	t.Run("with cloud static nodegroup", func(t *testing.T) {
@@ -78,9 +79,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 3, "only readiness checks")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
-		require.Equal(t, checkers[2].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'node' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
+		require.Equal(t, checkers[2].Name(), "deckhouse.io/v1, Kind=NodeGroup 'node'")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min and max per zone not set", func(t *testing.T) {
@@ -111,9 +112,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 3, "only readiness checks")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
-		require.Equal(t, checkers[2].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'system' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
+		require.Equal(t, checkers[2].Name(), "deckhouse.io/v1, Kind=NodeGroup 'system'")
 	})
 
 	ngTemplate := func(name string, min, max int) string {
@@ -152,9 +153,9 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 3, "only readiness checks")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
-		require.Equal(t, checkers[2].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'system' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
+		require.Equal(t, checkers[2].Name(), "deckhouse.io/v1, Kind=NodeGroup 'system'")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min = 0 and max not zero", func(t *testing.T) {
@@ -168,10 +169,10 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 4, "readiness checks with cluster bootstrapped")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
-		require.Equal(t, checkers[2].Name(), "Waiting for the cluster to become bootstrapped.")
-		require.Equal(t, checkers[3].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'system' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
+		require.Equal(t, checkers[2].Name(), "cluster")
+		require.Equal(t, checkers[3].Name(), "deckhouse.io/v1, Kind=NodeGroup 'system'")
 	})
 
 	t.Run("with cloud ephemeral nodegroup, but min not zero and max not zero", func(t *testing.T) {
@@ -185,10 +186,10 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 4, "readiness checks with cluster bootstrapped")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
-		require.Equal(t, checkers[2].Name(), "Waiting for the cluster to become bootstrapped.")
-		require.Equal(t, checkers[3].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'system' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
+		require.Equal(t, checkers[2].Name(), "cluster")
+		require.Equal(t, checkers[3].Name(), "deckhouse.io/v1, Kind=NodeGroup 'system'")
 	})
 
 	t.Run("with multiple cloud ephemeral nodegroup", func(t *testing.T) {
@@ -204,11 +205,11 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 5, "readiness checks with only one cluster bootstrapped")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
-		require.Equal(t, checkers[2].Name(), "Waiting for the cluster to become bootstrapped.")
-		require.Equal(t, checkers[3].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'system' to become ready.")
-		require.Equal(t, checkers[4].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'node' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
+		require.Equal(t, checkers[2].Name(), "cluster")
+		require.Equal(t, checkers[3].Name(), "deckhouse.io/v1, Kind=NodeGroup 'system'")
+		require.Equal(t, checkers[4].Name(), "deckhouse.io/v1, Kind=NodeGroup 'node'")
 	})
 
 	t.Run("with one terra node without replicas", func(t *testing.T) {
@@ -228,8 +229,8 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 2) // ready resources for all
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
+		require.Equal(t, checkers[0].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
 	})
 
 	t.Run("with one terra node with replicas", func(t *testing.T) {
@@ -243,7 +244,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.Equal(t, checkers[0].Name(), "cluster")
 	})
 
 	t.Run("with multiple terra node with replicas", func(t *testing.T) {
@@ -258,7 +259,7 @@ spec:
 		require.NoError(t, err)
 		require.Len(t, checkers, 1, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
+		require.Equal(t, checkers[0].Name(), "cluster")
 	})
 
 	t.Run("with one terra node with replicas an ephemeral node group", func(t *testing.T) {
@@ -279,10 +280,10 @@ spec:
 
 		require.Len(t, checkers, 4, "should get one check")
 
-		require.Equal(t, checkers[0].Name(), "Waiting for the cluster to become bootstrapped.")
-		require.Equal(t, checkers[1].Name(), "Waiting for the resource deckhouse.io/v1, Kind=YandexInstanceClass 'system' to become ready.")
-		require.Equal(t, checkers[2].Name(), "Waiting for the resource deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin' to become ready.")
-		require.Equal(t, checkers[3].Name(), "Waiting for the resource deckhouse.io/v1, Kind=NodeGroup 'system' to become ready.")
+		require.Equal(t, checkers[0].Name(), "cluster")
+		require.Equal(t, checkers[1].Name(), "deckhouse.io/v1, Kind=YandexInstanceClass 'system'")
+		require.Equal(t, checkers[2].Name(), "deckhouse.io/v1, Kind=ClusterAuthorizationRule 'admin'")
+		require.Equal(t, checkers[3].Name(), "deckhouse.io/v1, Kind=NodeGroup 'system'")
 	})
 }
 
@@ -302,7 +303,7 @@ func newTestChecker(returns bool, err error, single bool, name string) *testChec
 	}
 }
 
-func (n *testChecker) IsReady() (bool, error) {
+func (n *testChecker) IsReady(_ context.Context) (bool, error) {
 	return n.returns, n.err
 }
 
@@ -310,14 +311,20 @@ func (n *testChecker) Name() string {
 	return "Test checker"
 }
 
+func (n *testChecker) ReadyMsg() string {
+	return "Ready"
+}
+
 func (n *testChecker) Single() bool {
 	return n.single
 }
 
 func TestWaiterStep(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("without checks", func(t *testing.T) {
 		w := NewWaiter(make([]Checker, 0))
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -325,7 +332,7 @@ func TestWaiterStep(t *testing.T) {
 
 	t.Run("with one ready check", func(t *testing.T) {
 		w := NewWaiter([]Checker{newTestChecker(true, nil, false, "Test 1")})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -337,7 +344,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(true, nil, false, "Test 2"),
 			newTestChecker(true, nil, false, "Test 3"),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.True(t, ready, "should ready")
@@ -349,7 +356,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(false, fmt.Errorf("error"), false, "Test 2"),
 			newTestChecker(true, nil, false, "Test 3"),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.Error(t, err, "should error")
 		require.False(t, ready)
@@ -361,7 +368,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(false, nil, false, "Test 2"),
 			newTestChecker(true, nil, false, "Test 3"),
 		})
-		ready, err := w.ReadyAll()
+		ready, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.False(t, ready, "should not ready")
@@ -374,7 +381,7 @@ func TestWaiterStep(t *testing.T) {
 			newTestChecker(true, nil, false, "Test 3"),
 		})
 
-		_, err := w.ReadyAll()
+		_, err := w.ReadyAll(ctx)
 
 		require.NoError(t, err)
 		require.Len(t, w.checkers, 1, "should remove ready checks")

@@ -6,7 +6,7 @@ spec:
           description: |
             Ресурс хранения `PrometheusRule`.
 
-            [Подробнее...](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
+            [Подробнее...](https://deckhouse.ru/modules/prometheus/faq.html#как-добавить-алерты-иили-recording-правила-для-вашего-проекта).
           properties:
             spec:
               properties:

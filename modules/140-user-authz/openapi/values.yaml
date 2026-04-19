@@ -6,6 +6,18 @@ properties:
     type: object
     default: {}
     properties:
+      consoleLegacyCompat:
+        type: boolean
+        description: |
+          When true, legacy namespace listing behavior is enabled for compatibility
+          with older Console module versions (< v1.44.0) that require `list namespaces`
+          permission via SelfSubjectAccessReview.
+        default: false
+      consoleVersion:
+        type: string
+        description: |
+          The currently installed Console module version, used to determine if
+          legacy compatibility mode should be enabled.
       customClusterRoles:
         type: object
         properties:
@@ -41,6 +53,18 @@ properties:
             default: []
         default: {}
       webhookCertificate:
+        type: object
+        properties:
+          ca:
+            type: string
+            x-examples: [ "testca" ]
+          key:
+            type: string
+            x-examples: [ "testkey" ]
+          crt:
+            type: string
+            x-examples: [ "testcrt" ]
+      apiserverCertificate:
         type: object
         properties:
           ca:
@@ -211,6 +235,10 @@ properties:
         default: []
     x-examples:
     - webhookCertificate:
+        ca: castring
+        key: keystring
+        crt: certificatestring
+      apiserverCertificate:
         ca: castring
         key: keystring
         crt: certificatestring

@@ -1,0 +1,15 @@
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: capcd-controller-manager
+  namespace: d8-cloud-provider-vcd
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for CAPCD controller manager.
+          The CAPCD Controller Manager requires host network access to serve its admission webhook to the Kubernetes API server and continue infrastructure reconciliation even if the CNI or pod network is unavailable.
+{{- end }}

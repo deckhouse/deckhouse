@@ -16,53 +16,188 @@ package commands
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/name212/govalue"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func DefineConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
-	cmd := kpApp.Command("converge", "Converge kubernetes cluster.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
 
-		converger := converge.NewConverger(&converge.Params{
-			SSHClient:        sshClient,
-			TerraformContext: terraform.NewTerraformContext(),
-		})
-		_, err = converger.Converge(context.Background())
+		tmpDir := app.TmpDirName
+		logger := log.GetDefaultLogger()
+		isDebug := app.IsDebug
 
-		return err
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           logger,
+			IsDebug:          isDebug,
+		})
+
+		converger := converge.NewConverger(&converge.Params{
+			SSHClient: sshClient,
+			ChangesSettings: infrastructure.ChangeActionSettings{
+				SkipChangesOnDeny: false,
+				AutomaticSettings: infrastructure.AutomaticSettings{
+					AutoDismissChanges:     false,
+					AutoDismissDestructive: false,
+					AutoApproveSettings: infrastructure.AutoApproveSettings{
+						AutoApprove: false,
+					},
+				},
+			},
+			ProviderGetter:  providerGetter,
+			TmpDir:          tmpDir,
+			Logger:          logger,
+			IsDebug:         isDebug,
+			DirectoryConfig: app.GetDirConfig(),
+
+			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
+		})
+		_, err = converger.Converge(ctx)
+
+		if err != nil {
+			msg := fmt.Sprintf("Converge failed with error: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 	return cmd
 }
 
-func DefineAutoConvergeCommand(kpApp *kingpin.Application) *kingpin.CmdClause {
-	cmd := kpApp.Command("converge-periodical", "Start service for periodical run converge.")
+func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		converger := converge.NewConverger(&converge.Params{
-			AutoDismissDestructive: true,
-			AutoApprove:            true,
-			TerraformContext:       terraform.NewTerraformContext(),
+		tmpDir := app.TmpDirName
+		logger := log.GetDefaultLogger()
+		isDebug := app.IsDebug
+
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           logger,
+			IsDebug:          isDebug,
 		})
-		return converger.AutoConverge()
+
+		converger := converge.NewConverger(&converge.Params{
+			ChangesSettings: infrastructure.ChangeActionSettings{
+				SkipChangesOnDeny: true,
+				AutomaticSettings: infrastructure.AutomaticSettings{
+					AutoDismissDestructive: true,
+					AutoDismissChanges:     false,
+					AutoApproveSettings: infrastructure.AutoApproveSettings{
+						AutoApprove: true,
+					},
+				},
+			},
+			ProviderGetter:  providerGetter,
+			TmpDir:          tmpDir,
+			Logger:          logger,
+			IsDebug:         isDebug,
+			DirectoryConfig: app.GetDirConfig(),
+		})
+		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
+	})
+	return cmd
+}
+
+func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineBecomeFlags(cmd)
+	app.DefineKubeFlags(cmd)
+	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd)
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		if err != nil {
+			return err
+		}
+
+		if govalue.IsNil(sshClient) {
+			sshClient = nil
+		}
+
+		tmpDir := app.TmpDirName
+		loggerFor := log.GetDefaultLogger()
+		isDebug := app.IsDebug
+
+		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           tmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           loggerFor,
+			IsDebug:          isDebug,
+		})
+
+		converger := converge.NewConverger(&converge.Params{
+			SSHClient: sshClient,
+			ChangesSettings: infrastructure.ChangeActionSettings{
+				AutomaticSettings: infrastructure.AutomaticSettings{
+					AutoDismissDestructive: true,
+					AutoDismissChanges:     true,
+					AutoApproveSettings: infrastructure.AutoApproveSettings{
+						AutoApprove: true,
+					},
+				},
+				SkipChangesOnDeny: true,
+			},
+			CheckHasTerraformStateBeforeMigration: app.CheckHasTerraformStateBeforeMigrateToTofu,
+			ProviderGetter:                        providersGetter,
+			TmpDir:                                tmpDir,
+			Logger:                                loggerFor,
+			IsDebug:                               isDebug,
+			DirectoryConfig:                       app.GetDirConfig(),
+		})
+		err = converger.ConvergeMigration(ctx)
+		if err != nil {
+			msg := fmt.Sprintf("ConvergeMigration failed with error: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 	return cmd
 }

@@ -1,0 +1,26 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8disallowedtolerations
+tests:
+  - name: d8disallowedtolerations
+    template: ../../templates/operation/disallowed-tolerations.yaml
+    constraint: constraint.yaml
+    cases:
+      - name: allowed-no-tolerations
+        object: allowed_no_tolerations.yaml
+        assertions:
+          - violations: no
+      - name: disallowed-toleration-key
+        object: disallowed_toleration_key.yaml
+        assertions:
+          - violations: yes
+      - name: disallowed-toleration-equal
+        object: disallowed_toleration_equal.yaml
+        assertions:
+          - violations: yes
+      - name: disallowed-toleration-noexecute-exists
+        object: disallowed_toleration_noexecute_exists.yaml
+        assertions:
+          - violations: yes
+

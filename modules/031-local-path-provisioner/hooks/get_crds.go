@@ -17,9 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/031-local-path-provisioner/hooks/internal/v1alpha1"
 )
@@ -54,10 +59,13 @@ func getLPPCRDFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	}, nil
 }
 
-func getLPPCRDsHandler(input *go_hook.HookInput) error {
-	localPathProvisioners := input.Snapshots["lpp"]
+func getLPPCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
+	localPathProvisioners, err := sdkobjectpatch.UnmarshalToStruct[LocalPathProvisionerInfo](input.Snapshots, "lpp")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal lpp snapshot: %w", err)
+	}
 	if len(localPathProvisioners) == 0 {
-		localPathProvisioners = make([]go_hook.FilterResult, 0)
+		localPathProvisioners = make([]LocalPathProvisionerInfo, 0)
 	}
 
 	input.Values.Set("localPathProvisioner.internal.localPathProvisioners", localPathProvisioners)

@@ -15,7 +15,7 @@ properties:
       Если значение не указано или указано `false`, будет использоваться [автоматика](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/#выделение-узлов-под-определенный-вид-нагрузки).
   speaker:
     description: |
-      Настройки компонента `speaker`, реализующего протокол публикации и направляющего на свой узел прикладной трафик сервисов.
+      Настройки для компонента `speaker`, который реализует протокол публикации IP-адресов LoadBalancer'а для внешней инфраструктуры.
     properties:
       nodeSelector:
         description: |
@@ -31,7 +31,7 @@ properties:
     description: |
       Список внешних BGP-роутеров, которые будут работать с этим модулем.
 
-      Формат — массив, [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#bgp-configuration).
+      Формат — массив, [как у оригинального MetalLB](https://metallb.io/configuration/#bgp-configuration).
     items:
       properties:
         peer-address:
@@ -67,17 +67,17 @@ properties:
             Формат — [`matchLabels` или `matchExpressions`](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements).
         password:
           description: |
-            Пароль для аутентификациии для роутеров, требующих TCP MD5 авторизованных сессий.
+            Пароль аутентификации для BGP-маршрутизаторов, использующих TCP MD5-аутентифицированные сессии.
   addressPools:
     description: |
       Список диапазонов IP, которые будут выдаваться сервисам.
 
-      Формат — массив, [как у оригинального MetalLB](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
+      Формат — массив, [как у оригинального MetalLB](https://metallb.io/configuration/#advanced-address-pool-configuration).
     items:
       properties:
         name:
           description: |
-            Имя пула, которое можно уточнять с помощью аннотации к сервису `metallb.universe.tf/address-pool: <name>`. Имя должно соответствовать RFC 1123: разделенные точками части в нижнем регистре, состоящие из букв и '-'. Каждое имя должно начинаться и заканчиваться буквой алфавита.
+            Имя пула. Должно соответствовать RFC 1123: разделенные точками части в нижнем регистре, состоящие из букв и '-'. Каждое имя должно начинаться и заканчиваться буквой алфавита.
         protocol:
           description: |
             Технология публикации сервисов, которую должен реализовать speaker.

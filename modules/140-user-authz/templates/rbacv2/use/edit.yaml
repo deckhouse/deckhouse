@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/kind: use
+  name: d8:use:capability:module:user-authz:edit
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - authorizationrules
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection

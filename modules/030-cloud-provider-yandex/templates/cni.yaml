@@ -1,3 +1,7 @@
+{{- $ciliumConfig := `{
+  "mode": "VXLAN",
+  "masqueradeMode": "BPF"
+}` }}
 ---
 apiVersion: v1
 kind: Secret
@@ -6,4 +10,9 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
-  cni: {{ b64enc "simple-bridge" | quote }}
+{{- if hasKey .Values.cloudProviderYandex.internal "cniSecretData" }}
+  {{- .Values.cloudProviderYandex.internal.cniSecretData | b64dec | nindent 2 }}
+{{- else }}
+  cni: {{ b64enc "cilium" | quote }}
+  cilium: {{ $ciliumConfig | b64enc | quote }}
+{{- end }}

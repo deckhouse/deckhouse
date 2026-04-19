@@ -17,7 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -76,15 +79,15 @@ func packagesProxyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResul
 	return fmt.Sprintf("%s:%d", pod.Status.HostIP, packagesProxyPort), nil
 }
 
-func handlePackagesProxyEndpoints(input *go_hook.HookInput) error {
-	endpointsSet := set.NewFromSnapshot(input.Snapshots["packages_proxy"])
+func handlePackagesProxyEndpoints(_ context.Context, input *go_hook.HookInput) error {
+	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("packages_proxy"))
 	endpointsList := endpointsSet.Slice() // sorted
 
 	if len(endpointsList) == 0 {
 		return fmt.Errorf("no packages proxy endpoints found")
 	}
 
-	input.Logger.Infof("found packages proxy endpoints: %v", endpointsList)
+	input.Logger.Info("found packages proxy endpoints", slog.String("endpoints", strings.Join(endpointsList, ",")))
 	input.Values.Set("nodeManager.internal.packagesProxy.addresses", endpointsList)
 
 	return nil

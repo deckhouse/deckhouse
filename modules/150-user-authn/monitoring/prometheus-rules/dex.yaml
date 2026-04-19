@@ -12,3 +12,124 @@
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
       summary: Prometheus is unable to scrape Dex metrics.
+
+- name: d8.dex.authrequests-quota
+  rules:
+  - alert: D8DexAuthRequestsQuotaHigh
+    expr: |
+      (
+        100 *
+        kube_resourcequota{
+          namespace="d8-user-authn",
+          resourcequota="authrequest-quota",
+          resource="count/authrequests.dex.coreos.com",
+          type="used"
+        }
+        /
+        ignoring(type)
+        kube_resourcequota{
+          namespace="d8-user-authn",
+          resourcequota="authrequest-quota",
+          resource="count/authrequests.dex.coreos.com",
+          type="hard"
+        }
+      ) > 80
+      and
+      ignoring(type)
+      kube_resourcequota{
+        namespace="d8-user-authn",
+        resourcequota="authrequest-quota",
+        resource="count/authrequests.dex.coreos.com",
+        type="hard"
+      } != 0
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dex
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Dex AuthRequest objects quota usage is higher than 80% in namespace "d8-user-authn".
+      description: |-
+        The ResourceQuota for `authrequests.dex.coreos.com` objects in namespace `d8-user-authn` is approaching its limit.
+
+        **Current usage:** {{ $value | printf "%.1f" }}%
+
+        When the quota is exhausted, Dex will be unable to create new AuthRequest custom resources, which may cause:
+        * Dex health checks to fail.
+        * Authentication through external identity providers (GitLab, GitHub, etc.) to stop working.
+
+        **Investigation steps:**
+
+        1. Check for stale AuthRequest objects that Dex should have cleaned up:
+           ```bash
+           d8 k get authrequests.dex.coreos.com -n d8-user-authn
+           ```
+
+        2. Review Dex configuration for AuthRequest TTL settings.
+
+        3. Consider temporarily increasing the ResourceQuota limit if needed.
+
+  - alert: D8DexAuthRequestsQuotaExhausted
+    expr: |
+      (
+        100 *
+        kube_resourcequota{
+          namespace="d8-user-authn",
+          resourcequota="authrequest-quota",
+          resource="count/authrequests.dex.coreos.com",
+          type="used"
+        }
+        /
+        ignoring(type)
+        kube_resourcequota{
+          namespace="d8-user-authn",
+          resourcequota="authrequest-quota",
+          resource="count/authrequests.dex.coreos.com",
+          type="hard"
+        }
+      ) >= 100
+      and
+      ignoring(type)
+      kube_resourcequota{
+        namespace="d8-user-authn",
+        resourcequota="authrequest-quota",
+        resource="count/authrequests.dex.coreos.com",
+        type="hard"
+      } != 0
+    for: 2m
+    labels:
+      severity_level: "3"
+      tier: cluster
+      d8_module: user-authn
+      d8_component: dex
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Dex AuthRequest objects ResourceQuota is exhausted in namespace "d8-user-authn".
+      description: |-
+        The ResourceQuota for `authrequests.dex.coreos.com` objects in namespace `d8-user-authn` has been fully exhausted.
+
+        Dex is currently unable to create new AuthRequest custom resources, which will cause:
+        * Dex health checks to fail immediately.
+        * Authentication through external identity providers to stop working.
+        * Users unable to log in via OAuth/OIDC flows.
+
+        **Immediate actions required:**
+
+        1. Check current AuthRequest objects and clean up stale ones:
+           ```bash
+           d8 k get authrequests.dex.coreos.com -n d8-user-authn --no-headers | wc -l
+           d8 k delete authrequests.dex.coreos.com --all -n d8-user-authn
+           ```
+
+        2. Temporarily increase the ResourceQuota limit:
+           ```bash
+           d8 k patch resourcequota authrequest-quota -n d8-user-authn --type='json' -p='[{"op": "replace", "path": "/spec/hard/count\/authrequests.dex.coreos.com", "value": "20000"}]'
+           ```
+
+        3. Investigate why Dex is not cleaning up AuthRequest objects automatically.
+
+        4. Review Dex configuration for AuthRequest TTL settings.

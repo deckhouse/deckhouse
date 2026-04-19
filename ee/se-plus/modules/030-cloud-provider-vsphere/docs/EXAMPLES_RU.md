@@ -2,7 +2,7 @@
 title: "Cloud provider — VMware vSphere: Примеры"
 ---
 
-Ниже представлен пример конфигурации cloud-провайдера VMware vSphere.
+Ниже представлен пример конфигурации облачного провайдера VMware vSphere.
 
 ## Пример конфигурации
 
@@ -12,7 +12,7 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-vsphere
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     host: vc-3.internal
@@ -52,5 +52,5 @@ spec:
   rootDiskSize: 20
   template: dev/golden_image
   mainNetwork: k8s-msk-178
-  datastore: lun-1201
+  datastore: <DS_PARENT_FOLDER>/lun-1201 # <DS_PARENT_FOLDER> — родительская папка Datastore.
 ```

@@ -31,7 +31,7 @@ title: "Cloud provider — AWS: FAQ"
 
 2. Поднять пиринговое соединение по инструкции [выше](#как-поднять-пиринговое-соединение--между-vpc).
 
-3. Продолжить установку кластера. На вопрос про кэш Terraform ответить `y`:
+3. Продолжить установку кластера. На вопрос про кеш Terraform ответить `y`:
 
    ```shell
    dhctl bootstrap --config config --ssh-...
@@ -47,7 +47,7 @@ title: "Cloud provider — AWS: FAQ"
 
 2. Запустить вручную bastion-хост в subnet <prefix>-public-0.
 
-3. Продолжить установку кластера. На вопрос про кэш Terraform ответить `y`:
+3. Продолжить установку кластера. На вопрос про кеш Terraform ответить `y`:
 
    ```shell
    dhctl bootstrap --config config --ssh-...
@@ -81,13 +81,13 @@ title: "Cloud provider — AWS: FAQ"
    * Узнать `cluster_uuid` можно с помощью команды:
 
      ```shell
-     kubectl -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
+     d8 k -n kube-system get cm d8-cluster-uuid -o json | jq -r '.data."cluster-uuid"'
      ```
 
    * Узнать `prefix` можно с помощью команды:
 
      ```shell
-     kubectl -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
+     d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \
        | base64 -d | grep prefix
      ```
 
@@ -97,6 +97,47 @@ title: "Cloud provider — AWS: FAQ"
 
 Операция проходит полностью автоматически и занимает до одной минуты. Никаких дополнительных действий не требуется.
 
-За ходом процесса можно наблюдать в events через команду `kubectl describe pvc`.
+За ходом процесса можно наблюдать в events через команду `d8 k describe pvc`.
 
 > После изменения volume нужно подождать не менее шести часов и убедиться, что volume находится в состоянии `in-use` или `available`, прежде чем станет возможно изменить его еще раз. Подробности можно найти [в официальной документации](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/modify-volume-requirements.html).
+
+## Как настроить доступ к репозиторию Amazon ECR на узлах кластера
+
+{% alert level="info" %}
+Под репозиторием Amazon ECR подразумевается [Amazon ECR repository](https://docs.aws.amazon.com/AmazonECR/latest/userguide/Repositories.html).
+{% endalert %}
+
+1. Задайте права для чтения образов [в Repository policies](https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html). В `Principal` должен быть существующий объект `Roles`.
+
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "RepositoryRead",
+         "Effect": "Allow",
+         "Principal": {
+           "AWS": "arn:aws:iam::xxx:role/xxx-node"
+         },
+         "Action": [
+           "ecr:BatchCheckLayerAvailability",
+           "ecr:BatchGetImage",
+           "ecr:DescribeImages",
+           "ecr:DescribeRepositories",
+           "ecr:GetAuthorizationToken",
+           "ecr:GetDownloadUrlForLayer",
+           "ecr:ListImages",
+           "ecr:ListTagsForResource"
+         ]
+       }
+     ]
+   }
+   ```
+
+   Примените эту политику в `Amazon ECR` > `Private registry` > `Repositories` > `{{ name }}` > `Permissions`.
+
+1. Добавьте `ecr:GetAuthorizationToken` [в additionalRolePolicies](cluster_configuration.html#awsclusterconfiguration-additionalrolepolicies).
+
+## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
+
+Если переключение на заказ узлов в менее приоритетных группах занимает много времени (например, когда для групп узлов со spot-инстансами установлен наивысший приоритет и при недоступности таких инстансов заказ узлов из других групп происходит очень долго), воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).

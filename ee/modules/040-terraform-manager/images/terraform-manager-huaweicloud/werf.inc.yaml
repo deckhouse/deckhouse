@@ -1,31 +1,14 @@
+{{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-huaweicloud"))) }}
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .ModuleName }}/base-terraform-manager
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "huaweicloud") }}'
 git:
-  - add: /{{ .ModulePath }}candi/cloud-providers/huaweicloud
+  - add: /{{ .ModulePath }}modules/030-cloud-provider-huaweicloud/candi
     to: /deckhouse/candi/cloud-providers/huaweicloud
 import:
-  - artifact: terraform-provider-huaweicloud
-    add: /terraform-provider-huaweicloud
-    to: /plugins/registry.terraform.io/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
+  - image: cloud-provider-huaweicloud/terraform-manager
+    add: /terraform-manager/terraform-provider-huaweicloud
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
     before: setup
----
-image: terraform-provider-huaweicloud
-final: false
-from: {{ $.Images.BASE_GOLANG_20_ALPINE_DEV }}
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-shell:
-  beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install:
-    - mkdir /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ .TF.huaweicloud.version }} {{ $.SOURCE_REPO }}/huaweicloud/terraform-provider-huaweicloud.git /src
-    - cd /src
-    - go mod tidy
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.huaweicloud.version }} -X main.commit=00000000" -o terraform-provider-huaweicloud ./
-    - mv /src/terraform-provider-huaweicloud /terraform-provider-huaweicloud
-    - chmod -R 755 /terraform-provider-huaweicloud
-    - chown 64535:64535 /terraform-provider-huaweicloud
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+{{- end }}

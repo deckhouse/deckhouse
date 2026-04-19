@@ -1,73 +1,127 @@
-.github/                        @name212
-002-deckhouse/                  @yalosev @miklezzzz @ldmonster
-005-external-module-manager/    @yalosev @miklezzzz @ldmonster
-007-registrypackages/           @RomanenkoDenys @name212 @sprait
-010-cloud-data-crd/             @nabokihms
-011-flow-schema/                @name212 @sprait
-015-admission-policy-engine/    @yalosev @miklezzzz
-021-cni-cilium/                 @apolovov
-030-cloud-provider-aws/         @aleksey-su
-030-cloud-provider-azure/       @aleksey-su
-030-cloud-provider-gcp/         @aleksey-su
-030-cloud-provider-yandex/      @aleksey-su
-030-cloud-provider-openstack/   @aleksey-su
-030-cloud-provider-vcd/         @aleksey-su
-030-cloud-provider-vsphere/     @aleksey-su
-030-cloud-provider-zvirt/       @aleksey-su
-031-local-path-provisioner/     @AleksZimin
-031-ceph-csi/                   @AleksZimin
-035-cni-flannel/                @apolovov
-035-cni-simple-bridge/          @apolovov
-036-kube-proxy/                 @name212 @sprait
-039-registry-packages-proxy/    @RomanenkoDenys @name212 @sprait
-040-control-plane-manager/      @name212 @sprait
-040-node-manager/               @name212 @sprait
-040-terraform-manager/          @name212 @sprait @aleksey-su
-042-kube-dns/                   @nabokihms
-045-snapshot-controller/        @AleksZimin
-050-network-policy-engine/      @apolovov
-101-cert-manager/               @yalosev @miklezzzz
-110-istio/                      @apolovov
-140-user-authz/                 @nabokihms
-150-user-authn/                 @nabokihms
-160-multitenancy-manager/       @yalosev @miklezzzz
-200-operator-prometheus/        @nabokihms @vladimirGuryanov @lazovskiy
-300-prometheus/                 @nabokihms @vladimirGuryanov @lazovskiy
-301-prometheus-*/               @nabokihms @vladimirGuryanov @lazovskiy
-302-vertical-pod-autoscaler/    @RomanenkoDenys @name212 @sprait
-303-prometheus-*/               @nabokihms @vladimirGuryanov @lazovskiy
-340-extended-monitoring/        @nabokihms @vladimirGuryanov @lazovskiy
-340-monitoring-*/               @nabokihms @vladimirGuryanov @lazovskiy
-350-node-local-dns/             @name212 @sprait
-380-metallb/                    @apolovov
-400-descheduler/                @RomanenkoDenys @name212 @sprait
-402-ingress-nginx/              @apolovov
-450-keepalived/                 @apolovov
-450-network-gateway/            @apolovov
-460-log-shipper/                @nabokihms @vladimirGuryanov @lazovskiy
-462-loki/                       @nabokihms @vladimirGuryanov @lazovskiy
-465-pod-reloader/               @name212 @sprait
-470-chrony/                     @name212 @sprait
-491-containerized-data-importer @fl64
-500-openvpn/                    @name212 @sprait
-500-cilium-hubble/              @apolovov
-500-dashboard/                  @nabokihms
-500-upmeter/                    @nabokihms
-500-okmeter/                    @nabokihms @vladimirGuryanov @lazovskiy @kolashtov
-500-operator-trivy/             @miklezzzz @yalosev
-502-delivery/                   @shvgn
-600-namespace-configurator/     @yalosev @miklezzzz
-650-runtime-audit-engine/       @name212 @sprait @nabokihms
-800-deckhouse-tools/            @RomanenkoDenys @name212 @sprait
-810-documentation/              @z9r5 @nabokihms
-bashible-apiserver/             @name212 @sprait
-candi/                          @name212 @sprait
-cloud-controller-manager/       @aleksey-su
-csi/                            @AleksZimin
-deckhouse-controller/           @yalosev @miklezzzz @ldmonster
-dhctl/                          @name212 @sprait
-docs/                           @z9r5 @nabokihms
-helm_lib/                       @name212 @sprait
-crds/                           @nabokihms @konstantin-axenov @z9r5
-openapi/                        @nabokihms @konstantin-axenov @z9r5
-/pkg/                           @yalosev @ldmonster
+.github/                                                         @Nikolay1224 @himax1991
+000-common/                                                      @RomanenkoDenys
+**/000-common/images/alt-p11                                     @name212 @090809
+**/000-common/images/cni-**                                      @apolovov
+**/000-common/images/coredns                                     @apolovov
+**/000-common/images/crane                                       @sprait
+**/000-common/images/csi-**                                      @AleksZimin
+**/000-common/images/debug-container                             @apolovov
+**/000-common/images/iptables-wrapper                            @apolovov
+**/000-common/images/kube-rbac-proxy                             @AlwxSin
+**/000-common/images/kubernetes                                  @sprait
+**/000-common/images/pause                                       @sprait
+**/000-common/images/shell-operator                              @ldmonster
+**/000-common/images/vxlan-offloading-fixer                      @apolovov
+002-deckhouse/                                                   @ldmonster
+007-registrypackages/                                            @RomanenkoDenys
+**/007-registrypackages/images/containerd                        @sprait
+**/007-registrypackages/images/crictl                            @sprait
+**/007-registrypackages/images/cryptsetup                        @sprait
+**/007-registrypackages/images/d8-ca-updater                     @name212 @090809
+**/007-registrypackages/images/d8-curl                           @name212 @090809
+**/007-registrypackages/images/e2fsprogs                         @name212 @090809
+**/007-registrypackages/images/erofs                             @name212 @090809 @sprait
+**/007-registrypackages/images/growpart                          @name212 @090809
+**/007-registrypackages/images/jq                                @name212 @090809
+**/007-registrypackages/images/kubeadm                           @sprait
+**/007-registrypackages/images/kubectl                           @sprait
+**/007-registrypackages/images/kubelet                           @sprait
+**/007-registrypackages/images/lsblk                             @name212 @090809
+**/007-registrypackages/images/netcat                            @name212 @090809
+**/007-registrypackages/images/nfs-mount                         @name212 @090809
+**/007-registrypackages/images/nvme-cli                          @name212 @090809
+**/007-registrypackages/images/pause                             @sprait
+**/007-registrypackages/images/socat                             @name212 @090809
+**/007-registrypackages/images/systemctl-power-commands-wrapper  @name212 @090809
+**/007-registrypackages/images/toml-merge                        @name212 @090809 @sprait
+**/007-registrypackages/images/virt-what                         @name212 @090809
+**/007-registrypackages/images/which                             @name212 @090809
+**/007-registrypackages/images/yq                                @name212 @090809
+015-admission-policy-engine/                                     @nabokihms @AlwxSin
+021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
+025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
+030-cloud-provider-*/                                            @aleksey-su @pabateman
+031-local-path-provisioner/                                      @AleksZimin @duckhawk
+035-cni-flannel/                                                 @AndreyPavlovFlant @apolovov
+035-cni-simple-bridge/                                           @AndreyPavlovFlant @apolovov
+036-kube-proxy/                                                  @AndreyPavlovFlant @apolovov
+038-registry/                                                    @RaveNoX
+039-registry-packages-proxy/                                     @name212 @090809
+040-control-plane-manager/                                       @sprait
+040-node-manager/                                                @name212 @090809
+**/040-node-manager/images/builder-cuda                          @serg-su
+**/040-node-manager/images/nvidia-container-toolkit              @serg-su
+**/040-node-manager/images/nvidia-dcgm                           @serg-su
+**/040-node-manager/images/nvidia-dcgm-exporter                  @serg-su
+**/040-node-manager/images/nvidia-device-plugin                  @serg-su
+**/040-node-manager/images/nvidia-mig-manager                    @serg-su
+**/040-node-manager/images/fencing-agent                         @yalosev @ergoz
+**/040-node-manager/images/cluster-autoscaler                    @yalosev @ergoz
+**/040-node-manager/images/bashible-apiserver                    @name212 @090809 @sprait
+**/040-node-manager/templates/fencing-agent                      @yalosev @ergoz
+**/040-node-manager/templates/cluster-autoscaler                 @yalosev @ergoz
+**/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu     @serg-su
+**/040-node-manager/templates/nvidia-gpu                         @serg-su
+**/040-node-manager/hooks/fencing**                              @yalosev @ergoz
+040-terraform-manager/                                           @name212 @090809
+**/040-terraform-manager/images                                  @aleksey-su @pabateman
+**/040-terraform-manager/images/base-terraform-manager           @name212 @090809
+**/040-terraform-manager/images/base-terraform                   @name212 @090809
+**/040-terraform-manager/images/base-opentofu                    @name212 @090809
+042-kube-dns/                                                    @AndreyPavlovFlant @apolovov
+050-network-policy-engine/                                       @AndreyPavlovFlant @apolovov
+101-cert-manager/                                                @Suselz @AlwxSin
+110-istio/                                                       @skurbatov @apolovov
+140-user-authz/                                                  @nabokihms @AlwxSin
+150-user-authn/                                                  @nabokihms @AlwxSin
+160-multitenancy-manager/                                        @nabokihms @AlwxSin
+200-operator-prometheus/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
+300-prometheus/                                                  @vladimirGuryanov @lazovskiy @maksimmadzhuga
+301-prometheus-*/                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
+302-vertical-pod-autoscaler/                                     @yalosev @ergoz
+303-prometheus-*/                                                @vladimirGuryanov @lazovskiy
+340-extended-monitoring/                                         @vladimirGuryanov @lazovskiy @maksimmadzhuga
+340-monitoring-*/                                                @vladimirGuryanov @lazovskiy @maksimmadzhuga
+350-node-local-dns/                                              @AndreyPavlovFlant @apolovov
+380-metallb/                                                     @AndreyPavlovFlant @apolovov
+400-descheduler/                                                 @yalosev @ergoz
+402-ingress-nginx/                                               @miklezzzz @apolovov
+450-keepalived/                                                  @AndreyPavlovFlant @apolovov
+450-network-gateway/                                             @AndreyPavlovFlant @apolovov
+460-log-shipper/                                                 @vladimirGuryanov @lazovskiy
+462-loki/                                                        @vladimirGuryanov @lazovskiy @maksimmadzhuga
+470-chrony/                                                      @name212 @090809
+491-containerized-data-importer                                  @fl64
+500-basic-auth/                                                  @nabokihms @AlwxSin
+500-openvpn/                                                     @AndreyPavlovFlant @apolovov
+500-cilium-hubble/                                               @AndreyPavlovFlant @apolovov
+500-dashboard/                                                   @shvgn
+500-upmeter/                                                     @vladimirGuryanov @lazovskiy @maksimmadzhuga
+500-okmeter/                                                     @vladimirGuryanov @lazovskiy @maksimmadzhuga
+600-secret-copier/                                               @nabokihms @AlwxSin
+600-namespace-configurator/                                      @nabokihms @AlwxSin
+610-service-with-healthchecks                                    @AndreyPavlovFlant @apolovov
+800-deckhouse-tools/                                             @RomanenkoDenys @name212 @090809
+810-documentation/                                               @z9r5
+
+/candi/                                  @name212 @090809
+/ee/candi/                               @name212 @090809
+/ee/**/candi/                            @name212 @090809
+candi/version_map.yml                    @sprait
+candi/cloud-providers/                   @aleksey-su @pabateman
+candi/terraform_versions.yml             @aleksey-su @pabateman
+cloud-controller-manager/                @aleksey-su @pabateman
+csi/                                     @AleksZimin @duckhawk
+deckhouse-controller/                    @ldmonster
+dhctl/                                   @name212 @090809
+docs/                                    @z9r5
+docs/documentation/pages/architecture/   @voitenkov
+helm_lib/                                @ldmonster
+crds/                                    @z9r5
+openapi/                                 @z9r5
+/pkg/                                    @ldmonster
+testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
+/monitoring/prometheus-rules/            @sudoroot-null
+/release.yaml                            @yalosev @ldmonster
+go_lib/cloud-data/                       @aleksey-su @pabateman
+go_lib/registry/                         @RaveNoX

@@ -1,0 +1,5 @@
+cloud-provider-openstack:
+  fixes:
+    - summary: fix LB.enabled flag
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18402
+

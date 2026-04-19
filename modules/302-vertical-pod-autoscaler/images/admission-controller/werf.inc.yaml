@@ -6,6 +6,9 @@ import:
   add: /admission-controller
   to: /admission-controller
   before: setup
-docker:
-  ENTRYPOINT: ["/admission-controller"]
-  CMD: ["--v=4", "--stderrthreshold=info"]
+git:  
+{{- include "image mount points" . }}  
+imageSpec:
+  config:
+    entrypoint: ["/admission-controller"]
+    cmd: ["--v=4", "--stderrthreshold=info"]

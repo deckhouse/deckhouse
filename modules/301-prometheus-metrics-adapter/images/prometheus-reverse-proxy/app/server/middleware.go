@@ -18,9 +18,9 @@ package server
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -41,6 +41,8 @@ const (
 	renewTokenPeriod = 30 * time.Second
 	tokenPath        = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
+
+type contextKeyRequestID struct{}
 
 type kubeTransport struct {
 	mu     sync.RWMutex
@@ -76,7 +78,7 @@ func (t *kubeTransport) updateToken() {
 		return
 	}
 
-	token, err := ioutil.ReadFile(tokenPath)
+	token, err := os.ReadFile(tokenPath)
 	if err != nil {
 		errLog.Println("Cannot read service account token, will try later")
 		return
@@ -112,7 +114,7 @@ func (t *logHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		id, r.RemoteAddr, r.UserAgent(), r.Method, r.URL.String(),
 	)
 
-	ctx := context.WithValue(r.Context(), "id", id.String())
+	ctx := context.WithValue(r.Context(), contextKeyRequestID{}, id.String())
 	req := r.WithContext(ctx)
 	*r = *req
 

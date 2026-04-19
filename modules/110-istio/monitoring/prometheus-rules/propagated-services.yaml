@@ -1,0 +1,21 @@
+- name: d8.istio.services
+  rules:
+  - alert: IstioIrrelevantExternalServiceFound
+    expr: max by (namespace, name) (d8_istio_irrelevant_service == 1)
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: application
+    annotations:
+      plk_markup_format: "markdown"
+      plk_protocol_version: "1"
+      plk_create_group_if_not_exists__istio_irrelevant_external_services: IstioIrrelevantExternalServices,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      plk_grouped_by__istio_irrelevant_external_services: IstioIrrelevantExternalServices,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+      summary: External service found with irrelevant ports specifications.
+      description: |
+        A service `{{$labels.name}}` in the `{{$labels.namespace}}` namespace has an irrelevant port specification.
+
+        The `.spec.ports[]` field isn't applicable for services of the `ExternalName` type.
+        However, Istio renders port listeners for external services as `0.0.0.0:port`, which captures all traffic to the specified port. This can cause problems for services that aren't registered in the Istio registry.
+
+        To resolve the issue, remove the `.spec.ports` section from the service configuration. It is safe.

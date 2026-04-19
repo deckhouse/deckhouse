@@ -4,108 +4,163 @@ permalink: ru/virtualization-platform/documentation/user/resource-management/ima
 lang: ru
 ---
 
-Ресурс [VirtualImage](../../../reference/cr/virtualimage.html) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин. Этот ресурс доступен только в пространстве имен или проекте, в котором он был создан.
+Ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage) предназначен для загрузки образов виртуальных машин и их последующего использования для создания дисков виртуальных машин.
+
+{% alert level="warning" %}
+Обратите внимание, что [VirtualImage](/modules/virtualization/cr.html#virtualimage) — это проектный ресурс, то есть он доступен только в том проекте или пространстве имен, в котором был создан. Для использования образов на уровне всего кластера предназначен отдельный ресурс — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+{% endalert %}
+
+При подключении к виртуальной машине доступ к образу предоставляется в режиме «только чтение».
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [VirtualImage](../../../reference/cr/virtualimage.html).
-1. После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
-1. После завершения загрузки ресурс становится доступным для создания дисков.
+- Пользователь создаёт ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage).
+- После создания образ автоматически загружается из указанного в спецификации источника в хранилище DVCR или PVC в зависимости от типа.
+- После завершения загрузки, ресурс становится доступным для создания дисков.
 
 Существуют различные типы образов:
 
-- ISO-образ — установочный образ, используемый для начальной установки операционной системы. Такие образы выпускаются производителями ОС и используются для установки на физические и виртуальные серверы.
-- Образ диска с предустановленной системой — содержит уже установленную и настроенную операционную систему, готовую к использованию после создания виртуальной машины. Эти образы предлагаются несколькими производителями и могут быть представлены в таких форматах, как qcow2, raw, vmdk и другие.
+- **ISO-образ** — установочный образ, используемый для начальной установки операционной системы. Такие образы выпускаются производителями ОС и используются для установки на физические и виртуальные серверы.
+- **Образ диска с предустановленной системой** — содержит уже установленную и настроенную операционную систему, готовую к использованию после создания виртуальной машины. Готовые образы можно получить на ресурсах разработчиков дистрибутива, либо создать самостоятельно.
 
 Примеры ресурсов для получения образов виртуальной машины:
 
-- [Ubuntu](https://cloud-images.ubuntu.com);
-- [Alt Linux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/platform/images/cloud/x86_64);
-- [Astra Linux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit).
+<a id="image-resources-table"></a>
 
-После создания ресурса, тип и размер образа определяются автоматически, и эта информация отражается в статусе ресурса.
+| Дистрибутив                                                                       | Пользователь по умолчанию |
+| --------------------------------------------------------------------------------- | ------------------------- |
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
+| [AltLinux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/)                   | `altlinux`                |
+| [AstraLinux](https://download.astralinux.ru/ui/native/mg-generic/alse/cloudinit/) | `astra`                   |
+| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
+| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
+| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
+
+Поддерживаются следующие форматы образов с предустановленной системой:
+
+- qcow2
+- raw
+- vmdk
+- vdi
+
+Также файлы образов могут быть сжаты одним из следующих алгоритмов сжатия: gz, xz.
+
+После создания ресурса, тип и размер образа определяются автоматически и эта информация отражается в статусе ресурса.
+
+В статусе образа отображаются два размера:
+
+- STOREDSIZE (размер в хранилище) — объём, который образ фактически занимает в хранилище (DVCR или PVC). Для образов, загруженных в сжатом виде (например, `.gz`, `.xz`), это значение меньше распакованного размера.
+- UNPACKEDSIZE (распакованный размер) — размер образа после распаковки. Он используется при создании диска из образа и задаёт минимальный размер диска, который можно создать.
+
+{% alert level="info" %}
+При создании диска из образа укажите размер диска не меньше значения `UNPACKEDSIZE`.  
+Если размер не задан, диск будет создан с размером, соответствующим распакованному размеру образа.
+{% endalert %}
 
 Образы могут быть загружены из различных источников, таких как HTTP-серверы, где расположены файлы образов, или контейнерные реестры. Также доступна возможность загрузки образов напрямую из командной строки с использованием утилиты curl.
 
 Образы могут быть созданы из других образов и дисков виртуальных машин.
 
-Для проектных образов поддерживается два варианта хранения:
+Проектный образ поддерживает два варианта хранения:
 
-- `ContainerRegistry` — тип по умолчанию, при котором образ хранится в `DVCR`.
-- `PersistentVolumeClaim` — тип, при котором в качестве хранилища для образа используется `PVC`. Этот вариант предпочтителен, если используется хранилище с поддержкой быстрого клонирования `PVC`. В этом случае диски из образов будут создаваться быстрее.
+- `ContainerRegistry` - тип по умолчанию, при котором образ хранится в `DVCR`.
+- `PersistentVolumeClaim` - тип, при котором в качестве хранилища для образа используется `PVC`. Этот вариант предпочтителен, если используется хранилище с поддержкой быстрого клонирования `PVC`, что позволяет быстрее создавать диски из образов.
 
-### Создание образа с HTTP-сервера
+{% alert level="warning" %}
+Использование образа с параметром `storage: PersistentVolumeClaim` поддерживается только для создания дисков в том же классе хранения (StorageClass).
+{% endalert %}
 
-Рассмотрим вариант создания образа с вариантом хранения в DVCR. Выполните следующую команду для создания [VirtualImage](../../../reference/cr/virtualimage.html):
+## Создание образа с HTTP-сервера
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualImage
-metadata:
-  name: ubuntu-22.04
-spec:
-  # Сохраним образ в DVCR
-  storage: ContainerRegistry
-  # Источник для создания образа.
-  dataSource:
-    type: HTTP
-    http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
-EOF
-```
+Рассмотрим вариант создания образа с вариантом хранения в DVCR.
 
-Проверить результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
+1. Выполните следующую команду для создания `VirtualImage`:
 
-```bash
-d8 k get virtualimage ubuntu-22.04
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualImage
+   metadata:
+     name: ubuntu-24-04
+   spec:
+     # Сохраним образ в DVCR.
+     storage: ContainerRegistry
+     # Источник для создания образа.
+     dataSource:
+       type: HTTP
+       http:
+         url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+   EOF
+   ```
 
-# Укороченный вариант команды
-d8 k get vi ubuntu-22.04
-```
+1. Проверьте результат создания `VirtualImage`:
 
-Пример вывода:
+   ```bash
+   d8 k get virtualimage ubuntu-24-04
+   # или более короткий вариант
+   d8 k get vi ubuntu-24-04
+   ```
 
-```console
-NAME           PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04   Ready   false   100%       23h
-```
+   Пример вывода:
 
-После создания ресурс [VirtualImage](../../../reference/cr/virtualimage.html) может находиться в следующих состояниях:
+   ```console
+   NAME           PHASE   CDROM   PROGRESS   AGE
+   ubuntu-24-04   Ready   false   100%       23h
+   ```
 
-- `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания образа.
-- `WaitForUserUpload` — ожидание загрузки образа пользователем (состояние присутствует только для `type=Upload`).
-- `Provisioning` — идет процесс создания образа.
-- `Ready` — образ создан и готов для использования.
-- `Failed` — произошла ошибка в процессе создания образа.
-- `Terminating` — идет процесс удаления образа; процесс может «зависнуть» в этом состоянии, если образ еще подключен к виртуальной машине.
+После создания ресурс `VirtualImage` может находиться в следующих состояниях (фазах):
 
-До тех пор, пока образ не перешёл в фазу `Ready`, содержимое всего блока `.spec` допускается изменять. При изменении процесс создания диска запустится заново. После перехода в фазу `Ready` содержимое блока `.spec` менять нельзя!
+- `Pending` — ожидание готовности всех зависимых ресурсов, требующихся для создания образа;
+- `WaitForUserUpload` — ожидание загрузки образа пользователем (фаза присутствует только для `type=Upload`);
+- `Provisioning` — идет процесс создания образа;
+- `Ready` — образ создан и готов для использования;
+- `Failed` — произошла ошибка в процессе создания образа;
+- `Terminating` - идет процесс удаления образа. Образ может «зависнуть» в данном состоянии, если он еще подключен к виртуальной машине;
+- `ImageLost` - образ отсутствует в DVCR. Ресурс не может быть использован;
+- `PVCLost` - дочерний PVC ресурса отсутствует. Ресурс не может быть использован.
+
+До тех пор, пока образ не перешёл в фазу `Ready`, содержимое всего блока `.spec` допускается изменять. При изменении процесс создании образа запустится заново. После перехода в фазу `Ready` содержимое блока `.spec` менять нельзя.
+
+Диагностика проблем с ресурсом осуществляется путем анализа информации в блоке `.status.conditions`.
 
 Отследить процесс создания образа можно путем добавления ключа `-w` к предыдущей команде:
 
 ```bash
-d8 k get vi ubuntu-22.04 -w
+d8 k get vi ubuntu-24-04 -w
 ```
 
 Пример вывода:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22.04   Provisioning   false              4s
-ubuntu-22.04   Provisioning   false   0.0%       4s
-ubuntu-22.04   Provisioning   false   28.2%      6s
-ubuntu-22.04   Provisioning   false   66.5%      8s
-ubuntu-22.04   Provisioning   false   100.0%     10s
-ubuntu-22.04   Provisioning   false   100.0%     16s
-ubuntu-22.04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
-В описании ресурса [VirtualImage](../../../reference/cr/virtualimage.html) можно получить дополнительную информацию о скачанном образе:
+В описание ресурса `VirtualImage` можно получить дополнительную информацию о скачанном образе:
 
 ```bash
-d8 k describe vi ubuntu-22.04
+d8 k describe vi ubuntu-24-04
 ```
+
+Как создать образ с HTTP-сервера в веб-интерфейсе:
+
+- Перейдите на вкладку «Проекты» и выберите нужный проект.
+- Перейдите в раздел «Виртуализация» → «Образы дисков».
+- Нажмите «Создать образ».
+- Из списка выберите «Загрузить данные по ссылке (HTTP)».
+- В открывшейся форме в поле «Имя образа» введите имя образа.
+- В поле «Хранилище» выберите `ContainerRegistry`.
+- В поле «URL» укажите ссылку на образ.
+- Нажмите кнопку «Создать».
+- Статус образа отображается слева вверху, под именем образа.
 
 Теперь рассмотрим пример создания образа с хранением его в PVC:
 
@@ -114,82 +169,112 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22.04-pvc
+  name: ubuntu-24-04-pvc
 spec:
   # Настройки хранения проектного образа.
   storage: PersistentVolumeClaim
+  persistentVolumeClaim:
+    # Подставьте ваше название StorageClass.
+    storageClassName: rv-thin-r2
   # Источник для создания образа.
   dataSource:
     type: HTTP
     http:
-      url: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img"
+      url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 EOF
 ```
 
-Проверить результат создания [VirtualImage](../../../reference/cr/virtualimage.html):
+Проверьте результат создания `VirtualImage`:
 
 ```bash
-d8 k get vi ubuntu-22.04-pvc
+d8 k get vi ubuntu-24-04-pvc
 ```
 
 Пример вывода:
 
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
-ubuntu-22.04-pvc  Ready   false   100%       23h
+ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
 
-### Создание образа из container registry
+Если параметр `.spec.persistentVolumeClaim.storageClassName` не указан, то будет использован `StorageClass` по умолчанию на уровне кластера, либо для образов, если он указан в настройках модуля.
 
-Образ, хранящийся в container registry, имеет определенный формат. Рассмотрим на примере:
+Как в веб-интерфейсе создать образ с его хранением в PVC:
 
-Для начала загрузите образ локально:
+- Перейдите на вкладку «Проекты» и выберите нужный проект.
+- Перейдите в раздел «Виртуализация» → «Образы дисков».
+- Нажмите «Создать образ».
+- Из списка выберите «Загрузить данные по ссылке (HTTP)».
+- В открывшейся форме в поле «Имя образа» введите имя образа.
+- В поле «Хранилище» выберите `PersistentVolumeClaim`.
+- В поле «Класс хранилища» можно выбрать StorageClass или оставить выбранный по умолчанию.
+- В поле «URL» укажите ссылку на образ.
+- Нажмите кнопку «Создать».
+- Статус образа отображается слева вверху, под именем образа.
 
-```bash
-curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
-```
+## Создание образа из container registry
 
-Затем создайте Dockerfile со следующим содержимым:
+Образ, хранящийся в container registry имеет определенный формат. Рассмотрим на примере:
 
-```Dockerfile
-FROM scratch
-COPY ubuntu2204.img /disk/ubuntu2204.img
-```
+1. Загрузите образ локально:
 
-Далее нужно собрать образ и загрузить его в container registry. В качестве container registry в примере ниже использован docker.io. Для выполнения вам необходимо иметь учетную запись сервиса и настроенное окружение.
+   ```bash
+   curl -L https://cloud-images.ubuntu.com/minimal/releases/jammy/release/ubuntu-22.04-minimal-cloudimg-amd64.img -o ubuntu2204.img
+   ```
 
-```bash
-docker build -t docker.io/<username>/ubuntu2204:latest
-```
+1. Создайте `Dockerfile` со следующим содержимым:
 
-где `username` — имя пользователя, указанное при регистрации в docker.io.
+   ```Dockerfile
+   FROM scratch
+   COPY ubuntu2204.img /disk/ubuntu2204.img
+   ```
 
-Загрузите созданный образ в container registry:
+1. Соберите образ и загрузите его в container registry. В качестве container registry в примере ниже использован docker.io. Для выполнения необходимо иметь учетную запись сервиса и настроенное окружение.
 
-```bash
-docker push docker.io/<username>/ubuntu2204:latest
-```
+   ```bash
+   docker build -t docker.io/<username>/ubuntu2204:latest
+   ```
 
-Чтобы использовать этот образ, создайте в качестве примера ресурс:
+   где `username` — имя пользователя, указанное при регистрации в docker.io.
 
-```yaml
-d8 k apply -f - <<EOF
-apiVersion: virtualization.deckhouse.io/v1alpha2
-kind: VirtualImage
-metadata:
-  name: ubuntu-2204
-spec:
-  storage: ContainerRegistry
-  dataSource:
-    type: ContainerImage
-    containerImage:
-      image: docker.io/<username>/ubuntu2204:latest
-EOF
-```
+1. Загрузите созданный образ в container registry:
 
-### Загрузка образа из командной строки
+   ```bash
+   docker push docker.io/<username>/ubuntu2204:latest
+   ```
 
-Чтобы загрузить образ из командной строки, предварительно создайте следующий ресурс, как представлено ниже на примере [VirtualImage](../../../reference/cr/virtualimage.html):
+1. Чтобы использовать этот образ, создайте в качестве примера ресурс:
+
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualImage
+   metadata:
+     name: ubuntu-2204
+   spec:
+     storage: ContainerRegistry
+     dataSource:
+       type: ContainerImage
+       containerImage:
+         image: docker.io/<username>/ubuntu2204:latest
+   EOF
+   ```
+
+Как создать образ из Container Registry в веб-интерфейсе:
+
+- Перейдите на вкладку «Проекты» и выберите нужный проект.
+- Перейдите в раздел «Виртуализация» → «Образы дисков».
+- Нажмите «Создать образ».
+- Из списка выберите «Загрузить данные из образа контейнера».
+- В открывшейся форме в поле «Имя образа» введите имя образа.
+- В поле «Хранилище» выберите `ContainerRegistry`.
+- В поле «Образ в реестре контейнеров» укажите `docker.io/<username>/ubuntu2204:latest`.
+- Нажмите кнопку «Создать».
+- Статус образа отображается слева вверху, под именем образа.
+
+## Загрузка образа из командной строки
+
+Чтобы загрузить образ из командной строки, предварительно создайте ресурс, как представлено ниже на примере `VirtualImage`:
 
 ```yaml
 d8 k apply -f - <<EOF
@@ -206,32 +291,36 @@ spec:
 EOF
 ```
 
-После создания, ресурс перейдет в фазу `WaitForUserUpload`, это означает, что он готов для загрузки образа.
+После создания, ресурс перейдет в фазу `WaitForUserUpload`, а это значит, что он готов для загрузки образа.
 
-Доступно два варианта загрузки: с узла кластера и с произвольного узла за пределами кластера:
+Доступно два варианта загрузки с узла кластера и с произвольного узла за пределами кластера:
 
 ```bash
 d8 k get vi some-image -o jsonpath="{.status.imageUploadURLs}"  | jq
-
-# {
-#   "external":"https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
-#   "inCluster":"http://10.222.165.239/upload"
-# }
 ```
 
-В качестве примера рассмотрим загрузку образ Cirros:
+Пример вывода:
+
+```json
+{
+  "external": "https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm",
+  "inCluster": "http://10.222.165.239/upload"
+}
+```
+
+В качестве примера загрузите образ Cirros:
 
 ```bash
 curl -L http://download.cirros-cloud.net/0.5.1/cirros-0.5.1-x86_64-disk.img -o cirros.img
 ```
 
-Выполните загрузку образа с использованием команды:
+Выполните загрузку образа с использование следующей команды
 
 ```bash
 curl https://virtualization.example.com/upload/g2OuLgRhdAWqlJsCMyNvcdt4o5ERIwmm --progress-bar -T cirros.img | cat
 ```
 
-После завершения загрузки образ должен быть создан и перейти в фазу `Ready`.
+После завершения загрузки образ должен быть создан и перейти в фазу `Ready`
 
 ```bash
 d8 k get vi some-image
@@ -244,11 +333,22 @@ NAME         PHASE   CDROM   PROGRESS   AGE
 some-image   Ready   false   100%       1m
 ```
 
-### Создание образа из диска
+Как загрузить образ из командной строки в веб-интерфейсе:
 
-Существует возможность создать образ из [диска](./disks.html). Для этого необходимо выполнить одно из следующих условий:
+- Перейдите на вкладку «Проекты» и выберите нужный проект.
+- Перейдите в раздел «Виртуализация» → «Образы дисков».
+- Нажмите «Создать образ», далее в выпадающем меню выберите «Загрузить с компьютера».
+- В поле «Имя образа» введите имя образа.
+- В поле «Загрузить файл» нажмите ссылку «Выберите файл на вашем компьютере».
+- Выберите файл в открывшемся файловом менеджере.
+- Нажмите кнопку «Создать».
+- Дождитесь пока образ перейдет в состояние `Готов`.
 
-- Диск не должен быть подключен ни к одной из виртуальных машин.
+## Создание образа из диска
+
+Существует возможность создать образ из [диска](/products/virtualization-platform/documentation/user/resource-management/disks.html). Для этого необходимо выполнить одно из следующих условий:
+
+- Диск не подключен ни к одной из виртуальных машин.
 - Виртуальная машина, к которой подключен диск, находится в выключенном состоянии.
 
 Пример создания образа из диска:
@@ -266,5 +366,39 @@ spec:
     objectRef:
       kind: VirtualDisk
       name: linux-vm-root
+EOF
+```
+
+Как в веб-интерфейсе создать образ из диска:
+
+- Перейдите на вкладку «Проекты» и выберите нужный проект.
+- Перейдите в раздел «Виртуализация» → «Образы дисков».
+- Нажмите «Создать образ».
+- Из списка выберите «Записать данные из диска».
+- В открывшейся форме в поле «Имя образа» введите `linux-vm-root`.
+- В поле «Хранилище» выберите `ContainerRegistry`.
+- В поле «Диск» выберите из выпадающего списка необходимый диск.
+- Нажмите кнопку «Создать».
+- Статус образа отображается слева вверху, под его именем.
+
+## Создание образа из снимка диска
+
+Можно создать образ из [снимка](/products/virtualization-platform/documentation/user/resource-management/snapshots.html). Для этого необходимо чтобы снимок диска находился в фазе готовности.
+
+Пример создания образа из моментального снимка диска:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualImage
+metadata:
+  name: linux-vm-root
+spec:
+  storage: ContainerRegistry
+  dataSource:
+    type: ObjectRef
+    objectRef:
+      kind: VirtualDiskSnapshot
+      name: linux-vm-root-snapshot
 EOF
 ```

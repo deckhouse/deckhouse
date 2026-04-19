@@ -23,5 +23,5 @@ type ZvirtCloudProviderDiscoveryData struct {
 type ZvirtStorageDomain struct {
 	Name      string `json:"name"`
 	IsEnabled bool   `json:"isEnabled,omitempty"`
-	IsDefault bool   `json:"IsDefault,omitempty"`
+	IsDefault bool   `json:"isDefault,omitempty"`
 }

@@ -19,13 +19,12 @@ package gatekeeper
 import (
 	"context"
 
-	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -99,7 +98,6 @@ func GetMutations(cClient controllerClient.Client, client *kubernetes.Clientset)
 				mutations = append(mutations, mutation)
 			}
 		}
-
 	}
 	return mutations, nil
 }

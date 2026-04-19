@@ -1,9 +1,9 @@
 {{- define "deckhouse_resources" }}
-cpu: 500m
-memory: 1000Mi
+cpu: 150m
+memory: 500Mi
 {{- end }}
 
-{{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
+{{- if or (.Values.global.discovery.apiVersions | has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -13,7 +13,7 @@ metadata:
   {{- if .Values.deckhouse.nodeSelector }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
   {{- else }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
   {{- end }}
 spec:
   targetRef:
@@ -21,10 +21,11 @@ spec:
     kind: Deployment
     name: deckhouse
   updatePolicy:
-    updateMode: "Initial"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: deckhouse
+      controlledValues: RequestsOnly
       minAllowed:
         {{- include "deckhouse_resources" . | nindent 8 }}
       maxAllowed:
@@ -52,6 +53,9 @@ metadata:
   namespace: d8-system
   annotations:
     helm.sh/resource-policy: keep
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/skip-logs: "true"
+    werf.io/track-termination-mode: NonBlocking
     core.deckhouse.io/version: {{ .Values.global.deckhouseVersion | quote }}
     core.deckhouse.io/edition: {{ .Values.global.deckhouseEdition | quote }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
@@ -71,9 +75,16 @@ spec:
         app: deckhouse
       annotations:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
+        checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
         kubectl.kubernetes.io/default-container: deckhouse
     spec:
       affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: deckhouse
+            topologyKey: kubernetes.io/hostname
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
             - preference:
@@ -83,19 +94,6 @@ spec:
                   values:
                   - "true"
               weight: 100
-{{- if and (include "helm_lib_ha_enabled" .) .Values.global.clusterIsBootstrapped }}
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - deckhouse
-                topologyKey: kubernetes.io/hostname
-              weight: 100
-{{- end }}
 {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
 {{- if .Values.deckhouse.nodeSelector }}
       nodeSelector:
@@ -106,18 +104,25 @@ spec:
 {{- if .Values.deckhouse.tolerations }}
       tolerations:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
+        - key: node.deckhouse.io/bashible-uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"        
+        - key: node.deckhouse.io/uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"
 {{- else }}
       {{- include "helm_lib_tolerations" (tuple . "wildcard") | nindent 6 }}
 {{- end }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       initContainers:
         - name: init-downloaded-modules
-          image: {{ include "helm_lib_module_common_image" (list . "init") }}
+          image: {{ include "helm_lib_module_image" (list . "init") }}
           imagePullPolicy: Always
-          command: ['sh', '-c', 'if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
+          command: ['sh', '-c', 'mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules']
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
+            readOnlyRootFilesystem: true
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
@@ -126,14 +131,40 @@ spec:
               name: deckhouse
       containers:
         - name: deckhouse
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_with_selinux" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
+{{- if .Values.deckhouse.internal.chrootMode }}
+            capabilities:
+              drop:
+              - all
+              add:
+              - SYS_ADMIN
+  {{- if semverCompare ">= 1.30" .Values.global.discovery.kubernetesVersion }}
+            appArmorProfile:
+              type: Unconfined
+  {{- end }}
+{{- end }}
           command:
-            - /deckhouse/deckhouse
+{{- if .Values.deckhouse.internal.chrootMode }}
+            - /usr/bin/caps-deckhouse-controller
+{{- else }}
+            - /usr/bin/deckhouse-controller
+{{- end }}
+            - start
           image: "{{ .Values.deckhouse.internal.currentReleaseImageName }}"
           imagePullPolicy: Always
           env:
-# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make Deckhouse work without kube-proxy
-{{- if not .Values.global.clusterIsBootstrapped }}
+{{- if (.Values.global.enabledModules | has "control-plane-manager") }}
+# control-plane is NOT managed by third-party team (EKS/GKP/...)
+  {{- if .Values.global.clusterIsBootstrapped }}
+  # managed by Deckhouse: use API-proxy
+            - name: KUBERNETES_SERVICE_HOST
+              value: 127.0.0.1
+              valueFrom: null # a hack for explicit wiping valueFrom field, helm has problems with arrays merge patching
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6445"
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
+  {{- else }}
+  # bootstrap phase: use direct connection
             - name: KUBERNETES_SERVICE_HOST
               valueFrom:
                 fieldRef:
@@ -141,9 +172,21 @@ spec:
                   fieldPath: status.hostIP
             - name: KUBERNETES_SERVICE_PORT
               value: "6443"
+            {{- $bootstrapContext := deepCopy . }}
+            {{- if and $bootstrapContext.Values.global.clusterConfiguration $bootstrapContext.Values.global.clusterConfiguration.proxy }}
+            {{- $_ := set $bootstrapContext.Values.global.clusterConfiguration.proxy "noProxy" (append ($bootstrapContext.Values.global.clusterConfiguration.proxy.noProxy | default list) "$(KUBERNETES_SERVICE_HOST)") }}
+            {{- end }}
+            {{- include "helm_lib_envs_for_proxy" $bootstrapContext | nindent 12 }}
+  {{- end }}
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
+            - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
+              value: "true"
+            - name: DECKHOUSE_ENABLE_MODULE_PACKAGES
+              value: "false"
+            - name: USE_NELM
+              value: "true"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
@@ -167,11 +210,13 @@ spec:
             - name: HELM_HOST
               value: "127.0.0.1:44434"
             - name: ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS
-              value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
+              value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency"
             - name: ADDON_OPERATOR_LISTEN_PORT
               value: "4222"
             - name: ADDON_OPERATOR_ADMISSION_SERVER_LISTEN_PORT
               value: "4223"
+            - name: ADDON_OPERATOR_BATCHING_ENABLED
+              value: "true"
             - name: OBJECT_PATCHER_KUBE_CLIENT_QPS
               value: "30"
             - name: OBJECT_PATCHER_KUBE_CLIENT_BURST
@@ -180,6 +225,8 @@ spec:
               value: "20"
             - name: KUBE_CLIENT_BURST
               value: "40"
+            - name: GOGC
+              value: "50"
             - name: ADDON_OPERATOR_PROMETHEUS_METRICS_PREFIX
               value: deckhouse_
             - name: ADDON_OPERATOR_NAMESPACE
@@ -196,8 +243,6 @@ spec:
               value: "/certs"
             - name: ADDON_OPERATOR_CRD_EXTRA_LABELS
               value: "heritage=deckhouse"
-            - name: HELM3LIB
-              value: "yes"
             - name: HELM_HISTORY_MAX
               value: "3"
             - name: MODULES_DIR
@@ -213,6 +258,34 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
+{{- if .Values.deckhouse.internal.chrootMode }}
+            - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
+              value: "/chroot"
+{{- end }}
+            - name: TRACING_OTLP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: endpoint
+                  optional: true
+            - name: TRACING_OTLP_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: token
+                  optional: true
+            - name: TRACING_OTLP_TLS_SKIP_VERIFY
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: tlsSkipVerify
+                  optional: true
+            - name: TRACING_OTLP_INSECURE
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: insecure
+                  optional: true
           ports:
             - containerPort: 4222
               name: self
@@ -227,15 +300,23 @@ spec:
             periodSeconds: 5
             failureThreshold: 120
           resources:
+            limits:
+              memory: 6Gi # heavy load usage ~2Gi (x3)
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 100 | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "deckhouse_resources" . | nindent 14 }}
-{{- end }}
           workingDir: /deckhouse
           volumeMounts:
+          - mountPath: /dev
+            name: dev-dir
           - mountPath: /tmp
             name: tmp
+          - mountPath: /run
+            name: tmp
+{{- if .Values.deckhouse.internal.chrootMode }}
+          - mountPath: /chroot
+            name: chroot
+{{- end }}
           - mountPath: /.kube
             name: kube
           - mountPath: /certs
@@ -244,7 +325,7 @@ spec:
           - mountPath: /deckhouse/downloaded
             name: downloaded
         - name: kube-rbac-proxy
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
           args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4204"
@@ -267,7 +348,7 @@ spec:
                     namespace: d8-system
                     apiGroup: apps
                     apiVersion: v1
-                    resource: deployment
+                    resource: deployments
                     subresource: http
                     name: debugSrv
           ports:
@@ -286,20 +367,31 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
-{{- end }}
       hostNetwork: true
 {{- if .Values.global.clusterIsBootstrapped }}
       dnsPolicy: ClusterFirstWithHostNet
 {{- else }}
       dnsPolicy: Default
+      hostAliases:
+      - ip: "127.0.0.1"
+        hostnames:
+        - "registry.d8-system.svc"
 {{- end}}
       serviceAccountName: deckhouse
+      automountServiceAccountToken: true
       volumes:
+      - name: dev-dir
+        hostPath:
+          path: /dev
+          type: Directory
       - emptyDir:
           medium: Memory
         name: tmp
+{{- if .Values.deckhouse.internal.chrootMode }}
+      - emptyDir: {}
+        name: chroot
+{{- end }}
       - emptyDir:
           medium: Memory
         name: kube

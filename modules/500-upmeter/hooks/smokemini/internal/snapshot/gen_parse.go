@@ -80,24 +80,31 @@ limitations under the License.
 
 // DO NOT EDIT
 // This file was generated automatically with
-// 	go run gen_parse.go -type {{.Types}}
+// 	go run gen_parse.go -types {{.Types}}
 //
 // It is used to cast slices of snapshot types. See file types.go
 
 package snapshot
 
 import (
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"fmt"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 {{- range $m := .Methods }}
 
 // {{ $m.Name }} parses {{ $m.Type }} slice from snapshots
-func {{ $m.Name }}(rs []go_hook.FilterResult) []{{ $m.Type }} {
-	ret := make([]{{ $m.Type }}, len(rs))
-	for i, r := range rs {
-		ret[i] = r.({{ $m.Type }})
+func {{ $m.Name }}(rs []sdkpkg.Snapshot) ([]{{ $m.Type }}, error) {
+	ret := make([]{{ $m.Type }}, 0, len(rs))
+	for snap, err := range sdkobjectpatch.SnapshotIter[{{ $m.Type }}](rs) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshots - failed to parse {{ $m.Type }}: %w", err)	
+		}
+			
+		ret = append(ret, snap)
 	}
-	return ret
+	return ret, nil
 }
 {{- end }}
 `

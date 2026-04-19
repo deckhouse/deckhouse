@@ -58,9 +58,83 @@ spec:
     getUserInfo: true
     insecureSkipEmailVerified: true
     issuer: https://issue.example.com
+    allowedGroups:
+    - not-slu-gif-ed
     scopes:
     - profile
     - email
+`
+		oidcDisabledCR = `
+---
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: oidc-disabled
+spec:
+  type: OIDC
+  displayName: disabled
+  enabled: false
+  oidc:
+    basicAuthUnsupported: true
+    clientID: plainstring
+    clientSecret: plainstring
+    getUserInfo: true
+    insecureSkipEmailVerified: true
+    issuer: https://issue.example.com
+    scopes:
+    - profile
+    - email
+`
+		// Use quoted filter values with explicit trailing newline to simulate
+		// what Kubernetes stores when users use YAML literal block scalars (|).
+		ldapWithTrailingNewlineCR = `
+---
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: openldap-demo
+spec:
+  type: LDAP
+  displayName: OpenLDAP Demo
+  ldap:
+    host: ldap-service.openldap-demo:389
+    insecureNoSSL: true
+    insecureSkipVerify: true
+    bindDN: cn=admin,dc=example,dc=org
+    bindPW: admin
+    usernamePrompt: Email Address
+    userSearch:
+      baseDN: ou=People,dc=example,dc=org
+      filter: "(objectClass=person)\n"
+      username: mail
+      idAttr: DN
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: ou=Groups,dc=example,dc=org
+      filter: "(objectClass=groupOfNames)\n"
+      nameAttr: cn
+      userMatchers:
+      - userAttr: DN
+        groupAttr: member
+`
+		samlCR = `
+---
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-test
+spec:
+  type: SAML
+  displayName: SAML Test Provider
+  saml:
+    ssoURL: "https://idp.example.com/saml/sso"
+    rootCAData: "-----BEGIN CERTIFICATE-----\nMIIFaDC...\n-----END CERTIFICATE-----\n"
+    entityIssuer: "https://dex.example.com"
+    usernameAttr: "name"
+    emailAttr: "email"
+    groupsAttr: "groups"
+    nameIDPolicyFormat: "persistent"
 `
 	)
 
@@ -98,6 +172,7 @@ spec:
     ]
   },
   "displayName": "bitbucket",
+  "enabled": true,
   "id": "bitbucket",
   "type": "BitbucketCloud"
 }]`))
@@ -117,7 +192,7 @@ spec:
 			})
 			Context("With adding new provider object", func() {
 				BeforeEach(func() {
-					f.BindingContexts.Set(f.KubeStateSet(bitbucketCR + oidcCR))
+					f.BindingContexts.Set(f.KubeStateSet(bitbucketCR + oidcCR + oidcDisabledCR))
 					f.RunHook()
 				})
 				It("Should update entry in internal values", func() {
@@ -137,11 +212,13 @@ spec:
     ]
   },
   "displayName": "bitbucket",
+  "enabled": true,
   "id": "bitbucket",
   "type": "BitbucketCloud"
 },
 {
   "displayName": "google",
+  "enabled": true,
   "id": "oidc-notslu-gif-ed",
   "oidc": {
     "basicAuthUnsupported": true,
@@ -153,6 +230,7 @@ spec:
     "insecureSkipVerify": false,
     "issuer": "https://issue.example.com",
     "promptType": "consent",
+	"allowedGroups": [ "not-slu-gif-ed" ],
     "scopes": [
       "profile",
       "email"
@@ -164,6 +242,26 @@ spec:
 }]`))
 				})
 			})
+		})
+	})
+
+	Context("LDAP provider with trailing newline in filter", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(ldapWithTrailingNewlineCR))
+			f.RunHook()
+		})
+		It("Should trim trailing newline from filter fields", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			providers := f.ValuesGet("userAuthn.internal.providers").Array()
+			Expect(providers).To(HaveLen(1))
+
+			provider := providers[0]
+			userFilter := provider.Get("ldap.userSearch.filter").String()
+			groupFilter := provider.Get("ldap.groupSearch.filter").String()
+
+			Expect(userFilter).To(Equal("(objectClass=person)"))
+			Expect(groupFilter).To(Equal("(objectClass=groupOfNames)"))
 		})
 	})
 
@@ -188,8 +286,38 @@ spec:
   ]
 },
 "displayName": "bitbucket",
+"enabled": true,
 "id": "bitbucket",
 "type": "BitbucketCloud"
+}]`))
+		})
+	})
+
+	Context("SAML provider", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(samlCR))
+			f.RunHook()
+		})
+		It("Should fill internal values with SAML provider fields", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.ValuesGet("userAuthn.internal.providers").String()).To(MatchJSON(`
+[{
+"type": "SAML",
+"displayName": "SAML Test Provider",
+"enabled": true,
+"id": "saml-test",
+"saml": {
+		"ssoURL": "https://idp.example.com/saml/sso",
+		"rootCAData": "-----BEGIN CERTIFICATE-----\nMIIFaDC...\n-----END CERTIFICATE-----\n",
+		"entityIssuer": "https://dex.example.com",
+		"usernameAttr": "name",
+		"emailAttr": "email",
+		"groupsAttr": "groups",
+		"filterGroups": false,
+		"insecureSkipSignatureValidation": false,
+		"nameIDPolicyFormat": "persistent"
+}
 }]`))
 		})
 	})

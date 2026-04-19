@@ -18,7 +18,10 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -27,9 +30,11 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	"github.com/flant/addon-operator/pkg/utils"
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,6 +48,8 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -54,8 +61,19 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	modulev2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
+	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
+	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
+	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
+	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
@@ -67,6 +85,12 @@ const (
 
 	deckhouseNamespace  = "d8-system"
 	kubernetesNamespace = "kube-system"
+
+	bootstrappedGlobalValue = "clusterIsBootstrapped"
+	defaultModuleVersion    = "v2.0.0"
+
+	envEnablePackageSystem  = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
+	envEnableModulePackages = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
 )
 
 type DeckhouseController struct {
@@ -79,16 +103,26 @@ type DeckhouseController struct {
 
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	settings       *helpers.DeckhouseSettingsContainer
-	log            *log.Logger
+
+	defaultReleaseChannel string
+
+	log *log.Logger
 }
 
-func NewDeckhouseController(ctx context.Context, version string, operator *addonoperator.AddonOperator, logger *log.Logger) (*DeckhouseController, error) {
+func NewDeckhouseController(
+	ctx context.Context,
+	version string,
+	defaultReleaseChannel string,
+	operator *addonoperator.AddonOperator,
+	logger *log.Logger,
+) (*DeckhouseController, error) {
 	addToScheme := []func(s *runtime.Scheme) error{
 		corev1.AddToScheme,
 		coordv1.AddToScheme,
 		v1alpha1.AddToScheme,
 		v1alpha2.AddToScheme,
 		appsv1.AddToScheme,
+		discoveryv1.AddToScheme,
 	}
 
 	scheme := runtime.NewScheme()
@@ -98,13 +132,18 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		}
 	}
 
+	// inject otel tripper
+	operator.KubeClient().RestConfig().Wrap(func(t http.RoundTripper) http.RoundTripper {
+		return otelhttp.NewTransport(t)
+	})
+
 	// Setting the controller-runtime logger to a no-op logger by default,
 	// unless debug mode is enabled. This is because the controller-runtime
 	// logger is *very* verbose even at info level. This is not really needed,
 	// but otherwise we get a warning from the controller-runtime.
 	controllerruntime.SetLogger(logr.New(ctrllog.NullLogSink{}))
 
-	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), controllerruntime.Options{
+	opts := controllerruntime.Options{
 		Scheme: scheme,
 		BaseContext: func() context.Context {
 			return ctx
@@ -157,30 +196,52 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 				&v1alpha1.ModuleDocumentation{}: {},
 				&v1alpha1.ModuleRelease{}:       {},
 				&v1alpha1.ModuleSource{}:        {},
-				&v1alpha1.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
-				&v1alpha1.ModulePullOverride{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
 			},
 		},
-	})
+	}
+
+	// Package system controllers (feature flag)
+	if os.Getenv(envEnablePackageSystem) == "true" {
+		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+	}
+
+	// Module package controllers (feature flag)
+	if os.Getenv(envEnableModulePackages) == "true" {
+		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
+	}
+
+	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}
 
+	conversionsStore := conversion.NewConversionsStore()
+
 	deckhouseConfigCh := make(chan utils.Values, 1)
 
-	configHandler := confighandler.New(runtimeManager.GetClient(), deckhouseConfigCh, logger.Named("config-handler"))
+	configHandler := confighandler.New(runtimeManager.GetClient(), conversionsStore, deckhouseConfigCh)
 	operator.SetupKubeConfigManager(configHandler)
 
-	// init module manager
+	// setup module manager
 	if err = operator.Setup(); err != nil {
 		return nil, fmt.Errorf("setup operator: %w", err)
 	}
 
 	moduleEventCh := make(chan events.ModuleEvent, 350)
 	operator.ModuleManager.SetModuleEventsChannel(moduleEventCh)
+	// set chrooted environment for modules
+	if len(os.Getenv("ADDON_OPERATOR_SHELL_CHROOT_DIR")) > 0 {
+		setModulesEnvironment(operator)
+	}
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
@@ -188,19 +249,40 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
 		}); err != nil {
-			return "", err
+			return "", fmt.Errorf("on error: %w", err)
 		}
 
 		// set some version for the modules overridden by mpos
-		if module.CheckConditionTrue(v1alpha1.ModuleConditionIsOverridden) {
-			return "v2.0.0", nil
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
+			return defaultModuleVersion, nil
 		}
 
 		return module.GetVersion(), nil
 	})
 
+	bootstrappedHelper := func() (bool, error) {
+		value, ok := operator.ModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		if !ok {
+			return false, nil
+		}
+
+		bootstrapped, ok := value.(bool)
+		if !ok {
+			return false, errors.New("bootstrapped value not boolean")
+		}
+
+		return bootstrapped, nil
+	}
+
+	edition, err := d8edition.Parse(version)
+	if err != nil {
+		return nil, fmt.Errorf("parse edition: %w", err)
+	}
+
+	exts := extenders.NewExtendersStack(edition, bootstrappedHelper, logger.Named("extenders"))
+
 	// register extenders
-	for _, extender := range extenders.Extenders() {
+	for _, extender := range exts.GetExtenders() {
 		if err = operator.ModuleManager.AddExtender(extender); err != nil {
 			return nil, fmt.Errorf("add extender: %w", err)
 		}
@@ -211,57 +293,133 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 		Update: v1alpha2.ModuleUpdatePolicySpecUpdate{
 			Mode: "Auto",
 		},
-		ReleaseChannel: "Stable",
+		ReleaseChannel: defaultReleaseChannel,
 	})
 
+	err = metrics.RegisterDeckhouseControllerMetrics(operator.MetricStorage)
+	if err != nil {
+		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
+	}
+
 	dc := dependency.NewDependencyContainer()
-	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil)
+	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
-	bundle := os.Getenv("DECKHOUSE_BUNDLE")
-
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, embeddedPolicy, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
-	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, logger.Named("deckhouse-release-controller"))
+	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse release controller: %w", err)
 	}
 
-	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, configHandler, operator.MetricStorage, loader, bundle, logger.Named("module-config-controller"))
+	err = moduleconfig.RegisterController(runtimeManager, operator.ModuleManager, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger.Named("module-config-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module config controller: %w", err)
 	}
 
-	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, logger.Named("module-source-controller"))
+	err = modulesource.RegisterController(runtimeManager, operator.ModuleManager, edition, dc, operator.MetricStorage, embeddedPolicy, logger.Named("module-source-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module source controller: %w", err)
 	}
 
-	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, dc, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
+	err = modulerelease.RegisterController(runtimeManager, operator.ModuleManager, loader.Installer(), dc, exts, embeddedPolicy, operator.MetricStorage, logger.Named("module-release-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, dc, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, dc, logger.Named("module-pull-override-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
 
-	err = docbuilder.NewModuleDocumentationController(runtimeManager, dc, logger.Named("module-documentation-controller"))
+	err = docbuilder.RegisterController(runtimeManager, dc, logger.Named("module-documentation-controller"))
 	if err != nil {
-		return nil, fmt.Errorf("create module documentation controller: %w", err)
+		return nil, fmt.Errorf("register module documentation controller: %w", err)
+	}
+
+	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
+	}
+
+	packageOperator, err := packageoperator.New(runtimeManager.GetClient(), operator.ModuleManager, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("create package operator: %w", err)
+	}
+
+	// package should not run before converge done
+	operator.ConvergeState.SetOnConvergeStart(func() {
+		logger.Debug("start converge")
+		packageOperator.Scheduler().Pause()
+	})
+
+	operator.ConvergeState.SetOnConvergeFinish(func() {
+		logger.Debug("finish converge")
+		packageOperator.Scheduler().Resume()
+	})
+
+	// Package system controllers (feature flag)
+	if os.Getenv(envEnablePackageSystem) == "true" {
+		logger.Info("Package system controllers are enabled")
+
+		packageOperator.Run()
+
+		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register package repository controller: %w", err)
+		}
+
+		err = packagerepositoryoperation.RegisterController(runtimeManager, dc, logger.Named("package-repository-operation-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register package repository operation controller: %w", err)
+		}
+
+		err = applicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register application package version controller: %w", err)
+		}
+
+		err = application.RegisterController(runtimeManager, packageOperator, operator.ModuleManager, dc, logger.Named("application-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register application controller: %w", err)
+		}
+	}
+
+	// Module package controllers (feature flag)
+	if os.Getenv(envEnableModulePackages) == "true" {
+		logger.Info("Module package controllers are enabled")
+
+		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module package controller: %w", err)
+		}
+
+		err = modulepackageversion.RegisterController(runtimeManager, dc, logger.Named("module-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module package version controller: %w", err)
+		}
+
+		err = modulev2.RegisterController(runtimeManager, dc, logger.Named("module-v2-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module v2 controller: %w", err)
+		}
 	}
 
 	validation.RegisterAdmissionHandlers(
 		operator.AdmissionServer,
 		runtimeManager.GetClient(),
 		operator.ModuleManager,
-		configtools.NewValidator(operator.ModuleManager),
+		packageOperator,
+		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
-		operator.MetricStorage)
+		operator.MetricStorage,
+		config.NewSchemaStore(nil),
+		settingsContainer,
+		exts,
+	)
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
@@ -272,8 +430,15 @@ func NewDeckhouseController(ctx context.Context, version string, operator *addon
 
 		embeddedPolicy: embeddedPolicy,
 		settings:       settingsContainer,
-		log:            logger,
+
+		defaultReleaseChannel: defaultReleaseChannel,
+
+		log: logger,
 	}, nil
+}
+
+func setModulesEnvironment(operator *addonoperator.AddonOperator) {
+	operator.ModuleManager.AddObjectsToChrootEnvironment(getChrootObjectDescriptors()...)
 }
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
@@ -307,7 +472,7 @@ func (c *DeckhouseController) startModulesControllers(ctx context.Context) {
 	// syncs the fs with the cluster state, starts the manager and various controllers
 	go func() {
 		if err := c.runtimeManager.Start(ctx); err != nil {
-			c.log.Fatalf("start controller manager failed: %s", err)
+			c.log.Fatal("start controller manager failed", log.Err(err))
 		}
 	}()
 
@@ -323,23 +488,25 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 
 		configBytes, _ := deckhouseConfig.AsBytes("yaml")
 		settings := &helpers.DeckhouseSettings{
-			ReleaseChannel: "",
+			ReleaseChannel:           "",
+			AllowExperimentalModules: false,
 		}
 		settings.Update.Mode = "Auto"
 		settings.Update.DisruptionApprovalMode = "Auto"
 
 		if err := yaml.Unmarshal(configBytes, settings); err != nil {
-			c.log.Errorf("failed to unmarshal the deckhouse setting: %s", err)
+			c.log.Error("failed to unmarshal the deckhouse setting", log.Err(err))
 			continue
 		}
 
-		c.log.Debugf("update deckhouse settings")
+		c.log.Debug("update deckhouse settings")
+
 		c.settings.Set(settings)
 
 		// if deckhouse moduleConfig has releaseChannel unset, apply default releaseChannel Stable to the embedded policy
 		if len(settings.ReleaseChannel) == 0 {
-			settings.ReleaseChannel = "Stable"
-			c.log.Debugf("the embedded deckhouse policy release channel set to %q", settings.ReleaseChannel)
+			settings.ReleaseChannel = c.defaultReleaseChannel
+			c.log.Debug("the embedded deckhouse policy release channel set", slog.String("release_channel", settings.ReleaseChannel))
 		}
 
 		c.embeddedPolicy.Set(settings)

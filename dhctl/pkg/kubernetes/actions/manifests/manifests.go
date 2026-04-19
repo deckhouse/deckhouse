@@ -15,7 +15,6 @@
 package manifests
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -29,22 +28,20 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
-
 const (
-	deckhouseRegistrySecretName = "deckhouse-registry"
+	deckhouseRegistrySecretName      = "deckhouse-registry"
+	registryBashibleConfigSecretName = "registry-bashible-config"
 
-	deployTimeEnvVarName        = "KUBERNETES_DEPLOYED"
-	deployServiceHostEnvVarName = "KUBERNETES_SERVICE_HOST"
-	deployServicePortEnvVarName = "KUBERNETES_SERVICE_PORT"
-	deployTimeEnvVarFormat      = time.RFC3339
-	pathSeparator               = ":"
-
-	ConvergeLabel = "dhctl.deckhouse.io/node-for-converge"
+	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
+	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
+	deployServicePortEnvVarName     = "KUBERNETES_SERVICE_PORT"
+	deployTimeEnvVarFormat          = time.RFC3339
+	pathSeparator                   = ":"
+	NodeInfrastructureStateLabelKey = "node.deckhouse.io/terraform-state"
 )
 
 type DeckhouseDeploymentParams struct {
@@ -54,17 +51,16 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry   bool
 	MasterNodeSelector bool
 	KubeadmBootstrap   bool
 }
 
 type imagesDigests map[string]map[string]interface{}
 
-func loadImagesDigests(filename string) (imagesDigests, error) {
+func loadImagesDigests(imagesDigestsJSONFile []byte) (imagesDigests, error) {
 	if val, ok := os.LookupEnv("DHCTL_TEST"); ok && val == "yes" {
 		return map[string]map[string]interface{}{
-			"common": {
+			"deckhouse": {
 				"init": "sha256:4c5064aa2864e7650e4f2dd5548a4a6a4aaa065b4f8779f01023f73132cde882",
 			},
 		}, nil
@@ -72,14 +68,9 @@ func loadImagesDigests(filename string) (imagesDigests, error) {
 
 	var imagesDigestsDict imagesDigests
 
-	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
 	if err != nil {
-		return imagesDigestsDict, fmt.Errorf("%s file load: %v", filename, err)
-	}
-
-	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigestsDict)
-	if err != nil {
-		return imagesDigestsDict, fmt.Errorf("%s file unmarshal: %v", filename, err)
+		return imagesDigestsDict, fmt.Errorf("unmarshal: %v", err)
 	}
 
 	return imagesDigestsDict, nil
@@ -141,10 +132,8 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 	}
 
-	if params.IsSecureRegistry {
-		deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
-			{Name: "deckhouse-registry"},
-		}
+	deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+		{Name: "deckhouse-registry"},
 	}
 
 	if params.KubeadmBootstrap && freshDeployment {
@@ -177,12 +166,17 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 
 func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 	initContainerImage := params.Registry
-	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSON)
+	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
+	if err != nil {
+		log.ErrorLn(err)
+	}
+
+	imagesDigestsDict, err := loadImagesDigests(imagesDigestsJSONFIle)
 	if err != nil {
 		log.ErrorLn(err)
 	} else {
 		imageSplitIndex := strings.LastIndex(params.Registry, ":")
-		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["common"]["init"].(string))
+		initContainerImage = fmt.Sprintf("%s@%s", params.Registry[:imageSplitIndex], imagesDigestsDict["deckhouse"]["init"].(string))
 	}
 
 	deckhouseDeployment := &appsv1.Deployment{
@@ -199,7 +193,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			RevisionHistoryLimit: ptr.To(int32(2)),
+			RevisionHistoryLimit: ptr.To(int32(0)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "deckhouse",
@@ -221,11 +215,13 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			},
 		},
 		Spec: apiv1.PodSpec{
-			HostNetwork:        true,
-			DNSPolicy:          apiv1.DNSDefault,
-			ServiceAccountName: "deckhouse",
+			HostNetwork:                  true,
+			DNSPolicy:                    apiv1.DNSDefault,
+			ServiceAccountName:           "deckhouse",
+			AutomountServiceAccountToken: ptr.To(true),
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
+				RunAsGroup:   ptr.To(int64(0)),
 				RunAsNonRoot: ptr.To(false),
 			},
 			Tolerations: []apiv1.Toleration{
@@ -262,6 +258,15 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 						},
 					},
 				},
+				{
+					Name: "dev-dir",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/dev",
+							Type: &hostPathDirectory,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -271,7 +276,8 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           params.Registry,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"/deckhouse/deckhouse",
+			"/usr/bin/deckhouse-controller",
+			"start",
 		},
 		WorkingDir: "/deckhouse",
 		ReadinessProbe: &apiv1.Probe{
@@ -280,7 +286,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			FailureThreshold:    120,
 			ProbeHandler: apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
-					Path: "/ready",
+					Path: "/readyz",
 					Port: intstr.FromInt(4222),
 				},
 			},
@@ -296,6 +302,11 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				MountPath: "/tmp",
 			},
 			{
+				Name:      "tmp",
+				ReadOnly:  false,
+				MountPath: "/run",
+			},
+			{
 				Name:      "kube",
 				ReadOnly:  false,
 				MountPath: "/.kube",
@@ -305,6 +316,18 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse/downloaded",
 			},
+			{
+				Name:      "dev-dir",
+				ReadOnly:  false,
+				MountPath: "/dev",
+			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
+			RunAsUser:              ptr.To(int64(0)),
+			RunAsGroup:             ptr.To(int64(0)),
+			RunAsNonRoot:           ptr.To(false),
+			Privileged:             ptr.To(true),
 		},
 	}
 
@@ -313,7 +336,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		Image:           initContainerImage,
 		ImagePullPolicy: apiv1.PullAlways,
 		Command: []string{
-			"sh", "-c", `if [ -d "/deckhouse/external-modules" ] && [ -n "$(ls -A "/deckhouse/external-modules")" ]; then cp -r /deckhouse/external-modules/* /deckhouse/downloaded/ && rm -rf /deckhouse/external-modules; fi && mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
+			"sh", "-c", `mkdir -p /deckhouse/downloaded/modules && chown -hR 64535 /deckhouse/downloaded /deckhouse/downloaded/modules && chmod 0700 /deckhouse/downloaded /deckhouse/downloaded/modules`,
 		},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
@@ -321,6 +344,9 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse",
 			},
+		},
+		SecurityContext: &apiv1.SecurityContext{
+			ReadOnlyRootFilesystem: ptr.To(true),
 		},
 	}
 
@@ -359,12 +385,12 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			Value: "heritage=deckhouse",
 		},
 		{
-			Name:  "HELM3LIB",
-			Value: "yes",
-		},
-		{
 			Name:  "HELM_HISTORY_MAX",
 			Value: "3",
+		},
+		{
+			Name:  "GOGC",
+			Value: "50",
 		},
 		{
 			Name:  "ADDON_OPERATOR_CONFIG_MAP",
@@ -404,7 +430,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 		},
 		{
 			Name:  "ADDON_OPERATOR_APPLIED_MODULE_EXTENDERS",
-			Value: "Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled",
+			Value: "EditionEnabled,Static,DynamicallyEnabled,KubeConfig,DeckhouseVersion,KubernetesVersion,Bootstrapped,ScriptEnabled,ModuleDependency",
 		},
 		{
 			Name:  "DOWNLOADED_MODULES_DIR",
@@ -459,6 +485,7 @@ func DeckhouseServiceAccount() *apiv1.ServiceAccount {
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
+		AutomountServiceAccountToken: ptr.To(false),
 	}
 }
 
@@ -507,8 +534,7 @@ func DeckhouseAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
-	data, _ := base64.StdEncoding.DecodeString(registry.DockerCfg)
+func DeckhouseRegistrySecret(data map[string][]byte) *apiv1.Secret {
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeDockerConfigJson,
 		ObjectMeta: metav1.ObjectMeta{
@@ -523,23 +549,29 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
-		Data: map[string][]byte{
-			apiv1.DockerConfigJsonKey: data,
-			"address":                 []byte(registry.Address),
-			"scheme":                  []byte(registry.Scheme),
-			"imagesRegistry":          []byte(registry.Address),
+		Data: data,
+	}
+	return ret
+}
+
+func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
+	ret := &apiv1.Secret{
+		Type: apiv1.SecretTypeOpaque,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: registryBashibleConfigSecretName,
+			Labels: map[string]string{
+				"heritage":                     "deckhouse",
+				"app.kubernetes.io/managed-by": "Helm",
+				"app":                          "registry",
+			},
+			Annotations: map[string]string{
+				"helm.sh/resource-policy":        "keep",
+				"meta.helm.sh/release-name":      "registry",
+				"meta.helm.sh/release-namespace": "d8-system",
+			},
 		},
+		Data: data,
 	}
-
-	if registry.Path != "" {
-		ret.Data["path"] = []byte(registry.Path)
-		ret.Data["imagesRegistry"] = []byte(registry.Address + registry.Path)
-	}
-
-	if registry.CA != "" {
-		ret.Data["ca"] = []byte(registry.CA)
-	}
-
 	return ret
 }
 
@@ -558,11 +590,11 @@ func generateSecret(name, namespace string, data map[string][]byte, labels map[s
 	}
 }
 
-const TerraformClusterStateName = "d8-cluster-terraform-state"
+const InfrastructureClusterStateName = "d8-cluster-terraform-state"
 
-func SecretWithTerraformState(data []byte) *apiv1.Secret {
+func SecretWithInfrastructureState(data []byte) *apiv1.Secret {
 	return generateSecret(
-		TerraformClusterStateName,
+		InfrastructureClusterStateName,
 		"d8-system",
 		map[string][]byte{
 			"cluster-tf-state.json": data,
@@ -573,7 +605,7 @@ func SecretWithTerraformState(data []byte) *apiv1.Secret {
 	)
 }
 
-func PatchWithTerraformState(stateData []byte) interface{} {
+func PatchWithInfrastructureState(stateData []byte) interface{} {
 	return map[string]interface{}{
 		"data": map[string]interface{}{
 			"cluster-tf-state.json": stateData,
@@ -604,7 +636,7 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 		"d8-provider-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-provider-cluster-configuration"},
 	)
 }
 
@@ -617,33 +649,33 @@ func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 		"d8-static-cluster-configuration",
 		"kube-system",
 		data,
-		nil,
+		map[string]string{"name": "d8-static-cluster-configuration"},
 	)
 }
 
-func SecretNameForNodeTerraformState(nodeName string) string {
+func SecretNameForNodeInfrastructureState(nodeName string) string {
 	return "d8-node-terraform-state-" + nodeName
 }
 
-func SecretWithNodeTerraformState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
+func SecretWithNodeInfrastructureState(nodeName, nodeGroup string, data, settings []byte) *apiv1.Secret {
 	body := map[string][]byte{"node-tf-state.json": data}
 	if settings != nil {
 		body["node-group-settings.json"] = settings
 	}
 	return generateSecret(
-		SecretNameForNodeTerraformState(nodeName),
+		SecretNameForNodeInfrastructureState(nodeName),
 		"d8-system",
 		body,
 		map[string]string{
-			"node.deckhouse.io/node-group":      nodeGroup,
-			"node.deckhouse.io/node-name":       nodeName,
-			"node.deckhouse.io/terraform-state": "",
-			"heritage":                          "deckhouse",
+			"node.deckhouse.io/node-group":  nodeGroup,
+			"node.deckhouse.io/node-name":   nodeName,
+			NodeInfrastructureStateLabelKey: "",
+			"heritage":                      "deckhouse",
 		},
 	)
 }
 
-func PatchWithNodeTerraformState(stateData []byte) interface{} {
+func PatchWithNodeInfrastructureState(stateData []byte) interface{} {
 	return map[string]interface{}{
 		"data": map[string]interface{}{
 			"node-tf-state.json": stateData,
@@ -736,8 +768,4 @@ func KubeDNSService(ipAddress string) *apiv1.Service {
 			},
 		},
 	}
-}
-
-func InitGlobalVars(pwd string) {
-	imagesDigestsJSON = pwd + "/deckhouse/candi/images_digests.json"
 }

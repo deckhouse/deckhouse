@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: descheduler
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "descheduler"
@@ -62,6 +62,7 @@ spec:
         checksum/config: {{ $.Values.descheduler.internal.deschedulers | toJson | sha256sum }}
     spec:
       serviceAccountName: descheduler
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
@@ -70,7 +71,7 @@ spec:
       {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       containers:
       - name: descheduler
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "descheduler") }}
         livenessProbe:
           failureThreshold: 3
@@ -93,7 +94,8 @@ spec:
         - "--v"
         - "6"
         - "--descheduling-interval"
-        - "15m"
+        {{- $intervalMap := dict "Frequent" "5m" "Moderate" "15m" "Rare" "30m" }}
+        - {{ index $intervalMap (.Values.descheduler.deschedulingInterval | default "Moderate") | quote }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
@@ -101,7 +103,7 @@ spec:
             {{- include "descheduler_resources" $ | nindent 12 }}
   {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):10258"

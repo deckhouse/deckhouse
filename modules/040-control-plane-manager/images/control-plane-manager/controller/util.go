@@ -18,16 +18,30 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
+
+	"github.com/otiai10/copy"
+	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/otiai10/copy"
 )
 
+var defaultBackoff = wait.Backoff{
+	Duration: 1 * time.Second,
+	Factor:   1.05,
+	Jitter:   0.2,
+	Steps:    50,
+}
+
+//nolint:unparam
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
@@ -41,29 +55,81 @@ func installFileIfChanged(src, dst string, perm os.FileMode) error {
 		return err
 	}
 
-	dstBytes, _ = os.ReadFile(dst)
-
 	srcBytes = []byte(os.ExpandEnv(string(srcBytes)))
 
-	if bytes.Equal(srcBytes, dstBytes) {
-		log.Infof("file %s is not changed, skipping", dst)
-		return nil
+	if _, statErr := os.Stat(dst); statErr == nil {
+		dstBytes, err = os.ReadFile(dst)
+		if err != nil {
+			return err
+		}
+
+		if bytes.Equal(srcBytes, dstBytes) {
+			log.Info("file is not changed, skipping", slog.String("path", dst))
+			return nil
+		}
+
+		if err := backupFile(dst); err != nil {
+			log.Warn("Backup failed", log.Err(err))
+		}
+	} else if !os.IsNotExist(statErr) {
+		return statErr
 	}
 
-	if err := backupFile(dst); err != nil {
-		log.Warnf("Backup failed, %s", err)
-	}
+	log.Info("install file to destination", slog.String("src", src), slog.String("destination", dst))
 
-	log.Infof("install file %s to destination %s", src, dst)
-	if err := os.WriteFile(dst, srcBytes, perm); err != nil {
+	return writeFileAtomically(dst, srcBytes, perm)
+}
+
+// Write data to a temporary file in the same directory,
+// fsync it, apply permissions, and atomically rename it over the target path.
+func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
+	dstDir := filepath.Dir(dst)
+	base := filepath.Base(dst)
+
+	tmpFile, err := os.CreateTemp(dstDir, "."+base+".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Sync(); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+	if err := tmpFile.Close(); err != nil {
 		return err
 	}
 
-	return os.Chown(dst, 0, 0)
+	if err := os.Chmod(tmpFile.Name(), perm); err != nil {
+		return err
+	}
+
+	if err := os.Rename(tmpFile.Name(), dst); err != nil {
+		return err
+	}
+
+	if err := os.Chown(dst, 0, 0); err != nil {
+		return err
+	}
+
+	if dirFd, err := os.Open(dstDir); err == nil {
+		_ = dirFd.Sync()
+		_ = dirFd.Close()
+	}
+
+	return nil
+}
+
+func cleanupEtcdFolder() error {
+	return os.RemoveAll("/var/lib/etcd/member")
 }
 
 func backupFile(src string) error {
-	log.Infof("backup %s file", src)
+	log.Info("backup file", slog.String("path", src))
 
 	if _, err := os.Stat(src); err != nil {
 		return err
@@ -71,41 +137,23 @@ func backupFile(src string) error {
 
 	backupDir := filepath.Join(deckhousePath, "backup", fmt.Sprintf("%d-%02d-%02d_%s", nowTime.Year(), nowTime.Month(), nowTime.Day(), config.ConfigurationChecksum))
 
-	if err := os.MkdirAll(backupDir, 0700); err != nil {
+	if err := os.MkdirAll(backupDir, 0o700); err != nil {
 		return err
 	}
 	return copy.Copy(src, backupDir+src)
 }
 
 func removeFile(src string) error {
-	log.Infof("remove %s file", src)
+	log.Info("remove file", slog.String("path", src))
 	if err := backupFile(src); err != nil {
 		return err
 	}
 	return os.Remove(src)
 }
 
-func removeDirectory(dir string) error {
-	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
-		if d == nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		return removeFile(path)
-	}
-
-	err := filepath.WalkDir(dir, walkDirFunc)
-	if err != nil {
-		return err
-	}
-	return os.RemoveAll(dir)
-}
-
 func removeOrphanFiles() {
 	srcDir := filepath.Join(deckhousePath, "kubeadm", "patches")
-	log.Infof("phase: remove orphan files from dir %s", srcDir)
+	log.Info("phase: remove orphan files from dir", slog.String("dir", srcDir))
 
 	walkDirFunc := func(path string, d fs.DirEntry, _ error) error {
 		if d == nil || d.IsDir() {
@@ -169,7 +217,7 @@ func removeOldBackups() error {
 		return nil
 	}
 	for _, f := range files[5:] {
-		log.Infof("removing old backup dir %s", f.Name())
+		log.Info("removing old backup dir", slog.String("dir", f.Name()))
 		if err := os.RemoveAll(filepath.Join(backupPath, f.Name())); err != nil {
 			return err
 		}
@@ -185,4 +233,30 @@ func cleanup() {
 	if err := removeOldBackups(); err != nil {
 		log.Warn(err.Error())
 	}
+}
+
+var ErrNonRetryable = errors.New("non-retryable error")
+
+func DoAction(ctx context.Context, backoff wait.Backoff, op func(ctx context.Context) error, opName string) error {
+	attempts := 0
+
+	condition := func(ctx context.Context) (bool, error) {
+		attempts++
+		log.Info(fmt.Sprintf("%s: attempt %d", opName, attempts))
+		err := op(ctx)
+		if err == nil {
+			return true, nil
+		}
+		log.Error(err.Error())
+		if errors.Is(err, ErrNonRetryable) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	err := wait.ExponentialBackoffWithContext(ctx, backoff, condition)
+	if wait.Interrupted(err) {
+		return fmt.Errorf("retries exhausted for %s after %d attempts: %w", opName, attempts, err)
+	}
+	return err
 }

@@ -1,4 +1,4 @@
-{{- $version := "1.7.3.4" }}
+{{- $version := include "get_oss_version_by_id" (list "socat" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -10,13 +10,16 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch tag-{{ $version }}  {{ $.SOURCE_REPO }}/socat.git /src/socat
+  - git clone --depth 1 --branch tag-{{ $version }}  $(cat /run/secrets/SOURCE_REPO)/socat.git /src/socat
   - rm -rf /src/socat/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -26,12 +29,14 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    socat: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "socat": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false

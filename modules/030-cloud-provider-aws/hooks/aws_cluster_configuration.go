@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,7 +27,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 )
 
 type InternalValues struct {
@@ -94,25 +98,31 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 	return secret, nil
 }
 
-func clusterConfiguration(input *go_hook.HookInput) error {
-	if len(input.Snapshots["provider_cluster_configuration"]) == 0 {
-		return fmt.Errorf("%s", "Can't find Secret d8-provider-cluster-configuration in Namespace kube-system")
+func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[v1.Secret](input.Snapshots, "provider_cluster_configuration")
+	if err != nil {
+		return fmt.Errorf("can't unmarshal snapshot provider_cluster_configuration: %w", err)
 	}
 
-	secret := input.Snapshots["provider_cluster_configuration"][0].(*v1.Secret)
+	if len(secrets) == 0 {
+		return fmt.Errorf("can't find Secret d8-provider-cluster-configuration in Namespace kube-system")
+	}
+
+	secret := secrets[0]
 
 	clusterConfiguration := secret.Data["cloud-provider-cluster-configuration.yaml"]
 
 	cloudDiscoveryData := secret.Data["cloud-provider-discovery-data.json"]
 
-	metaCfg, err := config.ParseConfigFromData(string(clusterConfiguration))
-	if err != nil {
-		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
-	}
-
-	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData, []string{})
+	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData, []string{"/deckhouse/modules/030-cloud-provider-aws/candi/openapi", "/deckhouse/candi/cloud-providers/aws/openapi"})
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
+	}
+
+	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider(
+		infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()), nil)
+	if err != nil {
+		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 	}
 
 	var provider Provider
@@ -133,19 +143,23 @@ func clusterConfiguration(input *go_hook.HookInput) error {
 		}
 	}
 
-	values := InternalValues{
-		KeyName:                   discoveryData.KeyName,
-		LoadBalancerSecurityGroup: discoveryData.LoadBalancerSecurityGroup,
-		Zones:                     discoveryData.Zones,
-		ZoneToSubnetIDMap:         discoveryData.ZoneToSubnetIDMap,
-		Instances:                 discoveryData.Instances,
-		Region:                    provider.Region,
-		ProviderAccessKeyID:       provider.ProviderAccessKeyID,
-		ProviderSecretAccessKey:   provider.ProviderSecretAccessKey,
-		Tags:                      tags,
+	if raw, ok := metaCfg.ProviderClusterConfig["publicNetworkAllowList"]; ok && len(raw) != 0 {
+		var publicNetworkAllowList []string
+		if err := json.Unmarshal(raw, &publicNetworkAllowList); err != nil {
+			return err
+		}
+		input.Values.Set("cloudProviderAws.internal.publicNetworkAllowList", publicNetworkAllowList)
 	}
 
-	input.Values.Set("cloudProviderAws.internal", values)
+	input.Values.Set("cloudProviderAws.internal.keyName", discoveryData.KeyName)
+	input.Values.Set("cloudProviderAws.internal.loadBalancerSecurityGroup", discoveryData.LoadBalancerSecurityGroup)
+	input.Values.Set("cloudProviderAws.internal.zones", discoveryData.Zones)
+	input.Values.Set("cloudProviderAws.internal.zoneToSubnetIdMap", discoveryData.ZoneToSubnetIDMap)
+	input.Values.Set("cloudProviderAws.internal.instances", discoveryData.Instances)
+	input.Values.Set("cloudProviderAws.internal.region", provider.Region)
+	input.Values.Set("cloudProviderAws.internal.providerAccessKeyId", provider.ProviderAccessKeyID)
+	input.Values.Set("cloudProviderAws.internal.providerSecretAccessKey", provider.ProviderSecretAccessKey)
+	input.Values.Set("cloudProviderAws.internal.tags", tags)
 
 	return nil
 }

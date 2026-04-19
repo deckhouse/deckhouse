@@ -1,48 +1,60 @@
-{{- $MimirVersion := "2.14.2" }}
+{{- $MimirVersion := "2.14.3" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+final: false
 git:
-  - add: /modules/300-prometheus/images/{{ $.ImageName }}
-    to: /
-    stageDependencies:
-      setup:
-        - "**/*"
-    includePaths:
-      - patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+      - "**/*"
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-    - git clone --depth 1 --branch mimir-{{ $MimirVersion }} {{ .SOURCE_REPO }}/grafana/mimir.git /src
+    - git clone --depth 1 --branch mimir-{{ $MimirVersion }} $(cat /run/secrets/SOURCE_REPO)/grafana/mimir.git /src
     - cd /src
     - git apply /patches/*.patch --verbose
-    - rm -r .git
+    - rm -rf .git ./operations
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
+fromCacheVersion: "2025-20-10"
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     before: install
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
     - cd /src
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - go mod download -x
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - go mod vendor
-    - go build -o mimir ./cmd/mimir
+    - |
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -o mimir ./cmd/mimir` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - chown -R 64535:64535 /src/mimir
     - chmod 0700 /src/mimir
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-  - artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/mimir
     to: /bin/mimir
     after: setup
-docker:
-  ENTRYPOINT: ["/bin/mimir"]
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/bin/mimir"]

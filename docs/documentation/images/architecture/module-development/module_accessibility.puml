@@ -1,0 +1,24 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+start
+
+if (Is module\naccessible in edition?) then (No)
+  :Module is inaccessible;
+  detach
+else (Yes)
+  if (Is module enabled\nin bundle?) then (Yes)
+    :Module is auto-enabled;
+    detach
+  else (No)
+    :Needs to be\nenabled manually;
+    detach
+  endif
+endif
+
+@enduml

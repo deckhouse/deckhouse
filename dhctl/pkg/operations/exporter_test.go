@@ -15,6 +15,7 @@
 package operations
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -22,9 +23,10 @@ import (
 	io_prometheus_client "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -41,15 +43,20 @@ func TestExporterGetStatistic(t *testing.T) {
 			MetricsPath:     "/metrics",
 			CheckInterval:   time.Second,
 			existedEntities: newPreviouslyExistedEntities(),
+			OneGaugeMetrics: make(map[string]prometheus.Gauge),
 			GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
 			CounterMetrics:  make(map[string]*prometheus.CounterVec),
+			isDebug:         false,
+			logger:          log.GetDefaultLogger(),
+			tmpDir:          t.TempDir(),
 		}
 	}
 	exporter := newTestConvergeExporter()
 	exporter.registerMetrics()
 
 	t.Run("Should increment errors metric because nothing exists in a cluster", func(t *testing.T) {
-		exporter.recordStatistic(exporter.getStatistic())
+		dummyCleaner := cache.NewDummyTmpCleaner(log.GetDefaultLoggerProvider(), "")
+		exporter.recordStatistic(exporter.getStatistic(context.Background(), dummyCleaner))
 
 		errorsCounter, err := exporter.CounterMetrics["errors"].GetMetricWith(prometheus.Labels{})
 		require.NoError(t, err)
@@ -60,18 +67,18 @@ func TestExporterGetStatistic(t *testing.T) {
 	})
 
 	t.Run("Should increment only specified statuses", func(t *testing.T) {
-		statistic := converge.Statistics{
-			Node: []converge.NodeCheckResult{
-				{Group: "test", Name: "test-0", Status: converge.OKStatus},
-				{Group: "test", Name: "test-1", Status: converge.ChangedStatus},
+		statistic := check.Statistics{
+			Node: []check.NodeCheckResult{
+				{Group: "test", Name: "test-0", Status: check.OKStatus},
+				{Group: "test", Name: "test-1", Status: check.ChangedStatus},
 			},
 		}
 
-		exporter.recordStatistic(&statistic)
+		exporter.recordStatistic(&statistic, false)
 		firstNodesStatus, err := exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-0",
-			"status":     converge.OKStatus,
+			"status":     check.OKStatus,
 		})
 		require.NoError(t, err)
 		collected := io_prometheus_client.Metric{}
@@ -81,7 +88,7 @@ func TestExporterGetStatistic(t *testing.T) {
 		secondNodeStatus, err := exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-1",
-			"status":     converge.ChangedStatus,
+			"status":     check.ChangedStatus,
 		})
 		require.NoError(t, err)
 		collected = io_prometheus_client.Metric{}
@@ -90,19 +97,19 @@ func TestExporterGetStatistic(t *testing.T) {
 
 		require.Equal(t, exporter.existedEntities.Nodes, map[string]string{"test-0": "test", "test-1": "test"})
 
-		statisticWithoutOneNode := converge.Statistics{
-			Node: []converge.NodeCheckResult{
-				{Group: "test", Name: "test-0", Status: converge.OKStatus},
+		statisticWithoutOneNode := check.Statistics{
+			Node: []check.NodeCheckResult{
+				{Group: "test", Name: "test-0", Status: check.OKStatus},
 			},
 		}
 
 		// if node disappears from statistic, we should mark its status as 0
-		exporter.recordStatistic(&statisticWithoutOneNode)
+		exporter.recordStatistic(&statisticWithoutOneNode, false)
 
 		secondNodeStatus, err = exporter.GaugeMetrics["node_status"].GetMetricWith(prometheus.Labels{
 			"node_group": "test",
 			"name":       "test-1",
-			"status":     converge.ChangedStatus,
+			"status":     check.ChangedStatus,
 		})
 		require.NoError(t, err)
 

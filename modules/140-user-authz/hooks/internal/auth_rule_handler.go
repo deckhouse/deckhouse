@@ -17,11 +17,15 @@ limitations under the License.
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type authorizationRule struct {
@@ -48,21 +52,24 @@ func ApplyAuthorizationRuleFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	return car, nil
 }
 
-func AuthorizationRulesHandler(valuesPath, snapshotKey string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
-		input.Values.Set(valuesPath, snapshotsToAuthorizationRulesSlice(input.Snapshots[snapshotKey]))
+func AuthorizationRulesHandler(valuesPath, snapshotKey string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
+		authorizationRules, err := snapshotsToAuthorizationRulesSlice(input.Snapshots.Get(snapshotKey))
+		if err != nil {
+			return fmt.Errorf("failed to convert '%s' snapshot to authorization rules: %w", snapshotKey, err)
+		}
+		input.Values.Set(valuesPath, authorizationRules)
 		return nil
 	}
 }
 
-func snapshotsToAuthorizationRulesSlice(snapshots []go_hook.FilterResult) []authorizationRule {
+func snapshotsToAuthorizationRulesSlice(snapshots []pkg.Snapshot) ([]authorizationRule, error) {
 	ars := make([]authorizationRule, 0, len(snapshots))
-	for _, snapshot := range snapshots {
-		if snapshot == nil {
-			continue
+	for ar, err := range sdkobjectpatch.SnapshotIter[authorizationRule](snapshots) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over snapshot: %w", err)
 		}
-		ar := snapshot.(*authorizationRule)
-		ars = append(ars, *ar)
+		ars = append(ars, ar)
 	}
-	return ars
+	return ars, nil
 }

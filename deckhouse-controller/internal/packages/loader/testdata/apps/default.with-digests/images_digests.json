@@ -1,0 +1,4 @@
+{
+  "nginx": "sha256:abc123def456",
+  "redis": "sha256:789xyz000111"
+}

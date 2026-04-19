@@ -2,11 +2,9 @@
 title: "The ingress-nginx module: FAQ"
 ---
 
-## How do I limit access to the application in the cluster to ingress controllers only?
+## How do I limit access to the application in the cluster to Ingress controllers only?
 
-Add the  kube-rbac-proxy container to the application Pod to allow only ingress Pods to access your application in the cluster:
-
-### An example of the corresponding Kubernetes Deployment
+If you need to limit access to your application inside the cluster exclusively from Ingress Pods, you should add a kube-rbac-proxy container to the application Pod as shown in the example below:
 
 {% raw %}
 
@@ -38,7 +36,8 @@ spec:
             port: 443
             scheme: HTTPS
       - name: kube-rbac-proxy
-        image: flant/kube-rbac-proxy:v0.1.0 # it is recommended to use a proxy from our repository
+        image: flant/kube-rbac-proxy:v0.1.0
+        # It is recommended to use a proxy from Deckhouse repository.
         args:
         - "--secure-listen-address=0.0.0.0:443"
         - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
@@ -68,8 +67,8 @@ At the same time, the proxy listens on 0.0.0.0 and intercepts all external traff
 
 The proxy needs permissions to create `TokenReview` and `SubjectAccessReview` to authenticate and authorize users using the kube-apiserver.
 
-Our clusters have a [built-in ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) called **d8-rbac-proxy** that is ideal for this kind of situation.
-You don't need to create it yourself! Just attach it to the ServiceAccount of your Deployment.
+DKP clusters [already have a ready-made ClusterRole](https://github.com/deckhouse/deckhouse/blob/main/modules/002-deckhouse/templates/common/rbac/kube-rbac-proxy.yaml) — **d8-rbac-proxy**, you don't need to create it yourself!
+Link it to your Deployment's ServiceAccount, as shown in the example below.
 {% raw %}
 
 ```yaml
@@ -104,10 +103,13 @@ metadata:
 data:
   config-file.yaml: |+
     excludePaths:
-    - /healthz # no authorization for liveness probes is required
+    - /healthz
+  # No authorization for liveness probes is required.
     upstreams:
-    - upstream: http://127.0.0.1:8081/ # the destination address
-      path: / # the path to the proxy to forward requests to the upstream
+    - upstream: http://127.0.0.1:8081/
+  # The destination address
+      path: /
+  # The path to the proxy to forward requests to the upstream.
       authorization:
         resourceAttributes:
           namespace: my-namespace
@@ -147,12 +149,12 @@ roleRef:
   kind: Role
   name: kube-rbac-proxy:my-app
 subjects:
-# All user certificates of ingress-controllers are issued for one specific group
+# All user certificates of Ingress controllers are issued for one specific group.
 - kind: Group
   name: ingress-nginx:auth
 ```
 
-You also need to add the following parameters to the ingress of the resource:
+For the Ingress resource, add parameters:
 
 ```yaml
 nginx.ingress.kubernetes.io/backend-protocol: HTTPS
@@ -168,16 +170,17 @@ nginx.ingress.kubernetes.io/configuration-snippet: |
 
 ## How do I configure an external load balancer to check if IngressNginxController is available?
 
-In case an `IngressNginxController` is deployed behind a load balancer, it is advisable to configure your load balancer so that it would check
-the availability of the IngressNginxController's endpoints via a health check mechanism, periodically sending either HTTP-requests or TCP-packets.
+In case an Ingress NGINX Controller is deployed behind a load balancer, it is recommended that you configure your load balancer so that it would check
+the availability of the Ingress NGINX Controller's endpoints via a health check mechanism, periodically sending either HTTP requests or TCP packets.
 While it is possible to test the endpoints simply by checking if a relevant TCP port is open, we recommend implementing HTTP checks with the following parameters:
+
 - Protocol: `HTTP`
 - Path: `/healthz`
 - Port: `80` (or relevant [httpPort](cr.html#ingressnginxcontroller-v1-spec-hostport-httpport) value in case of using `HostPort` inlet).
 
 ## How do I configure MetalLB to be accessible from the internal network only?
 
-Below is an example of a MetalLB config with access from the internal network only.
+Below is an example of a MetalLB config with access from the internal network only:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -193,10 +196,12 @@ spec:
 ```
 
 {% alert level="warning" %}
-The [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) parameter should be enabled in cni-cilium module for correct work.
+The [`svcSourceRangeCheck`](/modules/cni-cilium/configuration.html#parameters-svcsourcerangecheck) parameter should be enabled in the `cni-cilium` module for correct work.
 {% endalert %}
 
 ## How to add extra log fields to a nginx-controller?
+
+Example of adding extra fields:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -212,9 +217,11 @@ spec:
 
 ## How to enable HorizontalPodAutoscaling for IngressNginxController?
 
-> **Note.** HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
->
-> **Note.** HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
+{% alert level="warning" %}
+HPA mode is possible only for controllers with inlet: `LoadBalancer` or `LoadBalancerWithProxyProtocol`.
+
+HPA mode is possible only for `minReplicas` != `maxReplicas` otherwise deployment `hpa-scaler` will not be created.
+{% endalert %}
 
 HPA is set with attributes `minReplicas` and `maxReplicas` in a [IngressNginxController CR](cr.html#ingressnginxcontroller).
 
@@ -223,13 +230,14 @@ The IngressNginxController is deployed using DaemonSet. DaemonSet does not provi
 `hpa-scaler` Deployment has HardPodAntiAffinity, and it will order a new Node (inside its NodeGroup), where one more ingress-controller will be set.
 
 Notes:
-* The minimum actual number of ingressNginxController replicas cannot be less than the minimum number of nodes in the NodeGroup where ingressNginxController is deployed.
-* The maximum actual number of ingressNginxController replicas cannot be greater than the maximum number of nodes in the NodeGroup where ingressNginxController is deployed.
+
+- The minimum actual number of IngressNginxController replicas cannot be less than the minimum number of nodes in the node group it is deployed to.
+- The maximum actual number of IngressNginxController replicas cannot be greater than the maximum number of nodes in the node group it is deployed to.
 
 ## How to use IngressClass with IngressClassParameters?
 
 Since version 1.1 IngressNginxController Deckhouse creates an IngressClass object. If you want to use your own IngressClass
-with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`
+with your customized IngressClassParameters, you need to add the label `ingress-class.deckhouse.io/external: "true"`:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -250,34 +258,127 @@ In this case Deckhouse will not create an IngressClass object and will use your 
 
 ## How to disable the collection of detailed Ingress resources statistics?
 
-By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster. This behavior may generate
-high load on the monitoring system.
+By default, Deckhouse collects detailed statistics from all Ingress resources in the cluster, which generates a high load on the monitoring system.
 
 To disable statistics collection, add label `ingress.deckhouse.io/discard-metrics: "true"` to the corresponding Namespace or Ingress resource.
 
 Example of disabling statistics (metrics) collection for all Ingress resources in the `review-1` namespace:
 
 ```shell
-kubectl label ns review-1 ingress.deckhouse.io/discard-metrics=true
+d8 k label ns review-1 ingress.deckhouse.io/discard-metrics=true
 ```
 
 Example of disabling statistics (metrics) collection for all `test-site` Ingress resources in the `development` namespace:
 
 ```shell
-kubectl label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
+d8 k label ingress test-site -n development ingress.deckhouse.io/discard-metrics=true
 ```
 
 ## How do I correctly drain a node running an IngressNginxController's pods?
 
-There are two ways of draining such a node correctly - either by annotating the node (the annotation will be deleted once the node is drained):
+There are two ways to gracefully drain a node running IngressNginxController.
 
-```shell
-kubectl annotate node <node_name> update.node.deckhouse.io/draining=user
+1. Using an annotation.
+
+    The annotation will be automatically removed after the operation completes.
+
+    ```shell
+    d8 k annotate node <node_name> update.node.deckhouse.io/draining=user
+    ```
+
+1. Using d8 k drain.
+
+    When using the standard d8 k drain command, you must specify the `--force` flag even if `--ignore-daemonsets` is present,
+    since IngressNginxController is deployed using Advanced DaemonSet:
+
+    ```shell
+    d8 k drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
+    ```
+
+## How to enable Web Application Firewall (WAF)?
+
+Software known as a Web Application Firewall (WAF) is used to protect web applications from Layer 7 attacks.
+Ingress-nginx controller has a built-in WAF called `ModSecurity' (The Open Worldwide Application Security Project).
+
+ModSecurity is disabled by default.
+
+### Enabling ModSecurity
+
+To enable ModSecurity, you must specify the following parameters in the `config` section of the CR IngressNginxController:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
 ```
 
-or by using kubectl drain functionality (it's worth mentioning that --force flag is required despite having --ignore-daemonsets flag set, as IngressNginxControllers
-are backed by Advanced DaemonSets):
+After applying the settings, ModSecurity will start working for all traffic passing through this Ingress nginx controller.
+This uses the audit mode (`DetectionOnly`) and [basic recommended configuration](https://github.com/owasp-modsecurity/ModSecurity/blob/v3/master/modsecurity.conf-recommended).
 
-```shell
-kubectl drain <node_name> --delete-emptydir-data --ignore-daemonsets --force
+### Setting up ModSecurity
+
+You can configure ModSecurity in two ways:
+
+1. For the entire ingress-nginx controller
+   - the necessary directives are described in the section `config.modsecurity-snippet` in CR IngressNginxController, as in the example above.
+1. For each CR Ingress separately
+   - the necessary directives are described in the annotation `nginx.ingress.kubernetes.io/modsecurity-snippet : |` directly in Ingress manifests.
+
+To enable the execution of rules (and not just logging), add the `SecRuleEngine On` directive as shown below:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+```
+
+### Adding SecRules
+
+An example of a rule to limit the number of arguments in a request URL. If the number of arguments exceeds 10, the server will reject the request with an error code 400 (Bad Request).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+      SecRule &ARGS "@gt 10" "id:100100,phase:2,deny,status:400,log,auditlog,severity:WARNING,msg:\"too many args\""
+```
+
+A full list and description of the directives can be found in the [official documentation](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).
+
+### Enabling OWASP Core Rule Set (CRS)
+
+To enable OWASP Core Rule Set (CRS) add the `config.enable-owasp-modsecurity-crs` in CR IngressNginxController, as in the example below.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    enable-owasp-modsecurity-crs: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
 ```

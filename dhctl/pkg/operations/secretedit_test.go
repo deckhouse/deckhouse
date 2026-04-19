@@ -16,14 +16,17 @@ package operations
 
 import (
 	"context"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
-	"testing"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 var (
@@ -41,7 +44,7 @@ data:
 `
 )
 
-func EditMock(data []byte) ([]byte, error) {
+func EditMock(data []byte, _ *directoryconfig.DirectoryConfig) ([]byte, error) {
 	newData := string(data) + "test: \"25\"\n"
 	return []byte(newData), nil
 }
@@ -58,11 +61,17 @@ func TestSecretEdit(t *testing.T) {
 	t.Run("Secret editing", func(t *testing.T) {
 
 		abstractEditing = EditMock
-		err := SecretEdit(f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml")
+		err := SecretEdit(
+			f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml",
+			map[string]string{"name": "test"},
+			nil,
+		)
 		require.NoError(t, err)
 
 		secretTestEdit, err := f.KubeClient.CoreV1().Secrets(secretTest.Namespace).Get(context.TODO(), secretTest.Name, metav1.GetOptions{})
 		require.NoError(t, err)
+
+		require.Equal(t, "test", secretTestEdit.Labels["name"])
 
 		require.Equal(t, string(secretTestEdit.Data["cloud-provider-discovery-data.json"]), "{\"test\": \"data\"}")
 

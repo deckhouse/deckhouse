@@ -14,7 +14,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: {{ .Chart.Name }}
   namespace: kube-system
-  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: apps/v1
@@ -49,6 +49,15 @@ spec:
   selector:
     matchLabels:
       app: node-local-dns
+  updateStrategy:
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+    type: OnDelete
+{{- else }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+{{- end }}
   template:
     metadata:
       labels:
@@ -63,9 +72,12 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
 {{- end }}
       serviceAccountName: d8-node-local-dns
-{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+      automountServiceAccountToken: true
       initContainers:
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
       {{- include "helm_lib_module_init_container_check_linux_kernel" (tuple . ">= 5.7") | nindent 6 }}
+{{- else }}
+      {{ include "helm_lib_module_init_container_iptables_wrapper" . | nindent 6 }}
 {{- end }}
       containers:
       - name: coredns
@@ -85,8 +97,9 @@ spec:
           runAsGroup: 0
           runAsNonRoot: false
           runAsUser: 0
+          readOnlyRootFilesystem: true
         image: {{ include "helm_lib_module_image" (list . "coredns") }}
-        command: ["/bin/bash", "-l", "-c", "/start.sh"]
+        command: ["/coredns-helper", "-action=start"]
         env:
         - name: KUBE_CLUSTER_DOMAIN
           value: {{ .Values.global.discovery.clusterDomain | quote }}
@@ -111,7 +124,8 @@ spec:
 {{- else }}
           exec:
             command:
-            - /liveness.sh
+            - /coredns-helper
+            - -action=liveness
           periodSeconds: 20
           timeoutSeconds: 7
 {{- end }}
@@ -123,7 +137,8 @@ spec:
 {{- else }}
           exec:
             command:
-            - /readiness.sh
+            - /coredns-helper
+            - -action=readiness
 {{- end }}
           periodSeconds: 5
           timeoutSeconds: 7
@@ -135,6 +150,11 @@ spec:
           mountPath: /etc/coredns
         - name: tmp
           mountPath: /tmp
+{{- if not (.Values.global.enabledModules | has "cni-cilium") }}
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
+{{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -149,6 +169,7 @@ spec:
             add:
             - NET_RAW
             - NET_ADMIN
+          readOnlyRootFilesystem: true
         image: {{ include "helm_lib_module_image" (list . "iptablesLoop") }}
         env:
         - name: KUBE_DNS_SVC_IP
@@ -159,6 +180,9 @@ spec:
           readOnly: false
         - name: tmp
           mountPath: /tmp
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -167,13 +191,14 @@ spec:
   {{- end }}
 {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4224"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
         env:
         - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
           valueFrom:
@@ -195,6 +220,16 @@ spec:
         ports:
         - containerPort: 4224
           name: https-metrics
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4224
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4224
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -210,6 +245,14 @@ spec:
         configMap:
           name: node-local-dns
       - name: tmp
-        emptyDir: {}
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+{{- if not (.Values.global.enabledModules | has "cni-cilium") }}
+      - name: sbin
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Mi
+{{- end }}
       imagePullSecrets:
       - name: deckhouse-registry

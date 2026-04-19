@@ -1,0 +1,103 @@
+# Copyright 2023 Flant JSC
+# Licensed underthe Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+locals {
+  template_parts   = split("/", local.instance_class.template)
+  org              = length(local.template_parts) == 3 ? local.template_parts[0] : null
+  catalog          = length(local.template_parts) == 3 ? local.template_parts[1] : local.template_parts[0]
+  template         = length(local.template_parts) == 3 ? local.template_parts[2] : local.template_parts[1]
+  ip_address       = length(local.main_ip_addresses) > var.nodeIndex ? element(local.main_ip_addresses, var.nodeIndex) : null
+  placement_policy = lookup(local.instance_class, "placementPolicy", "")
+}
+
+data "vcd_catalog" "catalog" {
+  org  = local.org
+  name = local.catalog
+}
+
+data "vcd_catalog_vapp_template" "template" {
+  catalog_id = data.vcd_catalog.catalog.id
+  name       = local.template
+}
+
+data "vcd_storage_profile" "sp" {
+  name = local.instance_class.storageProfile
+}
+
+data "vcd_vm_sizing_policy" "vmsp" {
+  name = local.instance_class.sizingPolicy
+}
+
+data "vcd_org_vdc" "vdc" {
+  count = local.placement_policy == "" ? 0 : 1
+  name  = var.providerClusterConfiguration.virtualDataCenter
+  org   = var.providerClusterConfiguration.organization
+}
+
+data "vcd_vm_placement_policy" "vmpp" {
+  count  = local.placement_policy == "" ? 0 : 1
+  name   = local.placement_policy
+  vdc_id = data.vcd_org_vdc.vdc[0].id
+}
+
+resource "vcd_vapp_vm" "node" {
+  vapp_name        = local.vapp_name
+  name             = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
+  computer_name    = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
+  vapp_template_id = data.vcd_catalog_vapp_template.template.id
+
+
+  sizing_policy_id    = data.vcd_vm_sizing_policy.vmsp.id
+  placement_policy_id = local.placement_policy == "" ? "" : data.vcd_vm_placement_policy.vmpp[0].id
+
+  network {
+    name               = local.main_network_name
+    type               = "org"
+    ip_allocation_mode = local.ip_address == null ? "DHCP" : "MANUAL"
+    is_primary         = true
+    ip                 = local.ip_address
+  }
+  network_dhcp_wait_seconds = 120
+
+  override_template_disk {
+    bus_type        = "paravirtual"
+    size_in_mb      = local.instance_class.rootDiskSizeGb * 1024
+    bus_number      = 0
+    unit_number     = 0
+    storage_profile = data.vcd_storage_profile.sp.name
+    iops            = data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max > 0 ? data.vcd_storage_profile.sp.iops_settings[0].disk_iops_per_gb_max * local.instance_class.rootDiskSizeGb : (data.vcd_storage_profile.sp.iops_settings[0].default_disk_iops > 0 ? data.vcd_storage_profile.sp.iops_settings[0].default_disk_iops : 0)
+  }
+
+  customization {
+    force   = false
+    enabled = true
+  }
+
+  lifecycle {
+    ignore_changes = [
+      guest_properties,
+      disk,
+      metadata
+    ]
+  }
+
+  guest_properties = {
+    "instance-id"     = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
+    "local-hostname"  = join("-", [local.prefix, local.node_group_name, var.nodeIndex])
+    "public-keys"     = var.providerClusterConfiguration.sshPublicKey
+    "user-data"       = var.cloudConfig
+    "disk.EnableUUID" = "1"
+  }
+
+  dynamic "metadata_entry" {
+    for_each = local.metadata
+
+    content {
+      type        = "MetadataStringValue"
+      is_system   = false
+      user_access = "READWRITE"
+      key         = metadata_entry.key
+      value       = metadata_entry.value
+    }
+  }
+}

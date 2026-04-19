@@ -29,7 +29,9 @@ on:
   pull_request_target:
      types:
       - opened
+      - reopened
       - synchronize
+      - edited
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -69,20 +71,27 @@ jobs:
   # <template: pull_request_info>
   pull_request_info:
     name: Get pull request reference
-    runs-on: ubuntu-latest
+    runs-on: "ubuntu-latest"
     outputs:
       ref: ${{ steps.pr_props.outputs.ref }}
       ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
-      edition: ${{ steps.pr_props.outputs.edition }}
       pr_title: ${{ steps.pr_props.outputs.pr_title }}
       pr_description: ${{ steps.pr_props.outputs.pr_description }}
       diff_url: ${{ steps.pr_props.outputs.diff_url }}
       labels: ${{ steps.pr_props.outputs.labels }}
+      security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
 
-    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs.
-    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain') }}
+      build_CE: ${{ steps.pr_props.outputs.build_CE }}
+      build_EE: ${{ steps.pr_props.outputs.build_EE }}
+      build_BE: ${{ steps.pr_props.outputs.build_BE }}
+      build_SE: ${{ steps.pr_props.outputs.build_SE }}
+      build_SE-plus: ${{ steps.pr_props.outputs.build_SE-plus }}
+      build_CSE: ${{ steps.pr_props.outputs.build_CSE }}
+
+    # Skip pull_request and pull_request_target triggers for PRs authored by deckhouse-BOaTswain, e.g. changelog PRs, don't skip if Pull Request title contains "[run ci]".
+    if: ${{ ! (startsWith(github.event_name, 'pull_request') && github.event.pull_request.user.login == 'deckhouse-BOaTswain' && !contains(github.event.pull_request.title, '[run ci]')) }}
     steps:
       - name: Get PR info for push trigger
         id: push_info
@@ -211,28 +220,11 @@ jobs:
               core.notice(`PR#{pr.number} may be dangerous, will check file changes.`)
             }
 
-            // Set edition from current labels.
-            const defaultEdition = process.env.WERF_ENV ? process.env.WERF_ENV : 'FE';
-            const hasEE = pr.labels.some((l) => l.name === 'edition/ee');
-            const hasCE = pr.labels.some((l) => l.name === 'edition/ce');
-            const hasBE = pr.labels.some((l) => l.name === 'edition/be');
-            const hasSE = pr.labels.some((l) => l.name === 'edition/se');
-            const hasSE_plus = pr.labels.some((l) => l.name === 'edition/se+');
-            let edition = defaultEdition;
-            if (hasCE) {
-              edition = 'CE';
-            } else if (hasEE) {
-              edition = 'EE';
-            } else if (hasBE) {
-              edition = 'BE';
-            } else if (hasSE) {
-              edition = 'SE';
-            } else if (hasSE_plus) {
-              edition = 'SE-plus';
-            }
-            core.info(`Edition labels: 'edition/ce':${hasCE}, 'edition/ee':${hasEE}, 'edition/be':${hasBE}, 'edition/se':${hasSE}, 'edition/se+':${hasSE_plus}`);
-            core.notice(`Enable '${edition}' edition for '${context.eventName}' trigger.`);
+            // Set editions from current labels to build_ce, build_ee and so on.
+            const build_editions = pr.labels.map(l => l.name).filter(l => l.startsWith('edition/')).map(e => e.replace('edition/', 'build_')).map(e => e.replace('se+','se-plus'));
 
+            // Set security rootless scan from labels.
+            const security_rootless_scan = pr.labels.some((l) => l.name === 'security/rootless');
             // Construct head commit ref using pr number.
             const ref = `refs/pull/${ pr.number }/head`;
             core.notice(`Use ref: '${ref}'`)
@@ -250,11 +242,17 @@ jobs:
             core.setOutput('should_check', shouldCheckFiles.toString());
             core.setOutput('ref', ref);
             core.setOutput('ref_slug', `pr${pr.number}`);
-            core.setOutput('edition', edition);
             core.setOutput('pr_title', pr.title);
             core.setOutput('pr_description', pr.body);
             core.setOutput('diff_url', diff_url);
             core.setOutput('labels', JSON.stringify(pr.labels));
+            core.setOutput('security_rootless_scan', security_rootless_scan);
+            core.startGroup('Set build editions based on pr labels')
+            for (build_edition of build_editions) {
+              core.setOutput(`${build_edition}`, 'true');
+              core.info(`${build_edition}`)
+            }
+            core.endGroup()
             core.setCommandEcho(false);
 
       # Checkhout the head commit of the PR branch.
@@ -314,6 +312,8 @@ jobs:
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
       run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
       label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_doc_reference: "true"
+      label_doc_reference: ${{ steps.check_labels.outputs.label_doc_changes }}
       run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
@@ -417,12 +417,146 @@ jobs:
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_doc_changes.sh
 
+  workflow_render:
+    name: Render workflow
+
+    # <template: workflow_render_template>
+    needs:
+      - discover
+      - pull_request_info
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+
+      # <template: login_readonly_registry_step>
+      - name: Check readonly registry credentials
+        id: check_readonly_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_READ_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to readonly registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_readonly_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          logout: false
+      # </template: login_readonly_registry_step>
+
+      - name: Render GitHub workflow
+        run: |
+          cd .github
+          ./render-workflows.sh
+
+      - name: Check rendered files
+        run: |
+          git diff --exit-code
+    # </template: workflow_render_template>
+
+
+
   doc_spell_check:
     name: Docs Validation (spellcheck)
     needs:
       - discover
       - pull_request_info
     if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      - name: Restore diff artifact
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: pr_diff
+
+       # <template: spellcheck_template>
+      - name: Spell check
+        run: |
+          make lint-doc-spellcheck-pr
+       # </template: spellcheck_template>
+
+  doc_validation_reference:
+    name: Docs Validation (reference)
+
+    needs:
+      - discover
+      - pull_request_info
+    if: needs.discover.outputs.run_doc_reference == 'true'
     runs-on: ubuntu-24.04
     steps:
 
@@ -433,39 +567,17 @@ jobs:
           ref: ${{ needs.pull_request_info.outputs.ref }}
       # </template: checkout_step>
 
-      # <template: login_dev_registry_step>
-      - name: Check dev registry credentials
-        id: check_dev_registry
-        env:
-          HOST: ${{secrets.DECKHOUSE_DEV_REGISTRY_HOST}}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to dev registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}
-          username: ${{ secrets.DECKHOUSE_DEV_REGISTRY_USER }}
-          password: ${{ secrets.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
-          logout: false
-      # </template: login_dev_registry_step>
-
       - name: Restore diff artifact
         uses: actions/download-artifact@v4.1.8
         with:
           name: pr_diff
 
-       # <template: spellcheck_template>
-      - name: Install werf
-        uses: werf/actions/install@v1.2
-
-      - name: Spell check
+      - name: Run check
+        env:
+          DIFF_PATH: ./pr.diff
+          SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_doc_reference }}
         run: |
-          make lint-doc-spellcheck-pr
-       # </template: spellcheck_template>
+          ./.github/scripts/validation_run.sh ./testing/validate_doc_reference.sh
 
   copyright_validation:
     name: Copyright Validation
@@ -582,5 +694,77 @@ jobs:
           SKIP_LABEL_NAME: ${{ needs.discover.outputs.label_release_requirements }}
         run: |
           ./.github/scripts/validation_run.sh ./testing/validate_release_requirements.sh
+
+  pull_request_changes_validation:
+    name: Pull Request Changes validation
+    runs-on: "ubuntu-latest"
+    needs:
+      - discover
+      - pull_request_info
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v3.5.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - run: npm install yaml marked
+      - uses: actions/github-script@v6.4.1
+        with:
+          script: |
+            const { findIn } = require('./.github/scripts/js/parsers/modules-parser.js');
+            const { parseMarkdown, findSectionInMarkdown } = require('./.github/scripts/js/parsers/md-parser.js');
+            const { validatePullRequestChangelog } = require('./.github/scripts/js/validators/pr-changes-validator.js');
+
+            const allowedModules = findIn('.');
+
+            /**
+            * @param {string} owner
+            * @param {string} repo
+            * @param {number} pullRequestID
+            */
+            async function getPR(owner, repo, pullRequestID) {
+              const { data } = await github.rest.pulls.get({
+                  owner: owner,
+                  repo: repo,
+                  pull_number: pullRequestID,
+              });
+
+              return data.body;
+            }
+
+            try {
+              const prBody = await getPR(context.repo.owner, context.repo.repo, context.issue.number);
+              const mdTokens = parseMarkdown(prBody);
+              const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries', 'lang', 'changes');
+              validatePullRequestChangelog(changelogEntries, allowedModules);
+            } catch(error) {
+              core.info(`
+              \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block. Check that the section follows the changelog guidelines,
+              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields.
+              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly.
+              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌
+              \u001B[1m\u001B[103m\u001B[30mguide https://github.com/deckhouse/changelog-action?tab=readme-ov-file#how-to-add-to-changelog\u001B[39m\u001B[49m\u001B[22m
+              `);
+              throw(error);
+            }
+
+  gitleaks_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        continue-on-error: true
+        with:
+          scan_mode: "diff"
+
+
+
+
 
 

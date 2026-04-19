@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -27,12 +28,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
-func (b *ClusterBootstrapper) CreateResources() error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
+	restore := b.applyParams()
+	defer restore()
 
 	resourcesToCreate := make(template.Resources, 0)
 	if app.ResourcesPath != "" {
@@ -62,30 +60,32 @@ func (b *ClusterBootstrapper) CreateResources() error {
 		return nil
 	}
 
+	if err := terminal.AskBecomePassword(); err != nil {
+		return err
+	}
+	if err := terminal.AskBastionPassword(); err != nil {
+		return err
+	}
+
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
 		sshClient := wrapper.Client()
 		if sshClient != nil {
-			if _, err := sshClient.Start(); err != nil {
+			if err := sshClient.Start(); err != nil {
 				return fmt.Errorf("unable to start ssh-client: %w", err)
 			}
 		}
 	}
 
-	if err := terminal.AskBecomePassword(); err != nil {
-		return err
-	}
-
 	return log.Process("bootstrap", "Create resources", func() error {
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
 		if err != nil {
 			return err
 		}
-
 		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
 		if err != nil {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, nil)
+		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, nil)
 	})
 }

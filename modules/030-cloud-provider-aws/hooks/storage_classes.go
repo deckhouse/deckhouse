@@ -17,7 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"sort"
 
@@ -27,6 +29,8 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type StorageClass struct {
@@ -90,7 +94,7 @@ func excludeCheck(regexps []*regexp.Regexp, storageClassName string) bool {
 	return false
 }
 
-func storageClasses(input *go_hook.HookInput) error {
+func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	provision := input.Values.Get("cloudProviderAws.storageClass.provision").Array()
 
 	provisionExcludeNames := make([]gjson.Result, 0, len(provision))
@@ -98,7 +102,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		provisionExcludeNames = append(provisionExcludeNames, sc.Get("name"))
 	}
 
-	var provisionRegexps []*regexp.Regexp
+	provisionRegexps := make([]*regexp.Regexp, 0, len(provisionExcludeNames))
 
 	// compile regular expressions
 	for _, excludePattern := range provisionExcludeNames {
@@ -109,7 +113,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		provisionRegexps = append(provisionRegexps, r)
 	}
 
-	var storageClassesFilteredProvision []StorageClass
+	storageClassesFilteredProvision := make([]StorageClass, 0)
 	for _, storageClass := range defaultStorageClasses {
 		if !excludeCheck(provisionRegexps, storageClass.Name) {
 			storageClassesFilteredProvision = append(storageClassesFilteredProvision, storageClass)
@@ -128,7 +132,7 @@ func storageClasses(input *go_hook.HookInput) error {
 
 	excludeStorageClasses := input.Values.Get("cloudProviderAws.storageClass.exclude").Array()
 
-	var excludeRegexps []*regexp.Regexp
+	excludeRegexps := make([]*regexp.Regexp, 0, len(excludeStorageClasses))
 
 	// compile regular expressions
 	for _, excludePattern := range excludeStorageClasses {
@@ -139,7 +143,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		excludeRegexps = append(excludeRegexps, r)
 	}
 
-	var storageClassesFiltered []StorageClass
+	storageClassesFiltered := make([]StorageClass, 0)
 	for _, storageClass := range storageClassesFilteredProvision {
 		if !excludeCheck(excludeRegexps, storageClass.Name) {
 			storageClassesFiltered = append(storageClassesFiltered, storageClass)
@@ -156,9 +160,13 @@ func storageClasses(input *go_hook.HookInput) error {
 		input.Values.Set("cloudProviderAws.internal.storageClasses", []StorageClass{})
 	}
 
-	var existedStorageClasses []StorageClass
-	for _, v := range input.Snapshots["module_storageclasses"] {
-		sc := v.(*storagev1.StorageClass)
+	rawSCs, err := sdkobjectpatch.UnmarshalToStruct[storagev1.StorageClass](input.Snapshots, "module_storageclasses")
+	if err != nil {
+		return fmt.Errorf("unmarshal snapshot module_storageclasses: %w", err)
+	}
+
+	existedStorageClasses := make([]StorageClass, 0, len(rawSCs))
+	for _, sc := range rawSCs {
 		existedStorageClasses = append(existedStorageClasses, StorageClass{
 			Name:       sc.Name,
 			Type:       sc.Parameters["type"],
@@ -172,7 +180,7 @@ func storageClasses(input *go_hook.HookInput) error {
 		if !isModified(storageClassesFiltered, sc) {
 			continue
 		}
-		input.Logger.Infof("Deleting storageclass/%s because its parameters has been changed", sc.Name)
+		input.Logger.Info("Deleting storageclass because its parameters has been changed", slog.String("storage_class", sc.Name))
 		input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 	}
 

@@ -54,7 +54,7 @@ positive:
         podSubnetNodeCIDRPrefix: "24"
         podSubnetCIDR: 10.244.0.0/16
         serviceSubnetCIDR: 192.168.0.0/16
-        kubernetesVersion: "1.29"
+        kubernetesVersion: "1.31"
         clusterDomain: test
         clusterType: "Cloud"
         cloud:
@@ -63,7 +63,7 @@ positive:
       clusterIsBootstrapped: true
       deckhouseVersion: dev
       deckhouseEdition: FE
-      enabledModules: [ "cert-manager", "vertical-pod-autoscaler", "prometheus", "priority-class" ]
+      enabledModules: [ "cert-manager", "vertical-pod-autoscaler", "prometheus"]
       discovery:
         clusterControlPlaneIsHighlyAvailable: true
         clusterMasterCount: 3
@@ -80,8 +80,8 @@ positive:
         clusterDomain: cluster.local
         d8SpecificNodeCountByRole:
           system: 2
-        kubernetesVersions: [ "1.29.2", "1.29.3", "1.29.2" ]
-        kubernetesVersion: "1.29.2"
+        kubernetesVersions: [ "1.31.2", "1.31.3", "1.31.2" ]
+        kubernetesVersion: "1.31.2"
         extensionAPIServerAuthenticationRequestheaderClientCA: |
           Extention Api server
           CA
@@ -104,7 +104,7 @@ positive:
         clusterType: Static
         defaultCRI: Containerd
         kind: ClusterConfiguration
-        kubernetesVersion: "1.29"
+        kubernetesVersion: "1.31"
         podSubnetCIDR: 10.111.0.0/16
         podSubnetNodeCIDRPrefix: "24"
         serviceSubnetCIDR: 10.222.0.0/16

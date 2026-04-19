@@ -61,7 +61,7 @@ func (p *DeploymentInformer) WithKubeEventCb(eventCb func(obj *appsv1.Deployment
 	p.EventCb = eventCb
 }
 
-func (p *DeploymentInformer) CreateSharedInformer() (err error) {
+func (p *DeploymentInformer) CreateSharedInformer() error {
 	// define resyncPeriod for informer
 	resyncPeriod := time.Duration(2) * time.Hour
 
@@ -87,7 +87,7 @@ func (p *DeploymentInformer) CreateSharedInformer() (err error) {
 
 	// create informer with add, update, delete callbacks
 	informer := infappsv1.NewFilteredDeploymentInformer(p.KubeClient, p.Namespace, resyncPeriod, indexers, tweakListOptions)
-	informer.AddEventHandler(p)
+	_, _ = informer.AddEventHandler(p)
 	p.SharedInformer = informer
 
 	return nil
@@ -148,7 +148,7 @@ func (p *CRDInformer) WithKubeEventCb(eventCb func(obj *apiextensionsv1beta1.Cus
 	p.EventCb = eventCb
 }
 
-func (p *CRDInformer) CreateSharedInformer() (err error) {
+func (p *CRDInformer) CreateSharedInformer() error {
 	// define resyncPeriod for informer
 	resyncPeriod := time.Duration(2) * time.Hour
 
@@ -157,7 +157,7 @@ func (p *CRDInformer) CreateSharedInformer() (err error) {
 
 	// Make kubeClient working with crd subscription, now client is replaced with nil value
 	informer := crdinformer.NewCustomResourceDefinitionInformer(nil, resyncPeriod, indexers)
-	informer.AddEventHandler(p)
+	_, _ = informer.AddEventHandler(p)
 	p.SharedInformer = informer
 
 	return nil

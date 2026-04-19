@@ -26,7 +26,7 @@ properties:
         description: |
           The enforcement action to control what to do with the result of the constraint.
           - Deny — Deny action.
-          - Dryrun — No action. It is used when debugging. Information about the event can be viewed in Grafana or in the console via kubectl.
+          - Dryrun — No action. It is used when debugging. Information about the event can be viewed in Grafana or in the console via `d8 k`.
           - Warn — Same as `Dryrun`. In addition to the event information, it provides some info on why that constraint would have been denied if you had set `Deny` instead of `Warn`.
         enum:
           - Warn
@@ -52,38 +52,53 @@ properties:
                       type: integer
                     max:
                       type: integer
-
   denyVulnerableImages:
     type: object
     default: {}
-    x-doc-d8Revision: ee
+    x-doc-d8Editions:
+      - ee
+      - cse-lite
+      - cse-pro
     description: |
-      Trivy provider will deny creation of the `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` with vulnerable images in namespaces with `security.deckhouse.io/trivy-provider: ""` label.
+      Trivy provider settings.
+
+      The Trivy provider prevents creation of the Pod, Deployment, StatefulSet, and DaemonSet resources with images containing vulnerabilities in namespaces labeled with `security.deckhouse.io/trivy-provider: ""`.
+
+      **Deprecated.** These settings have been moved to the `operator-trivy` module. Please migrate your configuration.
     properties:
+      enabled:
+        type: boolean
+        default: false
+        description: Enable the Trivy provider.
+      allowedSeverityLevels:
+        type: array
+        description: |
+          List of allowed vulnerability severity levels.
+
+          Images containing only vulnerabilities of the specified severity levels will not be blocked.
+        items:
+          type: string
+          enum: ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
       storageClass:
         type: string
         x-examples: ["ceph-ssd", "false"]
         description: |-
-          The name of the StorageClass to use for `trivy-provider`.
+          Name of the StorageClass used by the Trivy provider.
 
-          If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
-            
-          The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
-          
-          **Warning.** Specifying a value different from the one currently used (in the existing PVC) will result in disk re-provisioning and all data will be deleted.
+          If the value is not specified, the StorageClass set in the global [`settings.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) parameter is used instead.
 
-          If `false` is specified, `emptyDir` will be forced to be used.
-      enabled:
-        type: boolean
-        default: false
-        description: "Enable trivy provider."
+          The global `settings.modules.storageClass` parameter is only applied when the module is enabled. Changing the global parameter while the module is enabled will not trigger disk re-provisioning.
+
+          > **Warning.** If you specify a value different from the current StorageClass used in the existing PersistentVolumeClaim, the disk will be re-provisioned, and all data will be deleted.
+
+          If you set it to `false`, `emptyDir` will be forcibly used instead of a PVC.
       registrySecrets:
         type: array
         default: []
         description: |
-          List of additional registry secrets to use for downloading images from private registries.
+          List of additional Secrets for accessing private registries.
 
-          By default, the `deckhouse-registry` secret is used to download images for scanning.
+          By default, the `deckhouse-registry` Secret is used to download images for scanning.
         items:
           type: object
           required:

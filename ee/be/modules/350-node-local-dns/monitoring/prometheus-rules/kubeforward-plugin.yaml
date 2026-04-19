@@ -1,0 +1,76 @@
+- name: d8.node-local-dns.kubeforward
+  rules:
+    - alert: D8NodeLocalDNSKubeforwardRequestLatencyP95High
+      expr: |
+        (
+          histogram_quantile(0.95,
+            sum by (le, node) (
+              rate(coredns_kubeforward_request_duration_seconds_bucket{
+                job="node-local-dns",
+                qtype="A"
+              }[5m])
+            )
+          ) > 0.3
+        )
+        and
+        (
+          sum by (node) (
+            rate(coredns_kubeforward_request_duration_seconds_count{
+              job="node-local-dns",
+              qtype="A"
+            }[5m])
+          ) > 0.1
+        )
+      for: 2m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: "High DNS request latency in kubeforward (p95 > 300ms under load)."
+        description: |
+          The 95th percentile DNS request latency for A-records through kubeforward
+          exceeded 300 milliseconds over the last 5 minutes while handling more than 0.1 QPS.
+
+          This may indicate slow upstreams, network issues, or DNS overload on this node.
+
+          Affected node: `{{$labels.node}}`
+
+          For more detailed diagnostics, inspect `Top 5 upstreams by slow kubeforward requests` in Grafana.
+
+          If the alert fires only on one node, run the checks below from node `{{$labels.node}}` (for example, from a debug pod on this node).
+          If the alert fires on many nodes, treat it as a potential systemic issue first.
+
+          Get kubeforward upstream IPs from a master host:
+
+          ```bash
+          d8 k -n kube-system get po -l k8s-app=kube-dns -o jsonpath='{.items[*].status.podIP}'
+          ```
+
+          Then run latency checks on the affected node `{{$labels.node}}` (or from a debug pod on that node):
+
+          ```bash
+          UPSTREAMS="<paste kube-dns pod IPs here>"
+          for ip in $UPSTREAMS; do
+            echo "== upstream ${ip} =="
+            for i in $(seq 1 20); do
+              dig @"$ip" -p 5353 kubernetes.default.svc.cluster.local A +tries=1 +time=1 +stats | grep "Query time"
+            done
+          done
+          ```
+
+          To identify slow requests, enable module logs ([`enableLogs`](https://deckhouse.io/modules/node-local-dns/configuration.html#parameters-enablelogs))
+          and inspect slow query messages:
+
+          ```bash
+          pod=$(kubectl -n kube-system get po -l k8s-app=node-local-dns --field-selector spec.nodeName={{$labels.node}} -o jsonpath='{.items[0].metadata.name}')
+          d8 k -n kube-system logs "$pod" | grep '\[kubeforward\] slow query'
+          ```
+
+          Example log line:
+          `[kubeforward] slow query A kubernetes.default.svc.cluster.local. took 425ms (rcode=NOERROR, upstream=10.96.0.10:53)`
+
+          Interpretation:
+          - If most upstreams are slow and many nodes are affected, suspect systemic network/CoreDNS overload.
+          - If one upstream is slow or only one node is affected, suspect a localized issue.

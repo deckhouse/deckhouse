@@ -71,6 +71,16 @@ internal:
         ca: CA
         key: KEY
         cert: CERT
+    settings:
+      extendedMetrics:
+        enabled: false
+        collectors: []
+      flowLogs:
+        enabled: false
+        allowFilterList: []
+        denyFilterList: []
+        fieldMaskList: []
+        fileMaxSizeMB: 10
   egressGatewaysMap:
     myeg:
       name: myeg
@@ -91,6 +101,16 @@ internal:
     - 192.168.0.0/16
     excludedCIDRs:
     - 192.168.3.0/24
+  - name: egp-dev-2
+    egressGatewayName: myeg
+    selectors:
+    - podSelector:
+        matchLabels:
+          app: nginx-2
+    destinationCIDRs:
+    - 192.168.100.0/16
+    excludedCIDRs:
+    - 192.168.103.0/24
 resourcesManagement:
   mode: VPA
   vpa:
@@ -103,6 +123,25 @@ resourcesManagement:
       max: "2Gi"
 `
 )
+
+const hubbleSettings = `
+extendedMetrics:
+  enabled: true
+  collectors:
+    - name: drop
+      contextOptions: labelsContext=source_ip,source_namespace
+    - name: flow
+flowLogs:
+  enabled: true
+  allowFilterList:
+    - verdict: ["DROPPED","ERROR"]
+    - source_pod: ["kube-system/kube-dns"]
+  denyFilterList:
+    - source_pod: ["kube-system/"]
+    - source_service: ["kube-system/kube-dns"]
+  fieldMaskList: ["time","verdict"]
+  fileMaxSizeMB: 30
+`
 
 func getSubdirs(dir string) ([]string, error) {
 	var subdirs []string
@@ -163,16 +202,19 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			cegp := f.KubernetesGlobalResource("CiliumEgressGatewayPolicy", "d8.myeg")
-			Expect(cegp.Exists()).To(BeTrue())
+			cegp1 := f.KubernetesGlobalResource("CiliumEgressGatewayPolicy", "d8.egp-dev")
+			Expect(cegp1.Exists()).To(BeTrue())
+			Expect(cegp1.Field("spec.destinationCIDRs").String()).To(MatchJSON(`["192.168.0.0/16"]`))
+			Expect(cegp1.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.3.0/24"]`))
+			Expect(cegp1.Field("spec.selectors").String()).To(MatchJSON(`[{"podSelector": {"matchLabels": {"app": "nginx"}}}]`))
+			Expect(cegp1.Field("spec.egressGateway.nodeSelector.matchLabels").String()).To(MatchJSON(`{"egress-gateway.network.deckhouse.io/active-for-myeg": ""}`))
 
-			Expect(cegp.Field("spec.destinationCIDRs").String()).To(MatchJSON(`["192.168.0.0/16"]`))
-
-			Expect(cegp.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.3.0/24"]`))
-
-			Expect(cegp.Field("spec.selectors").String()).To(MatchJSON(`[{"podSelector": {"matchLabels": {"app": "nginx"}}}]`))
-
-			Expect(cegp.Field("spec.egressGateway.nodeSelector.matchLabels").String()).To(MatchJSON(`{"egress-gateway.network.deckhouse.io/active-for-myeg": ""}`))
+			cegp2 := f.KubernetesGlobalResource("CiliumEgressGatewayPolicy", "d8.egp-dev-2")
+			Expect(cegp2.Exists()).To(BeTrue())
+			Expect(cegp2.Field("spec.destinationCIDRs").String()).To(MatchJSON(`["192.168.100.0/16"]`))
+			Expect(cegp2.Field("spec.excludedCIDRs").String()).To(MatchJSON(`["192.168.103.0/24"]`))
+			Expect(cegp2.Field("spec.selectors").String()).To(MatchJSON(`[{"podSelector": {"matchLabels": {"app": "nginx-2"}}}]`))
+			Expect(cegp2.Field("spec.egressGateway.nodeSelector.matchLabels").String()).To(MatchJSON(`{"egress-gateway.network.deckhouse.io/active-for-myeg": ""}`))
 
 			ceds := f.KubernetesResource("Daemonset", "d8-cni-cilium", "egress-gateway-agent")
 			Expect(ceds.Exists()).To(BeTrue())
@@ -249,5 +291,67 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 ]`))
 		})
 
+	})
+
+	Context("ConfigMap cilium-config rendering (hubble enabled, extended metrics + flow logs)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+
+			// Enable cilium-hubble module
+			f.ValuesSetFromYaml("global.enabledModules", `[vertical-pod-autoscaler, prometheus, operator-prometheus, cilium-hubble]`)
+
+			// Enable hubble settings
+			f.ValuesSetFromYaml("cniCilium.internal.hubble.settings", hubbleSettings)
+
+			f.HelmRender()
+		})
+
+		It("Renders ConfigMap cilium-config with expected hubble keys", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config")
+			Expect(cm.Exists()).To(BeTrue())
+
+			Expect(cm.Field("data.enable-hubble").String()).To(Equal("true"))
+			Expect(cm.Field("data.enable-hubble-open-metrics").String()).To(Equal("true"))
+			Expect(cm.Field("data.hubble-metrics-server").String()).To(Equal("127.0.0.1:9091"))
+
+			metrics := cm.Field("data.hubble-metrics").String()
+			Expect(metrics).To(ContainSubstring("drop:labelsContext=source_ip,source_namespace"))
+			Expect(metrics).To(ContainSubstring("flow"))
+
+			Expect(cm.Field("data.hubble-export-file-path").String()).To(Equal("/var/log/cilium/hubble/flow.log"))
+			Expect(cm.Field("data.hubble-export-file-max-size-mb").String()).To(Equal("30"))
+			Expect(cm.Field("data.hubble-export-allowlist").String()).To(Equal(`{"verdict":["DROPPED","ERROR"]} {"source_pod":["kube-system/kube-dns"]}`))
+			Expect(cm.Field("data.hubble-export-denylist").String()).To(Equal(`{"source_pod":["kube-system/"]} {"source_service":["kube-system/kube-dns"]}`))
+			Expect(cm.Field("data.hubble-export-fieldmask").String()).To(Equal("time verdict"))
+		})
+	})
+
+	Context("ConfigMap cilium-config rendering (hubble module disabled)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+
+			f.HelmRender()
+		})
+
+		It("Renders ConfigMap cilium-config with disabled cilium-hubble module and without hubble export/metrics keys", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config")
+			Expect(cm.Exists()).To(BeTrue())
+
+			Expect(cm.Field("data.enable-hubble").String()).To(Equal("false"))
+			Expect(cm.Field("data.hubble-metrics-server").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-metrics").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-file-path").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-allowlist").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-denylist").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-fieldmask").Exists()).To(BeFalse())
+		})
 	})
 })

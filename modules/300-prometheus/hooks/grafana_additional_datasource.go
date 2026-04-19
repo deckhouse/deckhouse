@@ -17,12 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type GrafanaAdditionalDatasource map[string]interface{}
@@ -38,7 +41,7 @@ func filterGrafanaDSCRD(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	spec["orgId"] = 1
 	spec["name"] = obj.GetName()
-	spec["uuid"] = obj.GetName()
+	spec["uid"] = obj.GetName()
 	spec["isDefault"] = false
 	spec["version"] = 1
 	spec["editable"] = false
@@ -65,8 +68,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, grafanaDatasourcesHandler)
 
-func grafanaDatasourcesHandler(input *go_hook.HookInput) error {
-	gad := input.Snapshots["grafana_additional_datasources"]
+func grafanaDatasourcesHandler(_ context.Context, input *go_hook.HookInput) error {
+	gad, err := sdkobjectpatch.UnmarshalToStruct[GrafanaAdditionalDatasource](input.Snapshots, "grafana_additional_datasources")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'grafana_additional_datasources' snapshots: %w", err)
+	}
 
 	if len(gad) == 0 {
 		input.Values.Set("prometheus.internal.grafana.additionalDatasources", make([]interface{}, 0))

@@ -1,0 +1,51 @@
+@startuml
+
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam handwritten false
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam PartitionFontColor grey
+skinparam backgroundColor transparent
+
+start
+
+:Выбор сценария;
+
+if (Выбран сценарий «Полное зеркало» (рекомендованный)?) then (да)
+
+group "Сценарий Полное зеркало"
+  :Формирование зеркала
+  из дисков целиком;
+  :Создание VG на зеркале;
+  :Создание LV в VG;
+  :Установка ОС на LV;
+  :Установка тега storage.deckhouse.io/enabled=true
+  на VG;
+end group
+
+else (нет)
+
+group "Сценарий Частичное зеркало"
+  :Создание двух разделов
+  на каждом диске;
+  :Формирование зеркала
+  из первых разделов дисков;
+  :Создание VG на зеркале;
+  :Создание LV в VG на зеркале;
+  :Установка ОС на LV в VG на зеркале;
+  :Установка тега storage.deckhouse.io/enabled=true
+  на VG на зеркале;
+  :Создание VG из вторых разделов каждого диска;
+  :Установка тега storage.deckhouse.io/enabled=true
+  на VG из вторых разделов;
+end group
+
+endif
+
+:Добавление узла в кластер Deckhouse;
+:Настройка модулей SDS;
+
+stop
+
+@enduml

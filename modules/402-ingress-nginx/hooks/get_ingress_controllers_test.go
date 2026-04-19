@@ -17,14 +17,17 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("ingress-nginx :: hooks :: get_ingress_controllers ::", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.9", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 
 	Context("Fresh cluster", func() {
@@ -48,7 +51,7 @@ metadata:
 spec:
   ingressClass: nginx
   inlet: LoadBalancer
-  controllerVersion: "1.9"
+  controllerVersion: "1.10"
   acceptRequestsFrom:
   - 127.0.0.1/32
   - 192.168.0.0/24
@@ -70,7 +73,7 @@ spec:
   "annotationValidationEnabled": false,
   "chaosMonkey": false,
   "config": {},
-  "controllerVersion": "1.9",
+  "controllerVersion": "1.10",
   "disableHTTP2": false,
   "enableHTTP3": false,
   "geoIP2": {},
@@ -82,7 +85,9 @@ spec:
   "ingressClass": "nginx",
   "inlet": "LoadBalancer",
   "loadBalancer": {},
+  "controllerLogLevel": "Info",
   "loadBalancerWithProxyProtocol": {},
+  "loadBalancerWithSSLPassthrough": {},
   "maxReplicas": 1,
   "minReplicas": 1,
   "resourcesRequests": {
@@ -190,8 +195,10 @@ spec:
 "inlet": "LoadBalancer",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
+"controllerLogLevel": "Info",
 "resourcesRequests": {
   "mode": "Static",
   "static": {},
@@ -215,7 +222,10 @@ spec:
 "hostPort": {},
 "hostPortWithProxyProtocol": {
   "httpPort": 80,
-  "httpsPort": 443
+  "httpsPort": 443,
+  "acceptClientIPHeadersFrom": [
+    "0.0.0.0/0"
+  ]
 },
 "hostWithFailover": {},
 "hsts": false,
@@ -224,6 +234,7 @@ spec:
 "inlet": "HostPortWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {
@@ -242,7 +253,8 @@ spec:
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true
+"validationEnabled": true,
+"controllerLogLevel": "Info"
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.2.name").String()).To(Equal("test-3"))
@@ -262,6 +274,7 @@ spec:
 "inlet": "LoadBalancerWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {
@@ -273,8 +286,101 @@ spec:
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true
+"validationEnabled": true,
+"controllerLogLevel": "Info"
 }`))
+		})
+	})
+
+	var IngressNginxControllerWithDeletionTomeStamp = `
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-3
+  deletionTimestamp: "2025-05-26T08:35:00Z"
+  finalizers:
+  - finalizer.ingress-nginx.deckhouse.io
+spec:
+  ingressClass: test
+  inlet: LoadBalancerWithProxyProtocol
+`
+
+	Context("A controller with deletion timestamp", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(IngressNginxControllerWithDeletionTomeStamp))
+			f.RunGoHook()
+		})
+
+		It("controller has to be excluded from internal.ingressControllers", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers").Array()).Should(BeEmpty())
+		})
+	})
+
+	Context("With suspended validation annotation", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-suspended
+  annotations:
+    network.deckhouse.io/ingress-nginx-validation-suspended: ""
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  validationEnabled: true
+`))
+			f.RunHook()
+		})
+		It("Should disable validationEnabled when annotation is present", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.name").String()).To(Equal("test-suspended"))
+
+			name := f.ValuesGet("ingressNginx.internal.ingressControllers.0.name").String()
+			validationEnabled := f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec.validationEnabled").Bool()
+
+			fmt.Println(name, validationEnabled)
+
+			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec.validationEnabled").Bool()).To(BeFalse())
+		})
+
+		Context("MaxMind account ID metric", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-mm
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  geoIP2:
+    maxmindLicenseKey: abc12345
+`))
+				f.RunHook()
+			})
+
+			It("emits metric when licenseKey present and accountID missing", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				metrics := f.MetricsCollector.CollectedMetrics()
+
+				var found bool
+				for _, m := range metrics {
+					if m.Name == "d8_ingress_nginx_controller_maxmind_account_id_not_set" &&
+						m.Action == operation.ActionGaugeSet &&
+						m.Labels["controller_name"] == "test-mm" &&
+						m.Value != nil && *m.Value == 1.0 {
+						found = true
+						break
+					}
+				}
+				Expect(found).To(BeTrue(), fmt.Sprintf("expected metric d8_ingress_nginx_controller_maxmind_account_id_not_set=1 for controller test-mm, got: %#v", metrics))
+			})
 		})
 	})
 })

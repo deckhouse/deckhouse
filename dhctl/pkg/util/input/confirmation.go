@@ -45,7 +45,7 @@ func (c *Confirmation) WithMessage(m string) *Confirmation {
 }
 
 func (c *Confirmation) Ask() bool {
-	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+	if !IsTerminal() {
 		return c.defaultAnswer
 	}
 
@@ -60,13 +60,20 @@ func (c *Confirmation) Ask() bool {
 
 		response := strings.ToLower(strings.TrimSpace(string(line)))
 
-		if response == "y" || response == "yes" {
+		switch response {
+		case "y", "yes":
 			log.InfoF("\r")
 			return true
-		} else if response == "n" || response == "no" {
+
+		case "n", "no":
 			log.InfoF("\r")
 			return false
 		}
+
 		log.InfoF("\r")
 	}
+}
+
+func IsTerminal() bool {
+	return terminal.IsTerminal(int(os.Stdin.Fd()))
 }

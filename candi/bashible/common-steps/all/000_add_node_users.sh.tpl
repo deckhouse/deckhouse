@@ -20,6 +20,10 @@
 node_users_json='{{ .nodeUsers | toJson}}'
   {{- end }}
 
+API_SERVERS="{{ .normal.apiserverEndpoints | join " " }}"
+read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
+
+
 # if reboot flag set due to disruption update (for example, in case of CRI change) we pass this step.
 # this step runs normally after node reboot.
 if bb-flag? disruption && bb-flag? reboot; then
@@ -35,7 +39,7 @@ function nodeuser_patch() {
   # This step puts information "how to get bootstrap logs" into Instance resource.
   # It's not critical, and waiting for it indefinitely, breaking bootstrap, is not reasonable.
   local failure_count=0
-  local failure_limit=3
+  local failure_limit=1
 
   if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
     json_file=$( mktemp -t patch_json.XXXXX )
@@ -51,10 +55,17 @@ function nodeuser_patch() {
       sleep 10
     done
     rm $json_file
+
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local patch_pending=true
+
     while [ "$patch_pending" = true ] ; do
-      for server in {{ .normal.apiserverEndpoints | join " " }} ; do
+      if [ ${#AVAILABLE_API_SERVERS[@]} -eq 0 ]; then
+        read -r -a AVAILABLE_API_SERVERS <<< "$API_SERVERS"
+        bb-log-info "All servers failed once, resetting to original list and retrying"
+      fi
+      bb-log-info "Current AVAILABLE_API_SERVERS: ${AVAILABLE_API_SERVERS[*]}"
+      for server in "${AVAILABLE_API_SERVERS[@]}"; do
         local server_addr=$(echo $server | cut -f1 -d":")
         until local tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
           bb-log-info "The network is not ready for connecting to apiserver yet, waiting..."
@@ -73,9 +84,12 @@ function nodeuser_patch() {
 
           bb-log-info "Successfully patched NodeUser."
           patch_pending=false
-
           break
         else
+
+          AVAILABLE_API_SERVERS=($(printf '%s\n' "${AVAILABLE_API_SERVERS[@]}" | grep -v "^$server$"))
+          bb-log-info "Server $server failed once, removing from current list"
+
           failure_count=$((failure_count + 1))
 
           if [[ $failure_count -eq $failure_limit ]]; then
@@ -84,12 +98,12 @@ function nodeuser_patch() {
             break
           fi
 
-          bb-log-error "Failed to patch NodeUser. ${failure_count} of ${failure_limit} attempts..."
-          sleep 10
-          continue
+          bb-log-error "Failed to patch NodeUser via $server. ${failure_count} of ${failure_limit} attempts..."
+          sleep 3
         fi
       done
     done
+
   else
     bb-log-error "failed to patch NodeUser can't find kubelet.conf or bootstrap-token"
     exit 1
@@ -100,7 +114,7 @@ function nodeuser_patch() {
 function nodeuser_add_error() {
   local username="$1"
   local message="$2"
-  local machine_name="${D8_NODE_HOSTNAME}"
+  local machine_name=$(bb-d8-node-name)
   if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
@@ -117,7 +131,7 @@ function nodeuser_add_error() {
 # $1 - username
 function nodeuser_clear_error() {
   local username="$1"
-  local machine_name="${D8_NODE_HOSTNAME}"
+  local machine_name=$(bb-d8-node-name)
   if [ -f ${BOOTSTRAP_DIR}/machine-name ]; then
     local machine_name="$(<${BOOTSTRAP_DIR}/machine-name)"
   fi
@@ -136,7 +150,9 @@ function modify_user() {
   local extra_groups="$2"
   local password_hash="$3"
 
-  usermod -G "$extra_groups" "$user_name"
+  if id -nG "$user_name" | grep -qvw "$extra_group"; then
+    usermod -G "$extra_groups" "$user_name"
+  fi
 
   local current_hash="$(getent shadow "$user_name" | awk -F ":" '{print $2}')"
   if [ "$password_hash" != "$current_hash" ]; then
@@ -168,16 +184,42 @@ function put_user_ssh_key() {
   fi
 }
 
+# $1 - group name
+function add_sudoer_group() {
+    local path="/etc/sudoers"
+    local groupname="$1"
+    sudoers_filename="30-deckhouse-nodeadmins"
+    local sudoersd_path=$(cat $path |egrep "^[@#]includedir" |awk '{ print $2}')
+
+    if [[ -z $sudoersd_path ]]
+      then
+        mkdir -p /etc/sudoers.d
+        echo "" >> $path
+        echo "#includedir /etc/sudoers.d" >> $path
+        sudoersd_path="/etc/sudoers.d"
+    fi
+
+    local sudoers_file="${sudoersd_path}/${sudoers_filename}"
+    if ! getent group $groupname >/dev/null
+      then
+        groupadd $groupname
+    fi
+
+    # Discover sudoer groups
+    groups=($(cat $path |egrep "^%[a-z][-a-zA-Z0-9._]*\s+.+" |awk '{print $1}' |cut -c2-))
+    additional_groups=$(find $sudoersd_path -type f -readable -exec egrep -h "^%[a-z][-a-zA-Z0-9._]*\s+.+" {} + | awk '{print $1}' |cut -c2-)
+    groups+=($additional_groups)
+
+    if [[ ! " ${groups[*]} " =~ [[:space:]]${groupname}[[:space:]] ]]
+      then
+        echo "# Group rules for deckhouse users" > $sudoers_file
+        echo "%${groupname} ALL=(ALL) ALL" >> $sudoers_file
+    fi
+}
+
 function main() {
-  if getent group sudo >/dev/null; then
-    sudo_group="sudo"
-  elif getent group wheel >/dev/null; then
-    sudo_group="wheel"
-  else
-    bb-log-error "Cannot find sudo group"
-    nodeuser_add_error "${user_name}" "Cannot find sudo group"
-    return
-  fi
+  sudo_group="nodeadmin"
+  add_sudoer_group $sudo_group
 
   main_group="100" # users
   home_base_path="/home/deckhouse"
@@ -255,7 +297,11 @@ function main() {
       continue
     else
       # Adding user
-      error_message=$(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -p "$password_hash" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name" 2>&1)
+      useradd_cmd=(useradd -b "$home_base_path" -g "$main_group" -G "$extra_groups" -s "$default_shell" -u "$uid" -c "$comment" -m "$user_name")
+      if [[ -n "$password_hash" ]]; then
+        useradd_cmd+=(-p "$password_hash")
+      fi
+      error_message=$("${useradd_cmd[@]}" 2>&1)
       if bb-error?
       then
         bb-log-error "Error adding user '$user_name': ${error_message}"
@@ -289,10 +335,12 @@ function main() {
         while true
         do
           # Emulate pkill -U $local_user_id
-          ps aux | grep "^$(id -nu $local_user_id)" | awk '{print $2}' | xargs kill -9
-
-          if userdel -r "$(id -nu $local_user_id)"; then
+          ps -u "$(id -nu $local_user_id)" --no-headers | awk '{print $1}' | xargs kill -9
+          
+          if errmsg=$(userdel -r "$(id -nu $local_user_id)" 2>&1); then
             break
+          else 
+            echo $errmsg |egrep -o "[0-9]{2,}" | xargs kill -9
           fi
         done
       else

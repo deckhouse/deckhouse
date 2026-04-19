@@ -41,7 +41,14 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+const providerID = "aws"
+const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
+const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
+const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
+const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
+
 const globalValues = `
+  clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
@@ -52,7 +59,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.27"
+    kubernetesVersion: "1.31"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -64,7 +71,7 @@ const globalValues = `
       master:
         __ConstantChoices__: "3"
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.27.0
+    kubernetesVersion: 1.31.0
 `
 
 const moduleValues = `
@@ -99,6 +106,40 @@ const moduleValues = `
       aaa: aaa
 `
 
+const tolerationsAnyNodeWithUninitialized = `
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: ToBeDeletedTaint
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable`
+
+const moduleNamespace = "d8-cloud-provider-aws"
+
 var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -114,21 +155,19 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-aws")
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-aws", "deckhouse-registry")
+			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
-			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "cloud-controller-manager")
-			ccmServiceAccount := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "cloud-controller-manager")
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			ccmServiceAccount := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
 			ccmClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:cloud-controller-manager")
 			ccmClusterRoleBinding := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:cloud-controller-manager")
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-aws", "cloud-controller-manager")
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 
-			ebsControllerPluginDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "csi-controller")
+			ebsControllerPluginDeployment := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			ebsCSIDriver := f.KubernetesGlobalResource("CSIDriver", "ebs.csi.aws.com")
-			ebsNodePluginDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-aws", "csi-node")
-			ebsControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-aws", "csi")
+			ebsNodePluginDaemonSet := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			ebsControllerSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
 			ebsProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:csi:controller:external-provisioner")
 			ebsProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-aws:csi:controller:external-provisioner")
 			ebsAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-aws:csi:controller:external-attacher")
@@ -140,14 +179,25 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-aws:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-aws:cluster-admin")
 
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
 
 			// user story #1
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
-			expectedAWSJSON := `{
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+			expectedProviderRegistrationJSON := `{
   "instances":{
     "ami": "ami-aaabbbccc",
     "associatePublicIPAddress": true,
@@ -165,9 +215,38 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
       "aaa": "aaa"
     }
 }`
-			dataAWS, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.aws").String())
+			actualProviderRegistrationJSON, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.aws").String())
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(dataAWS)).To(MatchJSON(expectedAWSJSON))
+			Expect(string(actualProviderRegistrationJSON)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			actualProviderSpecificRegistrationJSON, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.aws").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(actualProviderSpecificRegistrationJSON)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID))
+			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("mcm"))
+			Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificMCMSecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificMCMSecretData["config-for-machine-controller-manager.yaml"].String()) > 0).To(BeTrue())
+
+			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
+			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificBashibleStepsSecret.Field(fmt.Sprintf("metadata.labels.%s", bashibleLabelKey)).String()).To(Equal("steps"))
+			Expect(providerSpecificBashibleStepsSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificBashibleStepsSecretData := providerSpecificBashibleStepsSecret.Field("data").Map()
+			Expect(len(providerSpecificBashibleStepsSecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificBashibleStepsSecretData["000_set_cloud_variables.sh.tpl"].String()) > 0).To(BeTrue())
+
+			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
+			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", bashibleLabelKey)).String()).To(Equal("bootstrap"))
+			Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificBashibleBootstrapSecretData := providerSpecificBashibleBootstrapSecret.Field("data").Map()
+			Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
 
 			// user story #2
 			Expect(ccmDeployment.Exists()).To(BeTrue())
@@ -176,8 +255,10 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ccmClusterRoleBinding.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
 			Expect(ebsControllerPluginDeployment.Exists()).To(BeTrue())
+			Expect(ebsControllerPluginDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(ebsCSIDriver.Exists()).To(BeTrue())
 			Expect(ebsNodePluginDaemonSet.Exists()).To(BeTrue())
+			Expect(ebsNodePluginDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(ebsControllerSA.Exists()).To(BeTrue())
 			Expect(ebsProvisionerCR.Exists()).To(BeTrue())
 			Expect(ebsProvisionerCRB.Exists()).To(BeTrue())
@@ -189,6 +270,9 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
 			Expect(ebsStorageClass.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 		})
 	})
 
@@ -231,15 +315,15 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			It("CCM should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})
 
 	Context("Cloud data discoverer", func() {
 		deployment := func(f *Config) object_store.KubeObject {
-			return f.KubernetesResource("Deployment", "d8-cloud-provider-aws", "cloud-data-discoverer")
+			return f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 		}
 
 		assertEnv := func(f *Config, envName, val string) {
@@ -297,7 +381,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("Should render VPA resource", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-aws", "cloud-data-discoverer")
+				d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 				Expect(d.Exists()).To(BeTrue())
 			})
 		})
@@ -314,7 +398,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("Should render VPA resource", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-aws", "cloud-data-discoverer")
+				d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 				Expect(d.Exists()).To(BeFalse())
 			})
 		})

@@ -17,7 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"path/filepath"
 	"sort"
 
 	"github.com/Masterminds/semver/v3"
@@ -34,12 +36,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10}, // Order matters — we need globalVersion from discovery_versions_to_install.go
 }, dependency.WithExternalDependencies(ensureCRDs))
 
-func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
+func ensureCRDs(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	// collect all istio versions (global + additional | uniq)
 	istioVersions := make([]string, 0)
 
 	if !input.Values.Get("istio.internal.globalVersion").Exists() {
-		return fmt.Errorf("istio.internal.globalVersion value isn't discovered by discovery_versions.go yet")
+		return fmt.Errorf("istio.internal.globalVersion is not discovered by discovery_versions_to_install.go yet")
 	}
 	globalVersion := input.Values.Get("istio.internal.globalVersion").String()
 	istioVersions = append(istioVersions, globalVersion)
@@ -64,6 +66,15 @@ func ensureCRDs(input *go_hook.HookInput, dc dependency.Container) error {
 
 	CRDversionToInstall := fmt.Sprintf("%d.%d", semvers[len(semvers)-1].Major(), semvers[len(semvers)-1].Minor())
 
-	prefix := "/deckhouse/"
-	return ensure_crds.EnsureCRDsHandler(prefix+"modules/110-istio/_crds/istio/"+CRDversionToInstall+"/*.yaml")(input, dc)
+	crdsGlob := "/deckhouse/modules/110-istio/_crds/istio/" + CRDversionToInstall + "/*.yaml"
+
+	crds, err := filepath.Glob(crdsGlob)
+	if err != nil {
+		return fmt.Errorf("invalid glob pattern: %w", err)
+	}
+	if len(crds) == 0 {
+		return fmt.Errorf("no CRD files found matching pattern: %s", crdsGlob)
+	}
+
+	return ensure_crds.EnsureCRDsHandler(crdsGlob)(ctx, input, dc)
 }

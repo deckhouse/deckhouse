@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -23,6 +24,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,7 +62,7 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	var service v1core.Service
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return ServiceAddr{service.Name, service.Spec.ClusterIP}, nil
@@ -81,12 +84,15 @@ func applyDNSServiceIPFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 // - from any other service selected by label 'k8s-app=kube-dns'
 //   if there are no more ClusterIP services with same label in namespace
 
-func discoveryDNSAddress(input *go_hook.HookInput) error {
+func discoveryDNSAddress(_ context.Context, input *go_hook.HookInput) error {
+	services, err := sdkobjectpatch.UnmarshalToStruct[ServiceAddr](input.Snapshots, "dns_cluster_ip")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal dns_cluster_ip snapshot: %w", err)
+	}
+
 	dnsAddress := ""
 
-	for _, sRaw := range input.Snapshots["dns_cluster_ip"] {
-		s := sRaw.(ServiceAddr)
-
+	for _, s := range services {
 		if s.ClusterIP == "None" || s.ClusterIP == "" {
 			continue
 		}

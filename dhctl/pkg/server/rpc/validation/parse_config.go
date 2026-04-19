@@ -25,6 +25,7 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 )
 
+//nolint:musttag
 func (s *Service) ParseConnectionConfig(
 	_ context.Context,
 	request *pb.ParseConnectionConfigRequest,

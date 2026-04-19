@@ -1,9 +1,11 @@
 name: cilium-hubble
-weight: 500
-description: |
-    The cilium-hubble module
-
+stage: General Availability
+subsystems:
+  - networking
+namespace: d8-cni-cilium
+descriptions:
+  en: Provides visualization of the cluster network stack when Cilium CNI is enabled. Requires Linux kernel version 5.8 or higher with eBPF support.
+  ru: Обеспечивает визуализацию сетевого стека кластера при включенном CNI Cilium. Требует версию ядра Linux 5.8 или выше с поддержкой eBPF.
 requirements:
-  bootstrapped: true
   modules:
     cni-cilium: ">= 0.0.0"

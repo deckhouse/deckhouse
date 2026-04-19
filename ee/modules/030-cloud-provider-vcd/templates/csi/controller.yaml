@@ -2,6 +2,7 @@
 - "--nodeid=$(NODE_ID)"
 - "--cloud-config=/etc/cloud/cloud-config"
 - "--endpoint=unix:///csi/csi.sock"
+- "--metadata-path=/etc/cloud/metadata/metadata.yaml"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
@@ -19,6 +20,9 @@
 - name: vcd-credentials-volume
   secret:
     secretName: vcd-credentials
+- name: vcd-metadata-volume
+  secret:
+    secretName: vcd-metadata
 {{- end }}
 
 {{- define "csi_controller_volume_mounts" }}
@@ -28,6 +32,13 @@
 - name: vcd-credentials-volume
   mountPath: /etc/kubernetes/vcloud/basic-auth
   readOnly: true
+- name: vcd-metadata-volume
+  mountPath: /etc/cloud/metadata
+  readOnly: true
+{{- end }}
+
+{{- define "csi_controller_pod_annotations" }}
+checksum/metadata: {{ (.Values.cloudProviderVcd.internal.metadata | default list) | toString | sha256sum | quote }}
 {{- end }}
 
 {{- define "csi_node_args" }}
@@ -62,28 +73,28 @@
   readOnly: true
 {{- end }}
 
-{{- define "csi_node_image_name" -}}
-{{- if semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion -}}
-vcdCsiPlugin
+{{- $csiImageName := ""}}
+{{- if eq .Values.cloudProviderVcd.internal.legacyMode true -}}
+  {{- $csiImageName = "vcdCsiPluginLegacy" }}
 {{- else -}}
-vcdCsiPluginLegacy
-{{- end }}
+  {{- $csiImageName = "vcdCsiPlugin" }}
 {{- end }}
 
-{{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
-{{- $csiImageName := join "" (list (include "csi_node_image_name" .) $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
 {{- if $csiControllerImage }}
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
   {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
-  {{- $_ := set $csiControllerConfig "resizerEnabled" (semverCompare ">=37.2" .Values.cloudProviderVcd.internal.discoveryData.vcdAPIVersion) }}
+  {{- $_ := set $csiControllerConfig "resizerEnabled" (ne .Values.cloudProviderVcd.internal.legacyMode true) }}
   {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiControllerConfig "additionalCsiControllerPodAnnotations" (include "csi_controller_pod_annotations" . | fromYaml) }}
+  {{- $_ := set $csiControllerConfig "dnsPolicy"  (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
+  {{- $_ := set $csiControllerConfig "securityPolicyExceptionEnabled" true }}
 
   {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
 
@@ -94,6 +105,8 @@ vcdCsiPluginLegacy
   {{- $_ := set $csiNodeConfig "additionalNodeEnvs" (include "csi_node_envs" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
+  {{- $_ := set $csiNodeConfig "securityPolicyExceptionEnabled" true }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
 {{- end }}

@@ -1,0 +1,14 @@
+diff --git a/dcgmbuild/scripts/host/0050_clang.sh b/dcgmbuild/scripts/host/0050_clang.sh
+index 7723c28..f84ba82 100755
+--- a/dcgmbuild/scripts/host/0050_clang.sh
++++ b/dcgmbuild/scripts/host/0050_clang.sh
+@@ -22,8 +22,7 @@ read -r _ URL SHA512SUM <<<$(grep '^clang ' $1)
+ export DEBIAN_FRONTEND=noninteractive
+ apt install --quiet --assume-yes software-properties-common gpg lsb-release wget
+ 
+-curl --location --fail --output llvm.sh $URL
+-echo "$SHA512SUM llvm.sh" | sha512sum --check -
++cp /tmp/scripts/llvm.sh .
+ 
+ chmod +x llvm.sh
+ ./llvm.sh -n $(lsb_release -c | awk '{print $2}') $VERSION all

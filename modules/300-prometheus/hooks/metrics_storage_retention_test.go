@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -42,13 +42,13 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_storage_retention ::
 
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "prometheus_disk_hook",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_prometheus_storage_retention_days",
 				Group:  "prometheus_disk_hook",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(14.0),
 				Labels: map[string]string{
 					"prometheus": "main",
@@ -58,7 +58,7 @@ var _ = Describe("Modules :: prometheus :: hooks :: metrics_storage_retention ::
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_prometheus_storage_retention_days",
 				Group:  "prometheus_disk_hook",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(300.0),
 				Labels: map[string]string{
 					"prometheus": "longterm",

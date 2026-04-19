@@ -17,7 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -28,6 +30,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/internal"
@@ -87,29 +91,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, safeControllerUpdate)
 
-func safeControllerUpdate(input *go_hook.HookInput) error {
-	controllerPods := input.Snapshots["for_delete"]
+func safeControllerUpdate(_ context.Context, input *go_hook.HookInput) error {
+	controllerPods := input.Snapshots.Get("for_delete")
 	if len(controllerPods) == 0 {
 		return nil
 	}
 
-	proxys := input.Snapshots["proxy_ads"]
-	failovers := input.Snapshots["failover_ads"]
+	proxys := input.Snapshots.Get("proxy_ads")
+	failovers := input.Snapshots.Get("failover_ads")
 
 	controllers := set.New()
 
 	proxyMap := make(map[string]daemonSet, len(proxys))
-	for _, pc := range proxys {
-		ds := pc.(daemonSet)
+	for ds, err := range sdkobjectpatch.SnapshotIter[daemonSet](proxys) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'proxy_ads' snapshots: %w", err)
+		}
+
 		proxyMap[ds.ControllerName] = ds
 	}
 
-	for _, fc := range failovers {
-		ds := fc.(daemonSet)
+	for ds, err := range sdkobjectpatch.SnapshotIter[daemonSet](failovers) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'failover_ads' snapshots: %w", err)
+		}
 
 		proxy, ok := proxyMap[ds.ControllerName]
 		if !ok {
-			input.Logger.Warnf("Proxy DaemonSets not found for %q controller", ds.ControllerName)
+			input.Logger.Warn("Proxy DaemonSets not found for controller", slog.String("name", ds.ControllerName))
 			continue
 		}
 
@@ -128,17 +137,19 @@ func safeControllerUpdate(input *go_hook.HookInput) error {
 		controllers.Add(ds.ControllerName)
 	}
 
-	for _, sn := range controllerPods {
-		podForDelete := sn.(ingressControllerPod)
+	for podForDelete, err := range sdkobjectpatch.SnapshotIter[ingressControllerPod](controllerPods) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'for_delete' snapshots: %w", err)
+		}
 
 		if !controllers.Has(podForDelete.ControllerName) {
-			input.Logger.Warnf("Failover and Proxy DaemonSets not found for %q controller", podForDelete.ControllerName)
+			input.Logger.Warn("Failover and Proxy DaemonSets not found for controller", slog.String("name", podForDelete.ControllerName))
 			continue
 		}
 
 		// postpone main controller's pod update for the first time so that failover controller could catch up with the hook
 		if !podForDelete.PostponedUpdate {
-			input.Logger.Infof("Assuring that %s/%s has met update conditions", podForDelete.ControllerName, podForDelete.Name)
+			input.Logger.Info("Assuring that update conditions met", slog.String("controller", podForDelete.ControllerName), slog.String("pod", podForDelete.Name))
 			metadata := map[string]interface{}{
 				"metadata": map[string]interface{}{
 					"annotations": map[string]interface{}{
@@ -146,7 +157,7 @@ func safeControllerUpdate(input *go_hook.HookInput) error {
 					},
 				},
 			}
-			input.PatchCollector.MergePatch(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
+			input.PatchCollector.PatchWithMerge(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
 			continue
 		}
 
@@ -158,7 +169,7 @@ func safeControllerUpdate(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
+		input.PatchCollector.PatchWithMerge(metadata, "v1", "Pod", internal.Namespace, podForDelete.Name)
 	}
 
 	return nil

@@ -23,6 +23,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
+// +kubebuilder:object:generate=false
 type Release interface {
 	GetName() string
 	GetModuleName() string
@@ -30,20 +31,20 @@ type Release interface {
 	GetVersion() *semver.Version
 	GetRequirements() map[string]string
 	GetChangelogLink() string
-	GetCooldownUntil() *time.Time
 	GetDisruptions() []string
 	GetDisruptionApproved() bool
 	GetPhase() string
 	GetForce() bool
+	GetReinstall() bool
 	GetApplyNow() bool
 	GetApprovedStatus() bool
 	SetApprovedStatus(b bool)
 	GetSuspend() bool
 	GetManuallyApproved() bool
 	GetMessage() string
+	GetNotified() bool
+	GetUpdateSpec() *UpdateSpec
 }
-
-type Changelog map[string]any
 
 func GetReleaseApprovalAnnotation(release Release) string {
 	switch release.(type) {

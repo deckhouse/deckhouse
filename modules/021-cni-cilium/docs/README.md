@@ -3,18 +3,21 @@ title: "The cni-cilium module"
 description: The cni-cilium module provides networking in a cluster using the Cilium module.
 ---
 
-The `cni-cilium module` provides a network in a cluster. It is based on the [Cilium](https://cilium.io/) project.
+The `cni-cilium` module provides a network in a cluster. It is based on the [Cilium](https://cilium.io/) project.
 
 ## Limitations
 
 1. Services with type `NodePort` and `LoadBalancer` are incompatible with hostNetwork endpoints in LB mode `DSR`. Switch to `SNAT` mode if it is required.
-2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple ultiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
-3. Kernel requirements:
-   * Linux kernel version not lower than `5.7` for the `cni-cilium` module to work and work together with the [istio](../istio/), [openvpn](../openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/products/kubernetes-platform/documentation/v1/modules/{% else %}..{% endif %}/node-local-dns/) modules.
-4. OS compatibility:
+2. `HostPort` pods only bind to [one IP address](https://github.com/deckhouse/deckhouse/issues/3035). If the OS has multiple interfaces/IP, Cilium will choose one, preferring `private` to `public`.
+3. To ensure the stable operation of `cni-cilium` on cluster nodes, disable Elastic Agent or restrict its access to the Elastic management server. Elastic Agent includes an Elastic Endpoint component which uses the Extended Berkeley Packet Filter (eBPF) technology on cluster nodes and may remove critical eBPF programs required for `cni-cilium` to work correctly. For detailed information and discussion of the issue, refer to the publications of the [Cilium](https://github.com/cilium/cilium/issues/28433) and [Elastic](https://discuss.elastic.co/t/network-disruption-on-kubernetes-node-with-elastic-security-integration-on-debian/354202) projects.
+4. Kernel requirements:
+   * Linux kernel version not lower than `5.8` for the `cni-cilium` module to work and work together with the [istio](/modules/istio/), [openvpn](/modules/openvpn/) or [node-local-dns]({% if site.d8Revision == 'CE' %}{{ site.urls.ru}}/modules/{% else %}..{% endif %}/node-local-dns/) modules.
+5. OS compatibility:
     * Ubuntu:
       * incompatible with version 18.04;
       * HWE kernel installation required for working with version 20.04.
+    * Astra Linux:
+      * incompatible with the "Smolensk" edition.
     * CentOS:
       * for versions 7 and 8, a new kernel from the [repository](https://elrepo.org) is required.
 
@@ -28,7 +31,7 @@ To extend the capabilities, the module allows [selectable mode of operation](con
   * if `externalTrafficPolicy: Local` is specified in the `Service`, the traffic will be forwarded and balanced only to those target pods running on the same node where the traffic arrived. If the target pod is not running on this node, the traffic will be dropped.
   * if `externalTrafficPolicy: Cluster` is specified in the `Service`, the traffic will be forwarded and balanced to all target pods in the cluster. At the same time, if the target pods are located on other nodes, SNAT will be performed when transmitting traffic to them (the source IP address will be replaced with the InternalIP of the node).
 
-   ![SNAT data flow diagram](../../images/cni-cilium/snat.png)
+   ![SNAT data flow diagram](images/snat.png)
 
 * `DSR` (Direct Server Return) — is a method where all incoming traffic passes through the load balancer, and all outgoing traffic bypasses it. This method is used instead of `SNAT`. Often, responses are much larger than requests, and `DSR` can significantly increase the overall throughput of the scheme:
   * if `externalTrafficPolicy: Local` is specified in the `Service`, its behavior is completely analogous to `kube-proxy` and `bpfLB` in `SNAT` mode.
@@ -38,10 +41,10 @@ To extend the capabilities, the module allows [selectable mode of operation](con
     * outgoing traffic will go directly from the node on which the target pod was launched;
     * the source IP address will be replaced with the external IP address of the node to which the incoming request **originally** came.
 
-   ![DSR data flow diagram](../../images/cni-cilium/dsr.png)
+   ![DSR data flow diagram](images/dsr.png)
 
 {% alert level="warning" %}
-In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.  
+In case of using `DSR` and `Service` mode with `externalTrafficPolicy: Cluster` additional network environment settings are required.
 Network equipment must be ready for asymmetric traffic flow: IP address anti-spoofing tools (`uRPF`, `sourceGuard`, etc.) must be disabled or configured accordingly.
 {% endalert %}
 
@@ -49,11 +52,16 @@ Network equipment must be ready for asymmetric traffic flow: IP address anti-spo
 
 ## Using CiliumClusterwideNetworkPolicies
 
-To use CiliumClusterwideNetworkPolicies, apply:
+{% alert level="danger" %}
+Using CiliumClusterwideNetworkPolicies if the `policyAuditMode` option is absent in the cni-cilium module settings may lead to incorrect operation of Control plane or loss of SSH access to all cluster nodes.
+{% endalert %}
 
-1. The primary set of `CiliumClusterwideNetworkPolicy` objects with the configuration option `policyAuditMode` set to `true`.
-   The absence of this option may lead to incorrect operation of the control plane or loss of SSH access to all cluster nodes . The option can be removed after applying all `CiliumClusterwideNetworkPolicy` objects and verifying their functionality in Hubble UI.
-2. Network security policy rule:
+Follow these steps to use CiliumClusterwideNetworkPolicies:
+
+1. Apply the primary set of `CiliumClusterwideNetworkPolicy` objects. To do this, in the settings of the cni-cilium module add the configuration option [`policyAuditMode`](configuration.html#parameters-policyauditmode) with the value `true`.
+The option can be removed after applying all `CiliumClusterwideNetworkPolicy` objects and verifying their functionality in Hubble UI.
+
+1. Apply network security policy rule:
 
    ```yaml
    apiVersion: "cilium.io/v2"
@@ -79,20 +87,48 @@ When changing Cilium's operation mode (the [tunnelMode](configuration.html#param
 
 Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-proxy` is automatically disabled when the `cni-cilium` module is enabled.
 
+## Using selective load balancing algorithm for services
+
+In Deckhouse Kubernetes Platform, you can apply the following algorithms to load balance service traffic:
+
+* `Random`: Randomly select a backend for each connection. Easy to implement, but does not always provide even distribution.
+* `Maglev`: Uses consistent hashing to distribute traffic evenly, suitable for large-scale services.
+* `Least Connections`: Directs traffic to the backend with the lowest number of active connections, optimizing load for applications with long-lived connections.
+
+By default, the **Random** balancing algorithm is set for all services. However, Deckhouse allows you to override the algorithm for individual services. To use a selective balancing algorithm for a specific service, follow these steps:
+
+* Edit the `cni-cilium` module configuration in Deckhouse by enabling the [`extraLoadBalancerAlgorithmsEnabled`](configuration.html#parameters-extraloadbalanceralgorithmsenabled) parameter. This activates support for service annotations for selective algorithms.
+* In the service manifest, specify the `service.cilium.io/lb-algorithm` annotation with one of the values: `random`, `maglev`, or `least-conn`.
+
+{% alert level="warning" %}
+This mechanism requires Linux kernel version 5.15 or higher to work correctly.
+{% endalert %}
+
 ## Using Egress Gateway
 
-{% alert level="warning" %} The feature is available only in the Enterprise Edition {% endalert %}
+{% alert level="warning" %}The feature is available only in the following Deckhouse Kubernetes Platform editions: SE+, EE.{% endalert %}
+
+Egress Gateway in Deckhouse Kubernetes Platform can be used in one of two modes: [Basic](#basic-mode) and [Mode with Virtual IP](#mode-with-virtual-ip). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
 
 ### Basic mode
 
 Pre-configured IP addresses are used on egress nodes.
 
-<div data-presentation="../../presentations/cni-cilium/egressgateway_base_en.pdf"></div>
+<div data-presentation="presentations/egressgateway_base_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1Gp8b82WQQnYr6te_zBROKnKmBicdhtX4SXNXDh3lB6Q/ --->
 
 ### Virtual IP mode
 
 The ability to dynamically assign additional IP addresses to nodes is implemented.
 
-<div data-presentation="../../presentations/cni-cilium/egressgateway_virtualip_en.pdf"></div>
+<div data-presentation="presentations/egressgateway_virtualip_en.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1jdn39uDFSraQIXVdrREBsRv-Lp4kPidhx4C-gvv1DVk/ --->
+
+## Exporting data from Hubble
+
+Deckhouse Kubernetes Platform allows to configure data export from Hubble running inside Cilium agents using the cluster-scoped custom resource [`HubbleMonitoringConfig`](cr.html#hubblemonitoringconfig).
+To enable export, [create a HubbleMonitoringConfig resource](examples.html#hubblemonitoringconfig).
+
+{% alert level="warning" %}
+Creating or modifying the HubbleMonitoringConfig resource will **restart all Cilium agents** in the cluster.
+{% endalert %}

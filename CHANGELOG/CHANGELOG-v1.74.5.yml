@@ -1,0 +1,49 @@
+admission-policy-engine:
+  fixes:
+    - summary: Refactor constraint templates
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17882
+candi:
+  features:
+    - summary: Display lists of third-party (OSS) components in the modules documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17530
+cloud-provider-dvp:
+  features:
+    - summary: Add validation for VirtualMachineClass and boot images before VM creation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17755
+dhctl:
+  fixes:
+    - summary: >-
+        Improved reliability when connecting to dhctl servers by adding retry logic and better error
+        handling during startup
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17698
+docs:
+  fixes:
+    - summary: Corrections of typos and terms.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17790
+    - summary: Small imrovements of control-plane management docs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17709
+    - summary: Improve documentation for cluster network configuration
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17621
+ingress-nginx:
+  fixes:
+    - summary: The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs fixes are backported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17823
+      impact: The ingress nginx controllers' pods will be restated.
+    - summary: The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17795
+      impact: The ingress nginx controllers' pods will be restated.
+monitoring-kubernetes:
+  fixes:
+    - summary: >-
+        fix kube_persistentvolume_is_local recording rule when there are more than one
+        kube-state-metrics exporter in cluster
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17877
+prometheus:
+  fixes:
+    - summary: Make Grafana redirect ingress pass the annotations validation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17816
+user-authz:
+  fixes:
+    - summary: Updated logo on the authentication page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17540
+

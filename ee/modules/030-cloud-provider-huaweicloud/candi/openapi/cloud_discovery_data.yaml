@@ -1,0 +1,53 @@
+kind: HuaweiCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion, kind, layout, instances, zones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1]
+      kind:
+        type: string
+        enum: [HuaweiCloudDiscoveryData]
+      layout:
+        type: string
+        enum: [Standard, VpcPeering]
+      zones:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 1
+        uniqueItems: true
+      instances:
+        type: object
+        properties:
+          vpcSubnetId:
+            type: string
+          vpcIPv4SubnetId:
+            type: string
+          securityGroupId:
+            type: string
+      volumeTypes:
+        type: array
+        description: |
+          A list of volume types in the cloud.
+        items:
+          type: object
+          required: [name]
+          properties:
+            id:
+              type: string
+              description: |
+                The volume type ID.
+            name:
+              type: string
+              description: |
+                The volume type name.
+            isPublic:
+              type: boolean
+              description: |
+                The flag that indicates whether the volume type is public.

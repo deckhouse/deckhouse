@@ -1,0 +1,37 @@
+diff --git a/pkg/validation/sessions.go b/pkg/validation/sessions.go
+index 96ea6d4f..e35f2ab8 100644
+--- a/pkg/validation/sessions.go
++++ b/pkg/validation/sessions.go
+@@ -8,6 +8,7 @@ import (
+
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/apis/options"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/encryption"
++	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/logger"
+ 	"github.com/oauth2-proxy/oauth2-proxy/v7/pkg/sessions/redis"
+ )
+
+@@ -64,13 +65,20 @@ func validateRedisSessionStore(o *options.Options) []string {
+ func sendRedisConnectionTest(client redis.Client, key string, val string) []string {
+ 	msgs := []string{}
+ 	ctx := context.Background()
+-
+-	err := client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
++	var err error
++	for i := 0; i < 10; i++ {
++		logger.Printf("testing connection to redis...")
++		err = client.Set(ctx, key, []byte(val), time.Duration(60)*time.Second)
++		if err == nil {
++			break
++		}
++		time.Sleep(2 * time.Second)
++	}
+ 	if err != nil {
+ 		msgs = append(msgs, fmt.Sprintf("unable to set a redis initialization key: %v", err))
+ 	} else {
+-		gval, err := client.Get(ctx, key)
+-		if err != nil {
++		gval, errGet := client.Get(ctx, key)
++		if errGet != nil {
+ 			msgs = append(msgs,
+ 				fmt.Sprintf("unable to retrieve redis initialization key: %v", err))
+ 		}

@@ -15,19 +15,24 @@
 package config
 
 import (
-	"encoding/base64"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
 	"os"
-	"regexp"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -49,26 +54,36 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap       map[string]interface{} `json:"-"`
-	Images           imagesDigests          `json:"-"`
-	Registry         RegistryData           `json:"-"`
-	UUID             string                 `json:"clusterUUID,omitempty"`
-	InstallerVersion string                 `json:"-"`
-	ResourcesYAML    string                 `json:"-"`
+	VersionMap                map[string]interface{} `json:"-"`
+	Images                    imagesDigests          `json:"-"`
+	Registry                  registry_config.Config `json:"-"`
+	UUID                      string                 `json:"clusterUUID,omitempty"`
+	InstallerVersion          string                 `json:"-"`
+	ResourcesYAML             string                 `json:"-"`
+	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
+
+	DownloadRootDir  string `json:"-"`
+	DownloadCacheDir string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
 
-type RegistryData struct {
-	Address   string `json:"address"`
-	Path      string `json:"path"`
-	Scheme    string `json:"scheme"`
-	CA        string `json:"ca"`
-	DockerCfg string `json:"dockerCfg"`
+func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
+	preparator := preparatorProvider(m.ProviderName)
+
+	if err := preparator.Validate(ctx, m); err != nil {
+		return nil, err
+	}
+
+	if err := preparator.Prepare(ctx, m); err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
-func (m *MetaConfig) Prepare() (*MetaConfig, error) {
+func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
@@ -85,27 +100,15 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
+	}
 
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-
-		parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-		m.Registry.Address = parts[0]
-		if len(parts) == 2 {
-			m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-		}
-
-		if err := validateRegistryDockerCfg(m.DeckhouseConfig.RegistryDockerCfg, m.Registry.Address); err != nil {
-			return nil, err
-		}
-		m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-		m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-		m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
+	// Prepare registry config
+	if err := m.prepareRegistry(); err != nil {
+		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
-		return m, nil
+		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 	}
 
 	if err := json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout); err != nil {
@@ -126,39 +129,6 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
-	if cloud.Provider == "Yandex" {
-		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
-			return nil, err
-		}
-
-		var masterNodeGroup YandexMasterNodeGroupSpec
-		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
-		}
-
-		if masterNodeGroup.Replicas > 0 &&
-			len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
-			masterNodeGroup.Replicas > len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
-			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
-		}
-
-		nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
-		if ok {
-			var yandexNodeGroups []YandexNodeGroupSpec
-			if err := json.Unmarshal(nodeGroups, &yandexNodeGroups); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal node groups from provider cluster configuration: %v", err)
-			}
-
-			for _, nodeGroup := range yandexNodeGroups {
-				if nodeGroup.Replicas > 0 &&
-					len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
-					nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
-					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
-				}
-			}
-		}
-	}
-
 	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
@@ -167,61 +137,131 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 	}
 
-	m.Registry.DockerCfg = m.DeckhouseConfig.RegistryDockerCfg
-	m.Registry.Scheme = strings.ToLower(m.DeckhouseConfig.RegistryScheme)
-	m.Registry.CA = m.DeckhouseConfig.RegistryCA
-
-	parts := strings.SplitN(m.DeckhouseConfig.ImagesRepo, "/", 2)
-	m.Registry.Address = parts[0]
-	if len(parts) == 2 {
-		m.Registry.Path = fmt.Sprintf("/%s", parts[1])
-	}
-
-	return m, nil
+	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 }
 
-func validateRegistryDockerCfg(cfg string, repo string) error {
-	if cfg == "" {
-		return fmt.Errorf("can't be empty")
-	}
-
-	regcrd, err := base64.StdEncoding.DecodeString(cfg)
-	if err != nil {
-		return fmt.Errorf("unable to decode registryDockerCfg: %w", err)
-	}
-
-	var creds struct {
-		Auths map[string]interface{} `json:"auths"`
-	}
-
-	if err = json.Unmarshal(regcrd, &creds); err != nil {
-		return fmt.Errorf("unable to unmarshal docker credentials: %w", err)
-	}
-
-	// The regexp match string with this pattern:
-	// ^([a-z]|\d)+ - string starts with a [a-z] letter or a number
-	// (\.?|\-?) - next symbol might be '.' or '-' and repeated zero or one times
-	// (([a-z]|\d)+(\.|\-|))* - middle part of string might have [a-z] letters, numbers, '.' or ':',
-	// and moreover '.' or ':' symbols can't be doubled or goes next to each other
-	// ([a-z]|\d+|([a-z]|\d)\:\d+)$ - string might be ended by [a-z] letter or number (if we have single host) or
-	// [a-z] letter or number with ':' symbol, and moreover there might be only numbers after ':' symbol
-	regx, err := regexp.Compile(`^([a-z]|\d)+(\.?|\-?)(([a-z]|\d)+(\.|\-|))*([a-z]|\d+|([a-z]|\d)\:\d+)$`)
-	if err != nil {
-		return fmt.Errorf("unable to compile regexp by pattern: %w", err)
-	}
-
-	for k := range creds.Auths {
-		if !regx.MatchString(k) {
-			return fmt.Errorf("invalid registryDockerCfg. Your auths host \"%s\" should be similar to \"your.private.registry.example.com\"", k)
+func (m *MetaConfig) prepareRegistry() error {
+	var defaultCRI registry_const.CRIType
+	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
+		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
+			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
 		}
 	}
 
-	for k := range creds.Auths {
-		if k == repo {
-			return nil
+	criSupported := registry_const.IsCRISupported(defaultCRI)
+	initConfig := m.DeckhouseConfig.registryInitConfig()
+
+	deckhouseSettings, err := m.registryDeckhouseSettings()
+	if err != nil {
+		return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+	}
+
+	switch {
+	// Check configuration conflict
+	case initConfig != nil && deckhouseSettings != nil:
+		return fmt.Errorf(
+			"duplicate registry configuration detected: " +
+				"registry is configured in both 'initConfiguration.deckhouse' " +
+				"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
+				"Please specify registry settings in only one location.",
+		)
+
+	case deckhouseSettings != nil:
+		// Check CRI
+		if !criSupported {
+			return fmt.Errorf(
+				"registry module cannot be started with defaultCRI '%s'. "+
+					"Please either configure registry in 'initConfiguration.deckhouse', "+
+					"or use a supported defaultCRI type with the existing configuration in "+
+					"'moduleConfig/deckhouse.spec.settings.registry'. Supported CRI types: %v",
+				defaultCRI,
+				registry_const.SupportedCRI,
+			)
+		}
+
+		// Check Local and Proxy modes
+		switch deckhouseSettings.Mode {
+		case registry_const.ModeLocal:
+			return fmt.Errorf(
+				"bootstrap is not supported with registry mode '%s'. "+
+					"Please use one of the supported bootstrap modes: %v",
+				deckhouseSettings.Mode,
+				[]registry_const.ModeType{
+					registry_const.ModeUnmanaged,
+					registry_const.ModeDirect,
+					registry_const.ModeProxy,
+				},
+			)
+		case registry_const.ModeProxy:
+			if !m.IsStatic() {
+				return fmt.Errorf(
+					"bootstrap with registry mode '%s' is supported only in static cluster. "+
+						"Please use one of the supported bootstrap modes for non-static cluster: %v",
+					deckhouseSettings.Mode,
+					[]registry_const.ModeType{
+						registry_const.ModeUnmanaged,
+						registry_const.ModeDirect,
+					},
+				)
+			}
+		}
+
+		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
+			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+		}
+		return nil
+
+	case initConfig != nil:
+		if err := m.Registry.UseInitConfig(*initConfig); err != nil {
+			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+		}
+		return nil
+
+	default:
+		if err := m.Registry.UseDefault(criSupported); err != nil {
+			return fmt.Errorf("get default registry settings: %w", err)
+		}
+		return nil
+	}
+}
+
+func (m *MetaConfig) registryDeckhouseSettings() (*registry_moduleconfig.DeckhouseSettings, error) {
+	var mcDeckhouse *ModuleConfig
+
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == "deckhouse" {
+			mcDeckhouse = mc
+			break
 		}
 	}
-	return fmt.Errorf("incorrect registryDockerCfg. It must contain auths host {\"auths\": { \"%s\": {}}}", repo)
+
+	if mcDeckhouse == nil {
+		return nil, nil
+	}
+
+	settings, ok := mcDeckhouse.Spec.Settings["registry"]
+	if !ok {
+		return nil, nil
+	}
+
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		return nil, fmt.Errorf("marshal deckhouse settings: %w", err)
+	}
+
+	var ret registry_moduleconfig.DeckhouseSettings
+	if err := json.Unmarshal(raw, &ret); err != nil {
+		return nil, fmt.Errorf("unmarshal deckhouse settings: %w", err)
+	}
+
+	return &ret, nil
+}
+
+func (m *MetaConfig) GetFullUUID() (string, error) {
+	if m.UUID == "" {
+		return "", fmt.Errorf("Unable to get full UUID for provider '%s/%s'. It is empty", m.ClusterPrefix, m.ProviderName)
+	}
+	return m.UUID, nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -267,7 +307,7 @@ func (m *MetaConfig) ExtractMasterNodeGroupStaticSettings() map[string]interface
 	return static
 }
 
-// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by Terraform
+// NodeGroupManifest prepares NodeGroup custom resource for static nodes, which were ordered by infrastructure utility
 func (m *MetaConfig) NodeGroupManifest(terraNodeGroup TerraNodeGroupSpec) map[string]interface{} {
 	if terraNodeGroup.NodeTemplate == nil {
 		terraNodeGroup.NodeTemplate = make(map[string]interface{})
@@ -352,12 +392,11 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.ParseRegistryData()
-	if err != nil {
-		return nil, err
-	}
-
-	result["registry"] = registryData
+	// Registry
+	result["registry"] = m.Registry.
+		Manifest().
+		KubeadmContext().
+		ToMap()
 
 	images := m.Images
 
@@ -365,7 +404,7 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	return result, nil
 }
 
-func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map[string]interface{}, error) {
+func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -405,11 +444,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.ParseRegistryData()
-	if err != nil {
-		return nil, err
-	}
-
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		configForBashibleBundleTemplate[key] = value
@@ -421,7 +455,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 		configForBashibleBundleTemplate["provider"] = m.ProviderName
 	}
 
-	configForBashibleBundleTemplate["bundle"] = bundle
 	configForBashibleBundleTemplate["cri"] = data["defaultCRI"]
 	configForBashibleBundleTemplate["kubernetesVersion"] = data["kubernetesVersion"]
 	configForBashibleBundleTemplate["nodeGroup"] = nodeGroup
@@ -436,7 +469,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
-	configForBashibleBundleTemplate["registry"] = registryData
+
+	// Registry
+	registryContext, err := m.Registry.
+		Manifest().
+		BashibleContext(registry_config.GeneratePKI)
+	if err != nil {
+		return nil, fmt.Errorf("create registry bashible context: %s", err)
+	}
+	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
@@ -445,7 +486,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(bundle, nodeIP string) (map
 	return configForBashibleBundleTemplate, nil
 }
 
-// NodeGroupConfig returns values for terraform to order master node or static node
+// NodeGroupConfig returns values for infrastructure utility to order master node or static node
 func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudConfig string) []byte {
 	result := map[string]interface{}{
 		"clusterConfiguration":         m.ClusterConfig,
@@ -460,6 +501,10 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 
 	if len(m.UUID) > 0 {
 		result["clusterUUID"] = m.UUID
+	}
+
+	if len(m.ResourceManagementTimeout) > 0 {
+		result["resourceManagementTimeout"] = m.ResourceManagementTimeout
 	}
 
 	data, _ := json.Marshal(result)
@@ -505,7 +550,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
-	out.Registry = m.Registry
+	out.Registry = *m.Registry.DeepCopy()
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType
@@ -531,6 +576,10 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.UUID = m.UUID
 	}
 
+	if m.ResourceManagementTimeout != "" {
+		out.ResourceManagementTimeout = m.ResourceManagementTimeout
+	}
+
 	return out
 }
 
@@ -552,27 +601,10 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	return nil
 }
 
-func (m *MetaConfig) ParseRegistryData() (map[string]interface{}, error) {
-	log.DebugF("registry data: %v\n", m.Registry)
-
-	ret := m.Registry.ConvertToMap()
-
-	if m.Registry.DockerCfg != "" {
-		auth, err := m.Registry.Auth()
-		if err != nil {
-			return nil, err
-		}
-
-		ret["auth"] = auth
-	}
-
-	return ret, nil
-}
-
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	type proxy struct {
-		HttpProxy  string   `json:"httpProxy" yaml:"httpProxy"`
-		HttpsProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
+		HTTPProxy  string   `json:"httpProxy" yaml:"httpProxy"`
+		HTTPSProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
 		NoProxy    []string `json:"noProxy" yaml:"noProxy"`
 	}
 
@@ -608,28 +640,23 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
 
 	ret := make(map[string]interface{})
-	if p.HttpProxy != "" {
-		ret["httpProxy"] = p.HttpProxy
+	if p.HTTPProxy != "" {
+		ret["httpProxy"] = p.HTTPProxy
 	}
-	if p.HttpsProxy != "" {
-		ret["httpsProxy"] = p.HttpsProxy
+	if p.HTTPSProxy != "" {
+		ret["httpsProxy"] = p.HTTPSProxy
 	}
 	ret["noProxy"] = p.NoProxy
 
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesDigests(filename string) error {
+func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 	var imagesDigests imagesDigests
 
-	imagesDigestsJSONFile, err := os.ReadFile(filename)
+	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
-		return fmt.Errorf("%s file load: %v", filename, err)
-	}
-
-	err = yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
-	if err != nil {
-		return fmt.Errorf("%s file unmarshal: %v", filename, err)
+		return fmt.Errorf("unmarshal: %v", err)
 	}
 
 	m.Images = imagesDigests
@@ -640,7 +667,13 @@ func (m *MetaConfig) LoadImagesDigests(filename string) error {
 func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
-		return err
+		// TODO param instead of hardcode path
+		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
+		rawFile, err = os.ReadFile(versionFilePath)
+		if err != nil {
+			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
+		}
+
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))
@@ -648,54 +681,18 @@ func (m *MetaConfig) LoadInstallerVersion() error {
 	return nil
 }
 
-func (r *RegistryData) ConvertToMap() map[string]interface{} {
-	return map[string]interface{}{
-		"address":   r.Address,
-		"path":      r.Path,
-		"scheme":    r.Scheme,
-		"ca":        r.CA,
-		"dockerCfg": r.DockerCfg,
-	}
-}
-
-func (r *RegistryData) Auth() (string, error) {
-	type dockerCfg struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"auths"`
+func (m *MetaConfig) GetReplicasByNodeGroupName(nodeGroupName string) int {
+	if nodeGroupName == global.MasterNodeGroupName {
+		return m.MasterNodeGroupSpec.Replicas
 	}
 
-	var (
-		registryAuth string
-		dc           dockerCfg
-	)
-
-	bytes, err := base64.StdEncoding.DecodeString(r.DockerCfg)
-	if err != nil {
-		return "", fmt.Errorf("cannot base64 decode docker cfg: %v", err)
-	}
-
-	log.DebugF("parse registry data: dockerCfg after base64 decode = %s\n", bytes)
-	err = json.Unmarshal(bytes, &dc)
-	if err != nil {
-		return "", fmt.Errorf("cannot unmarshal docker cfg: %v", err)
-	}
-
-	if registry, ok := dc.Auths[r.Address]; ok {
-		switch {
-		case registry.Auth != "":
-			registryAuth = registry.Auth
-		case registry.Username != "" && registry.Password != "":
-			auth := fmt.Sprintf("%s:%s", registry.Username, registry.Password)
-			registryAuth = base64.StdEncoding.EncodeToString([]byte(auth))
-		default:
-			log.DebugF("auth or username with password not found in dockerCfg %s for %s. Use empty string", bytes, r.Address)
+	for _, group := range m.GetTerraNodeGroups() {
+		if group.Name == nodeGroupName {
+			return group.Replicas
 		}
 	}
 
-	return registryAuth, nil
+	return 0
 }
 
 func getDNSAddress(serviceCIDR string) string {

@@ -1,0 +1,72 @@
+diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
+index db0bccbed3..e79553a5a9 100644
+--- a/pkg/provider/azure.go
++++ b/pkg/provider/azure.go
+@@ -191,6 +191,9 @@ type Config struct {
+ 	// Use instance metadata service where possible
+ 	UseInstanceMetadata bool `json:"useInstanceMetadata,omitempty" yaml:"useInstanceMetadata,omitempty"`
+ 
++	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
++	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
++
+ 	// Backoff exponent
+ 	CloudProviderBackoffExponent float64 `json:"cloudProviderBackoffExponent,omitempty" yaml:"cloudProviderBackoffExponent,omitempty"`
+ 	// Backoff jitter
+@@ -608,7 +611,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *Config,
+ 	az.Config = *config
+ 	az.Environment = *env
+ 	az.ResourceRequestBackoff = resourceRequestBackoff
+-	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer)
++	az.Metadata, err = NewInstanceMetadataService(consts.ImdsServer, config.DisableAPICallCache)
+ 	if err != nil {
+ 		return err
+ 	}
+diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
+index ad198e6740..a4f94e941b 100644
+--- a/pkg/provider/azure_instance_metadata.go
++++ b/pkg/provider/azure_instance_metadata.go
+@@ -109,12 +109,12 @@ type InstanceMetadataService struct {
+ }
+ 
+ // NewInstanceMetadataService creates an instance of the InstanceMetadataService accessor object.
+-func NewInstanceMetadataService(imdsServer string) (*InstanceMetadataService, error) {
++func NewInstanceMetadataService(imdsServer string, disableAPICallCache bool) (*InstanceMetadataService, error) {
+ 	ims := &InstanceMetadataService{
+ 		imdsServer: imdsServer,
+ 	}
+ 
+-	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, false)
++	imsCache, err := azcache.NewTimedCache(consts.MetadataCacheTTL, ims.getMetadata, disableAPICallCache)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
+index 2ef66bd3dc..64bcc2355e 100644
+--- a/pkg/provider/azure_vmss.go
++++ b/pkg/provider/azure_vmss.go
+@@ -446,6 +446,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
+ 	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
+ 	if err != nil {
+ 		klog.Errorf("Failed to check VM management type: %v", err)
++
++		if vmManagementType == ManagedByUnknownVMSet {
++			klog.V(2).Infof("Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex", providerID)
++
++			nodeName, err2 := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				klog.Warningf("Failed to get node name for provider ID %q from availability set: %v", providerID, err2)
++			} else {
++				return nodeName, nil
++			}
++
++			nodeName, err2 = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				klog.Warningf("Failed to get node name for provider ID %q from vmss flex: %v", providerID, err2)
++			} else {
++				return nodeName, nil
++			}
++		}
++
+ 		return "", err
+ 	}
+ 

@@ -1,0 +1,24 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+start
+
+if (Модуль\nдоступен в редакции?) then (Нет)
+  :Модуль недоступен;
+  detach
+else (Да)
+  if (Модуль включён\nв наборе модулей?) then (Да)
+    :Автовключение модуля;
+    detach
+  else (Нет)
+    :Требуется\nвключение вручную;
+    detach
+  endif
+endif
+
+@enduml

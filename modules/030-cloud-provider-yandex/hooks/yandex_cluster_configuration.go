@@ -23,8 +23,14 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
+
+func preparatorProvider(_ string) config.MetaConfigPreparator {
+	// prefix does not provide here
+	return yandex.NewMetaConfigPreparator(false)
+}
 
 var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error {
 	if !secretFound {
@@ -34,4 +40,4 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	input.Values.Set("cloudProviderYandex.internal.providerDiscoveryData", providerDiscoveryData.Object)
 
 	return nil
-})
+}, cluster_configuration.NewConfig(preparatorProvider))

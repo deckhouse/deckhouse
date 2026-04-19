@@ -72,7 +72,7 @@ func (pt PostgreSQLProbeTarget) GetID() string {
 	sb.WriteString("#")
 	sb.WriteString(fmt.Sprintf("%d", pt.targetPort))
 	sb.WriteString("#")
-	sb.WriteString(fmt.Sprintf("%s", pt.dbName))
+	sb.WriteString(pt.dbName)
 	return sb.String()
 }
 
@@ -133,14 +133,14 @@ func getNativeTLSMode(tlsMode string) string {
 	case "VerifyAll":
 		return "verify-full"
 	case "Disabled":
-		return "disabled"
+		return "disable"
 	default:
 		return "require"
 	}
 }
 
 type PostgreSQLCredentials struct {
-	TlsMode    string
+	TLSMode    string
 	User       string
 	Password   string
 	ClientCert string

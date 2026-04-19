@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -25,6 +26,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
@@ -104,12 +108,12 @@ func filterMachineDeploymentForChecksumCalculation(obj *unstructured.Unstructure
 	return result, nil
 }
 
-func saveMachineClassChecksum(input *go_hook.HookInput) error {
+func saveMachineClassChecksum(_ context.Context, input *go_hook.HookInput) error {
 	if !input.Values.Exists(machineDeploymentsInternalValuesPath) {
 		input.Values.Set(machineDeploymentsInternalValuesPath, map[string]interface{}{})
 	}
 
-	rawMDs := input.Snapshots["machine_deployments"]
+	rawMDs := input.Snapshots.Get("machine_deployments")
 	if len(rawMDs) == 0 {
 		return nil
 	}
@@ -118,10 +122,8 @@ func saveMachineClassChecksum(input *go_hook.HookInput) error {
 	if err != nil {
 		return fmt.Errorf("cannot parse nodeGroup values: %v", err)
 	}
-
-	for _, mdRaw := range rawMDs {
-		md, ok := mdRaw.(machineDeployment)
-		if !ok {
+	for md, err := range sdkobjectpatch.SnapshotIter[machineDeployment](rawMDs) {
+		if err != nil {
 			return fmt.Errorf("cannot parse machineDeployment filter result")
 		}
 
@@ -143,10 +145,10 @@ func saveMachineClassChecksum(input *go_hook.HookInput) error {
 type nodeGroupValue struct {
 	Name string        `json:"name"`
 	Type ngv1.NodeType `json:"nodeType"`
-	Raw  interface{}
+	Raw  interface{}   `json:"-"`
 }
 
-func parseNodeGroupValues(values go_hook.PatchableValuesCollector) ([]*nodeGroupValue, error) {
+func parseNodeGroupValues(values sdkpkg.PatchableValuesCollector) ([]*nodeGroupValue, error) {
 	const nodeGroupsPath = "nodeManager.internal.nodeGroups"
 	var ng []*nodeGroupValue
 

@@ -7,13 +7,13 @@ properties:
       Посмотреть список location'ов и увидеть сгенерированный пароль можно командой:
 
       ```shell
-      kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values basic-auth -o json | jq '.basicAuth.internal.locations'
+      d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values basic-auth -o json | jq '.basicAuth.internal.locations'
       ```
 
       Для генерации нового пароля нужно удалить секрет:
 
       ```shell
-      kubectl -n kube-basic-auth delete secret/htpasswd
+      d8 k -n kube-basic-auth delete secret/htpasswd
       ```
 
     items:
@@ -29,7 +29,7 @@ properties:
     description: |
       Ручное управление режимом отказоустойчивости.
 
-      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](../../deckhouse-configure-global.html#параметры) про режим отказоустойчивости.
+      По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
 
   nodeSelector:
     description: |

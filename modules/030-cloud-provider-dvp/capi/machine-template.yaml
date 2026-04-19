@@ -1,0 +1,52 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: DeckhouseMachineTemplate
+metadata:
+  annotations:
+    checksum/instance-class: {{ .instanceClassChecksum | quote }}
+    # todo keep machine instance template after rollout
+    # https://github.com/kubernetes-sigs/cluster-api/issues/6588#issuecomment-1925433449
+    helm.sh/resource-policy: keep
+  namespace: d8-cloud-instance-manager
+  name: {{ .templateName | quote }}
+  {{- include "helm_lib_module_labels" (list . (dict "node-group" .nodeGroup.name)) | nindent 2 }}
+spec:
+  template:
+    spec:
+      {{- if .nodeGroup.instanceClass.virtualMachine.virtualMachineClassName }}
+      vmClassName: {{ .nodeGroup.instanceClass.virtualMachine.virtualMachineClassName }}
+      {{- else }}
+      vmClassName: generic
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.rootDisk.storageClass }}
+      rootDiskStorageClass: {{ .nodeGroup.instanceClass.rootDisk.storageClass | quote }}
+      {{- end }}
+      cpu:
+        {{- if .nodeGroup.instanceClass.virtualMachine.cpu.cores }}
+        cores: {{ .nodeGroup.instanceClass.virtualMachine.cpu.cores }}
+        {{- end }}
+        {{- if .nodeGroup.instanceClass.virtualMachine.cpu.coreFraction }}
+        cpuFraction: {{ .nodeGroup.instanceClass.virtualMachine.cpu.coreFraction }}
+        {{- end }}
+      {{- if .nodeGroup.instanceClass.virtualMachine.memory.size }}
+      memory: {{ .nodeGroup.instanceClass.virtualMachine.memory.size }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.rootDisk.size }}
+      rootDiskSize: {{ .nodeGroup.instanceClass.rootDisk.size | quote }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.additionalDisks }}
+      additionalDisks:
+      {{- range $disk := .nodeGroup.instanceClass.additionalDisks }}
+        - size: {{ $disk.size | quote }}
+          storageClass: {{ $disk.storageClass | quote }}
+      {{- end }}
+      {{- end }}
+      {{- if .nodeGroup.instanceClass.virtualMachine.bootloader }}
+      bootloader: {{ .nodeGroup.instanceClass.virtualMachine.bootloader | quote }}
+      {{- end }}
+      bootDiskImageRef:
+        {{- if .nodeGroup.instanceClass.rootDisk.image.kind }}
+        kind: {{ .nodeGroup.instanceClass.rootDisk.image.kind | quote }}
+        {{- end }}
+        {{- if .nodeGroup.instanceClass.rootDisk.image.name }}
+        name: {{ .nodeGroup.instanceClass.rootDisk.image.name | quote }}
+        {{- end }}

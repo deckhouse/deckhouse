@@ -27,15 +27,41 @@ import (
 
 func TestKubernetesVersionRequirement(t *testing.T) {
 	t.Run("complies with the requirements", func(t *testing.T) {
-		requirements.SaveValue(cniConfigurationSettledKey, "")
-		ok, err := requirements.CheckRequirement(cniConfigurationSettledRequirementsKey, "")
+		requirements.SaveValue("cniConfigurationSettled", "")
+		ok, err := requirements.CheckRequirement("cniConfigurationSettled", "")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("fail: Misconfigured", func(t *testing.T) {
-		requirements.SaveValue(cniConfigurationSettledKey, "false")
-		ok, err := requirements.CheckRequirement(cniConfigurationSettledRequirementsKey, "")
+		requirements.SaveValue("cniConfigurationSettled", "false")
+		ok, err := requirements.CheckRequirement("cniConfigurationSettled", "")
+		assert.False(t, ok)
+		require.Error(t, err)
+	})
+}
+
+func TestLinuxKernelVersionRequirement(t *testing.T) {
+	t.Run("SUCCESS: The version is above the required ", func(t *testing.T) {
+		requirements.SaveValue("currentMinimalLinuxKernelVersion", "5.10.0-90-generic")
+
+		ok, err := requirements.CheckRequirement("nodesMinimalLinuxKernelVersion", "5.8.0")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("SUCCESS: The version is equal the required ", func(t *testing.T) {
+		requirements.SaveValue("currentMinimalLinuxKernelVersion", "5.8.0-90-generic")
+
+		ok, err := requirements.CheckRequirement("nodesMinimalLinuxKernelVersion", "5.8.0")
+		assert.True(t, ok)
+		require.NoError(t, err)
+	})
+
+	t.Run("FAIL: The version is below the required ", func(t *testing.T) {
+		requirements.SaveValue("currentMinimalLinuxKernelVersion", "5.2.0-90-generic")
+
+		ok, err := requirements.CheckRequirement("nodesMinimalLinuxKernelVersion", "5.8.0")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

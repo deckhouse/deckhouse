@@ -1,8 +1,8 @@
 spec:
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
+      served: false
+      storage: false
       schema:
         openAPIV3Schema:
           type: object
@@ -28,18 +28,21 @@ spec:
                   description: "Когда модуль был обновлен в последний раз."
                 imageDigest:
                   type: string
-                  description: "Контрольная сумма образа контейнера."
+                  description: Контрольная сумма образа контейнера.
                 weight:
                   type: integer
-                  description: "_Вес_ (приоритет) модуля."
+                  description: Вес (приоритет) модуля.
     - name: v1alpha2
       served: true
-      storage: false
+      storage: true
       schema:
         openAPIV3Schema:
           type: object
           description: |
             Определяет конфигурацию ресурса для скачивания конкретных версий модулей Deckhouse.
+
+            > **Важно**. Ресурс предназначен только для использования в средах разработки и отладки.
+            > Его применение в production-кластерах не рекомендуется. Поддержка ресурса может быть исключена в следующих версиях Deckhouse Kubernetes Platform.
           required:
             - spec
           properties:
@@ -49,6 +52,8 @@ spec:
                   description: Тег образа контейнера модуля, который будет скачан и установлен.
                 scanInterval:
                   description: Интервал сканирования для проверки изменения образа контейнера. Если образ изменился, модуль будет обновлен.
+                rollback:
+                  description: Определение необходимости восстановления модуля из релиза, если объект ModulePullOverride удалён.
             status:
               properties:
                 message:
@@ -61,4 +66,4 @@ spec:
                   description: Контрольная сумма образа контейнера.
                 weight:
                   type: integer
-                  description: "_Вес_ (приоритет) модуля."
+                  description: Вес (приоритет) модуля.

@@ -29,9 +29,7 @@ func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 	ctx := context.Background()
 
 	suite.Run("No new deckhouse image", func() {
-		dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (string, error) {
-			return "sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1", nil
-		})
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:d57f01a88e54f863ff5365c989cb4e2654398fa274d46389e0af749090b862d1", nil)
 
 		suite.setupController("dev-no-new-deckhouse-image.yaml", initValues, embeddedMUP)
 		leaderPod, err := suite.ctr.getDeckhouseLatestPod(ctx)
@@ -42,9 +40,7 @@ func (suite *ControllerTestSuite) TestUpdateByImageHash() {
 	})
 
 	suite.Run("Have new deckhouse image", func() {
-		dependency.TestDC.CRClient.DigestMock.Set(func(_ string) (string, error) {
-			return "sha256:123456", nil
-		})
+		dependency.TestDC.CRClient.DigestMock.Return("sha256:123456", nil)
 
 		ds := &helpers.DeckhouseSettings{}
 		ds.Update.Mode = embeddedMUP.Update.Mode

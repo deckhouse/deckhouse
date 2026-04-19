@@ -13,7 +13,7 @@ import (
 )
 
 var _ = Describe("Global hooks :: set custom logo for dex", func() {
-	f := HookExecutionConfigInit(`{"global": {}, "userAuthn": {"internal": {"customLogo": {}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"clusterIsBootstrapped": true}, "userAuthn": {"internal": {"customLogo": {}}}}`, `{}`)
 	Context("ConfigMap with logo in d8-system does not exist", func() {
 		BeforeEach(func() {
 			f.KubeStateSet(``)

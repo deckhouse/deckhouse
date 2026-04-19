@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/go-openapi/spec"
@@ -41,25 +40,17 @@ const (
 )
 
 var cloudProviderToProviderKind = map[string]string{
-	"OpenStack": "OpenStackClusterConfiguration",
-	"AWS":       "AWSClusterConfiguration",
-	"GCP":       "GCPClusterConfiguration",
-	"Yandex":    "YandexClusterConfiguration",
-	"vSphere":   "VsphereClusterConfiguration",
-	"Azure":     "AzureClusterConfiguration",
-	"VCD":       "VCDClusterConfiguration",
-	"Zvirt":     "ZvirtClusterConfiguration",
-}
-
-var cloudProviderSpecificClusterPrefix = map[string]interface{}{
-	"OpenStack": regexp.MustCompile(".+"),
-	"AWS":       regexp.MustCompile(".+"),
-	"GCP":       regexp.MustCompile(".+"),
-	"Yandex":    regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$"),
-	"vSphere":   regexp.MustCompile(".+"),
-	"Azure":     regexp.MustCompile(".+"),
-	"VCD":       regexp.MustCompile(".+"),
-	"Zvirt":     regexp.MustCompile(".+"),
+	"OpenStack":   "OpenStackClusterConfiguration",
+	"AWS":         "AWSClusterConfiguration",
+	"GCP":         "GCPClusterConfiguration",
+	"Yandex":      "YandexClusterConfiguration",
+	"vSphere":     "VsphereClusterConfiguration",
+	"Azure":       "AzureClusterConfiguration",
+	"VCD":         "VCDClusterConfiguration",
+	"Zvirt":       "ZvirtClusterConfiguration",
+	"Huaweicloud": "HuaweiCloudClusterConfiguration",
+	"Dynamix":     "DynamixClusterConfiguration",
+	"DVP":         "DVPClusterConfiguration",
 }
 
 type ClusterConfig struct {
@@ -296,6 +287,9 @@ func ValidateClusterConfiguration(
 // "AzureClusterConfiguration",
 // "VCDClusterConfiguration",
 // "ZvirtClusterConfiguration",
+// "HuaweiCloudClusterConfiguration",
+// "DynamixClusterConfiguration",
+// "DVPClusterConfiguration",
 // ]
 func ValidateProviderSpecificClusterConfiguration(
 	providerSpecificClusterConfiguration string,
@@ -751,17 +745,4 @@ func (i *namedIndex) String() string {
 		return fmt.Sprintf("%s, %s", i.Kind, i.Version)
 	}
 	return fmt.Sprintf("%s, %s, metadata.name: %q", i.Kind, i.Version, i.Metadata.Name)
-}
-
-func ValidateClusterConfigurationPrefix(prefix string, provider string) error {
-	regex, ok := cloudProviderSpecificClusterPrefix[provider]
-	if !ok {
-		return nil
-	}
-
-	if !regex.(*regexp.Regexp).MatchString(prefix) {
-		return fmt.Errorf("invalid prefix '%v' for provider '%v', prefix must match the pattern: %v", prefix, provider, regex)
-	}
-
-	return nil
 }

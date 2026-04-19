@@ -34,6 +34,21 @@ bb-rp-curl() {
   fi
 }
 
+bb-rp-ctr() {
+  if ! command -v ctr >/dev/null; then
+    bb-log-error "ctr is not installed"
+    exit 1
+  fi
+  ctr --namespace=k8s.io "$@" >/dev/null
+}
+
+bb-rp-ctrd-status() {
+  if ! bb-rp-ctr info >/dev/null; then
+    bb-log-error "containerd is not runnig"
+    exit 1
+  fi
+}
+
 # check if package installed
 # bb-rp-is-installed? package digest
 bb-rp-is-installed?() {
@@ -54,6 +69,18 @@ bb-rp-is-fetched?() {
   bb-log-deprecated "bb-rp-is-fetched?"
   if [[ -d "${BB_RP_FETCHED_PACKAGES_STORE}/${1}" ]]; then
     if [[ -f "${BB_RP_FETCHED_PACKAGES_STORE}/${1}/${2}.tar.gz" ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+# Check if img fetched
+# bb-rp-is-fetched-img? package digest
+bb-rp-is-fetched-img?() {
+  bb-log-deprecated "bb-rp-is-fetched-img?"
+  if [[ -d "${BB_RP_FETCHED_PACKAGES_STORE}/${1}" ]]; then
+    if [[ -f "${BB_RP_FETCHED_PACKAGES_STORE}/${1}/${2}-img.tar" ]]; then
       return 0
     fi
   fi
@@ -132,6 +159,72 @@ bb-rp-fetch-blobs() {
   bb-rp-curl -fsSLH "Authorization: Bearer ${TOKEN}" "${URLs[@]}"
 }
 
+# Pull and export container images
+# bb-rp-fetch-imgs map[digest]package_name
+#
+# This function uses the FETCH_PACKAGES_MAP variable from the scope of the bb-rp-fetch()
+# due to the limitations of using `declare -n` in CentOS 7 (bash 4.2, and 4.3 is needed).
+# DO NOT CALL THIS FUNCTION DIRECTLY!
+bb-rp-fetch-imgs() {
+  bb-log-deprecated "bb-rp-fetch-imgs"
+
+  local DIGEST
+  for DIGEST in "${!FETCH_PACKAGES_MAP[@]}"; do
+    local PACKAGE="${FETCH_PACKAGES_MAP[$DIGEST]}"
+    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+    local IMAGE_TAR="${PACKAGE_DIR}/${DIGEST}-img.tar"
+    local IMAGE_REF="${REGISTRY_ADDRESS}${REGISTRY_PATH}@${DIGEST}"
+
+    # Pull
+    trap 'bb-log-error "Failed to pull image: ${IMAGE_REF}"' ERR
+    local CTR_PULL_ARGS=(--hosts-dir "/etc/containerd/registry.d")
+    [[ "$SCHEME" == "http" ]] && CTR_PULL_ARGS+=(--plain-http)
+    bb-rp-ctr images pull "${CTR_PULL_ARGS[@]}" "${IMAGE_REF}"
+    trap - ERR
+
+    mkdir -p "${PACKAGE_DIR}"
+
+    # Export
+    trap '
+      rm -rf "${IMAGE_TAR}"
+      bb-log-error "Failed to export image: ${IMAGE_REF}"
+    ' ERR
+    bb-rp-ctr images export "${IMAGE_TAR}" "${IMAGE_REF}"
+    trap - ERR
+  done
+}
+
+# Unpack images and extract last blob layer
+# bb-rp-unpack-imgs map[digest]package_name
+#
+# This function uses the PACKAGES_MAP variable from the scope of the bb-rp-fetch()
+# due to the limitations of using `declare -n` in CentOS 7 (bash 4.2, and 4.3 is needed).
+# DO NOT CALL THIS FUNCTION DIRECTLY!
+bb-rp-unpack-imgs() {
+  bb-log-deprecated "bb-rp-unpack-imgs"
+
+  local DIGEST
+  for DIGEST in "${!PACKAGES_MAP[@]}"; do
+    local PACKAGE="${PACKAGES_MAP[$DIGEST]}"
+    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE:?}/${PACKAGE}"
+    local IMAGE_TAR="${PACKAGE_DIR}/${DIGEST}-img.tar"
+    local BLOB_TAR="${PACKAGE_DIR}/${DIGEST}.tar.gz"
+    local TMP_DIR="$(mktemp -d)"
+
+    trap '
+      bb-log-error "Failed while unpacking image: ${DIGEST}"
+      rm -rf "${TMP_DIR}"
+    ' ERR
+    tar -xf "${IMAGE_TAR}" -C "${TMP_DIR}"
+    jq -er '.[0].Layers[-1]' "${TMP_DIR}/manifest.json" > "${TMP_DIR}/top_layer_digest"
+    local BLOB_PATH=$(cat "${TMP_DIR}/top_layer_digest")
+    cp "${TMP_DIR}/${BLOB_PATH:?}" "${BLOB_TAR}"
+    trap - ERR
+    
+    rm -rf "${TMP_DIR}"
+  done
+}
+
 # Fetch packages by digest
 # bb-rp-fetch package1:digest1 [package2:digest2 ...]
 bb-rp-fetch() {
@@ -163,23 +256,55 @@ bb-rp-fetch() {
     return 0
   fi
 
-  bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
-  trap 'bb-log-error "Failed to fetch manifests"' ERR
-  bb-rp-fetch-manifests PACKAGES_MAP
-  trap - ERR
+  # If pkg from registry module -> use ctr
+  # Otherwise -> fallback to curl
+  if [[ "${REGISTRY_MODULE_ENABLE}" == "true" &&
+    "${REGISTRY_ADDRESS}" == "${REGISTRY_MODULE_ADDRESS}" ]]; then
+    bb-log-info "Check containerd status"
+    bb-rp-ctrd-status
 
-  declare -A BLOB_FILES_MAP
-  local PACKAGE_DIGEST
-  for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
-    local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
-    jq -er '.layers[-1].digest' "${PACKAGE_DIR}/manifest.json" > "${PACKAGE_DIR}/top_layer_digest"
-    BLOB_FILES_MAP[$(cat "${PACKAGE_DIR}/top_layer_digest")]="${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
-  done
+    declare -A FETCH_PACKAGES_MAP
+    local DIGEST
+    for DIGEST in "${!PACKAGES_MAP[@]}"; do
+      local PACKAGE="${PACKAGES_MAP[$DIGEST]}"
+      if bb-rp-is-fetched-img? "${PACKAGE}" "${DIGEST}"; then
+        bb-log-info "Image already fetched: ${PACKAGE}:${DIGEST}"
+        continue
+      fi
+      FETCH_PACKAGES_MAP[$DIGEST]="${PACKAGE}"
+    done
 
-  bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
-  trap 'bb-log-error "Failed to fetch packages"' ERR
-  bb-rp-fetch-blobs BLOB_FILES_MAP
-  trap - ERR
+    if [[ "${#FETCH_PACKAGES_MAP[@]}" -ne 0 ]]; then
+      bb-log-info "Fetching images: ${FETCH_PACKAGES_MAP[*]}"
+      trap 'bb-log-error "Failed to fetch images"' ERR
+      bb-rp-fetch-imgs FETCH_PACKAGES_MAP
+      trap - ERR
+    fi
+
+    bb-log-info "Unpacking images: ${PACKAGES_MAP[*]}"
+    trap 'bb-log-error "Failed to unpack images' ERR
+    bb-rp-unpack-imgs PACKAGES_MAP
+    trap - ERR
+  else
+    # Use curl
+    bb-log-info "Fetching manifests: ${PACKAGES_MAP[*]}"
+    trap 'bb-log-error "Failed to fetch manifests"' ERR
+    bb-rp-fetch-manifests PACKAGES_MAP
+    trap - ERR
+
+    declare -A BLOB_FILES_MAP
+    local PACKAGE_DIGEST
+    for PACKAGE_DIGEST in "${!PACKAGES_MAP[@]}"; do
+      local PACKAGE_DIR="${BB_RP_FETCHED_PACKAGES_STORE}/${PACKAGES_MAP[$PACKAGE_DIGEST]}"
+      jq -er '.layers[-1].digest' "${PACKAGE_DIR}/manifest.json" >"${PACKAGE_DIR}/top_layer_digest"
+      BLOB_FILES_MAP[$(cat "${PACKAGE_DIR}/top_layer_digest")]="${PACKAGE_DIR}/${PACKAGE_DIGEST}.tar.gz"
+    done
+
+    bb-log-info "Fetching packages: ${PACKAGES_MAP[*]}"
+    trap 'bb-log-error "Failed to fetch packages"' ERR
+    bb-rp-fetch-blobs BLOB_FILES_MAP
+    trap - ERR
+  fi
   bb-log-info "Packages saved under ${BB_RP_FETCHED_PACKAGES_STORE}"
 }
 

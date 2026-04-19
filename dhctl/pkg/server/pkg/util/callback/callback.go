@@ -39,11 +39,12 @@ func (cb *Callback) Add(f func() error) {
 	cb.Functions = append(cb.Functions, f)
 }
 
-func (cb *Callback) Call() (err error) {
+func (cb *Callback) Call() error {
+	var err error
 	for _, f := range cb.Functions {
 		err = errors.Join(err, f())
 	}
-	return
+	return err
 }
 
 func (cb *Callback) AsFunc() func() error {

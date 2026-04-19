@@ -44,7 +44,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.29.8
+  kubernetesVersion: 1.31.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -54,7 +54,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Containerd
   kind: ClusterConfiguration
-  kubernetesVersion: "1.29"
+  kubernetesVersion: "1.31"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -80,6 +80,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   allowedBundles:
     - "ubuntu-lts"
     - "centos"
@@ -96,16 +100,20 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
 
   clusterAutoscalerPriorities:
     "50":
-    - ^xxx-staging-[0-9a-zA-Z]+$
+    - .*xxx-staging-[0-9a-zA-Z]+$
     "70":
-    - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
     "90":
-    - ^xxx-staging-spot-[0-9a-zA-Z]+$
-    - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
-    - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+    - .*xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -136,7 +144,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -158,6 +166,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -191,7 +203,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -244,6 +256,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -274,7 +290,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -296,6 +312,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -328,7 +348,7 @@ internal:
     instanceClass:
       flavorName: m1.large
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -350,6 +370,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -392,7 +416,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -414,7 +438,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -435,6 +459,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -472,7 +500,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -499,7 +527,7 @@ internal:
         nestedHardwareVirtualization: false
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -521,6 +549,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -565,7 +597,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -590,6 +622,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -599,7 +635,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     cri:
       type: "Containerd"
 `
@@ -612,6 +648,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -668,7 +708,16 @@ metadata:
 spec:
   clusterName: static
   replicas: 0
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: static
+        cluster.x-k8s.io/deployment-name: worker
     spec:
       bootstrap:
         dataSecretName: manual-bootstrap-for-worker
@@ -676,17 +725,23 @@ spec:
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
         kind: StaticMachineTemplate
+        namespace: d8-cloud-instance-manager
         name: worker
-  selector: {}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: static
+      cluster.x-k8s.io/deployment-name: worker
 `
 )
 
-const openstackCIMPath = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
-const openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
-const vsphereCIMPath = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager"
-const vsphereCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
-const vcdCAPIPath = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
-const vcdCAPISymlink = "/deckhouse/modules/040-node-manager/capi/vcd"
+const (
+	openstackCIMPath    = "/deckhouse/ee/modules/030-cloud-provider-openstack/cloud-instance-manager"
+	openstackCIMSymlink = "/deckhouse/modules/040-node-manager/cloud-providers/openstack"
+	vsphereCIMPath      = "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager"
+	vsphereCIMSymlink   = "/deckhouse/modules/040-node-manager/cloud-providers/vsphere"
+	vcdCAPIPath         = "/deckhouse/ee/modules/030-cloud-provider-vcd/capi"
+	vcdCAPISymlink      = "/deckhouse/modules/040-node-manager/capi/vcd"
+)
 
 var _ = Describe("Module :: node-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
@@ -723,31 +778,17 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "operator-prometheus", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
 		})
 
-		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {
-			Expect(rule.Exists()).To(BeTrue())
-
-			groups := rule.Field("spec.groups")
-
-			Expect(groups.IsArray()).To(BeTrue())
-			if shouldEmpty {
-				Expect(groups.Array()).To(BeEmpty())
-			} else {
-				Expect(groups.Array()).ToNot(BeEmpty())
-			}
-		}
-
 		Context("For cluster auto-scaler", func() {
 			Context("cluster auto-scaler disabled", func() {
 				BeforeEach(func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule does not Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
-
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).Should(BeFalse())
 				})
 			})
 
@@ -759,23 +800,23 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be none empty array", func() {
+				It("PrometheusRule Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
 					cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "cluster-autoscaler-priority-expander")
 					Expect(cm.Field("data.priorities").String()).To(MatchYAML(`
 50:
-  - ^xxx-staging-[0-9a-zA-Z]+$
+  - .*xxx-staging-[0-9a-zA-Z]+$
 70:
-  - ^xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-m5a-2xlarge-[0-9a-zA-Z]+$
 90:
-  - ^xxx-staging-spot-[0-9a-zA-Z]+$
-  - ^xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
-  - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-m5a.8xlarge-[0-9a-zA-Z]+$
+  - .*xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
 `))
 
-					assertSpecDotGroupsArray(rule, false)
 				})
 			})
 		})
@@ -786,12 +827,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule does not Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
-
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).Should(BeFalse())
 				})
 			})
 
@@ -803,12 +843,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be none empty array", func() {
+				It("PrometheusRule Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
-
-					assertSpecDotGroupsArray(rule, false)
+					Expect(rule.Exists()).Should(BeTrue())
 				})
 			})
 		})
@@ -1748,6 +1787,188 @@ ccc: ddd
 			Expect(capiDeploy.Exists()).To(BeTrue())
 		}
 
+		Context("Scale from zero annotations", func() {
+			const nodeManager = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: vcd
+    machineClassKind: ""
+    capiClusterKind: "VCDCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    capiClusterName: "app"
+    capiMachineTemplateKind: "VCDMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1beta2"
+    vcd:
+      sshPublicKey: cert-authority,principals="test" ssh-rsa AAAAB...==
+      organization: org
+      virtualDataCenter: dc
+      virtualApplicationName: app
+      server: https://localhost:5000
+      username: user
+      password: pass
+      insecure: true
+  nodeGroups:
+  - name: without-labels-and-taints
+    serializedLabels: ""
+    serializedTaints: ""
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+      - zoneb
+  - name: with-labels-only
+    serializedLabels: "app=warp-drive-ai,environment=production"
+    serializedTaints: ""
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+  - name: with-taints-only
+    serializedLabels: ""
+    serializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:"
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+  - name: with-labels-and-taints
+    serializedLabels: "app=warp-drive-ai,environment=production"
+    serializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:"
+    nodeCapacity:
+      cpu: "2"
+      memory: "2Gi"
+    instanceClass:
+      rootDiskSizeGb: 20
+      sizingPolicy: s-c572-MSK1-S1-vDC1
+      storageProfile: vHDD
+      template: catalog/Ubuntu
+      placementPolicy: policy
+    nodeType: CloudEphemeral
+    kubernetesVersion: "1.24"
+    cri:
+      type: "Containerd"
+    cloudInstances:
+      classReference:
+        kind: VcdInstanceClass
+        name: worker
+      maxPerZone: 5
+      minPerZone: 4
+      zones:
+      - zonea
+  machineControllerManagerEnabled: false
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManager)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				assertAutoscalingAnnotations := func(md object_store.KubeObject, labels, taints string) {
+					Expect(md.Exists()).To(BeTrue())
+
+					annotations := md.Field("metadata.annotations").Map()
+
+					if labels != "" {
+						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/labels"].String()).To(Equal(labels))
+					} else {
+						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/labels"))
+					}
+
+					if taints != "" {
+						Expect(annotations["capacity.cluster-autoscaler.kubernetes.io/taints"].String()).To(Equal(taints))
+					} else {
+						Expect(annotations).ToNot(HaveKey("capacity.cluster-autoscaler.kubernetes.io/taints"))
+					}
+				}
+
+				md1 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-without-labels-and-taints-02320933")
+				assertAutoscalingAnnotations(md1, "", "")
+
+				md2 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-only-02320933")
+				assertAutoscalingAnnotations(md2, "app=warp-drive-ai,environment=production", "")
+
+				md3 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-taints-only-02320933")
+				assertAutoscalingAnnotations(md3, "", "b=v:NoExecute,a,d:NoExecute,c=v1:")
+
+				md4 := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", "myprefix-with-labels-and-taints-02320933")
+				assertAutoscalingAnnotations(md4, "app=warp-drive-ai,environment=production", "b=v:NoExecute,a,d:NoExecute,c=v1:")
+			})
+		})
+
 		Context("VCD", func() {
 			const nodeManagerVCD = `
 internal:
@@ -1759,6 +1980,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -1853,12 +2078,6 @@ internal:
 					Expect(vcdCluster.Field("spec.site").String()).To(Equal("https://localhost:5000"))
 					Expect(vcdCluster.Field("spec.org").String()).To(Equal("org"))
 					Expect(vcdCluster.Field("spec.ovdc").String()).To(Equal("dc"))
-
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.httpsProxy").String()).To(Equal("https://example.com"))
-					Expect(vcdCluster.Field("spec.proxyConfigSpec.noProxy").AsStringSlice()).To(Equal([]string{
-						"127.0.0.1", "169.254.169.254", "cluster.local", "10.111.0.0/16", "10.222.0.0/16", "example.com",
-					}))
 				}
 
 				type mdParams struct {
@@ -1896,7 +2115,7 @@ internal:
 					Expect(vcdTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("9a87428aa818245d4b86ee9438255d53e6ae2d8a76d43cfb1b7560a6f0eab02e"), "Prevent checksum changing")
 				}
-
+				//
 				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
 				Expect(registrySecret.Exists()).To(BeTrue())
 
@@ -1922,13 +2141,141 @@ internal:
 				Expect(vcdTemplateWithCatalog.Field("spec.template.spec.catalog").String()).To(Equal("catalog"))
 			})
 		})
+
+		Context("DVP", func() {
+			const nodeManagerDVP = `
+internal:
+  capiControllerManagerEnabled: true
+  bootstrapTokens:
+    worker: mytoken
+  capiControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  machineDeployments: {}
+  instancePrefix: myprefix
+  clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
+  kubernetesCA: myclusterca
+  cloudProvider:
+    type: dvp
+    machineClassKind: ""
+    capiClusterKind: "DeckhouseCluster"
+    capiClusterAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1"
+    capiClusterName: "dvp"
+    capiMachineTemplateKind: "DeckhouseMachineTemplate"
+    capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1"
+    dvp: {}
+  nodeGroups:
+    - cloudInstances:
+        classReference:
+          kind: DVPInstanceClass
+          name: worker
+        maxPerZone: 5
+        minPerZone: 4
+        zones:
+          - default
+      cri:
+        type: Containerd
+      instanceClass:
+        rootDisk:
+          image:
+            kind: ClusterVirtualImage
+            name: ubuntu-2204
+          size: 50Gi
+          storageClass: ceph-pool-r2-csi-rbd-immediate
+        virtualMachine:
+          bootloader: EFI
+          cpu:
+            coreFraction: 100%
+            cores: 4
+          memory:
+            size: 8Gi
+      kubelet:
+        containerLogMaxFiles: 4
+        containerLogMaxSize: 50Mi
+        resourceReservation:
+          mode: Auto
+        topologyManager: {}
+      kubernetesVersion: "1.31"
+      manualRolloutID: ""
+      name: worker
+      nodeType: CloudEphemeral
+      updateEpoch: "1746532947"
+`
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerDVP)
+				setBashibleAPIServerTLSValues(f)
+				f.HelmRender()
+			})
+			It("Everything must render properly", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				type mdParams struct {
+					name         string
+					templateName string
+				}
+
+				assertMachineDeploymentAndItsDeps := func(f *Config, d mdParams) {
+					md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", d.name)
+					Expect(md.Exists()).To(BeTrue())
+
+					Expect(md.Field("spec.clusterName").String()).To(Equal("dvp"))
+					Expect(md.Field("spec.template.spec.clusterName").String()).To(Equal("dvp"))
+					Expect(md.Field("spec.template.spec.bootstrap.dataSecretName").String()).To(Equal(d.templateName))
+					Expect(md.Field("spec.template.spec.infrastructureRef.name").String()).To(Equal(d.templateName))
+
+					annotations := md.Field("metadata.annotations").Map()
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-min-size"].String()).To(Equal("4"))
+					Expect(annotations["cluster.x-k8s.io/cluster-api-autoscaler-node-group-max-size"].String()).To(Equal("5"))
+
+					secret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", d.templateName)
+					Expect(secret.Exists()).To(BeTrue())
+
+					dvpTemplate := f.KubernetesResource("DeckhouseMachineTemplate", "d8-cloud-instance-manager", d.templateName)
+					Expect(dvpTemplate.Exists()).To(BeTrue())
+
+					Expect(dvpTemplate.Field("spec.template.spec.bootDiskImageRef.kind").String()).To(Equal("ClusterVirtualImage"))
+					Expect(dvpTemplate.Field("spec.template.spec.bootDiskImageRef.name").String()).To(Equal("ubuntu-2204"))
+					Expect(dvpTemplate.Field("spec.template.spec.bootloader").String()).To(Equal("EFI"))
+					Expect(dvpTemplate.Field("spec.template.spec.cpu.cores").String()).To(Equal("4"))
+					Expect(dvpTemplate.Field("spec.template.spec.cpu.cpuFraction").String()).To(Equal("100%"))
+					Expect(dvpTemplate.Field("spec.template.spec.memory").String()).To(Equal("8Gi"))
+					Expect(dvpTemplate.Field("spec.template.spec.rootDiskSize").String()).To(Equal("50Gi"))
+					Expect(dvpTemplate.Field("spec.template.spec.rootDiskStorageClass").String()).To(Equal("ceph-pool-r2-csi-rbd-immediate"))
+					Expect(dvpTemplate.Field("spec.template.spec.vmClassName").String()).To(Equal("generic"))
+
+					Expect(dvpTemplate.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
+					Expect(md.Field("metadata.annotations.checksum/instance-class").String()).To(Equal("2f66b46c3006bc0a32f70593543ee50385f2f4d405b541e17208dfbf27dd4fd9"), "Prevent checksum changing")
+				}
+
+				registrySecret := f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry")
+				Expect(registrySecret.Exists()).To(BeTrue())
+
+				assertClusterResources(f, "dvp")
+
+				assertMachineDeploymentAndItsDeps(f, mdParams{
+					name:         "myprefix-worker-8ced91ee",
+					templateName: "worker-a6381073",
+				})
+			})
+		})
 	})
 })
 
 func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, mds ...object_store.KubeObject) error {
 	args := deployment.Field("spec.template.spec.containers.0.args").AsStringSlice()
 
-	var nodesArgs []string
+	nodesArgs := make([]string, 0)
 	for _, arg := range args {
 		if !strings.HasPrefix(arg, "--nodes") {
 			continue
@@ -1937,7 +2284,7 @@ func verifyClusterAutoscalerDeploymentArgs(deployment object_store.KubeObject, m
 		nodesArgs = append(nodesArgs, strings.Split(arg, ".")[1])
 	}
 
-	var mdsNames []string
+	mdsNames := make([]string, 0, len(mds))
 	for _, md := range mds {
 		mdsNames = append(mdsNames, md.Field("metadata.name").String())
 	}

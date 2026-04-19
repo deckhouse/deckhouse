@@ -207,10 +207,10 @@ spec:
     httpPort: 80
     httpsPort: 443
   nodeSelector:
-    node-role/frontend: ''
+    node-role.deckhouse.io/frontend: ""
   tolerations:
     - effect: NoExecute
-      key: dedicated
+      key: dedicated.deckhouse.io
       operator: Equal
       value: frontend
   resourcesRequests:
@@ -221,7 +221,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: app-tls-secert
+  name: app-tls-secret
   namespace: d8-ingress-istio # note the namespace isn't app-ns
 type: kubernetes.io/tls
 data:
@@ -258,7 +258,7 @@ spec:
         mode: SIMPLE
         # a secret with a certificate and a key, which must be created in the d8-ingress-istio namespace
         # supported secret formats can be found at https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```
@@ -280,9 +280,10 @@ spec:
             host: app-svc
 ```
 
-### NGINX Ingress
+### Ingress NGINX
 
 To use Ingress, you need to:
+
 * Configure the Ingress controller by adding Istio sidecar to it. In our case, you need to enable the `enableIstioSidecar` parameter in the [ingress-nginx](../../modules/ingress-nginx/) module's [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) custom resource.
 * Set up an Ingress that refers to the Service. The following annotations are mandatory for Ingress:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — using this annotation, the Ingress controller sends requests to a single ClusterIP (from Service CIDR) while envoy load balances them. Ingress controller's sidecar is only catching traffic directed to Service CIDR.
@@ -417,7 +418,7 @@ Examples:
     - {}
   ```
 
-### Deny all for the foo namespace
+### Deny all actions for the foo namespace
 
 There are two ways you can do that:
 
@@ -562,7 +563,7 @@ spec:
 
 ## Setting up federation for two clusters using the IstioFederation CR
 
-> Available in Enterprise Edition only.
+{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
 
 Cluster A:
 
@@ -590,7 +591,7 @@ spec:
 
 ## Setting up multicluster for two clusters using the IstioMulticluster CR
 
-> Available in Enterprise Edition only.
+{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
 
 Cluster A:
 
@@ -634,35 +635,110 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 * Run the application init container from the user with uid `1337`. Requests from this user are not intercepted under Istio control.
 * Exclude an service IP address or port from Istio control using the `traffic.sidecar.istio.io/excludeOutboundIPRanges` or `traffic.sidecar.istio.io/excludeOutboundPorts` annotations.
 
+{% alert level="warning" %}Each of the workarounds removes traffic from Istio's control, which in turn removes encryption of traffic between application services.{% endalert %}
+
+{% alert level="warning" %}UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not run your application containers with this UID — their traffic will bypass Istio completely (no routing rules, mTLS, or telemetry will be applied). Use UID `1337` only in init containers when you need to perform network requests before the sidecar is ready.{% endalert %}
+
 ## Upgrading Istio
 
 ### Upgrading Istio control-plane
 
 * Deckhouse allows you to install different control-plane versions simultaneously:
   * A single global version to handle namespaces or Pods with indifferent version (namespace label `istio-injection: enabled`). It is configured by the [globalVersion](configuration.html#parameters-globalversion) parameter.
-  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x21` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
+  * The other ones are additional, they handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [additionalVersions](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
-![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
-* Upgrade algorithm (i.e. to `1.21`):
-  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.21"]`).
-  * Wait for the corresponding pod `istiod-v1x21-xxx-yyy` to appear in `d8-istio` namespace.
+![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
+* Upgrade algorithm (i.e. from `1.21` to `1.25`):
+  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
+  * Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
   * For every application Namespase with istio enabled:
-    * Change `istio-injection: enabled` label to `istio.io/rev: v1x21`.
+    * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
     * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
-  * Reconfigure `globalVersion` to `1.21` and remove the `additionalVersions` configuration.
+  * Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
   * Make sure, the old `istiod` Pod has gone.
   * Change application namespace labels to `istio-injection: enabled`.
 
-To find all Pods with old Istio revision, execute the following command:
+To find all Pods with old Istio revision (in the example — version 21), execute the command:
 
 ```shell
-kubectl get pods -A -o json | jq --arg revision "v1x21" \
+d8 k get pods -A -o json | jq --arg revision "v1x21" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
 
+{% alert level="warning" %}Upgrading to Istio 1.25 is only possible from version 1.21.{% endalert %}
+
 ### Auto upgrading istio data-plane
 
-> Available in Enterprise Edition only.
+{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
 
 To automate istio-sidecar upgrading, set a label `istio.deckhouse.io/auto-upgrade="true"` on the application `Namespace` or on the individual resources — `Deployment`, `DaemonSet` or `StatefulSet`.
+
+## Customizing istio-proxy sidecar resource management
+
+You can override the global istio-proxy sidecar resource limits for specific workloads by adding annotations to your application Pods.
+
+### Supported annotations
+
+Use these Pod annotations to customize sidecar resources:
+
+| Annotation                          | Description                 | Example Value |
+|-------------------------------------|-----------------------------|---------------|
+| `sidecar.istio.io/proxyCPU`         | CPU request for sidecar     | `200m`        |
+| `sidecar.istio.io/proxyCPULimit`    | CPU limit for sidecar       | `"1"`         |
+| `sidecar.istio.io/proxyMemory`      | Memory request for sidecar  | `128Mi`       |
+| `sidecar.istio.io/proxyMemoryLimit` | Memory limit for sidecar    | `512Mi`       |
+
+### Configuration Examples
+
+For Deployments:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... rest of your deployment spec
+```
+
+For ReplicaSets:
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+# ...
+spec:
+  template:
+    metadata:
+      annotations:
+          sidecar.istio.io/proxyCPU: 200m
+          sidecar.istio.io/proxyCPULimit: "1"
+          sidecar.istio.io/proxyMemory: 128Mi
+          sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... rest of your deployment spec
+```
+
+For Pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    sidecar.istio.io/proxyCPU: 200m
+    sidecar.istio.io/proxyCPULimit: "1"
+    sidecar.istio.io/proxyMemory: 128Mi
+    sidecar.istio.io/proxyMemoryLimit: 512Mi
+# ... rest of your pod spec
+```
+
+{% alert level="warning" %}All four parameters must be defined together - if you set any of these annotations, you must specify all four (`sidecar.istio.io/proxyCPU`, `sidecar.istio.io/proxyCPULimit`, `sidecar.istio.io/proxyMemory`, and `sidecar.istio.io/proxyMemoryLimit`).{% endalert %}

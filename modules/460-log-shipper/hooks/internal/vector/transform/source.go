@@ -25,6 +25,34 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
+func CleanUpForKubernetesSourceTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "clean_up_kubernetes",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.CleanUpAfterSourceRuleForKubernetes.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
+func CleanUpForFileSourceTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "clean_up_file",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.CleanUpAfterSourceRuleForFile.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
 func OwnerReferenceSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
@@ -39,15 +67,15 @@ func OwnerReferenceSourceTransform() *DynamicTransform {
 	}
 }
 
-func CleanUpAfterSourceTransform() *DynamicTransform {
+func FileSourceHostTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name:   "clean_up",
+			Name:   "file_host",
 			Type:   "remap",
 			Inputs: set.New(),
 		},
 		DynamicArgsMap: map[string]interface{}{
-			"source":        vrl.CleanUpAfterSourceRule.String(),
+			"source":        vrl.Combine(vrl.FileSourceHostRule, vrl.FileSourceHostIPRule).String(),
 			"drop_on_abort": false,
 		},
 	}
@@ -83,6 +111,10 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 		transforms = append(transforms, OwnerReferenceSourceTransform())
 	}
 
+	if cfg.SourceType == v1alpha1.SourceFile {
+		transforms = append(transforms, FileSourceHostTransform())
+	}
+
 	transforms = append(transforms, LocalTimezoneAfterSourceTransform())
 
 	multilineTransforms, err := CreateMultiLineTransforms(cfg.MultilineType, cfg.MultilineCustomConfig)
@@ -104,9 +136,14 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 	}
 	transforms = append(transforms, logFilterTransforms...)
 
-	transforms = append(transforms, CleanUpAfterSourceTransform())
+	switch cfg.SourceType {
+	case v1alpha1.SourceKubernetesPods:
+		transforms = append(transforms, CleanUpForKubernetesSourceTransform())
+	case v1alpha1.SourceFile:
+		transforms = append(transforms, CleanUpForFileSourceTransform())
+	}
 
-	sTransforms, err := BuildFromMapSlice("source", name, transforms)
+	sTransforms, err := BuildFromMapSlice("source", name, cfg.SourceType, transforms)
 	if err != nil {
 		return nil, fmt.Errorf("add source transforms: %v", err)
 	}

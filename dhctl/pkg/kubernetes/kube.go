@@ -15,9 +15,15 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -26,28 +32,77 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func ConnectToKubernetesAPI(nodeInterface node.Interface) (*client.KubernetesClient, error) {
+type LabelSelector struct {
+	Label    string
+	Operator selection.Operator
+	Vals     []string
+}
+
+func GetLabelSelector(selectors []LabelSelector) (string, error) {
+	if len(selectors) == 0 {
+		return "", fmt.Errorf("Pass empty label selectors to GetLabelSelector")
+	}
+
+	requirements := make([]labels.Requirement, 0, len(selectors))
+
+	for i, s := range selectors {
+		r, err := labels.NewRequirement(s.Label, s.Operator, s.Vals)
+		if err != nil {
+			return "", fmt.Errorf(
+				"Cannot create requirement for selector [%d] %s/%s[%s]: %w",
+				i,
+				s.Label,
+				s.Operator,
+				strings.Join(s.Vals, ", "),
+				err,
+			)
+		}
+
+		requirements = append(requirements, *r)
+	}
+
+	selector := labels.NewSelector()
+	selector = selector.Add(requirements...)
+	return selector.String(), nil
+}
+
+func GetMasterNodeGroupLabelSelector(selectors ...LabelSelector) (string, error) {
+	withNg := []LabelSelector{
+		{
+			Label:    global.NodeGroupLabel,
+			Operator: selection.Equals,
+			Vals:     []string{global.MasterNodeGroupName},
+		},
+	}
+
+	withNg = append(withNg, selectors...)
+
+	return GetLabelSelector(withNg)
+}
+
+func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 	err := log.Process("common", "Connect to Kubernetes API", func() error {
 		if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok && wrapper != nil {
-			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(); err != nil {
+			if err := wrapper.Client().Check().WithDelaySeconds(1).AwaitAvailability(ctx); err != nil {
 				return fmt.Errorf("await master available: %v", err)
 			}
 		}
 
-		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).Run(func() error {
-			kubeCl = client.NewKubernetesClient().WithNodeInterface(nodeInterface)
-			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-				return fmt.Errorf("open kubernetes connection: %v", err)
-			}
-			return nil
-		})
+		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).
+			RunContext(ctx, func() error {
+				kubeCl = client.NewKubernetesClient().WithNodeInterface(nodeInterface)
+				if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams()); err != nil {
+					return fmt.Errorf("open kubernetes connection: %v", err)
+				}
+				return nil
+			})
 		if err != nil {
 			return err
 		}
 
 		time.Sleep(50 * time.Millisecond) // tick to prevent first probable fail
-		err = deckhouse.WaitForKubernetesAPI(kubeCl)
+		err = deckhouse.WaitForKubernetesAPI(ctx, kubeCl)
 		if err != nil {
 			return fmt.Errorf("wait kubernetes api: %v", err)
 		}
@@ -59,4 +114,32 @@ func ConnectToKubernetesAPI(nodeInterface node.Interface) (*client.KubernetesCli
 	}
 
 	return kubeCl, nil
+}
+
+type KubeClientProvider interface {
+	KubeClient() *client.KubernetesClient
+}
+
+// todo refactor it we need one provider with context
+type KubeClientProviderWithCtx interface {
+	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
+}
+
+var _ KubeClientProvider = &SimpleKubeClientGetter{}
+var _ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
+
+type SimpleKubeClientGetter struct {
+	kubeCl *client.KubernetesClient
+}
+
+func NewSimpleKubeClientGetter(kubeCl *client.KubernetesClient) *SimpleKubeClientGetter {
+	return &SimpleKubeClientGetter{kubeCl: kubeCl}
+}
+
+func (s *SimpleKubeClientGetter) KubeClient() *client.KubernetesClient {
+	return s.kubeCl
+}
+
+func (s *SimpleKubeClientGetter) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
+	return s.kubeCl, nil
 }

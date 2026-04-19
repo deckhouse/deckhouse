@@ -1,0 +1,17 @@
+docs:
+  features:
+    - summary: added upmeter FAQ page with information about probes
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11626
+monitoring-kubernetes:
+  fixes:
+    - summary: Fix kube-state-metrics duplicate samples
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11655
+operator-trivy:
+  fixes:
+    - summary: Add chowning init container to the trivy-server.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11671
+prometheus:
+  fixes:
+    - summary: Fix alerts for expiring and expired Certificates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/9751
+

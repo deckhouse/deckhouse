@@ -4,8 +4,6 @@ title: "Модуль documentation: примеры"
 
 ## Пример конфигурации модуля
 
-Ниже представлен простой пример конфигурации модуля:
-
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -16,11 +14,11 @@ spec:
   enabled: true
   settings:
     nodeSelector:
-      node-role/example: ""
+      node-role/system: ""
     tolerations:
-    - key: dedicated
+    - key: dedicated.deckhouse.io
       operator: Equal
-      value: example
+      value: system
     externalAuthentication:
       authURL: "https://<applicationDomain>/auth"
       authSignInURL: "https://<applicationDomain>/sign-in"

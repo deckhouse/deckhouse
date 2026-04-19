@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-initContainer-disallowed-capability
+  namespace: testns
+spec:
+  initContainers:
+    - name: init
+      image: busybox
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        capabilities:
+          add:
+            - AUDIT_WRITE
+

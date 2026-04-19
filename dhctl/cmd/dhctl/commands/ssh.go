@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -26,25 +27,33 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("ssh-connection", "Test connection via ssh.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshCl, err := ssh.NewClientFromFlagsWithHosts()
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshCl, err := sshclient.NewClientFromFlagsWithHosts(ctx)
 		if err != nil {
 			return err
 		}
-		sshCl, err = sshCl.Start()
+		err = sshCl.Start()
 		if err != nil {
 			return err
 		}
 
-		err = sshCl.Check().AwaitAvailability()
+		err = sshCl.Check().AwaitAvailability(ctx)
 
 		if err != nil {
 			return fmt.Errorf("check connection: %v", err)
@@ -57,14 +66,13 @@ func DefineTestSSHConnectionCommand(parent *kingpin.CmdClause) *kingpin.CmdClaus
 	return cmd
 }
 
-func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var SrcPath string
 	var DstPath string
 	var Data string
 	var Direction string
 
-	cmd := parent.Command("scp", "Test scp file operations.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Flag("src", "source path").Short('s').StringVar(&SrcPath)
@@ -73,11 +81,19 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		log.DebugLn("scp: start ssh-agent")
-		sshCl, err := ssh.NewClientFromFlagsWithHosts()
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshCl, err := sshclient.NewClientFromFlagsWithHosts(ctx)
 		if err != nil {
 			return err
 		}
-		sshCl, err = sshCl.Start()
+		err = sshCl.Start()
 		if err != nil {
 			return err
 		}
@@ -88,10 +104,10 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		if Direction == "up" {
 			if Data != "" {
 				log.InfoF("upload bytes to '%s' on remote\n", DstPath)
-				err = sshCl.File().UploadBytes([]byte(Data), DstPath)
+				err = sshCl.File().UploadBytes(ctx, []byte(Data), DstPath)
 			} else {
 				log.InfoF("upload local '%s' to '%s' on remote\n", SrcPath, DstPath)
-				err = sshCl.File().Upload(SrcPath, DstPath)
+				err = sshCl.File().Upload(ctx, SrcPath, DstPath)
 			}
 			if err != nil {
 				return err
@@ -100,7 +116,7 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		} else {
 			if DstPath == "stdout" {
 				log.InfoF("download bytes from remote '%s'\n", SrcPath)
-				data, err := sshCl.File().DownloadBytes(SrcPath)
+				data, err := sshCl.File().DownloadBytes(ctx, SrcPath)
 				if err != nil {
 					return err
 				}
@@ -108,7 +124,7 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 				success = true
 			} else {
 				log.InfoF("download bytes from remote '%s' to local '%s'\n", SrcPath, DstPath)
-				err = sshCl.File().Download(SrcPath, DstPath)
+				err = sshCl.File().Download(ctx, SrcPath, DstPath)
 				if err != nil {
 					return err
 				}
@@ -126,11 +142,11 @@ func DefineTestSCPCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd
 }
 
-func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptPath string
 	var Sudo bool
-	cmd := parent.Command("upload-exec", "Test scp upload and ssh run uploaded script.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("script", "source path").
 		StringVar(&ScriptPath)
@@ -138,17 +154,24 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		BoolVar(&Sudo)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
-		if err != nil {
-			return nil
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
 		}
 
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(ctx, true)
+		if err != nil {
+			return err
+		}
 		cmd := sshClient.UploadScript(ScriptPath)
 		if Sudo {
 			cmd.Sudo()
 		}
 		var stdout []byte
-		stdout, err = cmd.Execute()
+		stdout, err = cmd.Execute(ctx)
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {
@@ -164,12 +187,11 @@ func DefineTestUploadExecCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd
 }
 
-func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptName string
 	var BundleDir string
 
-	cmd := parent.Command("bashible-bundle", "Test upload and execute a bundle.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("bundle-dir", "path of a bundle root directory").
 		Short('d').
@@ -179,16 +201,24 @@ func DefineTestBundle(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		StringVar(&ScriptName)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlagsWithHosts(true)
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(ctx, true)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		cmd := sshClient.UploadScript(ScriptName)
 		cmd.Sudo()
 		parentDir := path.Dir(BundleDir)
 		bundleDir := path.Base(BundleDir)
-		stdout, err := cmd.ExecuteBundle(parentDir, bundleDir)
+		stdout, err := cmd.ExecuteBundle(context.Background(), parentDir, bundleDir)
 		if err != nil {
 			var ee *exec.ExitError
 			if errors.As(err, &ee) {

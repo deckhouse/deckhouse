@@ -12,19 +12,19 @@ lang: ru
 
 YAML-файл конфигурации установки содержит параметры нескольких ресурсов (манифесты):
 
-- [ClusterConfiguration](../../../../reference/cr/clusterconfiguration.html) — общие параметры кластера, такие как версия управляющего слоя (control plane), сетевые параметры, параметры CRI и т.д.
+- [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия управляющего слоя (control plane), сетевые параметры, параметры CRI и т.д.
 
   > Использовать ресурс ClusterConfiguration в конфигурации необходимо только если при установке платформы нужно предварительно развернуть кластер Kubernetes. То есть `ClusterConfiguration` не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [StaticClusterConfiguration](../../../../reference/cr/staticclusterconfiguration.html) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
+- [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры кластера Kubernetes, разворачиваемого на серверах bare metal.
 
   > Как и в случае с ресурсом ClusterConfiguration, ресурс StaticClusterConfiguration не нужен, если платформа устанавливается в существующем кластере Kubernetes.
 
-- [ModuleConfig](/products/virtualization-platform/reference/cr/moduleconfig.html) — набор ресурсов, содержащих параметры конфигурации встроенных модулей платформы.
+- [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — набор ресурсов, содержащих параметры конфигурации модулей платформы.
 
 Например, при планировании параметров кластера были выбраны следующие значения:
 
-- Подсети подов и сервисов — `10.88.0.0/16` и `10.99.0.0./16`;
+- Подсети подов и сервисов — `10.88.0.0/16` и `10.99.0.0/16`;
 - Узлы связаны между собой через подсеть `192.168.1.0/24`;
 - Публичный wildcard-домен кластера `my-dvp-cluster.example.com`;
 - Канал обновлений `early-access`.
@@ -77,7 +77,7 @@ spec:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # Включение доступа к Kubernetes API через Ingress.
-    # https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
       enabled: true
       https:
@@ -100,31 +100,31 @@ spec:
 
 ## Авторизация в container registry
 
-В зависимости от выбранной редакции может потребоваться авторизация в container registry `registry.deckhouse.io`:
+В зависимости от выбранной редакции может потребоваться авторизация в container registry `registry.deckhouse.ru`:
 
 - Для установки Community Edition авторизация не требуется.
 
 - Для установки Enterprise Edition и выше необходимо выполнить авторизацию на **машине установки**  с использованием лицензионного ключа:
 
   ```shell
-  docker login -u license-token registry.deckhouse.io
+  docker login -u license-token registry.deckhouse.ru
   ```
 
 ## Запуск установщика платформы
 
 ### Выбор образа установщика
 
-Установщик запускается в виде Docker-контейнера. Образ контейнера выбирается в зависимости от редакции и канала обновлений:
+Установщик запускается в виде контейнера. Образ контейнера выбирается в зависимости от редакции и канала обновлений:
 
 ```shell
-registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
+registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 ```
 
 Где:
 
-- `<REVISION>` — [редакция](../../editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
+- `<REVISION>` — [редакция](../../../about/editions.html) платформы (например `ee` — для Enterprise Edition, `ce` — для Community Edition и т. д.)
 
-- `<RELEASE_CHANNEL>` — [канал обновлений](../../release-channels.html) платформы в kebab-case. Должен совпадать с указанным в `config.yaml`:
+- `<RELEASE_CHANNEL>` — [канал обновлений](../../../about/release-channels.html) платформы в kebab-case:
   - `alpha` — для канала обновлений *Alpha*;
   - `beta` — для канала обновлений *Beta*;
   - `early-access` — для канала обновлений *EarlyAccess*;
@@ -135,12 +135,12 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 1. Запустите контейнер, в который будут подмонтированы файл конфигурации и ключи для доступа к узлам.
 
-   Например, для установки редакции `CE` из канала обновлений `Stable` следует использовать образ `registry.deckhouse.io/deckhouse/ce/install:stable`. В этом случае контейнер можно запустить следующей командой:
+   Например, для установки редакции `CE` из канала обновлений `Stable` следует использовать образ `registry.deckhouse.ru/deckhouse/ce/install:stable`. В этом случае контейнер можно запустить следующей командой:
 
    ```shell
    docker run -it --pull=always \
      -v "$PWD/config.yaml:/config.yaml" \
-     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
+     -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
 1. Запустите внутри контейнера установщик платформы с помощью команды `dhctl bootstrap`.
@@ -150,9 +150,11 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
    ```shell
    dhctl bootstrap \
      --ssh-host=54.43.32.21 \
-     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
      --config=/config.yaml --ask-become-pass
    ```
+
+> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Если для запуска `sudo` на сервере необходим пароль, то укажите его в ответ на запрос `[sudo] Password:`.
 Параметр `--ask-become-pass` можно не указывать, если при подготовке узла был настроен запуск `sudo` без пароля.
@@ -163,14 +165,14 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 1. Запустите контейнер, в который будут подмонтированы файл конфигурации, ключи для доступа к узлам и файл для подключения к Kubernetes API.
 
-   Например, для установки редакции `CE` из канала обновлений `Stable` будет использоваться образ `registry.deckhouse.io/deckhouse/ce/install:stable`,  а для подключения к Kubernetes API будет использоваться файл конфигурации в `$HOME/.kube/config`.
+   Например, для установки редакции `CE` из канала обновлений `Stable` будет использоваться образ `registry.deckhouse.ru/deckhouse/ce/install:stable`,  а для подключения к Kubernetes API будет использоваться файл конфигурации в `$HOME/.kube/config`.
 
    В этом случае контейнер можно запустить следующей командой:
 
    ```shell
    docker run -it --pull=always \
      -v "$PWD/config.yaml:/config.yaml" \
-     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.io/deckhouse/ce/install:stable bash
+     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
 1. Запустите внутри контейнера установщик платформы с помощью команды `dhctl bootstrap-phase install-deckhouse`.
@@ -187,7 +189,7 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 Время установки может варьироваться от 5 до 30 минут в зависимости от качества соединения между master-узлом и хранилищем образов.
 
-Пример вывода при успешном окончании установки:
+{% offtopic title="Пример вывода при успешном окончании установки..." %}
 
 ```console
 ...
@@ -203,25 +205,16 @@ registry.deckhouse.io/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 🎉 Deckhouse cluster was created successfully!
 ```
 
-После успешной установки можно выйти из запущенного контейнера и проверить статус master-узла командой:
+{% endofftopic %}
 
-```shell
-sudo -i d8 k get no
-```
+После успешной установки можно выйти из запущенного контейнера и перейти к [настройке доступа](access.html).
 
-Пример вывода команды:
-
-```console
-NAME           STATUS   ROLES                  AGE     VERSION
-master-0       Ready    control-plane,master   5m      v1.29.10
-```
-
-### Проверки перед началом установки
+## Проверки, выполняемые перед началом установки
 
 Список проверок, выполняемых инсталлятором перед началом установки платформы:
 
 1. Общие проверки:
-   - Значения параметров [PublicDomainTemplate](/products/virtualization-platform/reference/mc.html#global-parameters-modules-publicdomaintemplate) и [clusterDomain](/products/virtualization-platform/reference/cr/clusterdomain.html) не совпадают.
+   - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
    - Данные аутентификации для хранилища образов контейнеров, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - Длина не более 63 символов;
@@ -235,7 +228,7 @@ master-0       Ready    control-plane,master   5m      v1.29.10
    - Должна быть возможность подключения по SSH с использованием указанных данных аутентификации.
    - Должна быть возможность установки SSH-туннеля до сервера (или виртуальной машины) master-узла.
    - Сервер (ВМ) удовлетворяет минимальным требованиям для настройки master-узла.
-   - На сервере (ВМ) для master-узла установлен Python и необходимые библиотеки.
+   - На сервере (ВМ) для master-узла установлен Python.
    - Хранилище образов контейнеров доступно через прокси (если настройки прокси указаны в конфигурации установки).
    - На сервере (ВМ) для master-узла и хосте инсталлятора свободны порты, необходимые для процесса установки.
    - DNS должен разрешать `localhost` в IP-адрес 127.0.0.1.
@@ -265,9 +258,11 @@ master-0       Ready    control-plane,master   5m      v1.29.10
 
 ```shell
     dhctl bootstrap \
-    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
-    --config=/config.yml --config=/resources.yml \
+    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
+    --config=/config.yml \
     --preflight-skip-all-checks 
 ```
+
+> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 {% endofftopic %}

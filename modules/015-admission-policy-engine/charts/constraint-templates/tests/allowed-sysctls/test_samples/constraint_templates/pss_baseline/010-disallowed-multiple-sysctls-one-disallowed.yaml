@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-multiple-sysctls-one-disallowed
+  namespace: testns
+spec:
+  securityContext:
+    sysctls:
+    - name: kernel.shm_rmid_forced
+      value: "1"
+    - name: net.core.rmem_max
+      value: "16777216"
+

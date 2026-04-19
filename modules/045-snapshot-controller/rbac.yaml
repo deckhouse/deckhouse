@@ -1,4 +1,0 @@
-module: snapshot-controller
-subsystems:
-  - storage
-  - infrastructure

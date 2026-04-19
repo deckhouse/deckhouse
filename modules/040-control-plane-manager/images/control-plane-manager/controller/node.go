@@ -19,14 +19,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
+	"log/slog"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func annotateNode() error {
-	log.Infof("phase: annotate node %s with annotation %s", config.NodeName, waitingApprovalAnnotation)
+	log.Info("phase: annotate node", slog.String("node", config.NodeName), slog.String("annotation", waitingApprovalAnnotation))
 	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -34,7 +35,7 @@ func annotateNode() error {
 
 	if _, ok := node.Annotations[approvedAnnotation]; ok {
 		// node already approved, no need to annotate
-		log.Infof("node %s already approved by annotation %s, no need to annotate", config.NodeName, approvedAnnotation)
+		log.Info("node already approved by annotation, no need to annotate", slog.String("node", config.NodeName), slog.String("annotation", approvedAnnotation))
 		return nil
 	}
 
@@ -45,18 +46,16 @@ func annotateNode() error {
 }
 
 func waitNodeApproval() error {
-	log.Infof("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation)
+	log.Info("phase: waiting node approval with annotation", slog.String("node", config.NodeName), slog.String("annotation", approvedAnnotation))
 
-	for i := 0; i < maxRetries; i++ {
-		log.Infof("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName)
-		node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		if _, ok := node.Annotations[approvedAnnotation]; ok {
-			return nil
-		}
-		time.Sleep(1 * time.Second)
+	log.Info("waiting for annotation on our node", slog.String("node", config.NodeName), slog.String("annotation", approvedAnnotation))
+	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
+	if err != nil {
+		return err
 	}
+	if _, ok := node.Annotations[approvedAnnotation]; ok {
+		return nil
+	}
+
 	return fmt.Errorf("can't get annotation %s from our node %s", approvedAnnotation, config.NodeName)
 }

@@ -11,12 +11,20 @@ properties:
             description: |
               Издатель ServiceAccount'ов. Это URL API-сервера. Значения этого поля используются как `iss` claim токена и для проверки JWT-токенов ServiceAccount.
 
+              Издатель по умолчанию автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`
+
               **Обратите внимание**, что все поды в кластере, использующие токены ServiceAccount, должны быть перезапущены при изменении этой опции.
           additionalAPIAudiences:
             description: |
               Список дополнительных API audience'ов, которые следует добавить при создании токенов ServiceAccount.
 
-              Audience по умолчанию, автоматически генерируются на основе шаблона `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`. Аутентификатор токенов ServiceAccount проверяет, что токены, использованные с API, привязаны как минимум к одной из этих audiences.
+              Список audience'ов по умолчанию содержит:
+
+              - `serviceAccount.issuer`, eсли указано
+              - `serviceAccount.additionalAPIIssuers`, eсли указано
+              - `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local` - этот audience добавляется всегда для обратной совместимости.
+
+              Аутентификатор токенов ServiceAccount проверяет, что токены, использованные с API, привязаны как минимум к одной из этих audiences.
 
               Этот вариант полезен при переходе от одного издателя API к другому.
           additionalAPIIssuers:
@@ -25,7 +33,7 @@ properties:
 
               Эти издатели (iss) используются для проверки источника токенов, чтобы гарантировать, что они поступают от доверенных сущностей.
 
-              Первый издатель автоматически генерируется по шаблону `https://kubernetes.default.svc.${clusterDomain}`, например, `https://kubernetes.default.svc.cluster.local`. Когда указано несколько издателей, то первый используется для генерации токенов, а все указанные издатели принимаются для валидации токенов.
+              Когда указано несколько издателей, то первый используется для генерации токенов, а все указанные издатели принимаются для валидации токенов.
 
               Этот вариант полезен при переходе от одного API издателя к другому.
       admissionPlugins:
@@ -71,7 +79,7 @@ properties:
         description: |
           Опциональные параметры аутентификации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/modules/user-authn/).
         properties:
           oidcIssuerURL:
             description: |
@@ -90,14 +98,14 @@ properties:
               CA аутентификационного webhook'a.
           webhookCacheTTL:
             description: |
-              Продолжительность кэширования ответов от аутентификационного webhook'a.
+              Продолжительность кеширования ответов от аутентификационного webhook'a.
 
               Задается в виде строки с указанием часов и минут: 30m, 1h, 2h30m, 24h.
       authz:
         description: |
           Параметры авторизации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/modules/user-authz/).
         properties:
           webhookURL:
             description: |
@@ -112,7 +120,7 @@ properties:
           annotations:
             description: |
               Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
-              > **Внимание!** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+              > **Внимание.** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
           sourceRanges:
             description: |
               Список CIDR, которым разрешен доступ к API.
@@ -145,8 +153,21 @@ properties:
           > **Важно!** Этот режим нельзя отключить!
   etcd:
     description: |
-      Параметры `etcd`.
+      Параметры etcd.
     properties:
+      backup:
+        description: |
+          Параметры резервного копирования etcd.
+        properties:
+          enabled:
+            description: |
+              Включение резервного копирование etcd.
+          cronSchedule:
+            description: |
+              Расписание резервного копирования etcd в формате cron. Используется локальный часовой пояс `kube-controller-manager`.
+          hostPath:
+            description: |
+              Путь для хранения резервных копий etcd на master-узлах.
       maxDbSize:
         description: |
           [quota-backend-bytes](https://etcd.io/docs/v3.5/dev-guide/limit/#storage-size-limit) параметр.
@@ -158,9 +179,6 @@ properties:
           Максимальное значение: 8GB.
 
           **Экспериментальный**. Может быть удален в будущем.
-      externalMembersNames:
-        description: |
-          Массив имен внешних etcd member'ов (эти member'ы не будут удаляться).
   nodeMonitorGracePeriodSeconds:
     description: |
       Число секунд, через которое узел перейдет в состояние `Unreachable` при потере с ним связи.
@@ -168,3 +186,9 @@ properties:
     description: |
       Количество секунд, по прошествии которых с узла в статусе `Unreachable` будут удалены поды.
       > **Важно!** При изменении этого параметра потребуется перезапуск подов.
+  enabledFeatureGates:
+    description: |
+      Список включенных в control plane экспериментальных функций (feature gates).
+
+      Описание отдельных feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      Список поддерживаемых в DKP feature gates доступен на [странице описания модуля](./#feature-gates).

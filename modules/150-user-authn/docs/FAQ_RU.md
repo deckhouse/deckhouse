@@ -2,16 +2,15 @@
 title: "Модуль user-authn: FAQ"
 ---
 
-{% raw %}
-
 ## Как защитить мое приложение?
 
 Чтобы включить аутентификацию через Dex для приложения, выполните следующие шаги:
-1. Создайте custom resource [DexAuthenticator](cr.html#dexauthenticator).
 
-   Создание `DexAuthenticator` в кластере приводит к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к Dex. После появления custom resource `DexAuthenticator` в указанном namespace появятся необходимые объекты Deployment, Service, Ingress, Secret.
+1. Создайте ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator).
 
-   Пример custom resource `DexAuthenticator`:
+   При создании [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) в кластере создаётся экземпляр [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключённый к Dex. В указанном неймспейсе будут созданы объекты Deployment, Service, Ingress, Secret.
+
+   Пример ресурса [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator):
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -20,14 +19,14 @@ title: "Модуль user-authn: FAQ"
      # Префикс имени подов Dex authenticator.
      # Например, если префикс имени `app-name`, то поды Dex authenticator будут вида `app-name-dex-authenticator-7f698684c8-c5cjg`.
      name: app-name
-     # Namespace, в котором будет развернут Dex authenticator.
+     # Неймспейс, в котором будет развернут Dex authenticator.
      namespace: app-ns
    spec:
-     # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификацию в Dex.
+     # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификации в Dex.
      applicationDomain: "app-name.kube.my-domain.com"
-     # Отправлять ли `Authorization: Bearer` header приложению. Полезно в связке с auth_request в NGINX.
+     # Отправлять ли заголовок `Authorization: Bearer` приложению. Полезно в связке с auth_request в NGINX.
      sendAuthorizationHeader: false
-     # Имя Secret'а с SSL-сертификатом.
+     # Имя секрета с SSL-сертификатом.
      applicationIngressCertificateSecretName: "ingress-tls"
      # Название Ingress-класса, которое будет использоваться в создаваемом для Dex authenticator Ingress-ресурсе.
      applicationIngressClassName: "nginx"
@@ -43,18 +42,27 @@ title: "Модуль user-authn: FAQ"
      - 192.168.0.0/24
    ```
 
-2. Подключите приложение к Dex.
+{% raw %}
+
+1. Подключите приложение к Dex.
 
    Для этого добавьте в Ingress-ресурс приложения следующие аннотации:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
-      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
-      - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
-      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
+   - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
+      - `SERVICE_NAME` — имя сервиса (Service) аутентификатора. Как правило, оно соответствует формату `<NAME>-dex-authenticator` (`<NAME>` — это `metadata.name` ресурса [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator));
+      - `NS` — значение параметра `metadata.namespace` ресурса [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator);
+      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration)).
 
-   Ниже представлен пример аннотаций на Ingress-ресурсе приложения, для подключения его к Dex:
+   > **Важно:** Если имя DexAuthenticator (`<NAME>`) слишком длинное, имя сервиса (Service) может быть сокращено. Чтобы найти корректное имя сервиса, воспользуйтесь следующей командой (укажите имя неймспейса и аутентификатора):
+   >
+   > ```shell
+   > d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
+   > ```
+   >
+
+   Пример аннотаций Ingress-ресурса приложения для подключения к Dex:
 
    ```yaml
    annotations:
@@ -62,6 +70,12 @@ title: "Модуль user-authn: FAQ"
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
+
+{% endraw %}
+
+{% alert level="warning" %}
+Ingress приложения должен иметь настроенный TLS. DexAuthenticator не поддерживает Ingress-ресурсы, работающие только по HTTP.
+{% endalert %}
 
 ### Настройка ограничений на основе CIDR
 
@@ -73,7 +87,7 @@ title: "Модуль user-authn: FAQ"
   nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
   ```
 
-* Если необходимо, чтобы пользователи из указанных сетей освобождались от прохождения аутентификации в Dex, а пользователи из остальных сетей обязательно аутентифицировались в Dex, добавьте следующую аннотацию:
+* Чтобы разрешить доступ без аутентификации в Dex для пользователей из указанных сетей, а для остальных оставить обязательную аутентификацию, добавьте аннотацию:
 
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
@@ -81,25 +95,34 @@ title: "Модуль user-authn: FAQ"
 
 ## Как работает аутентификация с помощью DexAuthenticator
 
-![Как работает аутентификация с помощью DexAuthenticator](../../images/user-authn/dex_login.svg)
+![Как работает аутентификация с помощью DexAuthenticator](images/dex_login.svg)
 
-1. Dex в большинстве случаев перенаправляет пользователя на страницу входа провайдера и ожидает, что пользователь будет перенаправлен на его `/callback` URL. Однако такие провайдеры, как LDAP или Atlassian Crowd, не поддерживают этот вариант. Вместо этого пользователь должен ввести свои логин и пароль в форму входа в Dex, и Dex сам проверит их верность, сделав запрос к API провайдера.
+{% alert level="warning" %}
+DexAuthenticator работает только по HTTPS. Ingress-ресурсы, настроенные только на HTTP, не поддерживаются.
 
-2. DexAuthenticator устанавливает cookie с целым refresh token (вместо того чтобы выдать тикет, как для ID token) потому что Redis не сохраняет данные на диск.
-Если по тикету в Redis не найден ID token, пользователь сможет запросить новый ID token, предоставив refresh token из cookie.
+Аутентификационные cookie устанавливаются с атрибутом `Secure`, что означает их передачу только через зашифрованные HTTPS-соединения.
 
-3. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID token из Redis. Это необязательно для сервисов по типу [Upmeter](../upmeter/), потому что права доступа к Upmeter не такие проработанные.
-С другой стороны, для [Kubernetes Dashboard](../dashboard/) это критичный функционал, потому что она отправляет ID token дальше для доступа к Kubernetes API.
+Убедитесь, что для Ingress вашего приложения настроен TLS, прежде чем интегрировать его с DexAuthenticator.
+{% endalert %}
 
-## Как я могу сгенерировать kubeconfig для доступа к Kubernetes API?
+1. Dex в большинстве случаев перенаправляет пользователя на страницу входа провайдера и ожидает, что пользователь будет перенаправлен на его `/callback` URL. Однако такие провайдеры, как LDAP или Atlassian Crowd, не поддерживают этот вариант. Вместо этого пользователь должен ввести логин и пароль в форму входа в Dex, и Dex сам проверит учётные данные, выполнив запрос к API провайдера.
 
-Сгенерировать `kubeconfig` для удаленного доступа к кластеру через `kubectl` можно через веб-интерфейс `kubeconfigurator`.
+1. DexAuthenticator устанавливает cookie с полным токеном обновления (вместо выдачи тикета, как для ID-токена), потому что Redis не сохраняет данные на диск.
+   Если по тикету в Redis не найден ID-токен, пользователь сможет запросить новый ID-токен, предоставив токен обновления из cookie.
 
-Настройте параметр [publishAPI](configuration.html#parameters-publishapi):
-- Откройте настройки модуля `user-authn` (создайте ресурс moduleConfig `user-authn`, если его нет):
+1. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID-токена из Redis. Это необязательно для сервисов вроде [`upmeter`](/modules/upmeter/), так как права доступа к `upmeter` менее детальные.
+   Для [Kubernetes Dashboard](/modules/dashboard/) это критичная функциональность: Dashboard передаёт ID-токен дальше для доступа к API Kubernetes.
+
+## Как сгенерировать kubeconfig для доступа к Kubernetes API?
+
+`kubeconfig` для удалённого доступа к кластеру через `kubectl` можно сгенерировать в [веб-интерфейсе `kubeconfigurator`](/products/kubernetes-platform/documentation/v1/user/web/kubeconfig.html).
+
+Настройте параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi):
+
+- Откройте настройки модуля `user-authn` (создайте ресурс ModuleConfig `user-authn`, если его нет):
 
   ```shell
-  kubectl edit mc user-authn
+  d8 k edit mc user-authn
   ```
 
 - Добавьте следующую секцию в блок `settings` и сохраните изменения:
@@ -109,12 +132,11 @@ title: "Модуль user-authn: FAQ"
     enabled: true
   ```
 
-Для доступа к веб-интерфейсу, позволяющему сгенерировать `kubeconfig`, зарезервировано имя `kubeconfig`. URL для доступа зависит от значения параметра [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) (например, для `publicDomainTemplate: %s.kube.my` это будет `kubeconfig.kube.my`, а для `publicDomainTemplate: %s-kube.company.my` — `kubeconfig-kube.company.my`)  
-{% endraw %}
+Имя `kubeconfig` зарезервировано для веб-интерфейса генерации kubeconfig. URL зависит от параметра [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (например, при шаблоне вида `%s.kube.my` веб-интерфейс генерации kubeconfig будет доступен по адресу `kubeconfig.kube.my`, при `%s-kube.company.my` — по адресу `kubeconfig-kube.company.my`).  
 
 ### Настройка kube-apiserver
 
-С помощью функционала модуля [control-plane-manager](../../modules/control-plane-manager/) Deckhouse автоматически настраивает kube-apiserver, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
+С помощью функций модуля [`control-plane-manager`](/modules/control-plane-manager/) DKP автоматически настраивает `kube-apiserver`, выставляя следующие флаги так, чтобы модули `dashboard` и `kubeconfig-generator` могли работать в кластере.
 
 {% offtopic title="Аргументы kube-apiserver, которые будут настроены" %}
 
@@ -123,25 +145,49 @@ title: "Модуль user-authn: FAQ"
 * `--oidc-issuer-url=https://dex.%addonsPublicDomainTemplate%/`
 * `--oidc-username-claim=email`
 
-В случае использования самоподписанных сертификатов для Dex будет добавлен еще один аргумент, а также в под с apiserver будет смонтирован файл с CA:
+При использовании самоподписанных сертификатов для Dex добавляется ещё один аргумент, а в под `apiserver` монтируется файл CA:
 
 * `--oidc-ca-file=/etc/kubernetes/oidc-ca.crt`
 {% endofftopic %}
 
-{% raw %}
-
 ### Как работает подключение к Kubernetes API с помощью сгенерированного kubeconfig
 
-![Схема взаимодействия при подключении к Kubernetes API с помощью сгенерированного kubeconfig](../../images/user-authn/kubeconfig_dex.svg)
+![Схема взаимодействия при подключении к Kubernetes API с помощью сгенерированного kubeconfig](images/kubeconfig_dex.svg)
 
-1. До начала работы kube-apiserver необходимо запросить конфигурационный endpoint OIDC провайдера (в нашем случае — Dex), чтобы получить issuer и настройки JWKS endpoint.
+1. До начала работы `kube-apiserver` необходимо запросить конфигурационный эндпоинт OIDC провайдера (в нашем случае — Dex), чтобы получить issuer и настройки JWKS-эндпоинта.
 
-2. Kubeconfig generator сохраняет ID token и refresh token в файл kubeconfig.
+1. Kubeconfig generator сохраняет ID-токен и Refresh-токен в файл `kubeconfig`.
 
-3. После получения запроса с ID token kube-apiserver идет проверять, что token подписан провайдером, который мы настроили на первом шаге, с помощью ключей, полученных с точки доступа JWKS. В качестве следующего шага он сравнивает значения claim'ов `iss` и `aud` из token'а со значениями из конфигурации.
+1. После получения запроса с ID-токеном `kube-apiserver` проверяет, что токен подписан провайдером, настроенным на первом шаге, с помощью ключей, полученных с JWKS-эндпоинта. Затем сравнивает значения claim `iss` и `aud` из токена со значениями из конфигурации.
+
+## Как включить SSO по Kerberos (SPNEGO) для LDAP?
+
+Если на стороне клиента настроено доменное SSO (браузер доверяет домену Dex), Dex может принимать Kerberos‑билеты по заголовку `Authorization: Negotiate` и выполнять аутентификацию без отображения формы ввода логина/пароля.
+
+Включение SSO по Kerberos (SPNEGO) для LDAP:
+
+1. В инфраструктуре клиента должен быть задан SPN `HTTP/<fqdn-dex>` для сервисного аккаунта и сгенерирован `keytab`.
+1. В кластере создайте секрет в неймспейсе `d8-user-authn` с ключом `krb5.keytab`.
+1. В ресурсе DexProvider (тип LDAP) включите блок [`spec.ldap.kerberos`](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap-kerberos) и настройте в нём параметры:
+   - `enabled: true`;
+   - `keytabSecretName: <имя секрета>`;
+   - опционально: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
+
+Dex автоматически смонтирует `keytab` и начнёт принимать SPNEGO. `krb5.conf` на сервере не обязателен — билеты проверяются по keytab.
+
+## Как настроить базовую аутентификацию для доступа к Kubernetes API через LDAP?
+
+1. Включите параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi) в конфигурации модуля `user-authn`.
+1. Создайте ресурс [DexProvider](/modules/user-authn/cr.html#dexprovider) типа `LDAP` и установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
+1. Передайте пользователям `kubeconfig` с настроенными параметрами базовой аутентификации (логин и пароль LDAP).
+
+{% alert level="warning" %}
+В кластере может быть только один провайдер аутентификации со включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+{% endalert %}
+
+Подробный пример описан в разделе [Примеры конфигурации](/modules/user-authn/usage.html#настройка-базовой-аутентификации).
 
 ## Как Dex защищен от подбора логина и пароля?
 
-Одному пользователю разрешено только 20 попыток входа. Если указанный лимит израсходован, одна дополнительная попытка будет добавляться каждые 6 секунд.
-
-{% endraw %}
+Каждому пользователю разрешено не более 20 попыток входа. После исчерпания лимита одна дополнительная попытка добавляется каждые 6 секунд.

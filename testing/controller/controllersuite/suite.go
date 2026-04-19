@@ -17,6 +17,7 @@ package controllersuite
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -31,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/testing/controller/testclient"
-	"github.com/deckhouse/deckhouse/testing/flags"
 )
 
 var defaultLogOutput = os.Stderr
@@ -48,10 +48,6 @@ type Suite struct {
 	tmpDir     string
 }
 
-func (suite *Suite) loggerExit(i int) {
-	suite.T().Fatalf("logger call Exit(%d)", i)
-}
-
 func (suite *Suite) Setup(initObjects []client.Object, opts ...SuiteOption) error {
 	suite.Lock()
 	defer suite.Unlock()
@@ -65,24 +61,21 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 		opt(suite)
 	}
 
-	loggerOpts := log.Options{
-		Level:  slog.LevelWarn,
-		Output: suite.logOutput,
-		TimeFunc: func(_ time.Time) time.Time {
+	logger := log.NewLogger(
+		log.WithLevel(slog.LevelWarn),
+		log.WithOutput(suite.logOutput),
+		log.WithTimeFunc(func(_ time.Time) time.Time {
 			return dependency.TestDC.GetClock().Now()
-		},
-	}
-
-	if flags.Verbose || flags.Run != nil {
-		loggerOpts.Level = slog.LevelDebug
-	}
-
-	logger := log.NewLogger(loggerOpts)
+		}),
+	)
 	suite.logger = logger.Named("suite")
 
 	var err error
 	suite.client, err = testclient.New(logger.Named("test k8s client"), initObjects)
-	return err
+	if err != nil {
+		return fmt.Errorf("new: %w", err)
+	}
+	return nil
 }
 
 func (suite *Suite) Check(err error) {
@@ -163,16 +156,6 @@ func (suite *Suite) TearDownSubTest() {
 
 		suite.Check(err)
 	}
-}
-
-func (suite *Suite) sameFile(a *os.File, b *os.File) bool {
-	aStat, err := a.Stat()
-	suite.Check(err)
-
-	bStat, err := b.Stat()
-	suite.Check(err)
-
-	return os.SameFile(aStat, bStat)
 }
 
 var (

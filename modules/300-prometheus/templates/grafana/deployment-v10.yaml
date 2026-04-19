@@ -8,7 +8,7 @@ cpu: 10m
 memory: 60Mi
 {{- end }}
 
-{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if and .Values.prometheus.internal.grafana.enabled (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -22,7 +22,7 @@ spec:
     kind: Deployment
     name: grafana-v10
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: grafana
@@ -39,6 +39,7 @@ spec:
         memory: 100Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
+{{- if .Values.prometheus.internal.grafana.enabled }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -68,15 +69,16 @@ spec:
     spec:
       {{- include "helm_lib_node_selector" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
-      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "grafana-v10")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: grafana
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: grafana
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "grafanaV10") }}
         env:
         {{- if .Values.global.modules.publicDomainTemplate }}
@@ -136,12 +138,32 @@ spec:
           value: "false"
         - name: GF_UNIFIED_ALERTING_DISABLED_ORGS
           value: "1"
+        - name: GF_ANALYTICS_REPORTING_ENABLED
+          value: "false"
+        - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+          value: "false"
+        - name: GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES
+          value: "false"
+        - name: GF_ANALYTICS_FEEDBACK_LINKS_ENABLED
+          value: "false"
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS
           value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
           {{- end }}
         {{- end }}
+        - name: GF_SECURITY_CONTENT_SECURITY_POLICY
+          value: "true"
+        {{- if ne .Values.global.modules.https.mode "Disabled" }}
+        - name: GF_SERVER_STRICT_TRANSPORT_SECURITY
+          value: "true"
+        - name: GF_SECURITY_COOKIE_SECURE
+          value: "true"
+        {{- end }}
+        - name: GF_SECURITY_COOKIE_SAMESITE
+          value: "strict"
+        - name: GF_DATABASE_WAL
+          value: "true"
         - name: PROMETHEUS_TOKEN
           valueFrom:
             secretKeyRef:
@@ -151,6 +173,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
         - name: grafana-alerts-channels
@@ -181,8 +205,14 @@ spec:
             port: 8443
             scheme: HTTPS
           initialDelaySeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8443
+            scheme: HTTPS
+          initialDelaySeconds: 60
       - name: dashboard-provisioner
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "grafanaDashboardProvisioner") }}
         env:
         - name: DEBUG_UNIX_SOCKET
@@ -197,6 +227,8 @@ spec:
         volumeMounts:
         - name: grafana-data
           mountPath: /var/lib/grafana/data
+        - name: grafana-alerting
+          mountPath: /var/lib/grafana/data/alerting
         - name: shared-dashboards-folder
           mountPath: /etc/grafana/dashboards
         - name: tmp
@@ -211,7 +243,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 5
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list $ "kubeRbacProxy") }}
         args:
         - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8443"
@@ -256,6 +288,11 @@ spec:
             path: /livez
             port: 8443
             scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 8443
+            scheme: HTTPS
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
@@ -283,6 +320,8 @@ spec:
           name: kube-rbac-proxy-ca.crt
       - name: grafana-data
         emptyDir: {}
+      - name: grafana-alerting
+        emptyDir: {}
       - name: tmp
         emptyDir: {}
       - name: plugins
@@ -296,3 +335,4 @@ spec:
             - key: grafanaLogo
               path: deckhouse-logo.svg
       {{- end }}
+{{- end }}

@@ -1,34 +1,38 @@
-{{- $docker_version := "2.8.3" }}
-{{- $docker_auth_version := "1.12.0" }}
+{{- $docker_version := include "get_oss_version_by_id" (list "docker" $ )  -}}
+{{- $docker_auth_version := include "get_oss_version_by_id" (list "docker-auth" $ )  -}}
 
 {{- $image_version := $docker_version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
 git:
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-    - '**/*'
-- add: /{{ $.ModulePath }}/modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+- add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ .ModulePath }}modules/{{ $.ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches/
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ $.SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
-  - git clone --depth 1 --branch v{{ $docker_version }} {{ $.SOURCE_REPO }}/distribution/distribution.git /src/distribution
+  - git clone --depth 1 --branch {{ $docker_auth_version }} {{ .SOURCE_REPO }}/cesanta/docker_auth.git /src/docker_auth
   - cd /src/docker_auth
   - git apply /patches/docker_auth/*.patch --verbose
-  - rm -rf .git
+  - git clone --depth 1 --branch v{{ $docker_version }} {{ .SOURCE_REPO }}/distribution/distribution.git /src/distribution
+  - rm -rf /src/docker_auth/.git
+  - rm -rf /src/distribution/.git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
+from: {{ index $.Images "builder/scratch" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -37,34 +41,34 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    docker: {{ $docker_version }}
-    cesanta_auth: {{ $docker_auth_version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "docker": "{{ $docker_version }}", "cesanta_auth": "{{ $docker_auth_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
-git:
-- add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-  to: /
-  stageDependencies:
-    setup:
-    - '**/*'
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make git
   setup:
-  - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=auto
   - cd /src/docker_auth/auth_server
   - make build
   - mv ./auth_server /auth_server

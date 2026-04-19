@@ -1,0 +1,10 @@
+#!/bin/bash
+# Copyright 2025 Flant JSC
+# Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
+set -Eeo pipefail
+
+# Copy binary.
+mkdir -p /opt/deckhouse/bin
+cp -f d8-shutdown-inhibitor /opt/deckhouse/bin
+

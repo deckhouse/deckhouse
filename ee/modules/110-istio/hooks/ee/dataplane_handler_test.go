@@ -8,13 +8,13 @@ package ee
 import (
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -355,7 +355,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		// the first action should always be "expire"
 		Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 			Group:  metadataExporterMetricsGroup,
-			Action: "expire",
+			Action: operation.ActionExpireMetrics,
 		}))
 
 		// there are no istio pods or ignored pods in the cluster, hense no metrics
@@ -368,7 +368,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 		Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 			Name:   istioPodMetadataMetricName,
 			Group:  metadataExporterMetricsGroup,
-			Action: "set",
+			Action: operation.ActionGaugeSet,
 			Value:  ptr.To(1.0),
 			Labels: map[string]string{
 				"namespace":            nsName,
@@ -470,6 +470,59 @@ var _ = Describe("Istio hooks :: dataplane_handler :: metrics ::", func() {
 				DesiredVersion:     "1.15",
 				FullVersion:        "1.15.15",
 				DesiredFullVersion: "1.15.15",
+			}),
+		Entry("NS with istio.io/rev=default (normalized to global), pod gets globalRevision as desired",
+			[]string{
+				generateIstioNsYAML(nsParams{
+					DefiniteRevision: "default",
+				}),
+				generateIstioPodYAML(podParams{
+					InjectionLabel:      true,
+					InjectionLabelValue: true,
+					CurrentRevision:     "v1x42",
+					FullVersion:         "1.42.42",
+				}),
+			}, &wantedMetric{
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
+			}),
+		Entry("Pod with istio.io/rev=default (normalized to global string), metric has desired_revision=<global one>",
+			[]string{
+				generateIstioNsYAML(nsParams{
+					GlobalRevision: true,
+				}),
+				generateIstioPodYAML(podParams{
+					DefiniteRevision: "default",
+					CurrentRevision:  "v1x42",
+					FullVersion:      "1.42.42",
+				}),
+			}, &wantedMetric{
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
+			}),
+		Entry("NS without labels, pod with istio.io/rev=default gets globalRevision as desired",
+			[]string{
+				generateIstioNsYAML(nsParams{}),
+				generateIstioPodYAML(podParams{
+					DefiniteRevision: "default",
+					CurrentRevision:  "v1x42",
+					FullVersion:      "1.42.42",
+				}),
+			}, &wantedMetric{
+				Revision:           "v1x42",
+				DesiredRevision:    "v1x42",
+				Version:            "1.42",
+				DesiredVersion:     "1.42",
+				FullVersion:        "1.42.42",
+				DesiredFullVersion: "1.42.42",
 			}),
 		Entry("NS without any revisions, pod with istio.io/rev label",
 			[]string{
@@ -1092,7 +1145,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch Deployment"))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Patch info\",\"kind\":\"Deployment\""))
 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1141,7 +1194,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch Deployment"))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Patch info\",\"kind\":\"Deployment\""))
 
 				d := f.KubernetesResource("Deployment", nsName, deployName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1248,7 +1301,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch DaemonSet"))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Patch info\",\"kind\":\"DaemonSet\""))
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1295,7 +1348,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch DaemonSet"))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Patch info\",\"kind\":\"DaemonSet\""))
 
 				d := f.KubernetesResource("DaemonSet", nsName, dsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1402,7 +1455,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch StatefulSet"))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Patch info\",\"kind\":\"StatefulSet\""))
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())
@@ -1449,7 +1502,7 @@ var _ = Describe("Istio hooks :: dataplane_handler :: dataplane_upgrade ::", fun
 				Expect(f).To(ExecuteSuccessfully())
 
 				Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(1))
-				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("Patch StatefulSet"))
+				Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"Patch info\",\"kind\":\"StatefulSet\""))
 
 				d := f.KubernetesResource("StatefulSet", nsName, stsName)
 				Expect(d.Exists()).Should(BeTrue())

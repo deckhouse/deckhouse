@@ -1,0 +1,108 @@
+@use "sass:math";
+
+@use "sass:color";
+@use "components/common/_variables.scss";
+
+$item-gap: 50px;
+$item-width-m: math.div(variables.$container-width-m - $item-gap*2, 3);
+$item-width-lg: (variables.$container-width-lg - $item-gap*3)*0.25;
+
+.features-tabs {
+    margin-bottom: 100px;
+    &__title {
+        margin-top: 0;
+        margin-bottom: variables.$spacing-l*1.5;
+        box-sizing: border-box;
+    }
+    &__tabs {
+        margin-bottom: variables.$spacing-l*1.5;
+        border-bottom: 2px solid color.adjust(variables.$color-main, $alpha: -0.9);
+        display: flex;
+        flex-direction: row;
+        margin-left: -20px;
+        margin-right: -20px;
+        &-item {
+            display: block;
+            padding: 0 20px 10px 20px;
+            text-decoration: none;
+            font-size: variables.$font-size-h3;
+            font-weight: variables.$font-weight-bold;
+            color: variables.$color-main;
+            margin-right: 50px;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            &.active {
+                color: variables.$color-alt;
+                border-color: variables.$color-alt;
+            }
+        }
+    }
+    &__item {
+        display: none;
+        &.active {
+            display: block;
+        }
+        &-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0 0 0 auto;
+
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            align-items: flex-start;
+
+            line-height: 1.5;
+
+            &::after {
+                content: '';
+                flex: auto;
+            }
+            a {
+                color: variables.$color-alt;
+                &:hover {
+                    text-decoration: none;
+                }
+            }
+            & > li {
+                margin-bottom: $item-gap;
+                margin-right: $item-gap;
+                position: relative;
+                @media (max-width: variables.$container-breakpoint-lg - 1) {
+                    width: $item-width-m;
+                    &:nth-child(3n) {
+                        margin-right: 0px;
+                    }
+                }
+                @media (min-width: variables.$container-breakpoint-lg) {
+                    width: $item-width-lg;
+                    &:nth-child(4n) {
+                        margin-right: 0px;
+                    }
+                }
+                &::before {
+                    content: '';
+                    width: 15px;
+                    height: 15px;
+                    position: absolute;
+                    left: -25px;
+                    top: 3px;
+                    background: url('../images/icons/check.svg');
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                }
+                ul {
+                    list-style-type: none;
+                    margin: variables.$spacing-m 0 variables.$spacing-l;
+                    padding: 0;
+                    li {
+                        opacity: 0.6;
+                        font-size: variables.$font-size-small;
+                        margin-bottom: variables.$spacing-m;
+                    }
+                }
+            }
+        }
+    }
+}

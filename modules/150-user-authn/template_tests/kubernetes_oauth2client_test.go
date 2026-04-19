@@ -39,6 +39,7 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 	})
 
 	Context("Without dex authenticator", func() {
@@ -66,6 +67,16 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
     applicationDomain: authenticator.example.com
     applicationIngressCertificateSecretName: test
 `)
+			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
+"test@d8-test":
+  name: "test-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames: {}
+`)
 			hec.HelmRender()
 		})
 		It("Should deploy kubernetes OAuth2Client", func() {
@@ -86,6 +97,16 @@ var _ = Describe("Module :: user-authn :: helm template :: kubernetes oauth2clie
   spec:
     applicationDomain: authenticator.example.com
     applicationIngressCertificateSecretName: test
+`)
+			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
+"test@d8-test":
+  name: "test-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames: {}
 `)
 			hec.HelmRender()
 		})

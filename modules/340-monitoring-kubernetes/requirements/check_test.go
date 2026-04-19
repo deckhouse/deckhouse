@@ -36,14 +36,14 @@ func TestKubernetesVersionRequirement(t *testing.T) {
 
 	t.Run("requirement failed", func(t *testing.T) {
 		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "1.22,1.23,1.25")
-		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.27")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.30")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
 	t.Run("requirement initial", func(t *testing.T) {
 		requirements.SaveValue(hooks.K8sVersionsWithDeprecations, "initial")
-		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.27")
+		ok, err := requirements.CheckRequirement("autoK8sVersion", "1.30")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

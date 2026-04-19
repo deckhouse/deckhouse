@@ -17,6 +17,7 @@ limitations under the License.
 package change_host_address
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,6 +26,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const initialHostAddressAnnotation = "node.deckhouse.io/initial-host-ip"
@@ -76,21 +79,24 @@ func RegisterHook(appName, namespace string) bool {
 	}, wrapChangeAddressHandler(namespace))
 }
 
-func wrapChangeAddressHandler(namespace string) func(input *go_hook.HookInput) error {
-	return func(input *go_hook.HookInput) error {
+func wrapChangeAddressHandler(namespace string) func(_ context.Context, input *go_hook.HookInput) error {
+	return func(_ context.Context, input *go_hook.HookInput) error {
 		return changeHostAddressHandler(namespace, input)
 	}
 }
 
 func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error {
-	pods := input.Snapshots["pod"]
+	pods := input.Snapshots.Get("pod")
 	if len(pods) == 0 {
 		return nil
 	}
 
-	for _, pod := range pods {
-		podAddress := pod.(address)
+	addresses, err := sdkobjectpatch.UnmarshalToStruct[address](input.Snapshots, "pod")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal pods: %v", err)
+	}
 
+	for _, podAddress := range addresses {
 		if podAddress.Host == "" {
 			// Pod doesn't exist, we can skip it
 			continue
@@ -104,7 +110,7 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 					},
 				},
 			}
-			input.PatchCollector.MergePatch(patch, "v1", "Pod", namespace, podAddress.Name)
+			input.PatchCollector.PatchWithMerge(patch, "v1", "Pod", namespace, podAddress.Name)
 			continue
 		}
 
@@ -112,5 +118,6 @@ func changeHostAddressHandler(namespace string, input *go_hook.HookInput) error 
 			input.PatchCollector.Delete("v1", "Pod", namespace, podAddress.Name)
 		}
 	}
+
 	return nil
 }

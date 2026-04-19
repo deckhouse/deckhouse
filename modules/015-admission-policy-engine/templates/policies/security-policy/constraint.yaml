@@ -9,17 +9,22 @@
   {{- if not $cr.spec.policies.allowPrivilegeEscalation }}
     {{- include "allow_privilege_escalation" (list $context $cr) }}
   {{- end }}
-  {{- if or (not $cr.spec.policies.allowHostPID) (not $cr.spec.policies.allowHostIPC) }}
+  {{- if or (and (hasKey $cr.spec.policies "allowHostPID") (not $cr.spec.policies.allowHostPID)) (and (hasKey $cr.spec.policies "allowHostIPC") (not $cr.spec.policies.allowHostIPC)) }}
     {{- include "allow_host_processes" (list $context $cr) }}
   {{- end }}
-  {{- if or (not $cr.spec.policies.allowHostNetwork) (hasKey $cr.spec.policies "allowedHostPorts") }}
+  {{- if or (and (hasKey $cr.spec.policies "allowHostNetwork") (not $cr.spec.policies.allowHostNetwork)) (hasKey $cr.spec.policies "allowedHostPorts") }}
     {{- include "allow_host_network" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "readOnlyRootFilesystem" }}
     {{- include "read_only_root_filesystem" (list $context $cr) }}
   {{- end }}
-  {{- if not $cr.spec.policies.automountServiceAccountToken }}
+  {{- if and (hasKey $cr.spec.policies "automountServiceAccountToken") (not $cr.spec.policies.automountServiceAccountToken) }}
     {{- include "automount_service_account_token" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "allowRbacWildcards" }}
+  {{- if not $cr.spec.policies.allowRbacWildcards }}
+    {{- include "allow_rbac_wildcards" (list $context $cr) }}
+  {{- end }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "allowedClusterRoles" }}
     {{- include "allowed_cluster_roles" (list $context $cr) }}
@@ -36,7 +41,7 @@
   {{- if or (hasKey $cr.spec.policies "allowedCapabilities") (hasKey $cr.spec.policies "requiredDropCapabilities") }}
     {{- include "allowed_capabilities" (list $context $cr) }}
   {{- end }}
-  {{- if or (hasKey $cr.spec.policies "allowedAppArmor") }}
+  {{- if hasKey $cr.spec.policies "allowedAppArmor" }}
     {{- include "allowed_apparmor" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "allowedProcMount" }}
@@ -51,12 +56,25 @@
   {{- if or (hasKey $cr.spec.policies "allowedUnsafeSysctls") (hasKey $cr.spec.policies "forbiddenSysctls") }}
     {{- include "allowed_sysctls" (list $context $cr) }}
   {{- end }}
-  {{- if hasKey $cr.spec.policies "seccompProfiles" }}
+  {{- if $cr.spec.policies.seccompProfiles }}
     {{- include "seccomp_profiles" (list $context $cr) }}
   {{- end }}
   {{- if and (hasKey $cr.spec.policies "verifyImageSignatures") (regexMatch "^(EE|FE|CSE|SE-plus)$" $context.Values.global.deckhouseEdition) }}
     {{- include "verify_image_signatures" (list $context $cr) }}
   {{- end }}
+  {{- if hasKey $cr.spec.policies "allowedServiceTypes" }}
+    {{- include "verify_service_type" (list $context $cr) }}
+  {{- end }}
+  {{- if hasKey $cr.spec.policies "blockWildcardDomains" }}
+  {{- if $cr.spec.policies.blockWildcardDomains }}
+    {{- include "verify_ingresses" (list $context $cr) }}
+  {{- end }}
+  {{- end }}  
+{{- end }}
+
+{{/* Global constraint for exec/attach on heritage: deckhouse pods - not tied to SecurityPolicy CR */}}
+{{- if ne $context.Values.global.deckhouseVersion "dev" }}
+{{- include "deny_exec_heritage" $context }}
 {{- end }}
 
 {{- end }} # end if bootstrapped
@@ -117,14 +135,8 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- if not $cr.spec.policies.allowHostPID }}
-    allowHostPID:
-      {{- $cr.spec.policies.allowHostPID | toYaml | nindent 6 }}
-    {{- end }}
-    {{- if not $cr.spec.policies.allowHostIPC }}
-    allowHostIPC:
-      {{- $cr.spec.policies.allowHostIPC | toYaml | nindent 6 }}
-    {{- end }}
+    allowHostPID: {{- if hasKey $cr.spec.policies "allowHostPID" }} {{ $cr.spec.policies.allowHostPID }} {{- else }} true {{- end }}
+    allowHostIPC: {{- if hasKey $cr.spec.policies "allowHostIPC" }} {{ $cr.spec.policies.allowHostIPC }} {{- else }} true {{- end }}
 {{- end }}
 
 {{- define "allow_host_network" }}
@@ -145,10 +157,7 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    {{- if not $cr.spec.policies.allowHostNetwork }}
-    allowHostNetwork:
-      {{- $cr.spec.policies.allowHostNetwork | toYaml | nindent 6 }}
-    {{- end }}
+    allowHostNetwork: {{- if hasKey $cr.spec.policies "allowHostNetwork" }} {{ $cr.spec.policies.allowHostNetwork }} {{- else }} true {{- end }}
     {{- if hasKey $cr.spec.policies "allowedHostPorts" }}
     ranges:
       {{- $cr.spec.policies.allowedHostPorts | toYaml | nindent 6 }}
@@ -494,3 +503,92 @@ spec:
     - {{ printf "^%s$" ($policy.reference | replace "*" ".*") }}
     {{- end }}
 {{- end }}
+
+{{- define "verify_service_type" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedServiceTypes
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: [""]
+      kinds: ["Service"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "allowedServiceTypes" }}
+    allowedServiceTypes:
+      {{- $cr.spec.policies.allowedServiceTypes | toYaml | nindent 6 }}
+    {{- end }}
+{{- end }}
+
+{{- define "verify_ingresses" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowedIngresses
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+    - apiGroups: ["networking.k8s.io"]
+      kinds: ["Ingress"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+  parameters:
+    {{- if hasKey $cr.spec.policies "blockWildcardDomains" }}
+    blockWildcardDomains: {{ $cr.spec.policies.blockWildcardDomains }}
+    {{- end }}
+{{- end }}
+
+{{- define "allow_rbac_wildcards" }}
+  {{- $context := index . 0 }}
+  {{- $cr := index . 1 }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8AllowRbacWildcards
+metadata:
+  name: {{$cr.metadata.name}}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
+  match:
+    kinds:
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        kinds: ["Role", "RoleBinding"]
+    scope: Namespaced
+    {{- include "constraint_selector" (list $cr) }}
+{{- end }}
+
+{{- define "deny_exec_heritage" }}
+  {{- $context := . }}
+  {{- if ne $context.Values.global.deckhouseVersion "dev" }}
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8DenyExecHeritage
+metadata:
+  name: deny-exec-heritage-pods
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/security-policy" "")) | nindent 2 }}
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["PodExecOptions", "PodAttachOptions"]
+    scope: Namespaced
+    namespaces:
+      - "d8-*"
+      - "kube-*"
+  {{- end }}
+{{- end }}
+

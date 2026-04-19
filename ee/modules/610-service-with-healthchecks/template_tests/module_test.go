@@ -65,18 +65,23 @@ debug: true
     requests:
       ephemeral-storage: 50Mi
   securityContext:
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     capabilities:
-      add:
-      - NET_RAW
       drop:
-      - ALL
-    readOnlyRootFilesystem: true
+        - ALL
+    privileged: false
+    runAsUser:   64535
+    runAsGroup:  64535
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
 - args:
-  - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4229
+  - --secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):8383
   - --v=2
   - --logtostderr=true
   - --stale-cache-interval=1h30m
+  - --livez-path=/livez
   env:
   - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
     valueFrom:
@@ -98,17 +103,33 @@ debug: true
   image: registry.example.com@imageHash-common-kubeRbacProxy
   name: kube-rbac-proxy
   ports:
-  - containerPort: 4229
+  - containerPort: 8383
     name: https-metrics
+  livenessProbe:
+    httpGet:
+      path: /livez
+      port: 8383
+      scheme: HTTPS
+  readinessProbe:
+    httpGet:
+      path: /livez
+      port: 8383
+      scheme: HTTPS
   resources:
     requests:
       ephemeral-storage: 50Mi
   securityContext:
+    readOnlyRootFilesystem: true
     allowPrivilegeEscalation: false
     capabilities:
       drop:
-      - ALL
-    readOnlyRootFilesystem: true
+        - ALL
+    privileged: false
+    runAsUser:   64535
+    runAsGroup:  64535
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
 `
 )
 

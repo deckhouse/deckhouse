@@ -1,17 +1,20 @@
 ---
 title: "The namespace-configurator module"
+description: "Automatic management of annotations and labels on namespaces in the Deckhouse Kubernetes Platform."
 ---
 
-This module allows to assign annotations and labels to namespaces automatically.
+The `namespace-configurator` module allows to assign annotations and labels to namespaces automatically.
 
 It facilitates to enable new namespaces to monitoring system by adding `extended-monitoring.deckhouse.io/enabled=true` label.
 
-### How does it work?
+## How does it work?
 
-This module monitors the namespaces and the configuration.
-* All namespaces matching pattern from `includeNames` and not matching pattern from `excludeNames`, will have assigned labels and annotations according to the configuration;
-* When changing the module configuration, the corresponding labels and annotations will be reassigned according to the configuration;
+This module monitors the namespaces and configuration:
 
-### What do I need to configure?
+* It assigns labels and annotations from the configuration to all namespaces that match the `includeNames` pattern and do not match the `excludeNames` pattern.
+* Namespaces labeled `heritage` with one of the values `upmeter`, `deckhouse` or `multitenancy-manager` are ignored;
+* When changing the module configuration, namespace labels and annotations will be reassigned according to the configuration.
+
+## What do I need to configure?
 
 All you need to do is to specify list of desired labels and annotations and matching patterns for namespaces in the module configuration.

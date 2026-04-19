@@ -1,48 +1,47 @@
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+- from: {{ index $.Images "base/python" }}
   add: /
-  to: /sbin
+  to: /
   includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
+  - lib/ld-musl-x86_64*
+  - usr/bin/python3*
+  - usr/lib/python3*
+  - usr/lib/libc.so
+  excludePaths:
+  - usr/lib/python3*/site-packages/pip-25.3*
+  before: install
+- image: registrypackages/d8-curl-artifact-8-9-1
+  add: /d8-curl
+  to: /usr/bin/curl
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-  add: /usr/lib64
-  to: /usr/lib64
+- from: {{ index $.Images "tools/jq" }}
+  add: /usr/bin/jq
+  to: /usr/bin/jq
   before: setup
-  includePaths:
-  - "python3.*"
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /sbin/iptables-wrapper
-  before: setup
-docker:
-  ENTRYPOINT: ["/sbin/iptables-wrapper"]
----
-{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /usr/bin/python3 /usr/bin/curl /usr/bin/jq /bin/bash /bin/grep /sbin/ip /usr/sbin/bridge" }}
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ .Images.BASE_ALT_DEV }}
 git:
-- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/rootfs
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/sbin/iptables-wrapper"]
+---
+{{ $simpleBridgeBinaries := "/bin/awk /bin/cat /bin/rm /bin/echo /usr/bin/tee /bin/sleep /bin/hostname /bin/bash /bin/grep /usr/sbin/ip /usr/sbin/bridge" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
+git:
+- add: /{{ $.ModulePath }}modules/035-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/rootfs
   to: /relocate
   stageDependencies:
     install:
     - '**/*'
 shell:
   install:
-    - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
-        rm -f "/relocate/sbin/${cmd}"
-        ln -s /sbin/iptables-wrapper "/relocate/sbin/${cmd}"
-      done
+  - /binary_replace.sh -i "{{ $simpleBridgeBinaries }}" -o /relocate

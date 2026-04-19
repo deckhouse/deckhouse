@@ -9,7 +9,7 @@ metadata:
   resourceVersion: "1001"
 spec:
   checksum: dfg
-  path: /testmodule/v1.1.1
+  path: /modules/testmodule
   version: v1.1.1
 status:
   conditions:

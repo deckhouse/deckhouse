@@ -17,6 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -24,13 +28,15 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: moduleQueue + "/update_approval",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:                   "nodes",
+			Name:                   "control_plane_nodes",
 			ApiVersion:             "v1",
 			Kind:                   "Node",
 			WaitForSynchronization: ptr.To(false),
@@ -45,7 +51,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: updateApprovalFilterNode,
 		},
 		{
-			Name:                   "control_plane_manager",
+			Name:                   "etcd_arbiter_nodes",
+			ApiVersion:             "v1",
+			Kind:                   "Node",
+			WaitForSynchronization: ptr.To(false),
+			LabelSelector: &v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "node.deckhouse.io/etcd-arbiter",
+						Operator: v1.LabelSelectorOpExists,
+					},
+				},
+			},
+			FilterFunc: updateApprovalFilterNode,
+		},
+		{
+			Name:                   "control_plane_manager_pods",
 			ApiVersion:             "v1",
 			Kind:                   "Pod",
 			WaitForSynchronization: ptr.To(false),
@@ -57,9 +78,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchExpressions: []v1.LabelSelectorRequirement{
 					{
-						Key:      "app",
+						Key:      "component",
 						Operator: v1.LabelSelectorOpIn,
-						Values:   []string{"d8-control-plane-manager"},
+						Values:   []string{"control-plane-manager"},
 					},
 				},
 			},
@@ -144,29 +165,45 @@ type approvedPod struct {
 	NodeName string
 }
 
-func handleUpdateApproval(input *go_hook.HookInput) error {
+func handleUpdateApproval(_ context.Context, input *go_hook.HookInput) error {
 	nodeMap := make(map[string]approvedNode)
-	snap := input.Snapshots["nodes"]
-	for _, s := range snap {
-		node := s.(approvedNode)
+
+	snaps := input.Snapshots.Get("control_plane_nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshots: %v", err)
+		}
+
+		nodeMap[node.Name] = node
+	}
+
+	snaps = input.Snapshots.Get("etcd_arbiter_nodes")
+	for node, err := range sdkobjectpatch.SnapshotIter[approvedNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'etcd_arbiter_nodes' snapshots: %v", err)
+		}
+
 		nodeMap[node.Name] = node
 	}
 
 	// Remove approved annotations if pod is ready and node has annotation
-	snap = input.Snapshots["control_plane_manager"]
-	for _, s := range snap {
-		pod := s.(approvedPod)
+	snaps = input.Snapshots.Get("control_plane_manager_pods")
+	for pod, err := range sdkobjectpatch.SnapshotIter[approvedPod](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'control_plane_manager_pods' snapshots: %v", err)
+		}
+
 		if !pod.IsReady {
 			continue
 		}
 
 		node, ok := nodeMap[pod.NodeName]
 		if !ok {
-			input.Logger.Warnf("Node %s not found", pod.NodeName)
+			input.Logger.Warn("Node not found", slog.String("name", pod.NodeName))
 			continue
 		}
 		if node.IsApproved {
-			input.PatchCollector.MergePatch(removeApprovedPatch, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(removeApprovedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}
@@ -181,7 +218,7 @@ func handleUpdateApproval(input *go_hook.HookInput) error {
 	for _, node := range nodeMap {
 		// Approve one node
 		if node.IsWaitingForApproval && node.IsReady && !node.IsUnschedulable {
-			input.PatchCollector.MergePatch(approvedPatch, "v1", "Node", "", node.Name)
+			input.PatchCollector.PatchWithMerge(approvedPatch, "v1", "Node", "", node.Name)
 			return nil
 		}
 	}

@@ -1,0 +1,9 @@
+deckhouse-controller:
+  fixes:
+    - summary: fixes default maintenance value which prevents stuck metric
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13951
+node-manager:
+  fixes:
+    - summary: fixed update for static clusters
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13962
+

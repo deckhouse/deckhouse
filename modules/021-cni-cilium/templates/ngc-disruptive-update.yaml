@@ -1,0 +1,138 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: cilium-1-17-migration.sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  weight: 98
+  nodeGroups: ["*"]
+  bundles: ["*"]
+  content: |
+    # Copyright 2025 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    # cilium-agent image hash: {{ include "helm_lib_module_image" (list . "agentDistroless") }}
+
+    desired_sau_ds_generation={{ include "agent_daemonset_template" (list . "undefined") | sha256sum | quote }}
+
+    # If it is the first bashible run, there is nothing to do
+    if [[ "${FIRST_BASHIBLE_RUN}" == "yes" ]]; then
+      exit 0
+    fi
+
+    # If there is no kubelet.conf than node is not bootstrapped and there is nothing to do
+    kubeconfig="/etc/kubernetes/kubelet.conf"
+    if [ ! -f "$kubeconfig" ]; then
+      exit 0
+    fi
+
+    # If there is no cilium-cni binary on node than node is not bootstrapped and there is nothing to do
+    if [ ! -f "/opt/cni/bin/cilium-cni" ]; then
+      exit 0
+    fi
+
+    # If the cilium-cni binary is the version 1.17.4 or higher, there is nothing to do
+    if ! out=$(/opt/cni/bin/cilium-cni VERSION 2>&1); then
+      bb-log-info "Failed to execute cilium-cni binary: $out"
+      exit 1
+    fi
+    version=$(echo "$out" | grep -oP 'Cilium\s+CNI\s+plugin\s+\K\d+\.\d+\.\d+')
+    major=$(echo "$version" | cut -d. -f1)
+    minor=$(echo "$version" | cut -d. -f2)
+    patch=$(echo "$version" | cut -d. -f3)
+
+    if [[ $major -gt 1 || ( $major -eq 1 && $minor -ge 17 ) ]]; then
+        echo "Cilium CNI plugin version is not less than 1.17: $version"
+        until bb-kubectl --kubeconfig $kubeconfig annotate --overwrite=true node "$(bb-d8-node-name)" network.deckhouse.io/cilium-1-17-migration-succeeded=""; do
+          attempt=$(( attempt + 1 ))
+          if [ "$attempt" -gt "$max_attempts" ]; then
+            bb-log-error "failed to annotate node $(bb-d8-node-name) after $max_attempts attempts"
+            exit 1
+          fi
+          echo "Waiting for annotate node $(bb-d8-node-name) (attempt $attempt of $max_attempts)..."
+          sleep 5
+        done
+        exit 0
+    fi
+
+    # If the migration has already succeeded, there is nothing to do
+    if bb-kubectl --kubeconfig $kubeconfig get node $(bb-d8-node-name) -o json | \
+        jq -e '.metadata.annotations | has("network.deckhouse.io/cilium-1-17-migration-succeeded")' >/dev/null; then
+      exit 0
+    fi
+
+    # If the safe-agent-updater pod does not exist, there is nothing to do
+    if /opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+        jq -er '.items | length == 0' > /dev/null; then
+      bb-log-info "There is no safe-agent-updater pod on the node."
+      exit 0
+    fi
+
+    attempt=0
+    until
+      /opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+        jq -er '.items | length == 1' > /dev/null;
+    do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+          bb-log-error "ERROR: Failed to wait until only one safe-agent-updater pod stays on the node. Retry limit is over."
+          exit 1
+      fi
+      bb-log-info "Waiting until there is only one safe-agent-updater pods on the node."
+      sleep 10
+    done
+
+    sau_pod_name="$(/opt/deckhouse/bin/crictl pods --namespace d8-cni-cilium --label app=safe-agent-updater -o json | \
+      jq -er '.items[0].metadata.name')";
+
+    if /opt/deckhouse/bin/crictl pods --name ${sau_pod_name} -o json | \
+      jq --arg desired_sau_ds_generation "$desired_sau_ds_generation" -e '.items[0].annotations."safe-agent-updater-daemonset-generation" != $desired_sau_ds_generation' > /dev/null;
+    then
+      bb-kubectl --kubeconfig $kubeconfig delete pod -n d8-cni-cilium -l app=safe-agent-updater \
+        --field-selector spec.nodeName=$(bb-d8-node-name)
+    fi
+
+    attempt=0
+    until
+      is_migration_required="$(bb-kubectl --kubeconfig $kubeconfig get node $(bb-d8-node-name) -o json | \
+      jq -er '.metadata.annotations."network.deckhouse.io/cilium-1-17-migration-disruptive-update-required"')";
+    do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+          bb-log-error "ERROR: Failed to get annotation 'network.deckhouse.io/cilium-1-17-migration-disruptive-update-required' from our Node. Retry limit is over."
+          exit 1
+      fi
+      bb-log-info "Waiting until the safe-agent-updater calculates the need for an disruptive-update and annotates the node."
+      sleep 10
+    done
+
+    if [[ "$is_migration_required" == "false" ]]; then
+      exit 0
+    fi
+
+    bb-deckhouse-get-disruptive-update-approval
+
+    attempt=0
+    until
+      bb-kubectl --kubeconfig $kubeconfig get node $(bb-d8-node-name) -o json | \
+      jq -e '.metadata.annotations | has("network.deckhouse.io/cilium-1-17-migration-succeeded")' >/dev/null;
+    do
+      attempt=$(( attempt + 1 ))
+      if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+          bb-log-error "ERROR: Failed to wait until the safe-agent-updater completes the disruptive-update on our Node (can't get annotation 'network.deckhouse.io/cilium-1-17-migration-succeeded') . Retry limit is over."
+          exit 1
+      fi
+      bb-log-info "Waiting until the safe-agent-updater completes the disruptive-update on node."
+      sleep 10
+    done

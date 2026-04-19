@@ -11,7 +11,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cainjector
   namespace: d8-cert-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector" "workload-resource-policy.deckhouse.io" "master"  )) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cainjector"  )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -47,6 +47,7 @@ spec:
         app: cainjector
     spec:
       serviceAccountName: cainjector
+      automountServiceAccountToken: true
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "cainjector")) | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -56,7 +57,7 @@ spec:
       - name: deckhouse-registry
       containers:
         - name: cainjector
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "certManagerCainjector") }}
           args:
           - --leader-election-namespace=$(POD_NAMESPACE)

@@ -2,33 +2,33 @@
 {{- $_ := set . "UsePrebuildJekyllImage" true }}
 {{- $_ := set . "Mode" "production" }}
 {{- $_ := set . "Edition" "EE" }}
-{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "EE") -}}
+{{- if or (eq $.Env "CE") (eq $.Env "BE") (eq $.Env "SE") (eq $.Env "SE-plus") (eq $.Env "EE") -}}
   {{- $_ := set . "Edition" $.Env }}
 {{- else if eq $.Env "FE"  }}
   {{- $_ := set . "Edition" "EE" }}
 {{- else }}
   {{- $_ := set . "Mode" $.Env }}
 {{- end }}
+
 project: deckhouse-web
 configVersion: 1
+build:
+  imageSpec:
+    author: "Deckhouse Kubernetes Platform <contact@deckhouse.io>"
+    clearHistory: true
+    config:
+      keepEssentialWerfLabels: true
+      removeLabels:
+        - /.*/
+---
+# Files.Get prefix
+{{- $_ := set . "prefix" "" }}
 ---
 # Base Images
-{{- $_ := set . "Images" (.Files.Get "../../candi/image_versions.yml" | fromYaml) }}
-  {{- range $k, $v := .Images }}
-    {{- $baseImagePath := (printf "%s%s" $.Images.REGISTRY_PATH (trimSuffix "/" $v)) }}
-    {{- if or (eq $.Mode "development") (eq $.Mode "module") (eq $.Mode "local") }}
-      {{- if or ( ne $k "BASE_JEKYLL" ) ( and (not $.UsePrebuildJekyllImage ) ( eq $k "BASE_JEKYLL" ) )}}
-        {{- $baseImagePath = trimSuffix "/" $v | splitList "@" | first }}
-      {{- end }}
-    {{- end }}
-    {{- if ne $k "REGISTRY_PATH" }}
-      {{- $_ := set $.Images $k $baseImagePath }}
-    {{- end }}
-  {{- end }}
+{{- include "parse_base_images_map" . }}
 ---
 {{- $context := . }}
-{{- $_ := set $context "ModuleName" "docs" }}
+{{- $_ := set $context "ModuleName" "website-docs" }}
 {{- $_ := set $context "ImageName" "web" }}
 {{- $_ := set $context "ModulePath" "../../" }}
 {{ tpl (.Files.Get "werf-web.inc.yaml") $context }}
----

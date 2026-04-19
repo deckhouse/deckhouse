@@ -1,0 +1,7 @@
+candi:
+  fixes:
+    - summary: Fix arg `encryption-provider-config ` for kubeadm configuration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15521
+    - summary: Disable immutable flag on erofs files in cleanup node stage.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15520
+

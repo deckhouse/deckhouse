@@ -132,6 +132,10 @@ properties:
                   type: string
                 appDexSecret:
                   type: string
+      dexAuthenticatorNames:
+        type: object
+        default: {}
+        additionalProperties: true
       dexClientCRDs:
         type: array
         default: []
@@ -187,6 +191,22 @@ properties:
               properties:
                 expireAt:
                   type: string
+                lock:
+                  type: object
+                  required:
+                    - state
+                  properties:
+                    state:
+                      type: boolean
+                    reason:
+                      type: string
+                      enum:
+                        - PasswordPolicyLockout
+                        - LockedByAdministrator
+                    message:
+                      type: string
+                    until:
+                      type: string
       providers:
         type: array
         default: []
@@ -241,6 +261,9 @@ properties:
               basicAuthUnsupported: true
               insecureSkipEmailVerified: true
               getUserInfo: true
+              allowedGroups:
+                - only
+                - team
               scopes:
                 - profile
                 - email
@@ -308,7 +331,9 @@ properties:
               type: string
             id:
               type: string
-            # providers spec is copied from custom resources as is and validated by its spec
+            enabled:
+              type: boolean
+              default: true
             crowd:
               type: object
               additionalProperties: true
@@ -324,7 +349,19 @@ properties:
             ldap:
               type: object
               additionalProperties: true
+              properties:
+                enableBasicAuth:
+                  type: boolean
+                basicAuthUnsupported:
+                  type: boolean
+                scopes:
+                  type: array
+                  items:
+                    type: string
             bitbucketCloud:
+              type: object
+              additionalProperties: true
+            saml:
               type: object
               additionalProperties: true
       customLogo:

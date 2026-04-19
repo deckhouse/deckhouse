@@ -1,10 +1,22 @@
-На этом шаге кластер в минимальном исполнении развернут. Настройте хранилище, которое будет использоваться для создания хранения метрик компонент кластер и дисков виртуальных машин.
+{% alert level="warning" %}
+На этом этапе приведен пример настройки программно-определяемого хранилища на основе DRBD.
+Если вы хотите использовать другой типа хранилища, ознакомьтесь с разделом [«Настройка хранилища»](../../documentation/admin/install/steps/storage.html).
+{% endalert %}
+
+На этом шаге кластер в минимальном исполнении развернут. Настройте хранилище, которое будет использоваться для хранения метрик компонентов кластера и дисков виртуальных машин.
 
 Включите модуль программно-определяемого хранилища sds-replicated-volume. Выполните на **master-узле** следующие команды:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k create -f - <<EOF
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: snapshot-controller
+spec:
+  enabled: true
+  version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -23,28 +35,22 @@ spec:
   enabled: true
 EOF
 ```
-{% endsnippetcut %}
 
 Дождитесь, пока модуль включится, для этого можете использовать следующую команду:
 
-{% snippetcut %}
-```sheel
-sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.status}=Ready' --timeout=1200s
+```shell
+sudo -i d8 k wait module sds-replicated-volume --for='jsonpath={.status.phase}=Ready' --timeout=1200s
 ```
-{% endsnippetcut %}
 
 Объедините доступные на узлах блочные устройства в группы томов LVM. Чтобы получить доступные блочные устройства, выполните команду:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k get blockdevices.storage.deckhouse.io
 ```
-{% endsnippetcut %}
 
-Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
+Чтобы объединить блочные устройства на одном узле, необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 Для создания ресурса LVMVolumeGroup на узле выполните следующую команду, предварительно заменив имена узла и блочных устройств на свои:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k apply -f - <<EOF
 apiVersion: storage.deckhouse.io/v1alpha1
@@ -62,56 +68,45 @@ spec:
         operator: In
         values:
           # Замените на имена своих блочных устройств узла, для которого создаете группу томов.
-          - dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa
+          - *!CHANGE_dev-ef4fb06b63d2c05fb6ee83008b55e486aa1161aa*
   # Имя группы томов LVM, которая будет создана из указанных выше блочных устройств на выбранном узле.
   actualVGNameOnTheNode: "vg"
-  # Раскомментируйте, если важно иметь возможность создавать Thin-пулы, детали будут раскрыты далее.
-  # thinPools:
-  #   - name: thin-pool-0
-  #     size: 70%
 EOF
 ```
-{% endsnippetcut %}
 
 Дождитесь, когда созданный ресурс LVMVolumeGroup перейдет в состояние `Operational`:
 
-{% snippetcut %}
 ```shell
-sudo -i d8 k get lvg vg-on-worker-0 -w
+sudo -i d8 k get lvg vg-on-dvp-worker -w
 ```
-{% endsnippetcut %}
 
 Пример вывода:
 
 ```console
-NAME             THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
-vg-on-worker-0   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
+NAME               THINPOOLS   CONFIGURATION APPLIED   PHASE   NODE       SIZE       ALLOCATED SIZE   VG   AGE
+vg-on-dvp-worker   1/1         True                    Ready   worker-0   360484Mi   30064Mi          vg   1h
 ```
 
 Создайте пул LVM-томов:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k apply -f - <<EOF
- apiVersion: storage.deckhouse.io/v1alpha1
- kind: ReplicatedStoragePool
- metadata:
-   name: sds-pool
- spec:
-   type: LVM
-   lvmVolumeGroups:
-     - name: vg-on-dvp-worker
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStoragePool
+metadata:
+  name: sds-pool
+spec:
+  type: LVM
+  lvmVolumeGroups:
+    - name: vg-on-dvp-worker
 EOF
 ```
-{% endsnippetcut %}
 
 Дождитесь, когда созданный ресурс ReplicatedStoragePool перейдет в состояние `Completed`:
 
-{% snippetcut %}
 ```shell
-sudo -i d8 k get rsp data -w
+sudo -i d8 k get rsp sds-pool -w
 ```
-{% endsnippetcut %}
 
 Пример вывода:
 
@@ -122,36 +117,29 @@ sds-pool     Completed   LVM    87d
 
 Создайте StorageClass:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k apply -f - <<EOF
- ---
- apiVersion: storage.deckhouse.io/v1alpha1
- kind: ReplicatedStorageClass
- metadata:
-   name: sds-r1
- spec:
-   replication: None
-   storagePool: sds-pool
-   reclaimPolicy: Delete
-   topology: Ignored
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: ReplicatedStorageClass
+metadata:
+  name: sds-r1
+spec:
+  replication: None
+  storagePool: sds-pool
+  reclaimPolicy: Delete
+  topology: Ignored
 EOF
 ```
-{% endsnippetcut %}
 
 Проверьте, что ресурсы StorageClass появились в кластере:
 
-{% snippetcut %}
 ```bash
 sudo -i d8 k get storageclass
 ```
-{% endsnippetcut %}
 
 Установите StorageClass как используемый в кластере по умолчанию (укажите имя StorageClass):
 
-{% snippetcut %}
 ```shell
-DEFAULT_STORAGE_CLASS=replicated-storage-class
+DEFAULT_STORAGE_CLASS=sds-r1
 sudo -i d8 k patch mc global --type='json' -p='[{"op": "replace", "path": "/spec/settings/defaultClusterStorageClass", "value": "'"$DEFAULT_STORAGE_CLASS"'"}]'
 ```
-{% endsnippetcut %}

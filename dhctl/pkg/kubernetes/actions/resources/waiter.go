@@ -15,21 +15,32 @@
 package resources
 
 import (
-	"reflect"
+	"context"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type Checker interface {
-	IsReady() (bool, error)
+	IsReady(ctx context.Context) (bool, error)
 	Name() string
 	Single() bool
+	ReadyMsg() string
 }
 
+type constructorParams struct {
+	kubeProvider   kubernetes.KubeClientProviderWithCtx
+	metaConfig     *config.MetaConfig
+	loggerProvider log.LoggerProvider
+}
+
+// todo refact to pass parameters with kube and logger provider
 func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) ([]Checker, error) {
 	errRes := &multierror.Error{}
 
@@ -42,7 +53,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 			return
 		}
 
-		if check == nil || reflect.ValueOf(check).IsNil() {
+		if govalue.IsNil(check) {
 			return
 		}
 
@@ -53,10 +64,19 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 		}
 	}
 
-	staticNGSChecker, err := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(kubeCl, metaConfig)
-	tryToAppendCheck(staticNGSChecker, err)
+	// todo pass logger as parameter
+	logger := log.GetDefaultLogger()
 
-	type constructor func(*client.KubernetesClient, *config.MetaConfig, *template.Resource) (Checker, error)
+	params := constructorParams{
+		kubeProvider:   kubernetes.NewSimpleKubeClientGetter(kubeCl),
+		metaConfig:     metaConfig,
+		loggerProvider: log.SimpleLoggerProvider(logger),
+	}
+
+	staticNGSChecker := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)
+	tryToAppendCheck(staticNGSChecker, nil)
+
+	type constructor func(resource *template.Resource, params constructorParams) (Checker, error)
 
 	constructors := []constructor{
 		tryToGetClusterIsBootstrappedChecker,
@@ -65,7 +85,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 
 	for _, r := range resources {
 		for _, crtor := range constructors {
-			check, err := crtor(kubeCl, metaConfig, r)
+			check, err := crtor(r, params)
 			tryToAppendCheck(check, err)
 		}
 	}
@@ -87,11 +107,11 @@ func NewWaiter(checkers []Checker) *Waiter {
 	}
 }
 
-func (w *Waiter) ReadyAll() (bool, error) {
+func (w *Waiter) ReadyAll(ctx context.Context) (bool, error) {
 	checkersToStay := make([]Checker, 0)
 
 	for _, c := range w.checkers {
-		ready, err := c.IsReady()
+		ready, err := c.IsReady(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -104,4 +124,28 @@ func (w *Waiter) ReadyAll() (bool, error) {
 	w.checkers = checkersToStay
 
 	return len(w.checkers) == 0, nil
+}
+
+func (w *Waiter) ReadyAllWithRes(ctx context.Context) (bool, []string, []string, error) {
+	checkersToStay := make([]Checker, 0)
+	readyResources := make([]string, 0)
+	remainedResources := make([]string, 0)
+
+	for _, c := range w.checkers {
+		ready, err := c.IsReady(ctx)
+		if err != nil {
+			return false, readyResources, remainedResources, err
+		}
+
+		if !ready {
+			checkersToStay = append(checkersToStay, c)
+			remainedResources = append(remainedResources, c.Name())
+		} else {
+			readyResources = append(readyResources, c.Name())
+		}
+	}
+
+	w.checkers = checkersToStay
+
+	return len(w.checkers) == 0, readyResources, remainedResources, nil
 }

@@ -1,0 +1,9 @@
+control-plane-manager:
+  fixes:
+    - summary: audit-log-maxage value to 30 days
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14056
+deckhouse:
+  fixes:
+    - summary: Fix obsolete config alert stuck after deleting module config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13853
+

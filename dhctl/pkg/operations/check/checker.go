@@ -15,39 +15,76 @@
 package check
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 )
 
+type externalPhasedContext interface {
+	CompleteSubPhase(completedSubPhase phases.OperationSubPhase)
+}
+
 type Params struct {
-	SSHClient     *ssh.Client
-	StateCache    dhctlstate.Cache
-	CommanderMode bool
-	CommanderUUID uuid.UUID
+	SSHClient      node.SSHClient
+	StateCache     dhctlstate.Cache
+	OnPhaseFunc    phases.DefaultOnPhaseFunc
+	OnProgressFunc phases.OnProgressFunc
+	CommanderMode  bool
+	CommanderUUID  uuid.UUID
 	*commander.CommanderModeParams
 
-	TerraformContext *terraform.TerraformContext
+	// if check runs in embedded mode, it uses external PhasedExecutionContext
+	// Checker is embedded in CommanderAttach and CommanderDetach operations
+	Embedded bool
+
+	InfrastructureContext *infrastructure.Context
 
 	KubeClient *client.KubernetesClient // optional
+
+	TmpDir  string
+	Logger  log.Logger
+	IsDebug bool
 }
+
+type Cleaner func() error
 
 type Checker struct {
 	*Params
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	ExternalPhasedContext  externalPhasedContext
+
+	logger log.Logger
 }
 
 func NewChecker(params *Params) *Checker {
+	logger := params.Logger
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
 	if !params.CommanderMode {
 		panic("check operation currently supported only in commander mode")
 	}
@@ -59,18 +96,59 @@ func NewChecker(params *Params) *Checker {
 
 	return &Checker{
 		Params: params,
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
+			phases.OperationCheck, params.OnPhaseFunc, params.OnProgressFunc,
+		),
+		logger: logger,
 	}
 }
 
-func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
-	kubeCl, err := c.GetKubeClient()
-	if err != nil {
-		return nil, err
+func (c *Checker) SetExternalPhasedContext(pec externalPhasedContext) {
+	c.ExternalPhasedContext = pec
+}
+
+func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
+	cleaner := func() error {
+		return nil
 	}
 
-	metaConfig, err := commander.ParseMetaConfig(c.StateCache, c.Params.CommanderModeParams)
+	kubeCl, err := c.GetKubeClient(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
+		return nil, cleaner, err
+	}
+
+	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
+	if err != nil {
+		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
+	}
+
+	if !c.Embedded {
+		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
+			return nil, cleaner, err
+		}
+		defer func() {
+			_ = c.PhasedExecutionContext.Finalize(c.StateCache)
+		}()
+	}
+
+	if c.InfrastructureContext == nil {
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           c.TmpDir,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           c.logger,
+			IsDebug:          c.IsDebug,
+		})
+
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, c.logger)
+	}
+
+	provider, err := c.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		return nil, cleaner, err
+	}
+
+	cleaner = func() error {
+		return provider.Cleanup()
 	}
 
 	res := &CheckResult{
@@ -80,79 +158,122 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, error) {
 	if c.CommanderMode {
 		shouldUpdate, err := commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, c.CommanderUUID)
 		if err != nil {
-			return nil, fmt.Errorf("uuid consistency check failed: %w", err)
+			return nil, cleaner, fmt.Errorf("uuid consistency check failed: %w", err)
 		}
 		if shouldUpdate {
 			res.Status = res.Status.CombineStatus(CheckStatusOutOfSync)
 		}
 	}
 
-	if metaConfig.ClusterType == config.CloudClusterType {
-		status, statusDetails, err := c.checkInfra(ctx, kubeCl, metaConfig, c.TerraformContext)
-		if err != nil {
-			return nil, fmt.Errorf("unable to check infra state: %w", err)
-		}
-		res.Status = res.Status.CombineStatus(status)
+	hasTerraformState := false
 
-		if status == CheckStatusDestructiveOutOfSync {
-			res.DestructiveChangeID, err = converge.DestructiveChangeID(statusDetails)
+	if metaConfig.ClusterType == config.CloudClusterType {
+		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
+		if err != nil {
+			return nil, cleaner, fmt.Errorf("unable to check infra state: %w", err)
+		}
+		res.Status = res.Status.CombineStatus(resInfra.Status)
+
+		if resInfra.Status == CheckStatusDestructiveOutOfSync {
+			res.DestructiveChangeID, err = DestructiveChangeID(resInfra.Statistics)
 			if err != nil {
-				return nil, fmt.Errorf("unable to generate destructive change id: %w", err)
+				return nil, cleaner, fmt.Errorf("unable to generate destructive change id: %w", err)
 			}
 		}
 
-		res.StatusDetails.Statistics = *statusDetails
+		hasTerraformState = resInfra.HasTerraformState
+		res.StatusDetails.Statistics = *resInfra.Statistics
+		res.StatusDetails.OpentofuMigrationStatus = resInfra.MigrationOpentofuStatus
 	}
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to check configuration state: %w", err)
+		return nil, cleaner, fmt.Errorf("unable to check configuration state: %w", err)
 	}
 	res.Status = res.Status.CombineStatus(configurationStatus)
 	res.StatusDetails.ConfigurationStatus = configurationStatus
+	res.HasTerraformState = hasTerraformState
 
-	return res, nil
+	return res, cleaner, nil
 }
+
+const (
+	clusterConfigKind = "cluster config"
+)
 
 func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig) (CheckStatus, error) {
-	clusterConfigurationData, err := metaConfig.ClusterConfigYAML()
+	const (
+		commanderSource = "commander"
+		inClusterSource = "in-cluster"
+	)
+
+	defer c.switchPhase(phases.CheckConfiguration)()
+
+	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
-		return "", fmt.Errorf("unable to get cluster config yaml: %w", err)
-	}
-	providerClusterConfigurationData, err := metaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
+		return "", err
 	}
 
-	inClusterMetaConfig, err := converge.GetMetaConfig(kubeCl)
+	// we use static or provider config because commander does not support managed cluster
+	staticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, metaConfig, commanderSource)
 	if err != nil {
-		return "", fmt.Errorf("unable to get in-cluster meta config: %w", err)
-	}
-	inClusterConfigurationData, err := inClusterMetaConfig.ClusterConfigYAML()
-	if err != nil {
-		return "", fmt.Errorf("unable to get cluster config yaml: %w", err)
-	}
-	inClusterProviderClusterConfigurationData, err := inClusterMetaConfig.ProviderClusterConfigYAML()
-	if err != nil {
-		return "", fmt.Errorf("unable to get provider cluster config yaml: %w", err)
+		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
 	}
 
-	if inClusterMetaConfig.UUID == metaConfig.UUID && bytes.Equal(clusterConfigurationData, inClusterConfigurationData) && bytes.Equal(providerClusterConfigurationData, inClusterProviderClusterConfigurationData) {
-		return CheckStatusInSync, nil
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, nil)
+	if err != nil {
+		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}
-	return CheckStatusOutOfSync, nil
+
+	inClusterConfig, err := getClusterConfig(inClusterMetaConfig, inClusterSource)
+	if err != nil {
+		return "", err
+	}
+
+	// we use static or provider config because commander does not support managed cluster
+	inClusterStaticOrProviderClusterConfig, err := getClusterSpecificConfig(ctx, inClusterMetaConfig, inClusterSource)
+	if err != nil {
+		return "", fmt.Errorf("Unable to get in-cluster static/provider cluster config yaml: %w", err)
+	}
+
+	checks := []checkFunc{
+		equalByOperatorCheck(metaConfig.UUID, inClusterMetaConfig.UUID, "cluster UUID"),
+		equalMapByDeepEqualFuncCheck(clusterConfig, inClusterConfig, clusterConfigKind),
+		equalMapByDeepEqualFuncCheck(staticOrProviderClusterConfig, inClusterStaticOrProviderClusterConfig, "provider configuration"),
+	}
+
+	syncStatus := CheckStatusInSync
+
+	for _, check := range checks {
+		if err := check(); err != nil {
+			syncStatus = CheckStatusOutOfSync
+			c.logger.LogInfoLn(err.Error())
+		}
+	}
+
+	return syncStatus, nil
 }
 
-func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraformContext *terraform.TerraformContext) (CheckStatus, *converge.Statistics, error) {
-	stat, err := converge.CheckState(
-		kubeCl, metaConfig, terraformContext,
-		converge.CheckStateOptions{
+type InfraResult struct {
+	Status                  CheckStatus
+	Statistics              *Statistics
+	HasTerraformState       bool
+	MigrationOpentofuStatus CheckStatus
+}
+
+func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
+	defer c.switchPhase(phases.CheckInfra)()
+
+	stat, hasTerraformState, err := CheckState(
+		ctx, kubeCl, metaConfig, infrastructureContext,
+		CheckStateOptions{
 			CommanderMode: c.CommanderMode,
 			StateCache:    c.StateCache,
 		},
+		false,
 	)
 	if err != nil {
-		return CheckStatusDestructiveOutOfSync, stat, err
+		return nil, err
 	}
 
 	checkStatus := CheckStatusInSync
@@ -167,40 +288,176 @@ func (c *Checker) checkInfra(_ context.Context, kubeCl *client.KubernetesClient,
 		checkStatus = checkStatus.CombineStatus(resolveStatisticsStatus(stat.Cluster.Status))
 	}
 
-	return checkStatus, stat, nil
+	migrateToTofuStatus := CheckStatusInSync
+
+	providerGetter := infrastructureContext.CloudProviderGetter()
+	if providerGetter == nil {
+		return nil, fmt.Errorf("Infrastructure context does not have a provider getter")
+	}
+
+	provider, err := providerGetter(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	if provider.NeedToUseTofu() && hasTerraformState {
+		checkStatus = checkStatus.CombineStatus(CheckStatusOutOfSync)
+		migrateToTofuStatus = CheckStatusOutOfSync
+	}
+
+	return &InfraResult{
+		Status:                  checkStatus,
+		Statistics:              stat,
+		HasTerraformState:       hasTerraformState,
+		MigrationOpentofuStatus: migrateToTofuStatus,
+	}, nil
 }
 
 func resolveStatisticsStatus(status string) CheckStatus {
 	switch status {
-	case converge.OKStatus:
+	case OKStatus:
 		return CheckStatusInSync
-	case converge.ChangedStatus:
+	case ChangedStatus:
 		// NOTE: Regular out-of-sync state, which can be fixed by the converge run
 		return CheckStatusOutOfSync
-	case converge.DestructiveStatus:
+	case DestructiveStatus:
 		// NOTE: Something will be destroyed by the converge run, such change should be approved
 		return CheckStatusDestructiveOutOfSync
-	case converge.AbandonedStatus:
+	case AbandonedStatus:
 		// NOTE: Excess node — treat as destructive out-of-sync, because this node will be destroyed during converge run
 		return CheckStatusDestructiveOutOfSync
-	case converge.AbsentStatus:
+	case AbsentStatus:
 		// NOTE: Lost node — treat as out-of-sync for now
 		return CheckStatusOutOfSync
-	case converge.ErrorStatus:
+	case ErrorStatus:
 		// NOTE: Unknown error, probably can be healed by the retry
 		return CheckStatusDestructiveOutOfSync
 	}
 	panic(fmt.Sprintf("unknown check infra status: %q", status))
 }
 
-func (c *Checker) GetKubeClient() (*client.KubernetesClient, error) {
+func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, error) {
 	if c.KubeClient != nil {
 		return c.KubeClient, nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(c.SSHClient))
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(c.SSHClient))
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}
 	return kubeCl, nil
+}
+
+func (c *Checker) switchPhase(s phases.OperationPhase) func() {
+	if !c.Embedded {
+		_, _ = c.PhasedExecutionContext.SwitchPhase(s, false, c.StateCache, nil)
+		return func() {}
+	}
+
+	return func() {
+		if c.ExternalPhasedContext != nil {
+			c.ExternalPhasedContext.CompleteSubPhase(phases.OperationSubPhase(s))
+		}
+	}
+}
+
+type configTypeForCompare map[string]any
+
+type clusterSpecificConfigProvider struct {
+	kind string
+}
+
+func (f *clusterSpecificConfigProvider) Cloud(_ context.Context, metaConfig *config.MetaConfig) (configTypeForCompare, error) {
+	providerConfig, err := metaConfig.ProviderClusterConfigYAML()
+	if err != nil {
+		return nil, err
+	}
+
+	// provider cluster config should present
+	return unmarshalToCompare(providerConfig, false, "provider cluster config", f.kind)
+}
+
+func (f *clusterSpecificConfigProvider) Static(_ context.Context, metaConfig *config.MetaConfig) (configTypeForCompare, error) {
+	staticConfig, err := metaConfig.StaticClusterConfigYAML()
+	if err != nil {
+		return nil, err
+	}
+
+	// empty static configuration is ok because we have auto discovery
+	return unmarshalToCompare(staticConfig, true, "static cluster config", f.kind)
+}
+
+func (f *clusterSpecificConfigProvider) Incorrect(_ context.Context, metaConfig *config.MetaConfig) (configTypeForCompare, error) {
+	return nil, config.UnsupportedClusterTypeErr(metaConfig)
+}
+
+func getClusterConfig(metaConfig *config.MetaConfig, stateSource string) (configTypeForCompare, error) {
+	clusterConfigData, err := metaConfig.ClusterConfigYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get '%s' yaml from '%s': %w", clusterConfigKind, stateSource, err)
+	}
+
+	// commander does not support managed cluster, cluster config should present
+	return unmarshalToCompare(clusterConfigData, false, clusterConfigKind, stateSource)
+}
+
+func getClusterSpecificConfig(ctx context.Context, metaConfig *config.MetaConfig, kind string) (configTypeForCompare, error) {
+	return config.DoByClusterType(ctx, metaConfig, &clusterSpecificConfigProvider{kind: kind})
+}
+
+func handleEmpty(canBeEmpty bool, kind, stateSource string) (configTypeForCompare, error) {
+	// always return nil to prevent compare empty map and nil
+	if canBeEmpty {
+		return nil, nil
+	}
+
+	return nil, fmt.Errorf("'%s' for '%s' cannot be empty", kind, stateSource)
+}
+
+// unmarshalToCompare
+// we need marshal and unmarshal to map[string]any because json.RawMessage is []byte
+// and it can ba marshal in random order in every time
+// thus we need to compare two maps
+func unmarshalToCompare(content []byte, canBeEmpty bool, kind, stateSource string) (configTypeForCompare, error) {
+	if len(content) == 0 {
+		return handleEmpty(canBeEmpty, kind, stateSource)
+	}
+
+	var res configTypeForCompare
+	err := yaml.Unmarshal(content, &res)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot unmarshal '%s' from '%s': %w", kind, stateSource, err)
+	}
+
+	if len(res) == 0 {
+		return handleEmpty(canBeEmpty, kind, stateSource)
+	}
+
+	return res, nil
+}
+
+type checkFunc func() error
+
+func checkError(kind string) error {
+	return fmt.Errorf("Commander state meta config %s does not equal in-cluster meta config %s", kind, kind)
+}
+
+func equalMapByDeepEqualFuncCheck(expected, data configTypeForCompare, kind string) checkFunc {
+	return func() error {
+		if reflect.DeepEqual(expected, data) {
+			return nil
+		}
+
+		return checkError(kind)
+	}
+}
+
+func equalByOperatorCheck[T comparable](expected, val T, kind string) checkFunc {
+	return func() error {
+		if expected == val {
+			return nil
+		}
+
+		return checkError(kind)
+	}
 }

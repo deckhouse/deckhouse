@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -25,6 +26,9 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/go_lib/taints"
@@ -43,17 +47,18 @@ const (
 	masterNodeRoleKey                 = "node-role.kubernetes.io/master"
 	clusterAPIAnnotationKey           = "cluster.x-k8s.io/machine"
 	HeartbeatAnnotationKey            = "kubevirt.internal.virtualization.deckhouse.io/heartbeat"
+	MetalLBmemberLabelKey             = "l2-load-balancer.network.deckhouse.io/member"
 )
 
 type NodeSettings struct {
-	Name        string
-	NodeType    ngv1.NodeType
-	NodeGroup   string
-	Annotations map[string]string
-	Labels      map[string]string
-	Taints      []v1.Taint
+	Name        string            `json:"name"`
+	NodeType    ngv1.NodeType     `json:"nodeType"`
+	NodeGroup   string            `json:"-"`
+	Annotations map[string]string `json:"annotations"`
+	Labels      map[string]string `json:"labels"`
+	Taints      []v1.Taint        `json:"taints"`
 
-	IsClusterAPINode bool
+	IsClusterAPINode bool `json:"-"`
 }
 
 // Hook will be executed when NodeType or NodeTemplate are changed.
@@ -102,6 +107,12 @@ func actualNodeSettingsFilter(obj *unstructured.Unstructured) (go_hook.FilterRes
 		delete(nodeObj.Annotations, HeartbeatAnnotationKey)
 	}
 
+	// Ignore labels "l2-load-balancer.network.deckhouse.io/member" on hook execute.
+	_, isMetalLB := nodeObj.Labels[MetalLBmemberLabelKey]
+	if isMetalLB {
+		delete(nodeObj.Labels, MetalLBmemberLabelKey)
+	}
+
 	return settings, nil
 }
 
@@ -131,13 +142,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 // nodeTemplatesHandler applies annotations, labels and taints to Hybrid and Static nodes from NodeGroup's nodeTemplate.
 // Also, "node.deckhouse.io/uninitialized" taint is deleted.
-func nodeTemplatesHandler(input *go_hook.HookInput) error {
-	nodes := input.Snapshots["nodes"]
+func nodeTemplatesHandler(_ context.Context, input *go_hook.HookInput) error {
+	nodes := input.Snapshots.Get("nodes")
 	// Expire d8_unmanaged_nodes_on_cluster metric and register unmanaged nodes.
 	// This is a separate loop because template applying may return an error.
 	input.MetricsCollector.Expire("")
-	for _, nodeObj := range nodes {
-		node := nodeObj.(NodeSettings)
+	for node, err := range sdkobjectpatch.SnapshotIter[NodeSettings](nodes) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes snapshots': %v", err)
+		}
 		if node.NodeGroup == "" {
 			input.MetricsCollector.Set("d8_unmanaged_nodes_on_cluster", 1, map[string]string{
 				"node": node.Name,
@@ -148,22 +161,26 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	nodeGroups := input.Snapshots["ngs"]
+	nodeGroups := input.Snapshots.Get("ngs")
 	if len(nodeGroups) == 0 {
 		return nil
 	}
 
 	// Prepare index of node groups.
 	ngs := map[string]NodeSettings{}
-	for _, nodeGroup := range nodeGroups {
-		ng := nodeGroup.(NodeSettings)
-		ngs[ng.Name] = ng
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeSettings](nodeGroups) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %v", err)
+		}
+		ngs[nodeGroup.Name] = nodeGroup
 
-		checkMasterNGTaints(input, ng, nodeGroups, nodes)
+		checkMasterNGTaints(input, nodeGroup, nodeGroups, nodes)
 	}
+	for node, err := range sdkobjectpatch.SnapshotIter[NodeSettings](nodes) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %v", err)
+		}
 
-	for _, nodeObj := range nodes {
-		node := nodeObj.(NodeSettings)
 		// Skip nodes not managed by us (not having node.deckhouse.io/group label)
 		if node.NodeGroup == "" {
 			continue
@@ -175,7 +192,7 @@ func nodeTemplatesHandler(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			nodeObj := new(v1.Node)
 			err := sdk.FromUnstructured(obj, nodeObj)
 			if err != nil {
@@ -396,7 +413,7 @@ func applyNodeTemplate(nodeObj *v1.Node, node, nodeGroup NodeSettings) error {
 
 // "control-plane" taint could be absent only for single-node installations
 // it's not valid for the other cases
-func checkMasterNGTaints(input *go_hook.HookInput, ng NodeSettings, nodeGroups, nodes []go_hook.FilterResult) {
+func checkMasterNGTaints(input *go_hook.HookInput, ng NodeSettings, nodeGroups, nodes []pkg.Snapshot) {
 	if ng.Name != "master" {
 		return
 	}

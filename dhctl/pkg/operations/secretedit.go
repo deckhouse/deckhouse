@@ -24,6 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -44,21 +46,37 @@ var emptySecret = &v1.Secret{
 	Data:       make(map[string][]byte),
 }
 
-func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, secret string, dataKey string) error {
-	config, err := kubeCl.CoreV1().Secrets(Namespace).Get(context.TODO(), secret, metav1.GetOptions{})
+func SecretEdit(
+	kubeCl *client.KubernetesClient, name string, namespace string, secret string, dataKey string,
+	labels map[string]string,
+	dirConfig *directoryconfig.DirectoryConfig,
+) error {
+	config, err := kubeCl.CoreV1().Secrets(namespace).Get(context.TODO(), secret, metav1.GetOptions{})
 	switch {
 	case errors.IsNotFound(err):
-		log.DebugF("Secret %s in namespace %s was not found, and will be created\n", secret, Namespace)
+		log.DebugF("Secret %s in namespace %s was not found, and will be created\n", secret, namespace)
 		config = emptySecret.DeepCopy()
-		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, Namespace
+		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, namespace
 	case err != nil:
 		return err
+	}
+
+	for k, v := range labels {
+		if config.ObjectMeta.Labels == nil {
+			config.ObjectMeta.Labels = make(map[string]string, len(labels))
+		}
+
+		config.ObjectMeta.Labels[k] = v
 	}
 
 	configData := config.Data[dataKey]
 
 	var modifiedData []byte
-	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData) })
+	err = dh_config.PrepareCandiDir(context.Background(), kubeCl, log.GetDefaultLogger(), dirConfig)
+	if err != nil {
+		return err
+	}
+	tomb.WithoutInterruptions(func() { modifiedData, err = abstractEditing(configData, dirConfig) })
 	if err != nil {
 		return err
 	}
@@ -81,11 +99,11 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, 
 			return retry.
 				NewLoop(fmt.Sprintf("Apply %s secret", secret), 5, 5*time.Second).
 				Run(func() error {
-					_, err = kubeCl.CoreV1().Secrets(Namespace).Update(context.TODO(), config, metav1.UpdateOptions{})
+					_, err = kubeCl.CoreV1().Secrets(namespace).Update(context.TODO(), config, metav1.UpdateOptions{})
 					switch {
 					case errors.IsNotFound(err):
-						log.DebugF("Creating new Secret %s in namespace %s\n", secret, Namespace)
-						if _, err = kubeCl.CoreV1().Secrets(Namespace).Create(context.TODO(), config, metav1.CreateOptions{}); err != nil {
+						log.DebugF("Creating new Secret %s in namespace %s\n", secret, namespace)
+						if _, err = kubeCl.CoreV1().Secrets(namespace).Create(context.TODO(), config, metav1.CreateOptions{}); err != nil {
 							return err
 						}
 					case err != nil:
@@ -97,14 +115,13 @@ func SecretEdit(kubeCl *client.KubernetesClient, name string, Namespace string, 
 						removeUnsafeAnnotation(config)
 
 						_, err = kubeCl.CoreV1().
-							Secrets(Namespace).
+							Secrets(namespace).
 							Update(context.TODO(), config, metav1.UpdateOptions{})
 					}
 
 					return err
 				})
 		})
-
 }
 
 func addUnsafeAnnotation(doc *v1.Secret) {

@@ -15,6 +15,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -23,19 +24,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func (b *ClusterBootstrapper) ExecPostBootstrap() error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
+	restore := b.applyParams()
+	defer restore()
 
 	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return fmt.Errorf("post bootstrap executor is not supported for local execution contexts")
 	}
 
-	if _, err := wrapper.Client().Start(); err != nil {
+	if err := wrapper.Client().Start(); err != nil {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
@@ -52,7 +50,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap() error {
 	postScriptExecutor := NewPostBootstrapScriptExecutor(wrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 		WithTimeout(app.PostBootstrapScriptTimeout)
 
-	if err := postScriptExecutor.Execute(); err != nil {
+	if err := postScriptExecutor.Execute(ctx); err != nil {
 		return err
 	}
 

@@ -1,0 +1,48 @@
+candi:
+  features:
+    - summary: Add a new layout for HuaweiCloud provider with support for VPC peering connections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12224
+  fixes:
+    - summary: Fix update_node_labels.sh to work on python2.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12315
+    - summary: Reduce `request-timeout` in kubernetes-api to 60s.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12191
+      impact: kubernetes-api will be restarted.
+ci:
+  fixes:
+    - summary: CI_COMMIT_TAG does not found in deckhouse controller
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12278
+    - summary: fix standalone-installer build
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12237
+    - summary: >-
+        cloud providers CVE fixes, use single images for cloud-provider-zvirt and
+        cloud-provider-yandex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12200
+cloud-provider-vcd:
+  fixes:
+    - summary: fix CVE, bump ccm, use go 1.23, use werf images and src-artifact
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11629
+deckhouse:
+  fixes:
+    - summary: Fix stuck overridden status in ms.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12263
+    - summary: Fix module.yaml ignored when weight == 0.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12254
+docs:
+  features:
+    - summary: Add new description info for conversions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12202
+node-manager:
+  fixes:
+    - summary: fix autoscaler RBAC for zvirt and dynamix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11236
+okmeter:
+  fixes:
+    - summary: drop service account fields from the okmeter daemonset manifest
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12303
+      impact: okmeter daemonset pods will be rollout restarted
+user-authn:
+  fixes:
+    - summary: Fix cronjob security context.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12295
+

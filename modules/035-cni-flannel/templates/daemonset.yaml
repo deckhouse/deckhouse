@@ -10,7 +10,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: flannel
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "flannel" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "flannel")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -56,12 +56,33 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      automountServiceAccountToken: true
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: {{ .Chart.Name }}
       initContainers:
+      - name: cni-migration-init-checker
+        image: {{ include "helm_lib_module_image" (list $ "cniMigrationInitChecker" "common") }}
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: CNI_NAME
+          value: "flannel"
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+      {{ include "helm_lib_module_init_container_iptables_wrapper" . | nindent 6 }}
       {{- if eq .Values.cniFlannel.internal.podNetworkMode "vxlan" }}
       - name: handle-vxlan-offload
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN")) | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "vxlanOffloadingFixer") }}
         imagePullPolicy: IfNotPresent
         env:
@@ -73,18 +94,11 @@ spec:
         resources:
           requests:
           {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-            drop:
-            - ALL
-          privileged: false
         terminationMessagePolicy: FallbackToLogsOnError
       {{- end }}
       containers:
       - name: kube-flannel
-        {{- include "helm_lib_module_container_security_context_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "NET_ADMIN" "NET_RAW")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "flanneld") }}
         args:
         - --ip-masq
@@ -104,13 +118,18 @@ spec:
               fieldPath: metadata.namespace
         volumeMounts:
         - name: run
-          mountPath: /run
+          mountPath: /run/flannel
+        - name: xtables-lock
+          mountPath: /run/xtables.lock
         - name: flannel-cfg
           mountPath: /etc/kube-flannel/
         - name: cni
           mountPath: /etc/cni/net.d
         - name: tmp
           mountPath: /tmp
+        - mountPath: /sbin
+          name: sbin
+          readOnly: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -120,7 +139,11 @@ spec:
       volumes:
         - name: run
           hostPath:
-            path: /run
+            path: /run/flannel
+        - name: xtables-lock
+          hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
         - name: cni
           hostPath:
             path: /etc/cni/net.d
@@ -129,3 +152,7 @@ spec:
             name: flannel
         - name: tmp
           emptyDir: {}
+        - name: sbin
+          emptyDir:
+            medium: Memory
+            sizeLimit: 4Mi

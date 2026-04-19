@@ -1,0 +1,10 @@
+name: registry-packages-proxy
+critical: true
+weight: 39
+subsystems:
+  - infrastructure
+namespace: d8-cloud-instance-manager
+descriptions:
+  en: Provides an in-cluster HTTP proxy service for accessing packages from container registries.
+  ru: Предоставляет сервис HTTP-прокси внутри кластера для доступа к пакетам из хранилищ образов контейнеров.
+stage: General Availability

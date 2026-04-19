@@ -1,15 +1,16 @@
-{{- $version := "1.16.2" }}
+{{- $version := include "get_oss_version_by_id" (list "cert-manager" $ )  -}} # see in oss.yaml
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /controller-linux-amd64
   to: /bin/cert-manager-controller
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/cert-manager-controller"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/cert-manager-controller"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
 fromImage: common/src-artifact
 final: false
 git:
@@ -18,9 +19,14 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
+  to: /module_crds    
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b "v{{ $version }}" --single-branch --depth=1 {{ $.SOURCE_REPO }}/jetstack/cert-manager.git /src
+  - git clone -b "v{{ $version }}" --single-branch --depth=1 $(cat /run/secrets/SOURCE_REPO)/jetstack/cert-manager.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - git describe --tags --always --match='v*' --abbrev=14 --dirty > VERSION
@@ -29,30 +35,73 @@ shell:
   - git show -s --format=%ct HEAD > GITEPOCH
   - rm -rf /src/.git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
-from: {{ $.Images.BASE_GOLANG_23_BULLSEYE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-ci-validator
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/crds
+  to: /module_crds
+- add: /{{ $.ModulePath }}modules/101-{{ $.ModuleName }}/docs
+  to: /docs  
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+  add: /src/deploy/crds
+  to: /src/deploy/crds
+  before: install
+- from: {{ index $.Images "tools/yq" }}
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: install
+shell:
+  install:
+  - | 
+    echo "Checking if module crds are the same as cert-manager crds"
+    DOWNLOAD=false CRD_FILE_PATH=/src/deploy/crds MODULE_VERSION=v{{ $version }} /module_crds/cert-manager/update.sh
+
+    dir1="/src/deploy/crds"
+    dir2="/module_crds/cert-manager"
+    for f in $dir1/*.yaml; do
+      base=$(basename "$f")
+        diff <(yq -P 'sort_keys(..)' $dir1/$base) <(yq -P 'sort_keys(..)' $dir2/$base)
+    done  
+
+  - |
+    echo "Checking cert-manager version in documentation"
+    cat /docs/README.md    | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README.md"    && exit 1 )
+    cat /docs/README_RU.md | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README_RU.md" && exit 1 )
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" ) }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $version | replace "." "-" }}
   add: /src
   to: /src
   before: install
-- image: common/jq-artifact
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
+{{- if eq $.SVACE_ENABLED "false" }}
   {{- include "debian packages proxy" . | nindent 2 }}
+{{- end }}
   - apt-get install -y rsync
   install:
-  - export GOPROXY={{ $.GOPROXY }} GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
   - export RELEASE_VERSION="v{{ $version }}-flant"
-  - make VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64
+  - export VERSION="$(cat VERSION)" IS_PRERELEASE="$(cat IS_PRERELEASE)" GITCOMMIT="$(cat GITCOMMIT)" GITEPOCH="$(cat GITEPOCH)" CTR=jq
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64`) | indent 4 }}
   - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
   - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
   - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
+
+

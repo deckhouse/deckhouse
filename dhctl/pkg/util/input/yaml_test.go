@@ -17,13 +17,12 @@ package input_test
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func TestCombineYAMLs(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		in  []string
 		out string
@@ -164,8 +163,6 @@ kind: ModuleConfig
 	for name, tt := range tests {
 		tt := tt
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			out := input.CombineYAMLs(tt.in...)
 			assert.Equal(t, tt.out, out)
 		})

@@ -11,7 +11,7 @@ spec:
   podMetricsEndpoints:
   - port: http-metrics
     relabelings:
-    - regex: endpoint|namespace
+    - regex: endpoint
       action: labeldrop
     - targetLabel: tier
       replacement: cluster
@@ -21,7 +21,7 @@ spec:
   selector:
     matchLabels:
       app: kube-router
-    namespaceSelector:
+  namespaceSelector:
       matchNames:
       - d8-system
 {{- end }}

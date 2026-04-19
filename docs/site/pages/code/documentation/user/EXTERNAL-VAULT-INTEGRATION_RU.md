@@ -1,0 +1,577 @@
+---
+title: "Интеграция с внешним Vault"
+menuTitle: Интеграция с внешним Vault
+force_searchable: true
+description: Подключение секретов из внешнего vault в CI
+permalink: ru/code/documentation/user/external-vault.html
+lang: ru
+weight: 50
+---
+
+Эта функция позволяет настроить интеграцию с Vault-сервером и использовать секреты в CI-пайплайнах. Перед началом работы необходимо настроить Vault-сервер и подготовить соответствующие роли и политики.
+
+## Настройка Vault
+
+1. Включите аутентификацию через JWTT:
+
+   ```bash
+   vault auth enable jwt
+
+   vault write auth/jwt/config \
+     oidc_discovery_url="https://code.example.com" \
+     bound_issuer="https://code.example.com" \
+     default_role="gitlab-role"
+   ```
+
+1. Создайте роль:
+
+   ```bash
+   vault write auth/jwt/role/gitlab-role - <<EOF
+   {
+     "role_type": "jwt",
+     "user_claim": "sub",
+     "bound_audiences": ["vault"],
+     "bound_claims": {
+       "project_id": "23"
+     },
+     "policies": ["gitlab-policy"],
+     "ttl": "1h"
+   }
+   EOF
+   ```
+
+   > Всегда используйте `bound_claims`, чтобы ограничить доступ к роли. Без этого любой JWT, выданный платформой, сможет получить доступ с этой ролью.
+  
+1. Настройте политики:
+
+   ```bash
+   vault policy write gitlab-policy - <<EOF
+   path "kv/data/code/vault-demo" {
+     capabilities = ["read"]
+   }
+   EOF
+   ```
+
+## Конфигурация CI
+
+### Переменные окружения
+
+Для корректной работы с Vault в пайплайне CI/CD необходимо задать следующие переменные окружения:
+
+- `VAULT_SERVER_URL` — **обязательно**. URL-адрес Vault-сервера (например, `https://vault.example.com`).
+- `VAULT_AUTH_ROLE` — *опционально*. Название роли в Vault. Если не указано, будет использована роль по умолчанию, заданная в конфигурации метода аутентификации.
+- `VAULT_AUTH_PATH` — *опционально*. Путь до метода аутентификации в Vault. По умолчанию используется `jwt`.
+- `VAULT_NAMESPACE` — *опционально*. Namespace Vault, если используется многоуровневая иерархия.
+
+### Использование секретов в CI
+
+Для получения секретов из Vault можно использовать следующий шаблон job'а:
+
+```yaml
+stages:
+  - test
+vault-login:
+  stage: test
+  image: ruby:3.2
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    DATABASE_PASSWORD:
+      vault: code/vault-demo/DATABASE_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+  script: echo $DATABASE_PASSWORD
+```
+
+### Параметры секрета
+
+Пример:
+
+```yaml
+DATABASE_PASSWORD:
+  vault: code/vault-demo/DATABASE_PASSWORD@kv
+  token: $VAULT_ID_TOKEN
+  file: false
+```
+
+Описание параметров:
+
+1. `vault` (обязательно) — путь к секрету в формате строки `path/to/secret/KEY@ENGINE`, где:
+   - `code/vault-demo/` — путь до секрета в Vault;
+   - `DATABASE_PASSWORD` — имя поля внутри секрета;
+   - `kv` — точка монтирования Secret Engine (по умолчанию — `secret`).
+
+По умолчанию используется `engine kv-v2`. Если необходимо использовать другой engine, можно указать объект вместо строки:
+
+```yaml
+DATABASE_PASSWORD:
+  vault: 
+    path: code/vault-demo
+    field: DATABASE_PASSWORD
+    engine:
+      name: 'kv-v1'
+      path: 'kv1'
+  token: $VAULT_ID_TOKEN
+  file: false
+```
+
+1. `token` (обязательно) — JWT-токен из секции `id_tokens`, используемый для аутентификации в Vault.
+
+1. `file` (опционально, по умолчанию `true`) — определяет способ предоставления секрета:
+   - `true` — секрет сохраняется во временный файл;
+   - `false` — секрет передаётся как строка в переменную окружения.
+
+### Поля, включённые в JWT
+
+Следующие поля автоматически включаются в JWT-токен и могут использоваться Vault для проверки прав доступа:
+
+| Поле                    | Условие появления           | Описание                                                                |
+|-------------------------|-----------------------------|-------------------------------------------------------------------------|
+| `jti`                   | всегда                      | Уникальный идентификатор токена                                         |
+| `iss`                   | всегда                      | Издатель токена (обычно URL Deckhouse Code)                            |
+| `iat`                   | всегда                      | Время выпуска токена (Issued At)                                        |
+| `nbf`                   | всегда                      | Время, до которого токен считается недействительным                     |
+| `exp`                   | всегда                      | Время истечения срока действия токена                                   |
+| `sub`                   | всегда                      | Subject токена (обычно ID задания CI)                                   |
+| `namespace_id`          | всегда                      | ID пространства (группы или пользователя)                               |
+| `namespace_path`        | всегда                      | Путь до пространства (например, `groups/dev`)                           |
+| `project_id`            | всегда                      | ID проекта                                                               |
+| `project_path`          | всегда                      | Путь до проекта                                                          |
+| `user_id`               | всегда                      | ID пользователя                                                          |
+| `user_login`            | всегда                      | Логин пользователя                                                       |
+| `user_email`            | всегда                      | Email пользователя                                                       |
+| `pipeline_id`           | всегда                      | ID CI-пайплайна                                                          |
+| `pipeline_source`       | всегда                      | Источник запуска пайплайна (push, schedule, MR и т.д.)                  |
+| `job_id`                | всегда                      | ID задания CI                                                            |
+| `ref`                   | всегда                      | Ссылка Git (Git reference)                                       |
+| `ref_type`              | всегда                      | Тип ссылки Git (Git reference) (`branch` или `tag`)                                           |
+| `ref_path`              | всегда                      | Полный путь ссылки Git (Git reference) (например, `refs/heads/main`)                       |
+| `ref_protected`         | всегда                      | Признак того, что объект по ссылке Git защищён |
+| `environment`           | при наличии                 | Название окружения (если используется)                                  |
+| `groups_direct`         | при наличии (<200 групп)    | Пути до групп, в которых состоит пользователь                           |
+| `environment_protected` | при наличии                 | Является ли окружение защищённым                                        |
+| `deployment_tier`       | при наличии                 | Тип окружения (`production`, `staging` и т.п.)                          |
+| `environment_action`    | при наличии                 | Тип действия над окружением (например, `deploy`)                        |
+
+## Быстрый старт
+
+В этом разделе приведён пример минимально необходимой настройки интеграции HashiCorp Vault с Deckhouse Code и проверки того, что CI job может получать секреты из Vault.
+
+{% alert level="warning" %}
+Данный пример предназначен только для ознакомления. Он не отражает лучшие практики безопасности и использует упрощённую конфигурацию, позволяющую быстро проверить работоспособность интеграции.
+{% endalert %}
+
+### Шаг 1. Установка переменных окружения
+
+Установите переменные окружения для Vault и Deckhouse Code.  
+Некоторые параметры можно оставить как есть, но `VAULT_ADDR`, `VAULT_TOKEN`, `CODE_URL` и `PROJECT_PATH` должны быть заданы вручную.
+
+```bash
+export VAULT_ADDR="https://vault.example.com"
+export VAULT_TOKEN="<your-token>"
+
+# URL-адрес Deckhouse Code.
+export CODE_URL="https://code.example.com"
+
+# Имя роли и политики Vault.
+export VAULT_ROLE="code-role"
+export VAULT_POLICY="code-policy"
+
+# Путь и данные секрета.
+export VAULT_SECRET_PATH="code/vault-demo"
+export VAULT_SECRET_FIELD="DATABASE_PASSWORD"
+export VAULT_SECRET_VALUE="super-secret-password"
+
+# Значение claim project_path, которое будет проверять Vault.
+export PROJECT_PATH="root/my-pr"
+```
+
+### Шаг 2. Включение метода аутентификации JWT
+
+Включите в Vault метод аутентификации JWT.
+Без этого Vault не сможет принимать ID-токены, которые Deckhouse Code передаёт в CI jobs.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/sys/auth/jwt" \
+  -d '{"type":"jwt"}'
+```
+
+### Шаг 3. Настройка JWT и OIDC
+
+Следующий запрос:
+
+- задаёт адрес OIDC discovery (`$CODE_URL`);
+- указывает ожидаемого issuer;
+- определяет *роль по умолчанию*, которую Vault выдаёт при аутентификации.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/auth/jwt/config" \
+  --data @- <<EOF
+{
+  "oidc_discovery_url": "$CODE_URL",
+  "bound_issuer": "$CODE_URL",
+  "default_role": "$VAULT_ROLE"
+}
+EOF
+```
+
+### Шаг 4. Монтирование Secret Engine KV v2
+
+KV v2 — это наиболее распространённый движок секретов Vault.
+Следующий запрос включает его по пути `/kv`:
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/sys/mounts/kv" \
+  -d '{"type": "kv-v2"}'
+```
+
+### Шаг 5. Создание тестового секрета
+
+Создайте секрет, который затем должна будет прочитать CI job.
+Секрет размещается по пути `code/vault-demo` и содержит одно поле.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/kv/data/$VAULT_SECRET_PATH" \
+  --data @- <<EOF
+{
+  "data": {
+    "$VAULT_SECRET_FIELD": "$VAULT_SECRET_VALUE"
+  }
+}
+EOF
+```
+
+### Шаг 6. Создание ACL-политики
+
+Политика определяет, к каким путям в Vault разрешён доступ.
+В следующем примере политика предоставляет только право на чтение указанного секрета.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X PUT "$VAULT_ADDR/v1/sys/policies/acl/$VAULT_POLICY" \
+  --data @- <<EOF
+{
+  "policy": "path \"kv/data/$VAULT_SECRET_PATH\" { capabilities = [\"read\"] }"
+}
+EOF
+```
+
+### Шаг 7. Создание роли Vault
+
+Роль определяет:
+
+- тип аутентификации;
+- обязательные claims в токене (`project_path`);
+- политики, которые получит аутентифицированный субъект;
+- допустимые аудитории (`aud`);
+- TTL токена.
+
+Deckhouse Code будет выпускать ID-токен с `aud=vault`, а Vault проверит, что значение `project_path` соответствует указанному.
+
+```bash
+curl \
+  -H "X-Vault-Token: $VAULT_TOKEN" \
+  -X POST "$VAULT_ADDR/v1/auth/jwt/role/$VAULT_ROLE" \
+  --data @- <<EOF
+{
+  "role_type":   "jwt",
+  "user_claim":  "sub",
+  "bound_audiences": ["vault"],
+
+  "bound_claims": {
+    "project_path": "$PROJECT_PATH"
+  },
+
+  "policies": ["$VAULT_POLICY"],
+  "ttl": "1h"
+}
+EOF
+```
+
+На этом настройка Vault завершена.
+
+### Тестирование интеграции в Deckhouse Code
+
+1. Откройте проект, указанный в `PROJECT_PATH`.
+   CI-токен проекта должен совпадать с claim `project_path`.
+   В противном случае Vault отклонит запрос на доступ к секретам.
+
+1. В настройках CI/CD проекта добавьте переменную `VAULT_SERVER_URL` со значением `$VAULT_ADDR`, использованным ранее.
+   Эта переменная сообщает Deckhouse Code, куда следует направлять запросы Vault API.
+
+1. Создайте файл `.gitlab-ci.yml`.
+   Файл запускает тестовую CI job, которая:
+
+   - получает ID-токен с `aud=vault`;
+   - передаёт его в Vault;
+   - загружает секрет из KV;
+   - выводит значение секрета.
+
+   ```yml
+   stages:
+     - test
+   
+   vault-demo:
+     stage: test
+     image: alpine
+     id_tokens:
+       VAULT_ID_TOKEN:
+         aud: vault
+     secrets:
+       DATABASE_PASSWORD:
+         vault: code/vault-demo/DATABASE_PASSWORD@kv
+         token: $VAULT_ID_TOKEN
+         file: false
+     script:
+       - echo "Raw value (masked by GitLab):"
+       - echo "$DATABASE_PASSWORD"
+   
+       - echo
+       - echo "Value with spaces (not masked):"
+       - printf '%s\n' "$DATABASE_PASSWORD" | sed 's/./& /g'
+   ```
+
+### Результат
+
+Если интеграция настроена правильно:
+
+- CI job успешно получит ID-токен;
+- Vault проверит значение `project_path` и выдаст доступ;
+- секрет будет считан и выведен в лог.
+
+В выводе вы увидите значение поля `DATABASE_PASSWORD`, загруженное напрямую из Vault.
+
+## Интеграция с Deckhouse Stronghold
+
+[Deckhouse Stronghold](/products/stronghold/) — это enterprise-решение для управления секретами, построенное на базе HashiCorp Vault. Интеграция Stronghold с Deckhouse Code позволяет безопасно использовать секреты в CI/CD-пайплайнах без необходимости хранить их в переменных проекта.
+
+### Схема взаимодействия
+
+![Схема интеграции Stronghold и Deckhouse Code](/images/code/stronghold_code_ru.png)
+
+Преимущества интеграции:
+
+- **Централизованное управление секретами** — все секреты хранятся в одном месте с аудитом доступа.
+- **Автоматическая ротация** — секреты могут обновляться автоматически без необходимости изменения CI/CD-пайплайнов.
+- **Гранулярный контроль доступа** — доступ к секретам ограничивается на основе проекта, ветки, окружения и других параметров.
+- **Отсутствие секретов в репозитории** — секреты не хранятся в коде и не передаются через переменные CI.
+
+### Примеры использования
+
+В этом разделе приведены типовые сценарии использования секретов из Vault в CI/CD-пайплайнах.
+
+#### Развёртывание приложения с учётными данными базы данных
+
+Пример получения данных для аутентификации (credentials) для подключения к PostgreSQL во время развётывания:
+
+```yaml
+stages:
+  - deploy
+
+deploy-production:
+  stage: deploy
+  image: alpine/k8s:1.28.0
+  environment:
+    name: production
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/production/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_USER:
+      vault: apps/myapp/production/DB_USER@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/production/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - kubectl create secret generic db-credentials \
+        --from-literal=host=$DB_HOST \
+        --from-literal=username=$DB_USER \
+        --from-literal=password=$DB_PASSWORD \
+        --dry-run=client -o yaml | kubectl apply -f -
+    - kubectl rollout restart deployment/myapp
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+```
+
+#### Использование API-ключей для внешних сервисов
+
+Пример интеграции с внешними API (Slack, Telegram, S3):
+
+```yaml
+stages:
+  - notify
+  - backup
+
+notify-slack:
+  stage: notify
+  image: curlimages/curl:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    SLACK_WEBHOOK_URL:
+      vault: integrations/slack/WEBHOOK_URL@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - |
+      curl -X POST "$SLACK_WEBHOOK_URL" \
+        -H "Content-Type: application/json" \
+        -d "{\"text\": \"Deployment completed for $CI_PROJECT_NAME\"}"
+
+backup-to-s3:
+  stage: backup
+  image: amazon/aws-cli:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    AWS_ACCESS_KEY_ID:
+      vault: cloud/aws/backup-user/ACCESS_KEY_ID@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    AWS_SECRET_ACCESS_KEY:
+      vault: cloud/aws/backup-user/SECRET_ACCESS_KEY@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  script:
+    - aws s3 sync ./artifacts s3://my-backup-bucket/$CI_PROJECT_NAME/$CI_COMMIT_SHA/
+```
+
+#### Подписание Docker-образов с помощью Cosign
+
+Пример использования приватного ключа из Vault для подписания образов:
+
+```yaml
+stages:
+  - build
+  - sign
+
+build-image:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+
+sign-image:
+  stage: sign
+  image: bitnami/cosign:latest
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  secrets:
+    COSIGN_PRIVATE_KEY:
+      vault: signing/cosign/PRIVATE_KEY@kv
+      token: $VAULT_ID_TOKEN
+      file: true
+  script:
+    - cosign sign --key $COSIGN_PRIVATE_KEY $CI_REGISTRY_IMAGE:$CI_COMMIT_SHA
+```
+
+#### Разграничение доступа по веткам
+
+Пример настройки различных секретов для веток `develop` и `main` с использованием bound claims по ветке (`ref`):
+
+```yaml
+stages:
+  - deploy
+
+.deploy-template:
+  image: alpine/k8s:1.28.0
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: vault
+  script:
+    - echo "Deploying from branch $CI_COMMIT_BRANCH with database $DB_HOST"
+    - kubectl set env deployment/myapp DB_HOST=$DB_HOST DB_PASSWORD=$DB_PASSWORD
+
+deploy-develop:
+  extends: .deploy-template
+  stage: deploy
+  variables:
+    VAULT_AUTH_ROLE: myapp-develop
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/develop/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/develop/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "develop"
+
+deploy-main:
+  extends: .deploy-template
+  stage: deploy
+  variables:
+    VAULT_AUTH_ROLE: myapp-main
+  secrets:
+    DB_HOST:
+      vault: apps/myapp/main/DB_HOST@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+    DB_PASSWORD:
+      vault: apps/myapp/main/DB_PASSWORD@kv
+      token: $VAULT_ID_TOKEN
+      file: false
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+```
+
+Пример настройки роли в Vault с bound claims по ветке для разграничения доступа:
+
+```bash
+# Роль для `develop` — доступ только с ветки `develop`.
+vault write auth/jwt/role/myapp-develop - <<EOF
+{
+  "role_type": "jwt",
+  "user_claim": "sub",
+  "bound_audiences": ["vault"],
+  "bound_claims": {
+    "project_path": "myteam/myapp",
+    "ref": "develop",
+    "ref_type": "branch"
+  },
+  "policies": ["myapp-develop-policy"],
+  "ttl": "1h"
+}
+EOF
+
+# Роль для `main` — доступ только с ветки `main` (защищённой).
+vault write auth/jwt/role/myapp-main - <<EOF
+{
+  "role_type": "jwt",
+  "user_claim": "sub",
+  "bound_audiences": ["vault"],
+  "bound_claims": {
+    "project_path": "myteam/myapp",
+    "ref": "main",
+    "ref_type": "branch",
+    "ref_protected": "true"
+  },
+  "policies": ["myapp-main-policy"],
+  "ttl": "1h"
+}
+EOF
+```

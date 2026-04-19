@@ -1,0 +1,64 @@
+diff --git a/main.go b/main.go
+index d6c71651..31d3bcba 100644
+--- a/main.go
++++ b/main.go
+@@ -15,6 +15,7 @@ import (
+ 
+ 	"github.com/spf13/pflag"
+ 	"sigs.k8s.io/controller-runtime/pkg/cache"
++	"sigs.k8s.io/controller-runtime/pkg/webhook"
+ 
+ 	"github.com/vmware/cluster-api-provider-cloud-director/release"
+ 
+@@ -22,7 +23,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+ 	"k8s.io/client-go/kubernetes/scheme"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/v1beta1"
+ 	bootstrapv1beta1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
+ 	addonsv1 "sigs.k8s.io/cluster-api/exp/addons/api/v1beta1"
+@@ -51,6 +52,7 @@ var (
+ 	syncPeriod           time.Duration
+ 	concurrency          int
+ 	diagnosticsOptions   flags.DiagnosticsOptions
++	port                 int
+ )
+ 
+ func init() {
+@@ -77,6 +79,8 @@ func initFlags(fs *pflag.FlagSet) {
+ 		"The minimum interval at which watched resources are reconciled (e.g. 15m)")
+ 	fs.IntVar(&concurrency, "concurrency", 10,
+ 		"The number of VCD machines to process simultaneously")
++	fs.IntVar(&port, "port", 4201,
++		"Webhook server port")
+ 
+ 	flags.AddDiagnosticsOptions(fs, &diagnosticsOptions)
+ 
+@@ -95,7 +99,11 @@ func main() {
+ 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+ 	pflag.Parse()
+ 
+-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
++	logger := zap.New(zap.UseFlagOptions(&opts))
++
++	ctrl.SetLogger(logger)
++	klog.SetLogger(logger)
++
+ 	if release.Version == "" {
+ 		setupLog.Error(fmt.Errorf("release.Version variable should not be empty"), "")
+ 	}
+@@ -109,7 +117,11 @@ func main() {
+ 		LeaderElectionID:       "capvcd-controller-manager-leader-election",
+ 		Cache: cache.Options{
+ 			SyncPeriod: &syncPeriod,
+-		}})
++		},
++		WebhookServer: webhook.NewServer((webhook.Options{
++			Port: port,
++		})),
++	})
+ 	if err != nil {
+ 		setupLog.Error(err, "unable to start manager")
+ 		os.Exit(1)

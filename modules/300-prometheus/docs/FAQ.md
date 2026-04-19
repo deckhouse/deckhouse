@@ -72,13 +72,26 @@ spec:
 ...
 ```
 
-> **Caution!** System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
+{% endraw %}
+
+{% alert level="warning" %}
+System dashboards and dashboards added using [GrafanaDashboardDefinition](cr.html#grafanadashboarddefinition) cannot be modified via the Grafana interface.
+
+Alerts configured in the dashboard do not work with datasource templates - such a dashboard is invalid and cannot be imported. In Grafana 9.0, the legacy alerting functionality was [deprecated](https://grafana.com/docs/grafana/latest/breaking-changes/breaking-changes-v10-0/#description) and replaced with Grafana Alerting. Therefore, we do not recommend using legacy alerting in dashboards.
+{% endalert %}
+
+{% alert level="info" %}
+If the dashboard does not appear in Grafana after being applied, there might be an error in the dashboard's JSON file. To identify the source of the problem, use the command `d8 k logs -n d8-monitoring deployments/grafana-v10 dashboard-provisioner` to view the logs of the component responsible for applying dashboards.
+{% endalert %}
+
+{% raw %}
 
 ## How do I add alerts and/or recording rules?
 
 The `CustomPrometheusRules` resource allows you to add alerts.
 
 Parameters:
+
 - `groups` — is the only parameter where you need to define alert groups. The structure of the groups is similar to [that of prometheus-operator](https://github.com/prometheus-operator/prometheus-operator/blob/ed9e365370603345ec985b8bfb8b65c242262497/Documentation/api.md#rulegroup).
 
 An example:
@@ -135,7 +148,7 @@ To enable secure access to metrics, we strongly recommend using **kube-rbac-prox
 
 ### An example of collecting metrics securely from an application inside a cluster
 
-Do the following to set up application metrics protection via the `kube-rbac-proxy` with the subsequent metrics scraping using Prometheus tools:
+To set up application metrics protection using `kube-rbac-proxy` and then collect metrics using Prometheus, follow these steps:
 
 1. Create a new `ServiceAccount` with the following permissions:
 
@@ -278,10 +291,12 @@ After step 4, your application's metrics should become available in Prometheus.
 Suppose there is a server exposed to the Internet on which the `node-exporter` is running. By default, the `node-exporter` listens on port `9100` and is available on all interfaces. One needs to ensure access control to the `node-exporter` so that metrics can be collected securely. Below is an example of how you can set this up.
 
 Requirements:
+
 - There must be network access from the cluster to the `kube-rbac-proxy` service running on the *remote server*.
 - The *remote server* must have access to the Kubernetes API server.
 
 Follow these steps:
+
 1. Create a new `ServiceAccount` with the following permissions:
 
    ```yaml
@@ -456,7 +471,7 @@ route:
       receiver: some-other-receiver
 ```
 
-Receive all alerts except for `DeadMansSwitch`:
+Receive all alerts except for [`DeadMansSwitch`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#monitoring-kubernetes-deadmansswitch):
 
 ```yaml
 receivers:
@@ -483,6 +498,7 @@ A detailed description of all parameters can be found in the [official documenta
 
 The Prometheus developer Brian Brazil provides, probably, the most [comprehensive answer](https://www.robustperception.io/keep-it-simple-scrape_interval-id) to this question.
 In short, different scrapeIntervals are likely to cause the following complications:
+
 * Increasing configuration complexity;
 * Problems with writing queries and creating graphs;
 * Short intervals are more like profiling an app, and Prometheus isn't the best tool to do this in most cases.
@@ -492,6 +508,7 @@ The most appropriate value for scrapeInterval is in the range of 10-60s.
 ## How do I limit Prometheus resource consumption?
 
 To avoid situations when VPA requests more resources for Prometheus or Longterm Prometheus than those available on the corresponding node, you can explicitly limit VPA using [module parameters](configuration.html):
+
 - `vpa.longtermMaxCPU`
 - `vpa.longtermMaxMemory`
 - `vpa.maxCPU`
@@ -597,13 +614,13 @@ You can get information about active alerts not only in the Grafana/Prometheus w
 Run the following command to get cluster alerts:
 
 ```shell
-kubectl get clusteralerts
+d8 k get clusteralerts
 ```
 
 Example:
 
 ```shell
-# kubectl get clusteralerts
+# d8 k get clusteralerts
 NAME               ALERT                                      SEVERITY   AGE     LAST RECEIVED   STATUS
 086551aeee5b5b24   ExtendedMonitoringDeprecatatedAnnotation   4          3h25m   38s             firing
 226d35c886464d6e   ExtendedMonitoringDeprecatatedAnnotation   4          3h25m   38s             firing
@@ -615,13 +632,13 @@ ab17837fffa5e440   DeadMansSwitch                             4          5d4h   
 Run the following command to view a specific alert:
 
 ```shell
-kubectl get clusteralerts <ALERT_NAME> -o yaml
+d8 k get clusteralerts <ALERT_NAME> -o yaml
 ```
 
 Example:
 
 ```shell
-# kubectl get clusteralerts 235d4efba7df6af4 -o yaml
+# d8 k get clusteralerts 235d4efba7df6af4 -o yaml
 alert:
   description: |
     The recommended course of action:
@@ -651,7 +668,15 @@ status:
   startsAt: "2023-05-10T13:43:09Z"
 ```
 
-Remember the special alert `DeadMansSwitch` — its presence in the cluster indicates that Prometheus is working.
+{% endraw %}
+
+{% alert level="info" %}
+The presence of a special alert `MissingDeadMansSwitch` in the cluster indicates problems in the performance of the monitoring components.
+{% endalert %}
+
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
+
+{% raw %}
 
 ## How do I add additional endpoints to a scrape config?
 

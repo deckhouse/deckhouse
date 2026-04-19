@@ -36,8 +36,9 @@ var (
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleDocumentation is a Module documentation rendering object.
 type ModuleDocumentation struct {
@@ -121,8 +122,7 @@ func (f *ModuleDocumentationKind) GroupVersionKind() schema.GroupVersionKind {
 	return ModuleDocumentationGVK
 }
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // ModuleDocumentationList is a list of ModuleDocumentation resources
 type ModuleDocumentationList struct {

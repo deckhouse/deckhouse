@@ -1,16 +1,19 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /registry-packages-proxy
   before: setup
-docker:
-  ENTRYPOINT: ["/registry-packages-proxy"]
+git:  
+{{- include "image mount points" . }}  
+imageSpec:
+  config:
+    entrypoint: ["/registry-packages-proxy"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
-fromImage: common/src-artifact
+from: {{ index $.Images "builder/src" }}
 git:
 - add: /{{ .ModulePath }}modules/039-{{ .ModuleName }}/images/{{ .ImageName }}/src
   to: /src
@@ -35,9 +38,10 @@ git:
     - 'go.mod'
     - 'go.sum'
 ---
+{{ $rppSignCheck := ternary "true" "false" (eq .Env "CSE") -}}
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -47,17 +51,18 @@ import:
   add: /go_lib/registry-packages-proxy
   to: /go_lib/registry-packages-proxy
   before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }}
-  - go mod download
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
   - go test ./... -v
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X registry-packages-proxy/internal/app.RppSignCheck={{ $rppSignCheck }}" -o /registry-packages-proxy cmd/registry-packages-proxy/*.go
   - chown 64535:64535 /registry-packages-proxy
   - chmod 0755 /registry-packages-proxy
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}

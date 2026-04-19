@@ -16,73 +16,55 @@ package types
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Module struct {
-	basic *modules.BasicModule
-
-	description string
-	stage       string
-	labels      map[string]string
-
-	needConfirmDisable        bool
-	needConfirmDisableMessage string
+	def   *Definition
+	basic *addonmodules.BasicModule
 }
 
-func NewModule(def *Definition, staticValues utils.Values, configBytes, valuesBytes []byte, logger *log.Logger) (*Module, error) {
-	basic, err := modules.NewBasicModule(def.Name, def.Path, def.Weight, staticValues, configBytes, valuesBytes, modules.WithLogger(logger))
+func NewModule(def *Definition, static addonutils.Values, config, values []byte, logger *log.Logger) (*Module, error) {
+	logOpt := addonmodules.WithLogger(logger)
+	basic, err := addonmodules.NewBasicModule(def.Name, def.Path, def.Weight, static, config, values, logOpt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build the '%s' basic module: %w", def.Name, err)
+		return nil, fmt.Errorf("build the '%s' basic module: %w", def.Name, err)
 	}
 
-	labels := make(map[string]string, len(def.Tags))
-	for _, tag := range def.Tags {
-		labels["module.deckhouse.io/"+tag] = ""
-	}
-
-	if len(def.Tags) == 0 {
-		labels = calculateLabels(def.Name)
-	}
+	basic.SetCritical(def.Critical)
 
 	return &Module{
-		basic:                     basic,
-		labels:                    labels,
-		description:               def.Description,
-		stage:                     def.Stage,
-		needConfirmDisable:        def.DisableOptions.Confirmation,
-		needConfirmDisableMessage: def.DisableOptions.Message,
+		def:   def,
+		basic: basic,
 	}, nil
 }
 
-func (m *Module) GetBasicModule() *modules.BasicModule {
+func (m *Module) GetBasicModule() *addonmodules.BasicModule {
+	if m == nil {
+		return nil
+	}
+
 	return m.basic
 }
 
-func (m *Module) GetConfirmationDisableReason() (string, bool) {
-	return m.needConfirmDisableMessage, m.needConfirmDisable
+func (m *Module) GetModuleDefinition() *Definition {
+	return m.def
 }
 
-func calculateLabels(name string) map[string]string {
-	// could be removed when we will ready properties from the module.yaml file
-	labels := make(map[string]string, 0)
-
-	if strings.HasPrefix(name, "cni-") {
-		labels["module.deckhouse.io/cni"] = ""
+func (m *Module) GetModuleExclusiveGroup() *string {
+	if m.def.ExclusiveGroup == "" {
+		return nil
 	}
+	return &m.def.ExclusiveGroup
+}
 
-	if strings.HasPrefix(name, "cloud-provider-") {
-		labels["module.deckhouse.io/cloud-provider"] = ""
+func (m *Module) GetConfirmationDisableReason() (string, bool) {
+	if m.def != nil && m.def.DisableOptions != nil {
+		return m.def.DisableOptions.Message, m.def.DisableOptions.Confirmation
 	}
-
-	if strings.HasSuffix(name, "-crd") {
-		labels["module.deckhouse.io/crd"] = ""
-	}
-
-	return labels
+	return "", false
 }

@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the 'user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the `user-authn` module in the Deckhouse Kubernetes Platform.
 
 {% raw %}
 
@@ -41,6 +41,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company Github
+  # Optional: disable the provider without deleting CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -65,7 +67,7 @@ metadata:
   name: gitlab
 spec:
   type: Gitlab
-  displayName: Dedicated Gitlab
+  displayName: Dedicated GitLab
   gitlab:
     baseURL: https://gitlab.example.com
     clientID: plainstring
@@ -78,9 +80,9 @@ spec:
 Create a new application in the GitLab project.
 
 To do this, you need to:
-* **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)` and set scopes `read_user`, `openid`;
-* **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)`; also, don't forget to set scopes `read_user`, `openid`;
-* (for GitLab version starting with 16) enable the `Trusted`/`Trusted applications are automatically authorized on Gitlab OAuth flow` checkbox  when creating an application.
+* **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)` and set scopes `read_user`, `openid`;
+* **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)`; also, don't forget to set scopes `read_user`, `openid`;
+* (for GitLab version starting with 16) enable the `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` checkbox when creating an application.
 
 Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
@@ -147,6 +149,62 @@ Authentication through the OIDC provider requires registering a client (or "crea
 
 Paste the generated `clientID` and `clientSecret` into the [DexProvider](cr.html#dexprovider) custom resource.
 
+#### Keycloak
+
+After selecting a `realm` to configure, adding a user in the [Users](https://www.keycloak.org/docs/latest/server_admin/index.html#assembly-managing-users_server_administration_guide) section, and creating a client in the [Clients](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide) section with [authentication](https://www.keycloak.org/docs/latest/server_admin/index.html#capability-config) enabled, which is required to generate the `clientSecret`, you need to perform the following steps:
+
+* Create a `scope` named `groups` in the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section and assign it the predefined mapping `groups`. ("Client scopes" → "Client scope details" → "Mappers" → "Add predefined mappers")
+* In the previously created client, add this `scope` in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Clients" → "Client details" → "Client Scopes" → "Add client scope").
+* In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields of [the client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is a value of the [parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) in the `global` module config.
+
+The example shows the provider's settings for integration with Keycloak.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: keycloak
+spec:
+  type: OIDC
+  displayName: My Company Keycloak
+  oidc:
+    issuer: https://keycloak.my-company.com/realms/myrealm # Use the name of your realm
+    clientID: plainstring
+    clientSecret: plainstring
+    insecureSkipEmailVerified: true    
+    getUserInfo: true
+    scopes:
+      - openid
+      - profile
+      - email
+      - groups
+```
+
+If email verification is not enabled in Keycloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
+
+* Delete the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers").
+  This is required for proper processing of the [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field when it's set to `true` and for correct permission assignment to users with unverified emails.
+
+* If you can't modify or delete the `Email verified` mapping, create a new Client Scope named `email_dkp` (or any other name) and add two mappings:
+  * `email`: "Client Scopes" → `email_dkp` → "Add mapper" → "From predefined mappers" → `email`.
+  * `email verified`: "Client Scopes" → `email_dkp` → "Add mapper" → "By configuration" → "Hardcoded claim". Specify the following fields:
+    * "Name": `email verified`
+    * "Token Claim Name": `emailVerified`
+    * "Claim value": `true`
+    * "Claim JSON Type": `boolean`
+
+  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+
+  In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
+  
+  ```yaml
+      scopes:
+        - openid
+        - profile
+        - email_dkp
+        - groups
+  ```
+
 #### Okta
 
 The example shows the provider's settings for integration with Okta.
@@ -169,7 +227,7 @@ spec:
 
 #### Blitz Identity Provider
 
-Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) in the `global` module.
+Note that you must specify a URL to redirect the user after authorization when [registering the application](https://docs.identityblitz.com/latest/integration-guide/oidc-app-enrollment.html) with the Blitz Identity Provider.  When using `DexProvider`, you must specify `https://dex.<publicDomainTemplate>/`, where `publicDomainTemplate` is the cluster's DNS name template as [defined](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) in the `global` module.
 
 The example below shows the provider settings for integration with Blitz Identity Provider.
 
@@ -241,8 +299,10 @@ spec:
 
     bindDN: cn=Administrator,cn=users,dc=example,dc=com
     bindPW: admin0!
-
+    
     usernamePrompt: Email Address
+
+    enableBasicAuth: true
 
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
@@ -261,11 +321,129 @@ spec:
       nameAttr: cn
 ```
 
+#### Configuring Basic Authentication
+
+To enable Basic Authentication for the Kubernetes API using LDAP credentials:
+
+1. Ensure that the [`publishAPI`](configuration.html#parameters-publishapi) parameter is enabled in the `user-authn` module configuration.
+1. Set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) in your LDAP DexProvider resource.
+
+> **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+
+After configuration, users can access the Kubernetes API via `kubectl`, using their LDAP username and password.
+
+Example `kubeconfig` for the user:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Path to CA certificate or insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```
+
+#### Kerberos (SPNEGO) SSO for LDAP
+
+Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. When enabled, a browser that trusts the Dex host will send `Authorization: Negotiate …` and Dex will validate the Kerberos ticket using a service keytab, skip the login form, map the Kerberos principal to an LDAP username, query groups, and complete the OIDC flow.
+
+Minimal example extending the LDAP provider spec:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: active-directory
+spec:
+  type: LDAP
+  displayName: Active Directory
+  ldap:
+    host: ad.example.com:636
+    bindDN: cn=Administrator,cn=users,dc=example,dc=com
+    bindPW: admin0!
+    userSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      username: sAMAccountName
+      idAttr: uid
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      nameAttr: cn
+      userMatchers:
+      - userAttr: uid
+        groupAttr: memberUid
+    kerberos:
+      enabled: true
+      keytabSecretName: dex-kerberos-keytab   # Secret in d8-user-authn with key 'krb5.keytab'
+      expectedRealm: EXAMPLE.COM              # optional, case-insensitive match
+      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      fallbackToPassword: false               # default false; if true, render form when header missing/invalid
+```
+
+Notes:
+
+- The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.
+- A single Dex Pod can serve multiple LDAP+Kerberos providers. Each provider mounts its own keytab; a shared `krb5.conf` is not required (Dex validates tickets offline using the keytab).
 To configure authentication, create a read-only user (service account) in LDAP.
 
-Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.
-1. You can omit these settings of anonymous read access is configured for LDAP.
-2. Enter the password into the `bindPW` in the plain text format. Strategies involving the passing of hashed passwords are not supported.
+Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in plain-text format (unencrypted). Strategies involving the passing of hashed passwords are not supported.
+
+You can omit these settings if anonymous read access is configured for LDAP.
+
+### SAML
+
+The example shows the provider's settings for integration with a SAML 2.0 Identity Provider (e.g., AD FS, Okta, Keycloak).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: saml-provider
+spec:
+  type: SAML
+  displayName: Corporate SAML
+  saml:
+    ssoURL: https://saml-idp.example.com/saml/sso
+    rootCAData: |
+      -----BEGIN CERTIFICATE-----
+      MIIFaDC...
+      -----END CERTIFICATE-----
+    entityIssuer: https://dex.example.com/callback
+    ssoIssuer: https://saml-idp.example.com
+    usernameAttr: name
+    emailAttr: email
+    groupsAttr: groups
+    nameIDPolicyFormat: persistent
+```
+
+To configure the SAML Identity Provider:
+
+1. Register Dex as a Service Provider (SP) in your IdP with the following settings:
+   - **ACS URL (Assertion Consumer Service)**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **Entity ID**: `https://dex.<modules.publicDomainTemplate>/callback`
+   - **NameID format**: `persistent` or `emailAddress`
+
+1. Configure attribute mappings in the IdP to send `email`, `name` (username), and `groups` attributes in the SAML assertion.
+
+1. Export the IdP signing certificate and specify it in the `rootCAData` field of the DexProvider resource.
+
+{% alert level="info" %}
+SAML does not natively support refresh tokens. Dex caches the user identity from the initial SAML assertion and returns it on subsequent refresh requests. The session lifetime is controlled by the `expiry.refreshTokens` settings in the `user-authn` module configuration.
+{% endalert %}
 
 ## Configuring the OAuth2 client in Dex for connecting an application
 
@@ -311,15 +489,28 @@ data:
 
 {% endraw %}
 
-## An example of creating a static user
+## Local Authentication
 
-Create a password and enter its hash in the `password` field.
+Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
+The implementation complies with OWASP recommendations, ensuring reliable protection of access to the cluster and applications without requiring integration with external authentication systems.
+
+### Creating a user
+
+Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
 
 Use the command below to calculate the password hash:
 
 ```shell
-echo "$password" | htpasswd -BinC 10 "" | cut -d: -f2 | base64 -w0
+echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
 ```
+
+{% alert level="info" %}
+If the `htpasswd` command is not available, install the appropriate package:
+
+* `apache2-utils` — for Debian-based distributions.
+* `httpd-tools` — for CentOS-based distributions.
+* `apache2-htpasswd` — for ALT Linux.
+{% endalert %}
 
 Alternatively, you can use the [online service](https://bcrypt-generator.com/) to calculate the password hash.
 
@@ -334,13 +525,16 @@ metadata:
   name: admin
 spec:
   email: admin@yourcompany.com
-  password: $2a$10$etblbZ9yfZaKgbvysf1qguW3WULdMnxwWFrkoKpRH1yeWa5etjjAa
+  # echo -n '3xAmpl3Pa$$wo#d' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  password: 'JDJ5JDEwJGRNWGVGUVBkdUdYYVMyWDFPcGdZdk9HSy81LkdsNm5sdU9mUkhnNWlQdDhuSlh6SzhpeS5H'
   ttl: 24h
 ```
 
 {% endraw %}
 
-## Example of adding a static user to a group
+### Adding a user to a group
+
+Users can be grouped to manage access rights. Example manifest of the Group resource for a group:
 
 {% raw %}
 
@@ -358,6 +552,76 @@ spec:
 
 {% endraw %}
 
-## How to set permissions for a user or group
+Where `members` is a list of users belonging to the group.
 
-Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.
+### Password policy
+
+Password policy settings allow controlling password complexity, rotation, and user lockout:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    passwordPolicy:
+      complexityLevel: Fair
+      passwordHistoryLimit: 10
+      lockout:
+        lockDuration: 15m
+        maxAttempts: 3
+      rotation:
+        interval: "30d"
+```
+
+{% endraw %}
+
+Field description:
+
+* `complexityLevel`: Password complexity level.
+* `passwordHistoryLimit`: Number of previous passwords stored in the system to prevent their reuse.
+* `lockout`: Lockout settings after exceeding the limit of failed login attempts:
+  * `lockout.maxAttempts`: Limit of allowed failed login attempts.
+  * `lockout.lockDuration`: User lockout duration.
+* `rotation`: Password rotation settings:
+  * `rotation.interval`: Period for mandatory password change.
+
+### Two-factor authentication (2FA)
+
+2FA increases security by requiring a code from a `TOTP` authenticator application (for example, Google Authenticator) during login.
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    staticUsers2FA:
+      enabled: true
+      issuerName: "awesome-app"
+```
+
+{% endraw %}
+
+Field description:
+
+* `enabled`: Enables or disables 2FA for all static users.
+* `issuerName`: Name displayed in the authenticator application when adding an account.
+
+{% alert level="info" %}
+After enabling 2FA, each user must register in the authenticator application during their first login.
+{% endalert %}
+
+### Assigning permissions to a user or group
+
+For permission configuration, parameters of the custom resource [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) are used.

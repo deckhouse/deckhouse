@@ -26,6 +26,8 @@ spec:
           type: object
           description: |
             Defines the configuration of a source of Deckhouse modules.
+
+            For more information about installing the module from the source, see the section ["Running the module in the DKP cluster"](../../architecture/module-development/run/#running-the-module-in-the-dkp-cluster).
           x-doc-examples:
             - apiVersion: deckhouse.io/v1alpha1
               kind: ModuleSource
@@ -47,6 +49,15 @@ spec:
                   type: string
                   description: Desirable default release channel for modules in the current source.
                   x-doc-deprecated: true
+                scanInterval:
+                  type: string
+                  x-doc-default: 3m
+                  x-doc-examples: ['5m', '1h', '6h30m']
+                  description: |
+                    Interval for registry scan.
+                    
+                    Defines the frequency of checking the container registry for new modules and their versions.
+                  pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 registry:
                   type: object
                   required:
@@ -77,6 +88,12 @@ spec:
                 syncTime:
                   type: string
                   description: When the repository was synchronized.
+                phase:
+                  type: string
+                  description: The current phase.
+                  enum:
+                    - Active
+                    - Terminating
                 modulesCount:
                   type: integer
                   description: The number of modules available.
@@ -89,12 +106,18 @@ spec:
                       name:
                         type: string
                         description: The module name.
+                      version:
+                        type: string
+                        description: The module version.
                       checksum:
                         type: string
                         description: The module checksum.
                       pullError:
                         type: string
                         description: The module pull error.
+                      error:
+                        type: string
+                        description: The module processing error.
                       policy:
                         type: string
                         description: The module policy name.
@@ -110,6 +133,10 @@ spec:
           type: integer
           jsonPath: .status.modulesCount
           description: The number of modules available.
+        - name: status
+          type: string
+          jsonPath: .status.phase
+          description: The current phase.
         - name: sync
           type: date
           jsonPath: .status.syncTime

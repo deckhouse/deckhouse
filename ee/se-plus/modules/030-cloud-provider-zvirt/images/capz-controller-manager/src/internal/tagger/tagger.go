@@ -36,9 +36,7 @@ func (t *TaggerImpl) InitTags(ctx context.Context, tags []string) error {
 	}
 
 	for _, existingTag := range existingTags {
-		if _, found := tagsToCreate[existingTag.Name()]; found {
-			delete(tagsToCreate, existingTag.Name())
-		}
+		delete(tagsToCreate, existingTag.Name())
 	}
 
 	ctp := ovirt.NewCreateTagParams().MustWithDescription("Tag created by cluster-api-provider-zvirt, do not delete")
@@ -53,11 +51,11 @@ func (t *TaggerImpl) InitTags(ctx context.Context, tags []string) error {
 	return nil
 }
 
-func (t *TaggerImpl) TagVM(ctx context.Context, vmid ovirt.VMID) error {
+func (t *TaggerImpl) TagVM(ctx context.Context, vmID ovirt.VMID) error {
 	cl := t.cl.WithContext(ctx)
 	for _, tagID := range t.tagIDs {
-		if err := cl.AddTagToVM(vmid, tagID); err != nil {
-			return fmt.Errorf("Tag VM[id = %s] with Tag[id = %s]: %w", err)
+		if err := cl.AddTagToVM(vmID, tagID); err != nil {
+			return fmt.Errorf("Tag VM[id = %s] with Tag[id = %s]: %w", vmID, tagID, err)
 		}
 	}
 	return nil

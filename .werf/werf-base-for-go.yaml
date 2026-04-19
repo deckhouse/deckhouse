@@ -1,0 +1,11 @@
+---
+image: base-for-go
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+{{ include "base components imports" (dict "Images" .Images "k8sVersions" .k8sVersions "CandiVersionMap" .CandiVersionMap) }}
+shell:
+  beforeInstall:
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache findutils sed make git coreutils libcap-setcap bash
+  {{- include "base components" (dict "Files" .Files "prefix" .prefix "k8sVersions" .k8sVersions) | nindent 2 }}

@@ -9,18 +9,20 @@ title: "Модуль documentation: настройки"
 ## Аутентификация
 
 По умолчанию используется модуль [user-authn](../user-authn/). Также можно настроить аутентификацию через `externalAuthentication` (см. ниже).
-Если эти варианты отключены, модуль включит basic auth со сгенерированным паролем.
+Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
-Посмотреть сгенерированный пароль можно командой:
-
-```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values documentation -o json | jq '.internal.auth.password'
-```
-
-Чтобы сгенерировать новый пароль, нужно удалить Secret:
+Чтобы посмотреть сгенерированный пароль, выполните команду:
 
 ```shell
-kubectl -n d8-system delete secret/documentation-basic-auth
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values documentation -o json | jq '.internal.auth.password'
 ```
 
-> **Внимание!** Параметр `auth.password` больше не поддерживается.
+Чтобы сгенерировать новый пароль, удалите ресурс Secret:
+
+```shell
+d8 k -n d8-system delete secret/documentation-basic-auth
+```
+
+{% alert level="info" %}
+Параметр `auth.password` больше не поддерживается.
+{% endalert %}

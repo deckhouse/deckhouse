@@ -79,6 +79,7 @@
  - **[control-plane-manager]** Fixed free space sufficiency detection for etcd-backup [#10426](https://github.com/deckhouse/deckhouse/pull/10426)
  - **[control-plane-manager]** Seamless change of clusterDomain. [#9739](https://github.com/deckhouse/deckhouse/pull/9739)
  - **[control-plane-manager]** Automatically regenerate kubeconfig for control plane components if validation fails, preventing crashes. [#9445](https://github.com/deckhouse/deckhouse/pull/9445)
+ - **[deckhouse]** Fix module requirements parsing. [#11741](https://github.com/deckhouse/deckhouse/pull/11741)
  - **[deckhouse]** Fix extenders message logs. [#10212](https://github.com/deckhouse/deckhouse/pull/10212)
  - **[deckhouse]** Fix for scaling down of webhook-handler deployment when ha mode is disabled [#9978](https://github.com/deckhouse/deckhouse/pull/9978)
  - **[deckhouse-controller]** Fix deployed module release detection in the ModuleReleaseController. [#10256](https://github.com/deckhouse/deckhouse/pull/10256)

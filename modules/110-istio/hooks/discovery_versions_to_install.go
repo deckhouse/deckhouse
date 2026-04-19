@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -38,11 +39,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(revisionsDiscovery))
 
-func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
+func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	var globalVersion string
 	var versionsToInstall = make([]string, 0)
 	var unsupportedVersions = make([]string, 0)
-	var supportedVersions = make([]string, 0)
+	var supportedVersions = make([]string, 0) //nolint:prealloc
 
 	var supportedVersionsResult = input.Values.Get("istio.internal.versionMap").Map()
 	for versionResult := range supportedVersionsResult {
@@ -112,7 +113,7 @@ func revisionsDiscovery(input *go_hook.HookInput, dc dependency.Container) error
 	for _, ver := range versionsToInstall {
 		fullVer, ok := versionMap[ver]
 		if !ok {
-			input.Logger.Warnf("Not found full version for version to install %s", ver)
+			input.Logger.Warn("Not found full version for version to install", slog.String("version", ver))
 			continue
 		}
 

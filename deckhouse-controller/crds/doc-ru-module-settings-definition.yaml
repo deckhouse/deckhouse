@@ -1,0 +1,34 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Отображает настройки модулей Deckhouse.
+            Определяет список версий настроек модуля.
+          properties:
+            spec:
+              description: Спецификация настроек модуля.
+              properties:
+                versions:
+                  description: Список версий настроек модуля. Каждая версия включает имя и схему.
+                  items:
+                    properties:
+                      name:
+                        description: Версия настроек модуля.
+                      schema:
+                        description: Схема настроек для данной версии модуля.
+                      conversions:
+                        description: Список правил конверсий для данной версии.
+                        items:
+                          description: Одно правило конверсии с выражениями и описаниями.
+                          properties:
+                            expr:
+                              description: Массив jq выражений для преобразования настроек.
+                            descriptions:
+                              description: Локализованные описания конверсии.
+                              properties:
+                                ru:
+                                  description: Русское описание конверсии.
+                                en:
+                                  description: Английское описание конверсии.

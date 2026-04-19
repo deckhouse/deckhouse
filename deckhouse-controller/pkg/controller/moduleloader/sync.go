@@ -20,64 +20,129 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"slices"
-	"strings"
+	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// restoreAbsentModulesFromOverrides checks ModulePullOverrides and restore modules on the FS
-func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
-	currentNodeName := os.Getenv("DECKHOUSE_NODE_NAME")
-	if len(currentNodeName) == 0 {
-		return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
+const (
+	// if a module is disabled more than three days, it will be uninstalled
+	deleteReleasesAfter = 72 * time.Hour
+
+	deleteStaleModuleLoopInterval = 3 * time.Hour
+)
+
+func (l *Loader) runDeleteStaleModuleReleasesLoop(ctx context.Context) {
+	_ = wait.PollUntilContextCancel(ctx, deleteStaleModuleLoopInterval, true, func(_ context.Context) (bool, error) {
+		if err := l.deleteStaleModuleReleases(ctx); err != nil {
+			l.logger.Warn("failed to delete stale modules", log.Err(err))
+		}
+		return false, nil
+	})
+}
+
+// deleteStaleModuleReleases deletes module releases for modules that disabled too long
+func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
+	modules := new(v1alpha1.ModuleList)
+	if err := l.client.List(ctx, modules); err != nil {
+		return fmt.Errorf("list all modules: %w", err)
 	}
 
+	for _, module := range modules.Items {
+		// handle too long disabled modules
+		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
+			// delete module releases of a stale module
+			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
+			moduleReleases := new(v1alpha1.ModuleReleaseList)
+			if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
+				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
+			}
+
+			for _, release := range moduleReleases.Items {
+				if err := l.client.Delete(ctx, &release); err != nil {
+					return fmt.Errorf("delete the '%s' module release for the '%s' module: %w", release.Name, module.Name, err)
+				}
+			}
+
+			// clear module
+			err := ctrlutils.UpdateWithRetry(ctx, l.client, &module, func() error {
+				availableSources := module.Properties.AvailableSources
+				module.Properties = v1alpha1.ModuleProperties{
+					AvailableSources: availableSources,
+				}
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("clear the %q module: %w", module.Name, err)
+			}
+
+			// set available and skip
+			err = ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+				module.Status.Phase = v1alpha1.ModulePhaseAvailable
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("set the Available module phase for the '%s' module: %w", module.Name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// restoreModulesByOverrides checks ModulePullOverrides and restore them on the FS
+func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 	mpos := new(v1alpha2.ModulePullOverrideList)
 	if err := l.client.List(ctx, mpos); err != nil {
 		return fmt.Errorf("list module pull overrides: %w", err)
 	}
 
 	for _, mpo := range mpos.Items {
-		// ignore deleted mpo
-		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() {
+		moduleName := mpo.GetModuleName()
+
+		// ignore deleted mpo or unready mpo
+		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
 			continue
 		}
 
 		module := new(v1alpha1.Module)
 		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
-				l.log.Errorf("failed to get the '%s' module: %v", mpo.Name, err)
-				return err
+				l.logger.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
+				return fmt.Errorf("get: %w", err)
 			}
-			l.log.Infof("the module '%s' does not exist, skip restoring module pull override process", mpo.Name)
+
+			l.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))
 			continue
 		}
 
 		// skip embedded module
 		if module.IsEmbedded() {
-			l.log.Infof("the module '%s' is embbedded, skip restoring module pull override process", mpo.Name)
+			l.logger.Info("module is embedded, skip restoring module pull override", slog.String("name", mpo.Name))
 			continue
 		}
 
 		// module must be enabled
-		if !module.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
-			l.log.Infof("the '%s' module disabled, skip restoring module pull override process", mpo.Name)
+		if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+			l.logger.Info("module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
 		// source must be
 		if module.Properties.Source == "" {
-			l.log.Infof("the '%s' module does have an active source, skip restoring module pull override process", mpo.Name)
+			l.logger.Info("module does not have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
@@ -86,314 +151,169 @@ func (l *Loader) restoreAbsentModulesFromOverrides(ctx context.Context) error {
 			return true
 		})
 		if err != nil {
-			return fmt.Errorf("set the '%s' module version: %w", module.Name, err)
+			return fmt.Errorf("set the module version '%s': %w", module.Name, err)
 		}
 
-		// get relevant module source
-		source := new(v1alpha1.ModuleSource)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
-			return fmt.Errorf("get the '%s' module source for the '%s' module: %w", module.Properties.Source, mpo.Name, err)
+		currentNode := os.Getenv("DECKHOUSE_NODE_NAME")
+		if len(currentNode) == 0 {
+			return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
 		}
 
-		// mpo's status.weight field isn't set - get it from the module's definition
-		if mpo.Status.Weight == 0 {
-			opts := utils.GenerateRegistryOptionsFromModuleSource(source, l.clusterUUID, l.log)
-			md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, source, opts)
-
-			def, err := md.DownloadModuleDefinitionByVersion(mpo.Name, mpo.Spec.ImageTag)
-			if err != nil {
-				return fmt.Errorf("get the '%s' module definition from repository: %w", mpo.Name, err)
-			}
-
-			mpo.Status.UpdatedAt = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
-			mpo.Status.Weight = def.Weight
-			// we don`t need to be bothered - even if the update fails, the weight will be set one way or another
-			_ = l.client.Status().Update(ctx, &mpo)
-		}
-
-		// if deployedOn annotation isn't set or its value doesn't equal to current node name - overwrite the module from the repository
-		if deployedOn, set := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; !set || deployedOn != currentNodeName {
-			l.log.Infof("reinitialize the '%s' module pull override due to stale/absent deployedOn annotation", mpo.Name)
-			if err = os.RemoveAll(filepath.Join(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion)); err != nil {
-				return fmt.Errorf("delete the stale directory of the '%s' module: %w", mpo.Name, err)
+		// if deployedOn annotation value doesn't equal to current node name - overwrite the module from the repository
+		if deployedOn := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; deployedOn != currentNode {
+			l.logger.Info("reinitialize module pull override due to stale deployedOn annotation", slog.String("name", mpo.Name))
+			if err = l.installer.Uninstall(ctx, moduleName); err != nil {
+				return fmt.Errorf("uninstall module pull override: %w", err)
 			}
 
 			if len(mpo.ObjectMeta.Annotations) == 0 {
 				mpo.ObjectMeta.Annotations = make(map[string]string)
 			}
-			mpo.ObjectMeta.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn] = currentNodeName
+			mpo.ObjectMeta.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn] = currentNode
 
 			if err = l.client.Update(ctx, &mpo); err != nil {
-				l.log.Warnf("failed to annotate the '%s' module pull override: %v", mpo.Name, err)
+				l.logger.Warn("failed to annotate module pull override", slog.String("name", mpo.Name), log.Err(err))
 			}
 		}
 
-		// if annotation is ok - we have to check that the file system is in sync
-		moduleSymLink := filepath.Join(l.symlinksDir, fmt.Sprintf("%d-%s", mpo.Status.Weight, mpo.Name))
-		if _, err = os.Stat(moduleSymLink); err != nil {
-			// module symlink not found
-			if !os.IsNotExist(err) {
-				return fmt.Errorf("check the '%s' module symlink: %w", mpo.Name, err)
-			}
-			l.log.Infof("the '%s' module symlink is absent on file system, restore it", mpo.Name)
-			if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
-				return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
-			}
-		} else {
-			downloadedModulePath, err := filepath.EvalSymlinks(moduleSymLink)
-			if err != nil {
-				return fmt.Errorf("evaluate the '%s' module symlink %s: %w", mpo.Name, moduleSymLink, err)
-			}
-
-			// check if module symlink leads to current version
-			if filepath.Base(downloadedModulePath) != downloader.DefaultDevVersion {
-				l.log.Infof("the '%s' module symlink is incorrect, restore it", mpo.Name)
-				if err = l.createModuleSymlink(mpo.Name, mpo.Spec.ImageTag, source, mpo.Status.Weight, true); err != nil {
-					return fmt.Errorf("create the '%s' module symlink: %w", mpo.Name, err)
-				}
-			}
+		// get relevant module source
+		source := new(v1alpha1.ModuleSource)
+		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
+			return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
 		}
 
-		// sync registry spec
-		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, mpo.Name, downloader.DefaultDevVersion, source); err != nil {
-			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", mpo.Name, source.Name, err)
+		if err = l.installer.Restore(ctx, source, moduleName, mpo.Spec.ImageTag); err != nil {
+			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
-		l.log.Infof("resynced the '%s' module's registry settings with the '%s' module source", mpo.Name, source.Name)
+
+		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
+
 	return nil
 }
 
-// restoreAbsentModulesFromReleases checks ModuleReleases with Deployed status and restore them on the FS
-func (l *Loader) restoreAbsentModulesFromReleases(ctx context.Context) error {
+// restoreModulesByReleases checks ModuleReleases with Deployed status and restores them on the FS
+func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
+	labelSelector := client.MatchingLabels{
+		v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+	}
+
 	releaseList := new(v1alpha1.ModuleReleaseList)
-	if err := l.client.List(ctx, releaseList); err != nil {
+	if err := l.client.List(ctx, releaseList, labelSelector); err != nil {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
-	// sorting releases by version (to check previous deployed)
+	// sort releases by version (to check previous deployed)
 	releases := releaseList.Items
 	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
 		return a.GetVersion().Compare(b.GetVersion())
 	})
 
 	deployedReleases := make(map[string]v1alpha1.ModuleRelease)
-
-	// TODO: add labels to list only Deployed releases
 	for _, release := range releases {
+		moduleName := release.GetModuleName()
+
 		// ignore deleted release and not deployed
 		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.ObjectMeta.DeletionTimestamp.IsZero() {
 			continue
 		}
 
 		// if we already have deployed release - make it superseded
-		deployedRelease, ok := deployedReleases[release.Spec.ModuleName]
+		deployedRelease, ok := deployedReleases[moduleName]
 		if ok {
 			updatedDeployedRelease := deployedRelease.DeepCopy()
 			updatedDeployedRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
 			updatedDeployedRelease.Status.Message = ""
 			updatedDeployedRelease.Status.TransitionTime = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
 
-			err := l.client.Status().Patch(ctx, updatedDeployedRelease, client.MergeFrom(&deployedRelease))
-			if err != nil {
-				l.log.Error("patch previous deployed module release", slog.String("name", release.GetName()), log.Err(err))
+			if err := l.client.Status().Patch(ctx, updatedDeployedRelease, client.MergeFrom(&deployedRelease)); err != nil {
+				l.logger.Error("patch previous deployed module release", slog.String("name", release.GetName()), log.Err(err))
 			}
 		}
 
-		deployedReleases[release.Spec.ModuleName] = release
-
-		moduleVersion := "v" + release.Spec.Version.String()
+		deployedReleases[moduleName] = release
 
 		// if ModulePullOverride exists, don't check and restore overridden release
-		exists, err := utils.ModulePullOverrideExists(ctx, l.client, release.Spec.ModuleName)
+		exists, err := utils.ModulePullOverrideExists(ctx, l.client, moduleName)
 		if err != nil {
-			return fmt.Errorf("get module pull override for the '%s' module: %w", release.Spec.ModuleName, err)
+			return fmt.Errorf("get module pull override for the '%s' module: %w", moduleName, err)
 		}
 		if exists {
-			l.log.Infof("the '%s' module is overridden, skip release restoring", release.Spec.ModuleName)
+			l.logger.Info("module is overridden, skip release restoring", slog.String("name", moduleName))
 			continue
 		}
 
 		// update module version
 		module := new(v1alpha1.Module)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: release.Spec.ModuleName}, module); err != nil {
+		if err = l.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get '%s' module: %w", release.Spec.ModuleName, err)
+				return fmt.Errorf("get the module '%s': %w", moduleName, err)
 			}
-			l.log.Warnf("the '%s' module is missing, skip setting version", release.Spec.ModuleName)
+			l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
 		} else {
-			l.log.Debugf("set the '%s' version for the '%s' module", release.Spec.Version.String(), release.Spec.ModuleName)
-			err = utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
-				if module.Properties.Version != moduleVersion {
-					module.Properties.Version = moduleVersion
-					return true
-				}
-				return false
+			l.logger.Debug("set module version", slog.String("name", moduleName), slog.String("version", release.GetModuleVersion()))
+			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
+				module.Properties.Version = release.GetModuleVersion()
+				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", release.Spec.ModuleName, err)
+				return fmt.Errorf("update the module '%s': %w", moduleName, err)
 			}
 		}
 
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
-			return fmt.Errorf("get the '%s' module source for the '%s' module: %w", source.Name, release.Spec.ModuleName, err)
+			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, moduleName, err)
 		}
 
-		moduleSymLink := filepath.Join(l.symlinksDir, fmt.Sprintf("%d-%s", release.Spec.Weight, release.Spec.ModuleName))
-		if _, err = os.Stat(moduleSymLink); err != nil {
-			if !os.IsNotExist(err) {
-				return fmt.Errorf("check the '%s' module symlink: %w", release.Spec.ModuleName, err)
-			}
-			l.log.Infof("the '%s' module symlink is absent on file system, restore it", release.Spec.ModuleName)
-			if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
-				return fmt.Errorf("create module symlink: %w", err)
-			}
-		} else {
-			downloadedModulePath, err := filepath.EvalSymlinks(moduleSymLink)
-			if err != nil {
-				return fmt.Errorf("evaluate the '%s' module symlink %s: %w", release.Spec.ModuleName, moduleSymLink, err)
-			}
-
-			// skip overridden modules
-			if filepath.Base(downloadedModulePath) == downloader.DefaultDevVersion {
-				l.log.Warnf("the '%s' module symlink is overridden, skip it", release.Spec.ModuleName)
-				continue
-			}
-
-			// check if module symlink leads to current version
-			if filepath.Base(downloadedModulePath) != moduleVersion {
-				l.log.Infof("the '%s' module symlink is incorrect, restore it", release.Spec.ModuleName)
-				if err = l.createModuleSymlink(release.Spec.ModuleName, moduleVersion, source, release.Spec.Weight, false); err != nil {
-					return fmt.Errorf("create the '%s' module symlink: %w", release.Spec.ModuleName, err)
-				}
-			}
+		if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 
-		// sync registry spec
-		if err = utils.SyncModuleRegistrySpec(l.downloadedModulesDir, release.Spec.ModuleName, moduleVersion, source); err != nil {
-			return fmt.Errorf("sync the '%s' module's registry settings with the '%s' module source: %w", release.Spec.ModuleName, source.Name, err)
-		}
-		l.log.Infof("resynced the '%s' module's registry settings with the '%s' module source", release.Spec.ModuleName, source.Name)
+		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
+
 	return nil
 }
 
-// deleteModulesWithAbsentRelease deletes modules with absent releases
-func (l *Loader) deleteModulesWithAbsentRelease(ctx context.Context) error {
-	// TODO: delete in downloaded dir too
-	symlinks, err := os.ReadDir(l.symlinksDir)
-	if err != nil {
-		return fmt.Errorf("read the '%s' symlinks directory: %w", l.symlinksDir, err)
-	}
-
-	modulesLinks := make(map[string]string, len(symlinks))
-	for _, symlink := range symlinks {
-		index := strings.Index(symlink.Name(), "-")
-		if index == -1 {
-			continue
-		}
-
-		moduleName := symlink.Name()[index+1:]
-		modulesLinks[moduleName] = filepath.Join(l.symlinksDir, symlink.Name())
-	}
-
+// deleteOrphanModules deletes modules without release and mpo
+func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 	releases := new(v1alpha1.ModuleReleaseList)
-	if err = l.client.List(ctx, releases); err != nil {
+	if err := l.client.List(ctx, releases); err != nil {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
-	l.log.Debugf("found %d releases", len(releases.Items))
+	installed, err := l.installer.GetInstalled()
+	if err != nil {
+		return fmt.Errorf("get installed modules: %w", err)
+	}
 
-	// remove modules with release
+	l.logger.Debug("found installed modules", slog.Any("installed", installed))
+
+	// exclude modules with release
 	for _, release := range releases.Items {
-		delete(modulesLinks, release.Spec.ModuleName)
+		delete(installed, release.GetModuleName())
 	}
 
-	for module, moduleLinkPath := range modulesLinks {
+	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err != nil && apierrors.IsNotFound(err) {
-			l.log.Warnf("the '%s' module has neither release nor override, purge it from fs", module)
-			_ = os.RemoveAll(moduleLinkPath)
-		}
-	}
-
-	return nil
-}
-
-// createModuleSymlink checks if there are any other symlinks for a module in the symlink dir and deletes them before
-// attempting to download version/tag of the module and creating correct symlink
-func (l *Loader) createModuleSymlink(moduleName, moduleVersion string, moduleSource *v1alpha1.ModuleSource, moduleWeight uint32, mpo bool) error {
-	l.log.Infof("the '%s' module is absent on filesystem, restore it from the '%s' source", moduleName, moduleSource.Name)
-
-	// remove possible symlink doubles
-	if err := deleteModuleSymlinks(l.symlinksDir, moduleName); err != nil {
-		return fmt.Errorf("delete the '%s' module symlinks: %w", moduleName, err)
-	}
-
-	var moduleTag string
-	if mpo {
-		moduleTag = moduleVersion
-		moduleVersion = downloader.DefaultDevVersion
-	}
-
-	// check if module's directory exists on fs
-	info, err := os.Stat(filepath.Join(l.downloadedModulesDir, moduleName, moduleVersion))
-	if err != nil || !info.IsDir() {
-		l.log.Infof("downloading the '%s:%s' module from the registry", moduleName, moduleVersion)
-		options := utils.GenerateRegistryOptionsFromModuleSource(moduleSource, l.clusterUUID, l.log)
-		md := downloader.NewModuleDownloader(l.dependencyContainer, l.downloadedModulesDir, moduleSource, options)
-
-		if mpo {
-			_, _, err = md.DownloadDevImageTag(moduleName, moduleTag, "")
-		} else {
-			_, err = md.DownloadByModuleVersion(moduleName, moduleVersion)
-		}
-		if err != nil {
-			return fmt.Errorf("download the '%s' module of the '%s' version/tag: %w", moduleName, moduleVersion, err)
-		}
-	}
-
-	moduleRelativePath := filepath.Join("../", moduleName, moduleVersion)
-	symlinkPath := filepath.Join(l.symlinksDir, fmt.Sprintf("%d-%s", moduleWeight, moduleName))
-	if err = restoreModuleSymlink(l.downloadedModulesDir, symlinkPath, moduleRelativePath); err != nil {
-		return fmt.Errorf("restore the '%s' module symlink: %w", moduleName, err)
-	}
-	l.log.Infof("the '%s:%s' module restored to %s", moduleName, moduleVersion, moduleRelativePath)
-
-	return nil
-}
-
-func restoreModuleSymlink(downloadedModulesDir, symlinkPath, moduleRelativePath string) error {
-	// make absolute path for versioned module
-	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(moduleRelativePath, "../"))
-	// check that module exists on a disk
-	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return fmt.Errorf("get stat of the '%s': %v", moduleRelativePath, err)
-	}
-
-	return os.Symlink(moduleRelativePath, symlinkPath)
-}
-
-// deleteModuleSymlinks checks if there are symlinks for the module with different weight in the symlink folder
-func deleteModuleSymlinks(symlinksDir, moduleName string) error {
-	// delete all module's symlinks in a loop
-	for {
-		anotherModuleSymlink, err := utils.GetModuleSymlink(symlinksDir, moduleName)
-		if err != nil {
-			return fmt.Errorf("check if there are any other symlinks for the '%s' module: %w", moduleName, err)
-		}
-
-		if len(anotherModuleSymlink) > 0 {
-			if err = os.Remove(anotherModuleSymlink); err != nil {
-				return fmt.Errorf("delete the '%s' stale symlink for the '%s' module: %w", anotherModuleSymlink, moduleName, err)
-			}
-			// go for another spin
+		err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo)
+		if err == nil {
+			// MPO exists - module is managed, don't delete
 			continue
 		}
 
-		// no more symlinks found
-		break
+		if !apierrors.IsNotFound(err) {
+			l.logger.Warn("get module pull override", slog.String("name", module), log.Err(err))
+			continue
+		}
+
+		l.logger.Debug("uninstall orphan module", slog.String("module", module))
+		if err = l.installer.Uninstall(ctx, module); err != nil {
+			return fmt.Errorf("uninstall the module '%s': %w", module, err)
+		}
 	}
+
 	return nil
 }

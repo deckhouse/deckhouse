@@ -210,8 +210,7 @@ spec:
 		It("Should do nothing", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			ds, _ := dependency.TestDC.MustGetK8sClient().AppsV1().DaemonSets("kube-system").Get(context.TODO(), "node-local-dns", metav1.GetOptions{})
-			Expect(ds).To(BeNil())
+			Expect(f.KubernetesResource("DaemonSet", "kube-system", "node-local-dns").Exists()).To(BeFalse())
 		})
 	})
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
-{!{- $ctx := coll.Merge $pullRequestContext . -}!}
+{!{- $ctx := coll.Merge $pullRequestContext . }!}
 
 # on every push to dev branches
 name: Build and test for dev branches
@@ -25,101 +25,72 @@ on:
       - reopened
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
-{!{ tmpl.Exec "git_source_envs" | strings.Indent 2 }!}
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: read
+
 jobs:
 {!{ tmpl.Exec "pull_request_info_job" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "git_info_job" $ctx | strings.Indent 2 }!}
 
-  enable_fe:
-    if: ${{ needs.pull_request_info.outputs.edition == 'FE' }}
-    name: Enable FE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_ee:
-    if: ${{ needs.pull_request_info.outputs.edition == 'EE' }}
-    name: Enable EE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_ce:
-    if: ${{ needs.pull_request_info.outputs.edition == 'CE' }}
-    name: Enable CE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_be:
-    if: ${{ needs.pull_request_info.outputs.edition == 'BE' }}
-    name: Enable BE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_se:
-    if: ${{ needs.pull_request_info.outputs.edition == 'SE' }}
-    name: Enable SE
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  enable_se_plus:
-    if: ${{ needs.pull_request_info.outputs.edition == 'SE-plus' }}
-    name: Enable SE-plus
-    needs:
-      - pull_request_info
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo Enable ${{ needs.pull_request_info.outputs.edition }}
-
-  go_generate:
-    name: Go Generate
+  build_fe:
+    name: Build FE
     needs:
       - git_info
       - pull_request_info
-{!{ tmpl.Exec "go_generate_template" $ctx | strings.Indent 4 }!}
-
-  workflow_render:
-    name: Render workflow
-    needs:
-      - git_info
-      - pull_request_info
-{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
-
-  build_deckhouse:
-    name: Build Deckhouse
-    needs:
-      - git_info
-      - pull_request_info
-      - go_generate
-      - workflow_render
     env:
-      WERF_ENV: ${{ needs.pull_request_info.outputs.edition }}
+      WERF_ENV: "FE"
+      SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
+      SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
+      SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+  build_{!{$werfEnv}!}:
+    name: Build {!{$werfEnv}!}
+    if: ${{ needs.pull_request_info.outputs.build_{!{$werfEnv}!} == 'true' }}
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+    env:
+      WERF_ENV: "{!{$werfEnv}!}"
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+{!{ end }!}
+
+  analyze_deckhouse:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') }}
+    name: Deckhouse static analysis
+    runs-on: [self-hosted, regular]
+    needs:
+      - build_fe
+    steps:
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_HOST" "SVACE_ANALYZE_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_USER" "SVACE_ANALYZE_SSH_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_URL" "SVACER_URL" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_IMPORT_USER" "SVACER_IMPORT_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACER_IMPORT_PASSWORD" "SVACER_IMPORT_PASSWORD" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI" "SVACE_ANALYZE_SSH_PRIVATE_KEY" "SVACE_ANALYZE_SSH_PRIVATE_KEY" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 6 }!}
+      - uses: deckhouse/modules-actions/svace_analyze@v4
+        with:
+          project_group: "DKP"
+          ci_commit_ref_name: ${{ github.event.pull_request.head.ref }}
+          ci_commit_hash: ${{ github.event.pull_request.head.sha }}
+          svace_analyze_host: "${{ steps.secrets.outputs.SVACE_ANALYZE_HOST }}"
+          svace_analyze_ssh_user: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_USER }}"
+          svacer_url: "${{ steps.secrets.outputs.SVACER_URL }}"
+          svacer_import_user: "${{ steps.secrets.outputs.SVACER_IMPORT_USER }}"
+          svacer_import_password: "${{ steps.secrets.outputs.SVACER_IMPORT_PASSWORD }}"
+          svace_analyze_ssh_private_key: "${{ steps.secrets.outputs.SVACE_ANALYZE_SSH_PRIVATE_KEY }}"
 
   doc_web_build:
     name: Doc web build
@@ -139,6 +110,16 @@ jobs:
       - pull_request_info
 {!{ tmpl.Exec "web_build_template" (slice $ctx "main" "dev") | strings.Indent 4 }!}
 
+  security_scan_images:
+    name: Security scan images
+    if: ${{ needs.pull_request_info.outputs.security_rootless_scan == 'true' }}
+    runs-on: [self-hosted, large]
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "security_scan_template" (slice $ctx "pr") | strings.Indent 4 }!}
+
   tests:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests
@@ -156,7 +137,6 @@ jobs:
 {!{ tmpl.Exec "tests_webhooks_template" (slice $ctx) | strings.Indent 4 }!}
 
   tests_dmt_lint:
-    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Tests DMT lint
     needs:
     - git_info
@@ -169,8 +149,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_deckhouse") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "dhctl" "build_fe") | strings.Indent 4 }!}
 
   golangci_lint:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -178,8 +158,18 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_deckhouse") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golangci_lint" "build_fe") | strings.Indent 4 }!}
+
+  golint:
+    if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    name: Go Lint Warning
+    continue-on-error: true
+    needs:
+      - git_info
+      - pull_request_info
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "golint" "build_fe") | strings.Indent 4 }!}
 
   openapi_test_cases:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -187,19 +177,8 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_deckhouse") | strings.Indent 4 }!}
-
-  web_links_test:
-    if: ${{ needs.pull_request_info.outputs.changes_docs == 'true' && github.repository == 'deckhouse/deckhouse' }}
-    name: Web links test
-    needs:
-      - git_info
-      - pull_request_info
-      - doc_web_build
-      - main_web_build
-    continue-on-error: true
-{!{ tmpl.Exec "web_links_test_template" (slice $ctx "dev") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "openapi_test_cases" "build_fe") | strings.Indent 4 }!}
 
   validators:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
@@ -207,33 +186,36 @@ jobs:
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
-{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_deckhouse") | strings.Indent 4 }!}
+      - build_fe
+{!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 
   set_e2e_requirement_status:
     # if previous jobs were failed we do not need set status, because checks will be failed
-    if: ${{ success() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
+    if: ${{ !failure() && needs.pull_request_info.outputs.changes_not_markdown == 'true' }}
     name: Set 'waiting for e2e' commit status
     needs:
       - git_info
       - pull_request_info
-      - build_deckhouse
+      - build_fe
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+      - build_{!{$werfEnv}!}{!{ end }!}
       - validators
       - openapi_test_cases
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: [ self-hosted, regular ]
+    runs-on: "ubuntu-latest"
     steps:
-    - name: Set commit status after e2e run
-      id: set_e2e_requirement_status
-      uses: {!{ index (ds "actions") "actions/github-script" }!}
-      env:
-        STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
-        PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
-      with:
-        github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-        script: |
-          const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
+{!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
+      - name: Set commit status after e2e run
+        id: set_e2e_requirement_status
+        uses: {!{ index (ds "actions") "actions/github-script" }!}
+        env:
+          STATUS_TARGET_COMMIT: ${{needs.git_info.outputs.github_sha}}
+          PR_LABELS: ${{ needs.pull_request_info.outputs.labels }}
+        with:
+          github-token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          script: |
+            const e2eStatus = require('./.github/scripts/js/e2e-commit-status');
 
-          await e2eStatus.setInitialStatus({github, context, core});
+            await e2eStatus.setInitialStatus({github, context, core});

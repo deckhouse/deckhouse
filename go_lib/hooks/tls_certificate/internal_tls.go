@@ -17,6 +17,8 @@ limitations under the License.
 package tls_certificate
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -27,6 +29,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/net"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
 )
@@ -49,7 +53,7 @@ const (
 //	ClusterDomainSAN(value) to generate sans with respect of cluster domain (e.g.: "app.default.svc" with "cluster.local" value will give: app.default.svc.cluster.local
 //	PublicDomainSAN(value)
 func DefaultSANs(sans []string) SANsGenerator {
-	return func(input *go_hook.HookInput) []string {
+	return func(_ context.Context, input *go_hook.HookInput) []string {
 		res := make([]string, 0, len(sans))
 
 		clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
@@ -107,7 +111,7 @@ type GenSelfSignedTLSHookConf struct {
 	// BeforeHookCheck runs check function before hook execution. Function should return boolean 'continue' value
 	// if return value is false - hook will stop its execution
 	// if return value is true - hook will continue
-	BeforeHookCheck func(input *go_hook.HookInput) bool
+	BeforeHookCheck func(_ context.Context, input *go_hook.HookInput) bool
 }
 
 func (gss GenSelfSignedTLSHookConf) path() string {
@@ -167,7 +171,7 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1.Secret
 	err := sdk.FromUnstructured(obj, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return certificate.Certificate{
@@ -177,7 +181,7 @@ func tlsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	}, nil
 }
 
-func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInput) error {
+func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(ctx context.Context, input *go_hook.HookInput) error {
 	var usages []string
 	if conf.Usages == nil {
 		usages = []string{
@@ -191,9 +195,9 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		}
 	}
 
-	return func(input *go_hook.HookInput) error {
+	return func(ctx context.Context, input *go_hook.HookInput) error {
 		if conf.BeforeHookCheck != nil {
-			passed := conf.BeforeHookCheck(input)
+			passed := conf.BeforeHookCheck(ctx, input)
 			if !passed {
 				return nil
 			}
@@ -202,9 +206,14 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 		var cert certificate.Certificate
 		var err error
 
-		cn, sans := conf.CN, conf.SANs(input)
+		cn, sans := conf.CN, conf.SANs(ctx, input)
 
-		if len(input.Snapshots[SnapshotKey]) == 0 {
+		certs, err := sdkobjectpatch.UnmarshalToStruct[certificate.Certificate](input.Snapshots, SnapshotKey)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal secret snapshot: %w", err)
+		}
+
+		if len(certs) == 0 {
 			// No certificate in snapshot => generate a new one.
 			// Secret will be updated by Helm.
 			cert, err = generateNewSelfSignedTLS(input, cn, sans, usages)
@@ -213,17 +222,17 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 			}
 		} else {
 			// Certificate is in the snapshot => load it.
-			cert = input.Snapshots[SnapshotKey][0].(certificate.Certificate)
+			cert = certs[0]
 			// update certificate if less than 6 month left. We create certificate for 10 years, so it looks acceptable
 			// and we don't need to create Crontab schedule
 			caOutdated, err := isOutdatedCA(cert.CA)
 			if err != nil {
-				input.Logger.Errorf(err.Error())
+				input.Logger.Error(err.Error())
 			}
 
 			certOutdated, err := isIrrelevantCert(cert.Cert, sans)
 			if err != nil {
-				input.Logger.Errorf(err.Error())
+				input.Logger.Error(err.Error())
 			}
 
 			// In case of errors, both these flags are false to avoid regeneration loop for the
@@ -245,7 +254,7 @@ func genSelfSignedTLS(conf GenSelfSignedTLSHookConf) func(input *go_hook.HookInp
 func isIrrelevantCert(certData string, desiredSANSs []string) (bool, error) {
 	cert, err := certificate.ParseCertificate(certData)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parse certificate: %w", err)
 	}
 
 	if time.Until(cert.NotAfter) < certOutdatedDuration {
@@ -286,7 +295,7 @@ func isOutdatedCA(ca string) (bool, error) {
 
 	cert, err := certificate.ParseCertificate(ca)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parse certificate: %w", err)
 	}
 
 	if time.Until(cert.NotAfter) < certOutdatedDuration {
@@ -303,10 +312,10 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages 
 		certificate.WithKeySize(keySize),
 		certificate.WithCAExpiry(caExpiryDurationStr))
 	if err != nil {
-		return certificate.Certificate{}, err
+		return certificate.Certificate{}, fmt.Errorf("generate ca: %w", err)
 	}
 
-	return certificate.GenerateSelfSignedCert(input.Logger,
+	cert, err := certificate.GenerateSelfSignedCert(input.Logger,
 		cn,
 		ca,
 		certificate.WithSANs(sans...),
@@ -315,7 +324,11 @@ func generateNewSelfSignedTLS(input *go_hook.HookInput, cn string, sans, usages 
 		certificate.WithSigningDefaultExpiry(certExpiryDuration),
 		certificate.WithSigningDefaultUsage(usages),
 	)
+	if err != nil {
+		return certificate.Certificate{}, fmt.Errorf("generate self signed cert: %w", err)
+	}
+	return cert, nil
 }
 
 // SANsGenerator function for generating sans
-type SANsGenerator func(input *go_hook.HookInput) []string
+type SANsGenerator func(_ context.Context, input *go_hook.HookInput) []string

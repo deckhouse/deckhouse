@@ -12,6 +12,16 @@ metadata:
 rules:
 - apiGroups:
   - deckhouse.io
+  resources:
+  - clusterauthorizationrules
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
   resourceNames:
   - user-authz
   resources:

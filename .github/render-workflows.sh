@@ -50,6 +50,7 @@ cat <<'SCRIPT_END' | docker run -i --rm \
   -v ${volumesRoot}/ci_includes:/in/ci_includes \
   -v ${volumesRoot}/ci_templates:/in/ci_templates \
   -v ${volumesRoot}/../candi/image_versions.yml:/in/image_versions.yml \
+  -v ${volumesRoot}/../candi/base_images.yml:/in/base_images.yml \
   -v ${volumesRoot}/workflow_templates:/in/workflow_templates \
   -v ${volumesRoot}/workflows:/out/workflows \
   --entrypoint=ash \
@@ -87,6 +88,7 @@ for f in /in/workflow_templates/* ; do
            --datasource in=/in \
            --datasource actions=file:///in/ci_includes/actions_versions.yml \
            --datasource image_versions=file:///in/image_versions.yml \
+           --datasource base_images=file:///in/base_images.yml \
            --template incl=/in/ci_includes \
            --template tpl=/in/ci_templates \
            --file $f $outarg

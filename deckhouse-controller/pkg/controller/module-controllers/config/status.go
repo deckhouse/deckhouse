@@ -19,13 +19,14 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders"
 	dynamicextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/dynamically_enabled"
-	kubeconfig "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
+	kubeconfigextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/kube_config"
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,17 +34,19 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
+	editionavailablextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
+	editionenabledextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionenabled"
 	k8sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	moduledependencyextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/moduledependency"
 )
 
 // refreshModule refreshes module in cluster
 func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error {
-	r.log.Debugf("refresh the %q module status", moduleName)
+	r.logger.Debug("refresh module status", slog.String("name", moduleName))
 
 	// events happen quite often, so conflicts happen often, default backoff not suitable
 	backoff := wait.Backoff{
@@ -55,31 +58,34 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 	}
 
 	module := new(v1alpha1.Module)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(backoff, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			r.refreshModuleStatus(module)
 			return r.client.Status().Update(ctx, module)
 		})
-	})
+	}); err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // refreshModuleConfig refreshes module config in cluster
 func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string) error {
-	r.log.Debugf("refresh the %q module config status", configName)
+	r.logger.Debug("refresh module config status", slog.String("name", configName))
 
 	// clear metrics
-	metricGroup := fmt.Sprintf("obsoleteVersion_%s", configName)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, configName)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	moduleConfig := new(v1alpha1.ModuleConfig)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
-					r.log.Debugf("the module '%s' config not found", configName)
+					r.logger.Debug("module config not found", slog.String("name", configName))
 					return nil
 				}
 				return fmt.Errorf("refresh the '%s' module config: %w", configName, err)
@@ -87,16 +93,16 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 
 			r.refreshModuleConfigStatus(moduleConfig)
 			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
-				return err
+				return fmt.Errorf("update: %w", err)
 			}
 
 			// skip firing alert for global module
 			if moduleConfig.Name != "global" {
 				// update metrics
-				converter := conversion.Store().Get(moduleConfig.Name)
+				converter := r.conversionsStore.Get(moduleConfig.Name)
 				// fire alert at obsolete version
 				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
-					r.metricStorage.Grouped().GaugeSet(metricGroup, "d8_module_config_obsolete_version", 1.0, map[string]string{
+					r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleConfigObsoleteVersion, 1.0, map[string]string{
 						"name":    moduleConfig.Name,
 						"version": strconv.Itoa(moduleConfig.Spec.Version),
 						"latest":  strconv.Itoa(converter.LatestVersion()),
@@ -105,7 +111,10 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 			}
 			return nil
 		})
-	})
+	}); err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // refreshModuleStatus refreshes module status by addon-operator
@@ -142,9 +151,11 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		// However, there are too many addon-operator internals involved.
 		// We should consider moving these statuses to the `Module` resource,
 		// which is directly controlled by addon-operator.
-		case modules.CanRunHelm:
-			module.Status.Phase = v1alpha1.ModulePhaseReady
-			module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+		case modules.Ready:
+			if !basicModule.HasReadiness() {
+				module.Status.Phase = v1alpha1.ModulePhaseReady
+				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+			}
 
 		case modules.Startup:
 			if module.Status.Phase == v1alpha1.ModulePhaseDownloading {
@@ -161,14 +172,6 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			} else {
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageOnStartupHook)
 			}
-
-		case modules.WaitForSynchronization:
-			module.Status.Phase = v1alpha1.ModulePhaseWaitSyncTasks
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonWaitSyncTasks, v1alpha1.ModuleMessageWaitSyncTasks)
-
-		case modules.HooksDisabled:
-			module.Status.Phase = v1alpha1.ModulePhaseHooksDisabled
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonHooksDisabled, v1alpha1.ModuleMessageHooksDisabled)
 		}
 
 		return
@@ -197,7 +200,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 			message = v1alpha1.ModuleMessageDisabled
 		}
 
-	case kubeconfig.Name:
+	case kubeconfigextender.Name:
 		reason = v1alpha1.ModuleReasonModuleConfig
 		message = v1alpha1.ModuleMessageModuleConfig
 
@@ -208,13 +211,31 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	case scriptextender.Name:
 		reason = v1alpha1.ModuleReasonEnabledScriptExtender
 		message = v1alpha1.ModuleMessageEnabledScriptExtender
-
+		if txt := basicModule.GetEnabledScriptReason(); txt != nil && *txt != "" {
+			message += ": " + *txt
+		}
 	case d7sversionextender.Name:
 		reason = v1alpha1.ModuleReasonDeckhouseVersionExtender
-		_, errMsg := d7sversionextender.Instance().Filter(module.Name, map[string]string{})
+		_, errMsg := r.exts.DeckhouseVersion.Filter(module.Name, map[string]string{})
 		message = v1alpha1.ModuleMessageDeckhouseVersionExtender
 		if errMsg != nil {
 			message += ": " + errMsg.Error()
+		}
+
+	case editionavailablextender.Name:
+		module.Status.Phase = v1alpha1.ModulePhaseUnavailable
+		reason = v1alpha1.ModuleReasonEditionAvailableExtender
+		_, errMsg := r.exts.EditionAvailable.Filter(module.Name, map[string]string{})
+		if errMsg != nil {
+			message = errMsg.Error()
+		}
+
+	case editionenabledextender.Name:
+		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
+		reason = v1alpha1.ModuleReasonEditionEnabledExtender
+		_, errMsg := r.exts.EditionEnabled.Filter(module.Name, map[string]string{})
+		if errMsg != nil {
+			message = errMsg.Error()
 		}
 
 	case k8sversionextender.Name:
@@ -226,8 +247,8 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		}
 
 	case bootstrappedextender.Name:
-		reason = v1alpha1.ModuleReasonClusterBootstrappedExtender
-		message = v1alpha1.ModuleMessageClusterBootstrappedExtender
+		reason = v1alpha1.ModuleReasonBootstrappedExtender
+		message = v1alpha1.ModuleMessageBootstrappedExtender
 
 	case moduledependencyextender.Name:
 		reason = v1alpha1.ModuleReasonModuleDependencyExtender
@@ -239,27 +260,30 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 	}
 
 	// do not change phase of not installed module
-	if module.Status.Phase != v1alpha1.ModulePhaseAvailable {
+	if module.Status.Phase != v1alpha1.ModulePhaseAvailable && module.Status.Phase != v1alpha1.ModulePhaseUnavailable {
 		module.Status.Phase = v1alpha1.ModulePhaseDownloaded
 	}
+
 	module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, reason, message)
 	module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, reason, message)
 }
 
 // refreshModuleConfigStatus refreshes module config status by validator and conversions
 func (r *reconciler) refreshModuleConfigStatus(config *v1alpha1.ModuleConfig) {
-	validationResult := r.configValidator.Validate(config)
-	if validationResult.HasError() {
-		config.Status.Version = ""
-		config.Status.Message = fmt.Sprintf("Error: %s", validationResult.Error)
-		return
+	if r.configValidator != nil {
+		validationResult := r.configValidator.Validate(config)
+		if validationResult.HasError() {
+			config.Status.Version = ""
+			config.Status.Message = fmt.Sprintf("Error: %s", validationResult.Error)
+			return
+		}
 	}
 
 	// fill the 'version' field. The value is a spec.version or the latest version from registered conversions.
 	// also create warning if version is unknown or outdated.
 	version := ""
 	versionWarning := ""
-	converter := conversion.Store().Get(config.Name)
+	converter := r.conversionsStore.Get(config.Name)
 	if config.Spec.Version == 0 {
 		// use latest version if spec.version is empty.
 		version = strconv.Itoa(converter.LatestVersion())

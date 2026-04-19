@@ -1,52 +1,162 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-{{ if ne .ModuleName "docs" }}
+{{ if eq .ModuleName "documentation" }}
 fromImage: common/distroless
 {{ else }}
-from: {{ .Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 {{ end }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/docs-builder
   to: /app/server
   before: setup
-docker:
-  WORKDIR: /app
-  ENTRYPOINT: [ "/app/server" ]
+- image: d8-docs-artifacts
+  add: /export
+  to: /app/hugo-init/data/dkp
+  includePaths:
+    - embedded_modules.json
+    - editions.json
+  before: setup
+imageSpec:
+  config:
+    workingDir: "/app"
+    entrypoint: [ "/app/server" ]
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
-    to: /app/hugo
-{{ if ne .ModuleName "docs" }}
+    to: /app/hugo-init
+{{ if ne .ModuleName "website-docs" }}
     excludePaths:
     - config/production/
+    - data/dkp/embedded_modules.json
+    - data/dkp/editions.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
-    to: /app/hugo/config/production/hugo.yaml
+    to: /app/hugo-init/config/production/hugo.yaml
+{{- include "image mount points" . | nindent 2 }}
 {{ end }}
+
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
-{{ if ne .ModuleName "docs" }}
+image: d8-docs-artifacts
+from: {{ .Images.BASE_ALPINE }}
+final: false
+shell:
+  setup:
+  - |
+    mkdir -p /export
+    MODULES_DIR="/rawdata/embedded-modules"
+    for name in $(find ${MODULES_DIR} -regex '.\+/modules/[^/]\+/docs/\(README\|readme\).md'); do
+      moduleName=$(echo $name | sed -E 's#^.+/modules/([^/]+)/docs/.+$#\1#; s#^[0-9]+-##')
+      moduleEdition=$(echo $name | sed -E "s#^.*${MODULES_DIR}/##; s#^modules/#ce/modules/#; s#^ee/(be|fe|se|se-plus)/#\1/#" | cut -d/ -f1)
+      DATA_RU=$(cat 2>/dev/null "$(echo -n $name | sed 's#.md#_RU.md#')" | awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' | yq '.' -o json | jq -Mc 'select(. != null)' )
+      awk 'f{print} /^---/ {c++; if(c==2) exit} /^---/ {f=1}' $name | yq '.' -o json | jq --argjson data_ru "$(echo -n $DATA_RU)" --arg module "$moduleName" --arg moduleEdition "$moduleEdition" 'select(. != null) | .module=$module | .embedded="true"| .tags += ["embedded"] | .editionMinimumAvailable="\($moduleEdition)" |.url="\($module)/" | if $data_ru != null then . + {ru: $data_ru} end '
+    done | jq -s 'unique_by(.module) | {entries: .}' | jq --slurpfile tags /rawdata/docs/modules/embedded_modules_tags.json '
+      .entries |= map(
+      . as $mod
+      | if $tags[0][$mod.module] != null then
+          $mod + {tags: (($mod.tags // []) + $tags[0][$mod.module] | unique)}
+        else
+          $mod
+        end
+      )' | jq --slurpfile excluded /rawdata/docs/modules/excluded_modules.json '
+      .entries |= map(select(.module as $m | ($excluded[0] | index($m) | not)))
+      ' > /export/embedded_modules_tmp.json
+
+    echo "[] Getting modules metadata from module.yaml files..."
+    export METADATA_SOURCE_DIR=/rawdata/embedded-modules
+    export METADATA_TARGET_FILE=/export/embedded_modules_metadata.json
+    sh /_tools/modules_generate_metadata.sh
+    MODULES_METADATA_COUNT=$(jq -r '.modules | length' /export/embedded_modules_metadata.json)
+
+    if [ "$MODULES_METADATA_COUNT" -le 10 ]; then
+      echo "Got modules metadata only for $MODULES_METADATA_COUNT DKP embedded modules, and it seems like there is a problem. Exiting."
+      exit 1
+    else
+      echo
+      echo "Got modules metadata for ${MODULES_METADATA_COUNT} DKP embedded modules."
+      echo
+    fi
+
+    # Merging modules metadata...
+    jq -s '.[0] as $main | .[1] as $meta | $main | .entries = (.entries | map(. + {metadata: ($meta.modules[.module] // {})}))' /export/embedded_modules_tmp.json /export/embedded_modules_metadata.json > /export/embedded_modules.json
+
+    MODULES_COUNT=$(jq -r '.entries | length' /export/embedded_modules.json)
+    if [ "$MODULES_COUNT" -le 10 ]; then
+      echo "Got only $MODULES_COUNT DKP embedded modules, and it seems like there is a problem. Exiting."
+      exit 1
+    else
+      echo
+      echo "Got ${MODULES_COUNT} DKP embedded modules."
+      echo
+    fi
+
+    cd /rawdata/docs
+    {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 4 }}
+    cp /rawdata/docs/editions.json /export/editions.json
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- from: {{ index $.Images "tools/jq" }}
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- from: {{ index $.Images "tools/yq" }}
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
+git:
+- add: /docs/documentation/_tools/modules_generate_metadata.sh
+  to: /_tools/modules_generate_metadata.sh
+  stageDependencies:
+    setup: ['**/*']
+- add: /{{ .ModulePath }}
+  to: /rawdata/embedded-modules
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - modules/**/docs/{README,readme}*.md
+  - ee/**/docs/{README,readme}*.md
+  - modules/**/module.yaml
+  - ee/**/module.yaml
+  - modules/**/oss.yaml
+  - ee/**/oss.yaml
+- add: /editions.yaml
+  to: /rawdata/docs/editions-repo-data.yaml
+  stageDependencies:
+    setup: ['**/*']
+- add: /{{ .ModulePath }}/docs/documentation/_data/modules
+  to: /rawdata/docs/modules
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - embedded_modules_tags.json
+  - excluded_modules.json
+  - editions-addition.json
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+{{ if ne .ModuleName "website-docs" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
   to: /src
   before: install
-mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
 {{ end }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod tidy
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -ldflags '-s -w' .
   - chown -R 64535:64535 /src
   - chmod 0700 /src/docs-builder
-{{ if ne .ModuleName "docs" }}
+{{ if ne .ModuleName "website-docs" }}
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 shell:
   install:
   - cd /src
@@ -60,6 +170,4 @@ git:
   - '**/*.sum'
   stageDependencies:
     install:
-    - '**/*.go'
-    - 'go.mod'
-    - 'go.sum'
+    - '**/*'

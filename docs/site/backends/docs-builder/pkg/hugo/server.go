@@ -21,10 +21,6 @@ import (
 	"github.com/spf13/afero"
 )
 
-func newHugoBuilder(c *command) *hugoBuilder {
-	return &hugoBuilder{c: c}
-}
-
 type countingStatFs struct {
 	afero.Fs
 	statCounter uint64
@@ -37,9 +33,10 @@ func (fs *countingStatFs) Stat(name string) (os.FileInfo, error) {
 			atomic.AddUint64(&fs.statCounter, 1)
 		}
 	}
+
 	return f, err
 }
 
-func chmodFilter(dst, src os.FileInfo) bool {
+func chmodFilter(_, src os.FileInfo) bool {
 	return src.IsDir()
 }

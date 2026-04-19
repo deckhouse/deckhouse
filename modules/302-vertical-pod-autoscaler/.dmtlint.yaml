@@ -1,0 +1,28 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: Deployment
+          name: vpa-admission-controller
+          container: admission-controller
+        - kind: Deployment
+          name: vpa-recommender
+          container: recommender
+        - kind: Deployment
+          name: vpa-updater
+          container: updater
+      liveness-probe:
+        - kind: Deployment
+          name: vpa-admission-controller
+          container: admission-controller
+        - kind: Deployment
+          name: vpa-recommender
+          container: recommender
+        - kind: Deployment
+          name: vpa-updater
+          container: updater
+  rbac:
+    exclude-rules:
+      wildcards:
+        - kind: ClusterRole
+          name: d8:vertical-pod-autoscaler:controllers-reader

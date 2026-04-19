@@ -19,7 +19,6 @@ package validators
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"unicode"
 
 	"github.com/hashicorp/go-multierror"
@@ -39,8 +38,22 @@ var (
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 		},
+		// exclude zone - ru-center-1, ru-center-2, ru-center-3
+		"modules/030-cloud-provider-yandex/candi/openapi/cluster_configuration.yaml": {
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
+		},
 		// disk types - gp2.,..
 		"candi/cloud-providers/aws/openapi/cluster_configuration.yaml": {
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.withNAT.properties.bastionInstance.properties.instanceClass.properties.diskType",
+		},
+		// disk types - gp2.,..
+		"modules/030-cloud-provider-aws/candi/openapi/cluster_configuration.yaml": {
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 			"apiVersions[0].openAPISpec.properties.withNAT.properties.bastionInstance.properties.instanceClass.properties.diskType",
@@ -48,6 +61,18 @@ var (
 		// disk types: pd-standard, pd-ssd, ...
 		"candi/cloud-providers/gcp/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			// disk types for additionalDisks: pd-standard, pd-ssd, pd-balanced, ...
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.additionalDisks.items.properties.type",
+		},
+		// disk types: pd-standard, pd-ssd, ...
+		"modules/030-cloud-provider-gcp/candi/openapi/instance_class.yaml": {
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			// disk types for additionalDisks: pd-standard, pd-ssd, pd-balanced, ...
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.additionalDisks.items.properties.type",
+		},
+		"modules/030-cloud-provider-gcp/openapi/values.yaml": {
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 		},
 		// disk types: network-ssd, network-hdd
 		"candi/cloud-providers/yandex/openapi/instance_class.yaml": {
@@ -55,9 +80,17 @@ var (
 			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
 		},
+		// disk types: network-ssd, network-hdd
+		"modules/030-cloud-provider-yandex/candi/openapi/instance_class.yaml": {
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
+		},
 		"candi/openapi/cluster_configuration.yaml": {
 			// vSphere
 			"apiVersions[0].openAPISpec.properties.cloud.properties.provider",
+			// encryptionAlgorithm
+			"apiVersions[0].openAPISpec.properties.encryptionAlgorithm",
 		},
 		"global-hooks/openapi/values.yaml": {
 			// from openapispec
@@ -99,6 +132,11 @@ var (
 			"properties.storageClass.properties.provision.items.properties.type",
 			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
 		},
+		"modules/030-cloud-provider-azure/openapi/values.yaml": {
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.serviceEndpoints.items",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+		},
 		"modules/030-cloud-provider-aws/openapi/config-values.yaml": {
 			// ignore AWS disk types
 			"properties.storageClass.properties.provision.items.properties.type",
@@ -135,11 +173,18 @@ var (
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 		},
+		"modules/030-csi-vsphere/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+		},
 		"modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 		"modules/030-cloud-provider-zvirt/openapi/values.yaml": {
 			// ignore internal values
@@ -151,6 +196,20 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 		},
+		"modules/030-cloud-provider-dvp/openapi/values.yaml": {
+			// ignore internal values
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+		},
+		"candi/cloud-providers/dvp/openapi/instance_class.yaml": {
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.virtualMachine.properties.cpu.properties.coreFraction",
+		},
+		"candi/cloud-providers/dvp/openapi/cluster_configuration.yaml": {
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction",
+		},
 		"modules/030-cloud-provider-huaweicloud/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
@@ -158,8 +217,11 @@ var (
 		},
 		"ee/modules/030-cloud-provider-vcd/openapi/values.yaml": {
 			// ignore internal values
+			"properties.internal.properties.discoveryData.properties.apiVersion",
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type",
+			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values
@@ -167,7 +229,9 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.zones.items",
 			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.zones.items",
+			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.zones.items",
+			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
 		},
 		"modules/035-cni-flannel/openapi/values.yaml": {
 			// ignore internal values
@@ -189,16 +253,6 @@ var (
 			// GeoIP base constants: GeoIP2-ISP, GeoIP2-ASN, ...
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.geoIP2.properties.maxmindEditionIDs.items",
 		},
-		"modules/031-ceph-csi/crds/cephcsi.yaml": {
-			// ignore file system names: ext4, xfs, etc.
-			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
-			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
-		},
-		"modules/031-ceph-csi/openapi/values.yaml": {
-			// ignore file system names: ext4, xfs, etc.
-			"properties.internal.properties.crs.items.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
-			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.rbd.properties.storageClasses.items.properties.defaultFSType",
-		},
 		"modules/380-metallb/openapi/config-values.yaml": {
 			// ignore enum values
 			"properties.addressPools.items.properties.protocol",
@@ -214,6 +268,31 @@ var (
 		"candi/cloud-providers/azure/openapi/cluster_configuration.yaml": {
 			// ignore enum values
 			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
+		},
+		"modules/030-cloud-provider-azure/candi/openapi/cluster_configuration.yaml": {
+			// ignore enum values
+			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
+		},
+		"candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
+			// ignore enum values "NSX-T" and "NSX-V"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
+			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
+			// ignore enum values "org" and "ext"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
+		},
+		"ee/modules/030-cloud-provider-vcd/candi/openapi/cluster_configuration.yaml": {
+			// ignore enum values "NSX-T" and "NSX-V"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
+			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
+			// ignore enum values "org" and "ext"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
+		},
+		"modules/030-cloud-provider-vcd/candi/openapi/cluster_configuration.yaml": {
+			// ignore enum values "NSX-T" and "NSX-V"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
+			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
+			// ignore enum values "org" and "ext"
+			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 	}
 
@@ -247,14 +326,11 @@ func (en EnumValidator) Run(fileName, absoluteKey string, value interface{}) err
 		return nil
 	}
 
-	// check for slice path with wildcard
-	index := arrayPathRegex.FindString(absoluteKey)
-	if index != "" {
-		wildcardKey := strings.ReplaceAll(absoluteKey, index, "[*]")
-		if _, ok := en.excludes[wildcardKey]; ok {
-			// excluding key with wildcard
-			return nil
-		}
+	// check for slice path with wildcard (imporoved: replace all indexes with [*])
+	wildcardKey := arrayPathRegex.ReplaceAllString(absoluteKey, "[*]")
+	if _, ok := en.excludes[wildcardKey]; ok {
+		// excluding key with wildcard
+		return nil
 	}
 
 	values := value.([]interface{})

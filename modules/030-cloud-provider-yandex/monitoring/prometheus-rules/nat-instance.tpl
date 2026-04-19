@@ -10,5 +10,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      description: Nat-instance connections quota should be increased by Yandex technical support.
-      summary: Yandex nat-instance connections quota utilization is above 85% over the last 5 minutes.
+      summary: Connection quota utilization of the Yandex NAT instance exceeds 85% over the last 5 minutes.
+      description: |
+        The connection quota for the Yandex NAT instance has exceeded 85% utilization over the past 5 minutes. 
+        
+        To prevent potential issues, contact Yandex technical support and request an increase in the connection quota.
+      

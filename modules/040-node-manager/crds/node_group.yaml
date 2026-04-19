@@ -187,13 +187,13 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  x-doc-examples: ["1.29"]
+                  x-doc-examples: ["1.32"]
                   enum:
-                    - "1.27"
-                    - "1.28"
-                    - "1.29"
-                    - "1.30"
                     - "1.31"
+                    - "1.32"
+                    - "1.33"
+                    - "1.34"
+                    - "1.35"
                 cri:
                   type: object
                   description: |
@@ -204,9 +204,9 @@ spec:
                       description: |
                         Container runtime type.
 
-                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -326,6 +326,7 @@ spec:
                             - ZvirtInstanceClass
                             - DynamixInstanceClass
                             - HuaweiCloudInstanceClass
+                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -369,7 +370,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -423,13 +424,13 @@ spec:
                       x-doc-default: 6h
                 operatingSystem:
                   type: object
-                  deprecated: true
+                  x-doc-deprecated: true
                   description: |
                     Operating System settings for nodes.
                   properties:
                     manageKernel:
                       type: boolean
-                      deprecated: true
+                      x-doc-deprecated: true
                       description: |
                         Enable kernel maintenance from bashible.
                       x-doc-default: true
@@ -475,7 +476,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -607,8 +608,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -807,7 +811,7 @@ spec:
 
                         Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
 
-                        > **Note!** the `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
@@ -859,6 +863,10 @@ spec:
                         type:
                           enum: [Containerd]
                         containerd: {}
+                    - properties:
+                        type:
+                          enum: [ContainerdV2]
+                        containerdV2: {}
                     - properties:
                         type:
                           enum: [NotManaged]
@@ -963,6 +971,7 @@ spec:
                             - ZvirtInstanceClass
                             - DynamixInstanceClass
                             - HuaweiCloudInstanceClass
+                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1006,7 +1015,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -1100,7 +1109,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -1213,8 +1222,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -1495,6 +1507,132 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                nodeDrainTimeoutSecond:
+                  type: integer
+                  description: |
+                    Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+                gpu:
+                  x-doc-d8Editions:
+                    - ee
+                  type: object
+                  description: |
+                    GPU parameters.
+                  properties:
+                    sharing:
+                      type: string
+                      description: |
+                        GPU sharing strategy:
+                        - `Exclusive` — no sharing (each GPU is fully allocated to a single Pod).
+                        - `TimeSlicing` — time-sliced sharing (multiple Pods can share one GPU concurrently by splitting GPU time).
+                        - `MIG` — use NVIDIA Multi-Instance GPU (MIG) to split each GPU into multiple instances (if supported by hardware).
+                      enum:
+                        - TimeSlicing
+                        - MIG
+                        - Exclusive
+                    mig:
+                      type: object
+                      description: |
+                        `MIG` sharing strategy parameters.
+                      properties:
+                        partedConfig:
+                          type: string
+                          description: |
+                            MIG configuration name.
+
+                            Standard `all-*` profiles are supported (the same partitioning applied to all GPUs), as well as the `custom` value, which allows defining partitioning individually for each GPU.
+                          x-doc-default: all-1g.5gb
+                        customConfigs:
+                          type: array
+                          description: |
+                            Custom MIG partitioning by GPU index.
+
+                            Used only when `partedConfig: custom` is set.
+
+                            Represents an array of devices (a map keyed by `index`), where each entry refers to a GPU by its index and describes the slices to be created.
+                          minItems: 1
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          x-kubernetes-list-type: map
+                          x-kubernetes-list-map-keys:
+                            - index
+                          items:
+                            type: object
+                            required:
+                              - index
+                              - slices
+                            properties:
+                              index:
+                                type: integer
+                                minimum: 0
+                                description: GPU index on the node.
+                              slices:
+                                type: array
+                                description: List of MIG slices to create.
+                                items:
+                                  type: object
+                                  required:
+                                    - profile
+                                    - count
+                                  properties:
+                                    profile:
+                                      type: string
+                                      pattern: "^[0-9]+g\\.[0-9]+gb(\\.me)?$"
+                                      description: MIG profile name.
+                                      x-doc-examples:
+                                        - 3g.40gb
+                                        - 1g.10gb
+                                        - 1g.10gb.me
+                                    count:
+                                      type: integer
+                                      minimum: 1
+                                      maximum: 7
+                                      description: Number of slices in the selected profile.
+                                      x-doc-default: 1
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
+                    timeSlicing:
+                      description: |
+                        `TimeSlicing` sharing strategy parameters.
+                      type: object
+                      properties:
+                        partitionCount:
+                          type: number
+                          description: |
+                            Count of partition per GPU.
+                          x-doc-default: 4
+                          minimum: 1
+                          maximum: 100
+                    exclusive:
+                      type: object
+                      description: |
+                        Without GPU sharing.
+                  oneOf:
+                    - properties:
+                        sharing:
+                          enum: [TimeSlicing]
+                        timeSlicing: {}
+                    - properties:
+                        sharing:
+                          enum: [MIG]
+                        mig: {}
+                    - properties:
+                        sharing:
+                          enum: [Exclusive]
+                        exclusive: {}
                 cri:
                   type: object
                   description: |
@@ -1505,12 +1643,13 @@ spec:
                       description: |
                         Container runtime type.
 
-                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
-                        > **Note!** The `Docker` is deprecated.
+                        > **Note.** Docker support is deprecated.
                       enum:
                         - Docker
                         - Containerd
+                        - ContainerdV2
                         - NotManaged
                     containerd:
                       type: object
@@ -1518,6 +1657,27 @@ spec:
                         Containerd runtime parameters.
 
                         If used, `cri.type` must be set to `Containerd`.
+                      properties:
+                        maxConcurrentDownloads:
+                          type: integer
+                          description: |
+                            Set the max concurrent downloads for each pull.
+                          x-doc-default: 3
+                    containerdV2:
+                      type: object
+                      description: |
+                        ContainerdV2 runtime parameters.
+
+                        If used, `cri.type` must be set to `ContainerdV2`.
+
+                        When using `ContainerdV2`, `CgroupsV2` will be used (providing improved security and resource management).
+
+                        To use `ContainerdV2` as a container runtime, the nodes in the group must meet the following requirements:
+
+                        - Support for `CgroupsV2`.
+                        - Linux kernel version `5.8` or newer.
+                        - Systemd version `244` or newer.
+                        - Support for `erofs` kernel module.
                       properties:
                         maxConcurrentDownloads:
                           type: integer
@@ -1560,21 +1720,28 @@ spec:
                         containerd: {}
                     - properties:
                         type:
+                          enum: [ContainerdV2]
+                        containerdV2: {}
+                    - properties:
+                        type:
                           enum: [NotManaged]
                 staticInstances:
                   description: |
                     Parameter for provisioning static machines to the cluster.
                   type: object
+                  x-kubernetes-validations:
+                    - message: "spec.staticInstances.labelSelector can be added but cannot be modified once set. To change it, create a new NodeGroup."
+                      rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
                       description: A label selector is a label query over a set
-                        of resources. The result of matchLabels and matchExpressions
+                        of `staticInstances` resources. The result of matchLabels and matchExpressions
                         are ANDed. An empty label selector matches all objects.
                         A null label selector matches no objects.
                       properties:
                         matchExpressions:
                           type: array
-                          description: matchExpressions is a list of label selector
+                          description: A list of label selector
                             requirements. The requirements are ANDed.
                           items:
                             description: A label selector requirement is a selector
@@ -1628,7 +1795,7 @@ spec:
                       x-kubernetes-map-type: atomic
                     count:
                       description: |
-                          The number of instances to create.
+                          The number of existing `staticInstances` to bootstrap and add to the cluster. In a NodeGroup of type Static or CloudStatic, you can explicitly specify the number of nodes using this parameter. This sets the expected number of nodes — DKP uses this value for state control and automation purposes.
                       type: integer
                       minimum: 0
                       default: 0
@@ -1644,8 +1811,10 @@ spec:
                     - maxPerZone
                   properties:
                     quickShutdown:
-                      description: Lowers CloudEphemeral machine drain timeout to 5 minutes.
                       type: boolean
+                      x-doc-deprecated: true
+                      description: |
+                        Lowers CloudEphemeral machine drain timeout to 5 minutes.
                     zones:
                       description: |
                         List of availability zones to create instances in.
@@ -1674,7 +1843,7 @@ spec:
                       description: |
                         Priority of the node group.
 
-                        When scaling a cluster, the autoscaler will first select node groups with a higher priority set. If several node groups have the same priority, the autoscaler randomly selects a group of them.
+                        When scaling a cluster, the autoscaler will first select node groups with a higher priority set. If several node groups have the same priority, the autoscaler randomly selects a group of them. You can control the rate at which nodes are switched to lower-priority groups on demand (for more details, see the [FAQ](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in)).
 
                         Using priorities can be convenient to prefer ordering cheaper nodes (for example, spot instances) over more expensive ones.
                     maxUnavailablePerZone:
@@ -1713,7 +1882,6 @@ spec:
                           description: |
                             Percentage of reserved resources calculated from the capacity of a node of a `NodeGroup`.
                         notHeldResources:
-                          deprecated: true
                           x-doc-deprecated: true
                           description: |
                             Deprecated: the parameter is no longer used. Use the `overprovisioningRate` parameter.
@@ -1755,6 +1923,7 @@ spec:
                             - ZvirtInstanceClass
                             - DynamixInstanceClass
                             - HuaweiCloudInstanceClass
+                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1798,7 +1967,7 @@ spec:
                       description: |
                         Similar to the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#taint-v1-core) object.
 
-                        **Caution!** Only `effect`, `key`, `value` fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-doc-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -1852,7 +2021,7 @@ spec:
                       description: |
                         This parameter has no effect. Earlier, it enabled kernel maintenance on behalf of bashible.
                       x-doc-default: true
-                      deprecated: true
+                      x-doc-deprecated: true
                 disruptions:
                   type: object
                   description: |
@@ -1872,8 +2041,8 @@ spec:
                       type: string
                       description: |
                         The approval mode for disruptive updates:
-                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
-                        - `Automatic` —  automatically approve disruption-involving updates.
+                        - `Manual` — disable automatic disruption approval; the alert will be displayed if disruption is needed. Nodes are not drained automatically in `Manual` mode. If necessary, manually drain nodes before setting the `update.node.deckhouse.io/disruption-approved=` annotation. **Caution!** The `master` node group update mode must be `Manual` to avoid issues with draining.
+                        - `Automatic` —  automatically approve disruption-involving updates. Nodes could be drained automatically before reboot, as configured by the [drainBeforeApproval](#nodegroup-v1-spec-disruptions-automatic-drainbeforeapproval) option.
                         - `RollingUpdate` — in this mode, a **new** node with new settings will be created; then, the old node will be deleted. Available only for cloud nodes.
 
                         If the `RollingUpdate` mode is not used, when updating, the node is first drained and then updated (rebooted) and put back into operation (uncordoned). Note that in this case, the cluster must have sufficient resources to accommodate the load while the node being updated is unavailable. In the `RollingUpdate` mode, the node is **replaced** by the updated node, i.e., an extra node appears in the cluster for the duration of the update. In cloud infrastructures, the `RollingUpdate` mode is convenient, for example, if there are no resources in the cluster to temporarily host the load from the node being updated.
@@ -1895,7 +2064,7 @@ spec:
 
                             **Caution!** This setting ignores (nodes will be approved without draining Pods):
                             - for the nodeGroup `master` with a single node;
-                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-run-deckhouse-on-a-particular-node) for Deckhouse placement.
+                            - for a single `ready` node in a nodeGroup [picked out](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#running-dkp-on-an-arbitrary-node) for Deckhouse placement.
                         windows:
                           type: array
                           description: |
@@ -2009,8 +2178,11 @@ spec:
                     maxPods:
                       type: integer
                       description: |
-                        Set the max count of pods per node.
-                      x-doc-default: 110
+                        Set the max count of pods per node for given `NodeGroup`. When left unspecified, the system automatically determines this limit according to the value of the [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration parameter:
+                        - `120`  pods for `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  pods for `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  pods for `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` pods for `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       type: string
                       x-doc-default: /var/lib/kubelet
@@ -2128,6 +2300,61 @@ spec:
                             - BestEffort
                             - Restricted
                             - SingleNumaNode
+                    memorySwap:
+                      type: object
+                      description: |
+                        Configuration of swap memory usage for kubelet.
+                      oneOf:
+                      - properties:
+                          swapBehavior:
+                            enum: ["NoSwap"]
+                        not:
+                          required: ["limitedSwap"]
+                      - properties:
+                          swapBehavior:
+                            enum: ["LimitedSwap"]
+                        required:
+                          - limitedSwap
+                      properties:
+                        swapBehavior:
+                          type: string
+                          description: |
+                            Defines how swap memory is handled on the node:
+
+                            * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
+                            * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
+
+                            For details on swap memory usage on nodes, refer to [Kubernetes documentation](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
+                          enum:
+                            - NoSwap
+                            - LimitedSwap
+                        swappiness:
+                          type: integer
+                          minimum: 0
+                          maximum: 100
+                          default: 60
+                          description: |
+                            Defines the kernel's tendency to use the swap.
+
+                            * `0`: Minimal swap usage (only to avoid OOM).
+                            * `60`: Default balanced behavior.
+                            * `100`: Aggressive swap usage.
+
+                            This value is set via `vm.swappiness` sysctl parameter.
+                          x-doc-default: 60
+                        limitedSwap:
+                          type: object
+                          description: |
+                            Configuration for the limited swap mode. Required when `swapBehavior` is set to `LimitedSwap`.
+                          required:
+                            - size
+                          properties:
+                            size:
+                              type: string
+                              pattern: '^\d+G$'
+                              description: |
+                                Size of the swap file to create, specified in GB (for example, "2G", "4G").
+                              x-doc-example: "1G"
                 update:
                   type: object
                   properties:
@@ -2145,27 +2372,41 @@ spec:
                 fencing:
                   type: object
                   description: |
-                    Enable fencing controller for this group.
+                    Enable fencing controller for this node group.
                   required: [mode]
                   properties:
                     mode:
                       type: string
                       enum:
                         - "Watchdog"
+                        - "Notify"
                       description: |
-                        Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
+                        Fencing operating modes:
+                        - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster. Also in this mode, the fencing agent monitors the nodes available in the cluster.
+                        - `Notify`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots). In this mode, the fencing agent monitors the nodes available in the cluster.
 
-                        The Watchdog implementation includes the following components:
+                        When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
 
-                        - Fencing-agent — a DaemonSet that is deployed on a specific group of nodes (NodeGroups).
-
-                          Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog.
-
-                          A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
-
-                        - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
-
-
+                        How the fencing-agent works:
+                        - Opens `/dev/watchdog` and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node.
+                        - Joins a gossip cluster (`memberlist`) with other fencing-agents in the same NodeGroup.
+                        - Regularly checks quorum (availability of a majority of nodes in the NodeGroup).
+                        - If quorum is not reached (`quorum=false`), performs a fallback check of Kubernetes API availability.
+                        - If quorum is present or the Kubernetes API is available, the agent resets the watchdog timer.
+                        - If neither quorum nor Kubernetes API access is available, the watchdog timer stops being reset, expires, and triggers a kernel panic followed by a node reboot.
+                        - Watches the maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, and `update.node.deckhouse.io/disruption-approved` to temporarily disable the watchdog during planned maintenance operations.
+                    watchdog:
+                      type: object
+                      properties:
+                        timeout:
+                          type: string
+                          pattern: "^[0-9]+[smh]{1}$"
+                          default: 60s
+                          description: |
+                            Watchdog timeout duration. Should be specified in seconds, minutes or hours.
+                          x-doc-default: 60s
+                      required:
+                        - timeout
               oneOf:
                 - properties:
                     nodeType:

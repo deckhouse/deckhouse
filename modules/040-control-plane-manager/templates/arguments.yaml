@@ -1,4 +1,4 @@
-{{- if hasKey .Values.controlPlaneManager.internal "arguments" }}
+{{- if or (hasKey .Values.controlPlaneManager.internal "arguments") (hasKey .Values.controlPlaneManager.internal "allowedFeatureGates") }}
 ---
 apiVersion: v1
 kind: Secret
@@ -8,5 +8,10 @@ metadata:
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
 data:
+{{- if hasKey .Values.controlPlaneManager.internal "arguments" }}
   arguments.json: {{ .Values.controlPlaneManager.internal.arguments | toJson | b64enc | quote }}
+{{- end }}
+{{- if hasKey .Values.controlPlaneManager.internal "allowedFeatureGates" }}
+  featureGates.json: {{ dict "kubelet" .Values.controlPlaneManager.internal.allowedFeatureGates.kubelet | toJson | b64enc | quote }}
+{{- end }}
 {{- end }}

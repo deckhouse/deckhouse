@@ -1,0 +1,37 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+start
+
+:Initial state:\ncurrent installed module version\n(Deployed);
+
+if (Is there a release in the cluster\nwith "update.versions"?) then (Yes)
+  if (Does one of the "to" values\nmatch this release version?) then (Yes)
+    :If there are multiple rules/releases —\nDKP selects the option with the largest "to";
+    if (Is the current version (Deployed)\nbelow the corresponding "from"?) then (Yes)
+      :Standard sequential update\n(no skipping);
+      stop
+    else (No)
+      :DKP selects the target — the latest available version\nwithin "to";
+      if (Is approval required?) then (Yes)
+        :Waiting for approval — annotation\nmodules.deckhouse.io/approved="true";
+      else (No)
+      endif
+      :Target release deployed (Deployed);
+      stop
+    endif
+  else (No)
+    :Standard sequential update\n(no skipping);
+    stop
+  endif
+else (No)
+  :Standard sequential update\n(no skipping);
+  stop
+endif
+
+@enduml

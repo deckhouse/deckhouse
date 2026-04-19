@@ -13,7 +13,7 @@
  * Bot related functions.
  */
 
-const {abortFailedE2eCommand} = require('./constants');
+const { abortFailedE2eCommand } = require('./constants');
 
 const WORKFLOW_START_MARKER = '<!-- workflow_start -->'
 module.exports.WORKFLOW_START_MARKER = WORKFLOW_START_MARKER;
@@ -25,7 +25,7 @@ module.exports.commentCommandRecognition = (userName, command) => {
 
 // Confirm label.
 module.exports.commentLabelRecognition = (userName, label) => {
-  return  `Aye, aye, @${userName}. I've started the workflow for label '${label}'...\n${WORKFLOW_START_MARKER}`;
+  return `Aye, aye, @${userName}. I've started the workflow for label '${label}'...\n${WORKFLOW_START_MARKER}`;
 };
 
 module.exports.deleteBotComment = (text) => {
@@ -67,7 +67,7 @@ module.exports.hasJobResult = (comment, name) => {
 
 
 
-module.exports.renderJobStatusOneLine  = (status, name, started_at) => {
+module.exports.renderJobStatusOneLine = (status, name, started_at) => {
   const time_elapsed = getTimeElapsedForStatus(started_at);
   let statusComment = `:white_check_mark:\u00a0\`${name}\` succeeded${time_elapsed}`;
   if (status === 'failure') {
@@ -111,6 +111,46 @@ module.exports.renderWorkflowStatusFinal = (status, name, ref, build_url, starte
 
   const info = additional_info ? `\n\n${additional_info}` : '';
   return `${statusComment}${info}`;
+};
+
+module.exports.renderDocumentationComments = (workflowName) => {
+  const allEnvironments = [
+    { name: 'Stage', host: 'deckhouse.stage.flant.dev' },
+    { name: 'Test', host: 'deckhouse.test.flant.dev' },
+    ...Array.from({ length: 9 }, (_, i) => ({
+      name: `Test${i + 2}`,
+      host: `deckhouse-${i + 2}.test.flant.dev`
+    }))
+  ].map(env => ({
+    ...env,
+    key: env.name.toLowerCase().replace(/\s+/g, '')
+  }));
+
+  // Extract environment from workflow name (e.g., "Deploy web to stage" -> "stage")
+  let environments = allEnvironments;
+  if (workflowName) {
+    const match = workflowName.match(/Deploy web to (.+)$/i);
+    if (match) {
+      const envKey = match[1].toLowerCase().replace(/\s+/g, '');
+      const found = allEnvironments.find(env => env.key === envKey);
+      if (found) {
+        environments = [found];
+      }
+    }
+  }
+
+  const basePath = '/products/kubernetes-platform/documentation/v1/';
+
+  if (environments.length === 1) {
+    const env = environments[0];
+    return `\nEnvironment URL: <a href="https://${env.host}${basePath}">${env.host}</a>`;
+  }
+
+  const listItems = environments
+    .map(env => `<li>${env.name}: <a href="https://${env.host}${basePath}">${env.host}</a></li>`)
+    .join('');
+
+  return `\nEnvironment URLS:\n<ul>${listItems}</ul>`;
 };
 
 /**

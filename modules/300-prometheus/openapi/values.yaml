@@ -81,6 +81,9 @@ properties:
         type: object
         default: {}
         properties:
+          enabled:
+            type: boolean
+            default: true
           alertsChannelsConfig:
             type: object
             default: {}
@@ -154,7 +157,7 @@ properties:
                   type: boolean
                 name:
                   type: string
-                uuid:
+                uid:
                   type: string
                 orgId:
                   type: integer
@@ -189,7 +192,7 @@ properties:
                 access: proxy
                 url: /graphite-1
                 name: testtesttest
-                uuid: testtesttest
+                uid: testtesttest
                 orgId: 1
                 editable: false
                 version: 1
@@ -235,6 +238,9 @@ properties:
                   type: string
                 customAuthToken:
                   type: string
+                headers:
+                  type: object
+                  additionalProperties: true
                 writeRelabelConfigs:
                   type: array
                   items:

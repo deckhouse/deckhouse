@@ -24,6 +24,30 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	DeckhouseReleasePhasePending    = "Pending"
+	DeckhouseReleasePhaseDeployed   = "Deployed"
+	DeckhouseReleasePhaseSuperseded = "Superseded"
+	DeckhouseReleasePhaseSuspended  = "Suspended"
+	DeckhouseReleasePhaseSkipped    = "Skipped"
+
+	DeckhouseReleaseApprovalAnnotation              = "release.deckhouse.io/approved"
+	DeckhouseReleaseAnnotationIsUpdating            = "release.deckhouse.io/isUpdating"
+	DeckhouseReleaseAnnotationNotified              = "release.deckhouse.io/notified"
+	DeckhouseReleaseAnnotationApplyNow              = "release.deckhouse.io/apply-now"
+	DeckhouseReleaseAnnotationApplyAfter            = "release.deckhouse.io/applyAfter"
+	DeckhouseReleaseAnnotationDisruptionApproved    = "release.deckhouse.io/disruption-approved"
+	DeckhouseReleaseAnnotationForce                 = "release.deckhouse.io/force"
+	DeckhouseReleaseAnnotationSuspended             = "release.deckhouse.io/suspended"
+	DeckhouseReleaseAnnotationNotificationTimeShift = "release.deckhouse.io/notification-time-shift"
+	DeckhouseReleaseAnnotationCurrentRestored       = "release.deckhouse.io/current-restored"
+	DeckhouseReleaseAnnotationChangeCause           = "release.deckhouse.io/change-cause"
+	DeckhouseReleaseAnnotationUpdateInfo            = "release.deckhouse.io/update-info"
+
+	DeckhouseReleaseAnnotationDryrun            = "dryrun"
+	DeckhouseReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
+)
+
 var DeckhouseReleaseGVK = schema.GroupVersionKind{
 	Group:   SchemeGroupVersion.Group,
 	Version: SchemeGroupVersion.Version,
@@ -32,8 +56,9 @@ var DeckhouseReleaseGVK = schema.GroupVersionKind{
 
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // DeckhouseRelease is a deckhouse release object.
 type DeckhouseRelease struct {
@@ -69,24 +94,12 @@ func (in *DeckhouseRelease) GetChangelogLink() string {
 	return in.Spec.ChangelogLink
 }
 
-func (in *DeckhouseRelease) GetCooldownUntil() *time.Time {
-	cooldown := new(time.Time)
-	if v, ok := in.Annotations["release.deckhouse.io/cooldown"]; ok {
-		cd, err := time.Parse(time.RFC3339, v)
-		if err == nil {
-			cooldown = &cd
-		}
-	}
-
-	return cooldown
-}
-
 func (in *DeckhouseRelease) GetDisruptions() []string {
 	return in.Spec.Disruptions
 }
 
 func (in *DeckhouseRelease) GetDisruptionApproved() bool {
-	v, ok := in.Annotations["release.deckhouse.io/disruption-approved"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationDisruptionApproved]
 	return ok && v == "true"
 }
 
@@ -95,12 +108,26 @@ func (in *DeckhouseRelease) GetPhase() string {
 }
 
 func (in *DeckhouseRelease) GetForce() bool {
-	v, ok := in.Annotations["release.deckhouse.io/force"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationForce]
 	return ok && v == "true"
 }
 
+func (*DeckhouseRelease) GetReinstall() bool {
+	return false
+}
+
 func (in *DeckhouseRelease) GetApplyNow() bool {
-	v, ok := in.Annotations["release.deckhouse.io/apply-now"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationApplyNow]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetIsUpdating() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationIsUpdating]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetNotified() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationNotified]
 	return ok && v == "true"
 }
 
@@ -113,7 +140,7 @@ func (in *DeckhouseRelease) SetApprovedStatus(val bool) {
 }
 
 func (in *DeckhouseRelease) GetSuspend() bool {
-	v, ok := in.Annotations["release.deckhouse.io/suspended"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationSuspended]
 	return ok && v == "true"
 }
 
@@ -123,11 +150,7 @@ func (in *DeckhouseRelease) GetManuallyApproved() bool {
 	}
 
 	v, ok := in.Annotations[DeckhouseReleaseApprovalAnnotation]
-	if ok {
-		return v == "true"
-	}
-
-	return in.Approved
+	return ok && v == "true"
 }
 
 func (in *DeckhouseRelease) GetMessage() string {
@@ -135,7 +158,22 @@ func (in *DeckhouseRelease) GetMessage() string {
 }
 
 func (in *DeckhouseRelease) GetNotificationShift() bool {
-	v, ok := in.Annotations["release.deckhouse.io/notification-time-shift"]
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationNotificationTimeShift]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationDryrun]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetTriggeredByDryRun() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationTriggeredByDryrun]
+	return ok && v == "true"
+}
+
+func (in *DeckhouseRelease) GetCurrentRestored() bool {
+	v, ok := in.Annotations[DeckhouseReleaseAnnotationCurrentRestored]
 	return ok && v == "true"
 }
 
@@ -143,13 +181,19 @@ func (in *DeckhouseRelease) GetModuleName() string {
 	return ""
 }
 
+// GetUpdateSpec returns the optional update spec of the related release
+func (in *DeckhouseRelease) GetUpdateSpec() *UpdateSpec {
+	return nil
+}
+
 type DeckhouseReleaseSpec struct {
-	Version       string            `json:"version,omitempty"`
-	ApplyAfter    *metav1.Time      `json:"applyAfter,omitempty"`
-	Requirements  map[string]string `json:"requirements,omitempty"`
-	Disruptions   []string          `json:"disruptions,omitempty"`
-	Changelog     Changelog         `json:"changelog,omitempty"`
-	ChangelogLink string            `json:"changelogLink,omitempty"`
+	Version      string            `json:"version,omitempty"`
+	ApplyAfter   *metav1.Time      `json:"applyAfter,omitempty"`
+	Requirements map[string]string `json:"requirements,omitempty"`
+	Disruptions  []string          `json:"disruptions,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	Changelog     *MappedFields `json:"changelog,omitempty"`
+	ChangelogLink string        `json:"changelogLink,omitempty"`
 }
 
 type DeckhouseReleaseStatus struct {
@@ -170,8 +214,7 @@ func (f *deckhouseReleaseKind) GroupVersionKind() schema.GroupVersionKind {
 	return DeckhouseReleaseGVK
 }
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
 
 // DeckhouseReleaseList is a list of DeckhouseRelease resources
 type DeckhouseReleaseList struct {

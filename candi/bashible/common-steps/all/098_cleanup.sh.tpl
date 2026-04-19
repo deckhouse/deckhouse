@@ -29,3 +29,4 @@ find /.kubeadm.checksum -mmin +120 -delete >/dev/null 2>&1 || true
 
 rm -f /var/lib/bashible/first_run
 
+bb-package-remove "netcat"

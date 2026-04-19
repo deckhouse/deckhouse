@@ -16,7 +16,6 @@ package server
 
 import (
 	"context"
-	"exporter/internal/yandex"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,10 +25,12 @@ import (
 
 	"github.com/go-chi/chi"
 	log "github.com/sirupsen/logrus"
+
+	"exporter/internal/yandex"
 )
 
 type Server struct {
-	api             *yandex.CloudApi
+	api             *yandex.CloudAPI
 	servicesForBach []string
 	logger          *log.Entry
 
@@ -42,7 +43,7 @@ type serviceResult struct {
 	err     error
 }
 
-func New(logger *log.Entry, api *yandex.CloudApi, servicesForBach []string) *Server {
+func New(logger *log.Entry, api *yandex.CloudAPI, servicesForBach []string) *Server {
 	metricsSet := map[string]struct{}{}
 	servicesList := make([]string, 0)
 	for _, s := range servicesForBach {
@@ -194,5 +195,4 @@ func (h *Server) getBatch(w http.ResponseWriter, r *http.Request) {
 	} else {
 		h.logger.Info("End request scrape batch metrics")
 	}
-
 }

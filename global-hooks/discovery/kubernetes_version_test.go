@@ -71,28 +71,35 @@ discovery: {}
 	)
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
-
 	stateEndpoints := func(ips []string) string {
+
 		var ipsStr string
+		var epAddresses []string
+
 		for _, ip := range ips {
-			ipsStr = fmt.Sprintf("%s\n  - ip: %s", ipsStr, ip)
+			adr := fmt.Sprintf(`- addresses:
+  - %s
+  conditions:
+    ready: true`, ip)
+			epAddresses = append(epAddresses, adr)
 		}
+		ipsStr = strings.Join(epAddresses, "\n")
 		return fmt.Sprintf(`
 ---
-apiVersion: v1
-kind: Endpoints
+kind: EndpointSlice
 metadata:
   labels:
-    endpointslice.kubernetes.io/skip-mirror: "true"
+    kubernetes.io/service-name: kubernetes
   name: kubernetes
   namespace: default
-subsets:
-- addresses: %s
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
-
+addressType: IPv4
+apiVersion: discovery.k8s.io/v1
+endpoints:
+%s
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 `, ipsStr)
 	}
 
@@ -169,6 +176,14 @@ subsets:
 		Expect(f.ValuesGet("global.discovery.kubernetesVersions").Exists()).To(BeFalse())
 	}
 
+	assertErrorVersionNotFound := func() {
+		Expect(f.GoHookError.Error()).Should(ContainSubstring(`k8s versions not found`))
+	}
+
+	assertErrorPodsLTEndpoints := func() {
+		Expect(f.GoHookError.Error()).Should(MatchRegexp(`^Kube-apiserver Pods(.*) count less than kubernetes Endpoints(.*) count$`))
+	}
+
 	assertNoFile := func() {
 		_, err := os.ReadFile(kubeVersionFileName)
 		Expect(os.IsNotExist(err)).To(BeTrue())
@@ -194,8 +209,8 @@ subsets:
 			f.RunHook()
 		})
 
-		It("Hook must run successfully", func() {
-			Expect(f).To(ExecuteSuccessfully())
+		It("Witout endpoints hook should return error", func() {
+			assertErrorVersionNotFound()
 		})
 
 		for _, s := range apiServerPods {
@@ -267,20 +282,24 @@ subsets:
 
 		state := `
 ---
-apiVersion: v1
-kind: Endpoints
+kind: EndpointSlice
 metadata:
   labels:
-    endpointslice.kubernetes.io/skip-mirror: "true"
+    kubernetes.io/service-name: kubernetes
   name: kubernetes
   namespace: default
-subsets:
+  uid: bb5cb645-117f-4a0f-ba51-c8ac22660c53
+addressType: IPv4
+apiVersion: discovery.k8s.io/v1
+endpoints:
 - addresses:
-  - ip: 192.168.128.190
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
+  - 192.168.128.190
+  conditions:
+    ready: true
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 ---
 apiVersion: v1
 kind: Service
@@ -626,6 +645,7 @@ status:
 	Context("Remove objects", func() {
 		initVers := []string{"1.21.20", "1.20.2", "1.19.4"}
 		k8sVer := initVers[2]
+		k8sVerToChange := initVers[0]
 
 		endpointsState := stateEndpoints(endpointsMul)
 
@@ -649,14 +669,14 @@ status:
 					f.RunHook()
 				})
 
-				It("does not change k8s version with versions array with one version into values", func() {
-					Expect(f).To(ExecuteSuccessfully())
+				It("without endpoints hook should return error and does not change k8s version into values", func() {
 					assertValues(k8sVer, initVers)
+					assertErrorVersionNotFound()
 				})
 
 				It("does not change k8s version into file", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertVersionInFile(k8sVer)
+					assertErrorVersionNotFound()
 				})
 			})
 
@@ -670,14 +690,14 @@ status:
 					f.RunHook()
 				})
 
-				It("does not change k8s version with versions array with one version into values", func() {
+				It("with single endpoint hook should request version and change k8s version in values", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					assertValues(k8sVer, initVers)
+					assertValues(k8sVerToChange, []string{k8sVerToChange})
 				})
 
-				It("does not change k8s version into file", func() {
+				It("change k8s version into file", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					assertVersionInFile(k8sVer)
+					assertVersionInFile(k8sVerToChange)
 				})
 			})
 		})
@@ -695,13 +715,13 @@ status:
 				})
 
 				It("does not change k8s version with versions array with one version into values", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertValues(k8sVer, initVers)
+					assertErrorPodsLTEndpoints()
 				})
 
 				It("does not change k8s version into file", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertVersionInFile(k8sVer)
+					assertErrorPodsLTEndpoints()
 				})
 			})
 		}
@@ -714,24 +734,22 @@ status:
 				f.BindingContexts.Set(f.KubeStateSet(podsState + endpointsState))
 				f.RunHook()
 			})
-
+			// simulate empty endpointSlices (cant get endpoints from api server)
 			Context("Removing", func() {
 				BeforeEach(func() {
-					podsState, _ := createAPIServerPodsMultiple(len(initVers)-1, "simple", map[string]string{
-						"simple": "simple",
-					})
-					f.BindingContexts.Set(f.KubeStateSet(podsState + endpointsState))
+					var emptyEndpointsState string
+					f.BindingContexts.Set(f.KubeStateSet(emptyEndpointsState))
 					f.RunHook()
 				})
 
-				It("does not set k8s version with versions array with one version into values", func() {
-					Expect(f).To(ExecuteSuccessfully())
+				It("without endpoints hook should return error and does not change k8s version into values", func() {
 					assertNoValues()
+					assertErrorVersionNotFound()
 				})
 
 				It("does not write k8s version into file", func() {
-					Expect(f).To(ExecuteSuccessfully())
 					assertNoFile()
+					assertErrorVersionNotFound()
 				})
 			})
 		})

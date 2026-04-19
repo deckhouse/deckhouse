@@ -1,0 +1,50 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  annotations:
+    modules.deckhouse.io/reinstall: "true"
+  name: parca-1.26.2
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      controller: true
+      kind: ModuleSource
+      name: foxtrot-suitable
+      uid: 71d2300f-700b-452a-896a-6a3805f9cef7
+spec:
+  moduleName: parca
+  version: 1.26.2
+  weight: 900
+status:
+  approved: true
+  phase: Deployed
+  transitionTime: "2021-12-08T08:34:01Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 38557e472e4e2bd8695fc58a255ec3dd
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  name: foxtrot-suitable
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/team/foxtrot/modules
+    scheme: HTTPS
+status:
+  message: ""
+  moduleErrors: []
+  modules:
+    - name: mcplay-suitable
+      policy: foxtrot-alpha-suitable
+    - name: parca-suitable
+      policy: foxtrot-alpha-suitable
+  modulesCount: 2
+  syncTime: "2024-05-03T21:05:05Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca

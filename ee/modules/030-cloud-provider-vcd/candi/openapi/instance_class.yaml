@@ -1,0 +1,122 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vcdinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  group: deckhouse.io
+  preserveUnknownFields: false
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Parameters of a group of VCD VirtualMachines used by `cluster-api-controller-manager` (the [cloud-provider-vcd](https://deckhouse.io/modules/cloud-provider-vcd/) module).
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required: [template, storageProfile]
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    root disk size in gigabytes.
+                  x-doc-examples: [20]
+                  default: 20
+                  type: integer
+                placementPolicy:
+                  description: |
+                    PlacementPolicy is the placement policy to be used on this machine.
+                    If no placement policy is specified, default placement policy will be used to create the nodes.
+                  type: string
+                  x-doc-examples: [Hypervisor1]
+                sizingPolicy:
+                  description: |
+                    SizingPolicy is the sizing policy to be used on this machine.
+                    If no sizing policy is specified, default sizing policy will be used to create the nodes.
+                  type: string
+                  x-doc-examples: [4Cpu8Memory]
+                storageProfile:
+                  description: |
+                    StorageProfile is the storage profile to be used on this machine.
+                  type: string
+                  x-doc-examples: [ssd]
+                template:
+                  description: |
+                    Path of the template OVA that is to be used. Consists of organization (optional), catalog, template name or template identifier.
+                    If a shared catalog is used, the organization name must be specified (it may differ from the value of `provider.organization`).
+
+                    If you have templates with the same name in multiple catalogs with the same name, you should specify the identifier of the template.
+
+                    You can find the template identifier in the URL when you open the template in the vCD UI. For example, if the URL is `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, then the template identifier is `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                  type: string
+                  x-doc-examples:
+                    - Linux/ubuntu2204-cloud-ova
+                    - MyOrg/Linux/ubuntu2204-cloud-ova
+                    - Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
+                    - MyOrg/Linux/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7
+                mainNetwork:
+                  description: |
+                    Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+                  x-doc-examples: [internal]
+                  type: string
+                additionalMetadata:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: |
+                    Custom string key-value pairs to be stored in the Metadata of every node VM, useful for organizing and categorizing your virtualization inventory.
+
+                    The properties in this field will be merged with the existing metadata stored in the `metadata` field at the root of the VCDProviderClusterConfiguration spec. This field will take precedence over the existing metadata in cases of duplicate keys.
+
+                    > **Warning.** Changing the `additionalMetadata` will cause the recreation of CloudEphemeral NodeGroups referring the VCDInstanceClass.
+                affinityRule:
+                  type: object
+                  description: |
+                    Specifies the affinity rule applied only to virtual machines of node groups referencing this instance class within the cluster.
+                    Affinity rules determine how nodes are scheduled in relation to each other at the hypervisor level,
+                    which can help improve fault tolerance, and control the distribution of workloads.
+                    If not specified, no affinity rule will be applied by default.
+                  required: [polarity]
+                  properties:
+                    polarity:
+                      type: string
+                      description: |
+                        The polarity of the affinity rule. Must be either `Affinity` or `AntiAffinity`.
+                        `Affinity` means that nodes should be placed on the same host,
+                        while `AntiAffinity` means they should be placed on different hosts.
+                      enum: [Affinity, AntiAffinity]
+                    required:
+                      type: boolean
+                      description: |
+                        Indicates whether the affinity rule is mandatory (`true`) or only preferred (`false`).
+                        If set to `true`, the rule must be enforced; if `false`, the rule is applied if possible but not strictly required.
+                      x-doc-default: false
+            status:
+              type: object
+              properties:
+                nodeGroupConsumers:
+                  type: array
+                  items:
+                    type: string
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          type: string
+          description: NodeGroups which use this instance class.
+          jsonPath: .status.nodeGroupConsumers
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+  scope: Cluster
+  names:
+    plural: vcdinstanceclasses
+    singular: vcdinstanceclass
+    kind: VCDInstanceClass
+    categories:
+      - cloudinstanceclasses

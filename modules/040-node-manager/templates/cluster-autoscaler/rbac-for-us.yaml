@@ -8,6 +8,7 @@ metadata:
   name: cluster-autoscaler
   namespace: d8-cloud-instance-manager
   {{- include "helm_lib_module_labels" (list . (dict "app" "cluster-autoscaler")) | nindent 2 }}
+automountServiceAccountToken: false
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -42,6 +43,9 @@ rules:
   resources:
   - vcdmachinetemplates
   - huaweicloudmachinetemplates
+  - dynamixmachinetemplates
+  - zvirtmachinetemplates
+  - deckhousemachinetemplates
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -84,6 +88,7 @@ rules:
   resources:
   - machinedeployments
   - machines
+  - machinedeployments/scale
   verbs:
   - patch
   - update
@@ -158,7 +163,7 @@ rules:
   resources: ["poddisruptionbudgets"]
   verbs: ["get", "list", "watch"]
 - apiGroups: ["storage.k8s.io"]
-  resources: ["storageclasses", "csinodes", "csistoragecapacities", "csidrivers"]
+  resources: ["storageclasses", "csinodes", "csistoragecapacities", "csidrivers", "volumeattachments"]
   verbs: ["get", "list", "watch"]
 # misc access
 - apiGroups: [""]
@@ -174,6 +179,9 @@ rules:
   resources:
   - vcdmachinetemplates
   - huaweicloudmachinetemplates
+  - dynamixmachinetemplates
+  - zvirtmachinetemplates
+  - deckhousemachinetemplates
 - apiGroups: ["cluster.x-k8s.io"]
   resources:
   - machinedeployments
@@ -181,7 +189,7 @@ rules:
   - machinesets
   - machinedeployments/scale
   - machinepools
-  verbs: ["get", "list", "watch", "update"]
+  verbs: ["get", "list", "watch", "update", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -17,8 +17,10 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,6 +31,8 @@ import (
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -67,19 +71,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleGatekeeperBootstrap)
 
-func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
-	var bootstrapped bool
-	templates := input.Snapshots["gatekeeper_templates"]
+func handleGatekeeperBootstrap(_ context.Context, input *go_hook.HookInput) error {
+	templates, err := sdkobjectpatch.UnmarshalToStruct[cTemplate](input.Snapshots, "gatekeeper_templates")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal gatekeeper_templates: %w", err)
+	}
 
+	var bootstrapped bool
 	if len(templates) != 0 {
 		existingTemplates := make(map[string]cTemplate, len(templates))
 		bootstrapped = true
 
-		for _, template := range templates {
-			t, ok := template.(cTemplate)
-			if !ok {
-				return fmt.Errorf("Cannot convert ConstraintTemplate")
-			}
+		for _, t := range templates {
 			existingTemplates[t.Name] = cTemplate{
 				Processed: t.Processed,
 				Created:   t.Created,
@@ -95,20 +98,20 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 			values, ok := existingTemplates[name]
 			if !ok {
 				// required template isn't found in the cluster
-				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: missing %s ConstraintTemplate", name)
+				input.Logger.Warn("admission-policy-engine isn't bootstrapped yet: missing ConstraintTemplate", slog.String("name", name))
 				bootstrapped = false
 				break
 			}
 
 			if !values.Processed {
 				// status.created field of a constraint template isn't found - highly likely the constraint template wasn't processed for some reasons
-				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate %s not processed", name)
+				input.Logger.Warn("admission-policy-engine isn't bootstrapped yet: ConstraintTemplate not processed", slog.String("name", name))
 				bootstrapped = false
 				break
 			}
 			if !values.Created {
 				// status.created field equals false, there might be some errors in processing there
-				input.Logger.Warnf("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate %s not created", name)
+				input.Logger.Warn("admission-policy-engine isn't bootstrapped yet: CRD for ConstraintTemplate not created", slog.String("name", name))
 				bootstrapped = false
 				break
 			}
@@ -118,10 +121,9 @@ func handleGatekeeperBootstrap(input *go_hook.HookInput) error {
 	}
 
 	input.Values.Set("admissionPolicyEngine.internal.bootstrapped", bootstrapped)
-
 	input.MetricsCollector.Expire("d8_admission_policy_engine_not_bootstrapped")
 	if !bootstrapped {
-		input.MetricsCollector.Set("d8_admission_policy_engine_not_bootstrapped", 1, map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_not_bootstrapped"))
+		input.MetricsCollector.Set("d8_admission_policy_engine_not_bootstrapped", 1, nil, metrics.WithGroup("d8_admission_policy_engine_not_bootstrapped"))
 	}
 
 	return nil

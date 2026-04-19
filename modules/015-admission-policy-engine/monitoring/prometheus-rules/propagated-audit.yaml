@@ -1,0 +1,88 @@
+- name: admission-policy-engine.audit
+  rules:
+    - alert: PodSecurityStandardsViolation
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",violating_kind="Pod",violating_namespace=~".*",source_type="PSS"})) > 0
+      for: 10m
+      labels:
+        severity_level: "3"
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: At least one pod violates the configured cluster pod security standards.
+        description: |-
+          You have configured [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/), and one or more running pods are violating these standards.
+
+          To identify violating pods:
+
+          - Run the following Prometheus query:
+          
+            ```prometheus
+            count by (violating_namespace, violating_name, violation_msg) (
+              d8_gatekeeper_exporter_constraint_violations{
+                violation_enforcement="deny",
+                violating_namespace=~".*",
+                violating_kind="Pod",
+                source_type="PSS"
+              }
+            )
+            ```
+
+          - Alternatively, check the admission-policy-engine Grafana dashboard.
+    - alert: OperationPolicyViolation
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="OperationPolicy"})) > 0
+      for: 10m
+      labels:
+        severity_level: "3"
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: At least one object violates the configured cluster operation policies.
+        description: |-
+          You have configured operation policies for the cluster, and one or more existing objects are violating these policies.
+
+          To identify violating objects:
+
+          - Run the following Prometheus query:
+
+            ```prometheus
+            count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+              d8_gatekeeper_exporter_constraint_violations{
+                violation_enforcement="deny",
+                source_type="OperationPolicy"
+              }
+            )
+            ```
+
+          - Alternatively, check the admission-policy-engine Grafana dashboard.
+    - alert: SecurityPolicyViolation
+      expr: (count by () (d8_gatekeeper_exporter_constraint_violations{violation_enforcement="deny",source_type="SecurityPolicy"})) > 0
+      for: 10m
+      labels:
+        severity_level: "3"
+        d8_module: admission-policy-engine
+        d8_component: gatekeeper
+      annotations:
+        plk_protocol_version: "1"
+        plk_markup_format: markdown
+        summary: At least one object violates the configured cluster security policies.
+        description: |-
+          You have configured security policies for the cluster, and one or more existing objects are violating these policies.
+
+          To identify violating objects:
+
+          - Run the following Prometheus query:
+
+            ```prometheus
+            count by (violating_namespace, violating_kind, violating_name, violation_msg) (
+              d8_gatekeeper_exporter_constraint_violations{
+                violation_enforcement="deny",
+                source_type="SecurityPolicy"
+              }
+            )
+            ```
+
+          - Alternatively, check the admission-policy-engine Grafana dashboard.

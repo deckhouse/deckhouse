@@ -85,10 +85,10 @@ var _ = Describe("Modules :: user-authz :: hooks :: handle-manage-bindings ::", 
 	Context("There`s UseBinding", func() {
 		BeforeEach(func() {
 			resources := []string{
-				useBinding("test", "test-ns"),
-				useBinding("test2", "test-ns"),
-				useBinding("test3", "test-ns2"),
-				useBinding("test4", "test-ns2"),
+				useAutomaticBinding("test", "test-ns"),
+				useAutomaticBinding("test2", "test-ns"),
+				useAutomaticBinding("test3", "test-ns2"),
+				useAutomaticBinding("test4", "test-ns2"),
 			}
 			f.BindingContexts.Set(f.KubeStateSet(strings.Join(resources, "\n---\n")))
 			f.RunHook()
@@ -184,7 +184,7 @@ func manageBinding(name, role string) string {
 	return string(marshaled)
 }
 
-func useBinding(relatedWith, namespace string) string {
+func useAutomaticBinding(relatedWith, namespace string) string {
 	binding := rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",

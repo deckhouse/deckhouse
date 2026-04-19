@@ -17,12 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -44,20 +47,22 @@ func applyKubernetesServicePortFilter(obj *unstructured.Unstructured) (go_hook.F
 	return ports[0].TargetPort.IntVal, nil
 }
 
-type KubernetesEndpoints []string
+type kubernetesEndpoints []string
 
 func applyKubernetesEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	endpoints := &v1.Endpoints{}
-	err := sdk.FromUnstructured(obj, endpoints)
+	endpointSlice := &discoveryv1.EndpointSlice{}
+	err := sdk.FromUnstructured(obj, endpointSlice)
 	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes service endpoints to endpoints: %v", err)
+		return nil, fmt.Errorf("cannot convert kubernetes service endpointslice to endpointslice: %v", err)
 	}
 
-	var parsedEndpoints KubernetesEndpoints
-	for _, subset := range endpoints.Subsets {
-		for _, address := range subset.Addresses {
-			parsedEndpoints = append(parsedEndpoints, address.IP)
+	// Only include ready endpoints (same as Endpoints.Addresses vs NotReadyAddresses)
+	parsedEndpoints := make(kubernetesEndpoints, 0)
+	for _, endpoint := range endpointSlice.Endpoints {
+		if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
+			continue
 		}
+		parsedEndpoints = append(parsedEndpoints, endpoint.Addresses...)
 	}
 
 	return parsedEndpoints, nil
@@ -83,22 +88,22 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "endpoints",
-			ApiVersion: "v1",
-			Kind:       "Endpoints",
+			ApiVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
 					MatchNames: []string{"default"},
 				},
 			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"kubernetes"},
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"kubernetes.io/service-name": "kubernetes"},
 			},
 			FilterFunc: applyKubernetesEndpointsFilter,
 		},
 	},
 }, discoverApiserverEndpoints)
 
-func discoverApiserverEndpoints(input *go_hook.HookInput) error {
+func discoverApiserverEndpoints(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		addressesPath  = "userAuthn.internal.kubernetesApiserverAddresses"
 		targetPortPath = "userAuthn.internal.kubernetesApiserverTargetPort"
@@ -111,17 +116,40 @@ func discoverApiserverEndpoints(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	ports := input.Snapshots["port"]
+	ports := input.Snapshots.Get("port")
 	if len(ports) == 0 {
 		return fmt.Errorf("kubernetes service pod was not discovered")
 	}
 
-	endpoints := input.Snapshots["endpoints"]
-	if len(endpoints) == 0 {
+	endpointsSnapshots := input.Snapshots.Get("endpoints")
+	if len(endpointsSnapshots) == 0 {
 		return fmt.Errorf("kubernetes service endpoints was not discovered")
 	}
 
-	input.Values.Set(targetPortPath, ports[0])
-	input.Values.Set(addressesPath, endpoints[0])
+	var portData int32
+	err := ports[0].UnmarshalTo(&portData)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'port' snapshot: %w", err)
+	}
+
+	// Merge addresses from all EndpointSlices (one service can have multiple slices)
+	mergedAddresses := make(kubernetesEndpoints, 0)
+	seen := make(map[string]bool)
+	for _, snapshot := range endpointsSnapshots {
+		var sliceAddresses kubernetesEndpoints
+		err = snapshot.UnmarshalTo(&sliceAddresses)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'endpoints' snapshot: %w", err)
+		}
+		for _, addr := range sliceAddresses {
+			if !seen[addr] {
+				seen[addr] = true
+				mergedAddresses = append(mergedAddresses, addr)
+			}
+		}
+	}
+
+	input.Values.Set(targetPortPath, portData)
+	input.Values.Set(addressesPath, mergedAddresses)
 	return nil
 }

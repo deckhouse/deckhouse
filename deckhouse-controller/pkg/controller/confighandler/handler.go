@@ -17,6 +17,8 @@ package confighandler
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
@@ -25,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -37,17 +38,25 @@ var _ backend.ConfigHandler = &Handler{}
 
 type Handler struct {
 	client            client.Client
-	log               *log.Logger
+	conversionsStore  *conversion.ConversionsStore
 	deckhouseConfigCh chan<- utils.Values
-	configEventCh     chan<- config.Event
+
+	l             sync.Mutex
+	configEventCh chan<- config.Event
 }
 
-func New(client client.Client, deckhouseConfigCh chan<- utils.Values, logger *log.Logger) *Handler {
+func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh chan<- utils.Values) *Handler {
 	return &Handler{
-		log:               logger,
 		client:            client,
+		conversionsStore:  conversionsStore,
 		deckhouseConfigCh: deckhouseConfigCh,
 	}
+}
+
+func (h *Handler) ModuleConfigChannelIsSet() bool {
+	h.l.Lock()
+	defer h.l.Unlock()
+	return h.configEventCh != nil
 }
 
 // HandleEvent sends event to addon-operator
@@ -68,9 +77,17 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	} else {
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
+		if len(moduleConfig.Spec.Maintenance) > 0 {
+			addonOperatorModuleConfig.Maintenance = utils.Maintenance(moduleConfig.Spec.Maintenance)
+		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
 			Checksum:     addonOperatorModuleConfig.Checksum(),
+		}
+
+		// it is needed to trigger kube config apply after enabling
+		if moduleConfig.Spec.Enabled != nil && !*moduleConfig.Spec.Enabled {
+			kubeConfig.Modules[moduleConfig.Name].Checksum = ""
 		}
 
 		// update deckhouse settings
@@ -82,16 +99,18 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 	h.configEventCh <- config.Event{Key: moduleConfig.Name, Config: kubeConfig, Op: op}
 }
 
-// StartInformer does not start informer, it just registers channels, this name used just to implement interface
+// StartInformer does not start informer, it just registers channels, this name is used just to implement interface
 func (h *Handler) StartInformer(_ context.Context, eventCh chan config.Event) {
+	h.l.Lock()
 	h.configEventCh = eventCh
+	h.l.Unlock()
 }
 
 // LoadConfig loads initial modules config before starting
 func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
 	configs := new(v1alpha1.ModuleConfigList)
 	if err := h.client.List(ctx, configs); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 
 	kubeConfig := config.NewConfig()
@@ -111,7 +130,9 @@ func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConf
 
 		addonOperatorModuleConfig := utils.NewModuleConfig(moduleConfig.Name, values)
 		addonOperatorModuleConfig.IsEnabled = moduleConfig.Spec.Enabled
-
+		if len(moduleConfig.Spec.Maintenance) > 0 {
+			addonOperatorModuleConfig.Maintenance = utils.Maintenance(moduleConfig.Spec.Maintenance)
+		}
 		kubeConfig.Modules[moduleConfig.Name] = &config.ModuleKubeConfig{
 			ModuleConfig: *addonOperatorModuleConfig,
 			Checksum:     addonOperatorModuleConfig.Checksum(),
@@ -132,20 +153,22 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 		return utils.Values{}, nil
 	}
 
+	settings := moduleConfig.Spec.Settings.GetMap()
+
 	if moduleConfig.Spec.Version == 0 {
-		return utils.Values(moduleConfig.Spec.Settings), nil
+		return utils.Values(settings), nil
 	}
 
-	converter := conversion.Store().Get(moduleConfig.Name)
-	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, moduleConfig.Spec.Settings)
+	converter := h.conversionsStore.Get(moduleConfig.Name)
+	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, settings)
 	if err != nil {
-		return utils.Values{}, err
+		return utils.Values{}, fmt.Errorf("convert to latest: %w", err)
 	}
 
 	moduleConfig.Spec.Version = newVersion
-	moduleConfig.Spec.Settings = newSettings
+	moduleConfig.Spec.Settings = v1alpha1.MakeMappedFields(newSettings)
 
-	return utils.Values(moduleConfig.Spec.Settings), nil
+	return utils.Values(newSettings), nil
 }
 
 // SaveConfigValues saving patches in ModuleConfigBackend.

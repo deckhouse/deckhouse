@@ -7,18 +7,16 @@
 Deckhouse завершил процесс установки кластера. Осталось выполнить некоторые настройки, для чего необходимо подключиться к **master-узлу**.
 
 Подключитесь к master-узлу по SSH (IP-адрес master-узла был выведен инсталлятором по завершении установки, но вы также можете найти его используя веб-интерфейс или CLI&#8209;утилиты облачного провайдера):
-{% snippetcut %}
+
 ```shell
 ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@<MASTER_IP>
 ```
-{% endsnippetcut %}
 
 Проверьте работу kubectl, выведя список узлов кластера:
-{% snippetcut %}
+
 ```shell
 sudo -i d8 k get nodes
 ```
-{% endsnippetcut %}
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -29,15 +27,21 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 ```
 {%- endofftopic %}
 
+{%- if page.platform_type == "cloud" %}
+
+{% alert level="info" %}
+Чтобы увеличить количество worker-узлов, измените параметр [maxPerZone](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) в NodeGroup `worker` с помощью CLI (`d8 k edit ng worker`) или веб-интерфейса администратора. Чтобы добавить дополнительные узлы, воспользуйтесь [инструкцией по масштабированию кластера](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+{% endalert %}
+
+{%- endif %}
+
 Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get po
 ```
-{% endsnippetcut %}
 
-Дождитесь перехода Pod'ов в статус `Ready`.
+Дождитесь перехода подов в статус `Ready`.
 
 {% offtopic title="Пример вывода..." %}
 ```
@@ -48,13 +52,12 @@ kruise-controller-manager-78786f57-82wph   3/3     Running   0          16h
 ```
 {%- endofftopic %}
 
-{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
+{% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' and page.platform_code != 'vcd' %}
 Также дождитесь готовности балансировщика:
-{% snippetcut %}
+
 ```shell
 sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer
 ```
-{% endsnippetcut %}
 
 Значение `EXTERNAL-IP` должно быть заполнено публичным IP-адресом или DNS-именем.
 
@@ -71,16 +74,16 @@ nginx-load-balancer   LoadBalancer   10.222.91.204   1.2.3.4         80:30493/TC
 
 Для того чтобы получить доступ к веб-интерфейсам компонентов Deckhouse, нужно:
 - настроить работу DNS
-- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate)
+- указать в параметрах Deckhouse [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)
 
 *Шаблон DNS-имен* используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `grafana.kube.company.my`, и т.д.
 
 {% if page.platform_type == 'cloud' and page.platform_code != 'vsphere' %}
 Чтобы упростить настройку, далее будет использоваться сервис [sslip.io](https://sslip.io/).
 
-На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
+На **master-узле** выполните следующую команду, чтобы получить IP-адрес балансировщика и настроить [шаблон DNS-имен](../../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) сервисов Deckhouse на использование *sslip.io*:
 {% if page.platform_code == 'aws' %}
-{% snippetcut %}
+
 {% raw %}
 ```shell
 BALANCER_IP=$(dig $(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].hostname') +short | head -1) && \
@@ -89,9 +92,7 @@ echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type m
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
-{% endsnippetcut %}
 {% else %}
-{% snippetcut %}
 {% raw %}
 ```shell
 BALANCER_IP=$(sudo -i d8 k -n d8-ingress-nginx get svc nginx-load-balancer -o json | jq -r '.status.loadBalancer.ingress[0].ip') && \
@@ -100,7 +101,6 @@ echo "Balancer IP is '${BALANCER_IP}'." && sudo -i d8 k patch mc global --type m
 echo "Domain template is '$(sudo -i d8 k get mc global -o=jsonpath='{.spec.settings.modules.publicDomainTemplate}')'."
 ```
 {% endraw %}
-{% endsnippetcut %}
 {% endif %}
 
 Команда также выведет установленный шаблон DNS-имен. Пример вывода:
@@ -120,13 +120,11 @@ Domain template is '%s.1.2.3.4.sslip.io'.
 {% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
 
 Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
-<div markdown="0">
-{% snippetcut %}
+<div markdown="1">
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
-{% endsnippetcut %}
 </div>
 {% endofftopic %}
 {% endif %}
@@ -137,21 +135,20 @@ sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"module
 {% include getting_started/global/partials/DNS_OPTIONS_RU.liquid %}
 
 Затем, на **master-узле** выполните следующую команду (укажите используемый шаблон DNS-имен в переменной <code>DOMAIN_TEMPLATE</code>):
-{% snippetcut %}
+
 {% raw %}
 ```shell
 DOMAIN_TEMPLATE='<DOMAIN_TEMPLATE>'
 sudo -i d8 k patch mc global --type merge -p "{\"spec\": {\"settings\":{\"modules\":{\"publicDomainTemplate\":\"${DOMAIN_TEMPLATE}\"}}}}"
 ```
 {% endraw %}
-{% endsnippetcut %}
 {% endif %}
 
 ## Настройте удаленный доступ к кластеру 
 
 На **персональном компьютере** выполните следующие шаги, для того чтобы настроить подключение `kubectl` к кластеру:
 - Откройте веб-интерфейс сервиса *Kubeconfig Generator*. Для него зарезервировано имя `kubeconfig`, и адрес для доступа формируется согласно шаблона DNS-имен (который вы установили ранее). Например, для шаблона DNS-имен `%s.1.2.3.4.sslip.io`, веб-интерфейс *Kubeconfig Generator* будет доступен по адресу `https://kubeconfig.1.2.3.4.sslip.io`.
-- Авторизуйтесь под пользователем `admin@deckhouse.io`. Пароль пользователя, сгенерированный на предыдущем шаге, — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `resource.yml`).
+- Авторизуйтесь под пользователем `admin@deckhouse.io`. Пароль пользователя, сгенерированный на предыдущем шаге, — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `config.yml`).
 - Выберите вкладку с ОС персонального компьютера.
 - Последовательно скопируйте и выполните команды, приведенные на странице.
 - Проверьте корректную работу `kubectl` (например, выполнив команду `kubectl get no`).

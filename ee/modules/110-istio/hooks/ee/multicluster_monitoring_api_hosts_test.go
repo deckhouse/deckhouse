@@ -11,12 +11,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -58,7 +58,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
-			Expect(m[0].Action).Should(Equal("expire"))
+			Expect(m[0].Action).Should(Equal(operation.ActionExpireMetrics))
 		})
 	})
 
@@ -124,20 +124,20 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 
 			// there should be 3 log messages
 			Expect(strings.Split(strings.Trim(string(f.LoggerOutput.Contents()), "\n"), "\n")).To(HaveLen(3))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot fetch api host improper-hostname-bad-code for IstioMulticluster improper-mc-bad-code (HTTP code 500)"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("cannot unmarshal api host improper-hostname-bad-json response for IstioMulticluster improper-mc-bad-json, error: unexpected end of JSON input"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("got wrong response format from api host improper-hostname-wrong-format for IstioMulticluster improper-mc-wrong-format"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch api host for IstioMulticluster\",\"api_host\":\"improper-hostname-bad-code\",\"http_code\":500,\"name\":\"improper-mc-bad-code\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal api host response for IstioMulticluster\",\"api_host\":\"improper-hostname-bad-json\",\"error\":\"unexpected end of JSON input\",\"name\":\"improper-mc-bad-json\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"got wrong response format from api host for IstioMulticluster\",\"api_host\":\"improper-hostname-wrong-format\",\"name\":\"improper-mc-wrong-format\""))
 
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(5))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  multiclusterMonitoringMetricsGroup,
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
 					"multicluster_name": "proper-mc",
@@ -147,7 +147,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-bad-code",
@@ -157,7 +157,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-bad-json",
@@ -167,7 +167,7 @@ var _ = Describe("Istio hooks :: multicluster_monitoring_api_hosts ::", func() {
 			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   multiclusterMonitoringMetricName,
 				Group:  multiclusterMonitoringMetricsGroup,
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
 					"multicluster_name": "improper-mc-wrong-format",

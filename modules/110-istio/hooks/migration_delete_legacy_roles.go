@@ -17,10 +17,15 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
@@ -102,31 +107,43 @@ func applyClusterRoleBindingFilter(obj *unstructured.Unstructured) (go_hook.Filt
 	return obj.GetName(), nil
 }
 
-func deleteLegacyRBACs(input *go_hook.HookInput) error {
+func deleteLegacyRBACs(_ context.Context, input *go_hook.HookInput) error {
 	// remove legacy Roles
-	for _, resource := range input.Snapshots["role_for_delete"] {
-		role := resource.(objectInfo)
+	for role, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.Snapshots.Get("role_for_delete")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'role_for_delete' snapshot: %w", err)
+		}
+
 		input.Logger.Info("remove legacy Role %s in %s namespace", role.Name, role.Namespace)
 		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "Role", role.Namespace, role.Name)
 	}
 
 	// remove legacy RoleBindings
-	for _, resource := range input.Snapshots["rolebinding_for_delete"] {
-		roleBinding := resource.(objectInfo)
+	for roleBinding, err := range sdkobjectpatch.SnapshotIter[objectInfo](input.Snapshots.Get("rolebinding_for_delete")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'rolebinding_for_delete' snapshot: %w", err)
+		}
+
 		input.Logger.Info("remove legacy RoleBinding %s in %s namespace", roleBinding.Name, roleBinding.Namespace)
 		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "RoleBinding", roleBinding.Namespace, roleBinding.Name)
 	}
 
 	// remove legacy ClusterRoles
-	for _, resource := range input.Snapshots["clusterrole_for_delete"] {
-		clusterRoleName := resource.(string)
+	for clusterRoleName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("clusterrole_for_delete")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'clusterrole_for_delete' snapshot: %w", err)
+		}
+
 		input.Logger.Info("remove legacy ClusterRole %s", clusterRoleName)
 		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRole", "", clusterRoleName)
 	}
 
 	// remove legacy ClusterRoleBindings
-	for _, resource := range input.Snapshots["clusterrolebinding_for_delete"] {
-		clusterRoleBindingName := resource.(string)
+	for clusterRoleBindingName, err := range sdkobjectpatch.SnapshotIter[string](input.Snapshots.Get("clusterrolebinding_for_delete")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'clusterrolebinding_for_delete' snapshot: %w", err)
+		}
+
 		input.Logger.Info("remove legacy ClusterRoleBinding %s", clusterRoleBindingName)
 		input.PatchCollector.Delete("rbac.authorization.k8s.io/v1", "ClusterRoleBinding", "", clusterRoleBindingName)
 	}

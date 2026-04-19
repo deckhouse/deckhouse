@@ -16,8 +16,8 @@ rules:
   resources:
   - instances
   - instancetypescatalogs
-  - nodegroups
   - nodegroupconfigurations
+  - nodegroups
   - nodeusers
   - sshcredentials
   - staticinstances

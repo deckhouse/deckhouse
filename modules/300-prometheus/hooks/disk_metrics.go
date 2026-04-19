@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -35,8 +36,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -96,14 +100,16 @@ func applyPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 	}, nil
 }
 
-func prometheusDiskMetrics(input *go_hook.HookInput, dc dependency.Container) error {
+func prometheusDiskMetrics(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	kubeClient, err := dc.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	for _, obj := range input.Snapshots["pods"] {
-		pod := obj.(PodFilter)
+	for pod, err := range sdkobjectpatch.SnapshotIter[PodFilter](input.Snapshots.Get("pods")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'pods' snapshot: %v", err)
+		}
 
 		if !pod.PrometheusContainerReady {
 			continue
@@ -153,7 +159,7 @@ func getFsInfo(input *go_hook.HookInput, kubeClient k8s.Client, pod PodFilter) (
 
 	output, _, err := execToPodThroughAPI(kubeClient, command, containerName, pod.Name, pod.Namespace)
 	if err != nil {
-		input.Logger.Warnf("%s: %s", pod.Name, err.Error())
+		input.Logger.Warn("exec to pod through api", slog.String("pod_name", pod.Name), log.Err(err))
 	} else {
 		for _, s := range strings.Split(output, "\n") {
 			if strings.Contains(s, "prometheus") {

@@ -1,0 +1,6 @@
+dirs:
+- /etc/kube-flannel/
+- /etc/cni/net.d
+- /run/flannel
+files:
+- /run/xtables.lock

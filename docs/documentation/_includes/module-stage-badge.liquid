@@ -1,0 +1,32 @@
+{%- assign stage = include.stage %}
+{%- assign stage_long = stage | downcase | replace: " ", "_" | append: "_long" %}
+{%- assign moduleName = page['module-kebab-name'] %}
+{%- assign hasRequirements = false %}
+{%- assign moduleMetadata = site.data.modules.metadata.modules[moduleName] %}
+{%- if moduleMetadata and moduleMetadata.requirements %}
+  {%- assign moduleRequirements = moduleMetadata.requirements %}
+  {%- if moduleRequirements.kubernetes or moduleRequirements.deckhouse or moduleRequirements.modules %}
+    {%- assign hasRequirements = true %}
+  {%- endif %}
+{%- endif %}
+{%- if stage and site.data.i18n.features[stage_long][page.lang] %}
+  {%- capture alert_content %}
+{{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <i data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}'>{{ stage }}</i>
+  {%- if hasRequirements and site.data.i18n.features['requirements_for_alert'][page.lang] %}
+  <br>{{ site.data.i18n.features['requirements_for_alert'][page.lang] | replace: "%s", moduleName }}
+  {%- endif %}
+  {% endcapture %}
+  {%- if stage == "Experimental" or stage == "Preview" %}
+{% alert level="warning" %}
+{{ alert_content }}
+{% endalert %}
+  {%- elsif stage == "Deprecated" %}
+{% alert level="danger" %}
+{{ alert_content }}
+{% endalert %}
+  {%- else %}
+{% alert level="info" %}
+{{ alert_content }}
+{% endalert %}
+  {%- endif %}
+{%- endif %}

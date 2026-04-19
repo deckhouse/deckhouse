@@ -19,12 +19,10 @@ package ensure_crds
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 	"reflect"
 	"strings"
 
-	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/hashicorp/go-multierror"
@@ -34,8 +32,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
 
+	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var crdGVR = schema.GroupVersionResource{
@@ -54,19 +55,21 @@ func RegisterEnsureCRDsHook(crdsGlob string) bool {
 	}, dependency.WithExternalDependencies(EnsureCRDsHandler(crdsGlob)))
 }
 
-func EnsureCRDsHandler(crdsGlob string) func(input *go_hook.HookInput, dc dependency.Container) error {
-	return func(input *go_hook.HookInput, dc dependency.Container) error {
-		result := EnsureCRDs(crdsGlob, dc)
+func EnsureCRDsHandler(crdsGlob string) func(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	return func(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+		err := EnsureCRDs(crdsGlob, dc)
 
-		if result.ErrorOrNil() != nil {
-			input.Logger.Error("ensure_crds failed", slog.String("error", result.Error()))
+		if err != nil {
+			input.Logger.Error("ensure_crds failed", log.Err(err))
+
+			return err
 		}
 
-		return result.ErrorOrNil()
+		return nil
 	}
 }
 
-func EnsureCRDs(crdsGlob string, dc dependency.Container) *multierror.Error {
+func EnsureCRDs(crdsGlob string, dc dependency.Container) error {
 	result := new(multierror.Error)
 
 	client, err := dc.GetK8sClient()
@@ -88,7 +91,7 @@ func EnsureCRDs(crdsGlob string, dc dependency.Container) *multierror.Error {
 type CRDsInstaller struct {
 	k8sClient    k8s.Client
 	crdFilesPath []string
-	installer    *addonoperator.CRDsInstaller
+	installer    *crdinstaller.CRDsInstaller
 
 	// concurrent tasks to create resource in a k8s cluster
 	k8sTasks *multierror.Group
@@ -134,22 +137,30 @@ func (cp *CRDsInstaller) DeleteCRDs(ctx context.Context, crdsToDelete []string) 
 	return deletedCRDs, nil
 }
 
-func (cp *CRDsInstaller) Run(ctx context.Context) *multierror.Error {
-	return cp.installer.Run(ctx)
+func (cp *CRDsInstaller) Run(ctx context.Context) error {
+	err := cp.installer.Run(ctx)
+	if err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+	return nil
 }
 
+//nolint:unused // Will uses later
 func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomResourceDefinition) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		existCRD, err := cp.getCRDFromCluster(ctx, crd.GetName())
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				ucrd, err := sdk.ToUnstructured(crd)
 				if err != nil {
-					return err
+					return fmt.Errorf("to unstructured: %w", err)
 				}
 
 				_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Create(ctx, ucrd, apimachineryv1.CreateOptions{})
-				return err
+				if err != nil {
+					return fmt.Errorf("create: %w", err)
+				}
+				return nil
 			}
 
 			return err
@@ -165,32 +176,38 @@ func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomRe
 		}
 
 		existCRD.Spec = crd.Spec
-		if len(existCRD.ObjectMeta.Labels) == 0 {
-			existCRD.ObjectMeta.Labels = make(map[string]string, 1)
+		if len(existCRD.Labels) == 0 {
+			existCRD.Labels = make(map[string]string, 1)
 		}
-		existCRD.ObjectMeta.Labels["heritage"] = "deckhouse"
+		existCRD.Labels["heritage"] = "deckhouse"
 
 		ucrd, err := sdk.ToUnstructured(existCRD)
 		if err != nil {
-			return err
+			return fmt.Errorf("to unstructured: %w", err)
 		}
 
 		_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Update(ctx, ucrd, apimachineryv1.UpdateOptions{})
-		return err
+		if err != nil {
+			return fmt.Errorf("update: %w", err)
+		}
+		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("retry on conflict: %w", err)
+	}
+	return nil
 }
-
 func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) (*v1.CustomResourceDefinition, error) {
 	crd := &v1.CustomResourceDefinition{}
 
 	o, err := cp.k8sClient.Dynamic().Resource(crdGVR).Get(ctx, crdName, apimachineryv1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get: %w", err)
 	}
 
 	err = sdk.FromUnstructured(o, &crd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return crd, nil
@@ -206,11 +223,11 @@ func NewCRDsInstaller(client k8s.Client, crdsGlob string) (*CRDsInstaller, error
 
 	return &CRDsInstaller{
 		k8sClient: client,
-		installer: addonoperator.NewCRDsInstaller(
+		installer: crdinstaller.NewCRDsInstaller(
 			client.Dynamic(),
 			crds,
-			addonoperator.WithExtraLabels(defaultLabels),
-			addonoperator.WithFileFilter(func(crdFilePath string) bool {
+			crdinstaller.WithExtraLabels(defaultLabels),
+			crdinstaller.WithFileFilter(func(crdFilePath string) bool {
 				return !strings.HasPrefix(filepath.Base(crdFilePath), "doc-")
 			}),
 		),

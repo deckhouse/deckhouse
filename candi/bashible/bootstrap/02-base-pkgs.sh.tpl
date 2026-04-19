@@ -24,10 +24,10 @@ set -Eeo pipefail
 # For node-manager render this file include to place, where 'bb_package_install' already included on previous lines.
 */}}
 
-{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
+{{- if $bb_package_install := .Files.Get "deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
   {{- tpl ( $bb_package_install ) . | nindent 0 }}
 {{- end }}
 
 {{ with .images.registrypackages }}
-bb-package-install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "netcat:{{ .netcat110481 }}"
+bb-package-install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "netcat:{{ .netcat110501 }}"
 {{- end }}

@@ -1,7 +1,7 @@
 # [<en>] General cluster parameters.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 # [<ru>] Общие параметры кластера.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#clusterconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Cloud
@@ -14,17 +14,22 @@ cloud:
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
 # [<ru>] Адресное пространство Pod’ов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство для service’ов кластера.
+# [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR.
+# [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 # [<ru>] Настройки первичной инициализации кластера Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/installing/configuration.html#initconfiguration
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
@@ -34,9 +39,9 @@ deckhouse:
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -50,15 +55,15 @@ spec:
     logLevel: Info
 ---
 # [<en>] Global Deckhouse settings.
-# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters
+# [<en>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters
 # [<ru>] Глобальные настройки Deckhouse.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#%D0%BF%D0%B0%D1%80%D0%B0%D0%BC%D0%B5%D1%82%D1%80%D1%8B
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings:
     modules:
       # [<en>] Template that will be used for system apps domains within the cluster.
@@ -72,34 +77,54 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] user-authn module settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<en>] https://deckhouse.io/modules/user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: user-authn
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
     # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
     # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi
+    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
-      enable: true
+      enabled: true
       https:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+# [<en>] cni-cilium module settings.
+# [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
+# [<ru>] Настройки модуля cni-cilium.
+# [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-cilium
+spec:
+  version: 1
+  # [<en>] Enable cni-cilium module.
+  # [<ru>] Включить модуль cni-cilium.
+  enabled: true
+  settings:
+    # [<en>] cni-cilium module settings.
+    # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
+    # [<ru>] Настройки модуля cni-cilium.
+    # [<ru>] https://deckhouse.ru/modules/cni-cilium/configuration.html
+    tunnelMode: VXLAN
+---
 # [<en>] Cloud provider settings.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-zvirt/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
-# [<ru>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/cluster_configuration.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-zvirt/cluster_configuration.html
 apiVersion: deckhouse.io/v1
 kind: ZvirtClusterConfiguration
 layout: Standard
@@ -114,16 +139,10 @@ clusterID: *!CHANGE_CLUSTER_ID*
 # [<en>] Zvirt API access parameters
 # [<ru>] параметры доступа к Zvirt API
 provider:
-  # [<en>] Url address to access Zvirt API.
-  # [<ru>] Url адрес доступа к Zvirt API.
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
+  # [<en>] URL to access Zvirt API.
+  # [<ru>] URL-адрес доступа к Zvirt API.
   server: *!CHANGE_API_URL*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
   username: *!CHANGE_USERNAME*
-  # [<en>] You might consider changing this.
-  # [<ru>] Возможно, захотите изменить.
   password: *!CHANGE_PASSWORD*
 masterNodeGroup:
   replicas: 1
@@ -132,11 +151,11 @@ masterNodeGroup:
     # [<ru>] Количество выделеных CPU для виртуальной машины.
     numCPUs: 4
     # [<en>] The amount of allocated RAM for the virtual machine.
-    # [<ru>] Количество выделеной оперативной памяти для виртуальной машины.
+    # [<ru>] Количество выделенной оперативной памяти для виртуальной машины.
     memory: 8192
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
-    rootDiskSizeGb: 40
+    rootDiskSizeGb: 50
     # [<en>] Virtual machine template name.
     # [<ru>] Название шаблона виртуальной машины.
     template: *!CHANGE_TEMPLATE*
@@ -146,4 +165,112 @@ masterNodeGroup:
     # [<en>] Storage domain ID.
     # [<ru>] Идентификатор домена хранения.
     storageDomainID: *!CHANGE_STORAGE_DOMAIN_ID*
-
+---
+# [<en>] Section containing the parameters of instance class for worker nodes.
+# [<en>] https://deckhouse.io/modules/cloud-provider-zvirt/cr.html
+# [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-zvirt/cr.html
+apiVersion: deckhouse.io/v1
+kind: ZvirtInstanceClass
+metadata:
+  name: worker
+spec:
+  # [<en>] Number of allocated CPUs for the virtual machine.
+  # [<ru>] Количество выделеных CPU для виртуальной машины.
+  numCPUs: 4
+  # [<en>] The amount of allocated RAM for the virtual machine.
+  # [<ru>] Количество выделенной оперативной памяти для виртуальной машины.
+  memory: 8192
+  # [<en>] Disk size for the root FS.
+  # [<ru>] Размер диска для корневой ФС.
+  rootDiskSizeGb: 40
+  # [<en>] Virtual machine template name.
+  # [<ru>] Название шаблона виртуальной машины.
+  template: *!CHANGE_TEMPLATE*
+  # [<en>] vNIC profile ID.
+  # [<ru>] Идентификатор профиля vNIC.
+  vnicProfileID: *!CHANGE_VNIC_PROFILE_ID*
+---
+# [<en>] Section containing the parameters of worker node group.
+# [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
+# [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
+# [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: ZvirtInstanceClass
+      name: worker
+    # [<en>] The maximum number of instances for the group in each zone (used by the autoscaler).
+    # [<en>] You might consider changing this.
+    # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
+    # [<ru>] Возможно, захотите изменить.
+    maxPerZone: 1
+    # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone or add more zones.
+    # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone или добавьте зоны.
+    minPerZone: 1
+  disruptions:
+    approvalMode: Automatic
+  nodeType: CloudEphemeral
+---
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
+# [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
+# [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  # [<en>] The way traffic goes to cluster from the outer network.
+  # [<ru>] Способ поступления трафика из внешнего мира.
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+    realIPHeader: X-Forwarded-For
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+  - operator: Exists
+---
+# [<en>] RBAC and authorization settings.
+# [<en>] https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
+# [<ru>] Настройки RBAC и авторизации.
+# [<ru>] https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  subjects:
+  - kind: User
+    name: admin@deckhouse.io
+  accessLevel: SuperAdmin
+  portForwarding: true
+---
+# [<en>] Parameters of the static user.
+# [<en>] https://deckhouse.io/modules/user-authn/cr.html#user
+# [<ru>] Данные статического пользователя.
+# [<ru>] https://deckhouse.ru/modules/user-authn/cr.html#user
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  # [<en>] User e-mail.
+  # [<ru>] E-mail пользователя.
+  email: admin@deckhouse.io
+  # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
+  # [<en>] Generate your own or use it at your own risk (for testing purposes)
+  # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
+  # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  # [<en>] You might consider changing this.
+  # [<ru>] Возможно, захотите изменить.
+  password: <GENERATED_PASSWORD_HASH>

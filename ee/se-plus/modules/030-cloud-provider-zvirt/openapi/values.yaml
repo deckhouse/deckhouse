@@ -19,7 +19,7 @@ properties:
           Run the following command to change the configuration in a running cluster:
 
           ```shell
-          kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit provider-cluster-configuration
+          d8 system edit provider-cluster-configuration
           ```
         x-doc-search: |
           ProviderClusterConfiguration
@@ -74,7 +74,7 @@ properties:
             description: |
               The definition of the master's NodeGroup.
 
-              > Caution! After changing the parameters of the section, you need to run `dhctl converge` for the changes to take effect.
+              > For the changes to take effect, run `dhctl converge` after modifying the parameters of the `masterNodeGroup` section.
             properties:
               replicas:
                 type: integer
@@ -118,14 +118,50 @@ properties:
                     type: string
                     description: |
                       Virtual NIC profile ID on the basis of which the virtual NIC will be created.
-                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
+                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
                   storageDomainID:
                     type: string
                     description: |
                       Storage domain id which contains the shared resources that must be available to all datacenter hosts.
-                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-4[\da-fA-F]{3}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
+                    pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                     example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+                  customNetworkConfig:
+                    type: object
+                    additionalProperties: false
+                    description: |
+                      Enables a custom static network configuration for nodes in this NodeGroup.
+                      
+                      If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
+                    properties:
+                      networkInterfaceName:
+                        type: string
+                        description: |
+                          Name of the network interface to apply the static configuration to.
+                        example: enp1s0
+                      networkInterfaceAddress:
+                        type: array
+                        items:
+                          type: string
+                        uniqueItems: true
+                        description: |
+                          List of IP addresses to assign to the interface (one IP address per node).
+                        example:  ["192.168.1.10", "192.168.1.11"]
+                      networkInterfaceNetmask:
+                        type: string
+                        description: |
+                          Subnet mask for the interface.
+                        example:  255.255.255.0
+                      networkInterfaceGateway:
+                        type: string
+                        description: |
+                          Default network gateway.
+                        example: 192.168.1.1
+                      dnsServers:
+                        type: string
+                        description: |
+                          List of DNS servers.
+                        example: "8.8.8.8 8.8.4.4"
           nodeGroups:
             type: array
             description: |
@@ -170,7 +206,7 @@ properties:
                       description: |
                         The same as the `.spec.taints` field of the [Node](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#taint-v1-core) object.
 
-                        > **Caution!** Only the `effect`, `key`, `values`  fields are available.
+                        > Available fields: `effect`, `key`, and `values`.
                       x-examples:
                       - - effect: NoExecute
                           key: ship-class
@@ -198,7 +234,7 @@ properties:
             description: |
               The way resources are located in the cloud.
 
-              Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/layouts.html) about possible provider layouts.
+              Read [more](https://deckhouse.io/modules/cloud-provider-vsphere/layouts.html) about possible provider layouts.
             x-unsafe: true
           provider:
             type: object

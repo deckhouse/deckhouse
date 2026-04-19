@@ -29,7 +29,7 @@ export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
 export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
 {{- end }}
 
-{{- if $check_python := .Files.Get "/deckhouse/candi/bashible/check_python.sh.tpl" | default (.Files.Get "candi/bashible/check_python.sh.tpl") -}}
+{{- if $check_python := .Files.Get "deckhouse/candi/bashible/check_python.sh.tpl" | default (.Files.Get "candi/bashible/check_python.sh.tpl") -}}
   {{- tpl ( $check_python ) . | nindent 0 }}
 {{- end }}
 
@@ -91,12 +91,18 @@ bb-package-fetch-blob() {
   local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
   local no_proxy=${PACKAGES_PROXY_ADDRESSES}
   local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
-  
+
+  if [[ -z "$1" || "$1" == "<no value>:" ]]; then
+    echo "Error: Digest is incorrect. Probably we pass incorrect package name and we cannot get correct digest"
+    return 1
+  fi
+
   check_python
 
   cat - <<EOFILE | $python_binary
 import random
 import ssl
+import sys
 try:
   from urllib.request import urlopen, Request, HTTPError
 except ImportError:
@@ -105,11 +111,12 @@ endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
 # Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
 random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
+response = None
 for ep in endpoints:
   url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
   request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
   try:
-    response = urlopen(request, timeout=300)
+    response = urlopen(request, timeout=60)
   except HTTPError as e:
     print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
     print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
@@ -118,6 +125,9 @@ for ep in endpoints:
     print("Access to {} return Error: {}".format(url, e))
     continue
   break
+if response is None:
+  print("Error: All package proxy endpoints failed")
+  sys.exit(1)
 with open('$2', 'wb') as f:
     f.write(response.read())
 EOFILE

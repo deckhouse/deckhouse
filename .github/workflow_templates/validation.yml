@@ -30,7 +30,9 @@ on:
   pull_request_target:
      types:
       - opened
+      - reopened
       - synchronize
+      - edited
 
 # Cancel in-progress jobs for the same PR (pull_request_target event) or for the same branch (push event).
 concurrency:
@@ -80,6 +82,8 @@ jobs:
       label_no_cyrillic: ${{ steps.check_labels.outputs.label_no_cyrillic }}
       run_doc_changes: ${{ steps.check_labels.outputs.run_doc_changes }}
       label_doc_changes: ${{ steps.check_labels.outputs.label_doc_changes }}
+      run_doc_reference: "true"
+      label_doc_reference: ${{ steps.check_labels.outputs.label_doc_changes }}
       run_copyright: ${{ steps.check_labels.outputs.run_copyright }}
       label_copyright: ${{ steps.check_labels.outputs.label_copyright }}
       run_markdown: ${{ steps.check_labels.outputs.run_markdown }}
@@ -127,9 +131,18 @@ jobs:
     name: Docs Validation (base)
 {!{ tmpl.Exec "validation_template" (slice $ctx "doc_changes") | strings.Indent 4 }!}
 
+  workflow_render:
+    name: Render workflow
+{!{ tmpl.Exec "workflow_render_template" $ctx | strings.Indent 4 }!}
+
+
   doc_spell_check:
     name: Docs Validation (spellcheck)
 {!{ tmpl.Exec "spellcheck_template" (slice $ctx) | strings.Indent 4 }!}
+
+  doc_validation_reference:
+    name: Docs Validation (reference)
+{!{ tmpl.Exec "validation_template" (slice $ctx "doc_reference") | strings.Indent 4 }!}
 
   copyright_validation:
     name: Copyright Validation
@@ -145,7 +158,76 @@ jobs:
 
   release_requirements_validation:
     name: Release Requirements Validation
-{!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 -}!}
+{!{ tmpl.Exec "validation_template" (slice $ctx "release_requirements") | strings.Indent 4 }!}
+
+  pull_request_changes_validation:
+    name: Pull Request Changes validation
+    runs-on: "ubuntu-latest"
+    needs:
+      - discover
+      - pull_request_info
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: {!{ index (ds "actions") "actions/checkout" }!}
+      - uses: {!{ index (ds "actions") "actions/setup-node" }!}
+        with:
+          node-version: '20.x'
+      - run: npm install yaml marked
+      - uses: {!{ index (ds "actions") "actions/github-script" }!}
+        with:
+          script: |
+            const { findIn } = require('./.github/scripts/js/parsers/modules-parser.js');
+            const { parseMarkdown, findSectionInMarkdown } = require('./.github/scripts/js/parsers/md-parser.js');
+            const { validatePullRequestChangelog } = require('./.github/scripts/js/validators/pr-changes-validator.js');
+
+            const allowedModules = findIn('.');
+
+            /**
+            * @param {string} owner
+            * @param {string} repo
+            * @param {number} pullRequestID
+            */
+            async function getPR(owner, repo, pullRequestID) {
+              const { data } = await github.rest.pulls.get({
+                  owner: owner,
+                  repo: repo,
+                  pull_number: pullRequestID,
+              });
+
+              return data.body;
+            }
+
+            try {
+              const prBody = await getPR(context.repo.owner, context.repo.repo, context.issue.number);
+              const mdTokens = parseMarkdown(prBody);
+              const changelogEntries = findSectionInMarkdown(mdTokens, 'Changelog entries', 'lang', 'changes');
+              validatePullRequestChangelog(changelogEntries, allowedModules);
+            } catch(error) {
+              core.info(`
+              \u001B[1m\u001B[103m\u001B[30mPlease ensure your Pull Request includes a properly formatted Changelog entries block. Check that the section follows the changelog guidelines,
+              \u001B[1m\u001B[103m\u001B[30mincluding the Type of changes and other required fields.
+              \u001B[1m\u001B[103m\u001B[30mThis helps maintain accurate release notes and ensures the changelog automation works smoothly.
+              \u001B[1m\u001B[103m\u001B[30mThank you! 🙌
+              \u001B[1m\u001B[103m\u001B[30mguide https://github.com/deckhouse/changelog-action?tab=readme-ov-file#how-to-add-to-changelog\u001B[39m\u001B[49m\u001B[22m
+              `);
+              throw(error);
+            }
+
+  gitleaks_scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Run Gitleaks diff scan
+        uses: deckhouse/modules-actions/gitleaks@main
+        continue-on-error: true
+        with:
+          scan_mode: "diff"
+
 
 {!{/* Template for validation jobs. */}!}
 {!{ define "validation_template" }!}
@@ -205,8 +287,16 @@ needs:
   - pull_request_info
 if: ${{ needs.discover.outputs.run_doc_changes == 'true' && github.repository == 'deckhouse/deckhouse' }}
 runs-on: ubuntu-24.04
+permissions:
+  contents: read
+  id-token: write
 steps:
   {!{ tmpl.Exec "checkout_step" $ctx | strings.Indent 2 }!}
+  {!{- $secrets := slice -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+  {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "login_dev_registry_step"   $ctx | strings.Indent 2 }!}
 
   - name: Restore diff artifact
@@ -215,11 +305,30 @@ steps:
       name: pr_diff
 
    # <template: spellcheck_template>
-  - name: Install werf
-    uses: werf/actions/install@v1.2
-
   - name: Spell check
     run: |
       make lint-doc-spellcheck-pr
    # </template: spellcheck_template>
 {!{- end -}!}
+
+{!{ define "workflow_render_template" }!}
+# <template: workflow_render_template>
+needs:
+  - discover
+  - pull_request_info
+runs-on: [self-hosted, regular]
+steps:
+  {!{ tmpl.Exec "started_at_output"            . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "checkout_step"                . | strings.Indent 2 }!}
+  {!{ tmpl.Exec "login_readonly_registry_step" . | strings.Indent 2 }!}
+
+  - name: Render GitHub workflow
+    run: |
+      cd .github
+      ./render-workflows.sh
+
+  - name: Check rendered files
+    run: |
+      git diff --exit-code
+# </template: workflow_render_template>
+{!{ end }!}

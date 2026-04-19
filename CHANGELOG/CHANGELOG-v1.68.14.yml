@@ -1,0 +1,11 @@
+deckhouse-controller:
+  fixes:
+    - summary: fix module release force behaviour
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13385
+    - summary: fix module release force behaviour
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13378
+runtime-audit-engine:
+  fixes:
+    - summary: Fix CrashLoopBack due to invalid config.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/13144
+

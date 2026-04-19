@@ -35,8 +35,7 @@ func TestConversions(t *testing.T) {
 			name: "should convert from 1 to 2 version",
 			settings: `
 allowedKubernetesVersions:
-  – 1.27
-  - 1.28
+  - 1.32
 allowedBundles:
   - ubuntu-lts
 earlyOomEnabled: false

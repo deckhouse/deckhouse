@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-fsGroup-in-range-pod
+  namespace: testns
+spec:
+  securityContext:
+    runAsUser: 5
+    runAsGroup: 50
+    fsGroup: 50
+    supplementalGroups:
+    - 50
+  containers:
+    - name: nginx
+      image: nginx
+

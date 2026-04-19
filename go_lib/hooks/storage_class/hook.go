@@ -17,6 +17,7 @@ limitations under the License.
 package storage_class
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -62,7 +63,7 @@ func RegisterHook(moduleName string, storageClassesConfig []StorageClass) bool {
 		return fmt.Sprintf("%s.%s", moduleName, path)
 	}
 
-	handler := func(input *go_hook.HookInput) error {
+	handler := func(_ context.Context, input *go_hook.HookInput) error {
 		return storageClasses(input, valuePath, storageClassesConfig)
 	}
 

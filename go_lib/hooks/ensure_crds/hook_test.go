@@ -36,8 +36,7 @@ func TestEnsureCRDs(t *testing.T) {
 	dependency.TestDC.K8sClient = cluster.Client
 
 	merr := EnsureCRDs("./test_data/**", dependency.TestDC)
-	require.Equal(t, 1, merr.Len())
-	assert.Errorf(t, merr.Errors[0], "invalid CRD document apiversion/kind: 'v1/Pod'")
+	assert.Errorf(t, merr, "invalid CRD document apiversion/kind: 'v1/Pod'")
 
 	list, err := cluster.Client.Dynamic().Resource(crdGVR).List(context.TODO(), apimachineryv1.ListOptions{})
 	require.NoError(t, err)
@@ -69,7 +68,7 @@ func TestDeleteCRDs(t *testing.T) {
 	require.NoError(t, err)
 
 	merr := inst.Run(context.TODO())
-	assert.Equal(t, merr.ErrorOrNil(), nil)
+	assert.Equal(t, merr, nil)
 
 	gvr := schema.GroupVersionResource{
 		Group:    "deckhouse.io",

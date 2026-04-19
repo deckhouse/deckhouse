@@ -40,12 +40,14 @@ import (
 	"sort"
 	"strings"
 	"text/template"
-	"tools/helm_generate/helper"
 
 	"github.com/Masterminds/sprig"
-	"github.com/deckhouse/deckhouse/testing/library/helm"
 	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v3"
+
+	"github.com/deckhouse/deckhouse/testing/library/helm"
+
+	"tools/helm_generate/helper"
 )
 
 var (
@@ -373,7 +375,7 @@ func updateReadme(fileName string, content []byte) error {
 	return nil
 }
 
-// templateData is an interface for rendering tempaltes
+// templateData is an interface for rendering templates
 type templateData interface {
 	toValues() map[string]interface{}
 }

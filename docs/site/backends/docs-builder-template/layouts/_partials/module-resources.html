@@ -1,0 +1,31 @@
+{{/*
+Renders a module resources (CRDs or configuration OpenAPI specification).
+Context:
+.name — module name
+.channel — module channel
+.data — module data (usually, it is .Site.Data.modules.<MODULE_NAME> structure)
+.type — resource to render. Can be: "crds" or "configuration"
+.lang — language to use for rendering
+.pageParams — the page parameters (.Page.Params)
+*/}}
+
+{{- $moduleName := .name }}
+{{- $moduleChannel := .channel }}
+{{- $moduleData := .data }}
+{{- $pageParams := .pageParams }}
+{{- $lang := .lang }}
+
+{{- if and (eq .type "crds") $moduleData.crds }}
+  {{- range $crdName, $crdData := $moduleData.crds }}
+    {{- if hasPrefix $crdName "doc-" }}{{ continue }}{{ end }}
+    {{- $langData := index $moduleData.crds (printf "doc-%s-%s" $lang $crdName) }}
+    {{- partial "openapi/format-crd" ( dict "data" $crdData "langData" $langData ) }}
+  {{- end }}
+{{- else if and (eq .type "configuration") $moduleData.openapi }}
+    {{- $cfgData := index $moduleData.openapi "config-values" }}
+    {{- $cfgConversions := index $moduleData.openapi "conversions" }}
+    {{ if $cfgData }}
+      {{- $langData := index $moduleData.openapi (printf "doc-%s-config-values" $lang ) }}
+      {{- partial "openapi/format-configuration" ( dict "name" $moduleName "channel" $moduleChannel "data" $cfgData "conversions" $cfgConversions "langData" $langData "pageParams" $pageParams ) }}
+    {{ end }}
+{{- end }}

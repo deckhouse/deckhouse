@@ -1,0 +1,5 @@
+deckhouse:
+  fixes:
+    - summary: Fix module requirements parsing.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11740
+

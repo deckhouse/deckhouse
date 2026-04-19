@@ -27,8 +27,15 @@ metadata:
     capacity.cluster-autoscaler.kubernetes.io/cpu: {{ $ng.nodeCapacity.cpu | quote }}
     capacity.cluster-autoscaler.kubernetes.io/memory: {{ $ng.nodeCapacity.memory | quote }}
   {{- end }}
+  {{- if $ng.serializedLabels }}
+    capacity.cluster-autoscaler.kubernetes.io/labels: {{ $ng.serializedLabels | quote }}
+  {{- end }}
+  {{- if $ng.serializedTaints }}
+    capacity.cluster-autoscaler.kubernetes.io/taints: {{ $ng.serializedTaints | quote }}
+  {{- end }}
 spec:
   clusterName: {{ $context.Values.nodeManager.internal.cloudProvider.capiClusterName | quote }}
+  selector: {}
   template:
     metadata:
       {{- include "helm_lib_module_labels" (list $context (dict "node-group" $ng.name)) | nindent 6 }}
@@ -39,10 +46,15 @@ spec:
       infrastructureRef:
         apiVersion: {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateAPIVersion | quote }}
         kind:  {{ $context.Values.nodeManager.internal.cloudProvider.capiMachineTemplateKind | quote }}
+        namespace: d8-cloud-instance-manager
         name: {{ $template_name }}
-      nodeDrainTimeout: 5m
-      nodeDeletionTimeout: 5m
-      nodeVolumeDetachTimeout: 5m
+  {{- if $ng.nodeDrainTimeoutSecond }}
+      nodeDrainTimeout: {{$ng.nodeDrainTimeoutSecond}}s
+  {{- else }}
+      nodeDrainTimeout: 10m
+  {{- end }}
+      nodeDeletionTimeout: 10m
+      nodeVolumeDetachTimeout: 10m
   strategy:
     type: RollingUpdate
     rollingUpdate:

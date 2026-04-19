@@ -1,3 +1,4 @@
+{{- /*
 # Copyright 2024 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+*/}}
 
 bb-set-proxy() {
 {{- if .proxy }}
@@ -22,7 +24,7 @@ bb-set-proxy() {
   export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
   export https_proxy=${HTTPS_PROXY}
   {{- end }}
-  {{- $noProxy := list "127.0.0.1" "169.254.169.254" .Values.global.clusterConfiguration.clusterDomain .Values.global.clusterConfiguration.podSubnetCIDR .Values.global.clusterConfiguration.serviceSubnetCIDR }}
+  {{- $noProxy := list "127.0.0.1" "169.254.169.254" "registry.d8-system.svc" .Values.global.clusterConfiguration.clusterDomain .Values.global.clusterConfiguration.podSubnetCIDR .Values.global.clusterConfiguration.serviceSubnetCIDR }}
   {{- if .proxy.noProxy }}
     {{- $noProxy = concat $noProxy .proxy.noProxy }}
   {{- end }}

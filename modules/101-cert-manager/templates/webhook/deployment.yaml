@@ -10,7 +10,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: webhook
   namespace: d8-cert-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -49,6 +49,7 @@ spec:
         app: webhook
     spec:
       serviceAccountName: webhook
+      automountServiceAccountToken: true
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "webhook")) | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
@@ -58,7 +59,7 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: webhook
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "certManagerWebhook") }}
         args:
         - --v=3
@@ -86,8 +87,8 @@ spec:
         volumeMounts:
         - name: certs
           mountPath: /certs
-        - mountPath: /tmp
-          name: tmp
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

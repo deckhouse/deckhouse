@@ -6,12 +6,19 @@ spec:
           type: object
           description: |
             Определяет конфигурацию источника модулей Deckhouse.
+
+            Подробнее об установке модуля из источника — в разделе [«Запуск модуля в кластере DKP»](../../architecture/module-development/run/#запуск-модуля-в-кластере-dkp)
           properties:
             spec:
               properties:
                 releaseChannel:
                   description: Желаемый канал обновлений по умолчанию для модулей данного container registry.
                   x-doc-deprecated: true
+                scanInterval:
+                  description: |
+                    Интервал для сканирования container registry.
+                    
+                    Определяет частоту проверки container registry на появление новых модулей и их версий.
                 registry:
                   properties:
                     scheme:
@@ -29,6 +36,8 @@ spec:
               properties:
                 syncTime:
                   description: Время последней синхронизации с container registry.
+                phase:
+                  description: Текущая фаза.
                 modulesCount:
                   type: integer
                   description: Количество доступных модулей.
@@ -41,9 +50,15 @@ spec:
                       name:
                         type: string
                         description: Имя модуля.
+                      version:
+                        type: string
+                        description: Версия модуля
                       pullError:
                         type: string
                         description: Ошибка скачивания модуля.
+                      error:
+                        type: string
+                        description: Ошибка процессинга модуля.
                       checksum:
                         type: string
                         description: Чексумма релиза.
@@ -58,14 +73,14 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: "release channel"
-          type: string
-          jsonPath: .spec.releaseChannel
-          description: Канал обновлений по умолчанию для модулей в данном репозитории.
         - name: count
           type: integer
           jsonPath: .status.modulesCount
           description: Количество доступных модулей в данном репозитории.
+        - name: status
+          type: string
+          jsonPath: .status.phase
+          description: Текущая фаза.
         - name: sync
           jsonPath: .status.syncTime
           type: date

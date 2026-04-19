@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
@@ -49,14 +52,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, discoverCloudProviderHandler)
 
-func discoverCloudProviderHandler(input *go_hook.HookInput) error {
-	secret := input.Snapshots["cloud_provider_secret"]
+func discoverCloudProviderHandler(_ context.Context, input *go_hook.HookInput) error {
+	secret := input.Snapshots.Get("cloud_provider_secret")
 	if len(secret) == 0 {
 		if input.Values.Exists("nodeManager.internal.cloudProvider") {
 			input.Values.Remove("nodeManager.internal.cloudProvider")
 		}
 		return nil
 	}
-	input.Values.Set("nodeManager.internal.cloudProvider", secret[0])
+	data := make(map[string]interface{})
+	err := secret[0].UnmarshalTo(&data)
+	if err != nil {
+		return fmt.Errorf("failder to unmarshal first 'cloud_provider_secret' snapshot: %w", err)
+	}
+
+	input.Values.Set("nodeManager.internal.cloudProvider", data)
+
 	return nil
 }

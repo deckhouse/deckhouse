@@ -1,38 +1,14 @@
+{{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-openstack"))) }}
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: {{ .ModuleName }}/base-terraform-manager
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "openstack") }}'
 git:
-- add: /{{ .ModulePath }}candi/cloud-providers/openstack
+- add: /{{ .ModulePath }}modules/030-cloud-provider-openstack/candi
   to: /deckhouse/candi/cloud-providers/openstack
 import:
-- artifact: terraform-provider-openstack
-  add: /terraform-provider-openstack
-  to: /plugins/registry.terraform.io/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
+- image: cloud-provider-openstack/terraform-manager
+  add: /terraform-manager/terraform-provider-openstack
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "openstack") }}/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
----
-image: terraform-provider-openstack
-final: false
-from: {{ $.Images.BASE_GOLANG_20_ALPINE }}
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
-git:
-  - add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
-shell:
-  beforeInstall:
-  - apk add --no-cache make patch git bash openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install:
-    - mkdir /src
-    - export GOPROXY={{ $.GOPROXY }}
-    - git clone --depth 1 --branch v{{ .TF.openstack.version }} {{ $.SOURCE_REPO }}/terraform-provider-openstack/terraform-provider-openstack.git /src
-    - cd /src
-    - git apply /patches/*.patch --verbose
-    - make fmt
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
-    - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack
-    - chmod -R 755 /terraform-provider-openstack
-    - chown 64535:64535 /terraform-provider-openstack
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+{{- end }}

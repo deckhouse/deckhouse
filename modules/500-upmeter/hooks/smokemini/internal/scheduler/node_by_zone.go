@@ -97,7 +97,7 @@ func (f *filterByZone) collect(nodes []snapshot.Node, spread func(int, []int) []
 	// The sorting is required to have stable sts distribution ordering. Otherwise, within
 	// similar zones, sts would migrate from time to time because `spread` can have prioritized
 	// direction.
-	zones := make([]*zoneStats, 0)
+	zones := make([]*zoneStats, 0, len(zonesByName))
 	for _, z := range zonesByName {
 		zones = append(zones, z)
 	}
@@ -166,7 +166,7 @@ func spread(total int, buckets []int) []int {
 
 Outer:
 	for {
-		min, eq := minAndAllEqual(demands)
+		minr, eq := minAndAllEqual(demands)
 
 		// Redistribute numbers per buckets
 		for i := range demands {
@@ -182,7 +182,7 @@ Outer:
 
 			if !eq {
 				// The distribution is controlled by making demand <= zero
-				demands[i] -= min
+				demands[i] -= minr
 			}
 		}
 	}
@@ -192,16 +192,16 @@ Outer:
 
 // minAndAllEqual returns the minimal element from slice and whether all elements are equal
 func minAndAllEqual(xs []int) (int, bool) {
-	min := math.MaxInt32
+	minv := math.MaxInt32
 	allEq := true
 
 	first := xs[0]
 	for _, x := range xs {
-		if min > x && x > 0 {
-			min = x
+		if minv > x && x > 0 {
+			minv = x
 		}
 		allEq = allEq && first == x
 	}
 
-	return min, allEq
+	return minv, allEq
 }

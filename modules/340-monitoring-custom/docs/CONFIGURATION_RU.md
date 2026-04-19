@@ -1,5 +1,5 @@
 ---
-title: "Модуль monitoring-custom: настройки"
+title: "Автоматическая настройка системы мониторинга для сбора метрик с пользовательских приложений: настройки"
 ---
 
 Модуль работает, если включен модуль `prometheus`, и не имеет параметров для настройки.
@@ -7,3 +7,9 @@ title: "Модуль monitoring-custom: настройки"
 {% include module-alerts.liquid %}
 
 {% include module-bundle.liquid %}
+
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}

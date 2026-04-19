@@ -1,24 +1,44 @@
 {{- define "todo_list" }}
-        Probably, machine-controller-manager is unable to create a machine using the cloud provider module. Possible causes:
-          1. Cloud provider limits on available resources;
-          2. No access to the cloud provider API;
-          3. Cloud provider or instance class misconfiguration;
-          4. Problems with bootstrapping the Machine.
+        This probably means that `machine-controller-manager` is unable to create Machines using the cloud provider module.
 
-        The recommended course of action:
-          1. Run `kubectl get ng {{`{{ $labels.node_group }}`}} -o yaml`. In the `.status.lastMachineFailures` field you can find all errors related to the creation of Machines;
-          2. The absence of Machines in the list that have been in Pending status for more than a couple of minutes means that Machines are continuously being created and deleted because of some error:
-          `kubectl -n d8-cloud-instance-manager get machine`;
-          3. Refer to the Machine description if the logs do not include error messages and the Machine continues to be Pending:
-          `kubectl -n d8-cloud-instance-manager get machine <machine_name> -o json | jq .status.bootstrapStatus`;
-          4. The output similar to the one below means that you have to use nc to examine the bootstrap logs:
-             ```json
-             {
-               "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-               "tcpEndpoint": "192.168.199.158"
-             }
-             ```
-          5. The absence of information about the endpoint for getting logs means that `cloudInit` is not working correctly. This may be due to the incorrect configuration of the instance class for the cloud provider.
+        Possible causes:
+
+        1. Cloud provider resource limits.
+        2. No access to the cloud provider API.
+        3. Misconfiguration of the cloud provider or instance class.
+        4. Problems with bootstrapping the Machine.
+
+        Recommended actions:
+
+        1. Check the status of the NodeGroup:
+
+           ```shell
+           d8 k get ng {{`{{ $labels.node_group }}`}} -o yaml
+           ```
+
+           Look for errors in the `.status.lastMachineFailures` field.
+
+        2. If no Instances stay in the Pending state for more than a couple of minutes, it likely means that Instances are being continuously created and deleted due to an error:
+
+           ```shell
+           d8 k get instances
+           ```
+
+        3. If logs don’t show errors, and an Instance continues to be Pending, check its bootstrap status:
+
+           ```shell
+           d8 k get instances <INSTANCE_NAME> -o yaml | grep 'bootstrapStatus' -B0 -A2
+           ```
+
+        4. If the output looks like the example below, use the `logsEndpoint` (or the command in `description`) to examine bootstrap logs:
+
+           ```text
+           bootstrapStatus:
+             description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+             logsEndpoint: http://192.168.199.158:8000
+           ```
+
+        5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
 {{- end }}
 
 - name: d8.node-group
@@ -37,9 +57,9 @@
       plk_create_group_if_not_exists__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "node_group"
-      summary: There are unavailable instances in the {{`{{ $labels.node_group }}`}} node group.
+      summary: NodeGroup {{`{{ $labels.node_group }}`}} has unavailable instances.
       description: |
-        The number of unavailable instances is {{`{{ $value }}`}}. See the relevant alerts for more information.
+        There are {{`{{ $value }}`}} unavailable instances in the NodeGroup {{`{{ $labels.node_group }}`}}.
 {{- template "todo_list" }}
 
   - alert: NodeGroupReplicasUnavailable
@@ -56,7 +76,7 @@
       plk_create_group_if_not_exists__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "node_group"
-      summary: There are no available instances in the {{`{{ $labels.node_group }}`}} node group.
+      summary: NodeGroup {{`{{ $labels.node_group }}`}} has no available instances.
       description: |
 {{- template "todo_list" }}
 
@@ -74,9 +94,10 @@
       plk_create_group_if_not_exists__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_grouped_by__d8_cluster_has_node_groups_with_unavailable_replicas: "ClusterHasNodeGroupsWithUnavailableReplicas,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       plk_labels_as_annotations: "node_group"
-      summary: The number of simultaneously unavailable instances in the {{`{{ $labels.node_group }}`}} node group exceeds the allowed value.
+      summary: Too many unavailable instances in the {{`{{ $labels.node_group }}`}} NodeGroup.
       description: |
-        Possibly, autoscaler has provisioned too many Nodes. Take a look at the state of the Machine in the cluster.
+        The number of simultaneously unavailable instances in the {{`{{ $labels.node_group }}`}} NodeGroup exceeds the allowed threshold.
+        This may indicate that the autoscaler has provisioned too many nodes at once. Check the state of the Machine in the cluster.
 {{- template "todo_list" }}
 
   - alert: NodeGroupMasterTaintIsAbsent
@@ -89,15 +110,60 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: The 'master' node group does not contain desired taint.
+      summary: The master NodeGroup is missing the required control-plane taint.
       description: |
-        `master` node group has no `node-role.kubernetes.io/control-plane` taint. Probably control-plane nodes are misconfigured
-        and are able to run not only control-plane Pods. Please, add:
+        The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.
+        This may indicate a misconfiguration where control-plane nodes can run non-control-plane Pods.
+
+        To resolve the issue, add the following to the `master` NodeGroup spec:
+
         ```yaml
           nodeTemplate:
             taints:
             - effect: NoSchedule
               key: node-role.kubernetes.io/control-plane
         ```
-        to the `master` node group spec.
-        `key: node-role.kubernetes.io/master` taint was deprecated and will have no effect in Kubernetes 1.24+.
+
+        Note that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.
+
+  - alert: D8NodeCgroupV2NotSupported
+    expr: |
+      max by (node, node_group) (d8_node_cgroup_v2_unsupported == 1)
+    for: 10m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: node-manager
+      d8_component: node-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "node,node_group"
+      summary: Node {{`{{ $labels.node }}`}} is using deprecated cgroup v1 – migration to v2 required.
+      description: |
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support cgroup v2.
+        Starting from Kubernetes 1.35, cgroup v1 is [deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
+        To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
+
+  - alert: D8NodeContainerdV2NotSupported
+    expr: |
+      max by (node, node_group) (d8_nodes_cntrd_v2_unsupported == 1)
+    for: 10m
+    labels:
+      tier: cluster
+      severity_level: "8"
+      d8_module: node-manager
+      d8_component: node-manager
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "node,node_group"
+      summary: Node {{`{{ $labels.node }}`}} is using deprecated containerd v1 – migration to v2 required.
+      description: |
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support containerd v2.
+        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Please check the requirements for containerd v2 and schedule your migration plan.

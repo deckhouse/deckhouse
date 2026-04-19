@@ -1,0 +1,51 @@
+<mxfile host="65bd71144e">
+    <diagram id="b9O8rZIneWjr-P9MC5kQ" name="DKP">
+        <mxGraphModel dx="3051" dy="694" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e7e9f5;strokeColor=#e7e9f;arcSize=4;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;dashed=1;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="40" y="80" width="520" height="340" as="geometry"/>
+                </mxCell>
+                <mxCell id="KZ__pssaalwZhVSVFkkO-1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5fb;strokeColor=#f5f5fb;arcSize=4;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;dashed=1;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="60" y="120" width="480" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="KZ__pssaalwZhVSVFkkO-2" value="Namespace" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontColor=#0066ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontSize=14;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="70" y="130" width="60" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="HVMJYCdbByCac82Y2Law-2" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;curved=1;strokeWidth=2;strokeColor=#969dc4;endArrow=none;endFill=0;fontStyle=1;fillColor=#969dc4;" parent="1" source="KZ__pssaalwZhVSVFkkO-3" target="HVMJYCdbByCac82Y2Law-1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="KZ__pssaalwZhVSVFkkO-3" value="VM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0064ff;fontColor=#f5f5fb;strokeColor=#0064ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="130" y="240" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="zBuhsIEzXWVct3BQoB1n-1" style="edgeStyle=orthogonalEdgeStyle;curved=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeColor=#969dc4;strokeWidth=2;endArrow=none;endFill=0;fontStyle=1;fillColor=#969dc4;" parent="1" source="KZ__pssaalwZhVSVFkkO-10" target="HVMJYCdbByCac82Y2Law-1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="KZ__pssaalwZhVSVFkkO-10" value="VM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0064ff;fontColor=#f5f5fb;strokeColor=#0064ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="260" y="240" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="zBuhsIEzXWVct3BQoB1n-2" style="edgeStyle=orthogonalEdgeStyle;curved=1;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeColor=#969dc4;strokeWidth=2;endArrow=none;endFill=0;fontStyle=1;fillColor=#969dc4;entryX=0.51;entryY=0.02;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="KZ__pssaalwZhVSVFkkO-18" edge="1" target="HVMJYCdbByCac82Y2Law-1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="280" y="320" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="KZ__pssaalwZhVSVFkkO-18" value="VM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0064ff;fontColor=#f5f5fb;strokeColor=#0064ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="400" y="240" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="KZ__pssaalwZhVSVFkkO-19" value="&lt;font color=&quot;#ffffff&quot;&gt;DKP&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#002cca;strokeColor=#002cca;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="180" width="350" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="HVMJYCdbByCac82Y2Law-1" value="" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#cdd1e6;shadow=0;dashed=0;shape=mxgraph.ios7.icons.cloud;fontSize=14;fillColor=#cdd1e6;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="320" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="" style="shape=image;verticalLabelPosition=bottom;verticalAlign=top;imageAspect=0;aspect=fixed;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyODEgMjgxIiBoZWlnaHQ9IjI4MSIgd2lkdGg9IjI4MSI+CjxwYXRoIGZpbGw9IiMwMDAwM0MiIGQ9Ik0yMDguOTQ1IDAuNUwyMjQuODk2IDU1LjYwMzlMMjgwIDcxLjU1NTFMMjQ4LjA5OCAxMDMuNDU3TDE5Mi45OTQgODcuNTA2MkwxNzcuMDQzIDMyLjQwMjNMMjA4Ljk0NSAwLjVaIi8+CjxwYXRoIGZpbGw9IiMwMDAwM0MiIGQ9Ik0wIDIwOS40NDVMNTUuMTA0IDIyNS4zOTZMNzEuMDU1MSAyODAuNUwxMDIuOTU3IDI0OC41OThMODcuMDA2MiAxOTMuNDk0TDMxLjkwMjMgMTc3LjU0M0wwIDIwOS40NDVaIi8+CjxwYXRoIGZpbGw9IiMwMDAwM0MiIGQ9Ik0yODAuMDAyIDIwOS40NDVMMjI0Ljg5OCAyMjUuMzk2TDIwOC45NDcgMjgwLjVMMTc3LjA0NSAyNDguNTk4TDE5Mi45OTYgMTkzLjQ5NEwyNDguMSAxNzcuNTQzTDI4MC4wMDIgMjA5LjQ0NVoiLz4KPHBhdGggZmlsbD0iIzAwMDAzQyIgZD0iTTcxLjA1NDcgMC41TDU1LjEwMzUgNTUuNjAzOUwtMC4wMDA0MDQwMDggNzEuNTU1MUwzMS45MDE5IDEwMy40NTdMODcuMDA1OCA4Ny41MDYyTDEwMi45NTcgMzIuNDAyM0w3MS4wNTQ3IDAuNVoiLz4KPHBhdGggZmlsbD0iIzAwNjRGRiIgZD0iTTE0Ni4xNDMgMTgwLjVIMTA2LjE0M1YxMDAuNUgxNDYuMTQzQzE2OC4xNzIgMTAwLjUgMTg2LjE0MyAxMTguNDcxIDE4Ni4xNDMgMTQwLjVDMTg2LjE0MyAxNjIuNTI5IDE2OC4xNzIgMTgwLjUgMTQ2LjE0MyAxODAuNVoiLz4KPC9zdmc+" parent="1" vertex="1">
+                    <mxGeometry x="59" y="86" width="30" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="" style="shape=image;verticalLabelPosition=bottom;verticalAlign=top;imageAspect=0;aspect=fixed;image=data:image/svg+xml,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAzMTAgMzEwIiBoZWlnaHQ9IjMxMCIgd2lkdGg9IjMxMCI+CjxwYXRoIGZpbGw9IiMwMDY0RkYiIGQ9Ik0xNjAuMjcgMTk1LjAwNEgxMjAuMjY5VjExNS4wMDNIMTYwLjI3QzE4Mi4yOTkgMTE1LjAwMyAyMDAuMjcgMTMyLjk3NCAyMDAuMjcgMTU1LjAwM0MyMDAuMjcgMTc3LjAzMyAxODIuMjk5IDE5NS4wMDQgMTYwLjI3IDE5NS4wMDRaIi8+CjxwYXRoIGZpbGw9IiMwMDAwM0MiIGQ9Ik05NS4xNzgzIDYwLjA0MTRMMTE3Ljc2NSA4Mi43MDk4TDEyOS4zNjQgNzEuMDY5M0gxODAuNjQyTDE5MS42MyA4Mi43MDk4TDIxNC44MjggNjAuMDQxNEwxNTUuMDAzIDAuMDAwOTc2NTYyTDk1LjE3ODMgNjAuMDQxNFoiLz4KPHBhdGggZmlsbD0iIzAwMDAzQyIgZD0iTTIxNC44MjcgMjQ5Ljk2NEwxOTIuMjQxIDIyNy4yOTZMMTgwLjY0MiAyMzguOTM3SDEyOS4zNjRMMTE4LjM3NSAyMjcuMjk2TDk1LjE3ODEgMjQ5Ljk2NEwxNTUuMDAzIDMxMC4wMDVMMjE0LjgyNyAyNDkuOTY0WiIvPgo8cGF0aCBmaWxsPSIjMDAwMDNDIiBkPSJNMjQ5Ljk2NSA5NS4xNzg3TDIyNy4yOTYgMTE3Ljc2NkwyMzguOTM3IDEyOS4zNjRMMjM4LjkzNyAxODAuNjQzTDIyNy4yOTYgMTkxLjYzMUwyNDkuOTY1IDIxNC44MjhMMzEwLjAwNSAxNTUuMDAzTDI0OS45NjUgOTUuMTc4N1oiLz4KPHBhdGggZmlsbD0iIzAwMDAzQyIgZD0iTTYwLjA0MTMgMjE0LjgyN0w4Mi43MDk2IDE5Mi4yNEw3MS4wNjkyIDE4MC42NDJMNzEuMDY5MiAxMjkuMzYzTDgyLjcwOTYgMTE4LjM3NUw2MC4wNDEzIDk1LjE3NzhMMC4wMDA4NTcxMDcgMTU1LjAwMkw2MC4wNDEzIDIxNC44MjdaIi8+Cjwvc3ZnPg==" parent="1" vertex="1">
+                    <mxGeometry x="260" y="191.25" width="27.5" height="27.5" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -3,12 +3,12 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.12.0
+    controller-gen.kubebuilder.io/version: v0.20.0
   labels:
+    cluster.x-k8s.io/provider: infrastructure-static
+    cluster.x-k8s.io/v1beta2: v1alpha1
     heritage: deckhouse
     module: node-manager
-    cluster.x-k8s.io/provider: infrastructure-static
-    cluster.x-k8s.io/v1beta1: v1alpha1
   name: staticclusters.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -22,56 +22,74 @@ spec:
     - name: v1alpha1
       schema:
         openAPIV3Schema:
-          description: StaticCluster is the Schema for the Cluster API Provider Static
+          description: StaticCluster is the Schema for the Cluster API Provider Static.
           properties:
             apiVersion:
-              description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
               type: string
             kind:
-              description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
               type: string
             metadata:
               type: object
             spec:
-              description: StaticClusterSpec defines the desired state of StaticCluster
+              description: StaticClusterSpec defines the desired state of StaticCluster.
               properties:
                 controlPlaneEndpoint:
                   description: APIEndpoint represents a reachable Kubernetes API endpoint.
+                  minProperties: 1
                   properties:
                     host:
-                      description: The hostname on which the API server is serving.
+                      description: host is the hostname on which the API server is serving.
+                      maxLength: 512
+                      minLength: 1
                       type: string
                     port:
-                      description: The port on which the API server is serving.
+                      description: port is the port on which the API server is serving.
                       format: int32
+                      maximum: 65535
+                      minimum: 1
                       type: integer
-                  required:
-                    - host
-                    - port
                   type: object
               type: object
             status:
-              description: StaticClusterStatus defines the observed state of StaticCluster
+              description: StaticClusterStatus defines the observed state of StaticCluster.
               properties:
                 failureMessage:
-                  description: |
+                  description: |-
                     FailureMessage will be set in the event that there is a terminal problem
                     reconciling the StaticCluster and will contain a more verbose string suitable
                     for logging and human consumption.
                   type: string
                 failureReason:
-                  description: |
+                  description: |-
                     FailureReason will be set in the event that there is a terminal problem
                     reconciling the StaticCluster and will contain a succinct value suitable
                     for machine interpretation.
                   type: string
+                initialization:
+                  description: |-
+                    Initialization provides observations of the StaticCluster initialization process.
+                    NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+                  minProperties: 1
+                  properties:
+                    provisioned:
+                      description: |-
+                        Provisioned is true when the infrastructure provider reports that the Cluster's infrastructure is fully provisioned.
+                        NOTE: this field is part of the Cluster API contract, and it is used to orchestrate initial Cluster provisioning.
+                      type: boolean
+                  type: object
                 ready:
-                  description: |
-                    Ready denotes that the static cluster (infrastructure) is ready.
+                  description: Ready denotes that the static cluster (infrastructure) is ready.
                   type: boolean
               type: object
           type: object

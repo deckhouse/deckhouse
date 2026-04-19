@@ -36,13 +36,16 @@ const (
 // TODO: Remove this hook after 1.65
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	OnStartup: &go_hook.OrderedConfig{Order: 15},
 }, dependency.WithExternalDependencies(deleteIngress))
 
-func deleteIngress(_ *go_hook.HookInput, dc dependency.Container) error {
-	kubeClient := dc.MustGetK8sClient()
+func deleteIngress(_ context.Context, _ *go_hook.HookInput, dc dependency.Container) error {
+	k8sClient, err := dc.GetK8sClient()
+	if err != nil {
+		return err
+	}
 
-	if err := kubeClient.NetworkingV1().Ingresses(istioNs).Delete(context.Background(), obsoleteIngress, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
+	if err := k8sClient.NetworkingV1().Ingresses(istioNs).Delete(context.Background(), obsoleteIngress, metav1.DeleteOptions{}); err != nil && !errors.IsNotFound(err) {
 		return err
 	}
 

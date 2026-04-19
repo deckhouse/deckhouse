@@ -1,5 +1,6 @@
 ---
 title: "The node-local-dns module"
+description: "Caching DNS server on each node of the Deckhouse Kubernetes Platform cluster."
 ---
 
 ## Module Description

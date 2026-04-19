@@ -39,7 +39,7 @@ echo $(( $NF_CONNTRACK_MAX / 4 )) > /sys/module/nf_conntrack/parameters/hashsize
 sysctl -w net.ipv4.conf.all.forwarding=1
 
 # http://www.brendangregg.com/blog/2017-12-31/reinvent-netflix-ec2-tuning.html
-sysctl -w vm.swappiness=0
+
 sysctl -w net.core.somaxconn=1000
 sysctl -w net.core.netdev_max_backlog=5000 # increase the backlog of packets taken from the ring buffer of the network card, but not yet transmitted up the network stack kernel
 sysctl -w net.core.rmem_max=16777216
@@ -66,9 +66,14 @@ sysctl -w kernel.numa_balancing=0 # disable the overly smart NUMA node balancer 
 sysctl -w fs.inotify.max_user_watches=524288 # Increase inotify (https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers#the-technical-details)
 sysctl -w fs.inotify.max_user_instances=5120
 sysctl -w kernel.pid_max=2000000
-{{- if eq .bundle "centos" }}
-sysctl -w fs.may_detach_mounts=1 # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
+{{- if .nodeGroup.gpu }}
+sysctl -w net.core.bpf_jit_harden=1 # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
 {{- end }}
+
+if [[ "$(sysctl -n fs.may_detach_mounts 2> /dev/null)"  ]]; then
+    # For Centos to avoid problems with unmount when container stops # https://bugzilla.redhat.com/show_bug.cgi?id=1441737
+    sysctl -w fs.may_detach_mounts=1
+fi
 
 # kubelet parameters
 sysctl -w vm.overcommit_memory=1
@@ -83,7 +88,7 @@ sysctl -w kernel.panic_on_oops=1
 sysctl -w kernel.panic={{ $fencingTime }}
 
 # we use tee for work with globs
-echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null # put more in the request queue, increase throughput
+echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null 2>&1 # put more in the request queue, increase throughput
 echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
 transparent_hugepage_current=$(grep -o '\[.*\]' /sys/kernel/mm/transparent_hugepage/enabled | tr -d '[]')
 if [ "$transparent_hugepage_current" != "never" ]; then
@@ -93,6 +98,11 @@ echo never | tee /sys/kernel/mm/transparent_hugepage/defrag >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/use_zero_page >/dev/null
 echo 0 | tee /sys/kernel/mm/transparent_hugepage/khugepaged/defrag >/dev/null
 echo 0 | tee /proc/sys/net/ipv4/conf/*/rp_filter >/dev/null # disable reverse-path filtering on all interfaces
+
+# auditd: increase kernel backlog
+if command -v auditctl &>/dev/null; then
+  auditctl -b 65536 || echo "auditctl backlog configuration failed, continuing without it"
+fi
 EOF
 chmod +x /opt/deckhouse/bin/sysctl-tuner
 

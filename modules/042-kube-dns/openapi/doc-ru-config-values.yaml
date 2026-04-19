@@ -40,4 +40,4 @@ properties:
     description: |
       Список альтернативных доменов кластера, разрешаемых наравне с `global.discovery.clusterDomain`.
 
-      **Обратите внимание:** альтернативный домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](../../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate).
+      **Обратите внимание:** альтернативный домен не должен совпадать с доменом, используемым в шаблоне DNS-имен в параметре [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate).

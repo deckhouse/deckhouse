@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,6 +26,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
+
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -54,7 +57,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, assignMachineClassChecksum)
 
-func assignMachineClassChecksum(input *go_hook.HookInput) error {
+func assignMachineClassChecksum(_ context.Context, input *go_hook.HookInput) error {
 	jsonValues := input.Values.Get(machineDeploymentsInternalValuesPath)
 	if len(jsonValues.Map()) == 0 {
 		return nil
@@ -117,9 +120,9 @@ func assignMachineClassChecksum(input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.MergePatch(patch,
+		input.PatchCollector.PatchWithMerge(patch,
 			apiVersion, kind, namespace, md.Name,
-			object_patch.IgnoreMissingObject())
+			object_patch.WithIgnoreMissingObject())
 	}
 
 	return nil
@@ -145,7 +148,7 @@ func renderMachineClassChecksum(templateContent []byte, ng *nodeGroupValue) (str
 	return checksum, nil
 }
 
-func getChecksumTemplate(values go_hook.PatchableValuesCollector) ([]byte, error) {
+func getChecksumTemplate(values sdkpkg.PatchableValuesCollector) ([]byte, error) {
 	cloudType := values.Get("nodeManager.internal.cloudProvider.type").String()
 	if cloudType == "" {
 		// Can be empty for the first run even in cloud.

@@ -21,10 +21,12 @@ spec:
       name: "prometheus-token"
       key: "token"
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: kube-apiserver
+    - targetLabel: namespace
+      replacement: kube-system
     - targetLabel: tier
       replacement: cluster
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]

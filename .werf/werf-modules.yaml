@@ -2,6 +2,8 @@
   {{- $Root := . }}
   {{- $ModulesImagesDigestList := list }}
   {{- $ExcludedModulesDict := dict }}
+  {{- $AvailableModulesDict := dict }}
+  {{- $HasAvailableModules := false }}
 
 # Collect images if desired for editions
 #
@@ -18,6 +20,12 @@
     {{- if $edition.excludeModules }}
     {{- range $_, $exludeModuleName := $edition.excludeModules }}
     {{- $_ := set $ExcludedModulesDict (printf "%s" $exludeModuleName) "true" }}
+    {{- end }}
+    {{- end }}
+    {{- if $edition.AvailableModules }}
+    {{- $HasAvailableModules = true }}
+    {{- range $_, $availableModuleName := $edition.AvailableModules }}
+    {{- $_ := set $AvailableModulesDict (printf "%s" $availableModuleName) "true" }}
     {{- end }}
     {{- end }}
 
@@ -38,38 +46,57 @@
       {{- if hasKey $ExcludedModulesDict $moduleName }}
       {{- continue -}}
       {{- end }}
+      {{- if and $HasAvailableModules (not (hasKey $AvailableModulesDict $moduleName)) }}
+      {{- continue -}}
+      {{- end }}
 
       {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
       {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
       {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
       {{- $_ := set $ctx "ModuleName" $moduleName }}
+      {{- $_ := set $ctx "OssYamlPath" (printf "%s/modules/%s-%s/oss.yaml" $ctx.ModulePath $ctx.ModulePriority $ctx.ModuleName) }}
       {{- $_ := set $ctx "ImageName" $ImageData._3 }}
       {{- $_ := set $ctx "ImageBuildData" $content }}
       {{- $_ := set $ctx "Files" $Root.Files }}
       {{- $_ := set $ctx "Env" $Root.Env }}
+      {{- $_ := set $ctx "isEE" $Root.isEE }}
+      {{- $_ := set $ctx "HasAvailableModules" $HasAvailableModules }}
+      {{- $_ := set $ctx "AvailableModulesDict" $AvailableModulesDict }}
 
       {{- $_ := set $ctx "Images" $Root.Images }}
       {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
       {{- $_ := set $ctx "TF" $Root.TF }}
       {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
       {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
-      {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
       {{- $_ := set $ctx "GOPROXY" $Root.GOPROXY }}
       {{- $_ := set $ctx "DECKHOUSE_PRIVATE_REPO" $Root.DECKHOUSE_PRIVATE_REPO }}
-      {{- $_ := set $ctx "STRONGHOLD_PULL_TOKEN" $Root.STRONGHOLD_PULL_TOKEN }}
       {{- $_ := set $ctx "DistroPackagesProxy" $Root.DistroPackagesProxy }}
       {{- $_ := set $ctx "CargoProxy" $Root.CargoProxy }}
+      # cosign
+      {{- $_ := set $ctx "RegistryUser" $Root.RegistryUser }}
+      {{- $_ := set $ctx "RegistryPassword" $Root.RegistryPassword }}
+      {{- $_ := set $ctx "CosignVaultAdress" $Root.CosignVaultAdress }}
+      {{- $_ := set $ctx "CosignVaultToken" $Root.CosignVaultToken }}
+      {{- $_ := set $ctx "CosignVaultKey" $Root.CosignVaultKey }}
+      {{- $_ := set $ctx "CosignTransitSecret" $Root.CosignTransitSecret }}
+      # svance
+      {{- $_ := set $ctx "ProjectName" (list $ctx.ModuleName $ctx.ImageName | join "/") }}
+      {{- $_ := set $ctx "SVACE_ENABLED" $Root.SVACE_ENABLED }}
+      {{- $_ := set $ctx "SVACE_ANALYZE_HOST" $Root.SVACE_ANALYZE_HOST }}
+      {{- $_ := set $ctx "SVACE_ANALYZE_SSH_USER" $Root.SVACE_ANALYZE_SSH_USER }}
+      {{- $_ := set $ctx "Commit" $Root.Commit }}
+      {{- $_ := set $ctx "gitPrefix" $Root.gitPrefix }}
 ---
 {{ include "module_image_template" $ctx }}
   {{- range $ImageYamlMainfest := regexSplit "\n?---[ \t]*\n" (include "module_image_template" $ctx) -1 }}
-  {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
-  {{- if $ImageManifest.image }}
-  {{- if ne $ImageManifest.final false }}
-  {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+    {{- $ImageManifest := $ImageYamlMainfest | fromYaml }}
+    {{- if $ImageManifest.image }}
+      {{- if ne $ImageManifest.final false }}
+        {{- $ModulesImagesDigestList = append $ModulesImagesDigestList $ImageManifest.image }}
+      {{- end }}
+    {{- end }}
   {{- end }}
-  {{- end }}
-  {{- end }}
-  {{- end }}
+{{- end }}
 ---
 # render images digest image
 {{ include "images_digest_image" (dict "Images" .Images "ModulesImagesDigestList" $ModulesImagesDigestList) }}

@@ -13,8 +13,16 @@ rules:
   - certificates
   - issuers
   - challenges
-  - orders
   - clusterissuers
+  - certificaterequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
+  - orders
   verbs:
   - get
   - list
@@ -52,6 +60,13 @@ rules:
   - cert-manager.io
   resources:
   - challenges
+  - certificaterequests    
+  verbs:
+  - delete
+  - deletecollection
+- apiGroups:
+  - acme.cert-manager.io
+  resources:
   - orders
   verbs:
   - delete

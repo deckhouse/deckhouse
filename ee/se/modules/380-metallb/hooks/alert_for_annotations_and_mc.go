@@ -7,6 +7,7 @@ See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -15,6 +16,10 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -66,18 +71,35 @@ func applyServiceFilterForAlerts(obj *unstructured.Unstructured) (go_hook.Filter
 	}, nil
 }
 
-func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
+func checkServicesForDeprecatedAnnotations(_ context.Context, input *go_hook.HookInput) error {
 	// Check ModuleConfig version and pools
 	input.MetricsCollector.Expire("D8MetallbUpdateMCVersionRequired")
+	input.MetricsCollector.Expire("D8MetallbObsoleteLayer2PoolsAreUsed")
 
-	mcSnaps := input.Snapshots["module_config"]
+	mcSnaps := input.Snapshots.Get("module_config")
 	if len(mcSnaps) != 1 {
 		return nil
 	}
-	mc, ok := mcSnaps[0].(*ModuleConfig)
-	if ok && mc.Spec.Version >= 2 {
+
+	mc := new(ModuleConfig)
+
+	err := mcSnaps[0].UnmarshalTo(mc)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
+	}
+
+	if mc.Spec.Version >= 2 {
+		for _, pool := range mc.Spec.Settings.AddressPools {
+			if pool.Protocol == "layer2" {
+				input.MetricsCollector.Set("d8_metallb_obsolete_layer2_pools_are_used", 1,
+					map[string]string{"name": pool.Name},
+					metrics.WithGroup("D8MetallbObsoleteLayer2PoolsAreUsed"))
+			}
+		}
+
 		return nil
 	}
+
 	for _, pool := range mc.Spec.Settings.AddressPools {
 		if pool.Protocol == "bgp" {
 			return nil
@@ -93,20 +115,28 @@ func checkServicesForDeprecatedAnnotations(input *go_hook.HookInput) error {
 		"metallb.universe.tf/ip-allocated-from-pool",
 		"metallb.universe.tf/address-pool",
 		"metallb.universe.tf/loadBalancerIPs",
+		"metallb.universe.tf/allow-shared-ip",
+		"metallb.io/ip-allocated-from-pool",
+		"metallb.io/address-pool",
+		"metallb.io/loadBalancerIPs",
+		"metallb.io/allow-shared-ip",
 	}
 
-	serviceSnaps := input.Snapshots["services"]
-	for _, serviceSnap := range serviceSnaps {
-		if service, ok := serviceSnap.(ServiceInfoForAlert); ok {
-			for _, annotation := range deprecatedAnnotations {
-				if _, ok := service.Annotations[annotation]; ok {
-					input.MetricsCollector.Set("d8_metallb_not_supported_service_annotations_detected", 1,
-						map[string]string{
-							"name":       service.Name,
-							"namespace":  service.Namespace,
-							"annotation": annotation,
-						}, metrics.WithGroup("D8MetallbNotSupportedServiceAnnotationsDetected"))
-				}
+	serviceSnaps := input.Snapshots.Get("services")
+	for service, err := range sdkobjectpatch.SnapshotIter[ServiceInfoForAlert](serviceSnaps) {
+		if err != nil {
+			input.Logger.Warn("iterate over services", log.Err(err))
+			continue
+		}
+
+		for _, annotation := range deprecatedAnnotations {
+			if _, ok := service.Annotations[annotation]; ok {
+				input.MetricsCollector.Set("d8_metallb_not_supported_service_annotations_detected", 1,
+					map[string]string{
+						"name":       service.Name,
+						"namespace":  service.Namespace,
+						"annotation": annotation,
+					}, metrics.WithGroup("D8MetallbNotSupportedServiceAnnotationsDetected"))
 			}
 		}
 	}

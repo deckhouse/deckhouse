@@ -19,16 +19,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -39,12 +41,32 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+type checkParams struct {
+	request      *pb.CheckStart
+	sendProgress phases.OnProgressFunc
+	sendCh       chan *pb.CheckResponse
+}
+
+func (p *checkParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *checkParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CheckResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CheckResponse {
+			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
+}
+
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -54,11 +76,12 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
-		func(lines []string) *pb.CheckResponse {
-			return &pb.CheckResponse{Message: &pb.CheckResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+	pt := progressTracker[*pb.CheckResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.CheckResponse {
+			return &pb.CheckResponse{Message: &pb.CheckResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	)
+	}
 
 	startReceiver[*pb.CheckRequest, *pb.CheckResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.CheckRequest, *pb.CheckResponse](server, sendCh, internalErrCh)
@@ -88,9 +111,16 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.checkSafe(ctx, message.Start, logWriter)
+					result := s.checkSafe(ctx, &checkParams{
+						request:      message.Start,
+						sendProgress: pt.sendProgress(),
+						sendCh:       sendCh,
+					})
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
+
+			case *pb.CheckRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -101,53 +131,49 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) checkSafe(
-	ctx context.Context,
-	request *pb.CheckStart,
-	logWriter io.Writer,
-) (result *pb.CheckResult) {
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) checkSafe(ctx context.Context, p *checkParams) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.CheckResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.CheckResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-
-	return s.check(ctx, request, logWriter)
+	return s.check(ctx, p)
 }
 
-func (s *Service) check(
-	ctx context.Context,
-	request *pb.CheckStart,
-	logWriter io.Writer,
-) *pb.CheckResult {
+func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
-	})
+	loggerFor := initDhctlLogger(ctx, p)
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
+	app.SetCacheDir(s.params.CacheDir)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			ctx,
+			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
+			),
+			s.params.DownloadDirConfig,
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing cluster meta config: %w", err)
@@ -158,11 +184,11 @@ func (s *Service) check(
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -181,38 +207,57 @@ func (s *Service) check(
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.CheckResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
 	}
 
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           s.params.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           loggerFor,
+		IsDebug:          s.params.IsDebug,
+	})
+
 	checkParams := &check.Params{
 		StateCache:    cache.Global(),
-		CommanderMode: request.Options.CommanderMode,
+		CommanderMode: p.request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
+			[]byte(p.request.ClusterConfig),
+			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TerraformContext: terraform.NewTerraformContext(),
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
+		Logger:                loggerFor,
+		IsDebug:               s.params.IsDebug,
+		TmpDir:                s.params.TmpDir,
+		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc:        p.sendProgress,
 	}
 
-	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(helper.ClusterConnectionsOptions{
-		CommanderMode: request.Options.CommanderMode,
-		ApiServerUrl:  request.Options.ApiServerUrl,
-		ApiServerOptions: helper.ApiServerOptions{
-			Token:                    request.Options.ApiServerToken,
-			InsecureSkipTLSVerify:    request.Options.ApiServerInsecureSkipTlsVerify,
-			CertificateAuthorityData: util.StringToBytes(request.Options.ApiServerCertificateAuthorityData),
+	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
+		CommanderMode: p.request.Options.CommanderMode,
+		APIServerURL:  p.request.Options.ApiServerUrl,
+		APIServerOptions: helper.APIServerOptions{
+			Token:                    p.request.Options.ApiServerToken,
+			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
+			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),
 		},
-		SchemaStore:         s.schemaStore,
-		SSHConnectionConfig: request.ConnectionConfig,
+		SchemaStore:         s.params.SchemaStore,
+		SSHConnectionConfig: p.request.ConnectionConfig,
 	})
 	cleanuper.Add(cleanup)
 	if err != nil {
 		return &pb.CheckResult{Err: err.Error()}
+	}
+
+	if !govalue.IsNil(sshClient) {
+		err = sshClient.Start()
+		if err != nil {
+			return &pb.CheckResult{Err: err.Error()}
+		}
 	}
 
 	checkParams.KubeClient = kubeClient
@@ -220,12 +265,18 @@ func (s *Service) check(
 
 	checker := check.NewChecker(checkParams)
 
-	result, checkErr := checker.Check(ctx)
-	resultData, marshalErr := json.Marshal(result)
-	state, extractStateErr := phases.ExtractDhctlState(cache.Global())
-	stateData, marshalStateErr := json.Marshal(state)
+	result, cleanProvider, checkErr := checker.Check(ctx)
+	defer func() {
+		err := cleanProvider()
+		if err != nil {
+			loggerFor.LogErrorF("Error cleaning up checker: %v\n", err)
+		}
+	}()
 
-	err = errors.Join(checkErr, marshalErr, extractStateErr, marshalStateErr)
+	resultData, marshalErr := json.Marshal(result)
+	state, stateErr := extractLastState()
+
+	err = errors.Join(checkErr, marshalErr, stateErr)
 
 	if result != nil {
 		// todo: move onCheckResult call to check.Check() func (as in converge)
@@ -235,7 +286,7 @@ func (s *Service) check(
 	return &pb.CheckResult{
 		Result: string(resultData),
 		Err:    util.ErrToString(err),
-		State:  string(stateData),
+		State:  string(state),
 	}
 }
 

@@ -25,6 +25,7 @@ message DestroyRequest {
   oneof message {
     DestroyStart start = 1;
     DestroyContinue continue = 2;
+    DestroyCancel cancel = 3;
   }
 }
 
@@ -33,6 +34,7 @@ message DestroyResponse {
     DestroyResult result = 1;
     DestroyPhaseEnd phase_end = 2;
     Logs logs = 3;
+    Progress progress = 4;
   }
 }
 
@@ -56,6 +58,8 @@ message DestroyContinue {
   Continue continue = 1;
   string err = 2;
 }
+
+message DestroyCancel {}
 
 message DestroyStartOptions {
   bool commander_mode = 1;

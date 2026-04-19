@@ -1,0 +1,13 @@
+dhctl:
+  fixes:
+    - summary: Add validations settings for Huawei Cloud & Dynamix.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11337
+docs:
+  fixes:
+    - summary: Update instructions to switch from EE to CSE 1.64
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11540
+metallb:
+  fixes:
+    - summary: Fix overlapping networks in IPAddressPools.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/11579
+

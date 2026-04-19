@@ -1,0 +1,6 @@
+dirs:
+- /host/
+- /var/run/node-exporter-textfile
+- /run/node-exporter-textfile
+- /etc/containerd
+- /root/.kube

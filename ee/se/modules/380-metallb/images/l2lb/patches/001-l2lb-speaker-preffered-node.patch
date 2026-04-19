@@ -15,7 +15,7 @@ index 77055934..ce17a703 100644
  )
 
 +const (
-+	annotationPreferredL2SpeakerNode = "metallb.universe.tf/preferredL2SpeakerNode"
++	annotationPreferredL2SpeakerNode = "metallb.io/preferredL2SpeakerNode"
 +)
 +
  type layer2Controller struct {

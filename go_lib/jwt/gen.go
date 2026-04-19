@@ -18,6 +18,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"time"
 
 	"github.com/square/go-jose/v3"
@@ -29,14 +30,14 @@ func GenerateJWT(privKeyPEMBytes []byte, claims map[string]string, ttl time.Dura
 	keyBlock, _ := pem.Decode(privKeyPEMBytes)
 	key, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("parse pkcs8 private key: %w", err)
 	}
 
 	signerKey := jose.SigningKey{Algorithm: jose.EdDSA, Key: key}
 	var signerOpts = jose.SignerOptions{}
 	tokenSigner, err := jose.NewSigner(signerKey, &signerOpts)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("new signer: %w", err)
 	}
 
 	tokenClaims := payloadMap{}
@@ -48,17 +49,17 @@ func GenerateJWT(privKeyPEMBytes []byte, claims map[string]string, ttl time.Dura
 
 	tokenClaimsBytes, err := json.Marshal(tokenClaims)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshal: %w", err)
 	}
 
 	tokenSignature, err := tokenSigner.Sign(tokenClaimsBytes)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("sign: %w", err)
 	}
 
 	tokenString, err := tokenSignature.CompactSerialize()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("compact serialize: %w", err)
 	}
 
 	return tokenString, nil

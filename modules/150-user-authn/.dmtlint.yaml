@@ -1,0 +1,24 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: Deployment
+          name: dex-authenticator-dex-authenticator
+          container: redis
+        - kind: Deployment
+          name: test-dex-authenticator
+          container: redis
+      liveness-probe:
+        - kind: Deployment
+          name: dex-authenticator-dex-authenticator
+          container: redis
+        - kind: Deployment
+          name: test-dex-authenticator
+          container: redis
+  openapi:
+    exclude-rules:
+      enum:
+        # These enums are kept in a user-friendly order.
+        # `spec.saml.nameIDPolicyFormat` is a case-sensitive Dex token (e.g. `emailAddress`, `X509SubjectName`), so we exclude enum linting for it.
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.saml.properties.nameIDPolicyFormat"

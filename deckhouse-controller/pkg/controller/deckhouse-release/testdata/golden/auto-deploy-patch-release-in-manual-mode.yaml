@@ -18,9 +18,12 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "true"
   creationTimestamp: null
   name: v1.25.1
-  resourceVersion: "1001"
+  resourceVersion: "1002"
 spec:
   version: v1.25.1
 status:
@@ -35,12 +38,12 @@ kind: DeckhouseRelease
 metadata:
   creationTimestamp: null
   name: v1.26.0
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   version: v1.26.0
 status:
   approved: false
-  message: Awaiting for v1.25.1 release to be deployed
+  message: awaiting for v1.25.1 release to be deployed
   phase: Pending
   transitionTime: null
 ---

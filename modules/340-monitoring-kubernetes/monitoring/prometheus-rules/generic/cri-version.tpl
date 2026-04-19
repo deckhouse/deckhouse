@@ -19,12 +19,14 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      description: |-
-        Unsupported version {{`{{$labels.container_runtime_version}}`}} of CRI installed on {{`{{$labels.node}}`}} node.
-        Supported version of CRI for kubernetes {{`{{$labels.kubelet_version}}`}} version:
-        * Containerd 1.4.*
-        * Containerd 1.5.*
-        * Containerd 1.6.*
-        * Containerd 1.7.*
       summary: >
-        Unsupported version of CRI {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version: {{`{{$labels.kubelet_version}}`}}
+        Unsupported version of CRI {{`{{$labels.container_runtime_version}}`}} installed for Kubernetes version {{`{{$labels.kubelet_version}}`}}.
+      description: |-
+        Deckhouse has detected that the node {{`{{$labels.node}}`}} is running an unsupported version of CRI {{`{{$labels.container_runtime_version}}`}}.
+        
+        Supported CRI versions for Kubernetes {{`{{$labels.kubelet_version}}`}}:
+
+        * Containerd 1.4.
+        * Containerd 1.5.
+        * Containerd 1.6.
+        * Containerd 1.7.

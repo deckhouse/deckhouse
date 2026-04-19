@@ -1,0 +1,196 @@
+- name: openvpn.admin.info
+  rules:
+    - alert: OpenVPNClientCertificateExpired
+      expr: ovpn_client_cert_expire <= 0
+      for: 1m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: "OpenVPN client certificate expired for {{ $labels.client }}"
+        description: |-
+          The OpenVPN client certificate for **{{ $labels.client }}** has expired.
+
+          Check the certificate information and make sure it actually expires:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets -l name="{{ $labels.client }}"  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+          Renew or delete the expired certificate.
+          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+
+    - alert: OpenVPNClientCertificateExpired
+      expr: ovpn_client_cert_expire < 7
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 7 days.
+        description: |-
+          The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
+
+          Renewal of certificate required.
+          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+    - alert: OpenVPNClientCertificateExpired
+      expr: ovpn_client_cert_expire < 30
+      for: 1h
+      labels:
+        severity_level: "6"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN client certificate expires for {{ $labels.client }} in less than 30 days.
+        description: |-
+          The OpenVPN client certificate for **{{ $labels.client }}** is set to expire in {{ $value }} days.
+
+          Renewal of certificate required.
+          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-revoke-rotate-or-delete-a-user-certificate) for details.
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets -l name={{ $labels.client }}  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+    - alert: OpenVPNServerCertificateExpiresTomorrow
+      expr: ovpn_server_cert_expire == 1
+      for: 1m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN server certificate will expire tomorrow.
+        description: |-
+          The OpenVPN server certificate is set to expire in less than 1 day.
+
+          OpenVPN server certificate renews automatically 1 days before expiration.
+          Automatic rotation did not work.
+          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+
+          Check the certificate information and make sure it actually expires:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+    - alert: OpenVPNServerCertificateExpired
+      expr: ovpn_server_cert_expire == 0
+      for: 1m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN server certificate has expired.
+        description: |-
+          The OpenVPN server certificate has expired.
+
+          OpenVPN server certificate renews automatically 1 days before expiration.
+          Automatic rotation did not work.
+          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-server-certificate).
+
+          Check the certificate information and make sure it actually expires.
+          ```shell
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+    - alert: OpenVPNServerCACertificateExpiringSoon
+      expr: ovpn_server_ca_cert_expire < 30
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate expires in less than 30 days.
+        description: |-
+          The OpenVPN CA certificate is set to expire in {{ $value }} days.
+
+          Renew the CA certificate if necessary.
+          After renewing the certificate, **you will need to reissue all client and server certificates**.
+          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+    - alert: OpenVPNServerCACertificateExpiringInAWeek
+      expr: ovpn_server_ca_cert_expire < 7
+      for: 1h
+      labels:
+        severity_level: "5"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate expires in less than 7 days.
+        description: |-
+          The OpenVPN CA certificate is set to expire in {{ $value }} days.
+
+          Renew the CA certificate if necessary.
+          After renewing the certificate, **you will need to reissue all client and server certificates**.
+          Check [the documentation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca) for details.
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets -l name=server  -o jsonpath='{.items[0].data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+    - alert: OpenVPNServerCACertificateExpiresTomorrow
+      expr: ovpn_server_ca_cert_expire == 1
+      for: 10m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate will expire tomorrow
+        description: |-
+          OpenVPN CA certificate renews automatically 1 days before expiration.
+          Automatic rotation did not work.
+          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+          The hook should rotate CA and server certificates before expiry.
+
+
+    - alert: OpenVPNServerCACertificateExpired
+      expr: ovpn_server_ca_cert_expire == 0
+      for: 1m
+      labels:
+        severity_level: "4"
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        summary: OpenVPN CA certificate has expired.
+        description: |-
+          OpenVPN CA certificate renews automatically 1 days before expiration.
+          Automatic rotation did not work.
+          Check the module status or perform [manual rotation](https://deckhouse.io/modules/openvpn/faq.html#how-to-rotate-a-root-certificate-ca).
+
+          View certificate details to display the exact expiration date:
+
+          ```shell
+          d8 k -n d8-openvpn get secrets openvpn-pki-ca  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -text -noout
+          ```
+
+          The hook should rotate CA and server certificates before expiry.

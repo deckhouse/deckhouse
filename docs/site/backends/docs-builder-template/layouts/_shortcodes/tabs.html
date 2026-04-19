@@ -1,0 +1,19 @@
+{{- .Page.Scratch.Add "tabset-counter" 1 -}}
+{{- $tabs_name := .Get "name" | default (printf "%s-%d" (.Page.RelPermalink) (.Page.Scratch.Get "tabset-counter") ) | anchorize -}}
+{{- $tabs := .Scratch.Get "tabs" -}}
+{{- if .Inner -}}{{- /* We don't use the inner content, but Hugo will complain if we don't reference it. */ -}}{{- end -}}
+<div class="tabs">
+  {{- range $i, $e := $tabs -}}
+    {{- $id := printf "%s_%d" $tabs_name $i -}}
+    <a id="tab_{{ $id }}" href="javascript:void(0)" class="tabs__btn tabs__btn_{{ $tabs_name }}{{ if (eq $i 0) }} active{{ end }}"
+       onclick="openTabAndSaveStatus(event, 'tabs__btn_{{ $tabs_name }}', 'tabs__content_{{ $tabs_name }}', 'block_{{ $id }}');" >
+      {{- trim .name " " -}}
+    </a>
+  {{- end -}}
+</div>
+{{- range $i, $e := $tabs -}}
+{{- $id := printf "%s_%d" $tabs_name $i -}}
+<div id='block_{{ $id }}' class="tabs__content tabs__content_{{ $tabs_name }}{{ if (eq $i 0) }} active{{ end }}">
+  {{ .content | $.Page.RenderString | safeHTML }}
+</div>
+{{- end -}}

@@ -4,47 +4,54 @@ permalink: ru/virtualization-platform/documentation/admin/install/steps/virtuali
 lang: ru
 ---
 
-## Настройка виртуализации
+{% alert level="info" %}
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+{% endalert %}
 
-После настройки хранилища необходимо включить модуль виртуализации. Включение и настройка модуля производятся с помощью ресурса ModuleConfig.
+После настройки хранилища необходимо включить модуль `virtualization`. Включение и настройка модуля производятся с помощью веб-интерфейса администратора или с помощью следующей команды:
 
-В параметрах `spec` установите:
+```shell
+d8 system module enable virtualization
+```
 
-- `enabled: true` — флаг для включения модуля;
-- `settings.virtualMachineCIDRs` — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
-- `settings.dvcr.storage.persistentVolumeClaim.size` — размер дискового пространства для хранения образов виртуальных машин.
+Отредактируйте конфигурацию модуля [одним из способов](#конфигурация-модуля-virtualization).
 
-Пример конфигурации модуля виртуализации:
+В конфигурации модуля укажите:
+
+- [settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
+- [settings.dvcr.storage.persistentVolumeClaim.size](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-size) — размер дискового пространства для хранения образов виртуальных машин;
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) — имя StorageClass, используемого для создания PersistentVolumeClaim (если не указан, то будет использоваться StorageClass используемый по умолчанию);
+- [settings.dvcr.storage.type](/modules/virtualization/configuration.html#parameters-dvcr-storage-type) — укажите `PersistentVolumeClaim`.
+
+Пример базовой настройки модуля виртуализации:
 
 ```yaml
-sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: virtualization
 spec:
   enabled: true
+  version: 1
   settings:
+    ingressClass: nginx # опциональный параметр
     dvcr:
       storage:
         persistentVolumeClaim:
           size: 50G
+          storageClassName: rv-thin-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
-    - 10.66.10.0/24
-    - 10.66.20.0/24
-    - 10.66.30.0/24
-  version: 1
-EOF
+      - 10.66.10.0/24
 ```
 
 Дождитесь, пока все поды модуля не перейдут в статус `Running`:
 
 ```shell
-sudo -i d8 k get po -n d8-virtualization
+d8 k get po -n d8-virtualization
 ```
 
-Пример вывода:
+{% offtopic title="Пример вывода..." %}
 
 ```console
 NAME                                         READY   STATUS    RESTARTS      AGE
@@ -64,3 +71,231 @@ vm-route-forge-288z7                         1/1     Running   0             10m
 vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
+
+{% endofftopic %}
+
+## Конфигурация модуля `virtualization`
+
+Изменить конфигурацию модуля `virtualization` можно через веб-интерфейс администратора или через CLI.
+
+### Через веб-интерфейс администратора
+
+- Перейдите на вкладку «Система», далее в раздел «Deckhouse» → «Модули».
+- Из списка выберите модуль `virtualization`.
+- Во всплывающем окне выберите вкладку «Конфигурация».
+- Для отображения настроек нажмите переключатель «Дополнительные настройки».
+- Укажите необходимые параметры модуля.
+- Для применения настроек нажмите кнопку «Сохранить».
+
+### Через CLI
+
+```shell
+d8 k edit mc virtualization
+```
+
+## Описание параметров
+
+Ниже представлены описания параметров модуля виртуализации.
+
+### Версия конфигурации
+
+Параметр `.spec.version` определяет версию схемы настроек. Структура параметров может меняться между версиями. Актуальные значения приведены в разделе настроек.
+
+### Параметры для настройки постоянного тома для хранения образов виртуальных машин (DVCR)
+
+Блок `.spec.settings.dvcr.storage` настраивает постоянный том для хранения образов:
+
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.size` — размер тома (например, `50G`). Для расширения хранилища увеличьте значение параметра;
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `rv-thin-r1`).
+
+{% alert level="warning" %}
+Перенос образов при изменении значения параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` не поддерживается.
+
+При смене StorageClass DVCR все образы, хранящиеся в DVCR, будут утеряны.
+{% endalert %}
+
+Для изменения StorageClass DVCR выполните следующие действия:
+
+1. Измените значение [параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname).
+
+1. Удалите старый PVC для DVCR с помощью следующей команды:
+
+   ```shell
+   d8 k -n d8-virtualization delete pvc -l app=dvcr
+   ```
+
+1. Перезапустите DVCR, выполнив следующую команду:
+
+   ```shell
+   d8 k -n d8-virtualization rollout restart deployment dvcr
+   ```
+
+{% alert level="warning" %}
+Хранилище, обслуживающее данный класс хранения `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`, должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
+{% endalert %}
+
+### Настройки Ingress
+
+Параметр `.spec.settings.ingressClass` определяет класс Ingress-контроллера, который будет использоваться для загрузки образов виртуальных машин через веб-интерфейс или CLI.
+
+- Если параметр не указан, используется глобальное значение из конфигурации DVP.
+- Параметр является опциональным и указывается только при необходимости использовать Ingress-контроллер, отличный от глобального.
+
+Пример:
+
+```yaml
+spec:
+  settings:
+    ingressClass: nginx
+```
+
+{% alert level="info" %}
+
+При загрузке больших образов виртуальных машин (особенно при слабых каналах связи) рекомендуется увеличить таймаут завершения работы воркеров Ingress-контроллера. Это предотвратит прерывание загрузки при перезапуске или обновлении Ingress-контроллера.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  config:
+    worker-shutdown-timeout: 1800s  # 30 минут или более при необходимости
+```
+
+{% endalert %}
+
+### Сетевые настройки
+
+В блоке `.spec.settings.virtualMachineCIDRs` указываются подсети в формате CIDR (например, `10.66.10.0/24`). IP-адреса для виртуальных машин распределяются из этих - диапазонов автоматически или по запросу.
+
+Пример:
+
+```yaml
+spec:
+  settings:
+    virtualMachineCIDRs:
+      - 10.66.10.0/24
+      - 10.66.20.0/24
+      - 10.77.20.0/16
+```
+
+Для каждой подсети первый и последний IP-адреса зарезервированы системой и не могут быть назначены виртуальным машинам. Например, для подсети `10.66.10.0/24` адреса `10.66.10.0` и `10.66.10.255` недоступны для использования ВМ.
+
+{% alert level="warning" %}
+Подсети блока `.spec.settings.virtualMachineCIDRs` не должны пересекаться с подсетями узлов кластера, подсетью сервисов или подсетью подов (`podCIDR`).
+
+Запрещено удалять подсети, если адреса из них уже выданы виртуальным машинам.
+{% endalert %}
+
+### Настройки классов хранения для образов
+
+Настройки классов хранения для образов определяются в параметре `.spec.settings.virtualImages` настроек модуля.
+
+Пример:
+
+```yaml
+spec:
+  #...
+  settings:
+    virtualImages:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Здесь:
+
+- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualImage, которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualImage, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+
+### Настройки классов хранения для дисков
+
+Настройки классов хранения для дисков определяются в параметре `.spec.settings.virtualDisks` настроек модуля.
+
+Пример:
+
+```yaml
+spec:
+  #...
+  settings:
+    virtualDisks:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Здесь:
+
+- `allowedStorageClassNames` (опционально) — это список допустимых StorageClass для создания VirtualDisk, которые можно явно указать в спецификации ресурса;
+- `defaultStorageClassName` (опционально) — это StorageClass, используемый по умолчанию при создании VirtualDisk, если параметр `.spec.persistentVolumeClaim.storageClassName` не задан.
+
+### Настройка аудита событий безопасности
+
+{% alert level="warning" %}
+Недоступно в Community Edition.
+{% endalert %}
+
+Для активации аудита событий безопасности:
+
+1. Включите модули `[log-shipper`](/modules/log-shipper/) и `[runtime-audit-engine](/modules/runtime-audit-engine/)`.
+1. Включите аудит Kubernetes API, установив [`.spec.settings.apiserver.auditPolicyEnabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) в модуле `control-plane-manager`.
+1. Установите [`.spec.settings.audit.enabled: true`](/modules/virtualization/stable/configuration.html#parameters-audit-enabled) в модуле `virtualization`:
+
+   ```yaml
+   spec:
+     settings:
+       audit:
+         enabled: true
+   ```
+
+Полный перечень параметров конфигурации приведён в разделе [«Настройки»](/modules/virtualization/configuration.html).
+
+События собираются подом `virtualization-audit-*` в неймспейсе `d8-virtualization`. Чтобы перенаправить события в систему логирования кластера (например, Loki), создайте [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: virtualization-audit-logs
+spec:
+  destinationRefs:
+    - d8-loki
+  kubernetesPods:
+    namespaceSelector:
+      matchNames:
+        - d8-virtualization
+    labelSelector:
+      matchLabels:
+        app: virtualization-audit
+  type: KubernetesPods
+```
+
+Для просмотра событий в Grafana используйте запрос к Loki:
+
+```logql
+{namespace="d8-virtualization", pod=~"virtualization-audit-.*"}
+```
+
+Доступные поля в логах:
+- `type` — тип события (Access to VM, VM Management и т.д.);
+- `name` — описание события;
+- `request_subject` — username или ServiceAccount;
+- `datetime` — время события;
+- `virtualmachine_name` — имя ВМ;
+- `source_ip` — IP-адрес источника (для запрещённых операций).
+
+### События безопасности
+
+Система аудита фиксирует следующие события:
+
+- Доступ к ВМ — подключение через console, VNC или port forward. Включает имя ВМ, ОС, версии, хранилище и адрес узла.
+- Управление ВМ — создание, обновление, изменение или удаление ресурсов [VirtualMachine](/modules/virtualization/cr.html#virtualmachine).
+- Управление ВМ через операции — Start, Stop, Restart, Migrate или Evict через ресурс [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation).
+- Проверка целостности — проверка SHA256 конфигурации ВМ. Логируется при изменении контрольной суммы.
+- Управление модулем — создание, обновление или удаление ModuleConfig.
+- Запрещённые операции — операции, заблокированные платформой. Включает пользователя, операцию, ресурс, IP-адрес и причину отказа.

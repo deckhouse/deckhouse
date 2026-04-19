@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/clarketm/json"
@@ -33,7 +34,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, updateSpStatus)
 
-func updateSpStatus(input *go_hook.HookInput) error {
+func updateSpStatus(_ context.Context, input *go_hook.HookInput) error {
 	securityPolicies := make([]securityPolicy, 0)
 
 	// get SPs' names
@@ -44,7 +45,7 @@ func updateSpStatus(input *go_hook.HookInput) error {
 
 	// update SPs' statuses
 	for _, sp := range securityPolicies {
-		input.PatchCollector.Filter(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetProcessedStatus(filterSP), "deckhouse.io/v1alpha1", "securitypolicy", "", sp.Metadata.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 	}
 
 	return nil

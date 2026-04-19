@@ -15,32 +15,42 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infra/hook/controlplane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -81,17 +91,24 @@ type Params struct {
 	ResetInitialState          bool
 	DisableBootstrapClearCache bool
 	OnPhaseFunc                phases.DefaultOnPhaseFunc
+	OnProgressFunc             phases.OnProgressFunc
 	CommanderMode              bool
 	CommanderUUID              uuid.UUID
-	TerraformContext           *terraform.TerraformContext
+	InfrastructureContext      *infrastructure.Context
 
 	ConfigPaths             []string
-	ResourcesPath           string
 	ResourcesTimeout        time.Duration
 	DeckhouseTimeout        time.Duration
 	PostBootstrapScriptPath string
 	UseTfCache              *bool
 	AutoApprove             *bool
+
+	TmpDir string
+	// todo refact to logger provider
+	Logger  log.Logger
+	IsDebug bool
+
+	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	*client.KubernetesInitParams
 }
@@ -99,17 +116,28 @@ type Params struct {
 type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
-
-	initializeNewAgent bool
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
+	logger    log.Logger
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
+	logger := params.Logger
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	return &ClusterBootstrapper{
-		Params:                 params,
-		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc),
-		lastState:              params.InitialState,
+		Params: params,
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
+			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
+		),
+		lastState: params.InitialState,
+		logger:    logger,
 	}
 }
 
@@ -118,7 +146,7 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 // TODO(remove-global-app):  applyParams will not be needed anymore then.
 //
 // applyParams overrides app.* options that are explicitly passed using Params struct
-func (b *ClusterBootstrapper) applyParams() (func(), error) {
+func (b *ClusterBootstrapper) applyParams() func() {
 	var restoreFuncs []func()
 	restoreFunc := func() {
 		for _, f := range restoreFuncs {
@@ -128,9 +156,6 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 
 	if len(b.ConfigPaths) > 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ConfigPaths, b.ConfigPaths))
-	}
-	if b.ResourcesPath != "" {
-		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesPath, b.ResourcesPath))
 	}
 	if b.ResourcesTimeout != 0 {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.ResourcesTimeout, b.ResourcesTimeout))
@@ -158,15 +183,33 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.KubeConfig, b.KubernetesInitParams.KubeConfig))
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.KubeConfigContext, b.KubernetesInitParams.KubeConfigContext))
 	}
-	return restoreFunc, nil
+	return restoreFunc
 }
 
-func (b *ClusterBootstrapper) Bootstrap() error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
+func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
+	if b.InfrastructureContext == nil {
+		b.logger.LogDebugF("InfrastructureContext is nil. Skip cleanup.\n")
+		return func() {}, nil
 	}
+
+	provider, err := b.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return func() {
+		err = provider.Cleanup()
+		if err != nil {
+			b.Logger.LogErrorF("Cannot cleanup provider: %v\n", err)
+		}
+	}, nil
+}
+
+func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
+	var preflightRunner *preflight.Preflight
+
+	restore := b.applyParams()
+	defer restore()
 
 	masterAddressesForSSH := make(map[string]string)
 
@@ -183,27 +226,82 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	// first, parse and check cluster config
-	metaConfig, err := config.LoadConfigFromFile(app.ConfigPaths)
+	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
+	preparatorParams.WithPhaseBootstrap()
+	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
+		DVPValidateKubeAPI: true,
+	})
+	metaConfig, err := config.LoadConfigFromFile(
+		ctx,
+		app.ConfigPaths,
+		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		b.DirectoryConfig,
+		config.ValidateOptionValidateExtensions(true),
+	)
 	if err != nil {
 		return err
 	}
 
-	if b.Params.NodeInterface == nil || reflect.ValueOf(b.Params.NodeInterface).IsNil() {
+	log.DebugLn("MetaConfig was loaded")
+
+	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
+	// Check if static cluster without ssh-host
+	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {
+		if input.IsTerminal() {
+			confirmation := input.NewConfirmation().
+				WithMessage("Do you really want to bootstrap the cluster on the current host?")
+			if !confirmation.Ask() {
+				return fmt.Errorf("Bootstrap cancelled by user")
+			}
+		} else {
+			return fmt.Errorf("Static cluster bootstrap requires --ssh-host option when not running in terminal. Please use --ssh-host option or pass --connection-config with SSHHost resource to bootstrap the cluster")
+		}
+	}
+
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           b.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           b.logger,
+		IsDebug:          b.IsDebug,
+	})
+
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
+
+	if govalue.IsNil(b.Params.NodeInterface) {
 		log.DebugLn("NodeInterface is nil")
 		if len(app.SSHHosts) == 0 && metaConfig.IsStatic() {
 			log.DebugLn("Hosts empty and static cluster. Use local interface")
 			b.Params.NodeInterface = local.NewNodeInterface()
 		} else {
-			sshClient := ssh.NewClientFromFlags()
-			if _, err := sshClient.Start(); err != nil {
-				return fmt.Errorf("unable to start ssh client: %w", err)
+			sshClient, err := sshclient.NewClientFromFlags(ctx)
+			if err != nil {
+				return err
 			}
-			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh", len(app.SSHHosts), metaConfig.IsStatic())
+
+			// do it for get ssh
+			if err := sshClient.OnlyPreparePrivateKeys(); err != nil {
+				return err
+			}
+
+			if metaConfig.IsStatic() {
+				// aks bastion pass for SSH Client Dial() with password auth
+				if err := terminal.AskBastionPassword(); err != nil {
+					return err
+				}
+				// ask become pass for SSH Client Dial() with password auth
+				if err := terminal.AskBecomePassword(); err != nil {
+					return err
+				}
+				if err := sshClient.Start(); err != nil {
+					return fmt.Errorf("unable to start ssh client: %w", err)
+				}
+			}
+
+			log.DebugF("Hosts is %v empty; static cluster is %v. Use ssh\n", len(app.SSHHosts), metaConfig.IsStatic())
 			b.Params.NodeInterface = ssh.NewNodeInterfaceWrapper(sshClient)
 		}
 	}
-
-	log.DebugLn("MetaConfig was loaded")
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
@@ -213,8 +311,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	stateCache := cache.Global()
-
-	log.InfoF("State directory: %s\n", stateCache.Dir())
+	configHash := state.ConfigHash(app.ConfigPaths)
 
 	if app.DropCache {
 		stateCache.Clean()
@@ -227,12 +324,9 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
-	defer b.PhasedExecutionContext.Finalize(stateCache)
-
-	err = terminal.AskBecomePassword()
-	if err != nil {
-		return err
-	}
+	defer func() {
+		_ = b.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	printBanner()
 
@@ -241,6 +335,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return err
 	}
 	metaConfig.UUID = clusterUUID
+
+	metaConfig.ResourceManagementTimeout = app.ResourceManagementTimeout
 
 	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
 	if err != nil {
@@ -262,11 +358,6 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-	if err := preflightChecker.Global(); err != nil {
-		return err
-	}
-
 	if shouldStop, err := b.PhasedExecutionContext.StartPhase(phases.BaseInfraPhase, true, stateCache); err != nil {
 		return err
 	} else if shouldStop {
@@ -277,15 +368,44 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	var devicePath string
 	var resourcesTemplateData map[string]interface{}
 
+	cleanup, err := b.getCleanupFunc(ctx, metaConfig)
+	if err != nil {
+		return err
+	}
+
+	defer cleanup()
+
+	globalPreflightSuite := suites.NewGlobalSuite(suites.GlobalDeps{
+		MetaConfig:    metaConfig,
+		InstallConfig: deckhouseInstallConfig,
+	})
+
 	if metaConfig.ClusterType == config.CloudClusterType {
-		err = preflightChecker.Cloud()
-		if err != nil {
+
+		cloudPreflightSuite := suites.NewCloudSuite(suites.CloudDeps{
+			InstallConfig: deckhouseInstallConfig,
+			MetaConfig:    metaConfig,
+		})
+		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
+			MetaConfig: metaConfig,
+			Node:       b.NodeInterface,
+		})
+
+		preflightRunner = preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
+		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.SetCacheSalt(configHash)
+		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
 			return err
 		}
-		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
-			baseRunner := b.TerraformContext.GetBootstrapBaseInfraRunner(metaConfig, stateCache)
 
-			baseOutputs, err := terraform.ApplyPipeline(baseRunner, "Kubernetes cluster", terraform.GetBaseInfraResult)
+		err = log.Process("bootstrap", "Cloud infrastructure", func() error {
+			baseRunner, err := b.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
+			if err != nil {
+				return err
+			}
+
+			baseOutputs, err := infrastructure.ApplyPipeline(ctx, baseRunner, "Kubernetes cluster", infrastructure.GetBaseInfraResult)
 			if err != nil {
 				return err
 			}
@@ -303,17 +423,19 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			}
 
 			masterNodeName := fmt.Sprintf("%s-master-0", metaConfig.ClusterPrefix)
-			masterRunner := b.Params.TerraformContext.GetBootstrapNodeRunner(metaConfig, stateCache, terraform.BootstrapNodeRunnerOptions{
-				AutoApprove:     true,
+			masterRunner, err := b.Params.InfrastructureContext.GetBootstrapNodeRunner(ctx, metaConfig, stateCache, infrastructure.BootstrapNodeRunnerOptions{
 				NodeName:        masterNodeName,
-				NodeGroupStep:   "master-node",
+				NodeGroupStep:   infrastructure.MasterNodeStep,
 				NodeGroupName:   "master",
 				NodeIndex:       0,
 				NodeCloudConfig: "",
 				RunnerLogger:    log.GetDefaultLogger(),
 			})
+			if err != nil {
+				return err
+			}
 
-			masterOutputs, err := terraform.ApplyPipeline(masterRunner, masterNodeName, terraform.GetMasterNodeResult)
+			masterOutputs, err := infrastructure.ApplyPipeline(ctx, masterRunner, masterNodeName, infrastructure.GetMasterNodeResult)
 			if err != nil {
 				return err
 			}
@@ -321,35 +443,61 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			log.DebugLn("First control-plane node was created")
 
 			deckhouseInstallConfig.CloudDiscovery = baseOutputs.CloudDiscovery
-			deckhouseInstallConfig.TerraformState = baseOutputs.TerraformState
+			deckhouseInstallConfig.InfrastructureState = baseOutputs.InfrastructureState
 
 			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 				sshClient := wrapper.Client()
 				if baseOutputs.BastionHost != "" {
-					sshClient.Settings.BastionHost = baseOutputs.BastionHost
+					sshClient.Session().BastionHost = baseOutputs.BastionHost
 					SaveBastionHostToCache(baseOutputs.BastionHost)
 				}
-				sshClient.Settings.SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				sshClient.Session().SetAvailableHosts([]session.Host{{Host: masterOutputs.MasterIPForSSH, Name: masterNodeName}})
+				// aks bastion pass for SSH Client Dial() with password auth
+				if err := terminal.AskBastionPassword(); err != nil {
+					return err
+				}
+				// ask become pass for SSH Client Dial() with password auth
+				if err := terminal.AskBecomePassword(); err != nil {
+					return err
+				}
+				if err := sshClient.Start(); err != nil {
+					return fmt.Errorf("unable to start ssh client: %w", err)
+				}
 			}
 
 			nodeIP = masterOutputs.NodeInternalIP
 			devicePath = masterOutputs.KubeDataDevicePath
 
-			deckhouseInstallConfig.NodesTerraformState = make(map[string][]byte)
-			deckhouseInstallConfig.NodesTerraformState[masterNodeName] = masterOutputs.TerraformState
+			deckhouseInstallConfig.NodesInfrastructureState = make(map[string][]byte)
+			deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
 
 			masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
-			SaveMasterHostsToCache(masterAddressesForSSH)
+			state.SaveMasterHostsToCache(stateCache, masterAddressesForSSH)
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-	} else {
-		err = preflightChecker.Static()
-		if err != nil {
+		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
+	} else {
+
+		staticPreflightSuite := suites.NewStaticSuite(suites.StaticDeps{
+			Node:       b.NodeInterface,
+			MetaConfig: metaConfig,
+		})
+		preflightRunner = preflight.New(globalPreflightSuite, staticPreflightSuite)
+		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.SetCacheSalt(configHash)
+		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		if err := preflightRunner.Run(ctx, preflight.PhasePreInfra); err != nil {
+			return err
+		}
+		if err = preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
+			return err
+		}
+
 		var static struct {
 			NodeIP string `json:"nodeIP"`
 		}
@@ -358,12 +506,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 
 		if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
 			sshClient := wrapper.Client()
-			if sshClient.Settings.BastionHost != "" {
-				SaveBastionHostToCache(sshClient.Settings.BastionHost)
+			if sshClient.Session().BastionHost != "" {
+				SaveBastionHostToCache(sshClient.Session().BastionHost)
 			}
 
-			SaveMasterHostsToCache(map[string]string{
-				"first-master": sshClient.Settings.Host(),
+			state.SaveMasterHostsToCache(stateCache, map[string]string{
+				"first-master": sshClient.Session().Host(),
 			})
 		}
 	}
@@ -371,14 +519,18 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	// next parse and check resources
 	// do it after bootstrap cloud because resources can be template
 	// and we want to fail immediately if template has errors
-	var resourcesToCreate template.Resources
+	var resourcesToCreateBeforeDeckhouseBootstrap template.Resources
+	var resourcesToCreateAfterDeckhouseBootstrap template.Resources
 	if metaConfig.ResourcesYAML != "" {
 		parsedResources, err := template.ParseResourcesContent(metaConfig.ResourcesYAML, resourcesTemplateData)
 		if err != nil {
 			return err
 		}
 
-		resourcesToCreate = parsedResources
+		before, after := splitResourcesOnPreAndPostDeckhouseInstall(parsedResources)
+
+		resourcesToCreateBeforeDeckhouseBootstrap = before
+		resourcesToCreateAfterDeckhouseBootstrap = after
 	}
 
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.RegistryPackagesProxyPhase, false, stateCache, nil); err != nil {
@@ -388,15 +540,8 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 	}
 
 	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if err := WaitForSSHConnectionOnMaster(wrapper.Client()); err != nil {
+		if err := WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
-		}
-	}
-
-	if metaConfig.ClusterType == config.CloudClusterType {
-		err = preflightChecker.PostCloud()
-		if err != nil {
-			return err
 		}
 	}
 
@@ -406,7 +551,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(b.NodeInterface, metaConfig, nodeIP, devicePath); err != nil {
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
 		return err
 	}
 
@@ -416,15 +561,33 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	kubeCl, err := kubernetes.ConnectToKubernetesAPI(b.NodeInterface)
+	kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
 	if err != nil {
 		return err
 	}
 
-	installDeckhouseResult, err := InstallDeckhouse(kubeCl, deckhouseInstallConfig)
+	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseConnect)
+
+	installParams := InstallDeckhouseParams{
+		BeforeDeckhouseTask: func() error {
+			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
+		},
+		State: bootstrapState,
+	}
+
+	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, installParams)
 	if err != nil {
 		return err
 	}
+
+	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseInstall)
+
+	err = WaitForFirstMasterNodeBecomeReady(ctx, kubeCl)
+	if err != nil {
+		return err
+	}
+
+	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseWait)
 
 	if metaConfig.ClusterType == config.CloudClusterType {
 		if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(phases.InstallAdditionalMastersAndStaticNodes, true, stateCache, nil); err != nil {
@@ -437,11 +600,12 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 			if b.CommanderMode {
 				return action()
 			}
-			return converge.NewInLockLocalRunner(kubeCl, "local-bootstraper").Run(action)
+			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-bootstraper").
+				Run(ctx, action)
 		}
 
 		err := localBootstraper(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(kubeCl, metaConfig, masterAddressesForSSH, b.TerraformContext)
+			return bootstrapAdditionalNodesForCloudCluster(ctx, kubeCl, metaConfig, masterAddressesForSSH, b.InfrastructureContext)
 		})
 		if err != nil {
 			return err
@@ -454,11 +618,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := controlplane.NewManagerReadinessChecker(kubeCl).IsReadyAll(); err != nil {
+	if err := controlplane.NewManagerReadinessChecker(kubernetes.NewSimpleKubeClientGetter(kubeCl)).IsReadyAll(ctx); err != nil {
 		return err
 	}
 
-	err = createResources(kubeCl, resourcesToCreate, metaConfig, installDeckhouseResult)
+	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
 	if err != nil {
 		return err
 	}
@@ -474,7 +638,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		postScriptExecutor := NewPostBootstrapScriptExecutor(sshNodeInterfaceWrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(app.PostBootstrapScriptTimeout)
 
-		if err := postScriptExecutor.Execute(); err != nil {
+		if err := postScriptExecutor.Execute(ctx); err != nil {
 			return err
 		}
 	}
@@ -485,14 +649,14 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		return nil
 	}
 
-	if err := RunPostInstallTasks(kubeCl, installDeckhouseResult); err != nil {
+	if err := RunPostInstallTasks(ctx, kubeCl, installDeckhouseResult); err != nil {
 		return err
 	}
 
 	if !b.DisableBootstrapClearCache {
 		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().CleanWithExceptions(
-				MasterHostsCacheKey,
+				state.MasterHostsCacheKey,
 				ManifestCreatedInClusterCacheKey,
 				BastionHostCacheKey,
 				PostBootstrapResultCacheKey,
@@ -508,7 +672,7 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 		_ = log.Process("common", "Kubernetes Master Node addresses for SSH", func() error {
 			wrapper := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 			for nodeName, address := range masterAddressesForSSH {
-				fakeSession := wrapper.Client().Settings.Copy()
+				fakeSession := wrapper.Client().Session().Copy()
 				fakeSession.SetAvailableHosts([]session.Host{{Host: address, Name: nodeName}})
 				log.InfoF("%s | %s\n", nodeName, fakeSession.String())
 			}
@@ -521,11 +685,11 @@ func (b *ClusterBootstrapper) Bootstrap() error {
 }
 
 // TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this method will be unneeded then
-func (c *ClusterBootstrapper) GetLastState() phases.DhctlState {
-	if c.lastState != nil {
-		return c.lastState
+func (b *ClusterBootstrapper) GetLastState() phases.DhctlState {
+	if b.lastState != nil {
+		return b.lastState
 	} else {
-		return c.PhasedExecutionContext.GetLastState()
+		return b.PhasedExecutionContext.GetLastState()
 	}
 }
 
@@ -566,46 +730,88 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 	return clusterUUID, err
 }
 
-func bootstrapAdditionalNodesForCloudCluster(kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, terraformContext *terraform.TerraformContext) error {
-	if err := BootstrapAdditionalMasterNodes(kubeCl, metaConfig, masterAddressesForSSH, terraformContext); err != nil {
+func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, infrastructureContext *infrastructure.Context) error {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global()); err != nil {
 		return err
 	}
 
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
-	if err := BootstrapTerraNodes(kubeCl, metaConfig, terraNodeGroups, terraformContext); err != nil {
+	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
+	if operations.IsSequentialNodesBootstrap(metaConfig) {
+		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
+	}
+
+	if err := bootstrapAdditionalTerraNodeGroups(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext); err != nil {
 		return err
 	}
 
 	return log.Process("bootstrap", "Waiting for Node Groups are ready", func() error {
-		if err := converge.WaitForNodesBecomeReady(kubeCl, map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}); err != nil {
+		ngs := map[string]int{"master": metaConfig.MasterNodeGroupSpec.Replicas}
+		for _, ng := range terraNodeGroups {
+			if ng.Replicas > 0 {
+				ngs[ng.Name] = ng.Replicas
+			}
+		}
+		if err := entity.WaitForNodesBecomeReady(ctx, kubeCl, ngs); err != nil {
 			return err
 		}
+
 		return nil
 	})
 }
 
-func createResources(kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult) error {
-	log.WarnLn("Some resources require at least one non-master node to be added to the cluster.")
+func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resources) (template.Resources, template.Resources) {
+	before := make(template.Resources, 0, len(resourcesToCreate))
+	after := make(template.Resources, 0, len(resourcesToCreate))
 
-	tasks := result.ManifestResult.WithResourcesMCTasks
-
-	if resourcesToCreate == nil {
-		for _, task := range tasks {
-			return retry.NewLoop(task.Title, 60, 5*time.Second).Run(func() error {
-				return task.Do(kubeCl)
-			})
+	for _, resource := range resourcesToCreate {
+		annotations := resource.Object.GetAnnotations()
+		if annotations == nil || annotations["dhctl.deckhouse.io/bootstrap-resource-place"] != "before-deckhouse" {
+			log.DebugF("Add resource %s - %s to after queue\n", resource.String(), resource.Object.GetName())
+			after = append(after, resource)
+			continue
 		}
 
+		log.DebugF("Add resource %s - %s to before queue\n", resource.String(), resource.Object.GetName())
+		before = append(before, resource)
+	}
+
+	return before, after
+}
+
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool) error {
+	tasks := make([]actions.ModuleConfigTask, 0)
+	if result != nil {
+		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
+
+		tasks = result.ManifestResult.WithResourcesMCTasks
+
+		if len(resourcesToCreate) == 0 {
+			for _, task := range tasks {
+				return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
+					return task.Do(kubeCl)
+				})
+			}
+
+			return nil
+		}
+	}
+
+	if len(resourcesToCreate) == 0 {
 		return nil
 	}
 
 	return log.Process("bootstrap", "Create Resources", func() error {
-		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
-		if err != nil {
-			return err
+		var err error
+		checkers := make([]resources.Checker, 0)
+		if !skipChecks {
+			checkers, err = resources.GetCheckers(kubeCl, resourcesToCreate, nil)
+			if err != nil {
+				return err
+			}
 		}
 
-		return resources.CreateResourcesLoop(kubeCl, resourcesToCreate, checkers, tasks)
+		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)
 	})
 }
 

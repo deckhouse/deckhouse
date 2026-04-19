@@ -1,0 +1,34 @@
+name: Create and Upload Deckhouse debug logs
+description: Creating Deckhouse debug logs and download as artifact
+inputs:
+  sshkey:
+    description: SSH Private key
+    required: true
+  sshloginfile:
+    description: File with ssh credentials | example 'debian@127.0.0.1'
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Create Deckhouse debug logs
+      continue-on-error: true
+      shell: bash
+      run: |
+        # start ssh-agent
+        eval $(ssh-agent)
+        ssh-add - <<< $(base64 -d <<< "${{ inputs.sshkey }}")
+        set -x
+        ssh -o StrictHostKeyChecking=no $(cat ${{ inputs.sshloginfile }}) -t 'sudo su - -c "kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse \
+          -- deckhouse-controller collect-debug-info > deckhouse-debug.tar.gz"'
+        scp -o StrictHostKeyChecking=no $(cat ${{ inputs.sshloginfile }}):deckhouse-debug.tar.gz \
+            deckhouse-debug-run_id-${{ github.run_id }}-run_number-${{ github.run_number }}.tar.gz
+
+        # kill ssh-agent
+        ssh-agent -k
+    - name: "Upload debug logs as artifact"
+      uses: actions/upload-artifact@v4
+      with:
+        name: deckhouse-debug-run_id-${{ github.run_id }}-run_number-${{ github.run_number }}
+        path: deckhouse-debug-run_id-${{ github.run_id }}-run_number-${{ github.run_number }}.tar.gz
+        retention-days: 7
+        compression-level: 9

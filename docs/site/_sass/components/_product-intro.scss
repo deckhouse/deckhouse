@@ -1,0 +1,188 @@
+@use "components/common/_variables.scss";
+
+.product-intro {
+    position: relative;
+    background: variables.$color-smooth;
+    overflow: hidden;
+    margin-bottom: 100px;
+    &__content {
+        position: relative;
+        z-index: 1;
+        padding: 125px 0;
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            width: 2680px;
+            height: 1572px;
+            background-image: url('../images/product-bg.svg');
+            z-index: -1;
+            @media (min-width: variables.$container-breakpoint-lg) {
+                left: 150px;
+            }
+        }
+    }
+    &__head {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+    &__logo {
+        margin-right: 100px;
+        img {
+            height: 85px;
+            @media (min-width: variables.$container-breakpoint-lg) {
+                height: 125px;
+            }
+        }
+    }
+    &__title {
+        margin: 0;
+
+      & span.text_alt {
+        display: block;
+        font-size: 35px;
+        line-height: 44px;
+        margin-top: 10px;
+        padding-bottom: 0;
+      }
+    }
+    &__diagram {
+        margin-top: 75px;
+        img {
+            width: 750px;
+            @media (min-width: variables.$container-breakpoint-lg) {
+                width: 942px;
+            }
+        }
+    }
+    &__info {
+        margin-top: 0px;
+        padding-left: 400px;
+        @media (min-width: variables.$container-breakpoint-lg) {
+            margin-top: -150px;
+            padding-left: 700px;
+        }
+    }
+    &__description {
+        width: 450px;
+    }
+    &__features {
+        list-style-type: none;
+        margin: 60px 0;
+        padding: 0;
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: flex-start;
+        position: relative;
+        &:before {
+            position: absolute;
+            top: 0px;
+            left: 5px;
+            content: '';
+            width: 9999px;
+            border-top: 2px solid variables.$color-alt;
+        }
+        li {
+            padding-top: 40px;
+            position: relative;
+            width: 200px;
+            @media (min-width: variables.$container-breakpoint-lg) {
+                width: 250px;
+            }
+            &::before {
+                content: '';
+                position: absolute;
+                top: -8px;
+                left: 0px;
+                width: 18px;
+                height: 18px;
+                background: variables.$color-alt;
+                transform: rotate(45deg);
+            }
+        }
+    }
+    &__actions {}
+
+    &__certificate--block {
+        position: absolute;
+        left: 0;
+        bottom: 120px;
+        width: fit-content;
+        box-sizing: border-box;
+        z-index: 10;
+    }
+
+    &__certificate {
+        display: flex;
+        align-items: center;
+        border: 2px solid variables.$color-alt;
+        border-left: none;
+
+        &--wrap {
+          margin-bottom: 30px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+
+        &--link {
+          text-decoration: none;
+
+          &:hover {
+            & .product-intro__certificate {
+              background: #02003E;
+              border: 2px solid #02003E;
+              border-left: none;
+            }
+
+            & .product-intro__certificate--text {
+              color: #FFF;
+            }
+
+            & .certificate__icon--ru {
+              fill: #fff;
+            }
+          }
+        }
+
+        &--pic {
+            height: 62px;
+            padding: 14px 0;
+            padding-left: 100px;
+
+            @media screen and (max-width: 1200px) {
+                padding-left: 70px;
+            }
+
+            & svg {
+                width: 46px;
+                height: 62px;
+            }
+
+            & .certificate__icon--ru {
+                fill: #00003C;
+            }
+        }
+
+        &--text {
+            padding-right: 20px;
+            padding-left: 25px;
+            color: variables.$color-main;
+
+            & span {
+                display: block;
+                //color: $color-alt;
+            }
+
+            & small {
+              display: block;
+              padding-top: 4px;
+            }
+        }
+    }
+}

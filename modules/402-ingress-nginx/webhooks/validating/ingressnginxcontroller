@@ -68,4 +68,4 @@ function __main__() {
   jq -nc '{"allowed": true}' > $VALIDATING_RESPONSE_PATH
 }
 
-hook::run $@
+hook::run "$@"

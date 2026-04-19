@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function kubectl_exec() {
-  kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf ${@}
-}
-
 check_python
 function fetch-local-labels() {
   cat - <<EOF | $python_binary
@@ -25,7 +21,30 @@ import sys
 import os
 import json
 
-system_lables = {"beta.kubernetes.io/arch", "beta.kubernetes.io/os", "failure-domain.beta.kubernetes.io/region", "failure-domain.beta.kubernetes.io/zone", "kubernetes.io/arch", "kubernetes.io/hostname", "kubernetes.io/os", "node.deckhouse.io/group", "node.deckhouse.io/type", "topology.kubernetes.io/region", "topology.kubernetes.io/zone"}
+system_lables = {"beta.kubernetes.io/arch", "beta.kubernetes.io/os", "failure-domain.beta.kubernetes.io/region", "failure-domain.beta.kubernetes.io/zone", "kubernetes.io/arch", "kubernetes.io/hostname", "kubernetes.io/os", "node.deckhouse.io/group", "node.deckhouse.io/type"}
+
+{{ if ne .nodeGroup.nodeType "Static" }}
+system_lables.update({
+    "topology.kubernetes.io/region",
+    "topology.kubernetes.io/zone",
+})
+{{ end }}
+
+def recursive_glob(base_dir, pattern):
+    matches = []
+    for root, _, filenames in os.walk(base_dir):
+        for filename in glob.glob(os.path.join(root, pattern)):
+            matches.append(filename)
+    return matches
+
+
+def find_files(base_dir, pattern):
+    if sys.version_info[0] == 2:
+        return recursive_glob(base_dir, pattern)
+    elif sys.version_info[0] == 3:
+        return glob.glob(os.path.join(base_dir, '**'), recursive=True)
+    else:
+        raise RuntimeError("unknown Py Ver")
 
 def validate(string, is_key = True):
     if len(string) > 63:
@@ -33,15 +52,15 @@ def validate(string, is_key = True):
     if is_key:
         if string in system_lables:
             return False
-        pattern = re.compile("^(?:(?:(?:[a-z0-9][a-z0-9-]+)\.)+[a-z0-9]+/)*[A-Za-z0-9][A-Za-z0-9-._]*$")
+        pattern = re.compile("^(?:(?:(?:[a-z0-9][a-z0-9-]+)[.])+[a-z0-9]+/)*[A-Za-z0-9][A-Za-z0-9-._]*$")
     else:
         pattern = re.compile("^[A-Za-z0-9][A-Za-z0-9-._]*$")
-    if pattern.fullmatch(string):
+    if pattern.match(string):
         return True
     return False
 
 def fetch_labels(fileglob, valid = True):
-    files = glob.glob(fileglob, recursive=True)
+    files = find_files(fileglob, "**")
     labels = dict()
     for f in files:
         if os.path.isfile(f):
@@ -72,7 +91,7 @@ def get_removed(d1, d2):
     removed = d1_keys - d2_keys
     return removed
 
-labels = fetch_labels("$1" + "/**", True)
+labels = fetch_labels("$1", True)
 
 if "$2" == "add":
     format = "$4"
@@ -95,7 +114,7 @@ EOF
 LABEL_DIRECTORY_PATH=/var/lib/node_labels
 mkdir -p $LABEL_DIRECTORY_PATH
 
-LABELS_FROM_ANNOTATION="$( kubectl_exec get no "$D8_NODE_HOSTNAME" -o json |jq -r '.metadata.annotations."node.deckhouse.io/last-applied-local-labels"' )"
+LABELS_FROM_ANNOTATION="$( bb-kubectl-exec get no $(bb-d8-node-name) -o json |jq -r '.metadata.annotations."node.deckhouse.io/last-applied-local-labels"' )"
 
 if [[ $LABELS_FROM_ANNOTATION == "null" ]]
   then
@@ -109,7 +128,7 @@ LABELS_ANNOTATION="$( fetch-local-labels "$LABEL_DIRECTORY_PATH" add "$LABELS_FR
 if [[ $LABLES_TO_REMOVE ]]
   then
     for label in $LABLES_TO_REMOVE; do
-        kubectl_exec label node "${D8_NODE_HOSTNAME}" "$label"
+        bb-kubectl-exec label node $(bb-d8-node-name) "$label"
     done
 fi
 
@@ -118,11 +137,11 @@ if [[ -z $LABELS ]]
     # No labels to apply, exit 0
     if [[ $LABELS_FROM_ANNOTATION ]]
       then
-        kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${D8_NODE_HOSTNAME}" node.deckhouse.io/last-applied-local-labels-
+        kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) node.deckhouse.io/last-applied-local-labels-
     fi
     exit 0
   else
     # Apply labels to node
-    kubectl_exec label node "${D8_NODE_HOSTNAME}" "${LABELS}" --overwrite
-    kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node "${D8_NODE_HOSTNAME}" --overwrite node.deckhouse.io/last-applied-local-labels="${LABELS_ANNOTATION}"
+    bb-kubectl-exec label node $(bb-d8-node-name) "${LABELS}" --overwrite
+    kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) --overwrite node.deckhouse.io/last-applied-local-labels="${LABELS_ANNOTATION}"
 fi

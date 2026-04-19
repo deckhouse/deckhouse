@@ -29,6 +29,22 @@ cloudProviderOpenstack:
       region: HetznerFinland
 `
 
+	initValuesHybrid := `
+cloudProviderOpenstack:
+  internal:
+    connection:
+      authURL: https://test.tests.com:5000/v3/
+      username: jamieHybrid
+      password: nein
+      domainName: default
+      tenantName: default
+      tenantID: "123"
+      region: HetznerFinland
+    hybridMode: true
+  zones:
+  - zone-a
+`
+
 	storageClasses := `---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -235,6 +251,48 @@ data:
   "discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(discoveryData)))
 
+	discoveryDataHybrid := `
+{
+  "apiVersion": "deckhouse.io/v1alpha1",
+  "kind": "OpenStackCloudProviderDiscoveryData",
+  "flavors": [
+    "m1.medium-50g",
+    "m1.xlarge",
+    "m1.large-cpu-host-passthrough",
+    "m1.small"
+  ],
+  "additionalNetworks": [
+    "dev",
+    "shared"
+  ],
+  "additionalSecurityGroups": [
+    "dev",
+    "dev-frontend"
+  ],
+  "defaultImageName": "ubuntu-22-04-cloud-amd64",
+  "images": [
+    "ubuntu-22-04-cloud-amd64",
+    "ubuntu-18-04-cloud-amd64"
+  ],
+  "mainNetwork": "dev",
+  "volumeTypes": [
+    {
+      "id": "15637549-2e1a-4cf5-adb9-d854f52a9865",
+      "name": "  YY fast SSD-foo."
+    }
+  ]
+}`
+
+	stateHybrid := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-provider-discovery-data
+  namespace: kube-system
+data:
+  "discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(discoveryDataHybrid)))
+
 	a := HookExecutionConfigInit(initValues, `{}`)
 	Context("Cluster has empty state", func() {
 		BeforeEach(func() {
@@ -356,6 +414,31 @@ data:
   }
 ]
 `))
+		})
+	})
+
+	f := HookExecutionConfigInit(initValues, `{}`)
+	Context("Hook should fail without zones and hybridMode activated", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateHybrid))
+			f.RunHook()
+		})
+
+		It("Hook should fail", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
+		})
+	})
+
+	g := HookExecutionConfigInit(initValuesHybrid, `{}`)
+	Context("Provider data is successfully discovered in hybrid mode", func() {
+		BeforeEach(func() {
+			g.BindingContexts.Set(g.KubeStateSet(stateHybrid))
+			g.RunHook()
+		})
+
+		It("Zones values should be gathered from ModuleConfig", func() {
+			Expect(g).To(ExecuteSuccessfully())
+			Expect(g.ValuesGet("cloudProviderOpenstack.internal.discoveryData.zones").String()).To(MatchJSON(`["zone-a"]`))
 		})
 	})
 })

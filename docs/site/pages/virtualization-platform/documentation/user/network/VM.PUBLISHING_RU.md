@@ -4,11 +4,13 @@ permalink: ru/virtualization-platform/documentation/user/network/vm-publishing.h
 lang: ru
 ---
 
+{% raw %}
+
 ## Предоставление публичного доступа с использованием сервисов
 
 Достаточно часто возникает необходимость сделать так, чтобы доступ к виртуальным машинам был возможен извне, например, для удалённого администрирования или подключения к каким-либо сервисам виртуальной машины. Для этих целей предусмотрены специальные сервисы, которые обеспечивают маршрутизацию трафика из внешней сети к внутренним ресурсам кластера. Рассмотрим несколько вариантов.
 
-Предварительно проставьте метки на ранее созданной ВМ:
+Предварительно проставьте лейблы на ранее созданной ВМ:
 
 ```shell
 d8 k label vm linux-vm app=nginx
@@ -35,7 +37,7 @@ metadata:
 spec:
   type: NodePort
   selector:
-    # Метка, по которой сервис определяет на какую виртуальную машину направлять трафик.
+    # Лейбл, по которому сервис определяет на какую виртуальную машину направлять трафик.
     app: nginx
   ports:
     - protocol: TCP
@@ -45,7 +47,7 @@ spec:
 EOF
 ```
 
-![NodePort](/images/virtualization-platform/lb-nodeport.ru.png)
+![NodePort](/../../../../images/virtualization-platform/lb-nodeport.ru.png)
 
 ### Использование сервиса LoadBalancer
 
@@ -60,7 +62,7 @@ metadata:
 spec:
   type: LoadBalancer
   selector:
-    # Метка, по которой сервис определяет на какую виртуальную машину направлять трафик.
+    # Лейбл, по которому сервис определяет на какую виртуальную машину направлять трафик.
     app: nginx
   ports:
     - protocol: TCP
@@ -69,13 +71,11 @@ spec:
 EOF
 ```
 
-![LoadBalancer](/images/virtualization-platform/lb-loadbalancer.ru.png)
+![LoadBalancer](/../../../../images/virtualization-platform/lb-loadbalancer.ru.png)
 
 ### Использование сервисов с активными проверками
 
-{% alert level="warning" %}
-Находится на стадии тестирования. Будет доступно в ближайших версиях.
-{% endalert %}
+> **Внимание.** Находится на стадии тестирования. Будет доступно в ближайших версиях.
 
 Ресурс `ServiceWithHealthchecks` позволяет настраивать для сервиса активные проверки на заданные TCP-порты. Если проверки для виртуальных машин не будут успешными, эти машины не будут включены в балансировку трафика.
 
@@ -99,7 +99,7 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    # Метка, по которой сервис определяет на какую виртуальную машину направлять трафик.
+    # Лейбл, по которому сервис определяет на какую виртуальную машину направлять трафик.
     app: nginx
   healthcheck:
     probes:
@@ -125,7 +125,7 @@ spec:
     protocol: TCP
     targetPort: 2525
   selector:
-    # Метка, по которой сервис определяет на какую виртуальную машину направлять трафик.
+    # Лейбл, по которому сервис определяет на какую виртуальную машину направлять трафик.
     app: nginx
   healthcheck:
     probes:
@@ -211,7 +211,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
      name: linux-vm-nginx
    spec:
      selector:
-       # Метка, по которой сервис определяет на какую виртуальную машину направлять трафик.
+       # Лейбл, по которому сервис определяет на какую виртуальную машину направлять трафик.
        app: nginx
      ports:
        - protocol: TCP
@@ -247,7 +247,7 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
 
 Чтобы включить аутентификацию через `Dex` для приложения, выполните следующие шаги:
 
-1. Создайте кастомный ресурс [DexAuthenticator](../../../reference/cr/dexauthenticator.html). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
+1. Создайте кастомный ресурс [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator). Это приведет к созданию экземпляра [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy), подключенного к `Dex`. После появления кастомного ресурса `DexAuthenticator`, в указанном `namespace` появятся необходимые объекты Deployment, Service, Ingress, Secret.
 
    Пример ресурса `DexAuthenticator`:
 
@@ -314,3 +314,5 @@ Ingress позволяет управлять входящими HTTP/HTTPS-за
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
+
+{% endraw %}

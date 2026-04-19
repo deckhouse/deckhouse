@@ -15,92 +15,120 @@
 package bootstrap
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
-func DefineBootstrapInstallDeckhouseCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("install-deckhouse", "Install deckhouse and wait for its readiness.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineBootstrapInstallDeckhouseCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
+	app.DefineTFResourceManagementTimeout(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineDeckhouseFlags(cmd)
 	app.DefineDeckhouseInstallFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+
+		var sshClient node.SSHClient
+		var err error
 		if len(app.SSHHosts) != 0 {
-			sshClient = ssh.NewClientFromFlags()
+			sshClient, err = sshclient.NewClientFromFlags(ctx)
+			if err != nil {
+				return err
+			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-			TerraformContext: terraform.NewTerraformContext(),
+			TmpDir:          app.TmpDirName,
+			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:          logger,
+			IsDebug:         app.IsDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
-		return bootstraper.InstallDeckhouse()
+		return bootstraper.InstallDeckhouse(ctx)
 	})
 
 	return cmd
 }
 
-func DefineBootstrapExecuteBashibleCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("execute-bashible-bundle", "Prepare Master node and install Kubernetes.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineConfigFlags(cmd)
 	app.DefineBecomeFlags(cmd)
 	app.DefineBashibleBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlagsWithHosts()
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+
+		sshClient, err := sshclient.NewClientFromFlagsWithHosts(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-			TerraformContext: terraform.NewTerraformContext(),
+			TmpDir:          app.TmpDirName,
+			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:          logger,
+			IsDebug:         app.IsDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
-		return bootstraper.ExecuteBashible()
+		return bootstraper.ExecuteBashible(ctx)
 	})
 
 	return cmd
 }
 
-func DefineCreateResourcesCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("create-resources", "Create resources in Kubernetes cluster.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigsForResourcesPhaseFlags(cmd)
 	app.DefineResourcesFlags(cmd, false)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		var sshClient *ssh.Client
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+
+		var sshClient node.SSHClient
+		var err error
+
 		if len(app.SSHHosts) != 0 {
-			sshClient = ssh.NewClientFromFlags()
+			sshClient, err = sshclient.NewClientFromFlags(ctx)
+			if err != nil {
+				return err
+			}
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-			TerraformContext: terraform.NewTerraformContext(),
+			TmpDir:          app.TmpDirName,
+			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:          logger,
+			IsDebug:         app.IsDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
-		return bootstraper.CreateResources()
+		return bootstraper.CreateResources(ctx)
 	})
 
 	return cmd
 }
 
-func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("abort", "Delete every node, which was created during bootstrap process.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineCacheFlags(cmd)
@@ -108,50 +136,80 @@ func DefineBootstrapAbortCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAbortFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient := ssh.NewClientFromFlags()
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+
+		sshClient, err := sshclient.NewClientFromFlags(ctx)
+		if err != nil {
+			return err
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-			TerraformContext: terraform.NewTerraformContext(),
+			TmpDir:          app.TmpDirName,
+			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:          logger,
+			IsDebug:         app.IsDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
-		return bootstraper.Abort(app.ForceAbortFromCache)
+
+		err = bootstraper.Abort(context.Background(), app.ForceAbortFromCache)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to abort cluster: %v", err)
+			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd
 }
 
-func DefineBaseInfrastructureCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("base-infra", "Create base infrastructure for Cloud Kubernetes cluster.")
+func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineDropCacheFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TerraformContext: terraform.NewTerraformContext(),
+			TmpDir:          app.TmpDirName,
+			Logger:          logger,
+			IsDebug:         app.IsDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
-		return bootstraper.BaseInfrastructure()
+
+		err := bootstraper.BaseInfrastructure(context.Background())
+		cache.GetGlobalTmpCleaner().DisableCleanup("Create base infra for cluster")
+		return err
 	})
 
 	return cmd
 }
 
-func DefineExecPostBootstrapScript(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("exec-post-bootstrap", "Test scp upload and ssh run uploaded script.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineExecPostBootstrapScript(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewClientFromFlagsWithHosts()
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+
+		sshClient, err := sshclient.NewClientFromFlagsWithHosts(ctx)
 		if err != nil {
 			return fmt.Errorf("unable to create ssh-client: %w", err)
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-			TerraformContext: terraform.NewTerraformContext(),
+			TmpDir:          app.TmpDirName,
+			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			Logger:          logger,
+			IsDebug:         app.IsDebug,
+			DirectoryConfig: app.GetDirConfig(),
 		})
-		return bootstraper.ExecPostBootstrap()
+		return bootstraper.ExecPostBootstrap(ctx)
 	})
 
 	return cmd

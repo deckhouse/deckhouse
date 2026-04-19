@@ -35,20 +35,3 @@ spec:
     secretRef:
       name: capi-user-credentials
       namespace: d8-cloud-instance-manager
-{{- if hasKey $.Values.global.clusterConfiguration "proxy" }}
-  proxyConfigSpec:
-    {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpProxy" }}
-    httpProxy: {{ $.Values.global.clusterConfiguration.proxy.httpProxy | quote }}
-    {{- end }}
-    {{- if hasKey $.Values.global.clusterConfiguration.proxy "httpsProxy" }}
-    httpsProxy: {{ $.Values.global.clusterConfiguration.proxy.httpsProxy | quote }}
-    {{- end }}
-    {{- $noProxy := list "127.0.0.1" "169.254.169.254" $.Values.global.clusterConfiguration.clusterDomain $.Values.global.clusterConfiguration.podSubnetCIDR $.Values.global.clusterConfiguration.serviceSubnetCIDR }}
-    {{- if hasKey $.Values.global.clusterConfiguration.proxy "noProxy" }}
-      {{- $noProxy = concat $noProxy $.Values.global.clusterConfiguration.proxy.noProxy }}
-    {{- end }}
-    noProxy:
-    {{- $noProxy | toYaml | nindent 4 }}
-{{- end }}
-
-

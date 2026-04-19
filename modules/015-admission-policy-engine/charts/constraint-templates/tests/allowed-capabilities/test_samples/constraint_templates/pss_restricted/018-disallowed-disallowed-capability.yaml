@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-disallowed-capability
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN
+          drop:
+            - ALL
+

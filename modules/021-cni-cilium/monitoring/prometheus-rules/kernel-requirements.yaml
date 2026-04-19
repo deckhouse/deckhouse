@@ -1,0 +1,22 @@
+- name: d8.kernel-requirements
+  rules:
+    - alert: D8NodeHasUnmetKernelRequirements
+      expr: >-
+        count(d8_node_kernel_does_not_satisfy_requirements) > 0
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: Nodes have unmet kernel requirements.
+        description: |-
+          Deckhouse has detected that some nodes don't meet the required kernel constraints.
+          As a result, certain modules can't run on these nodes.
+
+          Kernel requirements for each module:
+
+          - **Cilium module**: Kernel version must be **>= 5.8**.
+
+          To list all affected nodes, use the `d8_node_kernel_does_not_satisfy_requirements == 1` expression in Prometheus.

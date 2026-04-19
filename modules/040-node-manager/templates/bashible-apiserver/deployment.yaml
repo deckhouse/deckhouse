@@ -10,14 +10,14 @@ kind: VerticalPodAutoscaler
 metadata:
   name: bashible-apiserver
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
     name: bashible-apiserver
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "bashible-apiserver"
@@ -45,7 +45,7 @@ kind: Deployment
 metadata:
   name: "bashible-apiserver"
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "bashible-apiserver")) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
@@ -62,12 +62,13 @@ spec:
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" .   | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "bashible-apiserver"))  | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: bashible-apiserver
       imagePullSecrets:
         - name: deckhouse-registry
       containers:
       - name: bashible-apiserver
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "bashibleApiserver") }}
         imagePullPolicy: IfNotPresent
         args:
@@ -113,6 +114,7 @@ spec:
 
 
 {{- define "bashible_input_data" }}
+    podSubnetNodeCIDRPrefix: {{ $.Values.global.clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
     clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}
 
@@ -139,6 +141,13 @@ spec:
       {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
+    {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
+    apiserverProxyCerts:
+      crt: |
+        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt | nindent 8 }}
+      key: |
+        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key | nindent 8 }}
+    {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
       addresses:
@@ -154,6 +163,10 @@ spec:
     nodeGroups:
       {{- $.Values.nodeManager.internal.nodeGroups | toYaml | nindent 6 }}
     nodeStatusUpdateFrequency: {{ $.Values.nodeManager.internal.nodeStatusUpdateFrequency | toYaml | default 0 }}
+    {{- if hasKey $.Values.nodeManager.internal "allowedKubeletFeatureGates" }}
+    allowedKubeletFeatureGates:
+      {{- $.Values.nodeManager.internal.allowedKubeletFeatureGates | toYaml | nindent 6 }}
+    {{- end }}
 {{- end }}
 ---
 apiVersion: v1

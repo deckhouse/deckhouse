@@ -9,7 +9,7 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-
+.env
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 
@@ -31,12 +31,19 @@ out/
 # terraform and dhctl artifacts
 *-tfstate/
 .terraform/
+.opentofu/
 
 # e2e tests
 testing/cloud_layouts/**/tmp
 testing/cloud_layouts/**/bootstrap.log
 testing/cloud_layouts/**/configuration.yaml
 testing/cloud_layouts/**/sshkey*
+testing/cloud_layouts/**/registry-mirror/ssl
+testing/cloud_layouts/**/registry-mirror/privkey.pem
+testing/cloud_layouts/**/registry-mirror/auth_config.yaml
+testing/cloud_layouts/**/registry-mirror/registry-config.yaml
+testing/cloud_layouts/**/registry-mirror/test.sh
+
 layouts-tests-tmp/
 
 # ignore generated files
@@ -59,3 +66,12 @@ __pycache__/
 
 # Helm lib
 deckhouse_lib_helm-*.tgz
+#testing
+env.sh
+testing/cloud_layouts/Static/id_rsa
+testing/cloud_layouts/Static/.terraform*
+testing/cloud_layouts/Static/errored*
+testing/cloud_layouts/Static/ssh-connect_str*
+testing/cloud_layouts/Static/opentofu
+testing/cloud_layouts/script-commander_test.sh  
+

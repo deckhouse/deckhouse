@@ -183,29 +183,32 @@ rules:
 			var policy audit.Policy
 			_ = yaml.UnmarshalStrict(data, &policy)
 
-			istiodServiceAccounts := []string{
-				"system:serviceaccount:d8-istio:istiod-v1x21x6",
-				"system:serviceaccount:d8-istio:istiod-v1x19x7",
+			var expectPolicy audit.Policy
+			extraData := []ConfigMapInfo{
+				{
+					ServiceAccounts: []string{
+						"system:serviceaccount:d8-istio:istiod-v1x21x6",
+						"system:serviceaccount:d8-istio:istiod-v1x19x7",
+					},
+				},
 			}
 
-			// All rules, except last three are dropping rules.
-			for i := 0; i < len(policy.Rules)-3; i++ {
-				Expect(policy.Rules[i].Level).To(Equal(audit.LevelNone))
+			appendBasicPolicyRules(&expectPolicy, extraData)
+			appendVirtualizationPolicyRules(&expectPolicy)
+			appendUnauthenticatedRules(&expectPolicy)
+
+			for i, actualRule := range policy.Rules {
+				// Note: Equal() is not working here as Rule contains array fields with "omitempty" directive and an empty array is not equal to nil.
+				expectedRule := expectPolicy.Rules[i]
+				Expect(actualRule.Level).To(Equal(expectedRule.Level), "Level in rule %d %+v should match expected rule %+v", i, actualRule, expectedRule)
+				if len(actualRule.Users) > 0 && len(expectedRule.Users) > 0 {
+					Expect(actualRule.Users).To(Equal(expectedRule.Users), "Users in rule %d %+v should match expected rule %+v", i, actualRule, expectedRule)
+				}
+				if len(actualRule.Namespaces) > 0 && len(expectedRule.Namespaces) > 0 {
+					Expect(actualRule.Namespaces).To(Equal(expectedRule.Namespaces), "Namespaces in rule %d %+v should match expected rule %+v", i, actualRule, expectedRule)
+				}
 			}
-
-			allServiceAccounts := append(auditPolicyBasicServiceAccounts, istiodServiceAccounts...)
-
-			saRule := policy.Rules[len(policy.Rules)-3]
-			Expect(saRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(saRule.Users).To(Equal(allServiceAccounts))
-
-			namespaceRule := policy.Rules[len(policy.Rules)-2]
-			Expect(namespaceRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(namespaceRule.Namespaces).To(Equal(auditPolicyBasicNamespaces))
-
-			listRule := policy.Rules[len(policy.Rules)-1]
-			Expect(listRule.Level).To(Equal(audit.LevelMetadata))
-			Expect(listRule.Namespaces).To(BeEmpty())
 		})
 	})
+
 })

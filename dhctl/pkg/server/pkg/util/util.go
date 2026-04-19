@@ -37,7 +37,9 @@ func WriteTempFile(dir, pathPattern string, writer func(*os.File) error) (string
 	}
 
 	if err := writer(f); err != nil {
-		defer cleanup()
+		defer func() {
+			_ = cleanup()
+		}()
 		return "", nil, fmt.Errorf("writing temp file: %w", err)
 	}
 
@@ -53,7 +55,7 @@ func ErrToString(err error) string {
 
 func PortToString(p *int32) string {
 	if p == nil {
-		return ""
+		return "22"
 	}
 	return strconv.Itoa(int(*p))
 }

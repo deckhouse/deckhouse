@@ -6,8 +6,21 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{ include "helm_lib_module_labels" (list .) | nindent 2 }}
 data:
+  # For CiliumNetworkPolicy and NetworkPolicy
+  policy-cidr-match-mode: "nodes"
+  # For CiliumNetworkPolicy
+  enable-node-selector-labels: "true"
+  #
+  bpf-lb-sock-terminate-pod-connections: "true"
+  enable-tcx: "false"
+  #
+  exclude-node-label-patterns: "virtualization.deckhouse.io storage.deckhouse.io"
+  # Disable ipam processing svc_loadBalancer if loadBalancerClass not specified
+  default-lb-service-ipam: none
+  #
   identity-allocation-mode: crd
   cluster-name: default # make sense only for cluster mesh
+  vlan-bpf-bypass: "0"
 
   debug: {{ .Values.cniCilium.debugLogging | quote }}
   pprof: "true"
@@ -21,12 +34,14 @@ data:
   operator-api-serve-addr: "127.0.0.1:9234"
   enable-metrics: "true"
 
+  {{- if not .Values.cniCilium.activeL2NeighborDiscoveryEnabled }}
+  enable-l2-neigh-discovery: "false"
+  {{- end }}
+
   enable-ipv4: "true"
   enable-ipv6: "false"
 
   enable-bpf-tproxy: "true"
-
-  bpf-lb-bypass-fib-lookup: "false" # TODO: https://docs.cilium.io/en/v1.11/gettingstarted/kubeproxy-free/#nodeport-with-fhrp-vpc
 
   {{- if .Values.cniCilium.labelsRegex }}
   labels: {{.Values.cniCilium.labelsRegex | join " " | quote }}
@@ -35,9 +50,11 @@ data:
   {{- if eq .Values.cniCilium.internal.mode "VXLAN" }}
   tunnel-protocol: "vxlan"
   routing-mode: "tunnel"
+
   {{- else if eq .Values.cniCilium.internal.mode "DirectWithNodeRoutes" }}
   routing-mode: "native"
   auto-direct-node-routes: "true"
+  direct-routing-skip-unreachable: "true"
   {{- else if eq .Values.cniCilium.internal.mode "Direct" }}
   routing-mode: "native"
   auto-direct-node-routes: "false"
@@ -56,6 +73,10 @@ data:
   dhcpd-enabled: "true"
   dhcpd-cluster-dns: {{ .Values.global.discovery.clusterDNSAddress | quote }}
   dhcpd-cluster-domain: {{ .Values.global.discovery.clusterDomain | quote }}
+  {{- end }}
+
+  {{- if .Values.cniCilium.sctpEnabled }}
+  enable-sctp: "true"
   {{- end }}
 
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
@@ -79,7 +100,7 @@ data:
 
   enable-host-firewall: "true"
 
-  kube-proxy-replacement: "strict"
+  kube-proxy-replacement: "true"
   kube-proxy-replacement-healthz-bind-address: "0.0.0.0:10256"
 
   bpf-lb-sock: "true"
@@ -100,11 +121,21 @@ data:
   bpf-lb-external-clusterip: "true"
   enable-service-topology: "true"
   netfilter-compatible-mode: "true"
+  {{- if .Values.cniCilium.extraLoadBalancerAlgorithmsEnabled }}
+  bpf-lb-algorithm-annotation: "true"
+  {{- end }}
+  {{- if .Values.cniCilium.loadBalancerICMPReplyEnabled }}
+  enable-loadbalancer-icmp-reply: "true"
+  {{- end }}
 
   enable-session-affinity: "true"
+  {{- if .Values.cniCilium.svcSourceRangeCheck }}
   enable-svc-source-range-check: {{ .Values.cniCilium.svcSourceRangeCheck | quote }}
+    {{- if .Values.cniCilium.loadBalancerSourceRangeAllTypes }}
+  bpf-lb-source-range-all-types: {{ .Values.cniCilium.loadBalancerSourceRangeAllTypes | quote }}
+    {{- end }}
+  {{- end }}
 
-  sockops-enable: "false"
   enable-icmp-rules: "true"
   enable-endpoint-health-checking: "true"
   enable-health-checking: "true"
@@ -119,18 +150,47 @@ data:
 
   enable-cilium-endpoint-slice: "true"
 
-  enable-k8s-terminating-endpoint: "true"
-  enable-remote-node-identity: "true"
-
   bpf-map-dynamic-size-ratio: "0.005"
   bpf-policy-map-max: "65536"
 
   # Local hubble sever section
-{{- if has "cilium-hubble" .Values.global.enabledModules }}
+  {{- if or (has "cilium-hubble" .Values.global.enabledModules) .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled .Values.cniCilium.internal.hubble.settings.flowLogs.enabled }}
   enable-hubble: "true"
-{{- else }}
+    {{- if .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled }}
+  hubble-metrics-server: "127.0.0.1:9091"
+  enable-hubble-open-metrics: "true"
+      {{- if .Values.cniCilium.internal.hubble.settings.extendedMetrics.collectors }}
+  hubble-metrics: |
+         {{- range .Values.cniCilium.internal.hubble.settings.extendedMetrics.collectors }}
+           {{- .name | nindent 4 }}{{ if .contextOptions }}:{{ .contextOptions }}{{ end }}
+         {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.enabled }}
+  hubble-export-file-path: /var/log/cilium/hubble/flow.log
+  hubble-export-file-max-backups: "0"
+  hubble-export-file-max-size-mb: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.fileMaxSizeMB | quote }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.allowFilterList }}
+        {{- $parts := list -}}
+        {{- range $obj := .Values.cniCilium.internal.hubble.settings.flowLogs.allowFilterList }}
+          {{- $parts = append $parts ($obj | toJson) -}}
+        {{- end }}
+  hubble-export-allowlist: {{ join " " $parts | quote }}
+      {{- end }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.denyFilterList }}
+        {{- $parts := list -}}
+        {{- range $obj := .Values.cniCilium.internal.hubble.settings.flowLogs.denyFilterList }}
+          {{- $parts = append $parts ($obj | toJson) -}}
+        {{- end }}
+  hubble-export-denylist: {{ join " " $parts | quote }}
+      {{- end }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.fieldMaskList }}
+  hubble-export-fieldmask: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.fieldMaskList | join " " | quote }}
+      {{- end }}
+    {{- end }}
+  {{- else }}
   enable-hubble: "false"
-{{- end }}
+  {{- end }}
   hubble-socket-path: "/var/run/cilium/hubble.sock"
   hubble-listen-address: ":4244"
 
@@ -142,13 +202,19 @@ data:
   # https://docs.cilium.io/en/v1.12/policy/language/#alpine-musl-deployments-and-dns-refused
   tofqdns-dns-reject-response-code: nameError
 
-  # disabled since they may generate absurd amount of requests in count and size
-  # we've found no use for status field of CNP and CCNP
-  disable-cnp-status-updates: "true"
-
   procfs: "/host/proc"
 
   write-cni-conf-when-ready: /host/etc/cni/net.d/05-cilium.conflist
-  cni-exclusive: {{ .Values.cniCilium.internal.isIstioCNIEnabled | not | quote }}
+
+  cni-exclusive: {{ .Values.cniCilium.internal.exclusiveCNIPlugin | quote }}
 
   skip-crd-creation: "true"
+
+  {{- if and (.Values.cniCilium.encryption) (.Values.cniCilium.encryption.mode) (ne .Values.cniCilium.encryption.mode "Disabled") }}
+    {{- if eq .Values.cniCilium.encryption.mode "WireGuard" }}
+  enable-wireguard: "true"
+      {{- if .Values.cniCilium.encryption.nodeToNodeModeEnabled }}
+  encrypt-node: "true"
+      {{- end }}
+    {{- end }}
+  {{- end }}

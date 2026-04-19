@@ -1,0 +1,5 @@
+linters-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.kafka.properties.sasl.properties.mechanism"

@@ -1,8 +1,9 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=1100">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- title/descriptions -->
+{%- assign description_maxlength = 199 -%}
 {%- assign page_url_parts = page.url | split: '/' -%}
 {%- assign max_ind = page_url_parts.size | minus: 1 -%}
 {%- assign title_parts = "" | split: "" -%}
@@ -26,53 +27,145 @@
     {%- assign title_parts = title_parts | push: title -%}
 {%- endif -%}
 {%- endfor %}
+{%- assign module_readme_page = false -%}
+{%- assign _readme_name = page.name | default: '' | downcase | regex_replace_once: '(_ru)?\.md$', '' -%}
+{%- if _readme_name == 'readme' -%}
+  {%- assign module_readme_page = true -%}
+{%- endif -%}
 
-{%- assign title_parts = title_parts | push: page.title -%}
+{%- assign embed_module_readme = false -%}
+{%- if module_readme_page and page.sidebar == 'embedded-modules' -%}
+  {%- assign embed_module_readme = true -%}
+{%- endif -%}
+
+{%- assign page_title_for_head = page.title -%}
+{%- if embed_module_readme -%}
+  {%- assign page_title_for_head = site.data.modules.sidebar.titles.overview[page.lang] -%}
+{%- elsif page.title contains ':' -%}
+  {%- assign _suffix = page.title | regex_replace_once: '^[^:]+:\s*', '' | strip -%}
+  {%- if _suffix != '' -%}
+    {%- assign page_title_for_head = _suffix | capitalize -%}
+  {%- endif -%}
+{%- endif -%}
+
+{%- assign title_parts = title_parts | push: page_title_for_head -%}
 
 {%- if page_url_without_lang.size > 1 and is_directory %}
 {%- assign page_url_without_lang = page_url_without_lang | append: '/' %}
 {%- endif %}
 
-{%- assign generated_title = title_parts | reverse | join: " / " %}
-<title>{{ generated_title }} | {{ site.site_title }}</title>
-{%- if page.description %}
-    {%- assign description = page.description | strip_html | strip_newlines | strip | truncate: 200 %}
+{%- if page.title_gen -%}
+  {%- assign generated_title = page.title_gen -%}
+  {%- if page.title_gen contains ':' -%}
+    {%- assign _gt_suffix = page.title_gen | regex_replace_once: '^[^:]+:\s*', '' | strip -%}
+    {%- if _gt_suffix != '' -%}
+      {%- assign generated_title = _gt_suffix | capitalize -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- else -%}
+  {%- assign generated_title = title_parts | reverse | join: "" -%}
+{%- endif -%}
+{%- if embed_module_readme -%}
+  {%- assign generated_title = page_title_for_head -%}
+{%- endif -%}
+
+{%- assign words = page.product_code | replace: '-', ' ' | split: ' ' -%}
+{%- assign additional_title = "" -%}
+{%- for word in words -%}
+  {%- assign capitalized_word = word | capitalize -%}
+  {%- if additional_title == "" -%}
+    {%- assign additional_title = capitalized_word -%}
+  {%- else -%}
+    {%- assign additional_title = additional_title | append: " " | append: capitalized_word -%}
+  {%- endif -%}
+{%- endfor -%}
+
+{%- if page.sidebar == 'embedded-modules' and page['module-kebab-name'] and page['module-kebab-name'] != 'global' %}
+  {%- assign module_primary_title = page_title_for_head -%}
+  {%- if page.title_gen -%}
+    {%- unless embed_module_readme -%}
+      {%- assign module_primary_title = generated_title -%}
+    {%- endunless -%}
+  {%- endif -%}
+  {%- capture html_title %}{{ module_primary_title }} | {{ page['module-kebab-name'] }} | {{ site.site_title }}{% endcapture %}
+  {%- assign meta_title = html_title -%}
 {%- else %}
-    {%- assign pageCommonName = page.name | replace: '_RU.md', '' | replace: '.md', '' | downcase %}
+  {%- capture html_title %}{{ generated_title }} | {{ site.site_title }} {{ additional_title }}{% endcapture %}
+  {%- capture meta_title %}{{ generated_title }} | {{ site.site_title }}{% endcapture %}
+{%- endif -%}
+<title>{{ html_title }}</title>
+
+{%- if page.description %}
+    {%- assign raw_description = page.description | strip_html | strip_newlines | strip %}
+{%- else %}
+    {%- assign pageCommonName = page.name | downcase | regex_replace_once: '(_ru)?\.md$', '' %}
     {%- if pageCommonName == "configuration" or pageCommonName == "cr" or pageCommonName == "examples" or pageCommonName == "usage" or pageCommonName == "faq"  %}
         {%- assign i18nKey = 'description_' | append: pageCommonName %}
-        {%- assign description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
+        {%- assign raw_description = site.data.i18n.common[i18nKey][page.lang] | replace: '<MODULENAME>', page['module-kebab-name'] %}
     {%- elsif page.platform_type %}
-        {%- assign description = site.data.i18n.common['gs_description'][page.lang] | replace: '<TITLE>', page.title_main | replace: '<STEP>', page.step_name %}
+        {%- assign raw_description = site.data.i18n.common['gs_description'][page.lang] | replace: '<TITLE>', page.title_main | replace: '<STEP>', page.step_name %}
     {%- else %}
-        {%- assign description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip | truncate: 200 %}
+        {%- assign raw_description = page.content | markdownify | strip_html | normalizeSearchContent | strip_newlines | strip %}
     {%- endif %}
 {%- endif %}
+{%- if raw_description.size > description_maxlength %}
+    {%- assign truncated = raw_description | truncate: description_maxlength, '' %}
+    {%- assign boundary_char = raw_description | slice: description_maxlength, 1 %}
+    {%- if boundary_char != ' ' %}
+        {%- assign words = truncated | split: ' ' %}
+        {%- if words.size > 1 %}
+            {%- assign last_index = words.size | minus: 1 %}
+            {%- assign description = words | slice: 0, last_index | join: ' ' %}
+        {%- else %}
+            {%- assign description = truncated %}
+        {%- endif %}
+    {%- else %}
+        {%- assign description = truncated | strip %}
+    {%- endif %}
+{%- else %}
+    {%- assign description = raw_description %}
+{%- endif %}
 
-{%- if include.mode=='documentation' %}
+{%- if page.sidebar == 'embedded-modules' %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url %}
+{%- elsif include.mode=='documentation' %}
   {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
 {%- else %}
-  {%- assign page_meta_url = page_url_without_lang | relative_url %}
+  {%- if page.product_code == 'kubernetes-platform' %}
+    {%- assign page_url_without_lang = page_url_without_lang | relative_url | prepend: page.product_code | prepend: '/' %}
+  {% endif %}
+  {%- assign page_meta_url = page_url_without_lang | relative_url | prepend: '/products' %}
 {% endif %}
+{%- capture raw_keywords %}{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}{% endcapture -%}
+{%- assign escaped_page_meta_url = page_meta_url | escape_once -%}
+{%- assign escaped_meta_title = meta_title | strip | escape_once -%}
+{%- assign escaped_description = description | strip | escape_once -%}
+{%- assign escaped_keywords = raw_keywords | strip | escape_once -%}
 <!-- multilang -->
 {%- if page.multilang %}
-    <link data-proofer-ignore rel="alternate" hreflang="ru" href="{{ site.urls['ru'] }}{{ page_meta_url }}" />
-    <link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.urls['en'] }}{{ page_meta_url }}" />
+    <link data-proofer-ignore rel="alternate" hreflang="ru" href="{{ site.urls['ru'] }}{{ escaped_page_meta_url }}" />
+    <link data-proofer-ignore rel="alternate" hreflang="en" href="{{ site.urls['en'] }}{{ escaped_page_meta_url }}" />
 {%- endif %}
 
 <!-- Primary Meta Tags -->
-<meta name="title" content="{{ generated_title }} | {{ site.site_title }}">
-<meta name="description" content="{{ description }}">
-<meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">
+<link rel="canonical" href="{{ site.urls[page.lang] }}{{ escaped_page_meta_url }}" />
+<meta name="title" content="{{ escaped_meta_title }}">
+<meta name="description" content="{{ escaped_description }}">
+<meta name="keywords" content="{{ escaped_keywords }}">
 
 <!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
-<meta property="og:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
-<meta property="og:title" content="{{ generated_title }} | {{ site.site_title }}">
-<meta property="og:description" content="{{ description }}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="{{ site.urls[page.lang] }}{{ escaped_page_meta_url }}">
+<meta property="og:title" content="{{ escaped_meta_title }}">
+<meta property="og:description" content="{{ escaped_description }}">
+
+{%- if page.product_code == 'stronghold' or page.product_code == "virtualization-platform" or page.product_code == "code" or page.product_code == "delivery-kit" or page.product_code == "kubernetes-platform" or page.product_code == "observability-platform" or page.product_code == "prompp" %}
+<meta property="og:image" content="{{ site.urls[page.lang] }}/images/og/{{ page.product_code }}.png">
+<meta property="og:site_name" content="Deckhouse">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta property="og:image:type" content="image/png">
+{%- endif %}
 
 <!-- Twitter -->
-<meta property="twitter:card" content="summary_large_image">
-<meta property="twitter:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
-<meta property="twitter:title" content="{{ generated_title }} | {{ site.site_title }}">
-<meta property="twitter:description" content="{{ description }}">
+<meta name="twitter:card" content="summary_large_image">

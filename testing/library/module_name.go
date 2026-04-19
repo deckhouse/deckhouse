@@ -34,7 +34,7 @@ func GetModuleNameByPath(modulePath string) (string, error) {
 	}
 
 	if !os.IsNotExist(err) {
-		return "", err
+		return "", fmt.Errorf("read file: %w", err)
 	}
 
 	dirName := filepath.Base(modulePath)
@@ -53,12 +53,12 @@ func extractModuleNameFromChartYaml(chartYamlBytes []byte) (string, error) {
 
 	err := yaml.Unmarshal(chartYamlBytes, &chart)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unmarshal: %w", err)
 	}
 
 	if len(chart.Name) == 0 {
 		return "", fmt.Errorf(`"Chart.yaml"'s Name field is empty`)
 	}
 
-	return chart.Name, err
+	return chart.Name, nil
 }

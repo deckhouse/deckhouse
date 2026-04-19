@@ -34,10 +34,14 @@ spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP', 'SAML']
                 displayName:
                   type: string
                   description: |
@@ -131,6 +135,18 @@ spec:
                         It is possible for a user to change their own user name but it is very rare for them to do so.
 
                         Equals to false by default.
+                    rootCAData:
+                      type: string
+                      description: |
+                        A CA chain to validate the provider in PEM format.
+                      x-doc-examples:
+                        - |
+                          ```yaml
+                          rootCAData: |
+                            -----BEGIN CERTIFICATE-----
+                            MIIFaDC...
+                            -----END CERTIFICATE-----
+                          ```
                 bitbucketCloud: &bitbucketCloud
                   type: object
                   required: ['clientID', 'clientSecret']
@@ -285,6 +301,16 @@ spec:
                         List of [additional scopes](https://github.com/dexidp/website/blob/main/content/docs/configuration/custom-scopes-claims-clients.md) to request in token response.
                       items:
                         type: string
+                    allowedGroups:
+                      type: array
+                      description: |
+                        A list of groups the user must belong to in order to authenticate successfully.
+
+                        If none of the specified groups match the user's groups, authentication will be denied.
+
+                        If the parameter is omitted, no group-based filtering will be applied.
+                      items:
+                        type: string
                     promptType:
                       type: string
                       default: 'consent'
@@ -317,7 +343,7 @@ spec:
                         Enables basic authorization for the Kubernetes API server.
 
                         The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
-                        Works **only** if the [publishAPI](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+                        Works **only** if the [publishAPI](https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
 
                         Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
                 ldap: &ldap
@@ -460,6 +486,134 @@ spec:
                                 x-doc-examples: ['member']
                                 description: |
                                   The name of the attribute that stores the group member names.
+                    enableBasicAuth:
+                      type: boolean
+                      description: |
+                        Enables Basic Authentication for access to the Kubernetes API server.
+
+                        The credentials are the Crowd user's username and password (from the application configured for this provider). 
+                        
+                        Limitations:
+                        - works only when [`publishAPI`](configuration.html#parameters-publishapi) is enabled;
+                        - can be enabled for only one OIDC or Crowd provider in the cluster.
+
+                        Authentication data and group membership obtained from the IdP are cached for 10 seconds.
+                    kerberos:
+                      type: object
+                      description: |
+                        Optional Kerberos (SPNEGO) SSO settings for LDAP.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Enable Kerberos SPNEGO flow for this LDAP provider.
+                        expectedRealm:
+                          type: string
+                          description: Optional realm to require (case-insensitive).
+                        usernameFromPrincipal:
+                          type: string
+                          enum: ["Localpart", "SAMAccountName", "UserPrincipalName"]
+                          default: "Localpart"
+                          description: How to map Kerberos principal to LDAP username.
+                        fallbackToPassword:
+                          type: boolean
+                          default: false
+                          description: |
+                            If `true`, in the absence of/incorrect `Authorization: Negotiate` header, a login/password form will be displayed instead of a 401 response with `WWW-Authenticate: Negotiate`.
+                        keytabSecretName:
+                          type: string
+                          description: Name of Secret containing key 'krb5.keytab' to mount for Dex.
+                        krb5ConfConfigMapName:
+                          type: string
+                          description: Optional ConfigMap name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                        krb5ConfSecretName:
+                          type: string
+                          description: Optional Secret name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                saml: &saml
+                  type: object
+                  description: |
+                    Parameters of a SAML provider  (intended for the `type: SAML`).
+                  properties:
+                    ssoURL:
+                      type: string
+                      description: |
+                        SSO URL used for POST value.
+                      x-doc-examples: ['https://idp.example.com/saml/sso']
+                    rootCAData:
+                      type: string
+                      description: |
+                        A CA chain to validate the provider in PEM format.
+                      x-doc-examples:
+                      - |
+                        ```yaml
+                        rootCAData: |
+                          -----BEGIN CERTIFICATE-----
+                          MIIFaDC...
+                          -----END CERTIFICATE-----
+                        ```
+                    entityIssuer:
+                      type: string
+                      description: |
+                        Issuer value expected in the SAML response.
+                        
+                        Defaults to the callback URL.
+                    ssoIssuer:
+                      type: string
+                      description: |
+                        Issuer value expected in the SAML response from the IdP.
+                    redirectURI:
+                      type: string
+                      description: |
+                        Callback URI.
+                        
+                        Overrides the default callback URL. Should be set to `https://<dex-domain>/callback`.
+                    usernameAttr:
+                      type: string
+                      description: |
+                        SAML attribute to map to the username claim.
+                      default: 'name'
+                    emailAttr:
+                      type: string
+                      description: |
+                        SAML attribute to map to the email claim.
+                      default: 'email'
+                    groupsAttr:
+                      type: string
+                      description: |
+                        SAML attribute to map to the groups claim.
+                    groupsDelim:
+                      type: string
+                      description: |
+                        Delimiter to split the groups attribute value if it is a single string.
+                    allowedGroups:
+                      type: array
+                      items:
+                        type: string
+                      description: |
+                        If set, only members of at least one of the listed groups will be allowed to log in.
+                    filterGroups:
+                      type: boolean
+                      description: |
+                        If `true`, the connector will filter the groups claim to only include groups from the `allowedGroups` list.
+                      default: false
+                    nameIDPolicyFormat:
+                      type: string
+                      description: |
+                        The NameIDPolicy format to request from the IdP.
+                      enum:
+                        - 'persistent'
+                        - 'emailAddress'
+                        - 'unspecified'
+                        - 'X509SubjectName'
+                        - 'WindowsDomainQualifiedName'
+                        - 'transient'
+                    insecureSkipSignatureValidation:
+                      type: boolean
+                      description: |
+                        Skip signature validation of SAML responses. This is insecure and should only be used for testing.
+                      default: false
+                  required:
+                    - ssoURL
               oneOf:
                 - properties:
                     inlet:
@@ -491,6 +645,11 @@ spec:
                       enum: ['LDAP']
                     ldap: {}
                   required: ['ldap']
+                - properties:
+                    inlet:
+                      enum: ['SAML']
+                    saml: {}
+                  required: ['saml']
       additionalPrinterColumns: &additionalPrinterColumns
         - jsonPath: .spec.type
           name: Type
@@ -500,6 +659,12 @@ spec:
           name: Display Name
           description: 'Name that will be displayed on the providers selection screen.'
           type: string
+        - jsonPath: .spec.enabled
+          name: Enabled
+          type: boolean
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
     - name: v1
       served: true
       storage: true
@@ -514,15 +679,20 @@ spec:
 
             [Usage example...](usage.html#configuring-a-provider)
 
+            **Warning.** It is forbidden to use users and groups with the `system:` prefix. Authentication attempts by such users or members of such groups will be rejected, and a corresponding warning will appear in the `kube-apiserver` logs.
           properties:
             spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
-                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP']
+                  enum: ['Github', 'Gitlab', 'BitbucketCloud', 'Crowd', 'OIDC', 'LDAP', 'SAML']
                 displayName:
                   type: string
                   description: |
@@ -549,7 +719,7 @@ spec:
                          - ['acme:Site Reliability Engineers'] for 'Name'
                          - ['acme:site-reliability-engineers'] for 'Slug'
                          - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'Both'
-
+      
                         'name' will be used by default.
                     useLoginAsID:
                       type: boolean
@@ -587,6 +757,7 @@ spec:
                 crowd: *crowd
                 oidc: *oidc
                 ldap: *ldap
+                saml: *saml
               oneOf:
                 - properties:
                     inlet:
@@ -618,4 +789,9 @@ spec:
                       enum: ['LDAP']
                     ldap: {}
                   required: ['ldap']
+                - properties:
+                    inlet:
+                      enum: ['SAML']
+                    saml: {}
+                  required: ['saml']
       additionalPrinterColumns: *additionalPrinterColumns

@@ -1,0 +1,63 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: testmodule-0.5.0
+  labels:
+    module: testmodule
+    source: test-source
+    modules.deckhouse.io/update-policy: test-lts
+spec:
+  moduleName: testmodule
+  version: 0.5.0
+  weight: 900
+status:
+  approved: true
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: testmodule-0.25.0
+  labels:
+    module: testmodule
+    source: test-source
+    modules.deckhouse.io/update-policy: test-lts
+spec:
+  moduleName: testmodule
+  version: 0.25.0
+  weight: 900
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: test-source
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io
+    scheme: HTTPS
+status:
+  modules:
+    - name: testmodule
+  modulesCount: 1
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: test-lts
+spec:
+  releaseChannel: LTS
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: testmodule
+  labels:
+    modules.deckhouse.io/update-policy: test-lts
+status:
+  phase: Ready

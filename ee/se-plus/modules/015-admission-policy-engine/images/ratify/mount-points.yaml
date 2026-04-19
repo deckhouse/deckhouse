@@ -1,0 +1,4 @@
+dirs:
+  - /.ratify
+  - /usr/local/tls
+  - /usr/local/ratify

@@ -1,0 +1,13 @@
+ci:
+  fixes:
+    - summary: Use fixed werf version.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12972
+cloud-provider-zvirt:
+  fixes:
+    - summary: fix invalid zvirt csi template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12961
+node-local-dns:
+  fixes:
+    - summary: Stale-dns-connection-cleaner file permissions and security context are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12944
+

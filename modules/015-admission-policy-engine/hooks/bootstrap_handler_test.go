@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -52,14 +52,14 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})
@@ -80,14 +80,14 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})
@@ -108,14 +108,14 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})
@@ -136,14 +136,14 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
 				Name:   "d8_admission_policy_engine_not_bootstrapped",
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
-				Labels: map[string]string{},
+				Labels: nil,
 			}))
 		})
 	})
@@ -164,7 +164,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: bootstrap_handl
 			Expect(m).To(HaveLen(1))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  "d8_admission_policy_engine_not_bootstrapped",
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 		})
 	})

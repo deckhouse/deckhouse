@@ -17,7 +17,6 @@ spec:
                     - `Dryrun` — событие без действия. Применяется при отладке. Информацию о событии можно посмотреть в Grafana в Dashboard `Security/Admission policy engine`;
                     - `Warn` — событие без действия, аналогичное `Dryrun`. Содержит информацию об ограничении (constraint), которое вызвало бы запрет, если бы было использовано действие `Deny`.
                 policies:
-                  type: object
                   description: Набор политик, условиям которых должны соответствовать поды и контейнеры.
                   properties:
                     allowedHostPaths:
@@ -40,8 +39,17 @@ spec:
                       description: Разрешает контейнерам доступ к PID-пространству имен хоста.
                     allowHostNetwork:
                       description: Разрешает контейнерам доступ к Network-пространству имен хоста.
+                    allowRbacWildcards:
+                      description: |
+                        Разрешает использование wildcard (`*`) в ресурсах Role и RoleBinding (namespace scope).
+
+                        Ресурсы ClusterRole и ClusterRoleBinding политикой SecurityPolicy не валидируются.
+
+                        **По умолчанию** (если значение не указано) — `true`. Это означает, что при отсутствии данного поля или его явного указания, использование wildcard разрешено. Если вы хотите запретить использование wildcard, задайте для данного параметра значение `false`.
                     allowedHostPorts:
-                      description: Cписок диапазонов портов хоста (`hostPort`), разрешенных для использования в контейнерах.
+                      description: |
+                        Cписок диапазонов портов хоста (`hostPort`), разрешенных для использования в контейнерах.
+                        Для подов с `hostNetwork: true` происходит дополнительная проверка портов, указанных в `containerPort`.
                       items:
                         properties:
                           min:
@@ -49,9 +57,15 @@ spec:
                           max:
                             description: Максимальное значение диапазона.
                     allowPrivileged:
-                      description: Разрешает запускать контейнеры в привилегированном режиме.
+                      description: |
+                        Разрешает запускать контейнеры в привилегированном режиме.
+
+                        **По умолчанию** (если значение не указано) — `false`. Это означает, что при отсутствии данного поля или его явного указания, контейнеру будет отказано в повышении привилегий. Если вы хотите разрешить повышение привилегий, задайте для данного параметра значение `true`.
                     allowPrivilegeEscalation:
-                      description: Разрешает процессам в контейнерах запрашивать более широкий список привилегий, чем у родительского процесса.
+                      description: |
+                        Разрешает процессам в контейнерах запрашивать более широкий список привилегий, чем у родительского процесса.
+
+                        **По умолчанию** (если значение не указано) — `false`. Это означает, что при отсутствии данного поля или его явного указания, контейнеру будет отказано в повышении привилегий. Если вы хотите разрешить повышение привилегий, задайте для данного параметра значение `true`.
                     allowedProcMount:
                       description: Разрешает монтирование `/proc` для контейнеров.
                     allowedCapabilities:
@@ -69,12 +83,9 @@ spec:
                       items:
                         description: Привилегия (linux capability).
                     allowedAppArmor:
-                      type: array
                       description: |
                         Список разрешенных для контейнеров профилей AppArmor.
-                      example: ["runtime/default", "unconfined"]
                       items:
-                        type: string
                         description: Профиль AppArmor.
                     allowedFlexVolumes:
                       description: Список разрешенных драйверов Flex Volumes.
@@ -153,36 +164,52 @@ spec:
                       description: Задает список разрешенных seccomp-профилей для аннотаций подов и контейнеров.
                       properties:
                         allowedProfiles:
-                          description: Список разрешенных seccomp-профилей для подов и контейнеров.
+                          description: |
+                            Список разрешенных seccomp-профилей для подов и контейнеров.
+
+                            Поддерживаются оба формата:
+                            - Через аннотации: `runtime/default`, `docker/default`, `unconfined`, `localhost/some-profile.json`.
+                              `localhost/*` — разрешает любые локальные профили.
+                            - Через securityContext: `RuntimeDefault`, `Unconfined`, `Localhost`.
+                              Для Localhost укажите разрешённые профили в параметре `allowedLocalhostFiles`.
+
+                            Типы профилей:
+                            - `Unconfined` — без ограничений (небезопасно).
+                            - `RuntimeDefault` — стандартный профиль среды выполнения (Docker, CRI-O).
+                            - `Localhost` — пользовательский профиль на узле (гибко и точно под приложение).
+
+                            Использование `*` разрешает все профили. Не обязательно указывать оба формата — они автоматически сопоставляются.
                         allowedLocalhostFiles:
                           description: |
                             Определяет локальные профили seccomp (в формате JSON), разрешенные после указания `Localhost` в параметре `allowedProfiles`.
 
                             Пустой список запрещает использование локальных профилей.
                     seLinux:
-                      description: Определяет разрешенные для использования в параметре `secutiryContext` значения SELinux-меток.
+                      description: Определяет разрешенные для использования в параметре `securityContext` значения SELinux-лейблов.
                       items:
                         properties:
                           level:
-                            description: Значения для SELinux level-меток.
+                            description: Значения для SELinux level-лейблов.
                           role:
-                            description: Значения для SELinux role-меток.
+                            description: Значения для SELinux role-лейблов.
                           type:
-                            description: Значения для SELinux type-меток.
+                            description: Значения для SELinux type-лейблов.
                           user:
-                            description: Значения для SELinux user-меток.
+                            description: Значения для SELinux user-лейблов.
                     allowedClusterRoles:
                       description: "Список разрешенных ролей кластера для связывания с пользователями."
                     allowedVolumes:
                       description: Список разрешенных volume-плагинов.
+                    allowedServiceTypes:
+                      description: Список разрешенных типов сервисов.
+                    blockWildcardDomains:
+                      description: Запрещает создание объектов Ingress с `*` в DNS доменах.
                     verifyImageSignatures:
                       description: |
                         Список политик проверки подписи образов контейнеров.
 
                         Образы контейнеров должны быть подписаны с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys).
-                      type: array
                       items:
-                        type: object
                         properties:
                           dockerCfg:
                             description: |
@@ -211,10 +238,10 @@ spec:
                         matchNames:
                           description: Выбирает пространства имен, соответствующие списку. Допускается использование шаблонов (glob patterns).
                         excludeNames:
-                          description: Выбирает все пространства имен, которых нет в списке.  Допускается использование шаблонов (glob patterns).
+                          description: Выбирает все пространства имен, которых нет в списке. Допускается использование шаблонов (glob patterns).
                         labelSelector:
                           description: |
-                            Указывает селектор меток для фильтрации пространств имен.
+                            Указывает селектор лейблов для фильтрации пространств имен.
 
                             Подробнее в [документации Kubernetes](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
                           properties:

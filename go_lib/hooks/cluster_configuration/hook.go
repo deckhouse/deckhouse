@@ -17,6 +17,7 @@ limitations under the License.
 package cluster_configuration
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -29,9 +30,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
+type Config struct {
+	PreparatorProvider config.MetaConfigPreparatorProvider
+}
+
+func NewConfig(preparatorProvider config.MetaConfigPreparatorProvider) Config {
+	return Config{
+		PreparatorProvider: preparatorProvider,
+	}
+}
+
 type Handler func(input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured, secretFound bool) error
 
-func RegisterHook(handler Handler) bool {
+func RegisterHook(handler Handler, c Config) bool {
 	return sdk.RegisterFunc(&go_hook.HookConfig{
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 		Kubernetes: []go_hook.KubernetesConfig{
@@ -50,13 +61,13 @@ func RegisterHook(handler Handler) bool {
 				FilterFunc: applyProviderClusterConfigurationSecretFilter,
 			},
 		},
-	}, func(input *go_hook.HookInput) error {
-		return clusterConfiguration(input, handler)
+	}, func(ctx context.Context, input *go_hook.HookInput) error {
+		return clusterConfiguration(ctx, input, handler, c)
 	})
 }
 
 func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret = &v1.Secret{}
+	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert secret from unstructured: %v", err)
@@ -65,33 +76,46 @@ func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructure
 	return secret, nil
 }
 
-func clusterConfiguration(input *go_hook.HookInput, handler Handler) error {
+func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler Handler, hookConfig Config) error {
 	var (
 		metaCfg               *config.MetaConfig
 		providerDiscoveryData *unstructured.Unstructured
 		secretFound           bool
 	)
 
-	snap := input.Snapshots["provider_cluster_configuration"]
-	if len(snap) > 0 {
+	snaps := input.Snapshots.Get("provider_cluster_configuration")
+	if len(snaps) > 0 {
 		secretFound = true
-		secret := snap[0].(*v1.Secret)
-		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
-			m, err := config.ParseConfigFromData(string(clusterConfigurationYAML))
-			if err != nil {
-				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
-			}
-			metaCfg = m
+		secret := new(v1.Secret)
+		err := snaps[0].UnmarshalTo(secret)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal secret: %w", err)
 		}
+
+		// We are forced to keep such a variable as a workaround in order to pass the tests during the build stage
+		// This variable (and this package) will be removed after the cloud provider modules are externalized
+		additionalOpenAPISchemasPaths := []string{
+			"/deckhouse/modules/030-cloud-provider-yandex/candi/openapi",
+			"/deckhouse/modules/030-cloud-provider-gcp/candi/openapi",
+			"/deckhouse/modules/030-cloud-provider-azure/candi/openapi",
+		}
+
 		if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
 			err := json.Unmarshal(discoveryDataJSON, &providerDiscoveryData)
 			if err != nil {
 				return fmt.Errorf("cannot unmarshal cloud-provider-discovery-data.json key: %v", err)
 			}
-			_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{})
+			_, err = config.ValidateDiscoveryData(&discoveryDataJSON, additionalOpenAPISchemasPaths)
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 			}
+		}
+		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
+			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider, nil)
+			if err != nil {
+				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
+			}
+			metaCfg = m
 		}
 	}
 

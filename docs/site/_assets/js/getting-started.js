@@ -1,4 +1,4 @@
-$(document).ready(function () {
+document.addEventListener("DOMContentLoaded", function() {
   $('[gs-revision-tabs]').on('click', function () {
     var name = $(this).attr('data-features-tabs-trigger');
     var $parent = $(this).closest('[data-features-tabs]');
@@ -21,17 +21,59 @@ function config_highlight() {
   let matchMightChangeEN = /# [Yy]ou might consider changing this\.?/;
   let matchMightChangeRU = /# [Вв]озможно, захотите изменить\.?/;
 
+  function nextCodeSpan($el) {
+    let n = $el.next();
+    while (n.length && (n.hasClass('line-number') || n.attr('data-copy') === 'ignore')) {
+      n = n.next();
+    }
+    return n;
+  }
+
+  function isLineNumberSpan(el) {
+    return $(el).hasClass('line-number') || $(el).attr('data-copy') === 'ignore';
+  }
+
   $('code span.c1').filter(function () {
     return (matchMightChangeEN.test(this.innerText)) || (matchMightChangeRU.test(this.innerText));
   }).each(function (index) {
+    let $third = nextCodeSpan(nextCodeSpan(nextCodeSpan($(this))));
+    let $colon = $third.length && nextCodeSpan($third).length && nextCodeSpan($third).text().trim() === ':' ? nextCodeSpan($third) : null;
     try {
-      if ($(this).next().next().next() && $(this).next().next().next().text() === '-') {
-        $(this).next().next().next().next().addClass('mightChange');
-      } else {
-        $(this).next().next().next().addClass('mightChange');
+      if ($third.length && $third.text() === '-') {
+        nextCodeSpan($third).addClass('mightChange');
+      } else if ($third.length && $third.text().trim() === ':') {
+        // key: value — highlight the value span, not the colon (after ":" there may be a space span)
+        let $afterColon = nextCodeSpan($third);
+        if ($afterColon.length && $afterColon.text().trim() === '' && nextCodeSpan($afterColon).length) {
+          nextCodeSpan($afterColon).addClass('mightChange');
+        } else if ($afterColon.length) {
+          $afterColon.addClass('mightChange');
+        }
+      } else if ($colon && nextCodeSpan($colon).length && /[\n]/.test(nextCodeSpan($colon).text())) {
+        // key: \n    nested-key: value — highlight only the value (after colon); colon may be in same span as key (e.g. "key:")
+        let $cursor = nextCodeSpan($colon);
+        while ($cursor.length && /^[\s\n]*$/.test($cursor.text())) {
+          $cursor = nextCodeSpan($cursor);
+        }
+        // Advance until we find a span that contains ":" (either ":" alone or "key:" in one span)
+        while ($cursor.length && $cursor.text().indexOf(':') === -1 && $cursor.text().indexOf('\n') === -1) {
+          $cursor = nextCodeSpan($cursor);
+        }
+        // Value is always in the next span(s) after the one that contains ":"
+        if ($cursor.length && $cursor.text().indexOf(':') !== -1) {
+          $cursor = nextCodeSpan($cursor);
+          while ($cursor.length && /^\s*$/.test($cursor.text()) && $cursor.text().indexOf('\n') === -1 && !isLineNumberSpan($cursor[0])) {
+            $cursor = nextCodeSpan($cursor);
+          }
+          if ($cursor.length && !isLineNumberSpan($cursor[0])) {
+            $cursor.addClass('mightChange');
+          }
+        }
+      } else if ($third.length && !isLineNumberSpan($third[0])) {
+        $third.addClass('mightChange');
       }
     } catch (e) {
-      $(this).next().next().next().addClass('mightChange');
+      if ($third.length && !isLineNumberSpan($third[0])) $third.addClass('mightChange');
     }
     $(this).addClass('mightChange');
   });
@@ -83,18 +125,18 @@ function update_domain_parameters() {
       $(this)[0].innerText = content.replace('admin@deckhouse.io', 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
-  // update user email in the resources-yml or user-yml snippet
-  $('[resources-yml],[user-yml]').each(function (index) {
+  // update user email in the config-yml or user-yml snippet
+  $('[config-yml],[user-yml]').each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].textContent : null;
     if (content && content.length > 0 && dhctlDomain) {
       $(this)[0].textContent = content.replace(/admin@deckhouse.io/g, 'admin@' + dhctlDomain.replace(/%s[^.]*./, ''));
     }
   });
 
-  update_parameter((sessionStorage.getItem('dhctl-domain') || 'example.com').replace('%s.', ''), null, 'example.com', null, '[resources-yml]');
+  update_parameter((sessionStorage.getItem('dhctl-domain') || 'example.com').replace('%s.', ''), null, 'example.com', null, '[config-yml]');
 }
 
-function update_parameter(sourceDataName, searchKey, replacePattern, value = null, snippetSelector = '', multilineIndent = 0) {
+function update_parameter(sourceDataName = '', searchKey = '', replacePattern = '', value = null, snippetSelector = '', multilineIndent = 0) {
   var objectToModify, sourceData;
 
   if (sourceDataName && sourceDataName.match(/^dhctl-/)) {
@@ -107,7 +149,7 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
     value = value ? value : sourceData
     if (value) {
       value = value.replace(/^/gm, ' '.repeat(multilineIndent));
-      value = "|\n" + value;
+      value = "\n" + value.replace(/\s+$/, '');
     }
   }
 
@@ -121,14 +163,19 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
         } else {
           objectToModify = $(this).next().next()[0]
         }
+
         if (objectToModify && (objectToModify.innerText.length > 0)) {
           let innerText = objectToModify.innerText;
-          if (replacePattern === '<GENERATED_PASSWORD_HASH>') {
+          if (multilineIndent > 0) {
+            objectToModify.innerText = '|';
+            objectToModify.after(innerText.replace(replacePattern, value ? value : sourceData));
+          } else if (replacePattern === '<GENERATED_PASSWORD_HASH>') {
             objectToModify.innerText = innerText.replace(replacePattern, "'" + (value ? value : sourceData) + "'");
           } else {
             objectToModify.innerText = innerText.replace(replacePattern, value ? value : sourceData);
           }
         }
+
       });
     }
 
@@ -148,7 +195,7 @@ function update_parameter(sourceDataName, searchKey, replacePattern, value = nul
   }
 }
 
-function updateTextInSnippet(snippetSelector, replacePattern, value) {
+function updateTextInSnippet(snippetSelector = '', replacePattern = '', value = '') {
   $(snippetSelector).each(function (index) {
     let content = ($(this)[0]) ? $(this)[0].textContent : null;
     if (content && content.length > 0) {
@@ -168,13 +215,13 @@ function getDockerConfigFromToken(registry, username, password) {
 //
 // Removes `disabled` class on target block selector if the item has a value otherwise, adds `disabled` class.
 //
-function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonElement = false) {
+function triggerBlockOnItemContent(itemSelector = '', targetSelector = '', turnCommonElement = false) {
   const input = $(itemSelector);
   const wrapper = $(targetSelector);
-  if (input.val() !== '') {
+  if (input && input.val() && input.length > 0) {
     update_license_parameters(input.val().trim());
     wrapper.removeClass('disabled');
-  } else if(input.val() === '' && !turnCommonElement) {
+  } else if(input && input.val() && input.val() === '' && !turnCommonElement) {
     getLicenseToken(input.val());
   } else {
     wrapper.addClass('disabled');
@@ -185,7 +232,7 @@ function triggerBlockOnItemContent(itemSelector, targetSelector, turnCommonEleme
   }
 }
 
-function toggleDisabled(tab, inputDataAttr) {
+function toggleDisabled(tab = '', inputDataAttr = '') {
   if (tab === 'tab_layout_ce' ) {
     $('.dimmer-block-content.common').removeClass('disabled');
   } else if (tab === 'tab_layout_ee' || tab === 'tab_layout_be' || tab === 'tab_layout_se' ) {
@@ -194,7 +241,7 @@ function toggleDisabled(tab, inputDataAttr) {
   }
 }
 
-async function getLicenseToken(token, revision) {
+async function getLicenseToken(token = '', revision = '') {
   try {
     if (token === '') {
       throw new Error(responseFromLicense[pageLang]['empty_input']);
@@ -204,6 +251,14 @@ async function getLicenseToken(token, revision) {
     const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
     if(response.ok) {
       const data = await response.json();
+      if (revision && data.redactions && Array.isArray(data.redactions) && data.redactions.length > 0) {
+        const revisionUpper = revision.toUpperCase();
+        const redactionsUpper = data.redactions.map(r => r.toUpperCase());
+        if (!redactionsUpper.includes(revisionUpper)) {
+          handlerRejectData(token, span, input, null, revision, data.redactions);
+          return;
+        }
+      }
       handlerResolveData(data, token, span, input);
     } else {
       handlerRejectData(token, span, input);
@@ -215,7 +270,7 @@ async function getLicenseToken(token, revision) {
   }
 }
 
-function handlerResolveData(data, licenseToken, messageElement, inputField) {
+function handlerResolveData(data = '', licenseToken = '', messageElement = '', inputField = '') {
   messageElement.html(`${responseFromLicense[pageLang]['resolve']}`);
   messageElement.removeAttr('class').addClass('license-form__message');
 
@@ -226,9 +281,22 @@ function handlerResolveData(data, licenseToken, messageElement, inputField) {
   update_license_parameters(licenseToken);
 }
 
-function handlerRejectData(licenseToken, messageElement, inputField, message = null) {
+function handlerRejectData(licenseToken, messageElement, inputField, message = null, revision = '', redactions = null) {
+  let rejectionMessage = null;
+  
+  if (revision && redactions && Array.isArray(redactions) && redactions.length > 0) {
+    const revisionUpper = revision.toUpperCase();
+    const redactionsUpper = redactions.map(r => r.toUpperCase());
+    if (!redactionsUpper.includes(revisionUpper)) {
+      const redactionNames = redactions.map(r => revisionNames[r.toLowerCase()]).filter(Boolean).join(', ');
+      rejectionMessage = responseFromLicense[pageLang]['invalid_revision'] + redactionNames;
+    }
+  }
+
   if (message) {
     messageElement.html(message);
+  } else if (rejectionMessage) {
+    messageElement.html(rejectionMessage);
   } else {
     messageElement.html(responseFromLicense[pageLang]['reject']);
   }
@@ -278,7 +346,15 @@ function update_license_parameters(newtoken = '') {
     $('.highlight code').filter(function () {
       return this.innerText.match(matchStringDockerLogin) == matchStringDockerLogin;
     }).each(function (index) {
-      $(this).text($(this).text().replace(matchStringDockerLogin, replacePartStringDockerLogin));
+      let originalCode = $(this);
+      let cloneCode = originalCode.clone();
+      let ignoreElement = cloneCode.find('[data-copy="ignore"]').detach();
+      let originalText = cloneCode.text();
+      let newText = originalText.replace(matchStringDockerLogin, replacePartStringDockerLogin);
+      originalCode.empty().text(newText);
+      if(ignoreElement.length > 0) {
+        originalCode.prepend(ignoreElement);
+      }
     });
   } else {
     console.log("No license token, so InitConfiguration was not updated");
@@ -299,8 +375,8 @@ function generate_password(force = false) {
 
 function replace_snippet_password() {
   update_parameter('dhctl-user-password-hash', 'password', '<GENERATED_PASSWORD_HASH>', null, null);
-  update_parameter('dhctl-user-password-hash', null, '<GENERATED_PASSWORD_HASH>', null, '[resources-yml]');
-  update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, '[resources-yml]');
+  update_parameter('dhctl-user-password-hash', null, '<GENERATED_PASSWORD_HASH>', null, '[config-yml]');
+  update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, '[config-yml]');
   update_parameter('dhctl-user-password', null, '<GENERATED_PASSWORD>', null, 'code span.c1');
   update_parameter('dhctl-domain', null, '<GENERATED_PASSWORD>', null, 'code span.c1');
 }
@@ -313,3 +389,61 @@ function set_license_token_cookie() {
     $.cookie('license-token', token, {path: '/', expires: 365});
   }
 }
+
+(function () {
+  const KEY = 'dhctl-variant';
+  
+  const get = () => {
+    return sessionStorage.getItem(KEY) || window.$?.cookie?.(KEY) || 'worker';
+  };
+  
+  const set = (v) => {
+    sessionStorage.setItem(KEY, v);
+    window.$?.cookie?.(KEY, v, { path: '/', expires: 1 });
+  };
+  
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.hidden = !visible;
+      el.style.display = visible ? 'block' : 'none';
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabWorker = document.getElementById('tab_layout_worker');
+    const tabMaster = document.getElementById('tab_layout_master');
+    
+    if ((tabWorker || tabMaster) && !sessionStorage.getItem(KEY)) {
+      sessionStorage.setItem(KEY, 'worker');
+    }
+  
+    const variant = get();
+    const isSingle = variant === 'single';
+
+    show('block_layout_master', isSingle);
+    show('block_layout_worker', !isSingle);
+
+    tabWorker?.classList.toggle('active', !isSingle);
+    tabMaster?.classList.toggle('active', isSingle);
+
+    const tabVarWorker = document.querySelector('[id^="tab_variant_worker_"]');
+    const tabVarSingle = document.querySelector('[id^="tab_variant_single_"]');
+    tabVarWorker?.classList.toggle('active', !isSingle);
+    tabVarSingle?.classList.toggle('active', isSingle);
+    
+    const blkVarW = document.querySelector('[id^="block_variant_worker_"]');
+    const blkVarS = document.querySelector('[id^="block_variant_single_"]');
+    if (blkVarW && blkVarS) {
+      blkVarW.style.display = isSingle ? 'none' : 'block';
+      blkVarS.style.display = isSingle ? 'block' : 'none';
+    }
+  
+    tabWorker?.addEventListener('click', () => set('worker'));
+    tabMaster?.addEventListener('click', () => set('single'));
+    tabVarWorker?.addEventListener('click', () => set('worker'));
+    tabVarSingle?.addEventListener('click', () => set('single'));
+  });
+
+  window.openTabAndSaveStatus ??= function () {};
+})();

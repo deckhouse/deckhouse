@@ -1,4 +1,4 @@
-{{- $version := "1.10-48.1" }}
+{{- $version := include "get_oss_version_by_id" (list "netcat" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -10,13 +10,16 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch applied/{{ $version }} {{ $.SOURCE_REPO }}/netcat /src/netcat
+  - git clone --depth 1 --branch applied/{{ $version }} $(cat /run/secrets/SOURCE_REPO)/netcat /src/netcat
   - rm -rf /src/netcat/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -26,16 +29,18 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    nc: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "nc": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ index $.Images "builder/alpine" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src

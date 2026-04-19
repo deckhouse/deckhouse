@@ -43,6 +43,24 @@ properties:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
+      nodeControllerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       machineControllerManagerEnabled:
         type: boolean
       capiControllerManagerEnabled:
@@ -89,6 +107,20 @@ properties:
         description: |
           kubernetes.ca content
 
+      kubernetesAPIProxyDiscoveryCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       standbyNodeGroups:
         type: array
         description: |
@@ -98,6 +130,7 @@ properties:
           properties:
             name:
               type: string
+              x-dmt-default: name
             standby:
               type: number
             reserveCPU:
@@ -159,6 +192,16 @@ properties:
           Bootstrap tokens for node groups.
         x-examples:
           - worker: mytoken
+
+      customMIGNames:
+        type: object
+        default: {}
+        description: |
+          Resolved MIG configuration names for node groups with custom MIG partitions.
+        additionalProperties:
+          type: string
+        x-examples:
+          - worker-gpu-custom: custom-worker-gpu-custom-12345678
 
       instancePrefix:
         type: string
@@ -260,6 +303,18 @@ properties:
               type: string
               description: |
                 Value of NodeGroup's annotation "manual-rollout-id".
+            serializedLabels:
+              type: string
+              description: |
+                Labels from node template in the format: key1=value1,key2=value2. If labels does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
+            serializedTaints:
+              type: string
+              description: |
+                Taints from node template in the format: key1=value1:NoSchedule,key2=value2:NoExecute. If taints does not persist it will set
+                to empty string. Now it needs for correct work scaling from zero for CAPI nodegroups.
+                https://cluster-api.sigs.k8s.io/tasks/automated-machine-management/autoscaling#pre-defined-labels-and-taints-on-nodes-scaled-from-zero
             static:
               type: object
               description: |
@@ -280,7 +335,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.29"
+                - "1.31"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -289,6 +344,10 @@ properties:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
+            gpu:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
+              type: object
+              additionalProperties: true
             cri:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
@@ -341,21 +400,29 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
+            nodeDrainTimeoutSecond:
+              type: [integer]
+              additionalProperties: true
+              minimum: 30
+              maximum: 7200
             fencing:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               properties:
                 mode:
                   type: string
-                  enum:
-                    - "Watchdog"
+                watchdog:
+                  type: object
+                  properties:
+                    timeout:
+                      type: integer
         x-examples:
           - - name: worker
               instanceClass: # minimum
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.29"
+              kubernetesVersion: "1.31"
               cri:
                 type: "Docker"
               cloudInstances:
@@ -386,5 +453,12 @@ properties:
           - "astra"
           - "altlinux"
           - "opensuse"
+        items:
+          type: string
+      allowedKubeletFeatureGates:
+        type: array
+        description: |
+          Allowed kubelet feature gates from control-plane-manager.
+        default: []
         items:
           type: string

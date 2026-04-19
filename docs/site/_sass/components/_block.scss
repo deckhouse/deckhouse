@@ -1,0 +1,37 @@
+@use "components/common/_variables.scss";
+
+.block {
+    margin: 75px auto;
+    &_inverse {
+        background: variables.$color-main;
+        color: variables.$color-inverse;
+        padding: 75px 0;
+    }
+    &_alt {
+        background: variables.$color-alt;
+        color: variables.$color-inverse;
+        padding: 75px 0;
+    }
+    &__content {
+        box-sizing: border-box;
+    }
+    &__columns {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        &_top {
+            align-items: flex-start;
+        }
+        & > * {
+            width: 45%;
+            @media (min-width: variables.$container-breakpoint-lg) {
+                width: 40%;
+            }
+        }
+    }
+    &__center {
+        text-align: center;
+    }
+}

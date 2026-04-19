@@ -19,9 +19,9 @@ rules:
   - moduledocumentations
   - modulepulloverrides
   - modulereleases
+  - modules
   - modulesources
   - moduleupdatepolicies
-  - modules
   verbs:
   - get
   - list

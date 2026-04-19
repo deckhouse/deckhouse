@@ -27,13 +27,46 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey = "nodeManager:nodesMinimalOSVersionUbuntu"
-	minDebianVersionValuesKey = "nodeManager:nodesMinimalOSVersionDebian"
-	requirementsUbuntuKey     = "nodesMinimalOSVersionUbuntu"
-	requirementsDebianKey     = "nodesMinimalOSVersionDebian"
-	containerdRequirementsKey = "containerdOnAllNodes"
-	hasNodesWithDocker        = "nodeManager:hasNodesWithDocker"
+	minUbuntuVersionValuesKey              = "nodeManager:nodesMinimalOSVersionUbuntu"
+	minDebianVersionValuesKey              = "nodeManager:nodesMinimalOSVersionDebian"
+	requirementsUbuntuKey                  = "nodesMinimalOSVersionUbuntu"
+	requirementsDebianKey                  = "nodesMinimalOSVersionDebian"
+	unmetCloudConditionsKey                = "nodeManager:unmetCloudConditions"
+	unmetCloudConditionsRequirementsKey    = "unmetCloudConditions"
+	unsupportedContainerdV1ValuesKey       = "nodeManager:unsupportedContainerdV1"
+	unsupportedContainerdV1RequirementsKey = "checkUnsupportedContainerdV1"
 )
+
+// normalizeUbuntuVersionForSemver converts Ubuntu version format to semver format: 20.04.3 -> 20.4.3, 20.04 -> 20.4.0
+func normalizeUbuntuVersionForSemver(version string) string {
+	parts := strings.Split(version, ".")
+	if len(parts) < 2 {
+		return version
+	}
+
+	// Normalize major version
+	major := strings.TrimLeft(parts[0], "0")
+	if major == "" {
+		major = "0"
+	}
+
+	// Normalize minor version
+	minor := strings.TrimLeft(parts[1], "0")
+	if minor == "" {
+		minor = "0"
+	}
+
+	// Handle patch version
+	patch := "0"
+	if len(parts) > 2 {
+		patch = strings.TrimLeft(parts[2], "0")
+		if patch == "" {
+			patch = "0"
+		}
+	}
+
+	return major + "." + minor + "." + patch
+}
 
 func init() {
 	checkRequirementUbuntuFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
@@ -44,31 +77,63 @@ func init() {
 		return baseFuncMinVerOS(requirementValue, getter, "Debian")
 	}
 
-	checkContainerdRequirementFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkUnmetCloudConditionsFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		requirementValue = strings.TrimSpace(requirementValue)
 		if requirementValue == "false" || requirementValue == "" {
 			return true, nil
 		}
 
-		hasDocker, exists := getter.Get(hasNodesWithDocker)
+		hasUnmetCloudConditions, exists := getter.Get(unmetCloudConditionsKey)
 		if !exists {
 			return true, nil
 		}
 
-		if hasDocker.(bool) {
-			return false, errors.New("has nodes with Docker CRI or defaultCRI is Docker")
+		if hasUnmetCloudConditions.(bool) {
+			return false, errors.New("has unmet cloud conditions, see clusteralerts for details")
 		}
 
 		return true, nil
 	}
+
+	checkUnsupportedContainerdV1 := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		requirementValue = strings.TrimSpace(requirementValue)
+		if requirementValue == "false" || requirementValue == "" {
+			return true, nil
+		}
+
+		unsupportedContainerdV1, exists := getter.Get(unsupportedContainerdV1ValuesKey)
+		if !exists {
+			return true, nil
+		}
+
+		hasUnsupportedContainerdV1, ok := unsupportedContainerdV1.(bool)
+		if !ok {
+			return false, fmt.Errorf("invalid unsupportedContainerdV1 value type")
+		}
+
+		if requirementValue == "true" && hasUnsupportedContainerdV1 {
+			return false, errors.New("has nodes with unsupported containerd version (v1.x), see clusteralerts for details")
+		}
+
+		return true, nil
+	}
+
+	requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
-	requirements.RegisterCheck(containerdRequirementsKey, checkContainerdRequirementFunc)
+	requirements.RegisterCheck(unsupportedContainerdV1RequirementsKey, checkUnsupportedContainerdV1)
 }
 
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {
 	var minVersionValuesKey string
-	desiredVersion, err := semver.NewVersion(requirementValue)
+
+	// Normalize Ubuntu version format for semver parsing
+	normalizedRequirementValue := requirementValue
+	if osImage == "Ubuntu" {
+		normalizedRequirementValue = normalizeUbuntuVersionForSemver(requirementValue)
+	}
+
+	desiredVersion, err := semver.NewVersion(normalizedRequirementValue)
 	if err != nil {
 		return false, err
 	}
@@ -83,7 +148,14 @@ func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, 
 	if !exists {
 		return true, nil
 	}
-	currentVersion, err := semver.NewVersion(currentVersionRaw.(string))
+
+	// Normalize Ubuntu version format for semver parsing
+	normalizedCurrentVersion := currentVersionRaw.(string)
+	if osImage == "Ubuntu" {
+		normalizedCurrentVersion = normalizeUbuntuVersionForSemver(normalizedCurrentVersion)
+	}
+
+	currentVersion, err := semver.NewVersion(normalizedCurrentVersion)
 	if err != nil {
 		return false, err
 	}

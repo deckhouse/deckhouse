@@ -47,11 +47,11 @@ If the dhcpOptions parameter is set, all DNS are routed to the DNS servers speci
 
 ## How to set a custom StorageClass as default?
 
-Specify the StorageClass name in the [defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
+Specify the StorageClass name in the [defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter in the `global` module settings.
 Note that after doing so, the `storageclass.kubernetes.io/is-default-class='true'` annotation will be removed from the StorageClass that was previously set as the default one.
 
 ```shell
-kubectl edit mc global
+d8 k edit mc global
 ```
 
 ## Adding CloudStatic nodes to a cluster
@@ -61,7 +61,7 @@ For VMs that you want to add to the cluster as nodes, add the `node-network-cidr
 You can find out the `nodeNetworkCIDR` of the cluster using the command below:
 
 ```shell
-kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
+d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --raw-output '.data."cloud-provider-cluster-configuration.yaml"' | base64 -d | grep '^nodeNetworkCIDR'
 ```
 
 ## How do I create a cluster in a new VPC and set up bastion host to access the nodes?
@@ -72,24 +72,32 @@ kubectl -n kube-system get secret d8-provider-cluster-configuration -o json | jq
    dhctl bootstrap-phase base-infra --config config.yml
    ```
 
-2. Create a bastion host:
+1. Create a bastion host:
 
    ```shell
    yc compute instance create \
    --name bastion \
    --hostname bastion \
-   --create-boot-disk image-family=ubuntu-2204-lts,image-folder-id=standard-images,size=20,type=network-hdd \
+   --create-boot-disk image-family=ubuntu-2404-lts,image-folder-id=standard-images,size=20,type=network-hdd \
    --memory 2 \
    --cores 2 \
    --core-fraction 100 \
-   --ssh-key ~/.ssh/id_rsa.pub \
+   --ssh-key ~/.ssh/<SSH_PUBLIC_KEY_FILE> \
    --zone ru-central1-a \
    --public-address 178.154.226.159
    ```
 
-3. Continue installing the cluster by specifying the bastion host data. Answer `y` to the question about the Terraform cache:
+   > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+
+1. Continue installing the cluster by specifying the bastion host data. Answer `y` to the question about the Terraform cache:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml --resources=/resources.yml
+   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
+
+   > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption it can be `id_rsa`, and for a key with ED25519 encryption it can be `id_ed25519`.
+
+## What to do if switching to nodes in lower-priority groups takes a long time?
+
+If switching to nodes in lower-priority groups takes a long time (for example, when node groups with preemptible instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).

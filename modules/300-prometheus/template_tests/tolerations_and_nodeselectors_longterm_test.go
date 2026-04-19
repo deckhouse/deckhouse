@@ -44,6 +44,15 @@ grafana: {}
 https:
   mode: CustomCertificate
 internal:
+  customCertificateData:
+    tls.crt: |
+      -----BEGIN CERTIFICATE-----
+      TEST
+      -----END CERTIFICATE-----
+    tls.key: |
+      -----BEGIN PRIVATE KEY-----
+      TEST
+      -----END PRIVATE KEY-----
   alertmanagers:
     byAddress: []
     byService: []
@@ -51,6 +60,7 @@ internal:
   auth: {}
   deployDexAuthenticator: true
   grafana:
+    enabled: true
     additionalDatasources: []
     alertsChannelsConfig:
       notifiers: []

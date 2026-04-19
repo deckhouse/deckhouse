@@ -15,33 +15,34 @@
 package helper
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type ClusterConnectionsOptions struct {
 	CommanderMode bool
 
-	ApiServerUrl     string
-	ApiServerOptions ApiServerOptions
+	APIServerURL     string
+	APIServerOptions APIServerOptions
 
 	SchemaStore         *config.SchemaStore
 	SSHConnectionConfig string
 }
 
-func InitializeClusterConnections(opts ClusterConnectionsOptions) (*client.KubernetesClient, *ssh.Client, func() error, error) {
-	if opts.CommanderMode && opts.ApiServerUrl != "" {
-		kubeCl, cleanup, err := CreateKubeClient(opts.ApiServerUrl, opts.ApiServerOptions)
+func InitializeClusterConnections(ctx context.Context, opts ClusterConnectionsOptions) (*client.KubernetesClient, node.SSHClient, func() error, error) {
+	if opts.CommanderMode && opts.APIServerURL != "" {
+		kubeCl, err := CreateKubeClient(ctx, opts.APIServerURL, opts.APIServerOptions)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error creating kubernetes client: %w", err)
 		}
-		return kubeCl, nil, cleanup, nil
+		return kubeCl, nil, func() error { return nil }, nil
 	} else {
-		var sshClient *ssh.Client
+		var sshClient node.SSHClient
 		var cleanup func() error
 
 		err := log.Process("default", "Preparing SSH client", func() error {
@@ -56,7 +57,7 @@ func InitializeClusterConnections(opts ClusterConnectionsOptions) (*client.Kuber
 				return fmt.Errorf("parsing connection config: %w", err)
 			}
 
-			sshClient, cleanup, err = CreateSSHClient(connectionConfig)
+			sshClient, cleanup, err = CreateSSHClient(ctx, connectionConfig)
 			if err != nil {
 				return fmt.Errorf("preparing ssh client: %w", err)
 			}

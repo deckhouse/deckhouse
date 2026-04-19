@@ -1,0 +1,9 @@
+linters-settings:
+  module:
+    conversions:
+      disable: true
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.deschedulers.items.properties.strategies.properties.removePodsViolatingNodeAffinity.properties.nodeAffinityType.items"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.strategies.properties.removePodsViolatingNodeAffinity.properties.nodeAffinityType.items"

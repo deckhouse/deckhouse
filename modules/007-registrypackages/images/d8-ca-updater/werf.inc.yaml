@@ -1,10 +1,10 @@
-{{- $version := "06.08.24" }}
+{{- $version := "20.02.25" }}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -13,33 +13,40 @@ import:
   - ca-bundle.crt
   - install
   - uninstall
-  before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    d8-ca-updater: {{ $version }}
+  before: install
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "d8-ca-updater": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_UBUNTU_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/golang-bookworm" }}
 git:
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
-    to: /
-    stageDependencies:
-      setup:
-      - '**/*'
-  - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
-    to: /ca-certificates
-    stageDependencies:
-      setup:
-      - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
+  to: /
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/ca-certificates
+  to: /ca-certificates
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
-  setup:
-    - mkdir /certs
-    - mv /mk-ca-bundle.pl /ca-certificates/mozilla
-    - cd ca-certificates/mozilla
-    - perl mk-ca-bundle.pl -n 
-    - mv ca-bundle.crt /ca-bundle.crt
-    - python3 certdata2pem.py
-    - mv *.crt /certs/
-    - chmod +x /d8-ca-updater /install /uninstall
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - apt-get install -y python3-cryptography
+  install:
+  - mv /mk-ca-bundle.pl /ca-certificates/mozilla
+  - cd /ca-certificates/mozilla
+  - perl mk-ca-bundle.pl -n
+  - mv ca-bundle.crt /ca-bundle.crt
+  - python3 certdata2pem.py
+  - mkdir /certs
+  - mv *.crt /certs/
+  - chmod +x /d8-ca-updater /install /uninstall

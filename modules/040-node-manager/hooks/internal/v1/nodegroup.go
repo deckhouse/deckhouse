@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"encoding/json"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -67,8 +68,14 @@ type NodeGroupSpec struct {
 	// Type of nodes in group: CloudEphemeral, CloudPermanent, CloudStatic, Static. Field is required
 	NodeType NodeType `json:"nodeType,omitempty"`
 
+	// Maximum drain time of CloudEphemeral machines in seconds
+	NodeDrainTimeoutSecond *int64 `json:"nodeDrainTimeoutSecond,omitempty"`
+
 	// CRI parameters. Optional.
 	CRI CRI `json:"cri,omitempty"`
+
+	// GPU parameters. Optional.
+	GPU GPU `json:"gpu,omitempty"`
 
 	// staticInstances. Optional.
 	StaticInstances *StaticInstances `json:"staticInstances,omitempty"`
@@ -98,12 +105,29 @@ type NodeGroupSpec struct {
 	Fencing Fencing `json:"fencing,omitempty"`
 }
 
+type GPU struct {
+	// Resources sharing type. timeSlicing, mig or exclusive(without sharing)
+	Sharing string `json:"sharing,omitempty"`
+
+	TimeSlicing *TimeSlicing `json:"timeSlicing,omitempty"`
+
+	// MIG parameters.
+	Mig *Mig `json:"mig,omitempty"`
+}
+
+func (g GPU) IsEmpty() bool {
+	return g.Sharing == "" && g.Mig == nil && g.TimeSlicing == nil
+}
+
 type CRI struct {
 	// Container runtime type. Docker, Containerd or NotManaged
 	Type string `json:"type,omitempty"`
 
 	// Containerd runtime parameters.
 	Containerd *Containerd `json:"containerd,omitempty"`
+
+	// Containerd runtime parameters.
+	ContainerdV2 *Containerd `json:"containerdV2,omitempty"`
 
 	// Docker settings for nodes.
 	Docker *Docker `json:"docker,omitempty"`
@@ -114,6 +138,29 @@ type CRI struct {
 
 func (c CRI) IsEmpty() bool {
 	return c.Type == "" && c.Containerd == nil && c.Docker == nil
+}
+
+type TimeSlicing struct {
+	// count replicas
+	GpuPartitionCount *int32 `json:"partitionCount,omitempty"`
+}
+
+type Mig struct {
+	// MIG profiles
+	PartedConfig *string `json:"partedConfig,omitempty"`
+
+	// Per-GPU custom layouts for the selected MIG config.
+	CustomConfigs []MigCustomConfig `json:"customConfigs,omitempty"`
+}
+
+type MigCustomConfig struct {
+	Index  int32          `json:"index"`
+	Slices []MigSliceSpec `json:"slices,omitempty"`
+}
+
+type MigSliceSpec struct {
+	Profile string `json:"profile,omitempty"`
+	Count   *int32 `json:"count,omitempty"`
 }
 
 type Containerd struct {
@@ -315,6 +362,8 @@ type Kubelet struct {
 	ResourceReservation KubeletResourceReservation `json:"resourceReservation"`
 
 	TopologyManager KubeletTopologyManager `json:"topologyManager"`
+
+	MemorySwap *KubeletMemorySwap `json:"memorySwap,omitempty"`
 }
 
 type KubeletTopologyManager struct {
@@ -366,18 +415,58 @@ const (
 	KubeletResourceReservationModeStatic KubeletResourceReservationMode = "Static"
 )
 
+type KubeletMemorySwap struct {
+	SwapBehavior string `json:"swapBehavior"`
+
+	LimitedSwap *KubeletLimitedSwap `json:"limitedSwap,omitempty"`
+
+	Swappiness *int `json:"swappiness,omitempty"`
+}
+
+type KubeletLimitedSwap struct {
+	// Size of the swap file (e.g., "1G", "2G")
+	Size string `json:"size"`
+}
+
 func (k Kubelet) IsEmpty() bool {
 	return k.MaxPods == nil && k.RootDir == "" && k.ContainerLogMaxSize == "" && k.ContainerLogMaxFiles == 0 &&
-		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil
+		k.ResourceReservation.Mode == "" && k.ResourceReservation.Static == nil && k.MemorySwap == nil && k.MemorySwap.Swappiness == nil
 }
 
 type Fencing struct {
 	// Set custom settings for fencing controller
-	Mode string `json:"mode,omitempty"`
+	Mode     string           `json:"mode,omitempty"`
+	Watchdog *FencingWatchdog `json:"watchdog,omitempty"`
 }
 
 func (f Fencing) IsEmpty() bool {
 	return f.Mode == ""
+}
+
+type FencingWatchdog struct {
+	Timeout int64 `json:"timeout,omitempty"`
+}
+
+func (f *FencingWatchdog) UnmarshalJSON(data []byte) error {
+	type Alias struct {
+		Timeout string `json:"timeout,omitempty"`
+	}
+
+	var aux Alias
+
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return err
+	}
+
+	duration, err := time.ParseDuration(aux.Timeout)
+	if err != nil {
+		return err
+	}
+
+	f.Timeout = int64(duration.Seconds())
+
+	return nil
 }
 
 type NodeGroupConditionType string

@@ -17,11 +17,11 @@ limitations under the License.
 package hooks
 
 import (
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -171,7 +171,7 @@ provisioner: yandex.csi.flant.com
 
 			// first is expiration
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 		})
 	})
@@ -195,10 +195,10 @@ provisioner: yandex.csi.flant.com
 
 			// first is expiration
 			Expect(ops[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "expire",
+				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(ops[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Name:   "storage_class_cloud_manual",
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
@@ -206,7 +206,7 @@ provisioner: yandex.csi.flant.com
 				},
 			}))
 			Expect(ops[2]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Name:   "storage_class_cloud_manual",
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
@@ -214,7 +214,7 @@ provisioner: yandex.csi.flant.com
 				},
 			}))
 			Expect(ops[3]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Name:   "storage_class_cloud_manual",
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
@@ -222,7 +222,7 @@ provisioner: yandex.csi.flant.com
 				},
 			}))
 			Expect(ops[4]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Name:   "storage_class_cloud_manual",
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
@@ -230,7 +230,7 @@ provisioner: yandex.csi.flant.com
 				},
 			}))
 			Expect(ops[5]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Name:   "storage_class_cloud_manual",
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
@@ -238,7 +238,7 @@ provisioner: yandex.csi.flant.com
 				},
 			}))
 			Expect(ops[6]).To(BeEquivalentTo(operation.MetricOperation{
-				Action: "set",
+				Action: operation.ActionGaugeSet,
 				Name:   "storage_class_cloud_manual",
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{

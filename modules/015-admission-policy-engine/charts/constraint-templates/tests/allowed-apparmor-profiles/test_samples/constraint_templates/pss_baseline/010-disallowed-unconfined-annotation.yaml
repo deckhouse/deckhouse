@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-unconfined-annotation
+  namespace: testns
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+

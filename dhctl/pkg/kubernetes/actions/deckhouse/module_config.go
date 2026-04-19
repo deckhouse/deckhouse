@@ -30,12 +30,21 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
+func removeResourceVersion(mc *unstructured.Unstructured) {
+	// try to multiple deleting
+	mc.SetResourceVersion("")
+	unstructured.RemoveNestedField(mc.Object, "metadata", "resourceVersion")
+}
+
+func createModuleConfigManifestTask(ctx context.Context, kubeCl *client.KubernetesClient, mc *config.ModuleConfig, createMsg string) actions.ManifestTask {
 	mcUnstructMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(mc)
 	if err != nil {
 		panic(err)
 	}
+
 	mcUnstruct := &unstructured.Unstructured{Object: mcUnstructMap}
+	removeResourceVersion(mcUnstruct)
+
 	return actions.ManifestTask{
 		Name: fmt.Sprintf(`ModuleConfig "%s"`, mc.GetName()),
 		Manifest: func() interface{} {
@@ -54,8 +63,13 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 				}
 			}
 
-			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
-				Create(context.TODO(), manifest.(*unstructured.Unstructured), metav1.CreateOptions{})
+			m := manifest.(*unstructured.Unstructured)
+
+			log.DebugF("Resource version before delete field for mc %s: '%s'\n", m.GetResourceVersion(), m.GetName())
+			removeResourceVersion(m)
+			log.DebugF("Resource version after delete field for mc %s: '%s'\n", m.GetResourceVersion(), m.GetName())
+
+			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Create(ctx, m, metav1.CreateOptions{})
 			if err != nil {
 				log.DebugF("Do not create mc: %v\n", err)
 			}
@@ -74,7 +88,7 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 
 			newManifest := manifest.(*unstructured.Unstructured)
 
-			oldManifest, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), newManifest.GetName(), metav1.GetOptions{})
+			oldManifest, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(ctx, newManifest.GetName(), metav1.GetOptions{})
 			if err != nil && !apierrors.IsNotFound(err) {
 				log.DebugF("Error getting mc: %v\n", err)
 			} else {
@@ -82,7 +96,7 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 			}
 
 			_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).
-				Update(context.TODO(), newManifest, metav1.UpdateOptions{})
+				Update(ctx, newManifest, metav1.UpdateOptions{})
 			if err != nil {
 				log.InfoF("Do not updating mc: %v\n", err)
 			}
@@ -92,22 +106,22 @@ func createModuleConfigManifestTask(kubeCl *client.KubernetesClient, mc *config.
 	}
 }
 
-func prepareModuleConfig(mc *config.ModuleConfig, res *ManifestsResult) {
+func prepareModuleConfig(ctx context.Context, mc *config.ModuleConfig, res *ManifestsResult) {
 	// we need apply some settings after bootstrap and with creating resources
 	// but not apply when we are creating module configs into cluster
 	// see description for functions
 	switch mc.GetName() {
 	case "deckhouse":
-		prepareDeckhouseMC(mc, res)
+		prepareDeckhouseMC(ctx, mc, res)
 	case "global":
-		prepareGlobalMC(mc, res)
+		prepareGlobalMC(ctx, mc, res)
 	}
 }
 
-func setSettingToModuleConfig(kubeCl *client.KubernetesClient, mcName string, value interface{}, field []string) error {
+func setSettingToModuleConfig(ctx context.Context, kubeCl *client.KubernetesClient, mcName string, value interface{}, field []string) error {
 	log.DebugF("setSettingToModuleConfig for mc %s, field %v, value %v", mcName, field, value)
 
-	cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(context.TODO(), mcName, metav1.GetOptions{})
+	cm, err := kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Get(ctx, mcName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -119,7 +133,7 @@ func setSettingToModuleConfig(kubeCl *client.KubernetesClient, mcName string, va
 		return err
 	}
 
-	_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(context.TODO(), cm, metav1.UpdateOptions{})
+	_, err = kubeCl.Dynamic().Resource(config.ModuleConfigGVR).Update(ctx, cm, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -127,7 +141,7 @@ func setSettingToModuleConfig(kubeCl *client.KubernetesClient, mcName string, va
 	return nil
 }
 
-func prepareDeckhouseMC(mc *config.ModuleConfig, res *ManifestsResult) {
+func prepareDeckhouseMC(ctx context.Context, mc *config.ModuleConfig, res *ManifestsResult) {
 	// we should apply releaseChannel setting after bootstrap cluster
 	// for preventing an updating deckhouse during bootstrap process
 	// for example, we are installing v1.66 tag but in release channel we have v1.67 tag
@@ -152,13 +166,13 @@ func prepareDeckhouseMC(mc *config.ModuleConfig, res *ManifestsResult) {
 	res.PostBootstrapMCTasks = append(res.PostBootstrapMCTasks, actions.ModuleConfigTask{
 		Title: "Set release channel to deckhouse module config",
 		Do: func(kubeCl *client.KubernetesClient) error {
-			return setSettingToModuleConfig(kubeCl, "deckhouse", releaseChannel, []string{"releaseChannel"})
+			return setSettingToModuleConfig(ctx, kubeCl, "deckhouse", releaseChannel, []string{"releaseChannel"})
 		},
 		Name: "deckhouse",
 	})
 }
 
-func prepareGlobalMC(mc *config.ModuleConfig, res *ManifestsResult) {
+func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *ManifestsResult) {
 	// we should apply setting only after bootstrap cloud permanent node
 	// imagine, we have https custom certificate setting
 	// if we apply with this, we will have deckhouse in error state because secret will be created in resource
@@ -181,13 +195,13 @@ func prepareGlobalMC(mc *config.ModuleConfig, res *ManifestsResult) {
 		return
 	}
 
-	httpsRaw, hasHttps := modules["https"]
-	if !hasHttps {
+	HTTPSRaw, hasHTTPS := modules["https"]
+	if !hasHTTPS {
 		log.DebugLn("Not found https in global mc. Finish preparing")
 		return
 	}
 
-	httpsSettings, ok = httpsRaw.(map[string]interface{})
+	httpsSettings, ok = HTTPSRaw.(map[string]interface{})
 	if !ok {
 		log.ErrorLn("https is not map in global mc. Finish preparing")
 		return
@@ -208,7 +222,7 @@ func prepareGlobalMC(mc *config.ModuleConfig, res *ManifestsResult) {
 	res.WithResourcesMCTasks = append(res.WithResourcesMCTasks, actions.ModuleConfigTask{
 		Title: "Set https setting to global module config",
 		Do: func(kubeCl *client.KubernetesClient) error {
-			return setSettingToModuleConfig(kubeCl, "global", httpsSettings, []string{"modules", "https"})
+			return setSettingToModuleConfig(ctx, kubeCl, "global", httpsSettings, []string{"modules", "https"})
 		},
 		Name: "global",
 	})

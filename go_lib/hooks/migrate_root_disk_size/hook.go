@@ -17,15 +17,20 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -41,7 +46,7 @@ type HookParams struct {
 }
 
 func RegisterHook(params *HookParams) bool {
-	hookHandler := func(input *go_hook.HookInput) error {
+	hookHandler := func(_ context.Context, input *go_hook.HookInput) error {
 		return migrateDiskGBHandler(input, params)
 	}
 
@@ -87,7 +92,7 @@ func providerConfigurationSecretFilter(unstructured *unstructured.Unstructured) 
 
 	err := sdk.FromUnstructured(unstructured, &secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return &secret, nil
@@ -98,7 +103,7 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 
 	err := sdk.FromUnstructured(unstructured, &cm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	if version, ok := cm.Data["version"]; ok {
@@ -109,8 +114,12 @@ func installDataCMFilter(unstructured *unstructured.Unstructured) (go_hook.Filte
 }
 
 func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) error {
-	providerConfigSecretSnap := input.Snapshots["provider_configuration"]
-	if len(providerConfigSecretSnap) == 0 {
+	providerConfigSecrets, err := sdkobjectpatch.UnmarshalToStruct[corev1.Secret](input.Snapshots, "provider_configuration")
+	if err != nil {
+		return fmt.Errorf("unable to parse provider_configuration snapshot: %w", err)
+	}
+
+	if len(providerConfigSecrets) == 0 {
 		return nil
 	}
 
@@ -124,14 +133,14 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 		return nil
 	}
 
-	providerConfigSecret := providerConfigSecretSnap[0].(*corev1.Secret)
+	providerConfigSecret := providerConfigSecrets[0]
 
 	backupSecret := providerConfigSecret.DeepCopy()
 
 	var rawConfig map[string]interface{}
 	err = yaml.Unmarshal(providerConfigSecret.Data[providerConfigKey], &rawConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	needMigratieMasters, err := needMigrateMasterInstanceClass(
@@ -159,11 +168,11 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 
 	backupSecret.Name += `-bkp-disk-gb`
 	backupSecret.ResourceVersion = ""
-	input.PatchCollector.Create(backupSecret, object_patch.IgnoreIfExists())
+	input.PatchCollector.CreateIfNotExists(backupSecret)
 
 	data, err := yaml.Marshal(rawConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal: %w", err)
 	}
 
 	patch := map[string]interface{}{
@@ -172,15 +181,15 @@ func migrateDiskGBHandler(input *go_hook.HookInput, hookParams *HookParams) erro
 		},
 	}
 
-	input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", secretName)
+	input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", "kube-system", secretName)
 
-	return err
+	return nil
 }
 
 func hasRootDiskSizeProperty(rawConfig map[string]interface{}, fields []string) (bool, error) {
 	_, found, err := unstructured.NestedFieldNoCopy(rawConfig, fields...)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("nested field no copy: %w", err)
 	}
 
 	return found, nil
@@ -189,7 +198,7 @@ func hasRootDiskSizeProperty(rawConfig map[string]interface{}, fields []string) 
 func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}, oldSize int64, sizeFieldPath []string) (bool, error) {
 	nodeGroups, found, err := unstructured.NestedSlice(rawConfig, "nodeGroups")
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("nested slice: %w", err)
 	}
 
 	if !found {
@@ -215,7 +224,7 @@ func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}, oldSiz
 
 		err = unstructured.SetNestedField(ng, oldSize, sizeFieldPath...)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("set nested field: %w", err)
 		}
 
 		needMigrate = true
@@ -228,7 +237,7 @@ func needMigrateNodeGroupsInstanceClass(rawConfig map[string]interface{}, oldSiz
 
 	err = unstructured.SetNestedSlice(rawConfig, resultNgs, "nodeGroups")
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("set nested slice: %w", err)
 	}
 
 	return true, nil
@@ -246,23 +255,27 @@ func needMigrateMasterInstanceClass(rawConfig map[string]interface{}, oldSize in
 
 	err = unstructured.SetNestedField(rawConfig, oldSize, sizeFieldPath...)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("set nested field: %w", err)
 	}
 
 	return true, nil
 }
 
 // check install version. if version > 1.63 we do not need migration because right default was set
-func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error) {
-	is := snaps["install_version"]
-	if len(is) == 0 {
+func needMigrateForDeckhouseInstallVersion(snaps pkg.Snapshots) (bool, error) {
+	installVersions, err := sdkobjectpatch.UnmarshalToStruct[string](snaps, "install_version")
+	if err != nil {
+		return false, fmt.Errorf("failed to unmarshal install_version snapshot: %w", err)
+	}
+
+	if len(installVersions) == 0 {
 		// install-data configmap available from 1.55
 		// https://github.com/deckhouse/deckhouse/pull/6522
 		// if cm not found we should try to migration
 		return true, nil
 	}
 
-	versionStr := is[0].(string)
+	versionStr := installVersions[0]
 	// do not migrate for dev build
 	if versionStr == "dev" {
 		return false, nil
@@ -270,7 +283,7 @@ func needMigrateForDeckhouseInstallVersion(snaps go_hook.Snapshots) (bool, error
 
 	version, err := semver.NewVersion(versionStr)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("new version: %w", err)
 	}
 
 	if version.Compare(semver.MustParse("1.63.0")) >= 0 {

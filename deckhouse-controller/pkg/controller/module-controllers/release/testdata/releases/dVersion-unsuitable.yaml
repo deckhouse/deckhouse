@@ -64,3 +64,8 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: "2019-10-17T15:33:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca-unsuitable

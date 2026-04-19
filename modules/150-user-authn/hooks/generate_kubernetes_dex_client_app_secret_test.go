@@ -66,6 +66,28 @@ data:
 		})
 	})
 
+	Context("With empty secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-dex-client-app-secret
+  namespace: d8-user-authn
+data: {}
+`))
+			f.RunHook()
+		})
+
+		It("Should generate new secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.BindingContexts.Array()).ShouldNot(BeEmpty())
+
+			Expect(f.ValuesGet("userAuthn.internal.kubernetesDexClientAppSecret").String()).To(HaveLen(20))
+		})
+	})
+
 	Context("With empty cluster", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(""))

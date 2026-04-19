@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"sort"
@@ -20,6 +21,8 @@ import (
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/json"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
@@ -77,22 +80,24 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return storageClass, nil
 }
 
-func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
-	if len(input.Snapshots["cloud_provider_discovery_data"]) == 0 {
+func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.Snapshots["storage_classes"]) == 0 {
+		if len(input.Snapshots.Get("storage_classes")) == 0 {
 			input.Logger.Warn("failed to find storage classes for 'cinder.csi.openstack.org' provisioner")
 
 			return nil
 		}
 
-		storageClassesSnapshots := input.Snapshots["storage_classes"]
+		storageClassesSnapshots := input.Snapshots.Get("storage_classes")
 
 		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
 
-		for _, storageClassSnapshot := range storageClassesSnapshots {
-			sc := storageClassSnapshot.(*storage.StorageClass)
+		for sc, err := range sdkobjectpatch.SnapshotIter[storage.StorageClass](storageClassesSnapshots) {
+			if err != nil {
+				return fmt.Errorf("failed to iterate over storage classes: %v", err)
+			}
 
 			storageClasses = append(storageClasses, storageClass{
 				Name: sc.Name,
@@ -105,19 +110,49 @@ func handleCloudProviderDiscoveryDataSecret(input *go_hook.HookInput) error {
 		return nil
 	}
 
-	secret := input.Snapshots["cloud_provider_discovery_data"][0].(*v1.Secret)
+	secret := new(v1.Secret)
+
+	snaps := input.Snapshots.Get("cloud_provider_discovery_data")
+	if len(snaps) == 0 {
+		return fmt.Errorf("cloud_provider_discovery_data snapshot is empty")
+	}
+
+	err := snaps[0].UnmarshalTo(secret)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal secret: %v", err)
+	}
 
 	discoveryDataJSON := secret.Data["discovery-data.json"]
 
-	_, err := config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/ee/candi/cloud-providers/openstack/openapi"})
-	if err != nil {
-		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
-	}
-
 	var discoveryData v1alpha1.OpenStackCloudProviderDiscoveryData
+
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+	}
+
+	// workaround to pass OpenAPI schema validation in hybrid mode
+	hybridMode, ok := input.Values.GetOk("cloudProviderOpenstack.internal.hybridMode")
+	if ok && hybridMode.Bool() {
+		zones, ok := input.Values.GetOk("cloudProviderOpenstack.zones")
+		if ok {
+			zonesArray := zones.Array()
+			discoveryData.Zones = []string{}
+
+			for _, zone := range zonesArray {
+				discoveryData.Zones = append(discoveryData.Zones, zone.String())
+			}
+
+			discoveryDataJSON, err = json.Marshal(discoveryData)
+			if err != nil {
+				return fmt.Errorf("failed to marshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
+			}
+		}
+	}
+
+	_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{"/deckhouse/candi/cloud-providers/openstack/openapi", "/deckhouse/ee/modules/030-cloud-provider-openstack/candi/openapi"})
+	if err != nil {
+		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
 	input.Values.Set("cloudProviderOpenstack.internal.discoveryData", discoveryData)

@@ -19,7 +19,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 const (
@@ -68,7 +68,7 @@ func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, phase st
 		warnMsg = tooManyWarn
 	}
 
-	var nodesSorted []string
+	nodesSorted := make([]string, 0, len(nodesNames))
 	nodesSorted = append(nodesSorted, nodesNames...)
 	sort.Strings(nodesSorted)
 

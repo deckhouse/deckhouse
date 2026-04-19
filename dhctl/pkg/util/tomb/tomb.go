@@ -18,10 +18,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 var callbacks teardownCallbacks
@@ -40,7 +42,7 @@ type callback struct {
 
 type teardownCallbacks struct {
 	mutex    sync.RWMutex
-	data     []callback
+	data     []*callback
 	exitCode int
 
 	exhausted        bool
@@ -54,8 +56,23 @@ func (c *teardownCallbacks) registerOnShutdown(name string, cb func()) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.data = append(c.data, callback{Name: name, Do: cb})
+	c.data = append(c.data, &callback{Name: name, Do: cb})
 	log.DebugF("teardown callback '%s' added, callbacks in queue: %d\n", name, len(c.data))
+}
+
+func (c *teardownCallbacks) replaceOnShutdown(name string, cb func()) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for _, clb := range c.data {
+		if clb.Name == name {
+			clb.Do = cb
+			log.DebugF("teardown callback '%s' replaced, callbacks in queue: %d\n", name, len(c.data))
+			return
+		}
+	}
+
+	log.DebugF("teardown callback '%s' not found, do nothing, callbacks in queue: %d\n", name, len(c.data))
 }
 
 func (c *teardownCallbacks) shutdown(exitCode int) {
@@ -76,7 +93,7 @@ func (c *teardownCallbacks) shutdown(exitCode int) {
 		cb := c.data[i]
 		log.DebugF("teardown callback %d: '%s' started\n", i, cb.Name)
 		cb.Do()
-		c.data[i] = callback{Name: "Stub", Do: func() {}}
+		c.data[i] = &callback{Name: "Stub", Do: func() {}}
 		log.DebugF("teardown callback %d: '%s' done\n", i, cb.Name)
 	}
 
@@ -91,6 +108,10 @@ func (c *teardownCallbacks) wait() {
 
 func RegisterOnShutdown(process string, cb func()) {
 	callbacks.registerOnShutdown(process, cb)
+}
+
+func ReplaceOnShutdown(process string, cb func()) {
+	callbacks.replaceOnShutdown(process, cb)
 }
 
 func Shutdown(code int) {
@@ -117,9 +138,33 @@ func WithoutInterruptions(fn func()) {
 	fn()
 }
 
-func WaitForProcessInterruption() {
+func printGorutinesStackTrace(shouldAlwaysPrint bool, msg string) {
+	// collect stacktrace for debug
+	buf := make([]byte, 20971520) // 20 mb
+	l := runtime.Stack(buf, true)
+	buf = buf[:l]
+	if shouldAlwaysPrint || input.IsTerminal() {
+		log.InfoF("\n%sGorutines stack for debug:\n%s\n", msg, string(buf))
+	}
+
+	buf = nil
+}
+
+type BeforeInterrupted []func(sig os.Signal)
+
+func (b BeforeInterrupted) Handle(sig os.Signal) {
+	if len(b) == 0 {
+		return
+	}
+
+	for _, action := range b {
+		action(sig)
+	}
+}
+
+func WaitForProcessInterruption(beforeInterrupted BeforeInterrupted) {
 	interruptCh := make(chan os.Signal, 1)
-	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
+	signal.Notify(interruptCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1, syscall.SIGUSR2)
 
 	for {
 		s, ok := <-interruptCh
@@ -129,11 +174,16 @@ func WaitForProcessInterruption() {
 
 		var exitCode int
 		switch s {
+		case syscall.SIGUSR2:
+			printGorutinesStackTrace(true, "")
+			continue
 		case syscall.SIGUSR1:
 			exitCode = 1
 		case syscall.SIGTERM, syscall.SIGINT:
 			exitCode = 0
 		default:
+			// will not exec anytime because we handle all
+			beforeInterrupted.Handle(s)
 			os.Exit(1)
 			return
 		}
@@ -142,6 +192,7 @@ func WaitForProcessInterruption() {
 			continue
 		}
 
+		beforeInterrupted.Handle(s)
 		graceShutdownForSignal(interruptCh, exitCode, s)
 		return
 	}
@@ -151,6 +202,9 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 	// Wait for the second signal to kill the main process immediately.
 	go func() {
 		<-interruptCh
+
+		printGorutinesStackTrace(false, "Killed by signal twice. Probably dhctl have problems. ")
+
 		log.ErrorLn("Killed by signal twice.")
 		os.Exit(1)
 	}()
@@ -159,7 +213,7 @@ func graceShutdownForSignal(interruptCh <-chan os.Signal, exitCode int, s os.Sig
 	close(callbacks.interruptedCh)
 
 	// Run all registered teardown callbacks and print an explanation at the end.
-	callbacks.data = append([]callback{{
+	callbacks.data = append([]*callback{{
 		Name: "Shutdown message",
 		Do: func() {
 			log.WarnLn(fmt.Sprintf("Graceful shutdown by %q signal ...", s.String()))

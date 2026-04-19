@@ -6,7 +6,7 @@ spec:
           description: |
             Описывает параметры хранилища логов, к которому можно подключить бесконечное количество источников.
 
-            `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` задаёт имя upstream'а, который будет использоваться в ресурсе [ClusterLoggingConfig](https://deckhouse.ru/modules/log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               properties:
@@ -37,6 +37,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -100,6 +110,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -128,6 +148,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -161,6 +191,13 @@ spec:
                     encoding:
                       description: |
                         В каком формате закодировать сообщение.
+                      properties:
+                        codec:
+                          description: |
+                            Доступные форматы для кодирования.
+                        cef:
+                          description: |
+                            Поля конфигурации, специфичные для CEF. Применяется только в том случае, если для кодирования установлено значение `CEF`.
                     keyField:
                       description: |
                         Позволяет задать поле [key_field](https://vector.dev/docs/reference/configuration/sinks/kafka/#key_field).
@@ -176,6 +213,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -208,6 +255,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -234,7 +291,15 @@ spec:
                     address:
                       description: "Адрес сокета."
                     encoding:
-                      description: "В каком формате закодировать сообщение."
+                      description: |
+                        В каком формате закодировать сообщение.
+                      properties:
+                        codec:
+                          description: |
+                            Доступные форматы для кодирования.
+                        cef:
+                          description: |
+                            Поля конфигурации, специфичные для CEF. Применяется только в том случае, если для кодирования установлено значение `CEF`.
                     mode:
                       descriptions: "Тип сокета, который будет использован."
                     tcp:
@@ -243,6 +308,16 @@ spec:
                         tls:
                           description: Настройки защищенного TLS-соединения.
                           properties:
+                            secretRef:
+                              description: |
+                                Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                                (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                                в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                                Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                                `log-shipper.deckhouse.io/watch-secret: true`.
+                              properties:
+                                name:
+                                  description: Имя секрета с TLS-сертификатами.
                             caFile:
                               description: Закодированный в Base64 сертификат CA в формате PEM.
                             clientCrt:
@@ -274,6 +349,16 @@ spec:
                     tls:
                       description: Настройки защищенного TLS-соединения.
                       properties:
+                        secretRef:
+                          description: |
+                            Ссылка на секрет Kubernetes, содержащий сертификат CA (ca.pem), клиентский сертификат
+                            (crt.pem), приватный ключ (key.pem) и пароль ключа для клиентского сертификата (keyPass)
+                            в формате PEM, закодированном в Base64. Настройки TLS будут переопределены значениями из секрета.
+                            Секрет должен находиться в пространстве имён `d8-log-shipper` и иметь лейбл
+                            `log-shipper.deckhouse.io/watch-secret: true`.
+                          properties:
+                            name:
+                              description: Имя секрета с TLS-сертификатами.
                         caFile:
                           description: Закодированный в Base64 сертификат CA в формате PEM.
                         clientCrt:
@@ -303,7 +388,7 @@ spec:
                       description: |
                         Количество записей в минуту.
                     keyField:
-                      description: Имя поля лога, значение которого будет хэшировано, чтобы определить, должно ли событие быть ограничено по скорости.
+                      description: Имя поля лога, значение которого будет хешировано, чтобы определить, должно ли событие быть ограничено по скорости.
                     excludes:
                       description: |
                         Список фильтров для keyField.
@@ -345,6 +430,103 @@ spec:
                     - pod_owner.
 
                     [Подробнее о путях к полям...](https://vector.dev/docs/reference/configuration/field-path-notation/)
+                transformations:
+                  description: |
+                    Список трансформаций, которые могут применяться к логам перед отправкой.
+
+                    Возможные варианты:
+
+                      - `ReplaceKeys` — заменяет `source` на `target` в заданных ключах лейблов.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
+                            labels:
+                              - .pod_labels
+                        ```
+
+                      - `ParseMessage` — преобразует поле `message` из формата, заданного в `sourceFormat`, в объект.
+                         Если это невозможно, поле `message` остается без изменений.
+
+                        Примеры:
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels` — удаляет указанные лейблы.
+
+                        Пример:
+
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - .first
+                              - .second
+                        ```
+
+                  items:
+                    properties:
+                      action:
+                        description: Тип трансформации.
+                      replaceKeys:
+                        description: Рекурсивная замена всех совпадений шаблона `source` на значение `target` в заданных ключах.
+                        properties:
+                          source:
+                            description: |
+                              Шаблон для поиска совпадений.
+                              Может быть статической строкой или регулярным выражением.
+                          target:
+                            description: Значение, на которое будут заменены все совпадения шаблона.
+                          labels:
+                            description: Список лейблов, в которых будет выполняться рекурсивная замена.
+                      parseMessage:
+                        description: Преобразует поле `message` в объект.
+                        properties:
+                          sourceFormat:
+                            description: Формат сообщения для преобразования в объект.
+                          string:
+                            properties:
+                              targetField:
+                                description: Имя поля, в которое помещается структурированное сообщение.
+                          json:
+                            properties:
+                              depth:
+                                description: Глубина парсинга JSON.
+                      dropLabels:
+                        description: Удаление заданных лейблов.
+                        properties:
+                          labels:
+                            description: Список лейблов, которые необходимо удалить.
                 buffer:
                   description: Параметры буфера.
                   properties:

@@ -1,0 +1,36 @@
+{{ template "header.html" . }}
+
+<div class="content">
+  <h2 class="content-title">
+      {{ if eq (extra "lang") "en" }}
+      Welcome!
+      {{ else }}
+      Добро пожаловать!
+      {{ end }}
+  </h2>
+  <div class="content-text">
+      {{ if eq (extra "lang") "en" }}
+      Please, select a login method:
+      {{ else }}
+      Пожалуйста, выберите метод авторизации:
+      {{ end }}
+  </div>
+  <div class="btn-login-wrapper">
+    {{ range $c := .Connectors }}
+      <a href="{{ $c.URL }}" target="_self"
+        class="btn-login">
+        <span class="btn-login-icon">
+          <img src="{{ url $.ReqPath "static/img" }}/{{ $c.Type}}-icon.svg" />
+        </span>
+        <span class="btn-login-title">{{ $c.Name }}</span>
+        <span class="btn-login-arrow">
+          <svg width="16" height="16" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+            <path fill="currentColor" d="M340.864 149.312a30.59 30.59 0 0 0 0 42.752L652.736 512 340.864 831.872a30.59 30.59 0 0 0 0 42.752 29.12 29.12 0 0 0 41.728 0L714.24 534.336a32 32 0 0 0 0-44.672L382.592 149.376a29.12 29.12 0 0 0-41.728 0z" />
+          </svg>
+        </span>
+      </a>
+    {{ end }}
+  </div>
+</div>
+
+{{ template "footer.html" . }}

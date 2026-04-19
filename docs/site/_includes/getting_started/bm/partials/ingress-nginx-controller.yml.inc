@@ -1,7 +1,7 @@
-# [<en>] Section containing the parameters of NGINX Ingress controller.
-# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
-# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/cr.html
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
+# [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
+# [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -16,12 +16,12 @@ spec:
     httpsPort: 443
   # [<en>] Describes on which nodes the Ingress Controller will be located.
   # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер.
-  # [<en>] You might consider changing this.
   # [<en>] More examples here.
-  # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
-  # [<ru>] Возможно, захотите изменить.
+  # [<en>] https://deckhouse.io/modules/ingress-nginx/examples.html
   # [<ru>] Больше примеров здесь
-  # [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/examples.html
+  # [<ru>] https://deckhouse.ru/modules/ingress-nginx/examples.html
+  # [<ru>] Возможно, захотите изменить.
+  # [<en>] You might consider changing this.
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   tolerations:

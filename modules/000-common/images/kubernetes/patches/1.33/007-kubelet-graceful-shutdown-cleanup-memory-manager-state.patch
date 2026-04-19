@@ -1,0 +1,45 @@
+diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+index 12dcb66ec77..989f0dc76e0 100644
+--- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
++++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
+@@ -22,6 +22,7 @@ package nodeshutdown
+ 
+ import (
+ 	"fmt"
++	"os"
+ 	"path/filepath"
+ 	"sync"
+ 	"time"
+@@ -248,6 +249,11 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
+ 				}
+ 
++				// Clean up memory manager state before shutdown
++				if isShuttingDown {
++					m.cleanupMemoryManagerState()
++				}
++
+ 				m.nodeShuttingDownMutex.Lock()
+ 				m.nodeShuttingDownNow = isShuttingDown
+ 				m.nodeShuttingDownMutex.Unlock()
+@@ -324,3 +330,20 @@ func (m *managerImpl) processShutdownEvent() error {
+ 
+ 	return m.podManager.killPods(activePods)
+ }
++
++// cleanupMemoryManagerState ensures that the memory manager starts with a clean state after reboot.
++func (m *managerImpl) cleanupMemoryManagerState() {
++	memoryManagerStatePath := "/var/lib/kubelet/memory_manager_state"
++
++	if _, err := os.Stat(memoryManagerStatePath); os.IsNotExist(err) {
++		m.logger.V(1).Info("Memory manager state file does not exist, skipping removal", "path", memoryManagerStatePath)
++		return
++	}
++
++	if err := os.Remove(memoryManagerStatePath); err != nil {
++		m.logger.Error(err, "Failed to remove memory manager state file", "path", memoryManagerStatePath)
++		return
++	}
++
++	m.logger.Info("Successfully removed memory manager state file before shutdown", "path", memoryManagerStatePath)
++}

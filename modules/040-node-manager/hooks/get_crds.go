@@ -17,10 +17,13 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -31,12 +34,16 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/set_cr_statuses"
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/autoscaler/capacity"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -47,6 +54,15 @@ const (
 	errorStatusField       = "error"
 	kubeVersionStatusField = "kubernetesVersion"
 )
+
+// cloud providers names in lower case
+type CloudFillerFunc func(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error
+
+var fillCloudSpecificDefaults = map[string][]CloudFillerFunc{
+	"vsphere": {
+		fillVsphereMainNewtork,
+	},
+}
 
 type InstanceClassCrdInfo struct {
 	Name string
@@ -188,14 +204,14 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 
 var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
 
-func getCRDsHandler(input *go_hook.HookInput) error {
+func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	// Detect InstanceClass kind and change binding if needed.
 	kindInUse, kindFromSecret := detectInstanceClassKind(input, getCRDsHookConfig)
 
 	// Kind is changed, so objects in "dynamic-kind" can be ignored. Update kind and stop the hook.
 	if kindInUse != kindFromSecret {
 		if kindFromSecret == "" {
-			input.Logger.Infof("InstanceClassKind has changed from '%s' to '': disable binding 'ics'", kindInUse)
+			input.Logger.Info("InstanceClassKind has changed: disable binding 'ics'")
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:       "ics",
 				Action:     "Disable",
@@ -203,7 +219,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				ApiVersion: "",
 			})
 		} else {
-			input.Logger.Infof("InstanceClassKind has changed from '%s' to '%s': update kind for binding 'ics'", kindInUse, kindFromSecret)
+			input.Logger.Info("InstanceClassKind has changed: update kind for binding 'ics'", slog.String("from", kindInUse), slog.String("to", kindFromSecret))
 			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
 				Name:   "ics",
 				Action: "UpdateKind",
@@ -250,15 +266,23 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 	controlPlaneMinVersion := semverMin(controlPlaneKubeVersions)
 
-	// Default zones. Take them from input.Snapshots["machine_deployments"]
-	// and from input.Snapshots["cloud_provider_secret"].zones
+	// Default zones. Take them from input.Snapshots.Get("machine_deployments")
+	// and from input.Snapshots.Get("cloud_provider_secret").zones
 	defaultZones := set.New()
-	for _, machineInfoItem := range input.Snapshots["machine_deployments"] {
-		machineInfo := machineInfoItem.(MachineDeploymentCrdInfo)
+	for machineInfo, err := range sdkobjectpatch.SnapshotIter[MachineDeploymentCrdInfo](input.Snapshots.Get("machine_deployments")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'machine_deployments' snapshots: %w", err)
+		}
+
 		defaultZones.Add(machineInfo.Zone)
 	}
-	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
-		secretInfo := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{})
+
+	cloudProviderSecrets, err := sdkobjectpatch.UnmarshalToStruct[map[string]interface{}](input.Snapshots, "cloud_provider_secret")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cloud_provider_secret' snapshot: %w", err)
+	}
+	if len(cloudProviderSecrets) > 0 {
+		secretInfo := cloudProviderSecrets[0]
 		zonesUntyped := secretInfo["zones"]
 
 		switch v := zonesUntyped.(type) {
@@ -279,24 +303,29 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	timestamp := epochTimestampAccessor()
 
 	finalNodeGroups := make([]interface{}, 0)
+	var nodeGroupErrors []string
 
 	// Expire node_group_info metric.
 	input.MetricsCollector.Expire("")
 
-	iCatalogRaw := input.Snapshots["instance_types_catalog"]
-	var instanceTypeCatalog *capacity.InstanceTypesCatalog
+	instanceTypeCatalog := new(capacity.InstanceTypesCatalog)
+	iCatalogRaws := input.Snapshots.Get("instance_types_catalog")
 
-	if len(iCatalogRaw) == 1 {
-		instanceTypeCatalog = iCatalogRaw[0].(*capacity.InstanceTypesCatalog)
-	} else {
-		instanceTypeCatalog = capacity.NewInstanceTypesCatalog(nil)
+	if len(iCatalogRaws) == 1 {
+		err := iCatalogRaws[0].UnmarshalTo(instanceTypeCatalog)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'instance_types_catalog' snapshot: %w", err)
+		}
 	}
 
-	for _, v := range input.Snapshots["ngs"] {
-		nodeGroup := v.(NodeGroupCrdInfo)
+	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.Snapshots.Get("ngs")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		// set observed status fields
-		input.PatchCollector.Filter(set_cr_statuses.SetObservedStatus(v, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.IgnoreHookError())
+		input.PatchCollector.PatchWithMutatingFunc(set_cr_statuses.SetObservedStatus(nodeGroup, applyNodeGroupCrdFilter), "deckhouse.io/v1", "nodegroup", "", nodeGroup.Name, object_patch.WithSubresource("/status"), object_patch.WithIgnoreHookError())
 		// Copy manualRolloutID and name.
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
@@ -311,16 +340,18 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
 			instanceClasses := make(map[string]interface{})
+			for ic, err := range sdkobjectpatch.SnapshotIter[InstanceClassCrdInfo](input.Snapshots.Get("ics")) {
+				if err != nil {
+					return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
+				}
 
-			for _, icsItem := range input.Snapshots["ics"] {
-				ic := icsItem.(InstanceClassCrdInfo)
 				instanceClasses[ic.Name] = ic.Spec
 			}
 
 			// check #1 — .spec.cloudInstances.classReference.kind should be allowed in our cluster
 			nodeGroupInstanceClassKind := nodeGroup.Spec.CloudInstances.ClassReference.Kind
 			if nodeGroupInstanceClassKind != kindInUse {
-				errorMsg := fmt.Sprintf("Wrong classReference: Kind %s is not allowed, the only allowed kind is %s.", nodeGroupInstanceClassKind, kindInUse)
+				errorMsg := fmt.Sprintf("Invalid classReference.kind '%s'. Expected '%s'. Please update the NodeGroup to use the correct instance class kind.", nodeGroupInstanceClassKind, kindInUse)
 
 				if input.Values.Exists("nodeManager.internal.nodeGroups") {
 					savedNodeGroups := input.Values.Get("nodeManager.internal.nodeGroups").Array()
@@ -328,13 +359,14 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 						ng := savedNodeGroup.Map()
 						if ng["name"].String() == nodeGroup.Name {
 							finalNodeGroups = append(finalNodeGroups, savedNodeGroup.Value().(map[string]interface{}))
-							errorMsg += " Earlier stored version of NG is in use now!"
+							errorMsg += " Using previously stored NodeGroup configuration to prevent cluster disruption."
 						}
 					}
 				}
 
-				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+				nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 				continue
 			}
 
@@ -348,7 +380,7 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 				}
 			}
 			if !isKnownClassName {
-				errorMsg := fmt.Sprintf("Wrong classReference: There is no valid instance class %s of type %s.", nodeGroupInstanceClassName, nodeGroupInstanceClassKind)
+				errorMsg := fmt.Sprintf("Instance class '%s' of type '%s' not found. Please create the required instance class or update the NodeGroup to reference an existing one.", nodeGroupInstanceClassName, nodeGroupInstanceClassKind)
 
 				if input.Values.Exists("nodeManager.internal.nodeGroups") {
 					savedNodeGroups := input.Values.Get("nodeManager.internal.nodeGroups").Array()
@@ -356,13 +388,14 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 						ng := savedNodeGroup.Map()
 						if ng["name"].String() == nodeGroup.Name {
 							finalNodeGroups = append(finalNodeGroups, savedNodeGroup.Value().(map[string]interface{}))
-							errorMsg += " Earlier stored version of NG is in use now!"
+							errorMsg += " Using previously stored NodeGroup configuration to prevent cluster disruption."
 						}
 					}
 				}
 
-				input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+				input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 				setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+				nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 				continue
 			}
 
@@ -373,8 +406,10 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					// capacity calculation required only for scaling from zero, we can save some time in the other cases
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
-						input.Logger.Errorf("Calculate capacity failed for: %s with spec: %v. Error: %s", nodeGroupInstanceClassKind, instanceClassSpec, err)
-						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, fmt.Sprintf("%s capacity is not set and instance type could not be found in the built-it types. ScaleFromZero would not work until you set a capacity spec into the %s/%s", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name))
+						errorMsg := fmt.Sprintf("Capacity calculation failed for instance class '%s'. The instance type is not found in built-in types and no capacity is set. ScaleFromZero will not work. Please set capacity in the %s '%s' or use a supported instance type.", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name)
+						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
+						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+						nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 						continue
 					}
 
@@ -396,17 +431,23 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 					}
 				}
 				if containCount != len(nodeGroup.Spec.CloudInstances.Zones) {
-					errorMsg := fmt.Sprintf("unknown cloudInstances.zones: %v", unknownZones)
-					input.Logger.Errorf("Bad NodeGroup '%s': %s", nodeGroup.Name, errorMsg)
+					errorMsg := fmt.Sprintf("Invalid zones specified: %v. Available zones: %v. Please update the NodeGroup to use valid zones.", unknownZones, defaultZones.Slice())
+					input.Logger.Error("Bad NodeGroup", slog.String("name", nodeGroup.Name), slog.String("error_msg", errorMsg))
 
 					setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+					nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
 					continue
 				}
 			}
 
 			// Put instanceClass.spec into values.
-			ngForValues["instanceClass"] = instanceClassSpec
+			providerName := strings.ToLower(input.Values.Get("nodeManager.internal.cloudProvider.type").String())
+			updatedSpecMap, err := applyCloudSpecificDefaults(input, providerName, instanceClassSpec)
+			if err != nil {
+				return fmt.Errorf("failed to fill cloud specific defaults for %s: %w", providerName, err)
+			}
 
+			ngForValues["instanceClass"] = updatedSpecMap
 			var zones []string
 			if nodeGroup.Spec.CloudInstances.Zones != nil {
 				zones = nodeGroup.Spec.CloudInstances.Zones
@@ -465,12 +506,20 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 			}
 		}
 
+		ngForValues["serializedLabels"] = serializeLabels(nodeGroup)
+		ngForValues["serializedTaints"] = serializeTaints(nodeGroup)
+
 		if ngForValues["cri"] == nil {
 			ngForValues["cri"] = ngv1.CRI{}
 		}
 		cri := ngForValues["cri"].(ngv1.CRI)
 		cri.Type = newCRIType
 		ngForValues["cri"] = cri
+
+		gpu, ok := ngForValues["gpu"].(ngv1.GPU)
+		if ok {
+			ngForValues["gpu"] = gpu
+		}
 
 		fencing, ok := ngForValues["fencing"].(ngv1.Fencing)
 		if ok {
@@ -501,6 +550,17 @@ func getCRDsHandler(input *go_hook.HookInput) error {
 	if !input.Values.Exists("nodeManager.internal") {
 		input.Values.Set("nodeManager.internal", map[string]interface{}{})
 	}
+
+	if len(input.Snapshots.Get("ngs")) != len(finalNodeGroups) {
+		var errorDetails string
+		if len(nodeGroupErrors) > 0 {
+			errorDetails = fmt.Sprintf("\n\n=== NodeGroup Validation Errors ===\n%s\n\nSummary: %d out of %d NodeGroups passed validation.\n\nTo resolve these issues:\n1. Check the NodeGroup configurations above\n2. Ensure required instance classes are created\n3. Verify zone configurations match available zones\n4. Fix any capacity-related issues for ScaleFromZero",
+				strings.Join(nodeGroupErrors, "\n"), len(finalNodeGroups), len(input.Snapshots.Get("ngs")))
+		}
+		return fmt.Errorf("NodeGroup validation failed: %d NodeGroups have configuration errors.%s",
+			len(input.Snapshots.Get("ngs"))-len(finalNodeGroups), errorDetails)
+	}
+
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
 }
@@ -511,6 +571,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	res["nodeType"] = nodeGroupSpec.NodeType
 	if !nodeGroupSpec.CRI.IsEmpty() {
 		res["cri"] = nodeGroupSpec.CRI
+	}
+	if !nodeGroupSpec.GPU.IsEmpty() {
+		res["gpu"] = nodeGroupSpec.GPU
 	}
 	if nodeGroupSpec.StaticInstances != nil {
 		res["staticInstances"] = *nodeGroupSpec.StaticInstances
@@ -536,6 +599,9 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	if !nodeGroupSpec.Fencing.IsEmpty() {
 		res["fencing"] = nodeGroupSpec.Fencing
 	}
+	if nodeGroupSpec.NodeDrainTimeoutSecond != nil {
+		res["nodeDrainTimeoutSecond"] = nodeGroupSpec.NodeDrainTimeoutSecond
+	}
 	return res
 }
 
@@ -545,8 +611,12 @@ var epochTimestampAccessor = func() int64 {
 
 var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.HookConfig) (string, string) {
 	var fromSecret string
-	if len(input.Snapshots["cloud_provider_secret"]) > 0 {
-		if secretInfo, ok := input.Snapshots["cloud_provider_secret"][0].(map[string]interface{}); ok {
+	secretInfoSnapshots := input.Snapshots.Get("cloud_provider_secret")
+
+	if len(secretInfoSnapshots) > 0 {
+		var secretInfo map[string]interface{}
+		err := secretInfoSnapshots[0].UnmarshalTo(&secretInfo)
+		if err == nil {
 			if kind, ok := secretInfo["instanceClassKind"].(string); ok {
 				fromSecret = kind
 			}
@@ -585,4 +655,77 @@ func calculateUpdateEpoch(ts int64, clusterUUID string, nodeGroupName string) st
 	absWindowStart := ((ts - drift - 1) / EpochWindowSize) * EpochWindowSize
 	epoch := absWindowStart + EpochWindowSize + drift
 	return strconv.FormatInt(epoch, 10)
+}
+
+func serializeLabels(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Labels) == 0 {
+		return ""
+	}
+
+	return labels.FormatLabels(info.Spec.NodeTemplate.Labels)
+}
+
+func serializeTaints(info NodeGroupCrdInfo) string {
+	if len(info.Spec.NodeTemplate.Taints) == 0 {
+		return ""
+	}
+
+	res := make([]string, 0, len(info.Spec.NodeTemplate.Taints))
+	for _, taint := range info.Spec.NodeTemplate.Taints {
+		res = append(res, taint.ToString())
+	}
+
+	return strings.Join(res, ",")
+}
+
+func fillVsphereMainNewtork(cloudVariables map[string]interface{}, instanceClass map[string]interface{}) error {
+	if _, ok := instanceClass["mainNetwork"]; ok {
+		return nil
+	}
+	instancesRaw, ok := cloudVariables["instances"]
+	if !ok {
+		return nil
+	}
+
+	instancesMap, ok := instancesRaw.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("cloudVariables.instances: expected map[string]interface{}, got %T", instancesRaw)
+	}
+
+	val, ok := instancesMap["mainNetwork"]
+	if !ok {
+		return nil
+	}
+
+	mn, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("instances.mainNetwork: expected string, got %T", val)
+	}
+
+	instanceClass["mainNetwork"] = mn
+	return nil
+}
+
+func applyCloudSpecificDefaults(input *go_hook.HookInput, providerName string, instanceClassSpec interface{}) (interface{}, error) {
+	specMap, ok := instanceClassSpec.(map[string]interface{})
+	if !ok {
+		return instanceClassSpec, nil
+	}
+
+	raw, ok := input.Values.GetOk("nodeManager.internal.cloudProvider." + providerName)
+	if !ok || !raw.IsObject() {
+		return specMap, nil
+	}
+	cloudVariables, ok := raw.Value().(map[string]interface{})
+	if !ok {
+		return specMap, nil
+	}
+
+	for _, fillFn := range fillCloudSpecificDefaults[providerName] {
+		if err := fillFn(cloudVariables, specMap); err != nil {
+			return nil, fmt.Errorf("fill %s defaults: %w", providerName, err)
+		}
+	}
+
+	return specMap, nil
 }

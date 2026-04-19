@@ -1,0 +1,24 @@
+linters-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: StatefulSet
+          name: openvpn
+          container: openvpn-tcp
+      liveness-probe:
+        - kind: StatefulSet
+          name: openvpn
+          container: openvpn-tcp
+        - kind: StatefulSet
+          name: openvpn
+          container: ovpn-admin
+      readiness-probe:
+        - kind: StatefulSet
+          name: openvpn
+          container: openvpn-tcp
+        - kind: StatefulSet
+          name: openvpn
+          container: ovpn-admin
+  module:
+    conversions:
+      disable: true

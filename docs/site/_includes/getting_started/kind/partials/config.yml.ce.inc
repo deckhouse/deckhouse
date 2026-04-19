@@ -14,13 +14,13 @@ spec:
     # [<ru>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
     # [<ru>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
     # [<ru>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<ru>] Подробнее о каналах обновлений: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-release-channels.html
+    # [<ru>] Подробнее о каналах обновлений: https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/release-channels.html
     # [<en>] Канал обновлений Deckhouse. По умолчанию установлен канал EarlyAccess — рекомендуемый канал обновлений,
     # [<en>] если вы не уверены в выборе. Подойдет для кластеров, в которых идет активная работа (запускаются,
     # [<en>] дорабатываются новые приложения и т. п.). Он достаточно стабилен для продакшена, но если планируется
     # [<en>] использовать несколько кластеров, то рекомендуется установить на них последовательные каналы обновлений,
     # [<en>] чтобы обновления происходили по очереди. Это позволит минимизировать риски в будущем.
-    # [<en>] Подробнее о каналах обновлений: https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-release-channels.html
+    # [<en>] Подробнее о каналах обновлений: https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/release-channels.html
     releaseChannel: EarlyAccess
     logLevel: Info
 ---
@@ -29,7 +29,7 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  version: 1
+  version: 2
   settings:
     modules:
       # [<en>] Template for Ingress resources of Deckhouse modules.

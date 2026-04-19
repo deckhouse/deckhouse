@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -71,7 +70,7 @@ func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme
 	case types.StrategicMergePatchType:
 		schemaReferenceObj, err := scheme.UnsafeConvertToVersion(input, input.GetObjectKind().GroupVersionKind().GroupVersion())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unsafe convert to version: %w", err)
 		}
 		mechanism = &smpPatcher{
 			patch:              patch,
@@ -105,7 +104,7 @@ func (p *jsonPatcher) applyPatchToCurrentObject(currentObject runtime.Object) (r
 	// Encode will convert & return a versioned object in JSON.
 	currentObjJS, err := runtime.Encode(codec, currentObject)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encode: %w", err)
 	}
 
 	// Apply the patch.
@@ -159,7 +158,7 @@ func (p *jsonPatcher) applyJSPatch(versionedJS []byte) ([]byte, []error, error) 
 
 		patchObj, err := jsonpatch.DecodePatch(p.patch)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("decode patch: %w", err)
 		}
 
 		if len(patchObj) > maxJSONPatchOperations {
@@ -171,7 +170,7 @@ func (p *jsonPatcher) applyJSPatch(versionedJS []byte) ([]byte, []error, error) 
 		}
 		patchedJS, err := patchObj.Apply(versionedJS)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("apply: %w", err)
 		}
 		return patchedJS, strictErrors, nil
 	case types.MergePatchType:
@@ -183,9 +182,12 @@ func (p *jsonPatcher) applyJSPatch(versionedJS []byte) ([]byte, []error, error) 
 
 		patchedJS, err := jsonpatch.MergePatch(versionedJS, p.patch)
 		if errors.Is(err, jsonpatch.ErrBadJSONPatch) {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("bad JSON patch: %w", err)
 		}
-		return patchedJS, strictErrors, err
+		if err != nil {
+			return nil, nil, fmt.Errorf("merge patch: %w", err)
+		}
+		return patchedJS, strictErrors, nil
 	default:
 		// only here as a safety net - go-restful filters content-type
 		return nil, nil, fmt.Errorf("unknown Content-Type header for patch: %v", p.patchType)
@@ -214,8 +216,6 @@ func (p *smpPatcher) applyPatchToCurrentObject(currentObject runtime.Object) (ru
 type applyPatcher struct {
 	patch        []byte
 	options      *metav1.PatchOptions
-	creature     runtime.ObjectCreater
-	kind         schema.GroupVersionKind
 	fieldManager *managedfields.FieldManager
 }
 
@@ -235,7 +235,7 @@ func (p *applyPatcher) applyPatchToCurrentObject(obj runtime.Object) (runtime.Ob
 
 	obj, err := p.fieldManager.Apply(obj, patchObj, p.options.FieldManager, force)
 	if err != nil {
-		return obj, err
+		return obj, fmt.Errorf("apply: %w", err)
 	}
 
 	// TODO: spawn something to track deciding whether a fieldValidation=Strict
@@ -261,14 +261,14 @@ func strategicPatchObject(
 ) error {
 	originalObjMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(originalObject)
 	if err != nil {
-		return err
+		return fmt.Errorf("to unstructured: %w", err)
 	}
 
 	patchMap := make(map[string]interface{})
 	var strictErrs []error
 	strictErrs, err = kjson.UnmarshalStrict(patchBytes, &patchMap)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal strict: %w", err)
 	}
 
 	return applyPatchToObject(defaulter, originalObjMap, patchMap, objToUpdate, schemaReferenceObj, strictErrs)
@@ -287,7 +287,7 @@ func applyPatchToObject(
 ) error {
 	patchedObjMap, err := strategicpatch.StrategicMergeMapPatch(originalMap, patchMap, schemaReferenceObj)
 	if err != nil {
-		return err
+		return fmt.Errorf("strategic merge map patch: %w", err)
 	}
 
 	// Rather than serialize the patched map to JSON, then decode it to an object, we go directly from a map to an object

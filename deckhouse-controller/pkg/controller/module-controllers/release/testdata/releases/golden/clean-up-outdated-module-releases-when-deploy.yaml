@@ -5,9 +5,11 @@ metadata:
   annotations:
     modules.deckhouse.io/registry-spec-checksum: 90f0955ee984feab5c50611987008def
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/release-exists
   generation: 1
   name: test
-  resourceVersion: "406077723"
+  resourceVersion: "406077724"
   uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
 spec:
   registry:
@@ -19,6 +21,7 @@ status:
   message: ""
   modules: null
   modulesCount: 0
+  phase: ""
   syncTime: null
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -121,14 +124,19 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
 metadata:
   annotations:
+    modules.deckhouse.io/isUpdating: "false"
+    modules.deckhouse.io/notified: "true"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
+  - modules.deckhouse.io/exist-on-fs
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
     release-checksum: 6f0b1c3f78bf63e712e225b2ac3030ce
     source: test
-    status: pending
+    status: deployed
   name: echo-v0.4.54
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
@@ -136,7 +144,7 @@ metadata:
     kind: ModuleSource
     name: test
     uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1003"
+  resourceVersion: "1004"
 spec:
   moduleName: echo
   version: 0.4.54
@@ -145,6 +153,21 @@ status:
   approved: false
   message: ""
   phase: Deployed
-  pullDuration: 9m15s
+  pullDuration: 0s
   size: 0
-  transitionTime: "2019-10-17T15:33:00Z"
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  name: echo
+  resourceVersion: "1000"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: LastReleaseDeployed
+  phase: Ready

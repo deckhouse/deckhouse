@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+  name: allow-root-user
+spec:
+  securityContext:
+    runAsUser:
+      allowedValues:
+      - 0
+    runAsNonRoot:
+      allowedValue: false
+

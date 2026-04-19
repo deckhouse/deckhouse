@@ -1,5 +1,5 @@
 ---
-title: "The upmeter module: Custom Resources"
+title: "Cluster SLA Monitoring: Custom Resources"
 ---
 
 <!-- SCHEMA -->

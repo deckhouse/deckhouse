@@ -1,0 +1,6 @@
+# Values scoped under package name (myApp)
+myApp:
+  enabled: true
+  port: 8080
+  settings:
+    debug: false

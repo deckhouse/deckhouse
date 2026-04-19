@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,7 +37,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were creatated")
+var ErrNotAllResourcesCreated = fmt.Errorf("Not all resources were created")
 
 // apiResourceListGetter discovery and cache APIResources list for group version kind
 type apiResourceListGetter struct {
@@ -51,7 +52,7 @@ func newAPIResourceListGetter(kubeCl *client.KubernetesClient) *apiResourceListG
 	}
 }
 
-func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIResourceList, error) {
+func (g *apiResourceListGetter) Get(ctx context.Context, gvk *schema.GroupVersionKind) (*metav1.APIResourceList, error) {
 	key := gvk.GroupVersion().String()
 	if resourcesList, ok := g.gvkToResourcesList[key]; ok {
 		return resourcesList, nil
@@ -59,7 +60,7 @@ func (g *apiResourceListGetter) Get(gvk *schema.GroupVersionKind) (*metav1.APIRe
 
 	var resourcesList *metav1.APIResourceList
 	var err error
-	err = retry.NewSilentLoop("Get resources list", 3, 1*time.Second).Run(func() error {
+	err = retry.NewSilentLoop("Get resources list", 3, 1*time.Second).RunContext(ctx, func() error {
 		// ServerResourcesForGroupVersion does not return error if API returned NotFound (404) or Forbidden (403)
 		// https://github.com/kubernetes/client-go/blob/51a4fd4aee686931f6a53148b3f4c9094f80d512/discovery/discovery_client.go#L204
 		// and if CRD was not deployed method will return empty APIResources list
@@ -91,7 +92,7 @@ func NewCreator(kubeCl *client.KubernetesClient, resources template.Resources, t
 	}
 }
 
-func (c *Creator) createAll() error {
+func (c *Creator) createAll(ctx context.Context) error {
 	apiResourceGetter := newAPIResourceListGetter(c.kubeCl)
 	addedResourcesIndexes := make(map[int]struct{})
 
@@ -112,7 +113,7 @@ func (c *Creator) createAll() error {
 	log.DebugLn("start ensureRequiredNamespacesExist")
 
 	// resourcesToSkipInCurrentIteration connect with c.resources via resource slice index
-	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist()
+	resourcesToSkipInCurrentIteration, err := c.ensureRequiredNamespacesExist(ctx)
 	if err != nil {
 		return err
 	}
@@ -125,7 +126,7 @@ func (c *Creator) createAll() error {
 			continue
 		}
 
-		resourcesList, err := apiResourceGetter.Get(&resource.GVK)
+		resourcesList, err := apiResourceGetter.Get(ctx, &resource.GVK)
 		if err != nil {
 			log.DebugF("apiResourceGetter returns error: %w\n", err)
 			continue
@@ -135,7 +136,7 @@ func (c *Creator) createAll() error {
 			if discoveredResource.Kind != resource.GVK.Kind {
 				continue
 			}
-			if err := c.createSingleResource(resource); err != nil {
+			if err := c.createSingleResource(ctx, resource, discoveredResource); err != nil {
 				return err
 			}
 
@@ -147,7 +148,7 @@ func (c *Creator) createAll() error {
 	return nil
 }
 
-func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
+func (c *Creator) ensureRequiredNamespacesExist(ctx context.Context) (map[int]struct{}, error) {
 	// true means known existing namespace
 	// false means known namespace that is not yet created (used to skip checking for that namespace for multiple times)
 	knownNamespaces := make(map[string]bool)
@@ -156,7 +157,7 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 	// or after state is set to "cluster is bootstrapped" (some namespaces will be created by the deckhouse after that)
 	resourcesToSkipInCurrentIteration := make(map[int]struct{})
 
-	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).Run(func() error {
+	err := retry.NewSilentLoop("Ensure that required namespaces exist", 10, 10*time.Second).RunContext(ctx, func() error {
 		for i, res := range c.resources {
 			nsName := res.Object.GetNamespace()
 
@@ -181,7 +182,7 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 				continue
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			if _, err := c.kubeCl.CoreV1().Namespaces().Get(ctx, nsName, metav1.GetOptions{}); err != nil {
 				cancel()
 
@@ -208,23 +209,13 @@ func (c *Creator) ensureRequiredNamespacesExist() (map[int]struct{}, error) {
 	return resourcesToSkipInCurrentIteration, nil
 }
 
-func (c *Creator) TryToCreate() error {
-	if err := c.createAll(); err != nil {
+func (c *Creator) TryToCreate(ctx context.Context) error {
+	if err := c.createAll(ctx); err != nil {
 		return err
 	}
 
-	gvks := make(map[string]struct{})
-	resourcesToCreate := make([]string, 0, len(c.resources))
-	for _, resource := range c.resources {
-		key := resource.GVK.String()
-		if _, ok := gvks[key]; !ok {
-			gvks[key] = struct{}{}
-			resourcesToCreate = append(resourcesToCreate, key)
-		}
-	}
-
 	for _, task := range c.mcTasks {
-		err := c.runSingleMCTask(task)
+		err := c.runSingleMCTask(ctx, task)
 		if err != nil {
 			return err
 		}
@@ -238,30 +229,22 @@ func (c *Creator) TryToCreate() error {
 	}
 
 	if len(c.resources) > 0 {
-		log.InfoF("\rResources to create: \n\t%s\n\n", strings.Join(resourcesToCreate, "\n\t"))
 		return ErrNotAllResourcesCreated
 	}
 
 	return nil
 }
 
-func (c *Creator) isNamespaced(gvk schema.GroupVersionKind, name string) (bool, error) {
-	return isNamespaced(c.kubeCl, gvk, name)
-}
-
-func resourceToGVR(kubeCl *client.KubernetesClient, resource *template.Resource) (*schema.GroupVersionResource, *unstructured.Unstructured, error) {
+func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*schema.GroupVersionResource, *unstructured.Unstructured) {
 	doc := resource.Object
-	gvk := resource.GVK
 
-	gvr, err := kubeCl.GroupVersionResource(gvk.ToAPIVersionAndKind())
-	if err != nil {
-		return nil, nil, fmt.Errorf("can't get resource by kind and apiVersion: %w", err)
+	gvr := &schema.GroupVersionResource{
+		Group:    resource.GVK.Group,
+		Version:  resource.GVK.Version,
+		Resource: apires.Name,
 	}
 
-	namespaced, err := isNamespaced(kubeCl, gvk, gvr.Resource)
-	if err != nil {
-		return nil, nil, fmt.Errorf("can't determine whether a resource is namespaced or not: %v", err)
-	}
+	namespaced := isNamespacedByAPIRes(apires)
 
 	docCopy := doc.DeepCopy()
 	namespace := docCopy.GetNamespace()
@@ -271,16 +254,13 @@ func resourceToGVR(kubeCl *client.KubernetesClient, resource *template.Resource)
 
 	docCopy.SetNamespace(namespace)
 
-	return &gvr, docCopy, nil
+	return gvr, docCopy
 }
 
-func (c *Creator) createSingleResource(resource *template.Resource) error {
+func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).Run(func() error {
-		gvr, docCopy, err := resourceToGVR(c.kubeCl, resource)
-		if err != nil {
-			return err
-		}
+	return retry.NewSilentLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).RunContext(ctx, func() error {
+		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
@@ -288,7 +268,7 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 			CreateFunc: func(manifest interface{}) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
-					Create(context.TODO(), docCopy, metav1.CreateOptions{})
+					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -299,23 +279,29 @@ func (c *Creator) createSingleResource(resource *template.Resource) error {
 				// using patch here because of https://github.com/kubernetes/kubernetes/issues/70674
 				_, err = c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
-					Patch(context.TODO(), docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+					Patch(ctx, docCopy.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 				return err
 			},
 		}
 
-		return manifestTask.CreateOrUpdate()
+		err := manifestTask.CreateOrUpdateSilent()
+		if err != nil {
+			if strings.Contains(err.Error(), "the server could not find the requested resource") {
+				c.kubeCl.InvalidateDiscoveryCache()
+			}
+		}
+		return err
 	})
 }
 
-func (c *Creator) runSingleMCTask(task actions.ModuleConfigTask) error {
+func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfigTask) error {
 	// Wait up to 10 minutes
-	return retry.NewLoop(task.Title, 60, 5*time.Second).Run(func() error {
+	return retry.NewLoop(task.Title, 60, 5*time.Second).RunContext(ctx, func() error {
 		return task.Do(c.kubeCl)
 	})
 }
 
-func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
+func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
 	endChannel := time.After(app.ResourcesTimeout)
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -324,27 +310,102 @@ func CreateResourcesLoop(kubeCl *client.KubernetesClient, resources template.Res
 	resourceCreator := NewCreator(kubeCl, resources, tasks)
 
 	waiter := NewWaiter(checkers)
+
+	gvks := make(map[string]struct{})
+	resourcesToCreate := make([]string, 0, len(resourceCreator.resources))
+	for _, resource := range resourceCreator.resources {
+		key := resource.DetailedGVKString()
+		if _, ok := gvks[key]; !ok {
+			gvks[key] = struct{}{}
+			resourcesToCreate = append(resourcesToCreate, key)
+		}
+	}
+
+	_ = log.Process("Create Resources", "Resources to create", func() error {
+		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
+		return nil
+	})
+
+	attempt := 0
+	createdResources := make([]string, 0, len(resourceCreator.resources))
 	for {
-		err := resourceCreator.TryToCreate()
+		err := resourceCreator.TryToCreate(ctx)
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
 			return err
 		}
 
-		ready, errWaiter := waiter.ReadyAll()
+		ready, res, remained, errWaiter := waiter.ReadyAllWithRes(ctx)
 		if errWaiter != nil {
 			return errWaiter
 		}
 
+		if len(res) > 0 {
+			createdResources = append(createdResources, res...)
+		}
+
+		if len(remained) > 0 && attempt%10 == 0 {
+			msg := make(map[string][]string)
+			msg["remained"] = remained
+			if len(createdResources) > 0 {
+				msg["created"] = createdResources
+			}
+			logResources(msg)
+		}
 		if ready && err == nil {
 			return nil
 		}
 
 		select {
 		case <-endChannel:
-			return fmt.Errorf("creating resources failed after %s waiting", app.ResourcesTimeout)
+			if len(resources) > 0 {
+				_ = log.Process("Create Resources", "Failed to create", func() error {
+					log.WarnF("%s\n", strings.Join(remained, "\n"))
+					return nil
+				})
+				return fmt.Errorf(
+					"Creating resources timed out after %s: resources cannot become ready. "+
+						"This could be due to lack of worker nodes in the cluster. "+
+						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
+					app.ResourcesTimeout,
+				)
+			}
+
+			return fmt.Errorf("Creating resources failed after %s waiting", app.ResourcesTimeout)
 		case <-ticker.C:
 		}
+		attempt++
 	}
+}
+
+func logResources(res map[string][]string) {
+	_ = log.Process("Create Resources", "Resource readiness check", func() error {
+		remained, ok := res["remained"]
+		if ok {
+			for i, s := range remained {
+				if strings.Contains(s, "cluster") {
+					remained = slices.Delete(remained, i, i+1)
+				}
+			}
+			_ = log.Process("Create Resources", "Resource not ready", func() error {
+				log.InfoF("%s\n", strings.Join(remained, "\n"))
+				return nil
+			})
+		}
+		created, ok := res["created"]
+		if ok {
+			for i, s := range created {
+				if strings.Contains(s, "cluster") {
+					created = slices.Delete(created, i, i+1)
+				}
+			}
+			_ = log.Process("Create Resources", "Resource ready", func() error {
+				log.InfoF("%s\n", strings.Join(created, "\n"))
+				return nil
+			})
+		}
+
+		return nil
+	})
 }
 
 func getUnstructuredName(obj *unstructured.Unstructured) string {
@@ -410,4 +471,11 @@ func isNamespaced(kubeCl *client.KubernetesClient, gvk schema.GroupVersionKind, 
 		}
 	}
 	return false, nil
+}
+
+func isNamespacedByAPIRes(res metav1.APIResource) bool {
+	if len(res.Verbs) == 0 {
+		return false
+	}
+	return res.Namespaced
 }

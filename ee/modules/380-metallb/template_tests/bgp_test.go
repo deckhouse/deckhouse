@@ -173,6 +173,11 @@ localPref: 150
 			l2Advertisement2 := f.KubernetesResource("L2Advertisement", "d8-metallb", "mypool2")
 			Expect(l2Advertisement2.Exists()).To(BeFalse())
 
+			bgpControllerDeployment := f.KubernetesResource("Deployment", "d8-metallb", "controller")
+			Expect(bgpControllerDeployment.Exists()).To(BeTrue())
+			bgpSpeakerDaemonset := f.KubernetesResource("DaemonSet", "d8-metallb", "speaker")
+			Expect(bgpSpeakerDaemonset.Exists()).To(BeTrue())
+
 		})
 	})
 })

@@ -20,3 +20,17 @@ spec:
 ```
 
 [Подробнее](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-config) про настройку DNS.
+
+## Пример конфигурации
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-local-dns
+spec:
+  version: 1
+  enabled: true
+  settings:
+    enableLogs: true
+```

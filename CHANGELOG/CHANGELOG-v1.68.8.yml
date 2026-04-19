@@ -1,0 +1,21 @@
+cert-manager:
+  features:
+    - summary: >-
+        Bump cert-manager version up to 1.17.1. This fixes acme confirmation for cloudflare
+        provider.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12808
+docs:
+  fixes:
+    - summary: FIx local docimentation build and run.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12850
+    - summary: The information label with the editions has been removed from the global settings page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12772
+ingress-nginx:
+  fixes:
+    - summary: Fixed the display of ports in the examples in the CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12743
+istio:
+  fixes:
+    - summary: Fixed the display of ports in the examples in the CRDs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12743
+

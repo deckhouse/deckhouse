@@ -38,8 +38,7 @@ for VERSION in $(yq e ../version_map.yml -o json | jq -r '.k8s | keys[]'); do
     NEW_FULL_VERSION="$(curl -s "https://raw.githubusercontent.com/kubernetes/kubernetes/master/CHANGELOG/CHANGELOG-${VERSION}.md" | grep '## Downloads for v' | head -n 1 | grep -Eo "${VERSION}.[0-9]+")"
     NEW_PATCH="$(awk -F "." '{print $3}' <<< "${NEW_FULL_VERSION}")"
     if [[ "${NEW_PATCH}" -ne "${PATCH}" ]]; then
-      PR_DESCRIPTION="${PR_DESCRIPTION}$(echo -e "\n* New kubernetes patch version ${VERSION}.${NEW_PATCH}.")"
-      CREATE_PR=true
+      echo -n "e2e/use/k8s/${VERSION}," >> /tmp/updated-versions
       update_version_map "${VERSION}" "${NEW_PATCH}"
     fi
   done

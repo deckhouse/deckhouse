@@ -1,0 +1,175 @@
+diff --git a/cmd/csi/main.go b/cmd/csi/main.go
+index fccc62c..127a97f 100644
+--- a/cmd/csi/main.go
++++ b/cmd/csi/main.go
+@@ -23,10 +23,11 @@ import (
+ )
+ 
+ var (
+-	endpointFlag    string
+-	nodeIDFlag      string
+-	cloudConfigFlag string
+-	upgradeRDEFlag  bool
++	endpointFlag     string
++	nodeIDFlag       string
++	cloudConfigFlag  string
++	metadataPathFlag string
++	upgradeRDEFlag   bool
+ )
+ 
+ func init() {
+@@ -81,6 +82,8 @@ func main() {
+ 	cmd.PersistentFlags().StringVar(&cloudConfigFlag, "cloud-config", "", "CSI driver cloud config")
+ 	cmd.MarkPersistentFlagRequired("cloud-config")
+ 
++	cmd.PersistentFlags().StringVar(&metadataPathFlag, "metadata-path", "", "CSI controller metadata file path")
++
+ 	logs.InitLogs()
+ 	defer logs.FlushLogs()
+ 
+@@ -114,6 +117,23 @@ func runCommand() {
+ 		panic(fmt.Errorf("unable to parse configuration: [%v]", err))
+ 	}
+ 
++	metadataConfig := &vcdcsiclient.MetadataConfig{}
++
++	if metadataPathFlag != "" {
++		metadataFile, err := os.Open(metadataPathFlag)
++		if err != nil {
++			panic(fmt.Errorf("unable to read metadata file: [%v]", err))
++		}
++		defer metadataFile.Close()
++
++		metadataConfig, err = vcdcsiclient.ParseMetadataConfig(metadataFile)
++		if err != nil {
++			panic(fmt.Errorf("unable to parse metadata configuration: [%v]", err))
++		}
++
++		klog.Infof("Successfully parsed metadata config: %+v", metadataConfig)
++	}
++
+ 	for {
+ 		err = config.SetAuthorization(cloudConfig)
+ 		if err == nil {
+@@ -147,8 +167,9 @@ func runCommand() {
+ 	}
+ 
+ 	if err = d.Setup(&vcdcsiclient.DiskManager{
+-		VCDClient: vcdClient,
+-		ClusterID: cloudConfig.ClusterID,
++		VCDClient:      vcdClient,
++		ClusterID:      cloudConfig.ClusterID,
++		MetadataConfig: metadataConfig,
+ 	}, cloudConfig.VCD.VAppName, nodeID, upgradeRDEFlag); err != nil {
+ 		panic(fmt.Errorf("error while setting up driver: [%v]", err))
+ 	}
+diff --git a/pkg/csi/controller.go b/pkg/csi/controller.go
+index 27dc123..d8b848c 100644
+--- a/pkg/csi/controller.go
++++ b/pkg/csi/controller.go
+@@ -13,6 +13,7 @@ import (
+ 	"github.com/vmware/cloud-director-named-disk-csi-driver/pkg/vcdcsiclient"
+ 	"github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk"
+ 	"github.com/vmware/go-vcloud-director/v2/govcd"
++	"github.com/vmware/go-vcloud-director/v2/types/v56"
+ 	"google.golang.org/grpc/codes"
+ 	"google.golang.org/grpc/status"
+ 	"k8s.io/klog"
+@@ -54,12 +55,13 @@ type controllerServer struct {
+ }
+ 
+ // NewControllerService creates a controllerService
+-func NewControllerService(driver *VCDDriver, vcdClient *vcdsdk.Client, clusterID string, vAppName string) csi.ControllerServer {
++func NewControllerService(driver *VCDDriver, vcdClient *vcdsdk.Client, clusterID string, vAppName string, metadataConfig *vcdcsiclient.MetadataConfig) csi.ControllerServer {
+ 	return &controllerServer{
+ 		Driver: driver,
+ 		DiskManager: &vcdcsiclient.DiskManager{
+-			VCDClient: vcdClient,
+-			ClusterID: clusterID,
++			VCDClient:      vcdClient,
++			ClusterID:      clusterID,
++			MetadataConfig: metadataConfig,
+ 		},
+ 		VAppName: vAppName,
+ 	}
+@@ -137,6 +139,18 @@ func (cs *controllerServer) CreateVolume(ctx context.Context,
+ 	}
+ 	klog.Infof("Successfully created disk [%s] of size [%d]MB", diskName, sizeMB)
+ 
++	for key := range cs.DiskManager.MetadataConfig.Metadata {
++		cs.DiskManager.VCDClient.VCDClient.AddMetadataEntryWithVisibilityByHref(
++			disk.HREF,
++			key,
++			cs.DiskManager.MetadataConfig.Metadata[key],
++			types.MetadataStringValue,
++			types.MetadataReadWriteVisibility,
++			false,
++		)
++	}
++	klog.Infof("Successfully updated disk [%s] metadata", diskName)
++
+ 	attributes := make(map[string]string)
+ 	attributes[BusTypeParameter] = BusTypesFromValues[disk.BusType]
+ 	attributes[BusSubTypeParameter] = disk.BusSubType
+diff --git a/pkg/csi/driver.go b/pkg/csi/driver.go
+index 48d6bf6..071b1d2 100644
+--- a/pkg/csi/driver.go
++++ b/pkg/csi/driver.go
+@@ -112,7 +112,7 @@ func NewDriver(nodeID string, endpoint string) (*VCDDriver, error) {
+ func (d *VCDDriver) Setup(diskManager *vcdcsiclient.DiskManager, VAppName string, nodeID string, upgradeRde bool) error {
+ 	klog.Infof("Driver setup called")
+ 	d.ns = NewNodeService(d, nodeID)
+-	d.cs = NewControllerService(d, diskManager.VCDClient, diskManager.ClusterID, VAppName)
++	d.cs = NewControllerService(d, diskManager.VCDClient, diskManager.ClusterID, VAppName, diskManager.MetadataConfig)
+ 	d.ids = NewIdentityServer(d)
+ 	if !upgradeRde {
+ 		klog.Infof("Skipping RDE CSI section upgrade as upgradeRde flag is false")
+diff --git a/pkg/vcdcsiclient/disks.go b/pkg/vcdcsiclient/disks.go
+index b89727a..ab4ba8f 100644
+--- a/pkg/vcdcsiclient/disks.go
++++ b/pkg/vcdcsiclient/disks.go
+@@ -9,6 +9,8 @@ import (
+ 	"context"
+ 	"encoding/json"
+ 	"fmt"
++	"gopkg.in/yaml.v2"
++	"io"
+ 	"net/http"
+ 	"strings"
+ 	"time"
+@@ -25,8 +27,13 @@ import (
+ )
+ 
+ type DiskManager struct {
+-	VCDClient *vcdsdk.Client
+-	ClusterID string
++	VCDClient      *vcdsdk.Client
++	MetadataConfig *MetadataConfig
++	ClusterID      string
++}
++
++type MetadataConfig struct {
++	Metadata map[string]string `yaml:"metadata"`
+ }
+ 
+ const (
+@@ -35,6 +42,19 @@ const (
+ 	NoRdePrefix              = `NO_RDE_`
+ )
+ 
++func ParseMetadataConfig(reader io.Reader) (*MetadataConfig, error) {
++	var err error
++	config := &MetadataConfig{}
++
++	decoder := yaml.NewDecoder(reader)
++	decoder.SetStrict(true)
++
++	if err = decoder.Decode(&config); err != nil {
++		return nil, fmt.Errorf("unable to decode metadata yaml file: [%v]", err)
++	}
++	return config, nil
++}
++
+ // Returns a Disk structure as JSON
+ func prettyDisk(disk vcdtypes.Disk) string {
+ 	if byteBuf, err := json.MarshalIndent(disk, " ", " "); err == nil {

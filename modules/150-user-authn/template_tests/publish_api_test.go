@@ -40,6 +40,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "test")
 
@@ -82,6 +83,11 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 			hec.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			hec.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `
+tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY
+`)
+
 			hec.HelmRender()
 		})
 
@@ -123,6 +129,40 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		})
 	})
 
+	Context("With LDAP provider with enableBasicAuth option", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "dGVzdA==")
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
+- id: ldapID
+  displayName: ldapDisplay
+  type: LDAP
+  ldap:
+    enableBasicAuth: true
+    host: ldap.example.com:636
+    userSearch:
+      baseDN: cn=users,dc=example,dc=com
+      username: uid
+      idAttr: uid
+      emailAttr: mail
+    groupSearch:
+      baseDN: cn=groups,dc=example,dc=com
+      userMatchers:
+      - userAttr: uid
+        groupAttr: member
+      nameAttr: name
+`)
+			hec.HelmRender()
+		})
+
+		It("Should deploy basic auth proxy deployment and ingress for LDAP", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+		})
+	})
+
 	Context("With provider with enableBasicAuth option", func() {
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
@@ -151,7 +191,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(
-				Equal("if ($http_authorization ~ \"^(.*)Basic(.*)$\") {\n  rewrite ^(.*)$ /basic-auth$1;\n}\n"))
+				Equal("if ($http_authorization ~ \"^(.*)Basic(.*)$\") {\n  rewrite ^(.*)$ /basic-auth$1;\n}\nlocation ~ ^/(healthz|livez|readyz) {\n  deny all;\n  return 403;\n}\n"))
 			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))

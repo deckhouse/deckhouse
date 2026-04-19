@@ -1,0 +1,125 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: dbc8d54ec27b3bb6ad2a1f02210e0489
+  creationTimestamp: "2024-01-25T08:24:23Z"
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  generation: 73
+  name: test-source
+  resourceVersion: "359254028"
+  uid: d4b66e73-a936-4ef0-9325-e940ec37af06
+spec:
+  registry:
+    ca: ""
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/test/external-modules
+    scheme: HTTP
+  releaseChannel: alpha
+status:
+  message: ""
+  modules:
+    - name: test-module
+  modulesCount: 1
+  syncTime: "2024-05-22T10:08:46Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: "2024-11-18T15:34:15Z"
+  generation: 17
+  labels:
+    deckhouse.io/epoch: "1326105356"
+  name: test-module
+  resourceVersion: "231005773"
+  uid: 7111cee7-50cd-4ecf-ba20-d691b13b0f59
+properties:
+  availableSources:
+    - test-source
+  releaseChannel: Stable
+  requirements:
+    deckhouse: "> v1.63.0"
+    kubernetes: "> v1.25.0"
+  source: test-source
+  weight: 900
+status:
+  conditions:
+    - lastProbeTime: "2024-12-03T15:57:20Z"
+      lastTransitionTime: "2024-12-03T15:57:20Z"
+      status: "True"
+      type: EnabledByModuleConfig
+    - lastProbeTime: "2024-12-04T10:01:55Z"
+      lastTransitionTime: "2024-12-03T15:57:26Z"
+      status: "True"
+      type: EnabledByModuleManager
+    - lastProbeTime: "2024-12-04T10:01:55Z"
+      lastTransitionTime: "2024-12-04T10:01:53Z"
+      status: "True"
+      type: IsReady
+    - lastProbeTime: "2024-12-04T10:06:41Z"
+      lastTransitionTime: "2024-12-04T10:06:41Z"
+      status: "False"
+      type: IsOverridden
+  hooksState: "ok"
+  phase: Ready
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: test-module
+    source: test-source
+    status: superseded
+  name: test-module-v1.0.0
+spec:
+  moduleName: test-module
+  version: 1.0.0
+  weight: 900
+status:
+  phase: Superseded
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: test-module
+    source: test-source
+    status: deployed
+  name: test-module-v1.0.1
+spec:
+  moduleName: test-module
+  version: 1.0.1
+  weight: 900
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: test-module
+    source: test-source
+    status: deployed
+  name: test-module-v1.0.2
+spec:
+  moduleName: test-module
+  version: 1.0.2
+  weight: 900
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  labels:
+    module: test-module
+    source: test-source
+    status: deployed
+  name: test-module-v1.0.3
+spec:
+  moduleName: test-module
+  version: 1.0.3
+  weight: 900
+status:
+  phase: Deployed

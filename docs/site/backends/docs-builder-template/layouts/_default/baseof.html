@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html>
+{{- $lang := .Language.Lang }}
+<html lang="{{- $lang }}">
   <head>
-  {{- partial "head" . }}
-  {{- "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
+    {{- partial "head" . }}
+    {{- "<!--#include virtual=\"/includes/head-site.html\" -->"  | safeHTML }}
   </head>
   <body>
     <div class="content">
@@ -10,32 +11,8 @@
 
      {{- "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
      <div class="container">
-
-       <div class="breadcrumbs-container">
-         <div class="breadcrumbs__left">
-           <ol class="breadcrumbs">
-             <li class="breadcrumbs__item">{{ T "modules_documentation" | humanize }}</li>
-           </ol>
-         </div>
-         <div class="breadcrumbs__right">
-           <ol class="breadcrumbs">
-             {{- partial "breadcrumbs" . }}
-           </ol>
-         </div>
-       </div>
-
-       <div class="layout-sidebar">
-         <div class="layout-sidebar__sidebar">
-           {{- partial "sidebar" . }}
-         </div>
-         <div class="layout-sidebar__content">
-           {{- block "main" . }}
-           {{- end }}
-         </div>
-         <div class="layout-sidebar__sidebar_right">
-           {{- partial "toc" . }}
-         </div>
-       </div>
+       {{- block "main" . }}
+       {{- end }}
      </div>
 
      </div>
@@ -94,5 +71,21 @@
     });
 
   </script>
-  </body>
+{{ if .Store.Get "hasMermaid" }}
+  <script src="/assets/js/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true });</script>
+{{ end }}
+<script type="text/javascript">
+  // Fix second level topnav menu for GS and guides sections.
+  let subUrls = ['/modules/'];
+  subUrls.forEach(function (element) {
+    if (window.location.pathname.toLowerCase().includes(element)) {
+      $('.header.header__product-menu ul.nav li').each(function () {
+        if ($(this).find('a').attr('href').toLowerCase().includes(element)) $(this).addClass('active');
+        else $(this).removeClass('active');
+      });
+    }
+  });
+</script>
+</body>
 </html>

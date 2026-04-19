@@ -1,5 +1,6 @@
 name: deckhouse-tools
-weight: 800
-
-requirements:
-  bootstrapped: true
+namespace: d8-system
+stage: General Availability
+descriptions:
+  en: Creates a web UI with links to download Deckhouse CLI tool for various operating systems.
+  ru: Создает веб-интерфейс для скачивания из кластера утилиты Deckhouse CLI под различные операционные системы.

@@ -1,5 +1,0 @@
-module: kube-proxy
-namespace: kube-system
-subsystems:
-  - kubernetes
-  - networking

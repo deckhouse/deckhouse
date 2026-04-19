@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strings"
@@ -41,7 +42,6 @@ import (
 	"github.com/flant/kube-client/fake"
 	. "github.com/flant/shell-operator/pkg/hook/types"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/flant/shell-operator/pkg/metric_storage/operation"
 	utils "github.com/flant/shell-operator/pkg/utils/file"
 	hookcontext "github.com/flant/shell-operator/test/hook/context"
 	"github.com/go-openapi/spec"
@@ -59,9 +59,12 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/yaml"
 
+	sdkpatchablevalues "github.com/deckhouse/module-sdk/pkg/patchable-values"
+
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 	"github.com/deckhouse/deckhouse/testing/library/sandbox_runner"
@@ -242,7 +245,7 @@ func HookExecutionConfigInit(initValues, initConfigValues string, k8sVersion ...
 	hookEnvs := []string{"ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests"}
 
 	hec := new(HookExecutionConfig)
-	hec.logger = log.NewLogger(log.Options{})
+	hec.logger = log.NewLogger()
 
 	fakeClusterVersion := k8s.DefaultFakeClusterVersion
 	if len(k8sVersion) > 0 {
@@ -402,12 +405,12 @@ func (hec *HookExecutionConfig) KubeStateSetAndWaitForBindingContexts(newKubeSta
 func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec.Schema, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getwd: %w", err)
 	}
 
 	crdPath, err := filepath.Abs(cwd + "/../crds/")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("abs: %w", err)
 	}
 
 	crdFilesPaths := make([]string, 0)
@@ -425,7 +428,7 @@ func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec
 			return nil
 		})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("walk: %w", err)
 	}
 
 	schemas := make(map[string]map[string]*spec.Schema, 0)
@@ -435,7 +438,7 @@ func (hec *HookExecutionConfig) prepareCRDSchemas() (map[string]map[string]*spec
 	for _, crdFile := range crdFilesPaths {
 		bytes, err := os.ReadFile(crdFile)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read file: %w", err)
 		}
 		yamlDocs := manifestDelimiter.Split(string(bytes), -1)
 
@@ -494,7 +497,7 @@ func (hec *HookExecutionConfig) ApplyCRDefaults(definition string) string {
 func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, error) {
 	yamls, err := kio.FromBytes([]byte(newKubeState))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from bytes: %w", err)
 	}
 
 	defaultedKubeState := new(strings.Builder)
@@ -508,12 +511,12 @@ func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, erro
 			if sc, ok := versions[version]; ok {
 				doc, err := yamlDoc.Map()
 				if err != nil {
-					return "", err
+					return "", fmt.Errorf("map: %w", err)
 				}
 				if defaulted = validation.ApplyDefaults(doc, sc); defaulted {
 					defaultedDoc, err := yaml.Marshal(doc)
 					if err != nil {
-						return "", err
+						return "", fmt.Errorf("marshal: %w", err)
 					}
 					defaultedKubeState.WriteString("---\n" + string(defaultedDoc))
 				}
@@ -522,7 +525,7 @@ func (hec *HookExecutionConfig) applyDefaults(newKubeState string) (string, erro
 		if !defaulted {
 			originalDoc, err := yamlDoc.String()
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("string: %w", err)
 			}
 			defaultedKubeState.WriteString("---\n" + originalDoc)
 		}
@@ -633,7 +636,7 @@ func (hec *HookExecutionConfig) GenerateScheduleContext(crontab string) hookcont
 	if hec.BindingContextController == nil {
 		return SimpleBindingGeneratedBindingContext(Schedule)
 	}
-	contexts, err := hec.BindingContextController.RunSchedule(crontab)
+	contexts, err := hec.BindingContextController.RunSchedule(context.TODO(), crontab)
 	if err != nil {
 		panic(err)
 	}
@@ -695,10 +698,9 @@ func (hec *HookExecutionConfig) RunHook() {
 		BindingContextFile        *os.File
 		KubernetesPatchSetFile    *os.File
 		MetricsFile               *os.File
-
-		hookEnvs []string
 	)
 
+	hookEnvs := make([]string, 0, len(hec.extraHookEnvs)+4)
 	hookEnvs = append(hookEnvs, "ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests", "D8_IS_TESTS_ENVIRONMENT=yes", "PATH="+os.Getenv("PATH"))
 	hookEnvs = append(hookEnvs, hec.extraHookEnvs...)
 
@@ -873,17 +875,27 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	convigValues, err := addonutils.NewValuesFromBytes(hec.configValues.JSONRepr)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableValues, err := go_hook.NewPatchableValues(values)
+	patchableValues, err := sdkpatchablevalues.NewPatchableValues(values)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	patchableConfigValues, err := go_hook.NewPatchableValues(convigValues)
+	patchableConfigValues, err := sdkpatchablevalues.NewPatchableValues(convigValues)
 	Expect(err).ShouldNot(HaveOccurred())
 
-	var formattedSnapshots = make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
+	newformattedSnapshots := make(go_hook.Snapshots, len(hec.BindingContexts.BindingContexts))
+
 	for _, bCtx := range hec.BindingContexts.BindingContexts {
 		for snapBindingName, snaps := range bCtx.Snapshots {
 			for _, snapshot := range snaps {
-				formattedSnapshots[snapBindingName] = append(formattedSnapshots[snapBindingName], snapshot.FilterResult)
+				if snapshot.FilterResult == nil {
+					continue
+				}
+
+				rw := reflect.ValueOf(snapshot.FilterResult)
+				if rw.Kind() == reflect.Pointer && rw.IsNil() {
+					continue
+				}
+
+				newformattedSnapshots[snapBindingName] = append(newformattedSnapshots[snapBindingName], &go_hook.Wrapped{Wrapped: snapshot.FilterResult})
 			}
 		}
 	}
@@ -904,7 +916,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 	hec.PatchCollector = patchCollector
 
 	hookInput := &go_hook.HookInput{
-		Snapshots:        formattedSnapshots,
+		Snapshots:        newformattedSnapshots,
 		Values:           patchableValues,
 		ConfigValues:     patchableConfigValues,
 		MetricsCollector: metricsCollector,
@@ -923,7 +935,7 @@ func (hec *HookExecutionConfig) RunGoHook() {
 		}
 	}
 
-	hec.GoHookError = hec.GoHook.Run(hookInput)
+	hec.GoHookError = hec.GoHook.Run(context.Background(), hookInput)
 
 	if patches := hookInput.Values.GetPatches(); len(patches) != 0 {
 		valuesPatch := addonutils.NewValuesPatch()

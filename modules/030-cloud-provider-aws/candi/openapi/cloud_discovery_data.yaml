@@ -1,0 +1,49 @@
+kind: AWSCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    additionalProperties: false
+    required: [apiVersion,kind,instances,keyName,loadBalancerSecurityGroup,zoneToSubnetIdMap,zones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [AWSCloudDiscoveryData]
+      instances:
+        type: object
+        additionalProperties: false
+        required: [ami,additionalSecurityGroups,associatePublicIPAddress,iamProfileName]
+        properties:
+          ami:
+            type: string
+            pattern: '^ami-[a-z0-9]+$'
+          additionalSecurityGroups:
+            type: array
+            items:
+              type: string
+              pattern: '^sg-[a-z0-9]+$'
+          associatePublicIPAddress:
+            type: boolean
+          iamProfileName:
+            type: string
+            minLength: 1
+      keyName:
+        type: string
+        minLength: 1
+      loadBalancerSecurityGroup:
+        type: string
+        pattern: '^$|^sg-[a-z0-9]+$'
+      zoneToSubnetIdMap:
+        type: object
+        minProperties: 1
+        additionalProperties:
+          type: string
+      zones:
+        type: array
+        minItems: 1
+        items:
+          type: string
+          pattern: '^[a-z]+-[a-z]+-[0-9]+(?:[a-z]|-[a-z]+-[0-9]+[a-z])$'

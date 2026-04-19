@@ -7,7 +7,7 @@ metadata:
   resourceVersion: "1000"
 spec:
   checksum: abc
-  path: /testmodule/v1.0.0
+  path: /modules/testmodule
   version: v1.0.0
 status:
   conditions:

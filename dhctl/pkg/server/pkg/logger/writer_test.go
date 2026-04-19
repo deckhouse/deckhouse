@@ -23,14 +23,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 )
 
 func TestLogWriter(t *testing.T) {
-	t.Parallel()
-
 	tests := map[string]struct {
 		input [][]byte
 		lines [][]string
@@ -90,8 +89,6 @@ func TestLogWriter(t *testing.T) {
 		tt := tt
 
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
 			sendCh := make(chan []string)
 			defer close(sendCh)
 

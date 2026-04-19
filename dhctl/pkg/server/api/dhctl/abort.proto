@@ -25,6 +25,7 @@ message AbortRequest {
   oneof message {
     AbortStart start = 1;
     AbortContinue continue = 2;
+    AbortCancel cancel = 3;
   }
 }
 
@@ -33,6 +34,7 @@ message AbortResponse {
     AbortResult result = 1;
     AbortPhaseEnd phase_end = 2;
     Logs logs = 3;
+    Progress progress = 4;
   }
 }
 
@@ -58,6 +60,8 @@ message AbortContinue {
   Continue continue = 1;
   string err = 2;
 }
+
+message AbortCancel {}
 
 message AbortStartOptions {
   bool commander_mode = 1;

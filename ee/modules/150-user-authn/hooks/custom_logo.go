@@ -6,16 +6,18 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"crypto/md5"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -44,15 +46,26 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, customLogoHandler)
 
-func customLogoHandler(input *go_hook.HookInput) error {
-	snap := input.Snapshots["logo-cm"]
-	if len(snap) == 0 || snap[0] == nil {
-		input.Values.Set("userAuthn.internal.customLogo.enabled", false)
-		input.PatchCollector.Delete("v1", "ConfigMap", ns, cmName, object_patch.InBackground())
+func customLogoHandler(_ context.Context, input *go_hook.HookInput) error {
+	if !input.Values.Get("global.clusterIsBootstrapped").Bool() {
+		input.Logger.Info("Cluster is not yet bootstrapped, skipping custom logo")
 		return nil
 	}
 
-	logoData := snap[0].(logos)
+	snaps := input.Snapshots.Get("logo-cm")
+	if len(snaps) == 0 {
+		input.Values.Set("userAuthn.internal.customLogo.enabled", false)
+		input.PatchCollector.DeleteInBackground("v1", "ConfigMap", ns, cmName)
+		return nil
+	}
+
+	logoData := new(logos)
+
+	err := snaps[0].UnmarshalTo(logoData)
+	if err != nil {
+		input.Logger.Warn("cannot unmarshal logo data", log.Err(err))
+		return nil
+	}
 
 	cm := buildDexLogoCM(logoData.Logo, logoData.Title)
 
@@ -60,7 +73,7 @@ func customLogoHandler(input *go_hook.HookInput) error {
 
 	md5Sum := md5.Sum([]byte(sum))
 
-	input.PatchCollector.Create(cm, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(cm)
 	input.Values.Set("userAuthn.internal.customLogo.enabled", true)
 	input.Values.Set("userAuthn.internal.customLogo.checksum", fmt.Sprintf("%x", md5Sum))
 

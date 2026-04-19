@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disallowed-deployment-disallowed-capability
+  namespace: testns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          securityContext:
+            capabilities:
+              add:
+              - NET_ADMIN
+              drop:
+              - ALL
+

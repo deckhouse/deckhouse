@@ -1,0 +1,51 @@
+{{/* Recursive function to extract CRD properties */}}
+{{- $data := .data }}
+{{- $langData := .langData }}
+{{- $moduleName := .moduleName }}
+{{- $moduleChannel := .moduleChannel }}
+{{- $ancestors := .ancestors }}
+{{- $kind := .kind }}
+{{- $versionName := .versionName }}
+{{- $searchParams := slice }}
+
+{{- if reflect.IsMap $data }}
+  {{- if $data.properties }}
+    {{- range $paramName, $paramData := $data.properties }}
+      {{- $paramLangData := index $langData.properties $paramName }}
+      {{- $currentAncestors := $ancestors | append $paramName }}
+      {{- $paramPath := delimit $currentAncestors "." }}
+
+      {{- $description := "" }}
+      {{- if $paramLangData.description }}
+        {{- $description = $paramLangData.description | plainify }}
+      {{- else if $paramData.description }}
+        {{- $description = $paramData.description | plainify }}
+      {{- end }}
+
+      {{- $searchParam := dict
+        "name" $paramName
+        "module" $moduleName
+        "moduletype" "source"
+        "url" (printf "/modules/%s/%s/cr.html#%s-%s-%s" $moduleName $moduleChannel ($kind | lower) ($versionName | lower) (delimit $currentAncestors "-" | lower))
+        "path" (printf "%s-%s-%s" ($kind | lower) $versionName $paramPath)
+        "content" $description
+        "resName" $kind }}
+
+      {{- $searchParams = $searchParams | append $searchParam }}
+
+      {{- /* Recursively process nested properties */}}
+      {{- if $paramData.properties }}
+        {{- $nestedParams := partial "openapi/extract-crd-properties-recursive" (dict "data" $paramData "langData" $paramLangData "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" $currentAncestors "kind" $kind "versionName" $versionName) }}
+        {{- $searchParams = $searchParams | append $nestedParams }}
+      {{- end }}
+
+      {{- /* Process array items if they have properties */}}
+      {{- if and $paramData.items $paramData.items.properties }}
+        {{- $arrayParams := partial "openapi/extract-crd-properties-recursive" (dict "data" $paramData.items "langData" $paramLangData.items "moduleName" $moduleName "moduleChannel" $moduleChannel "ancestors" $currentAncestors "kind" $kind "versionName" $versionName) }}
+        {{- $searchParams = $searchParams | append $arrayParams }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{- return $searchParams }}

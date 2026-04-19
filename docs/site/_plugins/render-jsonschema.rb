@@ -1,28 +1,21 @@
 require 'erb'
+require 'cgi'
+require 'uri'
 
 module JSONSchemaRenderer
   class JSONSchemaRenderer
     # Liquid Template characters to escape
     @@CHARS_TO_ESCAPE = {
-      #'&' => '&amp;',
-      #'<' => '&lt;',
-      #'>' => '&gt;',
-      #'"' => '&quot;',
-      #"'" => '&#39;',
       '{' => '&#123;',
       '}' => '&#125;',
       '%' => '&#37;'
     }
 
     def convert(content)
+      if @converter.nil?
+        @converter = @site.find_converter_instance(::Jekyll::Converters::Markdown)
+      end
       return @converter.convert(content)
-    end
-
-    def initialize(site, data, converter)
-       @site = site
-       @path = data['permalink']
-       @lang = data['lang']
-       @converter = converter
     end
 
     def escape_chars(input)
@@ -31,8 +24,6 @@ module JSONSchemaRenderer
       end
       input
     end
-
-    input_string = 'Hello & Welcome <to> "Ruby"!'
 
     # moduleName
     # revision - Deckhouse revision
@@ -110,13 +101,14 @@ module JSONSchemaRenderer
         aVersion["minVersion"] <=> bVersion["minVersion"]
     end
 
-    def AppendResource2Search(name, url, resourceName, description, version = '', search = '')
+    def AppendResource2Search(name, moduleName, url, resourceName, description, version = '', search = '')
 
         return
         # Data for search index
         if name and name.length > 0
             searchItemData = Hash.new
             searchItemData['name'] = name
+            searchItemData['module'] = moduleName.nil? ? '' : moduleName
             searchItemData['url'] = sprintf('%s#%s', url, name.downcase)
             searchItemData['resourceName'] = resourceName if resourceName
             searchItemData['isResource'] = true
@@ -321,7 +313,7 @@ module JSONSchemaRenderer
                 end
             else
                 if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 else
                     result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['x-doc-default']))
                 end
@@ -333,7 +325,7 @@ module JSONSchemaRenderer
                 end
             else
                 if attributes['type'] == 'string'
-                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>"%s"</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
+                    result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
                 else
                     result.push(sprintf(%q(<p class="resources__attrs"><span class="resources__attrs_name">%s:</span> <span class="resources__attrs_content"><code>%s</code></span></p>), get_i18n_term("default_value").capitalize, attributes['default']))
                 end
@@ -414,7 +406,13 @@ module JSONSchemaRenderer
     # 3 - parent item data (hash)
     # 4 - object with primary language data
     # 5 - object with language data which use if there is no data in primary language
-    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '')
+    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '')
+        # Checking for x-doc-skip
+        if attributes.is_a?(Hash) and attributes.has_key?('x-doc-skip') and attributes['x-doc-skip'] == true
+            # Parameter marked with x-doc-skip: true - skip rendering entirely
+            return ''
+        end
+
         result = Array.new()
         ancestorsPathString = ''
 
@@ -430,10 +428,10 @@ module JSONSchemaRenderer
         # The replacement with sub is for preserving anchor links for ModuleConfig parameters
         linkAnchor = fullPath.join('-').downcase.sub(/^parameters-settings-/, 'parameters-')
         linkAnchor = @moduleName.downcase + '-' + linkAnchor if @resourceType == 'moduleConfig' and @moduleName != ''
+        # Processing linkAnchor: replace problematic characters with -, collapse minuses, remove the first minus
+        linkAnchor = linkAnchor.gsub(/[^a-zA-Z0-9_-]/, '-').gsub(/-+/, '-').gsub(/^-|-$/, '')
+
         pathString = fullPath.slice(1,fullPath.length-1).join('.')
-        if resourceName.nil? or resourceName.length < 1
-           resourceName = @site.data['title']
-        end
 
         # Data for search index
         # FIX THIS! TODO!
@@ -524,7 +522,12 @@ module JSONSchemaRenderer
         if attributes.is_a?(Hash) and attributes.has_key?("properties")
             result.push('<ul>')
             attributes["properties"].sort.to_h.each do |key, value|
-                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath, resourceName, versionAPI))
+                # Checking for x-doc-skip into child properties
+                if value.is_a?(Hash) and value.has_key?('x-doc-skip') and value['x-doc-skip'] == true
+                    # Skip this child parameter entirely
+                    next
+                end
+                result.push(format_schema(key, value, attributes, get_hash_value(primaryLanguage, "properties", key), get_hash_value(fallbackLanguage, "properties", key), fullPath, resourceName, versionAPI, moduleName))
             end
             result.push('</ul>')
         elsif attributes.is_a?(Hash) and  attributes.has_key?('items')
@@ -532,7 +535,12 @@ module JSONSchemaRenderer
                 #  Array of objects
                 result.push('<ul>')
                 attributes['items']["properties"].sort.to_h.each do |item_key, item_value|
-                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath, resourceName, versionAPI))
+                    # Checking for x-doc-skip for array items
+                    if item_value.is_a?(Hash) and item_value.has_key?('x-doc-skip') and item_value['x-doc-skip'] == true
+                        # Skip this array item property entirely
+                        next
+                    end
+                    result.push(format_schema(item_key, item_value, attributes['items'], get_hash_value(primaryLanguage,"items", "properties", item_key) , get_hash_value(fallbackLanguage,"items", "properties", item_key), fullPath, resourceName, versionAPI, moduleName))
                 end
                 result.push('</ul>')
             else
@@ -542,12 +550,212 @@ module JSONSchemaRenderer
                     lang = @lang
                     i18n = @site.data["i18n"]["common"]
                     result.push('<ul>')
-                    result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI))
+                    result.push(format_schema(nil, attributes['items'], attributes, get_hash_value(primaryLanguage,"items") , get_hash_value(fallbackLanguage,"items"), fullPath, resourceName, versionAPI, moduleName))
                     result.push('</ul>')
                 end
             end
         else
             # result.push("no properties for #{name}")
+        end
+
+        # Render additionalProperties if they exist
+        if attributes.is_a?(Hash) and attributes.has_key?('additionalProperties')
+            additionalProps = attributes['additionalProperties']
+
+            # Render additionalProperties if it is a schema object with properties (not primitive type) AND parent has no properties
+            if additionalProps.is_a?(Hash) and
+               (not attributes.has_key?('properties') or attributes['properties'].nil?) and
+               additionalProps.has_key?('properties') and
+               (not additionalProps.has_key?('type') or additionalProps['type'] == 'object')
+                # Checking for x-doc-skip for additionalProperties
+                if additionalProps.has_key?('x-doc-skip') and additionalProps['x-doc-skip'] == true
+                    # Skip additionalProperties entirely
+                else
+                    additionalPropsData = additionalProps.dup
+                    additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                    additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                    additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+
+                    # Prepare the description with special text for additionalProperties object
+                additionalPropertyName = '&lt;KEY_NAME&gt;'
+                additionalPropertyNameQuoted = '`<KEY_NAME>`'
+                mapKeyName = get_hash_value(additionalPropsData, 'x-doc-map-key-name')
+                additionalPropertyNameLang = get_i18n_term('additional_property_name')
+
+                if mapKeyName
+                    specialDescriptionText = "#{additionalPropertyNameQuoted} — #{mapKeyName}"
+                else
+                    specialDescriptionText = "#{additionalPropertyNameQuoted} — #{additionalPropertyNameLang}."
+                end
+
+                # Get existing description if any
+                existingDescription = ''
+                if get_hash_value(additionalPropsLangData, 'description')
+                    existingDescription = additionalPropsLangData['description']
+                elsif get_hash_value(additionalPropsData, 'description')
+                    existingDescription = additionalPropsData['description']
+                end
+
+                # Combine special text with existing description
+                finalDescription = specialDescriptionText
+                if existingDescription and existingDescription.length > 0
+                    finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
+                end
+
+                # Create modified data with updated description
+                additionalPropsData['description'] = finalDescription
+                if additionalPropsLangData
+                    additionalPropsLangData = additionalPropsLangData.dup
+                    additionalPropsLangData['description'] = finalDescription
+                else
+                    additionalPropsLangData = { 'description' => finalDescription }
+                end
+
+                    result.push('<ul>')
+                    result.push(format_schema(additionalPropertyName, additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                    result.push('</ul>')
+                end
+            # Only render if additionalProperties is a schema object AND has properties (normal case when parent has properties)
+            elsif additionalProps.is_a?(Hash) and additionalProps.has_key?('properties')
+                # Checking for x-doc-skip for additionalProperties
+                if additionalProps.has_key?('x-doc-skip') and additionalProps['x-doc-skip'] == true
+                    # Skip additionalProperties entirely
+                else
+                    additionalPropsData = additionalProps
+                    additionalPropsLangData = get_hash_value(primaryLanguage, 'additionalProperties')
+                    additionalPropsFallbackLangData = get_hash_value(fallbackLanguage, 'additionalProperties')
+                    additionalPropsRequired = get_hash_value(additionalPropsData, 'required')
+                    result.push('<ul>')
+                    result.push(format_schema('additionalProperties', additionalPropsData, attributes, additionalPropsLangData, additionalPropsFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                    result.push('</ul>')
+                end
+            end
+
+        end
+
+        # Render patternProperties if they exist
+        if attributes.is_a?(Hash) and attributes.has_key?('patternProperties')
+            attributes['patternProperties'].each do |pattern, patternSchema|
+                if patternSchema.is_a?(Hash)
+                    # Checking for x-doc-skip for patternProperties
+                    if patternSchema.has_key?('x-doc-skip') and patternSchema['x-doc-skip'] == true
+                        # Skip this patternProperty entirely
+                        next
+                    end
+
+                    # Get language data for pattern
+                    patternLangData = {}
+                    if primaryLanguage and primaryLanguage.is_a?(Hash) and primaryLanguage.has_key?('patternProperties')
+                        indexedLangData = get_hash_value(primaryLanguage, 'patternProperties', pattern)
+                        if indexedLangData and indexedLangData.is_a?(Hash)
+                            patternLangData = indexedLangData
+                        end
+                    end
+                    patternFallbackLangData = {}
+                    if fallbackLanguage and fallbackLanguage.is_a?(Hash) and fallbackLanguage.has_key?('patternProperties')
+                        indexedLangData = get_hash_value(fallbackLanguage, 'patternProperties', pattern)
+                        if indexedLangData and indexedLangData.is_a?(Hash)
+                            patternFallbackLangData = indexedLangData
+                        end
+                    end
+                    patternRequired = get_hash_value(patternSchema, 'required')
+
+                    # Use pattern in path and display - ADD SLASHES FOR REGEX
+                    patternName = pattern
+                    patternNameQuoted = "`/#{pattern}/`"
+                    patternNameForPath = "/#{pattern}/"
+
+                    # Handle objects with properties
+                    if patternSchema.has_key?('properties') and (not patternSchema.has_key?('type') or patternSchema['type'] == 'object')
+                        # Prepare the description with special text for patternProperties object
+                        mapKeyName = get_hash_value(patternSchema, 'x-doc-pattern-name')
+                        patternPropertyNameLang = get_i18n_term('pattern_property_name')
+
+                        if mapKeyName
+                            specialDescriptionText = "#{patternNameQuoted} — #{mapKeyName}"
+                        else
+                            specialDescriptionText = "#{patternNameQuoted} — #{patternPropertyNameLang}."
+                        end
+
+                        # Get existing description if any
+                        existingDescription = ''
+                        if patternLangData.is_a?(Hash) and patternLangData.has_key?('description')
+                            existingDescription = patternLangData['description']
+                        elsif patternSchema.has_key?('description')
+                            existingDescription = patternSchema['description']
+                        end
+
+                        # Combine special text with existing description
+                        finalDescription = specialDescriptionText
+                        if existingDescription and existingDescription.length > 0
+                            finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
+                        end
+
+                        # Create modified data with updated description
+                        modifiedPatternSchema = patternSchema.dup
+                        modifiedPatternSchema['description'] = finalDescription
+                        if patternLangData.is_a?(Hash) and patternLangData.length > 0
+                            modifiedPatternLangData = patternLangData.dup
+                            modifiedPatternLangData['description'] = finalDescription
+                            patternLangData = modifiedPatternLangData
+                        else
+                            patternLangData = { 'description' => finalDescription }
+                        end
+
+                        result.push('<ul>')
+                        result.push(format_schema(patternNameForPath, modifiedPatternSchema, attributes, patternLangData, patternFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                        result.push('</ul>')
+                    # Handle arrays - always render arrays
+                    elsif patternSchema['type'] == 'array' or patternSchema.has_key?('items')
+                        result.push('<ul>')
+                        result.push(format_schema(patternNameForPath, patternSchema, attributes, patternLangData, patternFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                        result.push('</ul>')
+                    # Handle primitive types and objects without properties
+                    else
+                        # Prepare the description with special text for patternProperties primitive
+                        mapKeyName = get_hash_value(patternSchema, 'x-doc-pattern-name')
+                        patternPropertyNameLang = get_i18n_term('pattern_property_name')
+
+                        if mapKeyName
+                            specialDescriptionText = "#{patternNameQuoted} — #{mapKeyName}"
+                        else
+                            specialDescriptionText = "#{patternNameQuoted} — #{patternPropertyNameLang}."
+                        end
+
+                        # Get existing description if any
+                        existingDescription = ''
+                        if patternLangData.is_a?(Hash) and patternLangData.has_key?('description')
+                            existingDescription = patternLangData['description']
+                        elsif patternSchema.has_key?('description')
+                            existingDescription = patternSchema['description']
+                        end
+
+                        # Combine special text with existing description
+                        finalDescription = specialDescriptionText
+                        if existingDescription and existingDescription.length > 0
+                            finalDescription = "#{specialDescriptionText}\n\n#{existingDescription}"
+                        end
+
+                        # Create modified data with updated description
+                        modifiedPatternSchema = patternSchema.dup
+                        modifiedPatternSchema['description'] = finalDescription
+                        if patternLangData.is_a?(Hash) and patternLangData.length > 0
+                            modifiedPatternLangData = patternLangData.dup
+                            modifiedPatternLangData['description'] = finalDescription
+                            patternLangData = modifiedPatternLangData
+                        else
+                            patternLangData = { 'description' => finalDescription }
+                        end
+
+                        keysToShow = ['description', 'example', 'x-examples', 'x-doc-example', 'x-doc-examples', 'enum', 'default', 'x-doc-default', 'minimum', 'maximum', 'pattern', 'minLength', 'maxLength', 'type']
+                        if (modifiedPatternSchema.keys & keysToShow).length > 0
+                            result.push('<ul>')
+                            result.push(format_schema(patternNameForPath, modifiedPatternSchema, attributes, patternLangData, patternFallbackLangData, fullPath, resourceName, versionAPI, moduleName))
+                            result.push('</ul>')
+                        end
+                    end
+                end
+            end
         end
 
         if parameterTitle != ''
@@ -556,8 +764,13 @@ module JSONSchemaRenderer
         result.join
     end
 
-    def format_crd(input, moduleName = "")
+    def format_crd(site, page, input, moduleName = "")
         return nil if !input
+
+        @site = site
+        @page = page
+        @path = page['permalink']
+        @lang = page['lang']
 
         @moduleName = moduleName
 
@@ -597,21 +810,27 @@ module JSONSchemaRenderer
                    if get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description") then
                        description = escape_chars(convert(get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description")))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], moduleName, @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
                        description = escape_chars(convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], moduleName, @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    else
                        description = escape_chars(convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
                        result.push(description)
-                       AppendResource2Search(input["spec"]["names"]["kind"], @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
+                       AppendResource2Search(input["spec"]["names"]["kind"], moduleName, @path.sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    end
                 end
 
                 if input["spec"]["validation"]["openAPIV3Schema"].has_key?('properties')
                     result.push('<ul class="resources">')
                     input["spec"]["validation"]["openAPIV3Schema"]['properties'].sort.to_h.each do |key, value|
+                    # Checking for x-doc-skip for TOP-level properties
+                    if value.is_a?(Hash) and value.has_key?('x-doc-skip') and value['x-doc-skip'] == true
+                        # Skip this parameter entirely
+                        next
+                    end
+
                     _primaryLanguage = nil
                     _fallbackLanguage = nil
 
@@ -621,7 +840,7 @@ module JSONSchemaRenderer
                     if   input['i18n'][fallbackLanguageName] then
                         _fallbackLanguage = get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","properties",key)
                     end
-                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI))
+                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
                     end
                     result.push('</ul>')
                 end
@@ -712,8 +931,9 @@ module JSONSchemaRenderer
                     end
 
                     AppendResource2Search(input["spec"]["names"]["kind"],
+                                          @moduleName,
                                           @path.sub(%r{^(/?ru/|/?en/)}, ''),
-                                          @site.data['title'],
+                                          input["spec"]["names"]["kind"],
                                           description,
                                           item['name'],
                                           searchKeywords)
@@ -733,6 +953,13 @@ module JSONSchemaRenderer
                         _fallbackLanguage = nil
                         # skip status object
                         next if key == 'status'
+
+                        # Checking for x-doc-skip for TOP-level properties
+                        if value.is_a?(Hash) and value.has_key?('x-doc-skip') and value['x-doc-skip'] == true
+                            # Skip this parameter entirely
+                            next
+                        end
+
                         if header != '' then
                             result.push(header)
                             header = ''
@@ -757,7 +984,7 @@ module JSONSchemaRenderer
                         linkAnchor = sprintf(%q(%s-%s), input["spec"]["names"]["kind"].downcase, item['name'].downcase)
                         resourceName = input["spec"]["names"]["kind"]
 
-                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI))
+                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
                         end
                         if header == '' then
                             result.push('</ul>')
@@ -777,7 +1004,12 @@ module JSONSchemaRenderer
 
     #
     # Returns configuration module content from the openAPI spec
-    def format_configuration(input, moduleConfig = false)
+    def format_configuration(site, page, input, moduleName, moduleConfig = false)
+        @site = site
+        @page = page
+        @path = @page['permalink']
+        @lang = @page['lang']
+
         result = []
         result.push('<div markdown="0">')
 
@@ -829,6 +1061,12 @@ module JSONSchemaRenderer
         then
             result.push('<ul class="resources">')
             input['properties'].sort.to_h.each do |key, value|
+                # Checking for x-doc-skip for TOP-level properties
+                if value.is_a?(Hash) and value.has_key?('x-doc-skip') and value['x-doc-skip'] == true
+                    # Skip this parameter entirely
+                    next
+                end
+
                 _primaryLanguage = nil
                 _fallbackLanguage = nil
 
@@ -840,7 +1078,7 @@ module JSONSchemaRenderer
                 end
                 _fallbackLanguage = get_hash_value(input,  'i18n', fallbackLanguageName, 'properties', key)
                 ancestor = ( resourceName.nil? or resourceName.length < 1 ) ? "parameters" : resourceName
-                result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, [ancestor], resourceName, versionAPI ))
+                result.push(format_schema(key, value, input, _primaryLanguage, _fallbackLanguage, [ancestor], resourceName, versionAPI, moduleName))
             end
             result.push('</ul>')
         end
@@ -848,14 +1086,15 @@ module JSONSchemaRenderer
         result.join
     end
 
-    def format_cluster_configuration(input, moduleName = "")
-        result = []
-
+    def format_cluster_configuration(site, page, input, moduleName = "")
+        @site = site
+        @page = page
+        @path = @page['permalink']
+        @lang = @page['lang']
         @moduleName = moduleName
         @resourceType = "clusterConfig"
 
-        puts "Module name: #{moduleName}"
-        puts "lang: #{@lang}"
+        result = []
 
         if ( @lang == 'en' )
             fallbackLanguageName = 'ru'
@@ -890,25 +1129,26 @@ module JSONSchemaRenderer
           searchKeywords = get_search_keywords(item['i18n'][@lang], item['i18n'][fallbackLanguageName])
 
           AppendResource2Search(item["resourceName"],
+                                moduleName,
                                 @path.sub(%r{^(/?ru/|/?en/)}, ''),
-                                @site.data['title'],
+                                item["resourceName"],
                                 description,
                                 item["APIversion"],
                                 searchKeywords)
 
-          result.push(format_configuration(item, false))
+          result.push(format_configuration(@site, @page, item, moduleName, false))
         end
         result.push('</div>')
         result.join
     end
 
-    def format_module_configuration(input, moduleName = "")
+    def format_module_configuration(site, page, input, moduleName = "")
         return if input.nil? || input.empty? || input["properties"].nil?|| input["properties"].empty?
 
         @moduleName = moduleName
         @resourceType = "moduleConfig"
-        puts "Generating moduleConfig for #{@moduleName}"
-        format_configuration(input, true)
+
+        format_configuration(site, page, input, moduleName, true)
     end
   end
 end

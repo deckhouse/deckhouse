@@ -18,15 +18,18 @@ package module
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/tidwall/gjson"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-func getFirstDefined(values go_hook.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
+func getFirstDefined(values sdkpkg.PatchableValuesCollector, keys ...string) (gjson.Result, bool) {
 	var (
 		v  gjson.Result
 		ok bool
@@ -108,7 +111,7 @@ func GetHTTPSSecretName(prefix string, moduleName string, input *go_hook.HookInp
 	case "OnlyInURI":
 		return ""
 	default:
-		input.Logger.Warnf("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning %s", prefix)
+		input.Logger.Warn("ERROR: https.mode must be in [CertManager, CustomCertificate, OnlyInURI], returning", slog.String("value", prefix))
 		return prefix
 	}
 }

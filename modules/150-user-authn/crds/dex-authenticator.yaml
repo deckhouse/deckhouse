@@ -31,7 +31,10 @@ spec:
             * Deployment containing OAuth2-Proxy and Redis containers;
             * Service, pointing to OAuth2-Proxy;
             * Ingress resource, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
+            * HTTPRoute resource (optional), configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
             * Secrets, needed to access Dex.
+
+            **Warning.** DexAuthenticator only works with HTTPS. The application Ingress must have TLS configured.
 
             **Warning.** After restarting a pod with an OAuth2-Proxy, the current Access Token and ID Token will be queried (using the refresh token) and stored in a Redis memory.
           x-doc-examples:
@@ -71,7 +74,7 @@ spec:
                   description: |-
                     An address for the application (DNS domain for Ingress resource) from which the user request will be redirected for authentication in Dex.
 
-                    **Warning.** Must be specified without HTTP scheme.
+                    > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                   x-doc-examples: ['my-app.domain.com']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 sendAuthorizationHeader:
@@ -89,6 +92,38 @@ spec:
                     The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
                   x-doc-examples: ['nginx']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                gatewayAPI:
+                  type: object
+                  required:
+                  - applicationHTTPRouteListenerSetName
+                  description: |-
+                    A set of parameters to use in HTTPRoute object.
+                    
+                    > **Warning.** Only applicable in clusters with Gateway API support.
+                    
+                    > **Warning.** Define the same ListenerSet object which is used to publish the application domain. 
+                  properties:
+                    applicationHTTPRouteListenerSetName:
+                      type: string
+                      description: |
+                        Name of the ListenerSet object from the Gateway API to be referred to from the HTTPRoute.
+                      x-doc-examples: ['default-listenerset']
+                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      maxLength: 253
+                    applicationHTTPRouteListenerSetNamespace:
+                      type: string
+                      description: |
+                        Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
+                      x-doc-examples: ['default']
+                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      maxLength: 63
+                    applicationHTTPRouteListenerSetSectionName:
+                      type: string
+                      description: |
+                        Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
+                      x-doc-examples: ['default-listener']
+                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      maxLength: 
                 signOutURL:
                   type: string
                   description: |-
@@ -102,6 +137,15 @@ spec:
                     Specified with  `s`, `m` or `h` suffix.
                   x-doc-examples: ['24h']
                   x-doc-default: '168h'
+                allowedEmails:
+                  type: array
+                  description: |-
+                    A list of emails of users are allowed to connect to the client.
+
+                    **By default**, all users can connect.
+                  x-doc-default: 'All emails are allowed.'
+                  items:
+                    type: string
                 allowedGroups:
                   type: array
                   description: |-
@@ -115,7 +159,7 @@ spec:
                   type: array
                   description: |
                     CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
-                  x-doc-examples: ['192.168.42.0/24']
+                  x-doc-examples: [['192.168.42.0/24']]
                   items:
                     type: string
                     pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -178,6 +222,56 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Container resources (CPU/memory) — requests/limits.
+
+                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
+
+                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.' 
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources of the `redis` container (CPU/memory) — requests/limits.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Upper limit of resources for the `redis` container (CPU/memory)'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
                 additionalApplications:
                   type: array
                   description: |
@@ -193,7 +287,7 @@ spec:
                         description: |-
                           An application domain from which the user request will be redirected for authentication in Dex.
 
-                          **Warning.** Must be specified without HTTP scheme.
+                          > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
@@ -214,6 +308,7 @@ spec:
                         type: array
                         description: |
                           CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, If not specified.
+                        x-doc-examples: [['192.168.42.0/24']]
                         items:
                           type: string
                           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -250,7 +345,7 @@ spec:
                         description: |-
                           An application domain (for Ingress resources) from which the user request will be redirected for authentication in Dex.
 
-                          **Warning.** Must be specified without HTTP scheme.
+                          > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
@@ -268,10 +363,45 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                      gatewayAPI:
+                        type: object
+                        required:
+                        - httpRouteListenerSetName
+                        description: |-
+                          A set of parameters to use in HTTPRoute object.
+                    
+                          > **Warning.** Only applicable in clusters with Gateway API support.
+
+                          > **Warning.** Define the same ListenerSet object which is used to publish the application domain.
+                        properties:
+                          httpRouteListenerSetName:
+                            type: string
+                            description: |
+                              Name of the ListenerSet object from the Gateway API to be referred to from the HTTPRoute.
+                            x-doc-examples: ['default-listener-set']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 253
+                          httpRouteListenerSetNamespace:
+                            type: string
+                            description: |
+                              Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
+
+                              If not set, the namespace of the `DeAuthenticator` is used.
+                            x-doc-examples: ['default']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 63
+                          httpRouteListenerSetSectionName:
+                            type: string
+                            description: |
+                              Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
+                            x-doc-examples: ['web-listener']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 253
                       whitelistSourceRanges:
                         type: array
                         description: |
                           CIDRs that are allowed to authenticate. Authentication is allowed without IP address restrictions, if not specified.
+                        x-doc-examples: [['192.168.42.0/24']]
                         items:
                           type: string
                           pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -285,6 +415,15 @@ spec:
 
                     Specified with  `s`, `m` or `h` suffix.
                   x-doc-default: '168h'
+                allowedEmails:
+                  type: array
+                  description: |-
+                    A list of emails of users are allowed to connect to the client.
+
+                    **By default**, all users can connect.
+                  x-doc-default: 'All users are allowed.'
+                  items:
+                    type: string
                 allowedGroups:
                   type: array
                   description: |-
@@ -353,6 +492,56 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Container resources (CPU/memory) — requests/limits.
+
+                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
+
+                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources of the `redis` container (CPU/memory) — requests/limits.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Upper limit of resources for the `redis` container (CPU/memory).'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains

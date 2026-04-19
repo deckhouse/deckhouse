@@ -15,11 +15,14 @@
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -27,9 +30,12 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1core "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	apimachineryversion "k8s.io/apimachinery/pkg/version"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -37,7 +43,7 @@ import (
 )
 
 const (
-	kubeEndpointsSnap         = "endpoinds"
+	kubeEndpointsSliceSnap    = "endpoints-slice"
 	kubeServiceSnap           = "service"
 	kubeAPIServK8sLabeledSnap = "apiserver-k8s-app"
 	kubeAPIServCPLabeledSnap  = "apiserver-cp"
@@ -100,9 +106,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 
 		{
-			Name:       kubeEndpointsSnap,
-			ApiVersion: "v1",
-			Kind:       "Endpoints",
+			Name:       kubeEndpointsSliceSnap,
+			ApiVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"kubernetes"},
 			},
@@ -138,30 +144,31 @@ func applyAPIServerPodFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 }
 
 func applyEndpointsAPIServerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var endpoints v1core.Endpoints
+	var endpointSlices discoveryv1.EndpointSlice
 
-	err := sdk.FromUnstructured(obj, &endpoints)
+	err := sdk.FromUnstructured(obj, &endpointSlices)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	addresses := make([]string, 0)
+	ports := make([]int32, 0)
 
-	for _, s := range endpoints.Subsets {
-		ports := make([]int32, 0)
-		for _, port := range s.Ports {
-			if port.Name == "https" {
-				ports = append(ports, port.Port)
-			}
+	for _, port := range endpointSlices.Ports {
+		if port.Name != nil && *port.Name == "https" {
+			ports = append(ports, *port.Port)
 		}
+	}
 
-		for _, addrObj := range s.Addresses {
+	for _, endpoints := range endpointSlices.Endpoints {
+		for _, addr := range endpoints.Addresses {
 			for _, port := range ports {
-				addr := fmt.Sprintf("%s:%d", addrObj.IP, port)
-				addresses = append(addresses, addr)
+				addrWithPort := fmt.Sprintf("%s:%d", addr, port)
+				addresses = append(addresses, addrWithPort)
 			}
 		}
 	}
+
 	return addresses, nil
 }
 
@@ -170,7 +177,7 @@ func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 
 	err := sdk.FromUnstructured(obj, &service)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return service.Spec.ClusterIP, nil
@@ -184,35 +191,35 @@ func applyServiceAPIServerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 // Therefore, we need to request all api servers, get versions and choice minimal
 func getKubeVersionForServer(endpoint string, cl d8http.Client) (*semver.Version, error) {
 	url := fmt.Sprintf("https://%s/version?timeout=5s", endpoint)
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new request: %w", err)
 	}
 	err = d8http.SetKubeAuthToken(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("set kube auth token: %w", err)
 	}
 
 	res, err := cl.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("do: %w", err)
 	}
 
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("k8s version: incorrect response code: %v", res.Status)
 	}
 
 	var info apimachineryversion.Info
 	err = json.NewDecoder(res.Body).Decode(&info)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode: %w", err)
 	}
 
 	ver, err := semver.NewVersion(info.GitVersion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new version: %w", err)
 	}
 
 	return ver, nil
@@ -224,10 +231,13 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 		return nil, err
 	}
 
-	serviceSnap := input.Snapshots[kubeServiceSnap]
+	serviceSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, kubeServiceSnap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeServiceSnap, err)
+	}
 
 	if len(serviceSnap) > 0 {
-		endpoint := serviceSnap[0].(string)
+		endpoint := serviceSnap[0]
 
 		ver, err := getKubeVersionForServer(endpoint, versionHTTPClient)
 		if err != nil {
@@ -240,10 +250,9 @@ func getKubeVersionForServerFallback(input *go_hook.HookInput, err error) (*semv
 	return nil, err
 }
 
-func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
-	endpointsSnap := input.Snapshots[kubeEndpointsSnap]
-	serverK8sLabeledSnap := input.Snapshots[kubeAPIServK8sLabeledSnap]
-	serverCPLabeledSnap := input.Snapshots[kubeAPIServCPLabeledSnap]
+func apiServerEndpoints(_ context.Context, input *go_hook.HookInput) ([]string, error) {
+	serverK8sLabeledSnap := input.Snapshots.Get(kubeAPIServK8sLabeledSnap)
+	serverCPLabeledSnap := input.Snapshots.Get(kubeAPIServCPLabeledSnap)
 
 	podsCnt := 0
 	if c := len(serverK8sLabeledSnap); c > 0 {
@@ -254,13 +263,18 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		input.Logger.Info("k8s version. Pods snapshots is empty")
 	}
 
+	endpointsSnap, err := sdkobjectpatch.UnmarshalToStruct[[]string](input.Snapshots, kubeEndpointsSliceSnap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %s snapshot: %w", kubeEndpointsSliceSnap, err)
+	}
+
 	var endpoints []string
 	if len(endpointsSnap) > 0 {
-		endpointsRaw := endpointsSnap[0]
-		endpoints = endpointsRaw.([]string)
+		endpoints = endpointsSnap[0]
 	} else {
 		input.Logger.Info("k8s version. Endpoints snapshots is empty")
 	}
+
 	endpointsCnt := len(endpoints)
 
 	if endpointsCnt == 0 && podsCnt == 0 {
@@ -270,9 +284,7 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 
 	controlPlaneEnabled := module.IsEnabled("control-plane-manager", input)
 
-	if controlPlaneEnabled && podsCnt != endpointsCnt {
-		msg := fmt.Sprintf("Not found k8s versions. Pods(%v) != Endpoints (%v) count", podsCnt, endpointsCnt)
-
+	if controlPlaneEnabled && podsCnt < endpointsCnt {
 		versions := input.Values.Get("global.discovery.kubernetesVersions")
 		minVer := input.Values.Get("global.discovery.kubernetesVersion")
 		// need return err for retry if k8s versions not found
@@ -281,25 +293,22 @@ func apiServerEndpoints(input *go_hook.HookInput) ([]string, error) {
 		// in bash hook we don't subscribe for deleting pods
 		// it is emulating this behaviour
 		if !versions.Exists() || !minVer.Exists() {
+			msg := fmt.Sprintf("Not found k8s versions. Kube-apiserver Pods(%v) count less than kubernetes Endpoints(%v) count", podsCnt, endpointsCnt)
 			return nil, errors.New(msg)
 		}
 
-		input.Logger.Warn(msg)
-
-		return nil, nil
+		msg := fmt.Sprintf("Kube-apiserver Pods(%v) count less than kubernetes Endpoints(%v) count", podsCnt, endpointsCnt)
+		return nil, errors.New(msg)
 	}
 
 	return endpoints, nil
 }
 
-func k8sVersions(input *go_hook.HookInput) error {
+func k8sVersions(ctx context.Context, input *go_hook.HookInput) error {
 	input.Logger.Info("k8s version. Start discovery")
-	endpoints, err := apiServerEndpoints(input)
+	endpoints, err := apiServerEndpoints(ctx, input)
 	if err != nil {
 		return err
-	}
-	if endpoints == nil {
-		return nil
 	}
 
 	// Dedicated client for version discovery is required because cloud providers tend to issue certificates only for
@@ -338,21 +347,20 @@ func k8sVersions(input *go_hook.HookInput) error {
 	}
 
 	if len(versions) == 0 {
-		input.Logger.Info("k8s version. Versions is empty. Skip")
-		return nil
+		return fmt.Errorf("k8s versions not found")
 	}
 
 	minVerStr := fmt.Sprintf("%d.%d.%d", minVer.Major(), minVer.Minor(), minVer.Patch())
 
 	err = os.WriteFile(kubeVersionFileName, []byte(minVerStr), os.FileMode(0644))
 	if err != nil {
-		return err
+		return fmt.Errorf("write file: %w", err)
 	}
 	input.Values.Set("global.discovery.kubernetesVersions", versions)
 	input.Values.Set("global.discovery.kubernetesVersion", minVerStr)
 
 	requirements.SaveValue("global.discovery.kubernetesVersion", minVerStr)
-	input.Logger.Infof("k8s version was discovered: %s, all %v", minVerStr, versions)
+	input.Logger.Info("k8s version was discovered", slog.String("minimal_version", minVerStr), slog.String("versions", strings.Join(versions, ",")))
 
 	input.MetricsCollector.Set("deckhouse_kubernetes_version", 1, map[string]string{
 		"version": minVerStr,

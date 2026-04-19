@@ -60,28 +60,43 @@ bb-package-fetch-blob() {
   local REPOSITORY_PATH="${REPOSITORY_PATH:-}"
   local no_proxy=${PACKAGES_PROXY_ADDRESSES}
   local NO_PROXY=${PACKAGES_PROXY_ADDRESSES}
-  
+
+  if [[ -z "$1" || "$1" == "<no value>:" ]]; then
+    echo "Error: Digest is incorrect. Probably we pass incorrect package name and we cannot get correct digest"
+    return 1
+  fi
+
   check_python
 
   cat - <<EOF | $python_binary
 import random
 import ssl
+import sys
 try:
-    from urllib.request import urlopen, Request, HTTPError
-except ImportError as e:
-    from urllib2 import urlopen, Request, HTTPError
-# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+  from urllib.request import urlopen, Request, HTTPError
+except ImportError:
+  from urllib2 import urlopen, Request, HTTPError
 endpoints = "${PACKAGES_PROXY_ADDRESSES}".split(",")
-endpoint = random.choice(endpoints)
+# Choose a random endpoint to increase fault tolerance and reduce load on a single endpoint.
+random.shuffle(endpoints)
 ssl._create_default_https_context = ssl._create_unverified_context
-url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(endpoint)
-request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
-try:
-    response = urlopen(request, timeout=300)
-except HTTPError as e:
-    print("HTTP Error {}: {}".format(e.getcode(), e.read()[:255]))
+response = None
+for ep in endpoints:
+  url = 'https://{}/package?digest=$1&repository=${REPOSITORY}&path=${REPOSITORY_PATH}'.format(ep)
+  request = Request(url, headers={'Authorization': 'Bearer ${PACKAGES_PROXY_TOKEN}'})
+  try:
+    response = urlopen(request, timeout=60)
+  except HTTPError as e:
+    print("Access to {} return HTTP Error {}: {}".format(url, e.getcode(), e.read()[:255]))
     print('You can check via curl -v -k -H "Authorization: Bearer ${PACKAGES_PROXY_TOKEN}" "{}" > /dev/null'.format(url))
-    raise SystemExit
+    continue
+  except Exception as e:
+    print("Access to {} return Error: {}".format(url, e))
+    continue
+  break
+if response is None:
+  print("Error: All package proxy endpoints failed")
+  sys.exit(1)
 with open('$2', 'wb') as f:
     f.write(response.read())
 EOF

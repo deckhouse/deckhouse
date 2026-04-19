@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -31,16 +30,23 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 // Serve starts GRPC server
-func Serve(network, address string) error {
+func Serve(params settings.ServerSingleshotParams) error {
+	if err := params.Validate(); err != nil {
+		return err
+	}
+
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
@@ -50,9 +56,7 @@ func Serve(network, address string) error {
 	done := make(chan struct{})
 	defer close(done)
 
-	// set concurrency limit of 1 for all rpcs
 	sem := make(chan struct{}, 1)
-	limiterPrefix := ""
 
 	podName := os.Getenv("HOSTNAME")
 
@@ -63,47 +67,54 @@ func Serve(network, address string) error {
 		log.Info("grpc server stopped")
 	})
 
-	cacheDir, err := cacheDirectory()
+	cacheDir, err := cacheDirectory(params)
 	if err != nil {
 		return fmt.Errorf("failed to init grpc server: %w", err)
 	}
 
 	log.Info(
 		"starting grpc server",
-		slog.String("network", network),
-		slog.String("address", address),
+		slog.String("network", params.Network),
+		slog.String("address", params.Address),
+		slog.String("tmp_dir", params.TmpDir),
 		slog.String("cache directory", cacheDir),
 	)
 
-	listener, err := net.Listen(network, address)
-	if err != nil {
-		log.Error("failed to listen", logger.Err(err))
-		return err
-	}
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptors.UnaryLogger(log),
 			logging.UnaryServerInterceptor(interceptors.Logger()),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.UnaryParallelTasksLimiter(sem, limiterPrefix),
+			interceptors.UnaryParallelTasksLimiter(sem, server.SinglethreadedMethodsPrefix),
 		),
 		grpc.ChainStreamInterceptor(
 			interceptors.StreamLogger(log),
 			logging.StreamServerInterceptor(interceptors.Logger()),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.StreamParallelTasksLimiter(sem, limiterPrefix),
+			interceptors.StreamParallelTasksLimiter(sem, server.SinglethreadedMethodsPrefix),
 		),
 	)
 
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
 	healthService := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(s, healthService)
+	healthService.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// grpcurl -plaintext host:port describe
 	reflection.Register(s)
 
+	podNamespace := os.Getenv("DHCTL_SERVER_NAMESPACE")
+
 	// init services
-	dhctlService := dhctl.New(podName, cacheDir, config.NewSchemaStore())
+	dhctlService := dhctl.New(dhctl.ServiceParams{
+		PodName:           podName,
+		PodNamespace:      podNamespace,
+		CacheDir:          cacheDir,
+		SchemaStore:       config.NewSchemaStore(params.DownloadDirConfig),
+		TmpDir:            params.TmpDir,
+		IsDebug:           false,
+		DownloadDirConfig: params.DownloadDirConfig,
+	})
 
 	// register services
 	pbdhctl.RegisterDHCTLServer(s, dhctlService)
@@ -114,6 +125,13 @@ func Serve(network, address string) error {
 		s.GracefulStop()
 	}()
 
+	listener, err := net.Listen(params.Network, params.Address)
+	if err != nil {
+		log.Error("failed to listen", logger.Err(err))
+		return err
+	}
+	log.Debug("grpc server listening, accepting connections")
+
 	if err = s.Serve(listener); err != nil {
 		log.Error("failed to serve", logger.Err(err))
 		return err
@@ -121,13 +139,13 @@ func Serve(network, address string) error {
 	return nil
 }
 
-func cacheDirectory() (string, error) {
+func cacheDirectory(params settings.ServerSingleshotParams) (string, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return "", fmt.Errorf("creating uuid for cache directory")
 	}
 
-	path := filepath.Join(os.TempDir(), "dhctl", "cache_"+id.String())
+	path := filepath.Join(params.TmpDir, "cache_"+id.String())
 
 	return path, nil
 }

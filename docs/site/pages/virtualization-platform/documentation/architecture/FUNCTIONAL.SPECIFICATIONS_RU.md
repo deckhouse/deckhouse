@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/architecture/functional-spec
 lang: ru
 ---
 
-Программное обеспечение Deckhouse Virtualization Platform предназначено для запуска и управления виртуальными машинами и их ресурсами на платформе Deckhouse Kubernetes Platform.
+Программное обеспечение Deckhouse Virtualization Platform предназначено для запуска и управления виртуальными машинами и их ресурсами на платформе Deckhouse Virtualization Platform.
 
 Основные функциональные характеристики Deckhouse Virtualization Platform включают:
 

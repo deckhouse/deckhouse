@@ -1,0 +1,11 @@
+name: prometheus-pushgateway
+stage: General Availability
+subsystems:
+  - observability
+namespace: kube-prometheus-pushgateway
+requirements:
+  modules:
+    prometheus: ">= 0.0.0"
+descriptions:
+  en: Receives metrics from applications and transmits them to the monitoring system, providing centralized data collection.
+  ru: Принимает метрики от приложений и передаёт их в систему мониторинга, обеспечивая централизованный сбор данных.

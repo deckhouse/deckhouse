@@ -9,7 +9,7 @@ description: "Примеры настройки балансировщика с 
 
 ### Создание виртуальной машины
 
-Создайте виртуальную машину `myvm` основываясь на примерах из [документации DVP](https://deckhouse.ru/products/kubernetes-platform/modules/virtualization/stable/user_guide.html).
+Создайте виртуальную машину `my-vm` основываясь на примерах из [документации DVP](https://deckhouse.ru/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html).
 
 В примере манифеста ниже добавлен лейбл `vm: my-vm` для дальнейшей идентификации в балансировщиках.
 
@@ -22,7 +22,7 @@ metadata:
   labels:
     vm: my-vm
 spec:
-  virtualMachineClassName: host
+  virtualMachineClassName: generic
   cpu:
     cores: 1
   memory:
@@ -87,7 +87,7 @@ spec:
   healthcheck:
     probes:
     - mode: TCP
-      http:
+      tcp:
         targetPort: 2525
 ```
 
@@ -147,7 +147,7 @@ spec:
 Создайте Secret для хранения учетных данных для доступа проб к базе данных:
 
 ```shell
-kubectl -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
+d8 k -n my-ns create secret generic cred-secret --from-literal=user=postgres --from-literal=password=example cred-secret
 ```
 
 Пример манифеста балансировщика для чтения:

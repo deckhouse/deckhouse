@@ -11,7 +11,7 @@ apiVersions:
       To change the `ClusterConfiguration` resource in a running cluster, run the following command:
 
       ```shell
-      kubectl -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller edit cluster-configuration
+      d8 system edit cluster-configuration
       ```
     additionalProperties: false
     required: [apiVersion, kind, clusterType, kubernetesVersion, podSubnetCIDR, serviceSubnetCIDR, clusterDomain]
@@ -21,7 +21,7 @@ apiVersions:
       podSubnetNodeCIDRPrefix: "24"
       podSubnetCIDR: 10.244.0.0/16
       serviceSubnetCIDR: 192.168.0.0/16
-      kubernetesVersion: "1.27"
+      kubernetesVersion: "1.31"
       clusterDomain: k8s.internal
       clusterType: "Cloud"
       cloud:
@@ -71,6 +71,7 @@ apiVersions:
             - "Zvirt"
             - "Dynamix"
             - "Huaweicloud"
+            - "DVP"
           prefix:
             type: string
             description: |
@@ -84,13 +85,20 @@ apiVersions:
         description: |
           Address space of the cluster's Pods.
 
-          > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       podSubnetNodeCIDRPrefix:
         type: string
         description: |
-          The prefix of Pod network on a node.
+          The prefix size of the Pod network allocated to each node.
 
-          > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
+          This parameter determines how many IP addresses are available for Pods on each individual node. For example, if `podSubnetCIDR: 10.111.0.0/16` and `podSubnetNodeCIDRPrefix: "24"`, each node will receive a `/24` subnet (e.g., `10.111.0.0/24`, `10.111.1.0/24`, etc.), providing up to 254 IP addresses per node (253 usable for Pods, accounting for network and broadcast addresses).
+
+          **Calculation examples:**
+          - With `/16` network and `/24` prefix: maximum **256 nodes** (2^(24-16) = 256)
+          - With `/16` network and `/25` prefix: maximum **512 nodes**, but only **126 IPs per node**
+          - Each Pod network IP can support up to 2 Pods (one running + one terminating)
+
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
         default: "24"
       serviceSubnetCIDR:
         type: string
@@ -98,15 +106,15 @@ apiVersions:
         description: |
           Address space of the cluster's services.
 
-          > Caution! Normally, you won't be able to change the parameter in a running cluster. To avoid this limitation use specific flag.
+          > **Warning!** Changing this parameter in a running cluster is **extremely dangerous** and can lead to complete cluster failure. The change is blocked by default. To bypass this protection, use `dhctl config edit cluster-configuration --yes-i-am-sane-and-i-understand-what-i-am-doing` command. However, it is **strongly recommended to recreate the cluster** instead of changing this parameter. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
       clusterDomain:
         type: string
         description: |
           Cluster domain (used for local routing).
 
-          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](../deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
+          **Please note:** the domain must not match the domain used in the DNS name template in the [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) parameter. For example, you cannot set `cluster Domain: cluster.local` and `publicDomainTemplate: %s.cluster.local` at the same time.
 
-          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](../modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
+          > If you need to change a parameter in a running cluster, it is recommended to use [instructions](/modules/kube-dns/faq.html#how-do-i-replace-the-cluster-domain-with-minimal-downtime)
         default: "cluster.local"
       defaultCRI:
         type: string
@@ -115,40 +123,83 @@ apiVersions:
 
           If the value `NotManaged` is used, then Deckhouse does not manage the container runtime (and doesn't install it).
           In this case, it is necessary to use images for NodeGroups on which the container runtime is already installed.
+
+          If `ContainerdV2` is set, `CgroupsV2` will be used (providing improved security and resource management). To use `ContainerdV2` as the container runtime, cluster nodes must meet the following requirements:
+
+          - Support for `CgroupsV2`.
+          - Linux kernel version `5.8` or newer.
+          - Systemd version `244` or newer.
+          - Support for `erofs` kernel module.
         enum:
         - "Containerd"
+        - "ContainerdV2"
         - "NotManaged"
         default: "Containerd"
       kubernetesVersion:
         type: string
         description: |
-          Kubernetes control plane version to use in a cluster.
+          Kubernetes version (control plane components of the cluster).
 
-          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/#version-control) the cluster's control plane version.
+          Changing a parameter in a running cluster will [automatically update](https://deckhouse.io/modules/control-plane-manager/#version-control) the cluster's control plane version.
 
           If `Automatic` is specified, then the control plane version is used, which is considered stable at the moment. If the stable version of control plane is less than the maximum version that has ever been installed in the cluster, more than 1 minor version, then the version of the cluster will not be changed.
           The version may change when the minor version of the Deckhouse release is changed (see a corresponding release message).
         enum:
-        - "1.27"
-        - "1.28"
-        - "1.29"
-        - "1.30"
         - "1.31"
+        - "1.32"
+        - "1.33"
+        - "1.34"
+        - "1.35"
         - "Automatic"
+      encryptionAlgorithm:
+        type: string
+        description: |
+          Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
+          when generating keys and certificates for the following control-plane components:
+
+          - `apiserver`
+          - `apiserver-kubelet-client`
+          - `apiserver-etcd-client`
+          - `front-proxy-client`
+          - `etcd-server`
+          - `etcd-peer`
+          - `etcd-healthcheck-client`
+
+          Certificates for the components listed above will be reissued using the selected algorithm and key length.
+
+          > **Warning.** When reissuing certificates, the root certificate (**CA**) is not rotated. The root certificate is created with the selected algorithm only during the initial cluster bootstrap.
+        enum:
+        - "RSA-2048"
+        - "RSA-3072"
+        - "RSA-4096"
+        - "ECDSA-P256"
+        default: "RSA-2048"
       proxy:
-        x-doc-d8Revision: ee
+        x-doc-d8Editions:
+          - be
+          - se
+          - se+
+          - ee
+          - cse-lite
+          - cse-pro
         type: object
         description: |
           Global proxy setup (mainly for working in air-gapped environments).
 
           The parameters described in this section will be translated into the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` for all cluster nodes and Deckhouse components. This will result in HTTP(S) requests (curl, git, registry, etc.) to all resources not listed in the `noProxy` parameter being made through a proxy. Note that the `podSubnetCIDR` and `serviceSubnetCIDR` subnets, as well as the `clusterDomain` domain are added to `noProxy` automatically.
 
-          > **Caution!** To avoid interfering with internal requests, make sure you list all the host subnets in the `noProxy` parameter.
+          > **Caution!** To avoid using proxies in requests between pods and services located in the cluster node network, make sure you list all the host subnets in the `noProxy` parameter.
         additionalProperties: false
         properties:
           httpProxy:
             type: string
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - be
+              - se
+              - se+
+              - ee
+              - cse-lite
+              - cse-pro
             pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTP requests.
@@ -161,7 +212,13 @@ apiVersions:
             - 'https://user%40domain.local:password@proxy.company.my:8443'
           httpsProxy:
             type: string
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - be
+              - se
+              - se+
+              - ee
+              - cse-lite
+              - cse-pro
             pattern: ^https?://([!*'();&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+(\:[!*'();:@&=+$,/?%#\[\]0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$
             description: |
               Proxy URL for HTTPS requests.
@@ -173,11 +230,19 @@ apiVersions:
             - 'https://DOMAIN%5Cuser:password@proxy.company.my:8443'
             - 'https://user%40domain.local:password@proxy.company.my:8443'
           noProxy:
-            x-doc-d8Revision: ee
+            x-doc-d8Editions:
+              - be
+              - se
+              - se+
+              - ee
+              - cse-lite
+              - cse-pro
             description: |
               List of no proxy IP and domain entries.
 
               For wildcard domains, use a domain name with a dot prefix, e.g., ".example.com".
+
+              > **Caution.** If the cluster is supposed to have pods interacting with services located in the cluster node network, then specify the list of subnets that are used on the nodes.
             type: array
             items:
               type: string

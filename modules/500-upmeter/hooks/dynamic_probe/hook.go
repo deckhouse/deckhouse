@@ -17,6 +17,7 @@ limitations under the License.
 package dynamic_probe
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,6 +26,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/module-sdk/pkg"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -85,12 +88,12 @@ var _ = sdk.RegisterFunc(
 )
 
 // collectDynamicNames sets names of objects to internal values
-func collectDynamicNames(input *go_hook.HookInput) error {
+func collectDynamicNames(_ context.Context, input *go_hook.HookInput) error {
 	// Input, empty strings mean invalidated data
 	var (
-		ingressNames   = parseSingleStringSet(input.Snapshots["upmeter_discovery_ingress_controllers"]).Delete("").Slice()
-		nodeGroupNames = parseSingleStringSet(input.Snapshots["upmeter_discovery_nodegroups"]).Delete("").Slice()
-		loc            = parseCloudLocations(input.Snapshots["cloud_provider_secret"])
+		ingressNames   = parseSingleStringSet(input.Snapshots.Get("upmeter_discovery_ingress_controllers")).Delete("").Slice()
+		nodeGroupNames = parseSingleStringSet(input.Snapshots.Get("upmeter_discovery_nodegroups")).Delete("").Slice()
+		loc            = parseCloudLocations(input.Snapshots.Get("cloud_provider_secret"))
 	)
 
 	// Populate values. `zonePrefix` is for cloud zones that are passed around without region
@@ -111,11 +114,17 @@ func collectDynamicNames(input *go_hook.HookInput) error {
 	return nil
 }
 
-func parseSingleStringSet(filtered []go_hook.FilterResult) set.Set {
+func parseSingleStringSet(filtered []pkg.Snapshot) set.Set {
 	if len(filtered) == 0 {
 		return set.New()
 	}
-	ss := filtered[0].([]string) // the secret MUST contain zones, so let it panic
+	var ss []string
+	err := filtered[0].UnmarshalTo(&ss)
+	if err != nil {
+		// the secret MUST contain zones, so let it panic
+		panic(fmt.Errorf("failed to unmarshal dynamic probe names: %w", err))
+	}
+
 	return set.New(ss...)
 }
 
@@ -145,11 +154,16 @@ type cloudLocations struct {
 	ZonePrefix string
 }
 
-func parseCloudLocations(filtered []go_hook.FilterResult) cloudLocations {
+func parseCloudLocations(filtered []pkg.Snapshot) cloudLocations {
 	if len(filtered) != 1 {
 		return cloudLocations{}
 	}
-	loc := filtered[0].(cloudLocations)                  // let it panic
+	var loc cloudLocations
+	err := filtered[0].UnmarshalTo(&loc)
+	if err != nil {
+		panic(fmt.Errorf("failed to unmarshal cloud locations: %w", err))
+	}
+
 	loc.Zones = set.New(loc.Zones...).Delete("").Slice() // unique and non-empty
 	return loc
 }

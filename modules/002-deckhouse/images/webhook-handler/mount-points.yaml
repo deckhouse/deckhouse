@@ -1,0 +1,7 @@
+dirs:
+  - /certs
+  - /var/run
+  - /run
+  - /tmp
+  - /hooks
+  - /.kube

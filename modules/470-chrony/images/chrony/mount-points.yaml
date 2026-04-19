@@ -1,0 +1,7 @@
+files:
+  - /etc/chrony/chrony.conf.tpl
+  - /etc/localtime
+  - /etc/timezone
+dirs:
+  - /etc/chrony
+  - /var/run

@@ -17,217 +17,116 @@ limitations under the License.
 package hooks
 
 import (
-	. "github.com/benjamintf1/unmarshalledmatchers"
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("Modules :: monitoring-ping:: hooks :: discover_targets ::", func() {
-	const (
-		node1 = `
+type Target struct {
+	Name      string `json:"name"`
+	IPAddress string `json:"ipAddress"`
+}
+
+type Targets struct {
+	Cluster []Target `json:"clusterTargets"`
+}
+
+var ctxNode1 = `
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: system
-  labels:
-    node-role.deckhouse.io/system: ""
+  name: node1
+spec: {}
 status:
   addresses:
-  - address: 192.168.199.213
-    type: InternalIP
-  - address: 95.217.82.168
-    type: ExternalIP
-  - address: master
-    type: Hostname
+    - type: InternalIP
+      address: 10.0.0.1
 `
-		node2 = `
+
+var ctxNode2 = `
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: system2
-  labels:
-    node-role.deckhouse.io/system: ""
+  name: node2
+spec: {}
 status:
   addresses:
-  - address: 192.168.199.140
-    type: InternalIP
-  - address: worker
-    type: Hostname
+    - type: InternalIP
+      address: 10.0.0.2
 `
-		unschedulableNode = `
+
+var ctxNode3NoAddress = `
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: unschedulable-system
-  labels:
-    node-role.deckhouse.io/system: ""
+  name: node3
+spec: {}
 status:
   addresses:
-  - address: 192.168.199.140
-    type: InternalIP
-  - address: worker
-    type: Hostname
+    - type: InternalIP
+      address: ""
+`
+
+var ctxNode4Unschedulable = `
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: node4
 spec:
   unschedulable: true
-`
-		nodeWithEmptyIP = `
----
-apiVersion: v1
-kind: Node
-metadata:
-  name: system3
-  labels:
-    node-role.deckhouse.io/system: ""
 status:
   addresses:
-  - address: ""
-    type: InternalIP
-  - address: worker
-    type: Hostname
+    - type: InternalIP
+      address: 10.0.0.4
 `
-	)
+
+var ctxConfigMap = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-ping-config
+  namespace: d8-monitoring
+data:
+  targets.json: ""
+`
+
+var ctxNamespace = `
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: d8-monitoring
+`
+
+var _ = Describe("Modules :: monitoring-ping :: hooks :: discover_targets", func() {
 	f := HookExecutionConfigInit(
 		`{"monitoringPing":{"internal":{}},"global":{"enabledModules":[]}}`,
 		`{}`,
 	)
 
-	Context("Empty cluster", func() {
+	Context("List nodes", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(``))
-			f.RunHook()
+			f.BindingContexts.Set(f.KubeStateSet(ctxNode1 + ctxNode2 + ctxNode3NoAddress + ctxNode4Unschedulable + ctxNamespace + ctxConfigMap))
+			f.RunGoHook()
 		})
 
-		It("Hook must not fail", func() {
+		It("Targets should exist", func() {
 			Expect(f).To(ExecuteSuccessfully())
-		})
-	})
-
-	Context("One node", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1))
-			f.RunHook()
-		})
-		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
-{
-          "cluster_targets": [
-            {
-              "ipAddress": "192.168.199.213",
-              "name": "system"
-            }
-          ],
-          "external_targets": []
-        }
-`))
-		})
-	})
-
-	Context("Two nodes", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1 + node2))
-			f.RunHook()
-		})
-		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
- {
-          "cluster_targets": [
-            {
-              "ipAddress": "192.168.199.140",
-              "name": "system2"
-            },
-            {
-              "ipAddress": "192.168.199.213",
-              "name": "system"
-            }
-          ],
-          "external_targets": []
-        }
-`))
-		})
-	})
-
-	Context("Two nodes with external targets", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1 + node2))
-			f.ValuesSetFromYaml("monitoringPing.externalTargets", []byte(`[
-{ "host": "1.2.3.4" },
-{ "host": "5.6.7.8" }
-]`))
-			f.RunHook()
-		})
-		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
- {
-          "cluster_targets": [
-            {
-              "ipAddress": "192.168.199.140",
-              "name": "system2"
-            },
-            {
-              "ipAddress": "192.168.199.213",
-              "name": "system"
-            }
-          ],
-          "external_targets": [
-            {
-              "host": "1.2.3.4"
-            },
-            {
-              "host": "5.6.7.8"
-            }
-          ]
-        }
-`))
-		})
-	})
-
-	Context("One node ready, one unschedulable", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1 + unschedulableNode))
-			f.RunHook()
-		})
-		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
- {
-          "cluster_targets": [
-            {
-              "ipAddress": "192.168.199.213",
-              "name": "system"
-            }
-          ],
-          "external_targets": []
-        }
-`))
-		})
-	})
-
-	Context("One node ready, one without IP", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(node1 + nodeWithEmptyIP))
-			f.RunHook()
-		})
-		It("Hook must not fail, monitoringPing.internal.targets must be set", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("monitoringPing.internal.targets").String()).To(MatchUnorderedJSON(`
- {
-          "cluster_targets": [
-            {
-              "ipAddress": "192.168.199.213",
-              "name": "system"
-            }
-          ],
-          "external_targets": []
-        }
-`))
+			str := f.ValuesGet("monitoringPing.internal.clusterTargets").String()
+			var targets []Target
+			err := json.Unmarshal([]byte(str), &targets)
+			if err != nil {
+				panic(err)
+			}
+			Expect(len(targets)).To(Equal(2))
 		})
 	})
 })

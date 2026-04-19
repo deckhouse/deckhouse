@@ -4,9 +4,9 @@
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -14,14 +14,18 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    kubectl: {{ printf "%s.%s" $version $patch }}
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "kubeadm": "{{ printf "%s.%s" $version $patch }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/scratch" }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -29,8 +33,11 @@ git:
     setup:
     - '**/*'
 import:
-- artifact: common/kubernetes-artifact-{{ $image_version }}
+- image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubeadm
   to: /kubeadm
   before: setup
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
+
 {{- end }}

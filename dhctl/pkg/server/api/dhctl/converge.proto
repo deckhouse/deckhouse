@@ -25,6 +25,7 @@ message ConvergeRequest {
   oneof message {
     ConvergeStart start = 1;
     ConvergeContinue continue = 2;
+    ConvergeCancel cancel = 3;
   }
 }
 
@@ -33,6 +34,7 @@ message ConvergeResponse {
     ConvergeResult result = 1;
     ConvergePhaseEnd phase_end = 2;
     Logs logs = 3;
+    Progress progress = 4;
   }
 }
 
@@ -56,6 +58,8 @@ message ConvergeContinue {
   Continue continue = 1;
   string err = 2;
 }
+
+message ConvergeCancel {}
 
 message ConvergeStartOptions {
   bool commander_mode = 1;

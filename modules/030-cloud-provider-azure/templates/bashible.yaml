@@ -1,0 +1,30 @@
+{{- $providerID := "azure" -}}
+{{- $bashbilePath := "candi/bashible" -}}
+{{- $bashibleSteps := .Files.Glob (printf "%s/*/**" $bashbilePath) -}}
+{{- $bashibleBootstrap := .Files.Glob (printf "%s/*" $bashbilePath) -}}
+{{- if $bashibleSteps }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ printf "d8-cloud-provider-%s-bashible-steps" $providerID }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/bashible" "steps"
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+data: {{ $bashibleSteps.AsSecrets | nindent 2 }}
+{{- end }}
+{{- if $bashibleBootstrap }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ printf "d8-cloud-provider-%s-bashible-bootstrap" $providerID }}
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict
+    "cloud-provider.deckhouse.io/bashible" "bootstrap"
+    "cloud-provider.deckhouse.io/name" $providerID
+    )) | nindent 2 }}
+data: {{ $bashibleBootstrap.AsSecrets | nindent 2 }}
+{{- end }}

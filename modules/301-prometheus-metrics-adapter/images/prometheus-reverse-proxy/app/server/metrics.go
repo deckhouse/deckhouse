@@ -59,8 +59,8 @@ type MetricHandler struct {
 
 func (m *MetricHandler) RenderQuery() string {
 	// TODO(nabokihms): use go template
-	query := strings.Replace(m.QueryTemplate, "<<.LabelMatchers>>", m.Selector, -1)
-	query = strings.Replace(query, "<<.GroupBy>>", m.GroupBy, -1)
+	query := strings.ReplaceAll(m.QueryTemplate, "<<.LabelMatchers>>", m.Selector)
+	query = strings.ReplaceAll(query, "<<.GroupBy>>", m.GroupBy)
 
 	return query
 }
@@ -117,7 +117,10 @@ func updateConfig() {
 	defer f.Close()
 
 	var newConfig map[string]map[string]CustomMetricConfig
-	json.NewDecoder(f).Decode(&newConfig)
+	if err := json.NewDecoder(f).Decode(&newConfig); err != nil {
+		errLog.Printf("failed to decode config file %s: %v\n", configPath, err)
+		return
+	}
 
 	defer infLog.Printf("config file %s was reloaded successfully\n", configPath)
 

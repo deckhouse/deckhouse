@@ -5,10 +5,12 @@ sectionPagesMenu: main
 
 # Language settings
 defaultContentLanguage: 'en'
-defaultContentLanguageInSubdir: false
+defaultContentLanguageInSubdir: true
 
 uglyURLs: true
 #relativeURLs: true
+
+printI18nWarnings: true
 
 params:
   display_toc: true
@@ -19,6 +21,7 @@ markup:
     ordered: false
     startLevel: 2
   goldmark:
+    duplicateResourceFiles: true
     extensions:
       definitionList: true
       footnote: true
@@ -53,13 +56,21 @@ markup:
     style: native
     tabWidth: 4
 
+# Output formats
+outputs:
+  home:
+    - HTML
+  page:
+    - HTML
+  section:
+    - HTML
+
 # "404" "home" "page" "robotsTXT" "RSS" "section" "sitemap" "taxonomy" "term"
 disableKinds:
 - "404"
 - home
 - robotsTXT
 - RSS
-#- section
 - sitemap
 - taxonomy
 - term

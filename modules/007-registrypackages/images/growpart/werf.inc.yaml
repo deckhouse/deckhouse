@@ -1,5 +1,6 @@
-{{- $version := "0.33" }}
-{{- $image_version := $version | replace "." "-" }}
+{{- $cloud_utils_version := include "get_oss_version_by_id" (list "cloud-utils" $ )  -}}
+{{- $growpart_version := include "get_oss_version_by_id" (list "util-linux-growpart" $ )  -}}
+{{- $image_version := $cloud_utils_version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -10,15 +11,18 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v2.40.1 --depth 1 {{ $.SOURCE_REPO }}/util-linux/util-linux.git  /src/util-linux
+  - git clone -b v{{ $growpart_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
   - rm -rf /src/util-linux/.git
-  - git clone -b {{ $version }} --depth 1 {{ $.SOURCE_REPO }}/canonical/cloud-utils.git /src/cloud-utils
+  - git clone -b {{ $cloud_utils_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/canonical/cloud-utils.git /src/cloud-utils
   - rm -rf /src/cloud-utils/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -35,16 +39,18 @@ import:
   - fdisk
   - sfdisk
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    growpart: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "growpart": "{{ $cloud_utils_version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-fdisk-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_GOLANG_23_ALPINE }}
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
@@ -65,7 +71,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ index $.Images "builder/alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src

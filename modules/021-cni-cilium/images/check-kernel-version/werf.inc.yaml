@@ -6,7 +6,7 @@ import:
   add: /check-kernel-version
   to: /check-kernel-version
   before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
   add: /relocate/bin/true
   to: /bin/true
   before: setup
@@ -14,13 +14,15 @@ import:
   add: /pause
   to: /pause
   before: install
-docker:
-  ENTRYPOINT: [ "/check-kernel-version" ]
+imageSpec:
+  config:
+    entrypoint: [ "/check-kernel-version" ]
 ---
 {{- $binaries := "/bin/true" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ $.Images.BASE_ALT_DEV }}
+image: {{ .ModuleName }}/{{ .ImageName }}-relocate-artifact
+fromImage: common/relocate-artifact
+final: false
 shell:
  setup:
    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate

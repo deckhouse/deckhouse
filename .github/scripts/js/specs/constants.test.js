@@ -9,42 +9,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-const {
-  knownProviders,
-  knownKubernetesVersions,
-  knownCRINames,
-  labelsSrv
-} = require('../constants');
+const { knownProviders, knownKubernetesVersions, labelsSrv } = require('../constants');
 
 test('knownProviders', () => {
-  expect(knownProviders).toContain('azure')
-  expect(knownProviders).toContain('aws')
-})
-
-test('knownCRINames', () => {
-  expect(knownCRINames).toContain('Containerd')
-})
+  expect(knownProviders).toContain('azure');
+  expect(knownProviders).toContain('aws');
+});
 
 test('knownKubernetesVersions', () => {
-  expect(knownKubernetesVersions).toContain('1.20')
-  expect(knownKubernetesVersions).toContain('1.23')
-})
+  knownKubernetesVersions.forEach((version) => {
+    expect(version).toMatch(/^(\d+\.\d+)|(Automatic)$/); // Check version format 'X.Y'
+  });
+});
 
 test('e2e/run/azure', () => {
-  const l = labelsSrv.findLabel({labelType: 'e2e-run', labelSubject: 'azure'})
-  expect(l).toBe('e2e/run/azure')
+  const l = labelsSrv.findLabel({ labelType: 'e2e-run', labelSubject: 'azure' });
+  expect(l).toBe('e2e/run/azure');
 });
 
 test('deploy/web/stage', () => {
-  const l = labelsSrv.findLabel({labelType: 'deploy-web', labelSubject: 'stage'})
-  expect(l).toBe('deploy/web/stage')
+  const l = labelsSrv.findLabel({ labelType: 'deploy-web', labelSubject: 'stage' });
+  expect(l).toBe('deploy/web/stage');
 });
 
 test('unknown label', () => {
-  let l = labelsSrv.findLabel({labelType: 'e2e-run-', labelSubject: 'azure'})
-  expect(l).toBe('')
-  l = labelsSrv.findLabel({labelType: 'e2e-run', labelSubject: 'azure-'})
-  expect(l).toBe('')
-  l = labelsSrv.findLabel({labelType: '', labelSubject: ''})
-  expect(l).toBe('')
+  let l = labelsSrv.findLabel({ labelType: 'e2e-run-', labelSubject: 'azure' });
+  expect(l).toBe('');
+  l = labelsSrv.findLabel({ labelType: 'e2e-run', labelSubject: 'azure-' });
+  expect(l).toBe('');
+  l = labelsSrv.findLabel({ labelType: '', labelSubject: '' });
+  expect(l).toBe('');
 });

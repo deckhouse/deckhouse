@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 
+	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -42,7 +43,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 
 		discovery := fakeClient.Discovery().(*fakediscovery.FakeDiscovery)
 		discovery.Resources = append(discovery.Resources, &metav1.APIResourceList{
-			GroupVersion: "machine.sapcloud.io/v1alpha1",
+			GroupVersion: sapcloud.GV.String(),
 			APIResources: []metav1.APIResource{},
 		})
 
@@ -55,16 +56,9 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 
 		discovery := fakeClient.Discovery().(*fakediscovery.FakeDiscovery)
 		discovery.Resources = append(discovery.Resources, &metav1.APIResourceList{
-			GroupVersion: "machine.sapcloud.io/v1alpha1",
+			GroupVersion: sapcloud.GV.String(),
 			APIResources: []metav1.APIResource{
-				{
-					Kind:       "Machine",
-					Name:       "machines",
-					Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
-					Group:      "machine.sapcloud.io",
-					Version:    "v1alpha1",
-					Namespaced: true,
-				},
+				sapcloud.MachineAPIResource,
 			},
 		})
 
@@ -76,27 +70,7 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 
 		discovery := fakeClient.Discovery().(*fakediscovery.FakeDiscovery)
-		discovery.Resources = append(discovery.Resources, &metav1.APIResourceList{
-			GroupVersion: "machine.sapcloud.io/v1alpha1",
-			APIResources: []metav1.APIResource{
-				{
-					Kind:       "Machine",
-					Name:       "machines",
-					Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
-					Group:      "machine.sapcloud.io",
-					Version:    "v1alpha1",
-					Namespaced: true,
-				},
-				{
-					Kind:       "MachineDeployment",
-					Name:       "machinedeployments",
-					Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
-					Group:      "machine.sapcloud.io",
-					Version:    "v1alpha1",
-					Namespaced: true,
-				},
-			},
-		})
+		discovery.Resources = append(discovery.Resources, sapcloud.APIResourcesList())
 
 		err := checkMCMMachinesAPI(fakeClient)
 		require.NoError(t, err)
@@ -104,12 +78,13 @@ func TestDeleteMachinesIfResourcesExist(t *testing.T) {
 }
 
 func TestDeletePods(t *testing.T) {
+	ctx := context.Background()
 	log.InitLogger("json")
 
 	t.Run("Without pods", func(t *testing.T) {
 		fakeClient := client.NewFakeKubernetesClient()
 
-		err := DeletePods(fakeClient)
+		err := DeletePods(ctx, fakeClient)
 		require.NoError(t, err)
 	})
 
@@ -189,7 +164,7 @@ func TestDeletePods(t *testing.T) {
 		_, err = fakeClient.CoreV1().Pods("test-ns").Create(context.TODO(), pod4, metav1.CreateOptions{})
 		require.NoError(t, err)
 
-		err = DeletePods(fakeClient)
+		err = DeletePods(ctx, fakeClient)
 		require.NoError(t, err)
 
 		pods, err := fakeClient.CoreV1().Pods(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})

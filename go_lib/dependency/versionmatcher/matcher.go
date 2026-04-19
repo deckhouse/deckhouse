@@ -32,6 +32,7 @@ type Matcher struct {
 
 func New(withBaseVersionLock bool) *Matcher {
 	baseVersion, _ := semver.NewVersion("v2.0.0")
+
 	return &Matcher{
 		withBaseVersionLock: withBaseVersionLock,
 		baseVersion:         baseVersion,
@@ -39,11 +40,21 @@ func New(withBaseVersionLock bool) *Matcher {
 	}
 }
 
+func (m *Matcher) GetBaseVersion() *semver.Version {
+	if m.withBaseVersionLock {
+		m.mtx.Lock()
+		defer m.mtx.Unlock()
+	}
+
+	return m.baseVersion
+}
+
 func (m *Matcher) AddConstraint(name, rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
-		return err
+		return fmt.Errorf("new constraint: %w", err)
 	}
+
 	m.installed[name] = constraint
 
 	return nil
@@ -73,6 +84,7 @@ func (m *Matcher) Validate(name string) error {
 		m.mtx.Lock()
 		defer m.mtx.Unlock()
 	}
+
 	if _, errs := m.installed[name].Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
@@ -83,8 +95,9 @@ func (m *Matcher) Validate(name string) error {
 func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 	parsed, err := semver.NewVersion(baseVersion)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("new version: %w", err)
 	}
+
 	for module, installed := range m.installed {
 		if _, errs := installed.Validate(parsed); len(errs) != 0 {
 			return module, errs[0]
@@ -97,12 +110,14 @@ func (m *Matcher) ValidateBaseVersion(baseVersion string) (string, error) {
 func (m *Matcher) ValidateConstraint(rawConstraint string) error {
 	constraint, err := semver.NewConstraint(rawConstraint)
 	if err != nil {
-		return err
+		return fmt.Errorf("new constraint: %w", err)
 	}
+
 	if m.withBaseVersionLock {
 		m.mtx.Lock()
 		defer m.mtx.Unlock()
 	}
+
 	if _, errs := constraint.Validate(m.baseVersion); len(errs) != 0 {
 		return errs[0]
 	}
@@ -115,6 +130,7 @@ func (m *Matcher) ChangeBaseVersion(version *semver.Version) {
 		m.mtx.Lock()
 		defer m.mtx.Unlock()
 	}
+
 	m.baseVersion = version
 }
 
@@ -126,7 +142,7 @@ func (m *Matcher) ValidateModuleVersion(name string, version *semver.Version) er
 	}
 
 	if !constraint.Check(version) {
-		return fmt.Errorf("the \"%s\" version does not satisfy the \"%s\" constraint", version.String(), constraint.String())
+		return fmt.Errorf("the '%s' version does not satisfy the '%s' constraint", version.Original(), constraint.String())
 	}
 
 	return nil

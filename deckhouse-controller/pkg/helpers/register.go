@@ -45,7 +45,7 @@ func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 		password := changeRegistryCommand.Flag("password", "Password/token for registry user.").String()
 		caFile := changeRegistryCommand.Flag("ca-file", "Path to registry CA.").ExistingFile()
 
-		scheme := changeRegistryCommand.Flag("scheme", "Used scheme while connecting to registry, http or https.").String()
+		scheme := changeRegistryCommand.Flag("scheme", `Used scheme while connecting to registry, "http" or "https".`).String()
 		dryRun := changeRegistryCommand.Flag("dry-run", "Don't change deckhouse resources, only print them.").Default("false").Bool()
 
 		newImageTag := changeRegistryCommand.Flag("new-deckhouse-tag", "New tag that will be used for deckhouse deployment image (by default current tag from deckhouse deployment will be used).").String()
@@ -55,6 +55,8 @@ func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 	}
 
 	// dhctl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
-	dhctlapp.DefineCommandParseClusterConfiguration(kpApp, helpersCommand)
-	dhctlapp.DefineCommandParseCloudDiscoveryData(kpApp, helpersCommand)
+	cmd := kpApp.Command("cluster-configuration", "Parse configuration and print it.")
+	dhctlapp.DefineCommandParseClusterConfiguration(cmd)
+	cmd = kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it.")
+	dhctlapp.DefineCommandParseCloudDiscoveryData(cmd)
 }

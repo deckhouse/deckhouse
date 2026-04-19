@@ -69,7 +69,7 @@ data:
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal":{}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Instance", false)
 
 	Context("Empty cluster", func() {
 		BeforeEach(func() {
@@ -169,8 +169,8 @@ data:
 
 	Context("approve_disruptions", func() {
 		for _, gDisruptionRequired := range []bool{true, false} {
-			for _, gDisruptionsApprovalMode := range []int{0, 1, 2} {
-				for _, gDisruptionsDrainBeforeApproval := range []int{0, 1, 2} {
+			for _, gDisruptionsApprovalMode := range []string{"Manual", "Automatic", "RollingUpdate"} {
+				for _, gDisruptionsDrainBeforeApproval := range []string{"false", "true", ""} {
 					for _, gUnschedulable := range []bool{true, false} {
 						Context(fmt.Sprintf("DisruptionRequired: %t, DisruptionsApprovalMode: %v, DisruptionsDrainBeforeApproval: %v, Unschedulable: %t", gDisruptionRequired, gDisruptionsApprovalMode, gDisruptionsDrainBeforeApproval, gUnschedulable), func() {
 							disruptionRequired := gDisruptionRequired
@@ -185,8 +185,8 @@ data:
 							It("Works as expected", func() {
 								Expect(f).To(ExecuteSuccessfully())
 								for _, nodeName := range nodeNames {
-									if disruptionRequired && disruptionsApprovalMode > 0 {
-										if disruptionsDrainBeforeApproval > 0 {
+									if disruptionRequired && disruptionsApprovalMode != "Manual" {
+										if disruptionsDrainBeforeApproval != "false" {
 											if unschedulable {
 												By(fmt.Sprintf("%s must not have /disruption-required", nodeName), func() {
 													Expect(f.KubernetesGlobalResource("Node", nodeName).Field(`metadata.annotations.update\.node\.deckhouse\.io/disruption-required`).Exists()).To(BeFalse())
@@ -904,6 +904,7 @@ metadata:
   annotations:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/disruption-required: ""
+    update.node.deckhouse.io/drained: "bashible"
 spec:
   unschedulable: true
 
@@ -1102,21 +1103,20 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
+apiVersion: deckhouse.io/v1alpha1
+kind: Instance
 metadata:
   name: worker-1
-  namespace: d8-cloud-instance-manager
   labels:
-    node: worker-1
+    node.deckhouse.io/group: ng1
 `))
 				f.RunHook()
 			})
 
-			It("machine should be deleted", func() {
+			It("Instance should be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				m := f.KubernetesResource("Instance", "", "worker-1")
 				Expect(m.Exists()).To(BeFalse())
 			})
 		})
@@ -1155,21 +1155,20 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
+apiVersion: deckhouse.io/v1alpha1
+kind: Instance
 metadata:
   name: worker-1
-  namespace: d8-cloud-instance-manager
   labels:
-    node: worker-1
+    node.deckhouse.io/group: ng1
 `))
 				f.RunHook()
 			})
 
-			It("machine should be deleted", func() {
+			It("Instance should be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				m := f.KubernetesResource("Instance", "", "worker-1")
 				Expect(m.Exists()).To(BeFalse())
 			})
 		})
@@ -1208,21 +1207,20 @@ metadata:
     update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/rolling-update: ""
 ---
-apiVersion: machine.sapcloud.io/v1alpha1
-kind: Machine
+apiVersion: deckhouse.io/v1alpha1
+kind: Instance
 metadata:
   name: worker-1
-  namespace: d8-cloud-instance-manager
   labels:
-    node: worker-1
+    node.deckhouse.io/group: ng1
 `))
 				f.RunHook()
 			})
 
-			It("machine should be deleted", func() {
+			It("Instance should be deleted", func() {
 				Expect(f).To(ExecuteSuccessfully())
 
-				m := f.KubernetesResource("Machine", "d8-cloud-instance-manager", "worker-1")
+				m := f.KubernetesResource("Instance", "", "worker-1")
 				Expect(m.Exists()).To(BeTrue())
 			})
 		})
@@ -1273,6 +1271,7 @@ metadata:
     node.deckhouse.io/group: master
 {{- if eq $nodeName $.DisruptionNode }}
   annotations:
+    update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/disruption-required: ""
 {{- end }}
 {{- end }}
@@ -1300,6 +1299,7 @@ metadata:
     node.deckhouse.io/group: worker
 {{ if eq $nodeName $.DisruptionNode }}
   annotations:
+    update.node.deckhouse.io/approved: ""
     update.node.deckhouse.io/disruption-required: ""
 {{- end }}
 {{- end }}
@@ -1396,25 +1396,25 @@ metadata:
   name: worker-2
 spec:
   nodeType: Static
-{{- if eq .DisruptionsApprovalMode 0 }}
+{{- if eq .DisruptionsApprovalMode "Manual" }}
   disruptions:
     approvalMode: Manual
-{{- else if eq .DisruptionsApprovalMode 1 }}
+{{- else if eq .DisruptionsApprovalMode "Automatic" }}
   disruptions:
     approvalMode: Automatic
-    {{- if eq .DisruptionsDrainBeforeApproval 0 }}
+    {{- if eq .DisruptionsDrainBeforeApproval "false" }}
     automatic:
       drainBeforeApproval: false
-    {{- else if eq .DisruptionsDrainBeforeApproval 1 }}
+    {{- else if eq .DisruptionsDrainBeforeApproval "true" }}
     automatic:
       drainBeforeApproval: true
     {{- end }}
-{{- else if eq .DisruptionsApprovalMode 2 }}
-  {{- if eq .DisruptionsDrainBeforeApproval 0 }}
+{{- else if eq .DisruptionsApprovalMode "RollingUpdate" }}
+  {{- if eq .DisruptionsDrainBeforeApproval "false" }}
   disruptions:
     automatic:
       drainBeforeApproval: false
-    {{- else if eq .DisruptionsDrainBeforeApproval 1 }}
+    {{- else if eq .DisruptionsDrainBeforeApproval "true" }}
   disruptions:
     automatic:
       drainBeforeApproval: true
@@ -1434,20 +1434,21 @@ metadata:
     update.node.deckhouse.io/disruption-required: ""
 {{- end }}
 {{- if $.Unschedulable }}
+    update.node.deckhouse.io/drained: "bashible"
 spec:
   unschedulable: true
 {{- end }}
 {{- end }}
 `
 
-func generateStateToTestApproveDisruptions(nodeNames []string, disruptionRequired bool, disruptionsApprovalMode, disruptionsDrainBeforeApproval int, unschedulable bool) string {
+func generateStateToTestApproveDisruptions(nodeNames []string, disruptionRequired bool, disruptionsApprovalMode, disruptionsDrainBeforeApproval string, unschedulable bool) string {
 	tmpl, _ := template.New("state").Parse(tpl)
 	var state bytes.Buffer
 	err := tmpl.Execute(&state, struct {
 		NodeNames                      []string
 		DisruptionRequired             bool
-		DisruptionsApprovalMode        int
-		DisruptionsDrainBeforeApproval int
+		DisruptionsApprovalMode        string
+		DisruptionsDrainBeforeApproval string
 		Unschedulable                  bool
 	}{nodeNames, disruptionRequired, disruptionsApprovalMode, disruptionsDrainBeforeApproval, unschedulable})
 	if err != nil {

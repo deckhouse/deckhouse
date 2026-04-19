@@ -1,0 +1,11 @@
+type: object
+properties:
+  replicas:
+    type: integer
+  image:
+    type: string
+  resources:
+    type: object
+    properties:
+      limits:
+        type: object

@@ -1,18 +1,24 @@
 {
   "en": [
     {
+      "id": 966,
+      "parent_id": 0,
       "title": "Privacy Policy",
       "url": "/privacy-policy/",
       "target": "",
       "rel": ""
     },
     {
+      "id": 983,
+      "parent_id": 0,
       "title": "Terms of service",
       "url": "/terms-of-service/",
       "target": "",
       "rel": ""
     },
     {
+      "id": 982,
+      "parent_id": 0,
       "title": "Cookie Policy",
       "url": "/cookie-policy/",
       "target": "",
@@ -21,27 +27,27 @@
   ],
   "ru": [
     {
+      "id": 1365,
+      "parent_id": 0,
       "title": "Политика обработки персональных данных",
       "url": "/security-policy/",
       "target": "",
       "rel": ""
     },
     {
-      "title": "Лицензионное соглашение",
-      "url": "/license/",
+      "id": 5663,
+      "parent_id": 0,
+      "title": "Политика использования файлов «cookie»",
+      "url": "/cookie-policy/",
       "target": "",
       "rel": ""
     },
     {
-      "title": "Правила лицензирования",
-      "url": "/license-rules/",
-      "target": "",
-      "rel": ""
-    },
-    {
-      "title": "Регламент технической поддержки",
-      "url": "/regulations/",
-      "target": "",
+      "id": 4133,
+      "parent_id": 0,
+      "title": "Правовые документы",
+      "url": "https://legal.flant.ru/",
+      "target": "_blank",
       "rel": ""
     }
   ]

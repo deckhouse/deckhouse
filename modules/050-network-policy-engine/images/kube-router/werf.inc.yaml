@@ -1,55 +1,67 @@
-{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /sbin/ipset /sbin/ip /usr/sbin/conntrack" }}
-{{- $iptables_version := "1.8.9" }}
-{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+{{- $kuberouterVersion := include "get_oss_version_by_id" (list "kuberouter" $ ) }}
+{{- $binaries := "/usr/lib64/libnetfilter_conntrack.so* /usr/sbin/ipset /usr/sbin/ip /usr/sbin/conntrack" }}
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-from: {{ .Images.BASE_ALT_DEV }}
-shell:
-  install:
-    - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
-    - |
-      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore ip6tables-nft ip6tables-nft-restore ip6tables-nft-save iptables-nft iptables-nft-restore iptables-nft-save; do
-        ln -f -s /iptables-wrapper "/relocate/sbin/${cmd}"
-      done
-      # broken symlinks are not imported from the artifact
-      touch /iptables-wrapper
----
-artifact: {{ .ModuleName }}/kube-router-artifact
-from: {{ .Images.BASE_GOLANG_20_ALPINE_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+final: false
+fromImage: common/relocate-artifact
 shell:
   beforeInstall:
-  - apk add --no-cache git openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
+  - apt-get install -y ipset conntrack-tools
   install:
-    - mkdir -p /src
-    - cd /src
-    - git clone --branch v2.0.1 --depth 1 {{ $.SOURCE_REPO }}/cloudnativelabs/kube-router.git .
-    - GIT_COMMIT=$(git describe --tags --dirty)
-    - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
-    - export GOPROXY={{ $.GOPROXY }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
+  - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+git:
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $kuberouterVersion }} $(cat /run/secrets/SOURCE_REPO)/cloudnativelabs/kube-router.git /src
+  - cd /src
+  - git apply /patches/001-fix-cve-gomod.patch
+  - git describe --tags --dirty > GIT_COMMIT
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/kube-router-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+from: {{ index $.Images "builder/golang-alpine" }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GIT_COMMIT=$(cat GIT_COMMIT)
+  - BUILD_DATE=$(date +%Y-%m-%dT%H:%M:%S%z)
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags "-X github.com/cloudnativelabs/kube-router/v2/pkg/version.Version=${GIT_COMMIT} -X github.com/cloudnativelabs/kube-router/v2/pkg/version.BuildDate=${BUILD_DATE}" -o kube-router cmd/kube-router/kube-router.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/kube-router-artifact
-  add: /src/kube-router
-  to: /opt/bin/kube-router
-  before: setup
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
   add: /relocate
   to: /
   before: setup
-- artifact: registrypackages/iptables-artifact-{{ $iptables_image_version }}
-  add: /
-  to: /sbin
-  includePaths:
-  - xtables-legacy-multi
-  - xtables-nft-multi
+- image: {{ .ModuleName }}/kube-router-artifact
+  add: /src/kube-router
+  to: /opt/bin/kube-router
   before: setup
-- image: common/iptables-wrapper
-  add: /iptables-wrapper
-  to: /iptables-wrapper
-  before: setup
-docker:
-  ENTRYPOINT: ["/opt/bin/kube-router"]
+git:
+{{- include "image mount points" $ }}
+imageSpec:
+  config:
+    entrypoint: ["/opt/bin/kube-router"]

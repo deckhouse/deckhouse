@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-default-container
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-default
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        procMount: Default
+

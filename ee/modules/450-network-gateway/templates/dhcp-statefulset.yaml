@@ -11,14 +11,14 @@ kind: VerticalPodAutoscaler
 metadata:
   name: dhcp
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list $ (dict "app" "dhcp" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "dhcp")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: StatefulSet
     name: dhcp
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: dhcp

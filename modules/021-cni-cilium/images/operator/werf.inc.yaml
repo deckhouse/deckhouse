@@ -1,44 +1,52 @@
 # #####################################################################
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/operator/Dockerfile
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/operator/Dockerfile
 # #####################################################################
 ---
-{{- $ciliumVersion := "1.14.14" }}
----
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
+image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
+final: false
+import:
+- image: {{ .ModuleName }}/bin-cilium-src-artifact
+  add: /src
+  to: /src
+  before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
+  {{- include "alpine packages proxy" . | nindent 2 }}
+  - apk add --no-cache make git bash
   install:
   - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64
-  - mkdir -p /go/src/github.com/cilium/cilium
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
-  - cd /go/src/github.com/cilium/cilium
-  - git apply /patches/*.patch --verbose
-  - go mod tidy && go mod vendor && go mod verify
-  - make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator
+  - cd /src/cilium
+  - go mod vendor && go mod verify
+  # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
+  # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,
+  # and this change just stops the compiler from failing on unused code interface checks.
+  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `make DESTDIR=/out/linux/amd64 build-container-operator install-container-binary-operator` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - chown 64535:64535 /out/linux/amd64/usr/bin/cilium-operator
   - chmod 0700 /out/linux/amd64/usr/bin/cilium-operator
+  - rm -rf /src/cilium/vendor
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
   add: /out/linux/amd64/usr/bin/cilium-operator
   to: /usr/bin/cilium-operator
   before: install
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/usr/bin/cilium-operator"]
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/bin/cilium-operator"]

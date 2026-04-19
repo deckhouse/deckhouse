@@ -1,4 +1,4 @@
-<script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}';</script>
+<script type="text/javascript">const responseFromLicense = {{ site.data.license.response | jsonify }}; const pageLang = '{{ page.lang }}'; const revisionNames = {ce: '{{ site.data.i18n.ce }}', be: '{{ site.data.i18n.be }}', se: '{{ site.data.i18n.se }}', 'se-plus': '{{ site.data.i18n.se-plus }}', ee: '{{ site.data.i18n.ee }}', cse: '{{ site.data.i18n.cse }}'};</script>
 <script type="text/javascript" src='{% javascript_asset_tag getting-started %}[_assets/js/getting-started.js]{% endjavascript_asset_tag %}'></script>
 {% if page.platform_code == "bm-private" -%}
   <script type="text/javascript" src='{% javascript_asset_tag getting-started-private %}[_assets/js/getting-started-private.js]{% endjavascript_asset_tag %}'></script>
@@ -18,6 +18,7 @@
 {% endif %}
 <div class="tabs">
     {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+        {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
         <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ce' %} active{% endif %}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
                  openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
@@ -28,10 +29,22 @@
 </div>
 {%- endunless %}
 {%- if page.ee_only == true and page.se_support == true %}
+{% if page.lang == 'ru' %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} в Community Edition недоступна. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
+{% endalert %}
+<h4>Выберите редакцию Deckhouse Kubernetes Platform</h4>
+{% else %}
+{% alert level="warning" %}
+The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](/products/kubernetes-platform/).
+{% endalert %}
+<h4>Select the Deckhouse Kubernetes Platform revision</h4>
+{% endif %}
   <div class="tabs">
     {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
-      {%  if revision == "se" or revision == "ee" %}
-      <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se' %} active{% endif %}"
+      {%  if revision == "se" or revision == "se-plus" or revision == "ee" %}
+      {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
+      <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'se-plus' %} active{% endif %}"
          onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
            openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
            toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
@@ -40,24 +53,46 @@
       {% endif %}
     {%- endfor %}
   </div>
+
+  <script>
+    // Function for initializing tabs on page load
+    function initializeTabs() {
+      // Set active tab
+      {% if page.platform_code == 'vsphere' %}
+      const defaultTab = 'se-plus';
+      {% else %}
+      const defaultTab = 'se';
+      {% endif %}
+      const defaultTabElement = document.getElementById(`tab_layout_${defaultTab}`);
+      if (defaultTabElement) {
+        defaultTabElement.click();
+      }
+    }
+
+    // Call the initialization function on page load
+    window.addEventListener('load', initializeTabs);
+  </script>
 {% endif %}
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+{%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'ce' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'be' %}{% continue %}{% endif %}
 {%- if page.ee_only == true and revision == 'se' %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
-{%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
-{% assign layoutCode = '' | append: layout.code %}
+{%- if page.ee_only == true and revision == 'se-plus' %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
+  {%- if page.ce_only == true and revision == 'ee' %}{% continue %}{% endif %}
+{%- assign layoutCode = '' | append: layout.code %}
 <div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision
-{% if revision == 'ce' %} active{% endif %}
-{% if page.ee_only == true and page.se_support != true %} active{% endif %}
-{% if revision == 'se' and page.se_support == true %} active{% endif %}
+{%- if revision == 'ce' %} active{% endif %}
+{%- if page.ee_only == true and page.se_support != true %} active{% endif %}
+{%- if revision == 'se' and page.se_support == true %} active{% endif %}
+{%- if revision == 'se-plus' and page.se_support == true %} active{% endif -%}
 " markdown="1">
-    {% if page.lang == 'ru' %}
-    {% include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
-    {% else %}
-    {% include getting_started/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
-    {% endif %}
+    {%- if page.lang == 'ru' %}
+    {%- include getting_started/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
+    {%- else %}
+    {%- include getting_started/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
+    {%- endif %}
 </div>
 {%- endfor %}
 
@@ -76,53 +111,40 @@
   </div>
 {% endif %}
 
-<div class="dimmer-block-content common" markdown="1">
-
-{% if page.platform_type == 'cloud' %}
-{% if page.lang == 'ru' %}
-Создайте файл `resources.yml`.
-{% else %}
-Create the `resources.yml` file.
-{% endif %}
-
-{% snippetcut name="resources.yml" selector="resources-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/resources.yml.minimal.inc" syntax="yaml" %}
-{% endsnippetcut %}
-{% endif %}
-
-</div>
-
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+{%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
 {%- if revision =='ce' and page.ee_only == true %}{% continue %}{% endif %}
 {%- if revision =='be' and page.ee_only == true %}{% continue %}{% endif %}
 {%- if revision =='se' and page.ee_only == true %}{% if page.se_support != true %}{% continue %}{% endif %}{% endif %}
 
 
-  {% if revision == 'ee' or revision == 'be' or revision == 'se' %}
+  {% if revision == 'ee' or revision == 'be' or revision == 'se' or revision == 'se-plus' %}
 <div class="dimmer-block-content">
 {% endif %}
 
 <div id='block_other_{{ revision }}' class="tabs__content tabs__content_other
-{% if revision == 'ce' %} active{% endif %}
-{% if page.ee_only == true and page.se_support != true %} active{% endif %}
-{% if revision == 'se' and page.se_support == true %} active{% endif %}
+{%- if revision == 'ce' %} active{% endif %}
+{%- if revision == 'ee' and page.ee_only == true and page.se_support != true %} active{% endif %}
+{%- if revision == 'se' and page.se_support == true %} active{% endif %}
+{%- if revision == 'se-plus' and page.se_support == true %} active{% endif -%}
 " markdown="1">
-{% if page.lang == 'ru' %}
-{% include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
-{% else %}
-{% include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
-{% endif %}
+{%- if page.lang == 'ru' %}
+{%- include getting_started/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
+{%- else %}
+{%- include getting_started/global/partials/INSTALL_OTHER.liquid revision=revision %}
+{%- endif %}
 </div>
-{% if revision == 'ee' or revision == 'be' or revision == 'se' %}
+{% if revision == 'ee' or revision == 'be' or revision == 'se' or revision == 'se-plus' %}
 </div>
-{% endif %}
+{%- endif %}
 
-{% endfor %}
+{%- endfor %}
 
 <script>
 $(document).ready(function() {
   $.cookie('lang', '{{ page.lang }}');
   {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
+  {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}
   {% if revision != "ce" %}
   $('#enter-license-key-{{ revision }}').click((e)=> {
     e.preventDefault();

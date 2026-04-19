@@ -17,10 +17,16 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -55,22 +61,25 @@ func applyNodeUsersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}, nil
 }
 
-func addStatusSubresourceForNodeUser(input *go_hook.HookInput) error {
-	nodeUserSnap := input.Snapshots["node_user"]
-	if len(nodeUserSnap) == 0 {
+func addStatusSubresourceForNodeUser(_ context.Context, input *go_hook.HookInput) error {
+	nodeUserSnaps := input.Snapshots.Get("node_user")
+	if len(nodeUserSnaps) == 0 {
 		return nil
 	}
 
-	for _, item := range nodeUserSnap {
-		nu := item.(existingStatus)
+	for nu, err := range sdkobjectpatch.SnapshotIter[existingStatus](nodeUserSnaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'node_user' snapshot: %w", err)
+		}
+
 		if nu.StatusExists {
-			input.Logger.Debugf("Status already exists for node user %s", nu.UserName)
+			input.Logger.Debug("Status already exists for node user", slog.String("user", nu.UserName))
 			continue
 		}
 
-		input.Logger.Infof("Add status for node user %s", nu.UserName)
+		input.Logger.Info("Add status for node user", slog.String("user", nu.UserName))
 
-		input.PatchCollector.Filter(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(u *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			objCopy := u.DeepCopy()
 			status := map[string]interface{}{
 				"errors": make(map[string]interface{}),

@@ -18,10 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -52,6 +51,26 @@ func (task *ManifestTask) CreateOrUpdate() error {
 			return fmt.Errorf("update resource: %v", err)
 		}
 		log.InfoLn("OK!")
+	}
+	return nil
+}
+
+func (task *ManifestTask) CreateOrUpdateSilent() error {
+	log.DebugF("Manifest for %s\n", task.Name)
+	manifest := task.Manifest()
+
+	err := task.CreateFunc(manifest)
+	if err != nil {
+		if !errors.IsAlreadyExists(err) {
+			return fmt.Errorf("create resource: %v", err)
+		}
+		log.DebugF("%s already exists. Trying to update ... ", task.Name)
+		err = task.UpdateFunc(manifest)
+		if err != nil {
+			log.ErrorLn("ERROR!")
+			return fmt.Errorf("update resource: %v", err)
+		}
+		log.DebugLn("OK!")
 	}
 	return nil
 }

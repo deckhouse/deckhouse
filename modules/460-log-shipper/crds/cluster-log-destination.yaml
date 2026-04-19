@@ -25,7 +25,7 @@ spec:
           description: |
             Describes setting for a log storage, which you can use in many log sources.
 
-            `metadata.name` — is an upstream name, which you should use in custom resource [ClusterLoggingConfig](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/log-shipper/cr.html#clusterloggingconfig).
+            `metadata.name` — is an upstream name, which you should use in custom resource [ClusterLoggingConfig](https://deckhouse.io/modules/log-shipper/cr.html#clusterloggingconfig).
           properties:
             spec:
               type: object
@@ -154,6 +154,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -283,6 +295,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -330,6 +354,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -396,6 +432,34 @@ spec:
                           type: string
                           enum: ["JSON", "CEF"]
                           default: "JSON"
+                          description: "Available encoding formats."
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                              default: "Deckhouse"
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                              default: "log-shipper-agent"
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                              default: "1"
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["JSON"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
                     keyField:
                       type: string
                       description: |
@@ -427,6 +491,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -483,6 +559,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -536,6 +624,34 @@ spec:
                           type: string
                           enum: ["Text", "JSON", "Syslog", "CEF", "GELF"]
                           default: "JSON"
+                          description: "Available encoding formats."
+                        cef:
+                          type: object
+                          description: |
+                            CEF-specific configuration fields. Only applicable when codec is set to `CEF`.
+                          properties:
+                            deviceVendor:
+                              type: string
+                              minLength: 1
+                              default: "Deckhouse"
+                            deviceProduct:
+                              type: string
+                              minLength: 1
+                              default: "log-shipper-agent"
+                            deviceVersion:
+                              type: string
+                              minLength: 1
+                              default: "1"
+                      oneOf:
+                        - properties:
+                            codec:
+                              enum: ["Text", "JSON", "Syslog", "GELF"]
+                          allOf:
+                            - not:
+                                required: ["cef"]
+                        - properties:
+                            codec:
+                              enum: ["CEF"]
                     mode:
                       type: string
                       enum: ["TCP", "UDP"]
@@ -548,6 +664,18 @@ spec:
                           type: object
                           description: Configures the TLS options for outgoing connections.
                           properties:
+                            secretRef:
+                              type: object
+                              description: |
+                                Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                                (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                                specified, TLS settings are overridden with values from the secret.
+                                Secret should be located in d8-log-shipper namespace and have
+                                `log-shipper.deckhouse.io/watch-secret: true` label.
+                              properties:
+                                name:
+                                  type: string
+                                  description: Name of the Secret with TLS certificates.
                             caFile:
                               type: string
                               description: Base64-encoded CA certificate in PEM format.
@@ -599,6 +727,18 @@ spec:
                       type: object
                       description: Configures the TLS options for outgoing connections.
                       properties:
+                        secretRef:
+                          type: object
+                          description: |
+                            Reference to a Kubernetes Secret containing the CA certificate (ca.pem), client certificate
+                            (crt.pem), private key (key.pem) and key pass (keyPass) in Base64-encoded PEM format. If
+                            specified, TLS settings are overridden with values from the secret.
+                            Secret should be located in d8-log-shipper namespace and have
+                            `log-shipper.deckhouse.io/watch-secret: true` label.
+                          properties:
+                            name:
+                              type: string
+                              description: Name of the Secret with TLS certificates.
                         caFile:
                           type: string
                           description: Base64-encoded CA certificate in PEM format.
@@ -750,6 +890,203 @@ spec:
                     anyOf:
                       - pattern: '^[a-zA-Z0-9_\-]+$'
                       - pattern: '^\{\{\ [a-zA-Z0-9\\\-][a-zA-Z0-9\[\]_\\\-\.]+\ \}\}$'
+                transformations:
+                  type: array
+                  description: |
+                    List of transformations that can be applied to logs before sending them to the destination.
+
+                    Available options:
+
+                      - `ReplaceKeys`: Replaces `source` with `target` in the specified label keys.
+
+                        Example:
+
+                        ```yaml
+                        transformations:
+                        - action: ReplaceKeys
+                          replaceKeys:
+                            source: "."
+                            target: "_"
+                            labels:
+                              - .pod_labels
+                        ```
+
+                      - `ParseMessage`: Converts the `message` field from the format specified in `sourceFormat` into an object. If conversion fails, the `message` field remains unchanged.
+
+                        Examples:
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                        ```yaml
+                        transformations:
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: Klog
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: JSON
+                            json:
+                              depth: 1
+                        - action: ParseMessage
+                          parseMessage:
+                            sourceFormat: String
+                            string:
+                              targetField: msg
+                        ```
+
+                      - `DropLabels`: Removes the specified labels.
+
+                        Example:
+
+                        ```yaml
+                        transformations:
+                        - action: DropLabels
+                          dropLabels:
+                            labels:
+                              - .first
+                              - .second
+                        ```
+
+                  items:
+                    type: object
+                    oneOf:
+                      - properties:
+                          replaceKeys: {}
+                          action:
+                            enum:
+                              - ReplaceKeys
+                        required:
+                          - replaceKeys
+                          - action
+                      - properties:
+                          parseMessage: {}
+                          action:
+                            enum:
+                              - ParseMessage
+                        required:
+                          - parseMessage
+                          - action
+                      - properties:
+                          dropLabels: {}
+                          action:
+                            enum:
+                              - DropLabels
+                        required:
+                          - dropLabels
+                          - action
+                    properties:
+                      action:
+                        type: string
+                        enum: ["ReplaceKeys", "ParseMessage", "DropLabels"]
+                        description: Type of a transformation.
+                      replaceKeys:
+                        type: object
+                        description: "Recursive replacement of all matches of the `source` pattern with the `target` value in the specified labels."
+                        required:
+                          - labels
+                          - source
+                        properties:
+                          source:
+                            type: string
+                            description: |
+                              Pattern used to find matches.
+                              Can be a static string or a regular expression.
+                          target:
+                            type: string
+                            default: ""
+                            description: "Value that replaces all matches of the pattern."
+                          labels:
+                            type: array
+                            description: "List of labels in which the recursive replacement will be performed."
+                            items:
+                              type: string
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
+                      parseMessage:
+                        type: object
+                        description: "Converts the `message` field into an object."
+                        required:
+                          - sourceFormat
+                        oneOf:
+                          - properties:
+                              string: {}
+                              sourceFormat:
+                                enum:
+                                  - String
+                            required:
+                              - string
+                              - sourceFormat
+                          - properties:
+                              json: {}
+                              sourceFormat:
+                                enum:
+                                  - JSON
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - Klog
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "SysLog"
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "CLF"
+                            required:
+                              - sourceFormat
+                          - properties:
+                              sourceFormat:
+                                enum:
+                                  - "Logfmt"
+                            required:
+                              - sourceFormat
+                        properties:
+                          sourceFormat:
+                            type: string
+                            enum: ["String", "JSON", "Klog", "SysLog", "CLF", "Logfmt"]
+                            description: "Message format for converting into an object."
+                          string:
+                            type: object
+                            required:
+                              - targetField
+                            properties:
+                              targetField:
+                                type: string
+                                pattern: '^[a-zA-Z0-9_\\\.\-]+$'
+                                description: "Target field where the structured message is placed."
+                          json:
+                            type: object
+                            properties:
+                              depth:
+                                type: integer
+                                minimum: 1
+                                maximum: 128
+                                description: "Depth for JSON parsing."
+                      dropLabels:
+                        type: object
+                        description: "Removes the specified labels."
+                        required:
+                          - labels
+                        properties:
+                          labels:
+                            type: array
+                            description: "List of labels to remove."
+                            items:
+                              type: string
+                              pattern: '^\.[a-zA-Z0-9_\[\]\\\.\-]+$'
                 buffer:
                   type: object
                   oneOf:

@@ -15,11 +15,14 @@
 package template
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -27,12 +30,15 @@ import (
 var (
 	candiDir         = "/deckhouse/candi"
 	candiBashibleDir = candiDir + "/bashible"
-	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
 )
 
 const (
 	bashibleDir = "/var/lib/bashible"
 	stepsDir    = bashibleDir + "/bundle_steps"
+)
+
+const (
+	kubeadmV1Beta4 = "v1beta4"
 )
 
 type saveFromTo struct {
@@ -59,25 +65,39 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePath string, metaConfig *config.MetaConfig) error {
+func PrepareBundle(
+	templateController *Controller,
+	nodeIP string,
+	devicePath string,
+	metaConfig *config.MetaConfig,
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
 	}
 	logTemplatesData("kubeadm", kubeadmData)
 
-	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(bundleName, nodeIP)
+	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, bundleName, devicePath); err != nil {
+	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
 		return err
 	}
 
-	if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
+	if err := PrepareKubeadmConfig(templateController, kubeadmData, dc); err != nil {
 		return err
+	}
+
+	_, err = os.Stat(candiBashibleDir)
+	if err != nil {
+		if dc == nil {
+			return fmt.Errorf("could not get value of dc.DownloadDir")
+		}
+		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
 	}
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
@@ -85,18 +105,31 @@ func PrepareBundle(templateController *Controller, nodeIP, bundleName, devicePat
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
-func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, bundle, devicePath string) error {
-
-	saveInfo := []saveFromTo{
-		{
-			from: candiBashibleDir,
-			to:   bashibleDir,
-			data: templateData,
-			ignorePaths: map[string]struct{}{
-				filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
-			},
-		},
+//nolint:prealloc
+func PrepareBashibleBundle(
+	templateController *Controller,
+	templateData map[string]interface{},
+	provider string,
+	devicePath string,
+	dc *directoryconfig.DirectoryConfig,
+) error {
+	_, err := os.Stat(candiBashibleDir)
+	if err != nil {
+		if dc == nil {
+			return fmt.Errorf("could not get value of dc.DownloadDir")
+		}
+		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
+		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
 	}
+	saveInfo := make([]saveFromTo, 0)
+	saveInfo = append(saveInfo, saveFromTo{
+		from: candiBashibleDir,
+		to:   bashibleDir,
+		data: templateData,
+		ignorePaths: map[string]struct{}{
+			filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
+		},
+	})
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
@@ -133,16 +166,36 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 	return fs.CreateFileWithContent(devicePathFile, devicePath)
 }
 
-func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {
+func GetKubeadmVersion(kubernetesVersion string) (string, error) {
+	return kubeadmV1Beta4, nil
+}
+
+func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}, dc *directoryconfig.DirectoryConfig) error {
+	_, err := os.Stat(candiDir)
+	if err != nil {
+		// fallback to alternative
+		if dc == nil {
+			return fmt.Errorf("could not get value of dc.DownloadDir")
+		}
+		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
+		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
+	}
+	cc := templateData["clusterConfiguration"].(map[string]interface{})
+	k8sVer := cc["kubernetesVersion"].(string)
+	kubeadmVersion, err := GetKubeadmVersion(k8sVer)
+	if err != nil {
+		return err
+	}
+
 	saveInfo := []saveFromTo{
 		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm"),
-			to:   filepath.Join(bashibleDir, "kubeadm"),
+			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion),
+			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion),
 			data: templateData,
 		},
 		{
-			from: filepath.Join(candiDir, "control-plane-kubeadm", "patches"),
-			to:   filepath.Join(bashibleDir, "kubeadm", "patches"),
+			from: filepath.Join(candiDir, "control-plane-kubeadm", kubeadmVersion, "patches"),
+			to:   filepath.Join(bashibleDir, "kubeadm", kubeadmVersion, "patches"),
 			data: templateData,
 		},
 	}
@@ -155,27 +208,13 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 	return nil
 }
 
-func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
-	filteredData := make(map[string]interface{}, len(data))
-	for key, value := range data {
-		if key != "nodeGroup" {
-			filteredData[key] = value
-		}
-	}
-	return filteredData
-}
-
-func RenderAndSaveDetectBundle(data map[string]interface{}) (string, error) {
-	log.DebugLn("Start render detect bundle script")
-
-	return RenderAndSaveTemplate("detect_bundle.sh", detectBundlePath, data)
-}
-
 func InitGlobalVars(pwd string) {
 	candiDir = pwd + "/deckhouse/candi"
 	candiBashibleDir = candiDir + "/bashible"
-	detectBundlePath = candiBashibleDir + "/detect_bundle.sh"
 	checkPortsScriptPath = candiBashibleDir + "/preflight/check_ports.sh.tpl"
 	checkLocalhostScriptPath = candiBashibleDir + "/preflight/check_localhost.sh.tpl"
+	checkDeckhouseUserScriptPath = candiBashibleDir + "/preflight/check_deckhouse_user.sh.tpl"
 	preflightScriptDirPath = candiBashibleDir + "/preflight/"
+	killReverseTunnelPath = candiBashibleDir + "/preflight/kill_reverse_tunnel.sh.tpl"
+	checkProxyRevTunnelOpenScriptPath = candiBashibleDir + "/preflight/check_reverse_tunnel_open.sh.tpl"
 }

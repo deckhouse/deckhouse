@@ -26,13 +26,6 @@ If it doesn't matter whether the changes will be backported into the patch relea
 Delete the section if the PR is for release, and not for the patch release.
 -->
 
-## What is the expected result?
-<!---
-  How can one check these changes after applying?  
-
-  Describe, what (resource, state, event, etc.) MUST or MUST NOT change/happen after applying these changes.
--->
-
 ## Checklist
 - [ ] The code is covered by unit tests.
 - [ ] e2e tests passed.

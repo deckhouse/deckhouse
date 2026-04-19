@@ -27,7 +27,7 @@ mkdir -p /var/lib/kubelet
 # Check CRI type and set appropriated parameters.
 # cgroup default is `systemd`.
 cgroup_driver="systemd"
-{{- if eq .cri "Containerd" }}
+{{- if or (eq .cri "Containerd") (eq .cri "ContainerdV2") }}
 # Overriding cgroup type from external config file
 if [ -f /var/lib/bashible/cgroup_config ]; then
   cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
@@ -50,15 +50,7 @@ if [[ -z "${cri_socket_path}" ]]; then
   bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
   exit 1
 fi
-
-{{- else if eq .cri "Containerd" }}
-cri_type="Containerd"
 {{- end }}
-
-
-if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
-  criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
-fi
 
 # Calculate eviction thresholds.
 
@@ -101,7 +93,16 @@ if [ "$(($nodefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdNodefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-imagefsSize=$(df --output=size $criDir | tail -n1)
+{{- if not (eq .cri "NotManaged") }}
+# Get CRI directory for eviction thresholds calculation
+criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
+# fallback
+if [ -z "$criDir" ] || [ "$criDir" = "null" ]; then
+  criDir="/var/lib/containerd"
+fi
+imagefsSize=$(df --output=size "$criDir" | tail -n1)
+imagefsInodes=$(df --output=itotal "$criDir" | tail -n1)
+
 imagefsSizeGFivePercent=$((imagefsSize/(1000*1000)*5/100))
 if [ "$imagefsSizeGFivePercent" -gt "$maxAvailableReservedSpace" ]; then
   evictionHardThresholdImagefsAvailable="${maxAvailableReservedSpace}G"
@@ -110,7 +111,6 @@ if [ "$(($imagefsSizeGFivePercent*2))" -gt "$(($maxAvailableReservedSpace*2))" ]
   evictionSoftThresholdImagefsAvailable="$(($maxAvailableReservedSpace*2))G"
 fi
 
-imagefsInodes=$(df --output=itotal $criDir | tail -n1)
 imagefsInodesKFivePercent=$((imagefsInodes/1000*5/100))
 if [ "$imagefsInodesKFivePercent" -gt "$needInodesFree" ]; then
   evictionHardThresholdImagefsInodesFree="${needInodesFree}k"
@@ -118,9 +118,13 @@ fi
 if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
+{{- else }}
+# For NotManaged CRI, use default percentage-based imagefs thresholds
+# We don't calculate absolute values since CRI is managed externally
+{{- end }}
 
-shutdownGracePeriod="2m"
-shutdownGracePeriodCriticalPods="15s"
+shutdownGracePeriod="115"
+shutdownGracePeriodCriticalPods="15"
 
 if [[ -f /var/lib/bashible/cloud-provider-variables ]]; then
   source /var/lib/bashible/cloud-provider-variables
@@ -136,15 +140,37 @@ fi
 check_python
 function resources_management_memory_units_to_bytes {
   $python_binary -c "
-from decimal import *
-getcontext().prec = 100
-def numfmt_to_bytes(human_number):
-    units = {'Ki': 1024, 'Mi': 1024**2, 'Gi': 1024**3, 'Ti': 1024**4, 'Pi': 1024**5, 'Ei': 1024**6, 'k': 1000, 'M': 1000**2, 'G': 1000**3, 'T': 1000**4, 'P': 1000**5, 'E': 1000**6, 'm': 0.001}
+import sys
+from decimal import Decimal
+
+def numfmt_to_bytes(human_number, multiplier = 1):
+    m = float(multiplier)
+    units = {
+        'Ki': 1024,
+        'Mi': 1024**2,
+        'Gi': 1024**3,
+        'Ti': 1024**4,
+        'Pi': 1024**5,
+        'Ei': 1024**6,
+        'k': 1000,
+        'M': 1000**2,
+        'G': 1000**3,
+        'T': 1000**4,
+        'P': 1000**5,
+        'E': 1000**6,
+        'm': 0.001,
+    }
     for unit, factor in units.items():
         if human_number.endswith(unit):
-            return Decimal(Decimal(human_number[:-len(unit)]) * Decimal(factor)).quantize(1)
-    return Decimal(human_number).quantize(1)
-print(numfmt_to_bytes('$1'))"
+            return Decimal(float(human_number[: -len(unit)]) * factor * m).quantize(1)
+    return Decimal(float(human_number) * m).quantize(1)
+
+human_number = sys.argv[1]
+multiplier = 1
+if len(sys.argv) > 2:
+    if len(sys.argv[2]) > 0:
+        multiplier = float(sys.argv[2])
+print(numfmt_to_bytes(human_number, multiplier))" $1 $2
 }
 
 total_memory=$(free -m|awk '/^Mem:/{print $2}')
@@ -153,39 +179,41 @@ total_memory=$(free -m|awk '/^Mem:/{print $2}')
 {{- if eq $resourceReservationMode "Auto" }}
 # https://github.com/openshift/machine-config-operator/blob/bd24f17943eb95309fe78327f8f3eabd104ab577/templates/common/_base/files/kubelet-auto-sizing.yaml / 3
 function dynamic_memory_sizing {
-    recommended_systemreserved_memory=0
-    if (($total_memory <= 4096)); then # 8% of the first 4GB of memory
-        recommended_systemreserved_memory=$(echo $total_memory 0.08 | awk '{print $1 * $2}')
-        total_memory=0
+    local recommended_systemreserved_memory=0
+    local t_memory=$total_memory
+
+    if (($t_memory <= 4096)); then # 8% of the first 4GB of memory
+        recommended_systemreserved_memory=$(echo $t_memory 0.08 | awk '{print $1 * $2}')
+        t_memory=0
     else
         recommended_systemreserved_memory=333
-        total_memory=$((total_memory-4096))
+        t_memory=$((t_memory-4096))
     fi
-    if (($total_memory <= 4096)); then # 6% of the next 4GB of memory (up to 8GB)
-        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.06 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
-        total_memory=0
+    if (($t_memory <= 4096)); then # 6% of the next 4GB of memory (up to 8GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $t_memory 0.06 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        t_memory=0
     else
         recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 252 | awk '{print $1 + $2}')
-        total_memory=$((total_memory-4096))
+        t_memory=$((t_memory-4096))
     fi
-    if (($total_memory <= 8192)); then # 3% of the next 8GB of memory (up to 16GB)
-        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.03 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
-        total_memory=0
+    if (($t_memory <= 8192)); then # 3% of the next 8GB of memory (up to 16GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $t_memory 0.03 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        t_memory=0
     else
         recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 246 | awk '{print $1 + $2}')
-        total_memory=$((total_memory-8192))
+        t_memory=$((t_memory-8192))
     fi
-    if (($total_memory <= 114688)); then # 2% of the next 112GB of memory (up to 128GB)
-        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.02 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
-        total_memory=0
+    if (($t_memory <= 114688)); then # 2% of the next 112GB of memory (up to 128GB)
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $t_memory 0.02 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+        t_memory=0
     else
         recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory 2240 | awk '{print $1 + $2}')
-        total_memory=$((total_memory-114688))
+        t_memory=$((t_memory-114688))
     fi
-    if (($total_memory >= 0)); then # 1% of any memory above 128GB
-        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $total_memory 0.01 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
+    if (($t_memory >= 0)); then # 1% of any memory above 128GB
+        recommended_systemreserved_memory=$(echo $recommended_systemreserved_memory $(echo $t_memory 0.01 | awk '{print $1 * $2}') | awk '{print $1 + $2}')
     fi
-    recommended_systemreserved_memory=$(resources_management_memory_units_to_bytes $(echo $recommended_systemreserved_memory | awk '{printf("%.0fMi",$1)}'))
+    recommended_systemreserved_memory=$(resources_management_memory_units_to_bytes "${recommended_systemreserved_memory}Mi")
     echo -n "${recommended_systemreserved_memory}"
 }
 {{- else if eq $resourceReservationMode "Static" }}
@@ -195,12 +223,12 @@ function dynamic_memory_sizing {
 {{- end }}
 
 function eviction_hard_threshold_memory_available {
-  return=$(resources_management_memory_units_to_bytes $(echo $total_memory 0.01 | awk '{print $1 * $2}' | awk '{printf("%.0fMi",$1)}'))
+  return=$(resources_management_memory_units_to_bytes "${total_memory}Mi" 0.01)
   echo -n "${return}"
 }
 
 function eviction_soft_threshold_memory_available {
-  return=$(resources_management_memory_units_to_bytes $(echo $total_memory 0.02 | awk '{print $1 * $2}' | awk '{printf("%.0fMi",$1)}'))
+  return=$(resources_management_memory_units_to_bytes "${total_memory}Mi" 0.02)
   echo -n "${return}"
 }
 
@@ -270,7 +298,17 @@ evictionSoftGracePeriod:
 evictionPressureTransitionPeriod: 4m0s
 evictionMaxPodGracePeriod: 90
 evictionMinimumReclaim: null
+{{- if ((.nodeGroup).kubelet).memorySwap }}
+  {{- $swapBehavior := .nodeGroup.kubelet.memorySwap.swapBehavior | default "NoSwap" }}
+failSwapOn: false
+memorySwap:
+  swapBehavior: {{ $swapBehavior }}
+{{- else }}
 failSwapOn: true
+{{- end }}
+{{- if semverCompare ">=1.35" .kubernetesVersion }}
+failCgroupV1: false
+{{- end }}
 tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_GCM_SHA256"]
 {{- if ne .runType "ClusterBootstrap" }}
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
@@ -282,12 +320,33 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
-{{- if semverCompare "< 1.30" .kubernetesVersion }}
-  ValidatingAdmissionPolicy: true
-{{- end }}
   RotateKubeletServerCertificate: true
 {{- if eq $topologyManagerEnabled true }}
   MemoryManager: true
+{{- end }}
+{{- if semverCompare "<=1.32" .kubernetesVersion }}
+  InPlacePodVerticalScaling: true
+{{- end }}
+{{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
+{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */}}
+  DynamicResourceAllocation: true
+{{- end }}
+{{- if semverCompare ">=1.32 <1.33" .kubernetesVersion }}
+{{- /* DRAResourceClaimDeviceStatus: Alpha in 1.32, Beta in 1.33 (for BindsToNode) */}}
+  DRAResourceClaimDeviceStatus: true
+{{- end }}
+{{- if semverCompare ">=1.33" .kubernetesVersion }}
+{{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */}}
+  DRAPartitionableDevices: true
+{{- end }}
+{{- if semverCompare ">=1.34" .kubernetesVersion }}
+{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */}}
+  DRADeviceBindingConditions: true
+  DRAConsumableCapacity: true
+  DRAExtendedResource: true
+{{- end }}
+{{- range .allowedKubeletFeatureGates }}
+  {{ . }}: true
 {{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
@@ -298,9 +357,20 @@ kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
 httpCheckFrequency: 20s
 maxOpenFiles: 1000000
-{{- $max_pods := 110 }}
-{{- if hasKey .nodeGroup "kubelet" }}
-  {{- $max_pods = .nodeGroup.kubelet.maxPods | default $max_pods }}
+{{- $max_pods := 120 }}
+{{- if (((.nodeGroup).kubelet).maxPods) }}
+  {{- $max_pods = .nodeGroup.kubelet.maxPods | int }}
+{{- else }}
+  {{- $prefix := .normal.podSubnetNodeCIDRPrefix | default "24" | int }}
+  {{- if ge $prefix 24 }}
+    {{- $max_pods = 120 }}
+  {{- else if eq $prefix 23 }}
+    {{- $max_pods = 250 }}
+  {{- else if eq $prefix 22 }}
+    {{- $max_pods = 500 }}
+  {{- else if le $prefix 21 }}
+    {{- $max_pods = 1000 }}
+  {{- end }}
 {{- end }}
 maxPods: {{ $max_pods }}
 nodeStatusUpdateFrequency: {{ .nodeStatusUpdateFrequency | default "10" }}s
@@ -341,13 +411,16 @@ volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
 protectKernelDefaults: true
-{{- if or (eq .cri "Containerd") (eq .cri "NotManaged") }}
 containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
-{{- end }}
 allowedUnsafeSysctls:  ["net.*"]
-shutdownGracePeriod: ${shutdownGracePeriod}
-shutdownGracePeriodCriticalPods: ${shutdownGracePeriodCriticalPods}
+shutdownGracePeriodByPodPriority:
+- priority: 2000000999
+  shutdownGracePeriodSeconds: 5
+- priority: 1999999999
+  shutdownGracePeriodSeconds: ${shutdownGracePeriodCriticalPods}
+- priority: 0
+  shutdownGracePeriodSeconds: ${shutdownGracePeriod}
 {{- if hasKey .nodeGroup "staticInstances" }}
 providerID: $(cat /var/lib/bashible/node-spec-provider-id)
 {{- end }}

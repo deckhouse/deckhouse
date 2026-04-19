@@ -1,0 +1,49 @@
+<mxfile host="65bd71144e">
+    <diagram id="2xkKjrrqf5umLNx4A2ML" name="PODS and VMS">
+        <mxGraphModel dx="927" dy="808" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="690" pageHeight="980" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5fb;strokeColor=#f5f5fb;arcSize=4;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="120" width="520" height="280" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-2" value="Namespace" style="text;html=1;strokeColor=#f5f5fb;fillColor=#f5f5fb;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontSize=14;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="60" y="130" width="60" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-3" value="VM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0064ff;fontColor=#f5f5fb;strokeColor=#0064ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="70" y="200" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-10" value="VM" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0064ff;fontColor=#f5f5fb;strokeColor=#0064ff;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1" parent="1" vertex="1">
+                    <mxGeometry x="450" y="190" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-15" style="edgeStyle=entityRelationEdgeStyle;html=1;strokeWidth=2;fontSize=14;endArrow=none;endFill=0;strokeColor=#969dc4;fillColor=#969dc4;" parent="1" source="S7Z1PFq_hIaQKoyHMAMb-17" target="S7Z1PFq_hIaQKoyHMAMb-3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-16" style="edgeStyle=entityRelationEdgeStyle;html=1;strokeWidth=2;fontSize=14;endArrow=none;endFill=0;strokeColor=#969dc4;fillColor=#969dc4;" parent="1" source="S7Z1PFq_hIaQKoyHMAMb-17" target="S7Z1PFq_hIaQKoyHMAMb-10" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-20" style="edgeStyle=entityRelationEdgeStyle;html=1;strokeColor=#969dc4;strokeWidth=2;fontSize=14;endArrow=none;endFill=0;fillColor=#969dc4;" parent="1" source="S7Z1PFq_hIaQKoyHMAMb-17" target="S7Z1PFq_hIaQKoyHMAMb-18" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-17" value="" style="html=1;verticalLabelPosition=bottom;align=center;labelBackgroundColor=#ffffff;verticalAlign=top;strokeWidth=2;strokeColor=#cdd1e6;shadow=0;dashed=0;shape=mxgraph.ios7.icons.cloud;fontSize=14;fillColor=#cdd1e6;" parent="1" vertex="1">
+                    <mxGeometry x="240" y="230" width="100" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-18" value="POD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#969dc4;strokeColor=#969dc4;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1;fontColor=#f5f5fb;" parent="1" vertex="1">
+                    <mxGeometry x="240" y="150" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-23" style="edgeStyle=entityRelationEdgeStyle;html=1;strokeColor=#969dc4;strokeWidth=2;fontSize=14;endArrow=none;endFill=0;fillColor=#969dc4;" parent="1" source="S7Z1PFq_hIaQKoyHMAMb-19" target="S7Z1PFq_hIaQKoyHMAMb-17" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-19" value="POD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#969dc4;strokeColor=#969dc4;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1;fontColor=#f5f5fb;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="320" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-22" style="edgeStyle=entityRelationEdgeStyle;html=1;strokeColor=#969dc4;strokeWidth=2;fontSize=14;endArrow=none;endFill=0;fillColor=#969dc4;" parent="1" source="S7Z1PFq_hIaQKoyHMAMb-21" target="S7Z1PFq_hIaQKoyHMAMb-17" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="S7Z1PFq_hIaQKoyHMAMb-21" value="POD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#969dc4;strokeColor=#969dc4;strokeWidth=2;fontFamily=JetBrains Mono;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;fontStyle=1;fontColor=#f5f5fb;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="320" width="80" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

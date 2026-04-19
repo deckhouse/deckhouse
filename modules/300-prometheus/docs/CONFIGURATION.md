@@ -11,19 +11,19 @@ The module does not require any configuration – it works right out-of-the-box.
 
 ## Authentication
 
-[user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
+[user-authn](/modules/user-authn/) module provides authentication by default. Also, externalAuthentication can be configured (see below).
 If these options are disabled, the module will use basic auth with the auto-generated password and the user `admin`.
 
-Use kubectl to see password:
+Use d8 k to see password:
 
 ```shell
-kubectl -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values prometheus -o json | jq '.internal.auth.password'
+d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values prometheus -o json | jq '.internal.auth.password'
 ```
 
 Delete the Secret to re-generate password:
 
 ```shell
-kubectl -n d8-monitoring delete secret/basic-auth
+d8 k -n d8-monitoring delete secret/basic-auth
 ```
 
 > **Note!** The `auth.password` parameter is deprecated.

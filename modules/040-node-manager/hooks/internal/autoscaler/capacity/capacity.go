@@ -283,6 +283,38 @@ func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog
 	return catalog.Get(c)
 }
 
+type dvpInstanceClass struct {
+	VirtualMachine struct {
+		CPU struct {
+			Cores int `json:"cores"`
+		} `json:"cpu"`
+
+		Memory struct {
+			Size string `json:"size"`
+		} `json:"memory"`
+	} `json:"virtualMachine"`
+}
+
+func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
+	cpuStr := strconv.FormatInt(int64(d.VirtualMachine.CPU.Cores), 10)
+
+	cpuRes, err := resource.ParseQuantity(cpuStr)
+	if err != nil {
+		return nil, err
+	}
+
+	memRes, err := resource.ParseQuantity(d.VirtualMachine.Memory.Size)
+	if err != nil {
+		return nil, err
+	}
+
+	return &v1alpha1.InstanceType{
+		CPU:      cpuRes,
+		Memory:   memRes,
+		RootDisk: resource.MustParse("0"),
+	}, nil
+}
+
 type testInstanceClass struct {
 	Capacity *Capacity `json:"capacity,omitempty"`
 	Type     string    `json:"type,omitempty"`
@@ -353,6 +385,10 @@ func CalculateNodeTemplateCapacity(instanceClassName string, instanceClassSpec i
 
 	case "HuaweiCloudInstanceClass":
 		var spec huaweiCloudInstanceClass
+		extractor = &spec
+
+	case "DVPInstanceClass":
+		var spec dvpInstanceClass
 		extractor = &spec
 
 	case "D8TestInstanceClass":

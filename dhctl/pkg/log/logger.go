@@ -21,15 +21,20 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+	"reflect"
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/gookit/color"
 	"github.com/werf/logboek"
 	"github.com/werf/logboek/pkg/level"
 	"github.com/werf/logboek/pkg/types"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
+
+	external "github.com/deckhouse/lib-dhctl/pkg/log"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
@@ -44,13 +49,67 @@ func init() {
 }
 
 type LoggerOptions struct {
-	OutStream io.Writer
-	Width     int
-	IsDebug   bool
+	OutStream   io.Writer
+	Width       int
+	IsDebug     bool
+	DebugStream io.Writer
 }
 
-func InitLogger(loggerType string) {
-	InitLoggerWithOptions(loggerType, LoggerOptions{IsDebug: app.IsDebug})
+type debugLogWriter struct {
+	DebugStream io.Writer
+}
+
+type klogWriterWrapper struct {
+	logger Logger
+}
+
+func newKlogWriterWrapper(logger Logger) *klogWriterWrapper {
+	return &klogWriterWrapper{logger: logger}
+}
+
+func (l *klogWriterWrapper) Write(p []byte) (int, error) {
+	l.logger.LogDebugF("klog: %s", string(p))
+
+	return len(p), nil
+}
+
+func InitLogger(loggerType string) error {
+	return InitExternalLogger(loggerType)
+}
+
+func InitExternalLogger(loggerType string) error {
+	extLogger, err := external.NewLogger(external.Type(loggerType), app.IsDebug)
+	if err != nil {
+		return err
+	}
+	l := &ExternalLogger{logger: extLogger}
+	defaultLogger = l
+
+	err = initExternalKlog(l)
+	if err != nil {
+		return err
+	}
+	// Mute Shell-Operator logs
+	log.Default().SetLevel(log.LevelFatal)
+	if app.IsDebug {
+		// Enable shell-operator log, because it captures klog output
+		// todo: capture output of klog with default logger instead
+		log.Default().SetLevel(log.LevelDebug)
+		// Wrap them with our default logger
+		log.Default().SetOutput(defaultLogger)
+	}
+
+	return nil
+}
+
+func initExternalKlog(logger *ExternalLogger) error {
+	sanitizer := external.NewKeywordSanitizer().WithAdditionalKeywords(sensitiveKeywords)
+	err := external.InitKlog(logger.logger, external.WithKlogSanitizer(sanitizer))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
@@ -65,20 +124,38 @@ func WrapLoggerWithTeeLogger(writer io.WriteCloser, bufSize int) error {
 	return nil
 }
 
+func initKlog(logger Logger) {
+	// we always init klog with maximal log level because we use wrapper for klog output which
+	// redirects all output to our logger and our logger doing all "perfect"
+	// (logs will out in standalone installer and dhctl-server)
+	flags := &flag.FlagSet{}
+	klog.InitFlags(flags)
+	klog.SetLogFilter(&LogSanitizer{}) // filter sensitive keywords
+	_ = flags.Set("logtostderr", "false")
+	_ = flags.Set("v", "10")
+
+	klog.SetOutput(newKlogWriterWrapper(logger))
+}
+
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
+	var l Logger
 	switch loggerType {
 	case "pretty":
-		defaultLogger = NewPrettyLogger(opts)
+		l = NewPrettyLogger(opts)
 	// todo: add simple logger when our slog implementation will be support not only json formatter
 	// case "simple":
 	// 	defaultLogger = NewSimpleLogger(opts)
 	case "json":
-		defaultLogger = NewJSONLogger(opts)
+		l = NewJSONLogger(opts)
 	case "silent":
-		defaultLogger = emptyLogger
+		l = emptyLogger
 	default:
 		panic("unknown logger type: " + app.LoggerType)
 	}
+
+	defaultLogger = l
+
+	initKlog(l)
 
 	// Mute Shell-Operator logs
 	log.Default().SetLevel(log.LevelFatal)
@@ -86,16 +163,8 @@ func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		log.Default().SetLevel(log.LevelDebug)
-		klog.InitFlags(nil)
-		_ = flag.CommandLine.Parse([]string{"-v=10"})
-
 		// Wrap them with our default logger
 		log.Default().SetOutput(defaultLogger)
-	} else {
-		klog.SetOutput(io.Discard)
-		flags := &flag.FlagSet{}
-		klog.InitFlags(flags)
-		flags.Set("logtostderr", "false")
 	}
 }
 
@@ -106,6 +175,9 @@ func WrapWithTeeLogger(writer io.WriteCloser, bufSize int) error {
 	}
 
 	defaultLogger = l
+
+	initKlog(l)
+
 	return nil
 }
 
@@ -139,6 +211,7 @@ type Logger interface {
 	LogJSON([]byte)
 
 	ProcessLogger() ProcessLogger
+	NewSilentLogger() *SilentLogger
 
 	CreateBufferLogger(buffer *bytes.Buffer) Logger
 
@@ -164,16 +237,18 @@ type styleEntry struct {
 }
 
 type PrettyLogger struct {
-	processTitles map[string]styleEntry
-	isDebug       bool
-	logboekLogger types.LoggerInterface
+	processTitles  map[string]styleEntry
+	isDebug        bool
+	logboekLogger  types.LoggerInterface
+	debugLogWriter *debugLogWriter
 }
 
 func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
 			"common":           {"🎈 ~ Common: %s", CommonOptions},
-			"terraform":        {"🌱 ~ Terraform: %s", TerraformOptions},
+			"preflight":        {"🎈 ~ Preflight checks %s", CommonOptions},
+			"infrastructure":   {"🌱 ~ Infrastructure: %s", InfrastructureOptions},
 			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
 			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},
 			"mirror":           {"🪞 ~ Mirror: %s", MirrorOptions},
@@ -188,6 +263,10 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 		res.logboekLogger = logboek.DefaultLogger().NewSubLogger(opts.OutStream, opts.OutStream)
 	} else {
 		res.logboekLogger = logboek.DefaultLogger()
+	}
+
+	if opts.DebugStream != nil && !reflect.ValueOf(opts.DebugStream).IsNil() {
+		res.debugLogWriter = &debugLogWriter{DebugStream: opts.DebugStream}
 	}
 
 	res.logboekLogger.SetAcceptedLevel(level.Info)
@@ -215,6 +294,10 @@ func (d *PrettyLogger) ProcessLogger() ProcessLogger {
 	return newPrettyProcessLogger(d.logboekLogger)
 }
 
+func (d *PrettyLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
+}
+
 func (d *PrettyLogger) LogProcess(p, t string, run func() error) error {
 	format, ok := d.processTitles[p]
 	if !ok {
@@ -240,12 +323,28 @@ func (d *PrettyLogger) LogErrorLn(a ...interface{}) {
 }
 
 func (d *PrettyLogger) LogDebugF(format string, a ...interface{}) {
+	if d.debugLogWriter != nil {
+		o := fmt.Sprintf(format, a...)
+		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "cannot write debug log (%s): %v", o, err)
+		}
+	}
+
 	if d.isDebug {
 		d.logboekLogger.Info().LogF(format, a...)
 	}
 }
 
 func (d *PrettyLogger) LogDebugLn(a ...interface{}) {
+	if d.debugLogWriter != nil {
+		o := fmt.Sprintln(a...)
+		_, err := d.debugLogWriter.DebugStream.Write([]byte(o))
+		if err != nil {
+			d.logboekLogger.Info().LogF("cannot write debug log (%s): %v", o, err)
+		}
+	}
+
 	if d.isDebug {
 		d.logboekLogger.Info().LogLn(a...)
 	}
@@ -302,7 +401,7 @@ type SimpleLogger struct {
 
 func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 	//todo: now unused, need change formatter to text when our slog implementation will support it
-	l := log.NewLogger(log.Options{})
+	l := log.NewLogger()
 
 	if opts.OutStream != nil {
 		l.SetOutput(opts.OutStream)
@@ -315,17 +414,19 @@ func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 }
 
 func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
-	//json is default formatter for our slog implementation
-	l := log.NewLogger(log.Options{})
+	// json is default formatter for our slog implementation
+	l := log.NewLogger()
 
 	if opts.OutStream != nil {
 		l.SetOutput(opts.OutStream)
 	}
 
-	return &SimpleLogger{
+	res := &SimpleLogger{
 		logger:  l,
 		isDebug: opts.IsDebug,
 	}
+
+	return res
 }
 
 func (d *SimpleLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
@@ -334,6 +435,10 @@ func (d *SimpleLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
 
 func (d *SimpleLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *SimpleLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
 }
 
 func (d *SimpleLogger) FlushAndClose() error {
@@ -348,30 +453,30 @@ func (d *SimpleLogger) LogProcess(p, t string, run func() error) error {
 }
 
 func (d *SimpleLogger) LogInfoF(format string, a ...interface{}) {
-	d.logger.Infof(format, a...)
+	d.logger.Info(format, a...)
 }
 
 func (d *SimpleLogger) LogInfoLn(a ...interface{}) {
-	d.logger.Infof("%v", a)
+	d.logger.Info(fmt.Sprintf("%v", a))
 }
 
 func (d *SimpleLogger) LogErrorF(format string, a ...interface{}) {
-	d.logger.Errorf(format, a...)
+	d.logger.Error(format, a...)
 }
 
 func (d *SimpleLogger) LogErrorLn(a ...interface{}) {
-	d.logger.Errorf("%v", a)
+	d.logger.Error(fmt.Sprintf("%v", a))
 }
 
 func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
 	if d.isDebug {
-		d.logger.Debugf(format, a...)
+		d.logger.Debug(format, a...)
 	}
 }
 
 func (d *SimpleLogger) LogDebugLn(a ...interface{}) {
 	if d.isDebug {
-		d.logger.Debugf("%v", a)
+		d.logger.Debug(fmt.Sprintf("%v", a))
 	}
 }
 
@@ -389,11 +494,11 @@ func (d *SimpleLogger) LogFailRetry(l string) {
 }
 
 func (d *SimpleLogger) LogWarnF(format string, a ...interface{}) {
-	d.logger.Warnf(format, a...)
+	d.logger.Warn(format, a...)
 }
 
 func (d *SimpleLogger) LogWarnLn(a ...interface{}) {
-	d.logger.Warnf("%v", a)
+	d.logger.Warn(fmt.Sprintf("%v", a))
 }
 
 func (d *SimpleLogger) LogJSON(content []byte) {
@@ -401,7 +506,7 @@ func (d *SimpleLogger) LogJSON(content []byte) {
 }
 
 func (d *SimpleLogger) Write(content []byte) (int, error) {
-	d.logger.Infof(string(content))
+	d.logger.Info(string(content))
 	return len(content), nil
 }
 
@@ -409,6 +514,10 @@ type DummyLogger struct{}
 
 func (d *DummyLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *DummyLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
 }
 
 func (d *DummyLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
@@ -483,6 +592,106 @@ func (d *DummyLogger) Write(content []byte) (int, error) {
 	return len(content), nil
 }
 
+type ExternalProcessLogger struct {
+	logger external.ProcessLogger
+}
+
+func (e *ExternalProcessLogger) LogProcessStart(name string) {
+	e.logger.ProcessStart(name)
+}
+
+func (e *ExternalProcessLogger) LogProcessEnd() {
+	e.logger.ProcessEnd()
+}
+
+func (e *ExternalProcessLogger) LogProcessFail() {
+	e.logger.ProcessFail()
+}
+
+func newExternalProcessLogger(logger external.ProcessLogger) *ExternalProcessLogger {
+	return &ExternalProcessLogger{logger: logger}
+}
+
+type ExternalLogger struct {
+	logger external.Logger
+}
+
+func (e *ExternalLogger) GetLogger() external.Logger {
+	return e.logger
+}
+
+func (e *ExternalLogger) ProcessLogger() ProcessLogger {
+	return newExternalProcessLogger(e.logger.ProcessLogger())
+}
+
+func (e *ExternalLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
+}
+
+func (e *ExternalLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
+	return &ExternalLogger{logger: e.logger.BufferLogger(buffer)}
+}
+
+func (e *ExternalLogger) FlushAndClose() error {
+	return e.logger.FlushAndClose()
+}
+
+func (e *ExternalLogger) LogProcess(p, t string, run func() error) error {
+	return e.logger.Process(external.Process(p), t, run)
+}
+
+func (e *ExternalLogger) LogInfoF(format string, a ...interface{}) {
+	e.logger.InfoFWithoutLn(format, a...)
+}
+
+func (e *ExternalLogger) LogInfoLn(a ...interface{}) {
+	e.logger.InfoLn(a...)
+}
+
+func (e *ExternalLogger) LogErrorF(format string, a ...interface{}) {
+	e.logger.ErrorF(format, a...)
+}
+
+func (e *ExternalLogger) LogErrorLn(a ...interface{}) {
+	e.logger.ErrorF("%v", a...)
+}
+
+func (e *ExternalLogger) LogDebugF(format string, a ...interface{}) {
+	e.logger.DebugF(format, a...)
+}
+
+func (e *ExternalLogger) LogDebugLn(a ...interface{}) {
+	e.logger.DebugF("%v", a...)
+}
+
+func (e *ExternalLogger) LogSuccess(l string) {
+	e.logger.Success(l)
+}
+
+func (e *ExternalLogger) LogFail(l string) {
+	e.logger.Fail(l)
+}
+
+func (e *ExternalLogger) LogFailRetry(l string) {
+	e.logger.FailRetry(l)
+}
+
+func (e *ExternalLogger) LogWarnLn(a ...interface{}) {
+	e.logger.WarnF("%s", a...)
+}
+
+func (e *ExternalLogger) LogWarnF(format string, a ...interface{}) {
+	e.logger.WarnFWithoutLn(format, a...)
+}
+
+func (e *ExternalLogger) LogJSON(content []byte) {
+	e.logger.JSON(content)
+}
+
+func (e *ExternalLogger) Write(content []byte) (int, error) {
+	return e.logger.Write(content)
+}
+
 func FlushAndClose() error {
 	return defaultLogger.FlushAndClose()
 }
@@ -548,13 +757,30 @@ func GetDefaultLogger() Logger {
 }
 
 func GetSilentLogger() Logger {
-	return emptyLogger
+	switch defaultLogger.(type) {
+	default:
+		return emptyLogger
+	case *TeeLogger:
+		return defaultLogger.NewSilentLogger()
+	}
 }
 
-type SilentLogger struct{}
+type SilentLogger struct {
+	t *TeeLogger
+}
+
+func NewSilentLogger() *SilentLogger {
+	return &SilentLogger{
+		t: nil,
+	}
+}
 
 func (d *SilentLogger) ProcessLogger() ProcessLogger {
 	return newWrappedProcessLogger(d)
+}
+
+func (d *SilentLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{}
 }
 
 func (d *SilentLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
@@ -571,42 +797,81 @@ func (d *SilentLogger) FlushAndClose() error {
 }
 
 func (d *SilentLogger) LogInfoF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogInfoLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogErrorF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogErrorLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogDebugF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogDebugLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogSuccess(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
 }
 
 func (d *SilentLogger) LogFail(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
 }
 
 func (d *SilentLogger) LogFailRetry(l string) {
+	if d.t != nil {
+		d.t.writeToFile(l)
+	}
 }
 
 func (d *SilentLogger) LogWarnLn(a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintln(a...))
+	}
 }
 
 func (d *SilentLogger) LogWarnF(format string, a ...interface{}) {
+	if d.t != nil {
+		d.t.writeToFile(fmt.Sprintf(format, a...))
+	}
 }
 
 func (d *SilentLogger) LogJSON(content []byte) {
+	if d.t != nil {
+		d.t.writeToFile(string(content))
+	}
 }
 
 func (d *SilentLogger) Write(content []byte) (int, error) {
+	if d.t != nil {
+		d.t.writeToFile(string(content))
+	}
 	return len(content), nil
 }
 
@@ -679,12 +944,18 @@ func (d *TeeLogger) ProcessLogger() ProcessLogger {
 	return d.l.ProcessLogger()
 }
 
+func (d *TeeLogger) NewSilentLogger() *SilentLogger {
+	return &SilentLogger{
+		t: d,
+	}
+}
+
 func (d *TeeLogger) LogProcess(msg, t string, run func() error) error {
-	d.writeToFile(fmt.Sprintf("Start process %s", t))
+	d.writeToFile(fmt.Sprintf("Start process %s\n", t))
 
 	err := d.l.LogProcess(msg, t, run)
 
-	d.writeToFile(fmt.Sprintf("End process %s", t))
+	d.writeToFile(fmt.Sprintf("End process %s\n", t))
 
 	return err
 }
@@ -790,5 +1061,4 @@ func (d *TeeLogger) writeToFile(content string) {
 	if _, err := d.buf.Write([]byte(contentWithTimestamp)); err != nil {
 		d.l.LogDebugF("Cannot write to TeeLog: %v", err)
 	}
-
 }

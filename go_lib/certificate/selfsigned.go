@@ -18,7 +18,9 @@ package certificate
 
 import (
 	"bytes"
+	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	"github.com/cloudflare/cfssl/cli/genkey"
@@ -52,7 +54,7 @@ func WithSigningDefaultUsage(usage []string) SigningOption {
 }
 
 func GenerateSelfSignedCert(logger go_hook.Logger, cn string, ca Authority, options ...interface{}) (Certificate, error) {
-	logger.Debugf("Generate self-signed cert for %s", cn)
+	logger.Debug("Generate self-signed cert", slog.String("cn", cn))
 	request := &csr.CertificateRequest{
 		CN: cn,
 		KeyRequest: &csr.KeyRequest{
@@ -77,19 +79,19 @@ func GenerateSelfSignedCert(logger go_hook.Logger, cn string, ca Authority, opti
 	g := &csr.Generator{Validator: genkey.Validator}
 	csrBytes, key, err := g.ProcessRequest(request)
 	if err != nil {
-		return Certificate{}, err
+		return Certificate{}, fmt.Errorf("process request: %w", err)
 	}
 
 	req := signer.SignRequest{Request: string(csrBytes)}
 
 	parsedCa, err := helpers.ParseCertificatePEM([]byte(ca.Cert))
 	if err != nil {
-		return Certificate{}, err
+		return Certificate{}, fmt.Errorf("parse certificate pem: %w", err)
 	}
 
 	priv, err := helpers.ParsePrivateKeyPEM([]byte(ca.Key))
 	if err != nil {
-		return Certificate{}, err
+		return Certificate{}, fmt.Errorf("parse private key pem: %w", err)
 	}
 
 	signingConfig := &config.Signing{
@@ -104,12 +106,12 @@ func GenerateSelfSignedCert(logger go_hook.Logger, cn string, ca Authority, opti
 
 	s, err := local.NewSigner(priv, parsedCa, signer.DefaultSigAlgo(priv), signingConfig)
 	if err != nil {
-		return Certificate{}, err
+		return Certificate{}, fmt.Errorf("new signer: %w", err)
 	}
 
 	cert, err := s.Sign(req)
 	if err != nil {
-		return Certificate{}, err
+		return Certificate{}, fmt.Errorf("sign: %w", err)
 	}
 
 	return Certificate{CA: ca.Cert, Key: string(key), Cert: string(cert)}, nil

@@ -16,8 +16,9 @@ spec:
     - kube-{{ .Chart.Name }}
   endpoints:
   - port: http-metrics
+    honorLabels: true
     relabelings:
-    - regex: namespace|pod|service|endpoint
+    - regex: pod|service|endpoint
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_service_label_app]
       targetLabel: pushgateway

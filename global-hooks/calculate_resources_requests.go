@@ -15,6 +15,7 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -48,7 +51,7 @@ func applyNodesResourcesFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	node := &v1.Node{}
 	err := sdk.FromUnstructured(obj, node)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	n := &Node{}
@@ -79,7 +82,7 @@ var (
 	}, calculateResourcesRequests)
 )
 
-func calculateResourcesRequests(input *go_hook.HookInput) error {
+func calculateResourcesRequests(_ context.Context, input *go_hook.HookInput) error {
 	var (
 		calculatedMasterNodeMilliCPU int64
 		calculatedMasterNodeMemory   int64
@@ -90,18 +93,22 @@ func calculateResourcesRequests(input *go_hook.HookInput) error {
 		discoveryMasterNodeMilliCPU int64
 		discoveryMasterNodeMemory   int64
 	)
-	snapshots := input.Snapshots["NodesResources"]
+
+	nodes, err := sdkobjectpatch.UnmarshalToStruct[Node](input.Snapshots, "NodesResources")
+	if err != nil {
+		return fmt.Errorf("unmarshal NodesResources snapshots: %v", err)
+	}
 
 	// Managed cloud
-	if len(snapshots) == 0 {
+	if len(nodes) == 0 {
 		return nil
 	}
 
 	// Hardcoded maximum values for master node resources
 	discoveryMasterNodeMilliCPU = hardLimitMilliCPU
 	discoveryMasterNodeMemory = hardLimitMemory
-	for _, snapshot := range snapshots {
-		n := snapshot.(*Node)
+
+	for _, n := range nodes {
 		if n.AllocatableMilliCPU < discoveryMasterNodeMilliCPU && absDiff(n.AllocatableMilliCPU, discoveryMasterNodeMilliCPU) > kubeletResourceReservationCPU {
 			discoveryMasterNodeMilliCPU = n.AllocatableMilliCPU
 		}

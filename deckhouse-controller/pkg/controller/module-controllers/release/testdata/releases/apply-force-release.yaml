@@ -1,0 +1,56 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: parca-1.2.1
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+spec:
+  moduleName: parca
+  version: 1.2.1
+  weight: 900
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleRelease
+metadata:
+  name: parca-1.5.2
+  labels:
+    module: parca
+    modules.deckhouse.io/update-policy: parca
+    release-checksum: fd59af7328ed891b53cc999f242b0866
+    source: test
+  annotations:
+    modules.deckhouse.io/force: "true"
+spec:
+  moduleName: parca
+  version: 1.5.2
+  weight: 900
+status:
+  phase: Pending
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: c12a99d96e9ec5e0b07d24cc9615835f
+  finalizers:
+    - modules.deckhouse.io/release-exists
+  name: test
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModuleUpdatePolicy
+metadata:
+  name: parca
+spec:
+  releaseChannel: Alpha
+  update:
+    mode: Auto
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: parca

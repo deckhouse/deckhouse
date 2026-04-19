@@ -1,0 +1,62 @@
+diff --git a/speaker/main.go b/speaker/main.go
+index ee0b0eb5..ae185a6f 100644
+--- a/speaker/main.go
++++ b/speaker/main.go
+@@ -38,7 +38,6 @@ import (
+ 	"sigs.k8s.io/controller-runtime/pkg/event"
+ 	"sigs.k8s.io/yaml"
+ 
+-	"go.universe.tf/metallb/internal/bgp"
+ 	"go.universe.tf/metallb/internal/config"
+ 	"go.universe.tf/metallb/internal/k8s"
+ 	"go.universe.tf/metallb/internal/k8s/controllers"
+@@ -235,7 +234,6 @@ func main() {
+ 		os.Exit(1)
+ 	}
+ 	ctrl.client = client
+-	ctrl.protocolHandlers[config.BGP].SetEventCallback(client.BGPEventCallback)
+ 
+ 	sList.Start(client)
+ 	defer sList.Stop()
+@@ -286,30 +284,10 @@ type controllerConfig struct {
+ }
+ 
+ func newController(cfg controllerConfig) (*controller, error) {
+-	secretHandling := SecretPassThrough
+-	// FrrK8s mode and frr-k8s deployed in a separate namespace, we don't have
+-	// permissions to write secrets there.
+-	if cfg.Namespace != cfg.FRRK8sNamespace && cfg.bgpType == bgpFrrK8s {
+-		secretHandling = SecretConvert
+-	}
+-
+-	bgpController := &bgpController{
+-		logger:             cfg.Logger,
+-		myNode:             cfg.MyNode,
+-		svcAds:             make(map[string][]*bgp.Advertisement),
+-		activeAds:          make(map[string]sets.Set[string]),
+-		adsChangedCallback: cfg.BGPAdsChangedCallback,
+-		bgpType:            cfg.bgpType,
+-		sessionManager:     newBGP(cfg),
+-		ignoreExcludeLB:    cfg.IgnoreExcludeLB,
+-		secretHandling:     secretHandling,
+-	}
+-	bgpPeersFetcher := bgpController.PeersForService
++	var bgpPeersFetcher controllers.PeersForService = func(key string) sets.Set[string] { return nil }
+ 
+-	handlers := map[config.Proto]Protocol{
+-		config.BGP: bgpController,
+-	}
+-	protocols := []config.Proto{config.BGP}
++	handlers := map[config.Proto]Protocol{}
++	protocols := []config.Proto{}
+ 
+ 	layer2StatusFetcher := func(types.NamespacedName) []layer2.IPAdvertisement { return nil }
+ 	if !cfg.DisableLayer2 {
+@@ -338,7 +316,6 @@ func newController(cfg controllerConfig) (*controller, error) {
+ 		layer2StatusFetchFunc: layer2StatusFetcher,
+ 		bgpPeersFetcher:       bgpPeersFetcher,
+ 	}
+-	ret.announced[config.BGP] = map[string]bool{}
+ 	ret.announced[config.Layer2] = map[string]bool{}
+ 
+ 	ret.nodes = make(map[string]*v1.Node)

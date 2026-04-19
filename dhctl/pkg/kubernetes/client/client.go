@@ -14,8 +14,11 @@
 
 package client
 
+//nolint:gci
 import (
+	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	klient "github.com/flant/kube-client/client"
@@ -26,13 +29,13 @@ import (
 
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
@@ -42,13 +45,14 @@ type KubeClient interface {
 	APIResourceList(apiVersion string) ([]*metav1.APIResourceList, error)
 	APIResource(apiVersion, kind string) (*metav1.APIResource, error)
 	GroupVersionResource(apiVersion, kind string) (schema.GroupVersionResource, error)
+	InvalidateDiscoveryCache()
 }
 
 // KubernetesClient connects to kubernetes API server through ssh tunnel and kubectl proxy.
 type KubernetesClient struct {
 	KubeClient
 	NodeInterface node.Interface
-	KubeProxy     *frontend.KubeProxy
+	KubeProxy     node.KubeProxy
 }
 
 type KubernetesInitParams struct {
@@ -56,6 +60,7 @@ type KubernetesInitParams struct {
 	KubeConfigContext string
 
 	KubeConfigInCluster bool
+	RestConfig          *rest.Config
 }
 
 func NewKubernetesClient() *KubernetesClient {
@@ -71,12 +76,14 @@ func NewFakeKubernetesClientWithListGVR(gvr map[schema.GroupVersionResource]stri
 }
 
 func (k *KubernetesClient) WithNodeInterface(client node.Interface) *KubernetesClient {
-	k.NodeInterface = client
+	if client != nil && !reflect.ValueOf(client).IsNil() {
+		k.NodeInterface = client
+	}
 	return k
 }
 
-func (k *KubernetesClient) NodeInterfaceAsSSHClient() *ssh.Client {
-	if k.NodeInterface == nil {
+func (k *KubernetesClient) NodeInterfaceAsSSHClient() node.SSHClient {
+	if k.NodeInterface == nil || reflect.ValueOf(k.NodeInterface).IsNil() {
 		return nil
 	}
 
@@ -90,6 +97,14 @@ func (k *KubernetesClient) NodeInterfaceAsSSHClient() *ssh.Client {
 
 // Init initializes kubernetes client
 func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
+	return k.InitContext(context.Background(), params)
+}
+
+func (k *KubernetesClient) InitContext(ctx context.Context, params *KubernetesInitParams) error {
+	return k.initContext(ctx, params)
+}
+
+func (k *KubernetesClient) initContext(ctx context.Context, params *KubernetesInitParams) error {
 	kubeClient := klient.New()
 	kubeClient.WithRateLimiterSettings(30, 60)
 	_, isLocalRun := k.NodeInterface.(*local.NodeInterface)
@@ -99,18 +114,27 @@ func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 	case params.KubeConfig != "":
 		kubeClient.WithContextName(params.KubeConfigContext)
 		kubeClient.WithConfigPath(params.KubeConfig)
+	case params.RestConfig != nil:
+		kubeClient.WithRestConfig(params.RestConfig)
 	case isLocalRun:
-		_, err := k.StartKubernetesProxy()
+		_, err := k.StartKubernetesProxy(ctx)
 		if err != nil {
 			return err
 		}
 	default:
-		port, err := k.StartKubernetesProxy()
+		port, err := k.StartKubernetesProxy(ctx)
 		if err != nil {
 			return err
 		}
 		kubeClient.WithServer("http://localhost:" + port)
 	}
+
+	// allow only accept json for prevent
+	// return protobuf from server
+	// because we log all requests/responses to log
+	// debug log is "broken" because protobuf response
+	// output as formatted byte array
+	kubeClient.WithAcceptOnlyJSONContentType(true)
 
 	// Initialize kube client for kube events hooks.
 	err := kubeClient.Init()
@@ -123,9 +147,10 @@ func (k *KubernetesClient) Init(params *KubernetesInitParams) error {
 }
 
 // StartKubernetesProxy initializes kubectl-proxy on remote host and establishes ssh tunnel to it
-func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
+func (k *KubernetesClient) StartKubernetesProxy(ctx context.Context) (string, error) {
 	if wrapper, ok := k.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if port, err = k.startRemoteKubeProxy(wrapper.Client()); err != nil {
+		port, err := k.startRemoteKubeProxy(ctx, wrapper.Client())
+		if err != nil {
 			return "", fmt.Errorf("start kube proxy: %s", err)
 		}
 		return port, nil
@@ -134,20 +159,23 @@ func (k *KubernetesClient) StartKubernetesProxy() (port string, err error) {
 	return "6445", nil
 }
 
-func (k *KubernetesClient) startRemoteKubeProxy(sshCl *ssh.Client) (port string, err error) {
-	err = retry.NewLoop("Starting kube proxy", sshCl.Settings.CountHosts(), 1*time.Second).Run(func() error {
-		log.InfoF("Using host %s\n", sshCl.Settings.Host())
+func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.SSHClient) (string, error) {
+	var port string
+	var err error
+	err = retry.NewLoop("Starting kube proxy", sshCl.Session().CountHosts(), 1*time.Second).
+		RunContext(ctx, func() error {
+			log.InfoF("Using host %s\n", sshCl.Session().Host())
 
-		k.KubeProxy = sshCl.KubeProxy()
-		port, err = k.KubeProxy.Start(-1)
+			k.KubeProxy = sshCl.KubeProxy()
+			port, err = k.KubeProxy.Start(-1)
 
-		if err != nil {
-			sshCl.Settings.ChoiceNewHost()
-			return fmt.Errorf("start kube proxy: %v", err)
-		}
+			if err != nil {
+				sshCl.Session().ChoiceNewHost()
+				return fmt.Errorf("start kube proxy: %v", err)
+			}
 
-		return nil
-	})
+			return nil
+		})
 
 	if err != nil {
 		return "", err

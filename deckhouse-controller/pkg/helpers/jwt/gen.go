@@ -25,12 +25,12 @@ import (
 func GenJWT(privateKeyPath string, claims map[string]string, ttl time.Duration) error {
 	privKeyBytes, err := os.ReadFile(privateKeyPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("os.ReadFile: %w", err)
 	}
 
 	tokenString, err := jwt.GenerateJWT(privKeyBytes, claims, ttl)
 	if err != nil {
-		return err
+		return fmt.Errorf("jwt.GenerateJWT: %w", err)
 	}
 
 	fmt.Fprint(os.Stdout, tokenString)

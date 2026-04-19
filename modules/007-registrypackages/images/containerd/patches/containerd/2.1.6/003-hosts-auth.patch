@@ -1,0 +1,278 @@
+diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/hosts.go
+index 40d451af0..c9210e5e0 100644
+--- a/core/remotes/docker/config/hosts.go
++++ b/core/remotes/docker/config/hosts.go
+@@ -20,6 +20,7 @@ package config
+ import (
+ 	"context"
+ 	"crypto/tls"
++	"encoding/base64"
+ 	"fmt"
+ 	"net"
+ 	"net/http"
+@@ -59,9 +60,19 @@ type hostConfig struct {
+ 
+ 	rewrites []hostPathRewrite
+ 
++	auth authConfig
++
+ 	// TODO: Add credential configuration (domain alias, username)
+ }
+ 
++// authConfig holds authentication-related parameters for interacting with a registry.
++type authConfig struct {
++	userName      string
++	password      string
++	auth          string
++	identityToken string
++}
++
+ // HostPathRewrite is used to confirure rewrite paths in the mirror hosts
+ type hostPathRewrite struct {
+ 	regexp      *regexp.Regexp
+@@ -166,19 +177,39 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+ 			}
+ 		}
+ 
+-		authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
+-		if options.Credentials != nil {
+-			authOpts = append(authOpts, docker.WithAuthCreds(options.Credentials))
+-		}
+-		authOpts = append(authOpts, options.AuthorizerOpts...)
+-		authorizer := docker.NewDockerAuthorizer(authOpts...)
+-
+ 		rhosts := make([]docker.RegistryHost, len(hosts))
+ 		for i, host := range hosts {
+ 			// Allow setting for each host as well
+ 			explicitTLSFromHost := host.caCerts != nil || host.clientPairs != nil || host.skipVerify != nil
+ 			explicitTLS := tlsConfigured || explicitTLSFromHost
+ 
++			authOpts := []docker.AuthorizerOpt{docker.WithAuthClient(client)}
++			hostAuth := host.auth // copy to local variable from loop variable
++
++			var credsFunc func(host string) (string, string, error)
++
++			if options.Credentials != nil {
++				optsCreds := options.Credentials // copy to local variable
++
++				credsFunc = func(host string) (string, string, error) {
++					u, p, err := optsCreds(host)
++
++					if (u != "" && p != "") || err != nil {
++						return u, p, err
++					}
++
++					// use creds from registry config options as fallback in the case
++					// of credentials from puller is empty
++					return parseAuth(&hostAuth)
++				}
++			} else {
++				credsFunc = func(host string) (string, string, error) {
++					return parseAuth(&hostAuth)
++				}
++			}
++			authOpts = append(authOpts, docker.WithAuthCreds(credsFunc))
++			authOpts = append(authOpts, options.AuthorizerOpts...)
++
+ 			if explicitTLSFromHost || host.dialTimeout != nil || len(host.header) != 0 {
+ 				c := *client
+ 				if explicitTLSFromHost || host.dialTimeout != nil {
+@@ -217,7 +248,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+ 				rhosts[i].Authorizer = docker.NewDockerAuthorizer(append(authOpts, docker.WithAuthClient(&c))...)
+ 			} else {
+ 				rhosts[i].Client = client
+-				rhosts[i].Authorizer = authorizer
++				rhosts[i].Authorizer = docker.NewDockerAuthorizer(authOpts...)
+ 			}
+ 
+ 			// When TLS has been configured for the operation or host and
+@@ -240,6 +271,7 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
+ 			rhosts[i].Path = host.path
+ 			rhosts[i].Capabilities = host.capabilities
+ 			rhosts[i].Header = host.header
++			rhosts[i].Credentials = credsFunc
+ 
+ 			if len(host.rewrites) > 0 {
+ 				rhosts[i].RepoRewrites = make([]docker.RegistryHostRepoRewrite, len(host.rewrites))
+@@ -398,6 +430,19 @@ type hostFileConfig struct {
+ 		Replacement string `toml:"replace"`
+ 	} `toml:"rewrite"`
+ 
++	Auth struct {
++		// Username is the username to login the registry.
++		Username string `toml:"username" json:"username"`
++		// Password is the password to login the registry.
++		Password string `toml:"password" json:"password"`
++		// Auth is a base64 encoded string from the concatenation of the username,
++		// a colon, and the password.
++		Auth string `toml:"auth" json:"auth"`
++		// IdentityToken is used to authenticate the user and get
++		// an access token for the registry.
++		IdentityToken string `toml:"identitytoken" json:"identitytoken"`
++	} `toml:"auth"`
++
+ 	// TODO: Credentials: helper? name? username? alternate domain? token?
+ }
+ 
+@@ -583,6 +628,13 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
+ 		}
+ 	}
+ 
++	result.auth = authConfig{
++		userName:      config.Auth.Username,
++		password:      config.Auth.Password,
++		auth:          config.Auth.Auth,
++		identityToken: config.Auth.IdentityToken,
++	}
++
+ 	return result, nil
+ }
+ 
+@@ -687,3 +739,31 @@ func loadCertFiles(ctx context.Context, certsDir string) ([]hostConfig, error) {
+ 	}
+ 	return hosts, nil
+ }
++
++// parseAuth parses AuthConfig and returns username and password/secret required by containerd.
++func parseAuth(auth *authConfig) (string, string, error) {
++	if auth == nil {
++		return "", "", nil
++	}
++	if auth.userName != "" {
++		return auth.userName, auth.password, nil
++	}
++	if auth.identityToken != "" {
++		return "", auth.identityToken, nil
++	}
++	if auth.auth != "" {
++		decLen := base64.StdEncoding.DecodedLen(len(auth.auth))
++		decoded := make([]byte, decLen)
++		_, err := base64.StdEncoding.Decode(decoded, []byte(auth.auth))
++		if err != nil {
++			return "", "", err
++		}
++		user, passwd, ok := strings.Cut(string(decoded), ":")
++		if !ok {
++			return "", "", fmt.Errorf("invalid decoded auth: %q", decoded)
++		}
++		return user, strings.Trim(passwd, "\x00"), nil
++	}
++
++	return "", "", nil
++}
+diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/config/hosts_test.go
+index bfa1dde8c..2faebea32 100644
+--- a/core/remotes/docker/config/hosts_test.go
++++ b/core/remotes/docker/config/hosts_test.go
+@@ -300,6 +300,70 @@ replace = "/other/path2"
+ 	}
+ }
+ 
++func TestParseHostFileWithAuth(t *testing.T) {
++	const testtoml = `
++server = "https://test-default.registry"
++[auth]
++username = "user"
++password = "password"
++
++[host."https://mirror.registry"]
++  capabilities = ["pull"]
++  [host."https://mirror.registry".auth]
++    username = "user2"
++    password = "password2"
++
++[host."https://mirror-bak.registry/us"]
++  capabilities = ["pull"]
++  [host."https://mirror-bak.registry/us".auth]
++    username = "user3"
++    password = "password3"
++`
++	expected := []hostConfig{
++		{
++			scheme:       "https",
++			host:         "mirror.registry",
++			path:         "/v2",
++			capabilities: docker.HostCapabilityPull,
++			auth:         authConfig{userName: "user2", password: "password2"},
++		},
++		{
++			scheme:       "https",
++			host:         "mirror-bak.registry",
++			path:         "/us/v2",
++			capabilities: docker.HostCapabilityPull,
++			auth:         authConfig{userName: "user3", password: "password3"},
++		},
++		{
++			scheme:       "https",
++			host:         "test-default.registry",
++			path:         "/v2",
++			capabilities: allCaps,
++			auth:         authConfig{userName: "user", password: "password"},
++		},
++	}
++	hosts, err := parseHostsFile("", []byte(testtoml))
++	if err != nil {
++		t.Fatal(err)
++	}
++
++	defer func() {
++		if t.Failed() {
++			t.Log("HostConfigs...\nActual:\n" + printHostConfig(hosts) + "Expected:\n" + printHostConfig(expected))
++		}
++	}()
++
++	if len(hosts) != len(expected) {
++		t.Fatalf("Unexpected number of hosts %d, expected %d", len(hosts), len(expected))
++	}
++
++	for i := range hosts {
++		if !compareHostConfig(hosts[i], expected[i]) {
++			t.Fatalf("Mismatch at host %d", i)
++		}
++	}
++}
++
+ func TestLoadCertFiles(t *testing.T) {
+ 	dir := t.TempDir()
+ 
+@@ -656,6 +720,20 @@ func compareHostConfig(j, k hostConfig) bool {
+ 			return false
+ 		}
+ 	}
++
++	if j.auth.userName != k.auth.userName {
++		return false
++	}
++	if j.auth.password != k.auth.password {
++		return false
++	}
++	if j.auth.auth != k.auth.auth {
++		return false
++	}
++	if j.auth.identityToken != k.auth.identityToken {
++		return false
++	}
++
+ 	return true
+ }
+ 
+@@ -680,6 +758,7 @@ func printHostConfig(hc []hostConfig) string {
+ 		if hc[i].rewrites != nil {
+ 			fmt.Fprintf(b, "\t\trewrites: %#v\n", hc[i].rewrites)
+ 		}
++		fmt.Fprintf(b, "\t\tauth: %#v\n", hc[i].auth)
+ 		fmt.Fprintf(b, "\n")
+ 	}
+ 	return b.String()
+diff --git a/core/remotes/docker/registry.go b/core/remotes/docker/registry.go
+index 574a5dc35..e0a9850ef 100644
+--- a/core/remotes/docker/registry.go
++++ b/core/remotes/docker/registry.go
+@@ -78,6 +78,7 @@ type RegistryHost struct {
+ 	Capabilities HostCapabilities
+ 	Header       http.Header
+ 	RepoRewrites []RegistryHostRepoRewrite
++	Credentials  func(host string) (string, string, error)
+ }
+ 
+ type RegistryHostRepoRewrite struct {

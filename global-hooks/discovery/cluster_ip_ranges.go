@@ -15,6 +15,9 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,7 +27,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/filter"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -135,7 +141,7 @@ func applyClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	var cm v1core.Secret
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	clusterConf, ok := cm.Data["cluster-configuration.yaml"]
@@ -147,24 +153,35 @@ func applyClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.Fi
 }
 
 func applyPodSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return filter.GetArgFromUnstructuredPodWithRegexp(obj, podSubnetRegexp, 1, "kube-controller-manager")
+	result, err := filter.GetArgFromUnstructuredPodWithRegexp(obj, podSubnetRegexp, 1, "kube-controller-manager")
+	if err != nil {
+		return nil, fmt.Errorf("get arg from unstructured pod with regexp: %w", err)
+	}
+	return result, nil
 }
 
 func applyServiceSubnetsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return filter.GetArgFromUnstructuredPodWithRegexp(obj, serviceSubnetRegexp, 1, "kube-apiserver")
+	result, err := filter.GetArgFromUnstructuredPodWithRegexp(obj, serviceSubnetRegexp, 1, "kube-apiserver")
+	if err != nil {
+		return nil, fmt.Errorf("get arg from unstructured pod with regexp: %w", err)
+	}
+	return result, nil
 }
 
 func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string) string {
-	subnetsRaw := make([]go_hook.FilterResult, 0)
+	subnets := make([]string, 0)
 	for _, s := range snapshotsNames {
-		subnetsSnap := input.Snapshots[s]
+		subnetsSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, s)
+		if err != nil {
+			input.Logger.Warn("failed to unmarshal snapshot", slog.String("snapshot", s), log.Err(err))
+			continue
+		}
 		if len(subnetsSnap) > 0 {
-			subnetsRaw = append(subnetsRaw, input.Snapshots[s]...)
+			subnets = append(subnets, subnetsSnap...)
 		}
 	}
 
-	for _, subnetRaw := range subnetsRaw {
-		subnet := subnetRaw.(string)
+	for _, subnet := range subnets {
 		if subnet != "" {
 			return subnet
 		}
@@ -173,8 +190,8 @@ func getSubnetsFromSnapshots(input *go_hook.HookInput, snapshotsNames ...string)
 	return ""
 }
 
-func discoveryClusterIPRanges(input *go_hook.HookInput) error {
-	clusterConfigSnap := input.Snapshots[clusterConfigurationSnapName]
+func discoveryClusterIPRanges(_ context.Context, input *go_hook.HookInput) error {
+	clusterConfigSnap := input.Snapshots.Get(clusterConfigurationSnapName)
 	if len(clusterConfigSnap) > 0 {
 		return nil
 	}

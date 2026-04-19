@@ -1,0 +1,26 @@
+- name: kubernetes.node
+  rules:
+    - alert: LoadBalancerServiceWithoutExternalIP
+      expr: sum(kube_service_status_load_balancer_ingress or vector(0)) < sum(kube_service_spec_type{type="LoadBalancer"})
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__cluster_has_node_alerts: "LoadBalancerServiceCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__cluster_has_node_alerts: "LoadBalancerServiceCluster,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: A LoadBalancer has not been created.
+        description: |-
+          One or more services of the `LoadBalancer` type have not received an external address.
+
+          To list affected services, run the following command:
+
+          ```bash
+          d8 k get svc -Ao json | jq -r '.items[] | select(.spec.type == "LoadBalancer") | select(.status.loadBalancer.ingress[0].ip == null) | "namespace: \(.metadata.namespace), name: \(.metadata.name), ip: \(.status.loadBalancer.ingress[0].ip)"'
+          ```
+          
+          Steps to troubleshoot:
+
+          - Check the `cloud-controller-manager` logs in the `d8-cloud-provider-*` namespace.
+          - If you are using a bare-metal cluster with the `metallb` module enabled, ensure the address pool has not been exhausted.

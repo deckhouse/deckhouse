@@ -26,7 +26,7 @@ spec:
                     properties:
                       podSelector:
                         description: |-
-                          Настройка фильтра меток (label) по ресурсам.
+                          Настройка фильтра лейблов по ресурсам.
 
                           Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (операция `И`).
 
@@ -42,11 +42,11 @@ spec:
                                 Фильтр на основе выражения.
                               properties:
                                 key:
-                                  description: Имя метки.
+                                  description: Имя лейбла.
                                 operator:
                                   description: Оператор сравнения.
                                 values:
-                                  description: Значение метки.
+                                  description: Значение лейбла.
                           matchLabels:
                             description: |
-                              Фильтр на основе совпадения/несовпадения меток.
+                              Фильтр на основе совпадения/несовпадения лейблов.

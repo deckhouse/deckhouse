@@ -2,7 +2,7 @@
 title: "Cloud provider — GCP: examples"
 ---
 
-## An example of the `GCPInstanceClass`custom resource
+## An example of the `GCPInstanceClass` custom resource
 
 Below is a simple example of custom resource `GCPInstanceClass` configuration:
 
@@ -15,19 +15,57 @@ spec:
   machineType: n1-standard-1
 ```
 
+## Enabling nested virtualization
+
+To run virtual machine workloads (e.g., KVM-based VMs) inside GCP instances, enable nested virtualization.
+
+{% alert %}
+Only specific machine types support nested virtualization. See [the GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
+{% endalert %}
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: GCPInstanceClass
+metadata:
+  name: vm-nodes
+spec:
+  machineType: n2-standard-8
+  enableNestedVirtualization: true
+```
+
+## Adding additional disks
+
+To attach additional disks to instances (for example, for LINSTOR, Ceph, NFS storage nodes, and similar solutions), specify them in the `additionalDisks` parameter:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: GCPInstanceClass
+metadata:
+  name: storage-nodes
+spec:
+  machineType: n1-standard-8
+  additionalDisks:
+  - size: 200
+    type: pd-ssd
+  - size: 500
+    type: pd-standard
+    autoDelete: true
+```
+
 ## Configuring security policies on nodes
 
-There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in GCP:
+For cluster virtual machines in GCP, you may need to limit or expand incoming and outgoing traffic for various reasons. Some of these may include:
 
-* Allow VMs on a different subnet to connect to cluster nodes.
-* Allow connecting to the ports of the static node so that the application can work.
-* Restrict access to external resources or other VMs in the cloud for security reasons.
+- Allowing connections to cluster nodes from virtual machines from a different subnet.
+- Allow connections to static node ports for application operation.
+- Restricting access to external resources or other virtual machines in the cloud at the request of the security service.
 
-For all this, additional network tags should be used.
+For all this, additional network tags must be used.
 
 ## Enabling additional network tags on static and master nodes
 
 This parameter can be set either in an existing cluster or when creating one. In both cases, additional network tags are declared in the `GCPClusterConfiguration`:
+
 - for master nodes, in the `additionalNetworkTags` field of the `masterNodeGroup` section;
 - for static nodes, in the `additionalNetworkTags` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
 

@@ -1,20 +1,26 @@
 ---
+{{ $TricksterVersion := "1.1.5" }}
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
   add: /src/entrypoint
   to: /usr/local/bin/entrypoint
   before: setup
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/OPATH/trickster
   to: /usr/local/bin/trickster
   before: setup
-docker:
-  ENTRYPOINT: ["entrypoint"]
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["entrypoint"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/entrypoint
   to: /src/entrypoint
@@ -32,51 +38,71 @@ git:
   stageDependencies:
     install:
       - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v1.1.5 {{ .SOURCE_REPO }}/trickstercache/trickster.git /src/trickster
+  - git clone --depth 1 --branch v{{ $TricksterVersion }} $(cat /run/secrets/SOURCE_REPO)/trickstercache/trickster.git /src/trickster
   - cd /src/trickster
+  - git rev-parse HEAD > GITCOMMIT
   - git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -rf .git
-  - rm -rf .git
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+final: false
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/trickster
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - make build
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 COMMIT_HASH="$(cat GITCOMMIT)"
+  - |
+    export LDFLAGS="-X main.applicationBuildTime=$(date +%Y%m%d-%H:%M:%S) \
+    -X main.applicationGitCommitID=${COMMIT_HASH} \
+    -X main.applicationGoVersion=$(shell go version | awk '{print $$3}') \
+    -X main.applicationGoArch=${GOARCH}
+    -extldflags '-static' -w -s"
+  - go mod tidy
+  - go mod vendor
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="${LDFLAGS}" -o ./OPATH/trickster -a -v ./cmd/trickster/*.go` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - chown -R 64535:64535 /src
   - chmod 0700 /src/OPATH/trickster
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
-from: {{ .Images.BASE_GOLANG_23_ALPINE }}
+image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
+final: false
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/entrypoint
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   install:
   - cd /src
-  - export GOPROXY={{ .GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go mod download -x
+  - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -ldflags="-s -w" -o entrypoint
   - chown -R 64535:64535 /src
   - chmod 0700 /src/entrypoint
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

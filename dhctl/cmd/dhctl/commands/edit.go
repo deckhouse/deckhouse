@@ -15,20 +15,23 @@
 package commands
 
 import (
+	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineKubeFlags(parent)
-	app.DefineSSHFlags(parent, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(parent, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(parent)
 }
 
@@ -38,17 +41,27 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 	app.DefineSanityFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}
 
-		return operations.SecretEdit(kubeCl, name, "kube-system", secret, dataKey)
+		return operations.SecretEdit(kubeCl, name, "kube-system", secret, dataKey, map[string]string{
+			"name": name,
+		}, app.GetDirConfig())
 	})
 
 	return cmd

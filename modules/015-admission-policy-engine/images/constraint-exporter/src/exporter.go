@@ -20,13 +20,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flant/constraint_exporter/pkg/gatekeeper"
-	"github.com/flant/constraint_exporter/pkg/kinds"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	controllerClient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/flant/constraint_exporter/pkg/gatekeeper"
+	"github.com/flant/constraint_exporter/pkg/kinds"
 )
 
 type Exporter struct {
@@ -81,6 +82,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- gatekeeper.Up
 	ch <- gatekeeper.ConstraintViolation
 	ch <- gatekeeper.ConstraintInformation
+	ch <- gatekeeper.ConstraintViolationsTruncated
 }
 
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
@@ -141,12 +143,16 @@ func (e *Exporter) fetchConstraints(clientGVR controllerClient.Client) ([]gateke
 		return nil, err
 	}
 
-	allMetrics := make([]prometheus.Metric, 0)
+	// Preallocate: at least 1 metric per constraint (constraint info) plus some violations.
+	allMetrics := make([]prometheus.Metric, 0, len(constraints))
 	violationMetrics := gatekeeper.ExportViolations(constraints)
 	allMetrics = append(allMetrics, violationMetrics...)
 
 	constraintInformationMetrics := gatekeeper.ExportConstraintInformation(constraints)
 	allMetrics = append(allMetrics, constraintInformationMetrics...)
+
+	truncatedMetrics := gatekeeper.ExportViolationsTruncated(constraints)
+	allMetrics = append(allMetrics, truncatedMetrics...)
 
 	e.metrics = allMetrics
 

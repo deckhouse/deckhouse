@@ -1,0 +1,14 @@
+{{- if not (and (index . "HasAvailableModules") (not (hasKey (index . "AvailableModulesDict") "cloud-provider-dvp"))) }}
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
+git:
+- add: /{{ .ModulePath }}modules/030-cloud-provider-dvp/candi
+  to: /deckhouse/candi/cloud-providers/dvp
+import:
+- image: cloud-provider-dvp/terraform-manager
+  add: /terraform-manager/terraform-provider-kubernetes
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
+  before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
+{{- end }}

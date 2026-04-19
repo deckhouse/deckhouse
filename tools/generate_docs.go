@@ -19,3 +19,5 @@ package main
 //go:generate go run ./helm_generate/ authz-generate-roles
 
 //go:generate go run ./helm_generate/ alert-templates
+
+//go:generate go run ./helm_generate/ conversion

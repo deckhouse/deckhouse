@@ -24,14 +24,14 @@ kind: VerticalPodAutoscaler
 metadata:
   name: chrony
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
     name: chrony
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "chrony"
@@ -53,14 +53,14 @@ kind: VerticalPodAutoscaler
 metadata:
   name: chrony-master
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "chrony" "tier" "node")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: DaemonSet
     name: chrony-master
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "chrony"
@@ -107,6 +107,7 @@ spec:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: chrony-exporter
+      automountServiceAccountToken: true
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -187,9 +188,9 @@ spec:
   {{- end }}
       - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
         name: chrony-exporter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         args:
-        - '--web.listen-address=127.0.0.1:4228'
+        - '--web.listen-address=127.0.0.1:4245'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
         - '--collector.tracking'
         - '--collector.serverstats'
@@ -198,12 +199,12 @@ spec:
           httpGet:
             path: /healthz
             scheme: HTTPS
-            port: 4228
+            port: 4245
         readinessProbe:
           httpGet:
             path: /healthz
             scheme: HTTPS
-            port: 4228
+            port: 4245
         volumeMounts:
         - name: var-run
           mountPath: /var/run
@@ -214,10 +215,10 @@ spec:
             {{- include "chrony_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4228"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4245"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -232,7 +233,7 @@ spec:
             excludePaths:
             - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:4228/
+            - upstream: http://127.0.0.1:4245/
               path: /
               authorization:
                 resourceAttributes:
@@ -243,17 +244,17 @@ spec:
                   subresource: prometheus-metrics
                   name: chrony
         ports:
-        - containerPort: 4228
+        - containerPort: 4245
           name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 4228
+            port: 4245
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 4228
+            port: 4245
             scheme: HTTPS
         resources:
           requests:
@@ -265,9 +266,11 @@ spec:
       - name: tz-config
         hostPath:
           path: /etc/localtime
+          type: FileOrCreate
       - name: tzdata-config
         hostPath:
           path: /etc/timezone
+          type: FileOrCreate
       - name: etc-chrony
         emptyDir: {}
       - name: var-run
@@ -305,6 +308,7 @@ spec:
                 - master
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: chrony-exporter-master
+      automountServiceAccountToken: true
       hostNetwork: true
       imagePullSecrets:
       - name: deckhouse-registry
@@ -383,9 +387,9 @@ spec:
   {{- end }}
       - image: {{ include "helm_lib_module_image" (list . "chronyExporter") }}
         name: chrony-exporter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         args:
-        - '--web.listen-address=127.0.0.1:4228'
+        - '--web.listen-address=127.0.0.1:4245'
         - '--chrony.address=unix:///var/run/chrony/chronyd.sock'
         - '--collector.tracking'
         - '--collector.serverstats'
@@ -394,12 +398,12 @@ spec:
           httpGet:
             path: /healthz
             scheme: HTTPS
-            port: 4228
+            port: 4245
         readinessProbe:
           httpGet:
             path: /healthz
             scheme: HTTPS
-            port: 4228
+            port: 4245
         volumeMounts:
         - name: var-run
           mountPath: /var/run
@@ -410,10 +414,10 @@ spec:
             {{- include "chrony_exporter_resources" . | nindent 12 }}
 {{- end }}
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
-        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4228"
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4245"
         - "--v=2"
         - "--logtostderr=true"
         - "--stale-cache-interval=1h30m"
@@ -428,7 +432,7 @@ spec:
             excludePaths:
             - /healthz
             upstreams:
-            - upstream: http://127.0.0.1:4228/
+            - upstream: http://127.0.0.1:4245/
               path: /
               authorization:
                 resourceAttributes:
@@ -439,17 +443,17 @@ spec:
                   subresource: prometheus-metrics
                   name: chrony-master
         ports:
-        - containerPort: 4228
+        - containerPort: 4245
           name: https-metrics
         livenessProbe:
           httpGet:
             path: /livez
-            port: 4228
+            port: 4245
             scheme: HTTPS
         readinessProbe:
           httpGet:
             path: /livez
-            port: 4228
+            port: 4245
             scheme: HTTPS
         resources:
           requests:
@@ -461,9 +465,11 @@ spec:
       - name: tz-config
         hostPath:
           path: /etc/localtime
+          type: FileOrCreate
       - name: tzdata-config
         hostPath:
           path: /etc/timezone
+          type: FileOrCreate
       - name: etc-chrony
         emptyDir: {}
       - name: var-run

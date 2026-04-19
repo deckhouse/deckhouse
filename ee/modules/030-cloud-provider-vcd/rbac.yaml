@@ -1,3 +1,0 @@
-module: cloud-provider-vcd
-subsystems:
-  - infrastructure

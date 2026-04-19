@@ -54,17 +54,21 @@ func TestNodeOSVersionRequirement(t *testing.T) {
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
+}
 
-	t.Run("containerd requirement runs successfully", func(t *testing.T) {
-		requirements.SaveValue(hasNodesWithDocker, false)
-		ok, err := requirements.CheckRequirement(containerdRequirementsKey, "true")
+func TestUnmetCloudConditionsRequirement(t *testing.T) {
+	requirements.RemoveValue(unmetCloudConditionsKey)
+
+	t.Run("unmetCloudConditions requirement runs successfully", func(t *testing.T) {
+		requirements.SaveValue(unmetCloudConditionsKey, false)
+		ok, err := requirements.CheckRequirement(unmetCloudConditionsRequirementsKey, "true")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
-	t.Run("containerd requirement fails", func(t *testing.T) {
-		requirements.SaveValue(hasNodesWithDocker, true)
-		ok, err := requirements.CheckRequirement(containerdRequirementsKey, "true")
+	t.Run("unmetCloudConditions requirement fails", func(t *testing.T) {
+		requirements.SaveValue(unmetCloudConditionsKey, true)
+		ok, err := requirements.CheckRequirement(unmetCloudConditionsRequirementsKey, "true")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})

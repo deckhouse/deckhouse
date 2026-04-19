@@ -1,39 +1,54 @@
 {{- $commit := "b081f2ae9e011fd92fd23f6efa209601f5a20a01" }}
 ---
-artifact: kruise-state-metrics
-from: {{ $.Images.BASE_GOLANG_21_ALPINE_DEV }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+from: {{ index $.Images "builder/src" }}
+final: false
 git:
-  - add: /{{ $.ModulePath }}/modules/402-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
     to: /patches
     stageDependencies:
       install:
         - '**/*'
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
-  beforeInstall:
-    - apk add --no-cache openssh-client
-  setup:
-    - export GOPROXY={{ $.GOPROXY }} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-    - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-    - git clone {{ $.SOURCE_REPO }}/openkruise/kruise-state-metrics.git
-    - cd kruise-state-metrics
+  install:
+    - git clone $(cat /run/secrets/SOURCE_REPO)/openkruise/kruise-state-metrics.git /src
+    - cd /src
     - git checkout {{ $commit }}
     - git apply /patches/*.patch --verbose
-    - go mod tidy
-    - go mod vendor
-    - go build -mod=vendor -a -o /tmp/kruise-state-metrics main.go
+    - rm -rf ./vendor ./.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: {{ .GOPROXY }}
+shell:
+  setup:
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - cd /src/
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - go build -a -o /tmp/kruise-state-metrics main.go
     - chown -R 64535:64535 /tmp/kruise-state-metrics
     - chmod 0700 /tmp/kruise-state-metrics
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: common/distroless
+from: {{ index $.Images "base/distroless" }}
 import:
- - artifact: kruise-state-metrics
-   add: /tmp/kruise-state-metrics
-   to: /kruise-state-metrics
-   before: setup
-docker:
-  ENTRYPOINT: ["/kruise-state-metrics"]
-  USER: 64535
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /tmp/kruise-state-metrics
+    to: /kruise-state-metrics
+    before: setup
+imageSpec:
+  config:
+    entrypoint: ["/kruise-state-metrics"]

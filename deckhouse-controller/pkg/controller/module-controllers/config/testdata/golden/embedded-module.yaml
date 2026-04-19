@@ -1,0 +1,31 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/module-registered
+  name: test-module
+  resourceVersion: "1001"
+spec:
+  enabled: true
+status:
+  message: ""
+  version: "1"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test-module
+  resourceVersion: "999"
+properties: {}
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: EnabledByModuleConfig
+  phase: Ready

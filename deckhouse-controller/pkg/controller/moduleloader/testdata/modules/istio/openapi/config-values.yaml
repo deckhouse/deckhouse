@@ -1,0 +1,11 @@
+x-config-version: 3
+type: object
+properties:
+  dataPlane:
+    type: object
+    properties:
+      enableHTTP10:
+        type: boolean
+        default: false
+      proxyConfig:
+        type: object

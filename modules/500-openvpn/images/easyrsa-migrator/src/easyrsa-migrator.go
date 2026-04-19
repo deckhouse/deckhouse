@@ -19,14 +19,16 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type indexTxtLine struct {
@@ -40,11 +42,9 @@ type indexTxtLine struct {
 }
 
 type clientSecret struct {
-	commonName string
-	serial     string
-	cert       string
-	key        string
-	revokedAt  string
+	cert      string
+	key       string
+	revokedAt string
 }
 
 const (
@@ -100,9 +100,9 @@ func main() {
 	}
 	_, err = kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err == nil {
-		log.Infof("secret created (%s)", secretCA)
+		log.Info("secret created", slog.String("name", secretCA))
 	} else {
-		log.Errorf("error create secret: %s", err.Error())
+		log.Error("error create secret", log.Err(err))
 	}
 
 	serverCertFile, err := os.ReadFile(fmt.Sprintf("%s/pki/issued/server.crt", easyrsaDir))
@@ -127,9 +127,9 @@ func main() {
 	}
 	_, err = kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err == nil {
-		log.Infof("secret created (%s)", secretCA)
+		log.Info("secret created", slog.String("name", secretCA))
 	} else {
-		log.Errorf("error create secret: %s", err.Error())
+		log.Error("error create secret", log.Err(err))
 	}
 
 	taKeyFile, err := os.ReadFile(fmt.Sprintf("%s/pki/ta.key", easyrsaDir))
@@ -154,9 +154,9 @@ func main() {
 	}
 	_, err = kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err == nil {
-		log.Infof("secret created (%s)", secretCA)
+		log.Info("secret created", slog.String("name", secretCA))
 	} else {
-		log.Errorf("error create secret: %s", err.Error())
+		log.Error("error create secret", log.Err(err))
 	}
 
 	indexTxt := indexTxtParser(string(indexTxtFile))
@@ -171,7 +171,7 @@ func main() {
 
 		path := fmt.Sprintf("%s/pki/issued/%s.crt", easyrsaDir, cert.CommonName)
 		if !checkFileExists(path) {
-			log.Infof("file not found: %s", path)
+			log.Info("file not found", slog.String("path", path))
 			path = fmt.Sprintf("%s/pki/revoked/certs_by_serial/%s.crt", easyrsaDir, cert.SerialNumber)
 		}
 		file, err := os.ReadFile(path)
@@ -182,7 +182,7 @@ func main() {
 
 		path = fmt.Sprintf("%s/pki/private/%s.key", easyrsaDir, cert.CommonName)
 		if !checkFileExists(path) {
-			log.Infof("file not found: %s", path)
+			log.Info("file not found", slog.String("path", path))
 			path = fmt.Sprintf("%s/pki/revoked/private_by_serial/%s.key", easyrsaDir, cert.SerialNumber)
 		}
 		file, err = os.ReadFile(path)
@@ -196,7 +196,7 @@ func main() {
 		}
 
 		if cert.Flag != "V" && cert.Flag != "R" {
-			log.Errorf("unknown flag: %s", cert.Flag)
+			log.Error("unknown flag", slog.String("flag", cert.Flag))
 		}
 
 		data := map[string]string{
@@ -225,9 +225,9 @@ func main() {
 		}
 		_, err = kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 		if err == nil {
-			log.Infof("secret created (%s)", cert.CommonName)
+			log.Info("secret created", slog.String("name", cert.CommonName))
 		} else {
-			log.Errorf("error create secret: %s", err.Error())
+			log.Error("error create secret", log.Err(err))
 		}
 	}
 
@@ -241,9 +241,8 @@ func main() {
 
 	_, err = kubeClient.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if err != nil {
-		log.Errorf("error create secret: %s", easyrsaMigrated)
+		log.Error("error create secret", slog.String("name", easyrsaMigrated))
 	}
-
 }
 
 func indexTxtParser(txt string) []indexTxtLine {

@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,7 +26,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+const d8Namespace = "d8-system"
 
 // should run after start pod
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -33,17 +37,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(setLeaderLabelToPod))
 
 // setLeaderLabelToPod just add `deckhouse-leader` label to leader pod
-func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) error {
+func setLeaderLabelToPod(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	podName := os.Getenv("DECKHOUSE_POD")
 
 	client, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	pods, err := client.CoreV1().Pods(d8Namespace).List(context.Background(), metav1.ListOptions{LabelSelector: "app=deckhouse"})
 	if err != nil {
-		input.Logger.Warnf("Error getting deckhouse pods: %s", err)
+		input.Logger.Warn("Error getting deckhouse pods", log.Err(err))
 		return nil
 	}
 
@@ -56,7 +60,7 @@ func setLeaderLabelToPod(input *go_hook.HookInput, dc dependency.Container) erro
 			},
 		}
 
-		input.PatchCollector.MergePatch(patch, "v1", "Pod", d8Namespace, pod.Name)
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Pod", d8Namespace, pod.Name)
 	}
 
 	return nil

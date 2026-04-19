@@ -1,0 +1,18 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/distroless
+import:
+- from: {{ index $.Images "tools/coreutils" }}
+  add: /
+  to: /
+  before: setup
+  includePaths:
+  - usr/bin/mkdir
+  - usr/bin/touch
+  - usr/bin/ln
+- from: {{ index $.Images "tools/bash" }}
+  add: /usr/bin/bash
+  to: /bin/bash
+  before: setup
+git:
+{{- include "image mount points" $ }}

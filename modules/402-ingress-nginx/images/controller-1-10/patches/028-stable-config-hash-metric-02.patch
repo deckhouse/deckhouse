@@ -1,0 +1,357 @@
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 489f1f3d4..f530421a2 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -17,13 +17,14 @@ limitations under the License.
+ package controller
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"sort"
+ 	"strconv"
+ 	"strings"
+ 	"time"
+ 
+-	"github.com/mitchellh/hashstructure/v2"
++	"github.com/cespare/xxhash/v2"
+ 	apiv1 "k8s.io/api/core/v1"
+ 	networking "k8s.io/api/networking/v1"
+ 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+@@ -44,6 +45,7 @@ import (
+ 	"k8s.io/ingress-nginx/internal/ingress/inspector"
+ 	"k8s.io/ingress-nginx/internal/ingress/metric/collectors"
+ 	"k8s.io/ingress-nginx/internal/k8s"
++	ssl "k8s.io/ingress-nginx/internal/net/ssl"
+ 	"k8s.io/ingress-nginx/internal/nginx"
+ 	"k8s.io/ingress-nginx/pkg/apis/ingress"
+ 	utilingress "k8s.io/ingress-nginx/pkg/util/ingress"
+@@ -164,6 +166,245 @@ func (n *NGINXController) GetPublishService() *apiv1.Service {
+ 	return s
+ }
+ 
++// deepCopyConfigurationForHash returns a full deep copy of the configuration with variable
++// or per-pod data cleared (Backend.Endpoints, SSLCert.Certificate/CACertificate, L4Service.Endpoints)
++// so the copy is suitable for deterministic hashing.
++// All slices are canonically sorted so slice order cannot differ across pods.
++func deepCopyConfigurationForHash(cfg *ingress.Configuration) *ingress.Configuration {
++	if cfg == nil {
++		return nil
++	}
++	cfgCopy := &ingress.Configuration{
++		BackendConfigChecksum: cfg.BackendConfigChecksum,
++		ConfigurationChecksum: cfg.ConfigurationChecksum,
++	}
++	if len(cfg.Backends) > 0 {
++		cfgCopy.Backends = make([]*ingress.Backend, len(cfg.Backends))
++		for i, b := range cfg.Backends {
++			if b != nil {
++				bc := b.DeepCopy()
++				bc.Endpoints = nil
++				cfgCopy.Backends[i] = bc
++			}
++		}
++	}
++	if len(cfg.Servers) > 0 {
++		cfgCopy.Servers = make([]*ingress.Server, len(cfg.Servers))
++		for i, s := range cfg.Servers {
++			if s != nil {
++				cfgCopy.Servers[i] = deepCopyServerForHash(s)
++			}
++		}
++	}
++	if len(cfg.TCPEndpoints) > 0 {
++		cfgCopy.TCPEndpoints = make([]ingress.L4Service, len(cfg.TCPEndpoints))
++		for i := range cfg.TCPEndpoints {
++			cfgCopy.TCPEndpoints[i] = cfg.TCPEndpoints[i]
++			cfgCopy.TCPEndpoints[i].Endpoints = nil
++		}
++	}
++	if len(cfg.UDPEndpoints) > 0 {
++		cfgCopy.UDPEndpoints = make([]ingress.L4Service, len(cfg.UDPEndpoints))
++		for i := range cfg.UDPEndpoints {
++			cfgCopy.UDPEndpoints[i] = cfg.UDPEndpoints[i]
++			cfgCopy.UDPEndpoints[i].Endpoints = nil
++		}
++	}
++	if len(cfg.PassthroughBackends) > 0 {
++		cfgCopy.PassthroughBackends = make([]*ingress.SSLPassthroughBackend, len(cfg.PassthroughBackends))
++		for i, p := range cfg.PassthroughBackends {
++			if p != nil {
++				cfgCopy.PassthroughBackends[i] = &ingress.SSLPassthroughBackend{
++					Port:     p.Port,
++					Backend:  p.Backend,
++					Hostname: p.Hostname,
++				}
++			}
++		}
++	}
++	if cfg.DefaultSSLCertificate != nil {
++		cfgCopy.DefaultSSLCertificate = deepCopySSLCertForHash(cfg.DefaultSSLCertificate)
++	}
++	if len(cfg.StreamSnippets) > 0 {
++		cfgCopy.StreamSnippets = make([]string, len(cfg.StreamSnippets))
++		copy(cfgCopy.StreamSnippets, cfg.StreamSnippets)
++	}
++	sortConfigCopyForHash(cfgCopy)
++	return cfgCopy
++}
++
++// sortConfigCopyForHash sorts all slices in the config copy so hashing is order-independent.
++func sortConfigCopyForHash(cfg *ingress.Configuration) {
++	if cfg == nil {
++		return
++	}
++	sort.Slice(cfg.Backends, func(i, j int) bool {
++		if cfg.Backends[i] == nil {
++			return cfg.Backends[j] != nil
++		}
++		if cfg.Backends[j] == nil {
++			return false
++		}
++		return cfg.Backends[i].Name < cfg.Backends[j].Name
++	})
++	for _, b := range cfg.Backends {
++		if b == nil {
++			continue
++		}
++		if len(b.AlternativeBackends) > 1 {
++			sort.Strings(b.AlternativeBackends)
++		}
++		// Sort map values so serialization is deterministic (CookieSessionAffinity.Locations is map[string][]string).
++		if b.SessionAffinity.CookieSessionAffinity.Locations != nil {
++			for k, v := range b.SessionAffinity.CookieSessionAffinity.Locations {
++				if len(v) > 1 {
++					sort.Strings(v)
++					b.SessionAffinity.CookieSessionAffinity.Locations[k] = v
++				}
++			}
++		}
++	}
++	sort.Slice(cfg.Servers, func(i, j int) bool {
++		if cfg.Servers[i] == nil {
++			return cfg.Servers[j] != nil
++		}
++		if cfg.Servers[j] == nil {
++			return false
++		}
++		return cfg.Servers[i].Hostname < cfg.Servers[j].Hostname
++	})
++	for _, s := range cfg.Servers {
++		if s != nil && len(s.Locations) > 1 {
++			sort.Slice(s.Locations, func(i, j int) bool {
++				li, lj := s.Locations[i], s.Locations[j]
++				if li == nil {
++					return lj != nil
++				}
++				if lj == nil {
++					return false
++				}
++				if len(li.Path) != len(lj.Path) {
++					return len(li.Path) > len(lj.Path)
++				}
++				return li.Path > lj.Path
++			})
++		}
++		if s != nil && len(s.Aliases) > 1 {
++			sort.Strings(s.Aliases)
++		}
++	}
++	sort.Slice(cfg.TCPEndpoints, func(i, j int) bool {
++		return cfg.TCPEndpoints[i].Port < cfg.TCPEndpoints[j].Port
++	})
++	sort.Slice(cfg.UDPEndpoints, func(i, j int) bool {
++		return cfg.UDPEndpoints[i].Port < cfg.UDPEndpoints[j].Port
++	})
++	sort.Slice(cfg.PassthroughBackends, func(i, j int) bool {
++		if cfg.PassthroughBackends[i] == nil {
++			return cfg.PassthroughBackends[j] != nil
++		}
++		if cfg.PassthroughBackends[j] == nil {
++			return false
++		}
++		a, b := cfg.PassthroughBackends[i], cfg.PassthroughBackends[j]
++		if a.Hostname != b.Hostname {
++			return a.Hostname < b.Hostname
++		}
++		return a.Backend < b.Backend
++	})
++	if len(cfg.StreamSnippets) > 1 {
++		sort.Strings(cfg.StreamSnippets)
++	}
++}
++
++// deepCopyServerForHash returns a deep copy of the server with SSLCert certificate pointers
++// cleared. Locations are copied so the copy can be sorted; metadata is left in place.
++func deepCopyServerForHash(s *ingress.Server) *ingress.Server {
++	if s == nil {
++		return nil
++	}
++	out := &ingress.Server{
++		Hostname:               s.Hostname,
++		SSLPassthrough:         s.SSLPassthrough,
++		RedirectFromToWWW:      s.RedirectFromToWWW,
++		CertificateAuth:        s.CertificateAuth,
++		ProxySSL:               s.ProxySSL,
++		ServerSnippet:          s.ServerSnippet,
++		SSLCiphers:             s.SSLCiphers,
++		SSLPreferServerCiphers: s.SSLPreferServerCiphers,
++		AuthTLSError:           s.AuthTLSError,
++		Locations:              deepCopyLocationsForHash(s.Locations),
++		Aliases:                append([]string(nil), s.Aliases...),
++	}
++	if s.SSLCert != nil {
++		out.SSLCert = deepCopySSLCertForHash(s.SSLCert)
++	}
++	return out
++}
++
++// deepCopyLocationsForHash returns a copy of the location slice (shallow copy of each Location)
++// so the copy can be sorted without mutating the original. Metadata is left in place.
++func deepCopyLocationsForHash(locs []*ingress.Location) []*ingress.Location {
++	if len(locs) == 0 {
++		return nil
++	}
++	out := make([]*ingress.Location, len(locs))
++	for i, loc := range locs {
++		if loc == nil {
++			continue
++		}
++		locCopy := *loc
++		out[i] = &locCopy
++	}
++	return out
++}
++
++// deepCopySSLCertForHash returns a copy of the cert with Certificate and CACertificate cleared.
++// For the per-pod fake certificate (identified by FakeSSLCertificateUID), the volatile fields
++// (PemCertKey, PemSHA, ExpireTime) are zeroed so all pods produce the same hash.
++func deepCopySSLCertForHash(sc *ingress.SSLCert) *ingress.SSLCert {
++	if sc == nil {
++		return nil
++	}
++	cnCopy := append([]string(nil), sc.CN...)
++	if len(cnCopy) > 1 {
++		sort.Strings(cnCopy)
++	}
++	out := &ingress.SSLCert{
++		Name:        sc.Name,
++		Namespace:   sc.Namespace,
++		CAFileName:  sc.CAFileName,
++		CASHA:       sc.CASHA,
++		CRLFileName: sc.CRLFileName,
++		CRLSHA:      sc.CRLSHA,
++		PemFileName: sc.PemFileName,
++		PemSHA:      sc.PemSHA,
++		CN:          cnCopy,
++		ExpireTime:  sc.ExpireTime,
++		PemCertKey:  sc.PemCertKey,
++		UID:         sc.UID,
++	}
++	if sc.UID == ssl.FakeSSLCertificateUID {
++		out.PemCertKey = ""
++		out.PemSHA = ""
++		out.ExpireTime = time.Time{}
++	}
++	return out
++}
++
++// hashConfigurationDeterministic returns a deterministic hash of the configuration so that all
++// controller pods with the same config report the same config_hash metric. Uses a full deep copy
++// with variable data cleared and all slices/map values sorted, then JSON (Go sorts map keys) plus xxhash.
++func hashConfigurationDeterministic(cfg *ingress.Configuration) (uint64, error) {
++	cfgCopy := deepCopyConfigurationForHash(cfg)
++	data, err := json.Marshal(cfgCopy)
++	if err != nil {
++		klog.Errorf("config_hash: json.Marshal failed: %v", err)
++		return 0, err
++	}
++	return xxhash.Sum64(data), nil
++}
++
+ // syncIngress collects all the pieces required to assemble the NGINX
+ // configuration file and passes the resulting data structures to the backend
+ // (OnUpdate) when a reload is deemed necessary.
+@@ -180,9 +421,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
+ 	n.metricCollector.SetSSLExpireTime(servers)
+ 	n.metricCollector.SetSSLInfo(servers)
+ 
+-	hash, err := hashstructure.Hash(pcfg, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
++	hash, err := hashConfigurationDeterministic(pcfg)
+ 	if err != nil {
+ 		klog.Errorf("unexpected error hashing configuration: %v", err)
+ 	}
+diff --git a/internal/ingress/controller/template/configmap.go b/internal/ingress/controller/template/configmap.go
+index 9dc019bcc..a9e1d7fe4 100644
+--- a/internal/ingress/controller/template/configmap.go
++++ b/internal/ingress/controller/template/configmap.go
+@@ -17,6 +17,7 @@ limitations under the License.
+ package template
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"net"
+ 	"regexp"
+@@ -24,6 +25,7 @@ import (
+ 	"strings"
+ 	"time"
+ 
++	"github.com/cespare/xxhash/v2"
+ 	"k8s.io/klog/v2"
+ 
+ 	"github.com/mitchellh/hashstructure/v2"
+@@ -376,13 +378,18 @@ func ReadConfig(src map[string]string) config.Configuration {
+ 		delete(conf, nginxStatusIpv6Whitelist)
+ 	}
+ 
++	var workerProcessesChecksum string
+ 	if val, ok := conf[workerProcesses]; ok {
+-		to.WorkerProcesses = val
+ 		if val == "auto" {
++			workerProcessesChecksum = "auto"
+ 			to.WorkerProcesses = strconv.Itoa(runtime.NumCPU())
++		} else {
++			workerProcessesChecksum = val
++			to.WorkerProcesses = val
+ 		}
+-
+ 		delete(conf, workerProcesses)
++	} else {
++		workerProcessesChecksum = "auto"
+ 	}
+ 
+ 	if val, ok := conf[plugins]; ok {
+@@ -439,15 +446,23 @@ func ReadConfig(src map[string]string) config.Configuration {
+ 		klog.Warningf("unexpected error merging defaults: %v", err)
+ 	}
+ 
+-	hash, err := hashstructure.Hash(to, hashstructure.FormatV1, &hashstructure.HashOptions{
+-		TagName: "json",
+-	})
+-	if err != nil {
+-		klog.Warningf("unexpected error obtaining hash: %v", err)
++	savedDisableIPv6DNS := to.DisableIpv6DNS
++	savedWorkerProcesses := to.WorkerProcesses
++	to.DisableIpv6DNS = false
++	to.WorkerProcesses = workerProcessesChecksum
++	to.Checksum = ""
++	data, jerr := json.Marshal(to)
++	to.DisableIpv6DNS = savedDisableIPv6DNS
++	to.WorkerProcesses = savedWorkerProcesses
++	if jerr != nil {
++		klog.Warningf("unexpected error obtaining checksum: %v", jerr)
++		if h, herr := hashstructure.Hash(to, hashstructure.FormatV1, &hashstructure.HashOptions{TagName: "json"}); herr == nil {
++			to.Checksum = fmt.Sprintf("%v", h)
++		}
++	} else {
++		to.Checksum = fmt.Sprintf("%v", xxhash.Sum64(data))
+ 	}
+ 
+-	to.Checksum = fmt.Sprintf("%v", hash)
+-
+ 	return to
+ }
+ 

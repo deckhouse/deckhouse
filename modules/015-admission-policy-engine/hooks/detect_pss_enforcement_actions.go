@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +26,8 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const pssEnforcementActionLabel = "security.deckhouse.io/pod-policy-action"
@@ -66,14 +70,19 @@ func actionCode(action string) float64 {
 	}
 }
 
-func handleActions(input *go_hook.HookInput) error {
+func handleActions(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_action")
+
 	actions := []string{strings.ToLower(input.Values.Get("admissionPolicyEngine.podSecurityStandards.enforcementAction").String())}
 	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_action", actionCode(actions[0]), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_action"))
-	labels := input.Snapshots["pss_enforcement_actions"]
+
+	labels, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "pss_enforcement_actions")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal pss_enforcement_actions snapshot: %w", err)
+	}
 
 	for _, label := range labels {
-		lbl := strings.ToLower(label.(string))
+		lbl := strings.ToLower(label)
 		if !hasItem(actions, lbl) {
 			actions = append(actions, lbl)
 			// all possible actions were found, it doesn't make sense to proceed
@@ -82,6 +91,7 @@ func handleActions(input *go_hook.HookInput) error {
 			}
 		}
 	}
+
 	input.Values.Set("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", actions)
 	return nil
 }

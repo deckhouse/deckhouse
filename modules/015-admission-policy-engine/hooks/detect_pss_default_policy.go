@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -26,6 +28,10 @@ import (
 	"golang.org/x/mod/semver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const milestone = "v1.55"
@@ -65,36 +71,42 @@ func policyCode(name string) float64 {
 	}
 }
 
-func setDefaultPolicy(input *go_hook.HookInput) error {
-	policy := getDefaultPolicy(input)
+func setDefaultPolicy(ctx context.Context, input *go_hook.HookInput) error {
+	policy := getDefaultPolicy(ctx, input)
 	input.Values.Set("admissionPolicyEngine.podSecurityStandards.defaultPolicy", policy)
 	input.MetricsCollector.Expire("d8_admission_policy_engine_pss_default_policy")
 	input.MetricsCollector.Set("d8_admission_policy_engine_pss_default_policy", policyCode(policy), map[string]string{}, metrics.WithGroup("d8_admission_policy_engine_pss_default_policy"))
 	return nil
 }
 
-func getDefaultPolicy(input *go_hook.HookInput) string {
+func getDefaultPolicy(_ context.Context, input *go_hook.HookInput) string {
 	// default policy is set explicitly - nothing to do here
 	if policy := input.ConfigValues.Get("admissionPolicyEngine.podSecurityStandards.defaultPolicy").String(); policy != "" {
 		return policy
 	}
 
-	// no map found - an old cluster
-	if len(input.Snapshots["install_data"]) == 0 {
+	installDataSlice, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "install_data")
+	if err != nil {
+		input.Logger.Error("failed to unmarshal install_data snapshot", log.Err(err))
 		return "Privileged"
 	}
 
-	deckhouseVersion := input.Snapshots["install_data"][0].(string)
+	// no map found - an old cluster
+	if len(installDataSlice) == 0 {
+		return "Privileged"
+	}
+
+	deckhouseVersion := installDataSlice[0]
 
 	// no version field found or invalid semver - something went wrong
 	if len(deckhouseVersion) == 0 || !semver.IsValid(deckhouseVersion) {
-		input.Logger.Warnf("deckhouseVersion isn't found or invalid: %s", deckhouseVersion)
+		input.Logger.Warn("deckhouseVersion isn't found or invalid", slog.String("version", deckhouseVersion))
 		return "Privileged"
 	}
 
 	// if deckhouse bootstrap release >= v1.55
 	if semver.Compare(semver.MajorMinor(deckhouseVersion), milestone) >= 0 {
-		input.Logger.Infof("PSS default policy for %v is set to baseline", deckhouseVersion)
+		input.Logger.Info("PSS default policy is set to baseline", slog.String("version", deckhouseVersion))
 		return "Baseline"
 	}
 

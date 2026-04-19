@@ -1,0 +1,299 @@
+{%- assign osVersions = include.osVersions | default: osItem[1] %}
+{%- if page.lang == 'ru' %}
+<!-- Prepare lists for different support types -->
+{% assign ceVersions = "" | split: "," %}
+{% assign cseVersions = "" | split: "," %}
+{% assign bePlusVersions = "" | split: "," %}
+{% assign otherVersions = "" | split: "," %}
+
+{%- for versionItem in osVersions %}
+  {%- assign versionNum = versionItem.version %}
+  {%- assign editions = versionItem.editions %}
+  
+  {%- if editions contains 'ce' and editions contains 'cse' %}
+    {%- assign ceVersions = ceVersions | push: versionNum %}
+    {%- assign cseVersions = cseVersions | push: versionNum %}
+  {%- elsif editions contains 'ce' %}
+    {%- assign ceVersions = ceVersions | push: versionNum %}
+  {%- elsif editions contains 'cse' %}
+    {%- assign cseVersions = cseVersions | push: versionNum %}
+  {%- elsif editions contains 'be' or editions contains 'se' or editions contains 'se-plus' or editions contains 'ee' %}
+    {%- assign bePlusVersions = bePlusVersions | push: versionNum %}
+  {%- else %}
+    {%- assign otherVersions = otherVersions | push: versionNum %}
+  {%- endif %}
+{%- endfor %}
+
+<!-- Prepare common versions (CE and CSE) -->
+{% assign commonVersions = "" | split: "," %}
+{%- for versionNum in ceVersions %}
+  {%- if cseVersions contains versionNum %}
+    {%- assign commonVersions = commonVersions | push: versionNum %}
+  {%- endif %}
+{%- endfor %}
+
+<!-- Remove common from CE and CSE lists -->
+{% assign ceOnlyVersions = "" | split: "," %}
+{%- for versionNum in ceVersions %}
+  {%- unless commonVersions contains versionNum %}
+    {%- assign ceOnlyVersions = ceOnlyVersions | push: versionNum %}
+  {%- endunless %}
+{%- endfor %}
+
+{% assign cseOnlyVersions = "" | split: "," %}
+{%- for versionNum in cseVersions %}
+  {%- unless commonVersions contains versionNum %}
+    {%- assign cseOnlyVersions = cseOnlyVersions | push: versionNum %}
+  {%- endunless %}
+{%- endfor %}
+
+{% assign rowsCount = 0 %}
+{% if commonVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign commonExists = true %}{% endif %}
+{% if ceOnlyVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign ceExists = true %}{% endif %}
+{% if cseOnlyVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign cseExists = true %}{% endif %}
+{% if bePlusVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign bePlusExists = true %}{% endif %}
+{% if otherVersions.size > 0 %}{% assign rowsCount = rowsCount | plus: 1 %}{% assign otherExists = true %}{% endif %}
+
+{% for i in (1..rowsCount) %}
+<tr>
+  <!-- OS name -->
+  {% if i == 1 %}
+  <td class="name" {% if rowsCount > 1 %}rowspan="{{ rowsCount }}"{% endif %}>
+    <span>
+      {%- if site.data.supported_versions.osDistributions[osKey].url %}
+        <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
+      {%- else %}{{ osName }}
+      {%- endif %}
+    </span>
+  </td>
+  {% endif %}
+  
+  {% if commonExists == true %}
+  <td class="versions">
+    {% for versionNum in commonVersions %}
+    {{ versionNum }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign commonExists = false %}
+  </td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td>
+    <div class="icon">
+      {%- assign hasNotes = false %}
+      {%- assign notesContent = "" %}
+      {%- assign addedNotes = "" | split: "," %}
+      {%- for versionItem in osVersions %}
+        {%- if commonVersions contains versionItem.version and versionItem.note_content %}
+          {%- assign currentNote = versionItem.note_content[page.lang] | strip %}
+          {%- unless addedNotes contains currentNote %}
+            {%- assign hasNotes = true %}
+            {%- assign addedNotes = addedNotes | push: currentNote %}
+            {%- if notesContent != "" %}{% assign notesContent = notesContent | append: "<br>" %}{% endif %}
+            {%- assign notesContent = notesContent | append: currentNote %}
+          {%- endunless %}
+        {%- endif %}
+      {%- endfor %}
+      {% if hasNotes %}
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
+      {% endif %}
+    </div>
+  </td>
+  </tr>
+  {% continue %}
+  {% endif %}
+  
+  {% if cseExists == true %}
+  <td class="versions">
+    {% for versionNum in cseOnlyVersions %}
+    {{ versionNum }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign cseExists = false %}
+  </td>
+  <td><div class="icon"><span data-tippy-content="Работоспособность в Community Edition не гарантируется.">{{ include.partially_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td>
+    <div class="icon">
+      {%- assign hasNotes = false %}
+      {%- assign notesContent = "" %}
+      {%- assign addedNotes = "" | split: "," %}
+      {%- for versionItem in osVersions %}
+        {%- if cseOnlyVersions contains versionItem.version and versionItem.note_content %}
+          {%- assign currentNote = versionItem.note_content[page.lang] | strip %}
+          {%- unless addedNotes contains currentNote %}
+            {%- assign hasNotes = true %}
+            {%- assign addedNotes = addedNotes | push: currentNote %}
+            {%- if notesContent != "" %}{% assign notesContent = notesContent | append: "<br>" %}{% endif %}
+            {%- assign notesContent = notesContent | append: currentNote %}
+          {%- endunless %}
+        {%- endif %}
+      {%- endfor %}
+      {% if hasNotes %}
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
+      {% endif %}
+    </div>
+  </td>
+  </tr>
+  {% continue %}
+  {% endif %}
+  
+  {% if ceExists == true %}
+  <td class="versions">
+    {% for versionNum in ceOnlyVersions %}
+    {{ versionNum }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign ceExists = false %}
+  </td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.not_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td>
+    <div class="icon">
+      {%- assign hasNotes = false %}
+      {%- assign notesContent = "" %}
+      {%- assign addedNotes = "" | split: "," %}
+      {%- for versionItem in osVersions %}
+        {%- if ceOnlyVersions contains versionItem.version and versionItem.note_content %}
+          {%- assign currentNote = versionItem.note_content[page.lang] | strip %}
+          {%- unless addedNotes contains currentNote %}
+            {%- assign hasNotes = true %}
+            {%- assign addedNotes = addedNotes | push: currentNote %}
+            {%- if notesContent != "" %}{% assign notesContent = notesContent | append: "<br>" %}{% endif %}
+            {%- assign notesContent = notesContent | append: currentNote %}
+          {%- endunless %}
+        {%- endif %}
+      {%- endfor %}
+      {% if hasNotes %}
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
+      {% endif %}
+    </div>
+  </td>
+  </tr>
+  {% continue %}
+  {% endif %}
+  
+  {% if bePlusExists == true %}
+  <td class="versions">
+    {% for versionNum in bePlusVersions %}
+    {{ versionNum }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign bePlusExists = false %}
+  </td>
+  <td><div class="icon"><span data-tippy-content="Работоспособность в Community Edition не гарантируется.">{{ include.partially_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.not_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td>
+    <div class="icon">
+      {%- assign hasNotes = false %}
+      {%- assign notesContent = "" %}
+      {%- assign addedNotes = "" | split: "," %}
+      {%- for versionItem in osVersions %}
+        {%- if bePlusVersions contains versionItem.version and versionItem.note_content %}
+          {%- assign currentNote = versionItem.note_content[page.lang] | strip %}
+          {%- unless addedNotes contains currentNote %}
+            {%- assign hasNotes = true %}
+            {%- assign addedNotes = addedNotes | push: currentNote %}
+            {%- if notesContent != "" %}{% assign notesContent = notesContent | append: "<br>" %}{% endif %}
+            {%- assign notesContent = notesContent | append: currentNote %}
+          {%- endunless %}
+        {%- endif %}
+      {%- endfor %}
+      {% if hasNotes %}
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
+      {% endif %}
+    </div>
+  </td>
+  </tr>
+  {% continue %}
+  {% endif %}
+  
+  {% if otherExists == true %}
+  <td class="versions">
+    {% for versionNum in otherVersions %}
+    {{ versionNum }}{%- unless forloop.last %},{% endunless %}
+    {% endfor %}
+    {% assign otherExists = false %}
+  </td>
+  <td>
+    <div class="icon">
+      {% if site.data.supported_versions.osDistributions[osKey]['ru_support'] == true %}
+      <span data-tippy-content="Работоспособность в Community Edition не гарантируется.">{{ include.partially_supported_img_inline }}</span>
+      {% else %}
+      <span>{{ include.supported_img_inline }}</span>
+      {% endif %}
+    </div>
+  </td>
+  <td><div class="icon"><span>{{ include.not_supported_img_inline }}</span></div></td>
+  <td><div class="icon"><span>{{ include.supported_img_inline }}</span></div></td>
+  <td>
+    <div class="icon">
+      {%- assign hasNotes = false %}
+      {%- assign notesContent = "" %}
+      {%- assign addedNotes = "" | split: "," %}
+      {%- for versionItem in osVersions %}
+        {%- if otherVersions contains versionItem.version and versionItem.note_content %}
+          {%- assign currentNote = versionItem.note_content[page.lang] | strip %}
+          {%- unless addedNotes contains currentNote %}
+            {%- assign hasNotes = true %}
+            {%- assign addedNotes = addedNotes | push: currentNote %}
+            {%- if notesContent != "" %}{% assign notesContent = notesContent | append: "<br>" %}{% endif %}
+            {%- assign notesContent = notesContent | append: currentNote %}
+          {%- endunless %}
+        {%- endif %}
+      {%- endfor %}
+      {% if hasNotes %}
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% continue %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{%- if page.lang == 'en' %}
+<tr>
+  <!-- OS name -->
+  <td class="name">
+    <span>
+      {%- if site.data.supported_versions.osDistributions[osKey].url %}
+        <a href="{{ site.data.supported_versions.osDistributions[osKey].url }}" target="_blank">{{ osName }}</a>
+      {%- else %}{{ osName }}
+      {%- endif %}
+    </span>
+  </td>
+  <td class="versions">
+    {%- for versionItem in osVersions %}
+    {{ versionItem.version }}{%- unless forloop.last %},{% endunless %}
+    {%- endfor %}
+  </td>
+  <td style="text-align: center; width: 170px;">
+    <div class="icon">
+      <span>{{ include.supported_img_inline }}</span>
+    </div>
+  </td>
+  <td style="text-align: center;">
+    <div class="icon">
+      {%- assign hasNotes = false %}
+      {%- assign notesContent = "" %}
+      {%- assign addedNotes = "" | split: "," %}
+      {%- for versionItem in osVersions %}
+        {%- if versionItem.note_content %}
+          {%- assign currentNote = versionItem.note_content[page.lang] | strip %}
+          {%- unless addedNotes contains currentNote %}
+            {%- assign hasNotes = true %}
+            {%- assign addedNotes = addedNotes | push: currentNote %}
+            {%- if notesContent != "" %}{% assign notesContent = notesContent | append: "<br>" %}{% endif %}
+            {%- assign notesContent = notesContent | append: currentNote %}
+          {%- endunless %}
+        {%- endif %}
+      {%- endfor %}
+      {% if hasNotes %}
+      <span data-tippy-content="{{ notesContent }}">{{ include.notes_img_inline }}</span>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% endif %}

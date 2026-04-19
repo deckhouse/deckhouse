@@ -1,0 +1,83 @@
+admission-policy-engine:
+  fixes:
+    - summary: Prohibit only creation or modification for objects with vulnerable images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16134
+    - summary: Fixed proxy support for trivy-provider
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16113
+candi:
+  fixes:
+    - summary: Remove proxy-environment for kubelet when proxy disabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16159
+ci:
+  fixes:
+    - summary: Fix e2e upgrade tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16255
+    - summary: fix grafana vex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16234
+    - summary: fix trickster vex
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16223
+    - summary: Fix missing edition suffixes in prerelease build.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16173
+cloud-provider-dvp:
+  fixes:
+    - summary: Correct the calculation of the path to the device
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16212
+cloud-provider-vsphere:
+  fixes:
+    - summary: fix vSphere storageClass template
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16275
+cni-cilium:
+  fixes:
+    - summary: fixed connectivity dashboard
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16257
+deckhouse:
+  fixes:
+    - summary: Fix race conditions in test
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16278
+deckhouse-controller:
+  fixes:
+    - summary: fix bash completion
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16229
+docs:
+  features:
+    - summary: Added manifest for internal LB VK Cloud.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16057
+    - summary: Added info from `csi-netapp` module about NetApp storage integration in DKP documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16024
+  fixes:
+    - summary: Small fix on the "Security event audit" page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16254
+    - summary: Fixed the description for the 4239 port in the reference table.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16192
+    - summary: Updated installer block in GS.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16158
+    - summary: Added a link to the DVP integration page in the virtualization overview.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16152
+istio:
+  features:
+    - summary: Added access log format setting for proxy sidecars.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16129
+  fixes:
+    - summary: The same owner is specified for the files that are used to run in the operator container.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16154
+metallb:
+  fixes:
+    - summary: Disabled unnecessary speaker functionality.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15836
+monitoring-kubernetes:
+  fixes:
+    - summary: Fixed CVE-2025-22870, CVE-2025-22872.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16195
+prometheus:
+  fixes:
+    - summary: Fix plur in vex for tricster
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16216
+prometheus-pushgateway:
+  fixes:
+    - summary: Fixed CVE-2025-22869,  CVE-2025-22868, CVE-2025-22870.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16195
+registrypackages:
+  fixes:
+    - summary: Update runc to 1.3.1.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16263
+

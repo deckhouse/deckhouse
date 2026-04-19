@@ -132,6 +132,8 @@ spec:
                           default: false
                 internal:
                   type: object
+                  required:
+                  - route
                   description: Internal Alertmanager parameters.
                   properties:
                     inhibitRules:
@@ -872,14 +874,14 @@ spec:
                             description: List of Telegram configurations.
                             items:
                               description: |
-                                Configures notifications via Telegram. 
-                                
+                                Configures notifications via Telegram.
+
                                 Read more in the [Prometheus documentation](https://prometheus.io/docs/alerting/latest/configuration/#telegram_config).
                               properties:
                                 apiURL:
                                   description: |
                                     The Telegram API URL i.e. `https://api.telegram.org`.
-                                    
+
                                     If not specified, the default API URL will be used.
                                   type: string
                                 botToken:

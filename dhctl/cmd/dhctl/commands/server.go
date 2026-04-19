@@ -19,25 +19,42 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/singlethreaded"
 )
 
-func DefineServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("server", "Start dhctl as GRPC server.")
+func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return server.Serve(app.ServerNetwork, app.ServerAddress, app.ServerParallelTasksLimit)
+		return server.Serve(settings.ServerParams{
+			ServerGeneralParams: settings.ServerGeneralParams{
+				Network:           app.ServerNetwork,
+				Address:           app.ServerAddress,
+				TmpDir:            app.TmpDirName,
+				DownloadDirConfig: app.GetDirConfig(),
+			},
+			ParallelTasksLimit:         app.ServerParallelTasksLimit,
+			RequestsCounterMaxDuration: app.ServerRequestsCounterMaxDuration,
+		})
 	})
 	return cmd
 }
 
-func DefineSingleThreadedServerCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("_server", "Start dhctl as GRPC server. Single threaded version.")
+func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	// cmd = parent.Command(cmd.Model().Name, cmd.Model().Help)
 	app.DefineServerFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		return singlethreaded.Serve(app.ServerNetwork, app.ServerAddress)
+		return singlethreaded.Serve(settings.ServerSingleshotParams{
+			ServerGeneralParams: settings.ServerGeneralParams{
+				Network:           app.ServerNetwork,
+				Address:           app.ServerAddress,
+				TmpDir:            app.TmpDirName,
+				DownloadDirConfig: app.GetDirConfig(),
+			},
+		})
 	})
 	return cmd
 }

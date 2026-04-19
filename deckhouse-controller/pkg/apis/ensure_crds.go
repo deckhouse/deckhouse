@@ -16,11 +16,16 @@ package apis
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+	"path/filepath"
+	"strings"
 
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
+	crdinstaller "github.com/deckhouse/module-sdk/pkg/crd-installer"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -33,24 +38,41 @@ type kubeClient interface {
 	InvalidateDiscoveryCache()
 }
 
+var defaultLabels = map[string]string{
+	crdinstaller.LabelHeritage: "deckhouse",
+}
+
 // EnsureCRDs installs or update primary CRDs for deckhouse-controller
 func EnsureCRDs(ctx context.Context, client kubeClient, crdsGlob string) error {
-	inst, err := ensure_crds.NewCRDsInstaller(client, crdsGlob)
+	crds, err := filepath.Glob(crdsGlob)
 	if err != nil {
-		return err
+		return fmt.Errorf("glob %q: %w", crdsGlob, err)
 	}
+
+	inst := crdinstaller.NewCRDsInstaller(
+		client.Dynamic(),
+		crds,
+		crdinstaller.WithExtraLabels(defaultLabels),
+		crdinstaller.WithFileFilter(func(crdFilePath string) bool {
+			return !strings.HasPrefix(filepath.Base(crdFilePath), "doc-")
+		}),
+	)
 
 	deletedCRDs, err := inst.DeleteCRDs(ctx, deprecatedCRDs)
 	if err != nil {
-		log.Warnf("Couldn't delete deprecated CRDs: %s", err)
+		log.Warn("Couldn't delete deprecated CRDs", log.Err(err))
 	} else {
-		log.Infof("The following deprecated CRDs were deleted: %v", deletedCRDs)
+		log.Info("The following deprecated CRDs were deleted", slog.String("crds", strings.Join(deletedCRDs, ",")))
 	}
 
-	merr := inst.Run(ctx)
+	err = inst.Run(ctx)
 
 	// it's not necessary, but it could speed up a bit further api discovery
 	client.InvalidateDiscoveryCache()
 
-	return merr.ErrorOrNil()
+	if err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+
+	return nil
 }

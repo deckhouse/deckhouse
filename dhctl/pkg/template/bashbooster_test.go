@@ -15,10 +15,12 @@
 package template
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 var clusterConfig = `
@@ -26,13 +28,14 @@ var clusterConfig = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.31"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 proxy:
   httpProxy: http://10.130.0.31:8888
   httpsProxy: http://10.130.0.31:8888
 `
+
 var initConfig = `
 ---
 apiVersion: deckhouse.io/v1
@@ -45,13 +48,16 @@ deckhouse:
 `
 
 func TestRenderBashBooster(t *testing.T) {
-
-	metaConfig, err := config.ParseConfigFromData(clusterConfig + initConfig)
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig+initConfig, config.DummyPreparatorProvider(), dc)
 	if err != nil {
 		t.Errorf("ParseConfigFromData error: %v", err)
 	}
 
-	bashibleData, _ := metaConfig.ConfigForBashibleBundleTemplate("ubuntu", "10.0.0.2")
+	bashibleData, _ := metaConfig.ConfigForBashibleBundleTemplate("10.0.0.2")
 	data, err := RenderBashBooster("/deckhouse/candi/bashible/bashbooster/", bashibleData)
 	if err != nil {
 		t.Errorf("Rendering bash booster error: %v", err)

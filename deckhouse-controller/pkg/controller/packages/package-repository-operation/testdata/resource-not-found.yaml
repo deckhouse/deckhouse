@@ -1,0 +1,2 @@
+# Test case: resource not found
+# This file is intentionally empty as we're testing the case where the PackageRepositoryOperation resource doesn't exist

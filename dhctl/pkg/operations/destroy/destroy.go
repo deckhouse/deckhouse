@@ -16,37 +16,53 @@ package destroy
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os/exec"
-	"time"
+	"sync"
 
 	"github.com/google/uuid"
+	"github.com/name212/govalue"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	infra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
-	tf "github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type Destroyer interface {
-	DestroyCluster(autoApprove bool) error
+	DestroyCluster(ctx context.Context, autoApprove bool) error
+}
+
+type infraDestroyer interface {
+	Destroyer
+
+	AfterResourcesDelete(ctx context.Context) error
+	Prepare(ctx context.Context) error
+	CleanupBeforeDestroy(ctx context.Context) error
+}
+
+type metaConfigPopulator interface {
+	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
 }
 
 type Params struct {
-	NodeInterface          node.Interface
-	StateCache             dhctlstate.Cache
+	NodeInterface node.Interface
+	StateCache    dhctlstate.Cache
+
+	// todo pass pipeline provider here
 	OnPhaseFunc            phases.DefaultOnPhaseFunc
+	OnProgressFunc         phases.OnProgressFunc
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	SkipResources bool
@@ -55,215 +71,235 @@ type Params struct {
 	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 
-	TerraformContext *tf.TerraformContext
+	InfrastructureContext *infrastructure.Context
+
+	TmpDir          string
+	LoggerProvider  log.LoggerProvider
+	IsDebug         bool
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
-type ClusterDestroyer struct {
-	state           *State
-	stateCache      dhctlstate.Cache
-	terrStateLoader infra.StateLoader
+func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
+	if p.PhasedExecutionContext != nil {
+		return p.PhasedExecutionContext
+	}
 
-	d8Destroyer       *DeckhouseDestroyer
-	cloudClusterInfra *infra.ClusterInfra
-
-	skipResources bool
-
-	staticDestroyer *StaticMastersDestroyer
-
-	PhasedExecutionContext phases.DefaultPhasedExecutionContext
-
-	CommanderMode bool
-	CommanderUUID uuid.UUID
+	return phases.NewDefaultPhasedExecutionContext(
+		phases.OperationDestroy, p.OnPhaseFunc, p.OnProgressFunc,
+	)
 }
 
-func NewClusterDestroyer(params *Params) (*ClusterDestroyer, error) {
-	state := NewDestroyState(params.StateCache)
+func (p *Params) getStateLoaderParams() *stateLoaderParams {
+	return &stateLoaderParams{
+		commanderMode:   p.CommanderMode,
+		commanderParams: p.CommanderModeParams,
 
-	var pec phases.DefaultPhasedExecutionContext
-	if params.PhasedExecutionContext != nil {
-		pec = params.PhasedExecutionContext
-	} else {
-		pec = phases.NewDefaultPhasedExecutionContext(params.OnPhaseFunc)
+		stateCache: p.StateCache,
+		logger:     log.SafeProvideLogger(p.LoggerProvider),
+
+		skipResources: p.SkipResources,
+		// from passed params always ask about load
+		forceFromCache: false,
 	}
+}
 
-	wrapper, ok := params.NodeInterface.(*ssh.NodeInterfaceWrapper)
-	if !ok {
-		return nil, fmt.Errorf("cluster destruction requires usage of ssh node interface")
-	}
+type stateLoaderParams struct {
+	commanderMode   bool
+	commanderParams *commander.CommanderModeParams
 
-	d8Destroyer := NewDeckhouseDestroyer(wrapper.Client(), state, DeckhouseDestroyerOptions{CommanderMode: params.CommanderMode})
+	stateCache dhctlstate.Cache
+	logger     log.Logger
 
-	var terraStateLoader terraform.StateLoader
+	skipResources  bool
+	forceFromCache bool
+}
 
-	if params.CommanderMode {
+func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvider kube.ClientProviderWithCleanup) (controller.StateLoader, kube.ClientProviderWithCleanup, error) {
+	if params.commanderMode {
 		// FIXME(dhctl-for-commander): commander uuid currently optional, make it required later
 		// if params.CommanderUUID == uuid.Nil {
 		//	panic("CommanderUUID required for destroy operation in commander mode!")
 		// }
 
-		metaConfig, err := commander.ParseMetaConfig(state.cache, params.CommanderModeParams)
+		metaConfig, err := commander.ParseMetaConfig(ctx, params.stateCache, params.commanderParams, params.logger)
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse meta configuration: %w", err)
+			return nil, nil, fmt.Errorf("Unable to parse meta configuration: %w", err)
 		}
-		terraStateLoader = terraform.NewFileTerraStateLoader(state.cache, metaConfig)
-	} else {
-		terraStateLoader = terraform.NewLazyTerraStateLoader(terraform.NewCachedTerraStateLoader(d8Destroyer, state.cache))
+		return infrastructurestate.NewFileTerraStateLoader(params.stateCache, metaConfig), kubeProvider, nil
 	}
 
-	clusterInfra := infra.NewClusterInfraWithOptions(terraStateLoader, state.cache, params.TerraformContext, infra.ClusterInfraOptions{PhasedExecutionContext: pec})
+	stateLoaderKubeProvider := kubeProvider
+	if params.skipResources {
+		stateLoaderKubeProvider = newKubeClientErrorProvider("Skip resources flag was provided. State not found in cache")
+	}
 
-	staticDestroyer := NewStaticMastersDestroyer(wrapper.Client())
+	cached := infrastructurestate.NewCachedTerraStateLoader(stateLoaderKubeProvider, params.stateCache, params.logger).
+		WithForceFromCache(params.forceFromCache)
+	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
+}
+
+type ClusterDestroyer struct {
+	stateCache       dhctlstate.Cache
+	configPreparator metaConfigPopulator
+
+	pipeline phases.DefaultPipeline
+
+	d8Destroyer     *deckhouse.Destroyer
+	infraProvider   *infraDestroyerProvider
+	DirectoryConfig *directoryconfig.DirectoryConfig
+}
+
+// NewClusterDestroyer
+// params.SSHClient should not START!
+func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer, error) {
+	if govalue.IsNil(params.StateCache) {
+		return nil, fmt.Errorf("State cache is required")
+	}
+
+	wrapper, ok := params.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		return nil, fmt.Errorf("Cluster destruction requires usage of ssh node interface")
+	}
+
+	sshClientProviderOnceFunc := sync.OnceValues(func() (node.SSHClient, error) {
+		sshClient := wrapper.Client()
+		if err := sshClient.Start(); err != nil {
+			return nil, err
+		}
+
+		return sshClient, nil
+	})
+
+	sshClientProvider := sshclient.NewDefaultSSHProviderWithFunc(sshClientProviderOnceFunc).WithLoggerProvider(params.LoggerProvider)
+
+	logger := log.SafeProvideLogger(params.LoggerProvider)
+
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	}
+
+	pec := params.getExecutionContext()
+
+	pipeline := phases.NewDefaultPipelineWithStateCacheProviderOpts(
+		pec,
+		params.StateCache,
+		phases.WithPipelineLoggerProvider(params.LoggerProvider),
+		phases.WithPipelineName("cluster-destroyer"),
+	)()
+
+	phaseActionProvider := phases.NewDefaultPhaseActionProviderFromPipeline(pipeline)
+
+	var kubeProvider kube.ClientProviderWithCleanup = newKubeClientProvider(sshClientProvider)
+
+	terraStateLoader, kubeProvider, err := initStateLoader(ctx, params.getStateLoaderParams(), kubeProvider)
+	if err != nil {
+		return nil, err
+	}
+
+	d8Destroyer := deckhouse.NewDestroyer(deckhouse.DestroyerParams{
+		CommanderUUID: params.CommanderUUID,
+		CommanderMode: params.CommanderMode,
+
+		SkipResources: params.SkipResources,
+		State:         deckhouse.NewState(params.StateCache),
+
+		LoggerProvider:       params.LoggerProvider,
+		KubeProvider:         kubeProvider,
+		PhasedActionProvider: phaseActionProvider,
+	})
+
+	infraProvider := &infraDestroyerProvider{
+		stateCache:           params.StateCache,
+		kubeProvider:         kubeProvider,
+		loggerProvider:       params.LoggerProvider,
+		phasesActionProvider: phaseActionProvider,
+
+		commanderMode: params.CommanderMode,
+		skipResources: params.SkipResources,
+		cloudStateProvider: func() (controller.StateLoader, cloud.ClusterInfraDestroyer, error) {
+			return terraStateLoader, controller.NewClusterInfraWithOptions(
+				terraStateLoader,
+				params.StateCache,
+				params.InfrastructureContext,
+				controller.ClusterInfraOptions{
+					PhasedExecutionContext: pec,
+					TmpDir:                 params.TmpDir,
+					IsDebug:                params.IsDebug,
+					Logger:                 logger,
+				},
+			), nil
+		},
+
+		sshClientProvider: sshClientProvider,
+		tmpDir:            params.TmpDir,
+	}
 
 	return &ClusterDestroyer{
-		state:           state,
-		stateCache:      params.StateCache,
-		terrStateLoader: terraStateLoader,
+		stateCache:       params.StateCache,
+		configPreparator: terraStateLoader,
 
-		d8Destroyer:       d8Destroyer,
-		cloudClusterInfra: clusterInfra,
+		pipeline: pipeline,
 
-		skipResources:   params.SkipResources,
-		staticDestroyer: staticDestroyer,
-
-		PhasedExecutionContext: pec,
-		CommanderMode:          params.CommanderMode,
-		CommanderUUID:          params.CommanderUUID,
+		d8Destroyer:     d8Destroyer,
+		infraProvider:   infraProvider,
+		DirectoryConfig: params.DirectoryConfig,
 	}, nil
 }
 
-func (d *ClusterDestroyer) DestroyCluster(autoApprove bool) error {
-	defer d.d8Destroyer.UnlockConverge(true)
+func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
+	return d.pipeline.Run(func(switcher phases.DefaultPipelinePhaseSwitcher) error {
+		return d.destroy(ctx, autoApprove)
+	})
+}
 
-	if err := d.PhasedExecutionContext.InitPipeline(d.stateCache); err != nil {
+func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error {
+	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
 		return err
-	}
-	defer d.PhasedExecutionContext.Finalize(d.stateCache)
-
-	if d.CommanderMode {
-		kubeCl, err := d.d8Destroyer.GetKubeClient()
-		if err != nil {
-			return err
-		}
-
-		_, err = commander.CheckShouldUpdateCommanderUUID(context.TODO(), kubeCl, d.CommanderUUID)
-		if err != nil {
-			return fmt.Errorf("uuid consistency check failed: %w", err)
-		}
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.terrStateLoader.PopulateMetaConfig()
+	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.DirectoryConfig)
 	if err != nil {
 		return err
 	}
 
-	clusterType := metaConfig.ClusterType
-	var infraDestroyer Destroyer
-	switch clusterType {
-	case config.CloudClusterType:
-		infraDestroyer = d.cloudClusterInfra
-	case config.StaticClusterType:
-		infraDestroyer = d.staticDestroyer
-	default:
-		return fmt.Errorf("Unknown cluster type '%s'", clusterType)
+	destroyer, err := config.DoByClusterType(ctx, metaConfig, d.infraProvider)
+	if err != nil {
+		return err
 	}
 
-	if !d.skipResources {
-		if shouldStop, err := d.PhasedExecutionContext.StartPhase(phases.DeleteResourcesPhase, false, d.stateCache); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
-		}
-		if err := d.d8Destroyer.DeleteResources(clusterType); err != nil {
-			return err
-		}
-		if err := d.PhasedExecutionContext.CompletePhase(d.stateCache, nil); err != nil {
-			return err
-		}
+	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
+	err = destroyer.Prepare(ctx)
+	if err != nil {
+		return err
 	}
 
-	if clusterType == config.CloudClusterType {
-		_, _, err = d.terrStateLoader.PopulateClusterState()
-		if err != nil {
-			return err
-		}
+	if err := d.d8Destroyer.CheckAndDeleteResources(ctx); err != nil {
+		return err
+	}
+
+	if err := destroyer.AfterResourcesDelete(ctx); err != nil {
+		return err
 	}
 
 	// only after load and save all states into cache
 	// set resources as deleted
-	if err := d.state.SetResourcesDestroyed(); err != nil {
+	if err := d.d8Destroyer.Finalize(ctx); err != nil {
 		return err
 	}
 
-	// why only unwatch lock without request unlock
-	// user may not delete resources and converge still working in cluster
-	// all node groups removing may still in long time run and
-	// we get race (destroyer destroy node group, auto applayer create nodes)
-	d.d8Destroyer.UnlockConverge(false)
 	// Stop proxy because we have already got all info from kubernetes-api
-	d.d8Destroyer.StopProxy()
-
-	if err := infraDestroyer.DestroyCluster(autoApprove); err != nil {
+	// also stop ssh client for cloud clusters
+	if err := destroyer.CleanupBeforeDestroy(ctx); err != nil {
 		return err
 	}
 
-	d.state.Clean()
-	return d.PhasedExecutionContext.CompletePipeline(d.stateCache)
-}
-
-type StaticMastersDestroyer struct {
-	SSHClient *ssh.Client
-}
-
-func NewStaticMastersDestroyer(c *ssh.Client) *StaticMastersDestroyer {
-	return &StaticMastersDestroyer{
-		SSHClient: c,
-	}
-}
-
-func (d *StaticMastersDestroyer) DestroyCluster(autoApprove bool) error {
-	if !autoApprove {
-		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
-			return fmt.Errorf("Cleanup master nodes disallow")
-		}
+	if err := destroyer.DestroyCluster(ctx, autoApprove); err != nil {
+		return err
 	}
 
-	mastersHosts := d.SSHClient.Settings.AvailableHosts()
-	stdOutErrHandler := func(l string) {
-		log.WarnLn(l)
-	}
-
-	cmd := "test -f /var/lib/bashible/cleanup_static_node.sh || exit 0 && bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing"
-	for _, host := range mastersHosts {
-		settings := d.SSHClient.Settings.Copy()
-		settings.SetAvailableHosts([]session.Host{host})
-		err := retry.NewLoop(fmt.Sprintf("Clear master %s", host), 5, 10*time.Second).Run(func() error {
-			cmd := frontend.NewCommand(settings, cmd)
-			cmd.Sudo()
-			cmd.WithTimeout(5 * time.Minute)
-			cmd.WithStdoutHandler(stdOutErrHandler)
-			cmd.WithStderrHandler(stdOutErrHandler)
-			err := cmd.Run()
-
-			if err != nil {
-				var ee *exec.ExitError
-				if errors.As(err, &ee) {
-					// script reboot node
-					if ee.ExitCode() == 255 {
-						return nil
-					}
-				}
-
-				return err
-			}
-
-			return err
-		})
-
-		if err != nil {
-			return err
-		}
-	}
+	d.stateCache.Clean()
 
 	return nil
 }

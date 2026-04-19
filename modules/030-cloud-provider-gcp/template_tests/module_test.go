@@ -48,7 +48,14 @@ var (
 	projectRE = regexp.MustCompile(`--project=([a-z\-]+)`)
 )
 
+const providerID = "gcp"
+const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
+const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
+const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
+const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
+
 const globalValues = `
+  clusterIsBootstrapped: true
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -58,7 +65,7 @@ const globalValues = `
     clusterType: "Cloud"
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.29"
+    kubernetesVersion: "1.31"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -70,7 +77,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.29.0
+    kubernetesVersion: 1.31.0
 `
 
 const moduleValues = `
@@ -128,6 +135,40 @@ const moduleValues = `
             test: test
 `
 
+const tolerationsAnyNodeWithUninitialized = `
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: ToBeDeletedTaint
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable`
+
+const moduleNamespace = "d8-cloud-provider-gcp"
+
 var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -143,22 +184,20 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-gcp")
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "deckhouse-registry")
+			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
-			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-controller-manager")
-			ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "cloud-controller-manager")
-			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-gcp", "cloud-controller-manager")
+			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
+			ccmDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			ccmSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
 			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:cloud-controller-manager")
 			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:cloud-controller-manager")
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-gcp", "cloud-controller-manager")
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 
-			pdCSISS := f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "csi-controller")
+			pdCSISS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			pdCSICSIDriver := f.KubernetesGlobalResource("CSIDriver", "pd.csi.storage.gke.io")
-			pdCSIDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-gcp", "csi-node")
-			pdCSIControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-gcp", "csi")
+			pdCSIDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			pdCSIControllerSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
 			pdCSIProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:csi:controller:external-provisioner")
 			pdCSIProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-gcp:csi:controller:external-provisioner")
 			pdCSIAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-gcp:csi:controller:external-attacher")
@@ -175,11 +214,22 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-gcp:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-gcp:cluster-admin")
 
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
 
 			// user story #1
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
 			expectedProviderRegistrationJSON := `{
           "disableExternalIP": false,
           "diskSizeGb": 50,
@@ -198,9 +248,34 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
           "sshKey": "mysshkey",
           "subnetworkName": "mysubnetname"
         }`
+
 			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.gcp").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificRegistrationData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.gcp").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(providerSpecificRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID))
+			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("mcm"))
+			Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificMCMSecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificMCMSecretData["config-for-machine-controller-manager.yaml"].String()) > 0).To(BeTrue())
+
+			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
+			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificBashibleStepsSecret.Field(fmt.Sprintf("metadata.labels.%s", bashibleLabelKey)).String()).To(Equal("steps"))
+			Expect(providerSpecificBashibleStepsSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificBashibleStepsSecretData := providerSpecificBashibleStepsSecret.Field("data").Map()
+			Expect(len(providerSpecificBashibleStepsSecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificBashibleStepsSecretData["000_set_cloud_variables.sh.tpl"].String()) > 0).To(BeTrue())
+
+			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
+			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 
 			// user story #2
 			Expect(ccmVPA.Exists()).To(BeTrue())
@@ -212,7 +287,9 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 
 			Expect(pdCSICSIDriver.Exists()).To(BeTrue())
 			Expect(pdCSISS.Exists()).To(BeTrue())
+			Expect(pdCSISS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(pdCSIDS.Exists()).To(BeTrue())
+			Expect(pdCSIDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(pdCSIControllerSA.Exists()).To(BeTrue())
 			Expect(pdCSIProvisionerCR.Exists()).To(BeTrue())
 			Expect(pdCSIProvisionerCRB.Exists()).To(BeTrue())
@@ -233,6 +310,10 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			Expect(userAuthzUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterAdmin.Exists()).To(BeTrue())
+
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 		})
 
 		Context("Unsupported Kubernetes version", func() {
@@ -246,8 +327,8 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})
@@ -291,7 +372,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Cloud data discoverer", func() {
 		deployment := func(f *Config) object_store.KubeObject {
-			return f.KubernetesResource("Deployment", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+			return f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 		}
 
 		BeforeEach(func() {
@@ -359,7 +440,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("Should render VPA resource", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+				d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 				Expect(d.Exists()).To(BeTrue())
 			})
 		})
@@ -376,7 +457,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			It("Should render VPA resource", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-gcp", "cloud-data-discoverer")
+				d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 				Expect(d.Exists()).To(BeFalse())
 			})
 		})

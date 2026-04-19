@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -28,21 +29,24 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
+// Set to true to update golden files with: `make FOCUS=ingress-nginx CGO_ENABLED=1 GOLDEN=true tests-modules`
 var (
-	// generate golden files with: `make FOCUS=ingress-nginx GOLDEN=true tests-modules`
-	golden bool
+	golden             bool
+	manifestsDelimiter = regexp.MustCompile("(?m)^---$")
 )
 
 func init() {
-	if os.Getenv("GOLDEN") == "" {
-		return
+	if env := os.Getenv("GOLDEN"); env != "" {
+		golden, _ = strconv.ParseBool(env)
 	}
-	golden, _ = strconv.ParseBool(os.Getenv("GOLDEN"))
+	format.TruncatedDiff = false
+	format.MaxLength = 0
 }
 
 func Test(t *testing.T) {
@@ -50,39 +54,45 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", func() {
+var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func() {
 	hec := SetupHelmConfig("")
 
 	BeforeEach(func() {
-		hec.ValuesSet("global.discovery.kubernetesVersion", "1.26.0")
+		hec.ValuesSet("global.discovery.kubernetesVersion", "1.31.14")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
 		hec.ValuesSet("global.modules.https.mode", "CertManager")
 		hec.ValuesSet("global.modules.https.certManager.clusterIssuerName", "letsencrypt")
 		hec.ValuesSet("global.modulesImages.registry.base", "registry.deckhouse.io/deckhouse/fe")
-		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus"})
+		hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus", "control-plane-manager"})
 		hec.ValuesSet("global.discovery.d8SpecificNodeCountByRole.system", 2)
 
-		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.9")
-
+		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.12")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.ca", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.cert", "test")
 		hec.ValuesSet("ingressNginx.internal.admissionCertificate.key", "test")
 		hec.ValuesSet("ingressNginx.internal.discardMetricResources.namespaces", json.RawMessage("[]"))
 		hec.ValuesSet("ingressNginx.internal.discardMetricResources.ingresses", json.RawMessage("[]"))
+		hec.ValuesSet("ingressNginx.internal.geoproxyReady", true)
 	})
 
 	table.DescribeTable("Render IngressNginx controllers",
 		func(fileName string) {
 			var ctrl ingressNginxController
 
-			data, err := os.ReadFile("testdata/" + fileName)
+			// Load YAML definition
+			data, err := os.ReadFile(filepath.Join("testdata", fileName))
 			Expect(err).ShouldNot(HaveOccurred())
-			// read yaml from fileName
+
+			if strings.HasSuffix(fileName, "with-istio.yaml") {
+				hec.ValuesSet("global.enabledModules", []string{"cert-manager", "vertical-pod-autoscaler", "operator-prometheus", "control-plane-manager", "istio"})
+			}
+
 			err = yaml.Unmarshal(data, &ctrl)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			controllerSpec, _ := yaml.Marshal(ctrl)
+			controllerSpecYAML, _ := yaml.Marshal(ctrl)
 
+			// Set TLS certs
 			cert := fmt.Sprintf(`
 - controllerName: %s
   ingressClass: nginx
@@ -90,77 +100,156 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers ", fun
     cert: teststring
     key: teststring
 `, ctrl.Name)
-
 			hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS", cert)
-			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers.0", string(controllerSpec))
-			out := make(map[string]string)
-			hec.HelmRender(WithFilteredRenderOutput(out, []string{"ingress-nginx/templates/controller/", "ingress-nginx/templates/failover/"}))
-			testD := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)
-			Expect(testD.Exists()).To(BeTrue())
+			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers.0", string(controllerSpecYAML))
+
+			// Render templates
+			rendered := make(map[string]string)
+			hec.HelmRender(WithFilteredRenderOutput(rendered, []string{
+				"ingress-nginx/templates/controller/",
+				"ingress-nginx/templates/failover/",
+				"ingress-nginx/templates/validator/",
+			}))
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+			// Assert DaemonSet exists
+			daemonSet := hec.KubernetesResource("DaemonSet", "d8-ingress-nginx", "controller-"+ctrl.Name)
+			Expect(daemonSet.Exists()).To(BeTrue())
+
+			// Compare with golden files
 			goldenDir := filepath.Join("testdata", "golden", strings.TrimSuffix(fileName, filepath.Ext(fileName)))
+			for path, content := range rendered {
+				var renderedFile string
 
-			for fn, content := range out {
-				renderedFile := filepath.Base(fn)
-				if strings.HasPrefix(fn, "ingress-nginx/templates/failover/") {
-					// skip pod monitors
-					if strings.HasSuffix(fn, "podmonitor.yaml") {
+				switch {
+				case strings.HasPrefix(path, "ingress-nginx/templates/failover/"):
+					if strings.HasSuffix(path, "podmonitor.yaml") || len(content) == 0 {
 						continue
 					}
-					if len(content) == 0 {
-						continue
-					}
+					renderedFile = filepath.Join("failover", filepath.Base(path))
 
-					renderedFile = filepath.Join("failover", renderedFile)
-				} else if strings.HasPrefix(fn, "ingress-nginx/templates/controller/") {
-					if strings.HasSuffix(fn, "fake-ingress.yaml") {
+				case strings.HasPrefix(path, "ingress-nginx/templates/controller/"):
+					if strings.HasSuffix(path, "fake-ingress.yaml") {
 						continue
 					}
-					renderedFile = filepath.Join("controller", renderedFile)
-				} else {
+					renderedFile = filepath.Join("controller", filepath.Base(path))
+
+				case strings.HasPrefix(path, "ingress-nginx/templates/validator/"):
+					renderedFile = filepath.Join("validator", filepath.Base(path))
+
+				default:
 					continue
 				}
+
 				filePath := filepath.Join(goldenDir, renderedFile)
 
 				if golden {
 					Expect(os.MkdirAll(filepath.Dir(filePath), os.ModePerm)).To(Succeed())
-					By("writing golden file " + filePath)
-					Expect(os.WriteFile(filePath, []byte(content), 0644)).To(Succeed())
+					By("Writing golden file: " + filePath)
+					Expect(os.WriteFile(filePath, []byte(content), 0o644)).To(Succeed())
 				} else {
-					By("reading golden file " + filePath)
-					goldenContent, err := os.ReadFile(filePath)
+					By("Reading golden file: " + filePath)
+					expectedContent, err := os.ReadFile(filePath)
 					Expect(err).ShouldNot(HaveOccurred())
-					Expect(content).Should(MatchYAML(string(goldenContent)))
+					Expect(content).Should(MatchYAML(expectedContent))
+
+					exp := splitManifests(expectedContent)
+					got := splitManifests([]byte(content))
+					Expect(got).To(HaveLen(len(exp)))
+
+					for i := range got {
+						Expect(got[i]).Should(MatchYAML(exp[i]))
+					}
 				}
 			}
 		},
 
+		// Test cases
 		table.Entry("HostPortWithProxyProtocol inlet", "host-port-with-pp.yaml"),
 		table.Entry("HostWithFailover inlet with custom resources and filter IP with acceptRequestsFrom", "host-with-failover.yaml"),
 		table.Entry("LoadBalancer inlet", "lb.yaml"),
+		table.Entry("LoadBalancer inlet with annotation validation enabled (v1.10)", "lb-annotation-validation-v110.yaml"),
+		table.Entry("LoadBalancer inlet with annotation validation disabled (v1.12)", "lb-annotation-validation-v112.yaml"),
 		table.Entry("LoadBalancerWithProxyProtocol inlet", "lb-with-pp.yaml"),
 		table.Entry("LoadBalancer inlet with custom terminating time", "lb-with-terminating.yaml"),
 		table.Entry("LoadBalancer without hpa deployment", "lb-without-hpa.yaml"),
+		table.Entry("LoadBalancer inlet with istio", "lb-with-istio.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers", "lb-with-hide-headers.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers and istio", "lb-with-hide-headers-and-with-istio.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers and envoy header added", "lb-with-hide-headers-and-envoy-header-added.yaml"),
+		table.Entry("LoadBalancer inlet with hide-headers and envoy header added and istio", "lb-with-hide-headers-and-envoy-header-added-and-with-istio.yaml"),
 	)
+
+	It("renders LoadBalancer Service with custom external ports", func() {
+		hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers", `
+- name: custom-ports
+  spec:
+    ingressClass: nginx
+    inlet: LoadBalancer
+    loadBalancer:
+      httpsPort: 8443
+`)
+		hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS", `
+- controllerName: custom-ports
+  ingressClass: nginx
+  data:
+    cert: teststring
+    key: teststring
+`)
+
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		service := hec.KubernetesResource("Service", "d8-ingress-nginx", "custom-ports-load-balancer")
+		Expect(service.Exists()).To(BeTrue())
+
+		ports := service.Field("spec.ports").Array()
+		Expect(ports).To(HaveLen(2))
+
+		Expect(ports[0].Get("name").String()).To(Equal("http"))
+		Expect(ports[0].Get("port").Int()).To(Equal(int64(80)))
+		Expect(ports[0].Get("targetPort").Int()).To(Equal(int64(80)))
+		Expect(ports[0].Get("protocol").String()).To(Equal("TCP"))
+
+		Expect(ports[1].Get("name").String()).To(Equal("https"))
+		Expect(ports[1].Get("port").Int()).To(Equal(int64(8443)))
+		Expect(ports[1].Get("targetPort").Int()).To(Equal(int64(443)))
+		Expect(ports[1].Get("protocol").String()).To(Equal("TCP"))
+	})
 })
 
+// ingressNginxController holds simplified structure to extract controller spec
 type ingressNginxController struct {
 	Name string          `json:"name"`
 	Spec json.RawMessage `json:"spec"`
 }
 
-// need to adopt IngressNginxController object to the internal values structure
 func (ing *ingressNginxController) UnmarshalJSON(data []byte) error {
-	s := struct {
+	aux := struct {
 		Metadata struct {
 			Name string `json:"name"`
 		} `json:"metadata"`
 		Spec json.RawMessage `json:"spec"`
 	}{}
 
-	if err := json.Unmarshal(data, &s); err != nil {
+	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	ing.Name = s.Metadata.Name
-	ing.Spec = s.Spec
+
+	ing.Name = aux.Metadata.Name
+	ing.Spec = aux.Spec
 	return nil
+}
+
+func splitManifests(doc []byte) []string {
+	splits := manifestsDelimiter.Split(string(doc), -1)
+
+	result := make([]string, 0, len(splits))
+	for i := range splits {
+		if splits[i] != "" {
+			result = append(result, splits[i])
+		}
+	}
+
+	return result
 }

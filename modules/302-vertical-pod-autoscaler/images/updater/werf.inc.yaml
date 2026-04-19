@@ -6,6 +6,7 @@ import:
   add: /updater
   to: /updater
   before: setup
-docker:
-  ENTRYPOINT: ["/updater"]
-  CMD: ["--v=4", "--stderrthreshold=info"]
+imageSpec:
+  config:
+    entrypoint: ["/updater"]
+    cmd: ["--v=4", "--stderrthreshold=info"]

@@ -14,11 +14,11 @@ spec:
   enabled: true
   settings:
     nodeSelector:
-      node-role/example: ""
+      node-role/system: ""
     tolerations:
-    - key: dedicated
+    - key: dedicated.deckhouse.io
       operator: Equal
-      value: example
+      value: system
 ```
 
 ## Пример минимального custom resource `VerticalPodAutoscaler`
@@ -48,7 +48,7 @@ spec:
     kind: Deployment
     name: my-app
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: hamster

@@ -1,19 +1,20 @@
+x-config-version: 2
 type: object
 properties:
-  ebpfExporterEnabled:
+  oomKillsExporterEnabled:
     type: boolean
     default: true
     x-examples:
     - false
     description: |
-      Set to 'false' to disable ebpf_exporter in case it behaves incorrectly.
+      Set to 'false' to disable oom-kills-exporter in case it behaves incorrectly.
   highAvailability:
     type: boolean
     x-examples: [true, false]
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   nodeSelector:
     type: object
     additionalProperties:

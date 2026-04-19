@@ -1,5 +1,21 @@
 # Patches
 
-## 001-update-go-libraries.patch
+## 000-update-go-libraries.patch
 
-Update golang.org/x/net and tidy.
+Update golang libraries and dependencies.
+
+## 001-add-d8-annotations.patch
+
+Add optional use of “network.deckhouse.io/load-balancer-ips” and “network.deckhouse.io/load-balancer-shared-ip-key” annotations.
+
+## 002-disable-l2.patch
+
+Prohibit initializing the L2 controller.
+
+## 003-disable-new-pool-annotation.patch
+
+Disabling the new annotation `metallb.io/ip-allocated-from-pool`, as well as warnings about using deprecated service annotations.
+
+## 004-fix-eps-for-identical-ip.patch
+
+Fix for the Virtualization module. During VM migration, EndpointSlices with duplicate IP addresses are created, which MetalLB handles incorrectly.

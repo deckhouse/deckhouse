@@ -23,9 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -40,7 +38,10 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/yaml"
+
+	"bashible-apiserver/pkg/template/registry"
 )
 
 const (
@@ -56,6 +57,7 @@ const (
 type Context interface {
 	Get(contextKey string) (map[string]interface{}, error)
 	GetBootstrapContext(ng string) (map[string]interface{}, error)
+	GetConfigurationChecksum(ng string) (string, bool)
 }
 
 type UpdateHandler interface {
@@ -96,6 +98,16 @@ type BashibleContext struct {
 	moduleSourcesConfigurationChanged chan struct{}
 
 	updateLocked bool
+
+	configurationChecksums map[string]string
+}
+
+type ContextNotFoundError struct {
+	Key string
+}
+
+func (e *ContextNotFoundError) Error() string {
+	return fmt.Sprintf("context %q not found", e.Key)
 }
 
 type queueAction struct {
@@ -109,7 +121,7 @@ type UserConfiguration struct {
 	Spec NodeUserSpec `json:"spec" yaml:"spec"`
 }
 
-func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler) *BashibleContext {
+func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient client.Client, resyncTimeout time.Duration, secretHandler checksumSecretUpdater, updateHandler UpdateHandler, ctrlManager ctrl.Manager) *BashibleContext {
 	c := BashibleContext{
 		ctx:                               ctx,
 		updateHandler:                     updateHandler,
@@ -121,23 +133,25 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 		nodeUsersConfigurationChanged:     make(chan struct{}, 1),
 		moduleSourcesQueue:                make(chan queueAction, 100),
 		moduleSourcesConfigurationChanged: make(chan struct{}, 1),
+		configurationChecksums:            make(map[string]string),
 	}
 
 	c.runFilesParser()
 
 	// Bashible context and its dynamic update
 	contextSecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-cloud-instance-manager", "app=bashible-apiserver")
-	registrySecretFactory := newBashibleInformerFactory(kubeClient, resyncTimeout, "d8-system", "app=registry")
 	nodeUserCRDFactory := newNodeUserInformerFactory(kubeClient, resyncTimeout)
 	moduleSourcesFactory := newModuleSourcesInformerFactory(kubeClient, resyncTimeout, "app!=deckhouse,heritage!=deckhouse,module!=deckhouse")
 
 	contextSecretUpdates := c.subscribe(ctx, contextSecretFactory, contextSecretName)
-	registrySecretUpdates := c.subscribe(ctx, registrySecretFactory, registrySecretName)
+
+	registryStateCtrl := &registry.StateController{}
+	registryDataCh := registryStateCtrl.SetupWithManager(ctx, ctrlManager)
 
 	c.subscribeOnNodeUserCRD(ctx, nodeUserCRDFactory)
 	c.subscribeOnModuleSource(ctx, moduleSourcesFactory)
 
-	go c.onSecretsUpdate(ctx, contextSecretUpdates, registrySecretUpdates)
+	go c.onSecretsUpdate(ctx, contextSecretUpdates, registryDataCh)
 
 	return &c
 }
@@ -147,12 +161,12 @@ func (c *BashibleContext) subscribe(ctx context.Context, factory informers.Share
 
 	// Launch the informer
 	informer := factory.Core().V1().Secrets().Informer()
-	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
 	go informer.Run(ctx.Done())
 
 	// Subscribe to updates
-	informer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = informer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: secretMapFilter(secretName),
 		Handler:    &secretEventHandler{ch, c},
 	})
@@ -288,7 +302,7 @@ func (c *BashibleContext) runFilesWatcher() {
 	}
 }
 
-func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, registrySecretC chan map[string][]byte) {
+func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC chan map[string][]byte, registryDataCh <-chan registry.HashedRegistryData) {
 	for {
 		select {
 		case data := <-contextSecretC:
@@ -310,25 +324,13 @@ func (c *BashibleContext) onSecretsUpdate(ctx context.Context, contextSecretC, r
 			c.saveChecksum(dataKey, checksum)
 			c.update("secret: bashible-apiserver-context")
 
-		case data := <-registrySecretC:
-			var input registryInputData
-			hash := sha256.New()
-			arr := make([]string, 0, len(data))
-			for k, v := range data {
-				arr = append(arr, k+"_"+string(v))
-			}
-			sort.Strings(arr)
-			for _, v := range arr {
-				hash.Write([]byte(v))
-			}
-			checksum := fmt.Sprintf("%x", hash.Sum(nil))
-			if c.isChecksumEqual("registry", checksum) {
+		case registryData := <-registryDataCh:
+			if c.isChecksumEqual("registry", registryData.HashSum) {
 				continue
 			}
-			input.FromMap(data)
-			c.contextBuilder.SetRegistryData(input.toRegistry())
+			c.contextBuilder.SetRegistryData(registryData.Data)
 			c.registrySynced = true
-			c.saveChecksum("registry", checksum)
+			c.saveChecksum("registry", registryData.HashSum)
 			c.update("secret: registry")
 
 		case <-c.stepsStorage.OnNodeGroupConfigurationsChanged():
@@ -351,7 +353,7 @@ func (c *BashibleContext) update(src string) {
 	defer c.rw.Unlock()
 
 	if c.updateLocked {
-		klog.Infof("Context update is locked", src)
+		klog.Infof("Context update is locked (source=%s)", src)
 		return
 	}
 
@@ -367,12 +369,12 @@ func (c *BashibleContext) update(src string) {
 	// easiest way to make appropriate map[string]interface{} struct
 	rawData, err := yaml.Marshal(data.Map())
 	if err != nil {
-		klog.Errorf("Failed to marshal data", err)
+		klog.Errorf("Failed to marshal data: %v", err)
 		return
 	}
 
 	// write for ability to check generated context from container
-	_ = ioutil.WriteFile("/tmp/context.yaml", rawData, 0666)
+	_ = os.WriteFile("/tmp/context.yaml", rawData, 0666)
 
 	if len(checksumErrors) > 0 {
 		klog.Warning("Context was saved without checksums. Bashible context hasn't been upgraded")
@@ -381,17 +383,22 @@ func (c *BashibleContext) update(src string) {
 			_, _ = errStr.WriteString(fmt.Sprintf("\t%s: %s\n", bundle, err))
 		}
 		klog.Warningf("bundles checksums have errors:\n%s", errStr.String())
-		_ = ioutil.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
+		_ = os.WriteFile("/tmp/context.error", []byte(errStr.String()), 0644)
 		return
 	}
 
 	_ = os.Remove("/tmp/context.error")
 
+	c.configurationChecksums = make(map[string]string, len(ngmap))
+	for ng, sum := range ngmap {
+		c.configurationChecksums[ng] = string(sum)
+	}
+
 	var res map[string]interface{}
 
 	err = yaml.Unmarshal(rawData, &res)
 	if err != nil {
-		klog.Errorf("Failed to unmarshal data", err)
+		klog.Errorf("Failed to unmarshal data: %v", err)
 		return
 	}
 
@@ -399,7 +406,6 @@ func (c *BashibleContext) update(src string) {
 
 	c.secretHandler.OnChecksumUpdate(ngmap)
 	c.updateHandler.OnUpdate()
-
 }
 
 // Get retrieves a copy of context for the given secretKey.
@@ -411,12 +417,7 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 
 	raw, ok := c.data[contextKey]
 	if !ok {
-		// log exists keys for debug purposes
-		keys := make([]string, 0, len(c.data))
-		for k := range c.data {
-			keys = append(keys, k)
-		}
-		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+		return nil, contextNotFoundError(contextKey)
 	}
 
 	converted, ok := raw.(map[string]interface{})
@@ -439,12 +440,7 @@ func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]int
 
 	raw, ok := c.data[contextKey]
 	if !ok {
-		// log exists keys for debug purposes
-		keys := make([]string, 0, len(c.data))
-		for k := range c.data {
-			keys = append(keys, k)
-		}
-		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+		return nil, contextNotFoundError(contextKey)
 	}
 
 	converted, ok := raw.(map[string]interface{})
@@ -458,6 +454,21 @@ func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]int
 	}
 
 	return copied, nil
+}
+
+func contextNotFoundError(contextKey string) error {
+	return &ContextNotFoundError{Key: contextKey}
+}
+
+func (c *BashibleContext) GetConfigurationChecksum(ng string) (string, bool) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	sum, ok := c.configurationChecksums[ng]
+	if !ok || sum == "" {
+		return "", false
+	}
+	return sum, true
 }
 
 // secretMapFilter returns filtering function for single secret
@@ -476,7 +487,7 @@ type secretEventHandler struct {
 	bashibleContext *BashibleContext
 }
 
-func (x *secretEventHandler) OnAdd(obj interface{}) {
+func (x *secretEventHandler) OnAdd(obj interface{}, _ bool) {
 	secret := obj.(*corev1.Secret)
 
 	if x.lockApplied(secret) {
@@ -584,9 +595,9 @@ func (c *BashibleContext) subscribeOnNodeUserCRD(ctx context.Context, ngConfigFa
 	})
 
 	informer := ginformer.Informer()
-	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			c.nodeUsersQueue <- queueAction{
 				action:    "add",
@@ -631,9 +642,9 @@ func (c *BashibleContext) subscribeOnModuleSource(ctx context.Context, moduleSou
 	})
 
 	informer := ginformer.Informer()
-	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			c.moduleSourcesQueue <- queueAction{
 				action:    "add",
@@ -665,7 +676,7 @@ func (c *BashibleContext) subscribeOnModuleSource(ctx context.Context, moduleSou
 
 func (c *BashibleContext) AddNodeUserConfiguration(nu *NodeUser) {
 	klog.Infof("Adding NodeUser %s to context", nu.Name)
-	ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
+	ngPairs := generateNgPairs(nu.Spec.NodeGroups)
 
 	nuc := UserConfiguration{
 		Name: nu.Name,
@@ -674,12 +685,12 @@ func (c *BashibleContext) AddNodeUserConfiguration(nu *NodeUser) {
 
 	c.rw.Lock()
 	defer c.rw.Unlock()
-	for _, ngBundlePair := range ngBundlePairs {
-		if m, ok := c.contextBuilder.nodeUserConfigurations[ngBundlePair]; ok {
+	for _, ngPair := range ngPairs {
+		if m, ok := c.contextBuilder.nodeUserConfigurations[ngPair]; ok {
 			m = append(m, &nuc)
-			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = m
+			c.contextBuilder.nodeUserConfigurations[ngPair] = m
 		} else {
-			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = []*UserConfiguration{&nuc}
+			c.contextBuilder.nodeUserConfigurations[ngPair] = []*UserConfiguration{&nuc}
 		}
 	}
 }
@@ -701,24 +712,23 @@ func (c *BashibleContext) RemoveModuleSourceCA(ms *ModuleSource) {
 	defer c.rw.Unlock()
 	registryHost := ms.getRegistry()
 	delete(c.contextBuilder.moduleSourcesCA, registryHost)
-
 }
 
 func (c *BashibleContext) RemoveNodeUserConfiguration(nu *NodeUser) {
 	klog.Infof("Removing NodeUser %s from context", nu.Name)
-	ngBundlePairs := generateNgBundlePairs(nu.Spec.NodeGroups, []string{"*"})
+	ngPairs := generateNgPairs(nu.Spec.NodeGroups)
 
 	c.rw.Lock()
 	defer c.rw.Unlock()
-	for _, ngBundlePair := range ngBundlePairs {
-		if configs, ok := c.contextBuilder.nodeUserConfigurations[ngBundlePair]; ok {
+	for _, ngPair := range ngPairs {
+		if configs, ok := c.contextBuilder.nodeUserConfigurations[ngPair]; ok {
 			for i, v := range configs {
 				if v.Name == nu.Name {
 					configs = append(configs[:i], configs[i+1:]...)
 					break
 				}
 			}
-			c.contextBuilder.nodeUserConfigurations[ngBundlePair] = configs
+			c.contextBuilder.nodeUserConfigurations[ngPair] = configs
 		}
 	}
 }

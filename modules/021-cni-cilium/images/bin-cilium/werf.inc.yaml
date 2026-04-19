@@ -1,20 +1,36 @@
-{{- $ciliumVersion := "1.14.14" }}
----
 # #####################################################################
 # Build cilium-agent binaries
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/cilium/Dockerfile (builder stage)
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/cilium/Dockerfile (builder stage)
 ---
-artifact: {{ $.ModuleName }}/cilium-artifact
-fromCacheVersion: "2024-11-21.0"
-fromImage: {{ $.ModuleName }}/base-cilium-dev
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
 git:
-- add: /{{ $.ModulePath }}modules/021-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
   to: /patches
   stageDependencies:
     install:
-      - '**/*'
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "cilium" $ ) }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src/cilium
+  - cd /src/cilium
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
+  - rm -rf Documentation
+  - rm -rf /src/cilium/.git
+---
+image: {{ .ModuleName }}/cilium-artifact
+fromImage: {{ .ModuleName }}/base-cilium-dev
+final: false
 import:
-- artifact: {{ $.ModuleName }}/llvm-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+- image: {{ .ModuleName }}/llvm-artifact
   add: /usr/local/bin/
   to: /usr/local/bin
   before: install
@@ -22,41 +38,65 @@ import:
   - clang
   - llc
   - llvm-objcopy
-- artifact: {{ $.ModuleName }}/bpftool-artifact
+- image: {{ .ModuleName }}/bpftool-artifact
   add: /usr/local/bin/bpftool
   to: /usr/local/bin/bpftool
   before: install
-- artifact: {{ $.ModuleName }}/cni-plugins-artifact
+- image: {{ .ModuleName }}/cni-plugins-artifact
   add: /out/linux/amd64/bin/loopback
   to: /cni/loopback
   before: install
-- artifact: {{ $.ModuleName }}/gops-artifact
+- image: {{ .ModuleName }}/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  - mkdir -p /go/src/github.com/cilium/cilium
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
-  setup:
+  install:
   - export GOROOT=/usr/local/go GOPATH=/go
   # When launching this container via CI, an unexpected path is inserted into the PATH variable.
   # Because of this, the code is built with errors. We haven't figured out why this is happening yet.
   # As a workaround, we explicitly specified PATH.
   - export PATH=${GOROOT}/bin:${GOPATH}/bin:/root/bin:/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin
-  - export GO_VERSION=${GOLANG_VERSION} GOPROXY={{ $.GOPROXY }}
+  #
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /go/src/github.com/cilium/cilium
-  - git apply /patches/*.patch --verbose
-  - go mod tidy && go mod vendor && go mod verify
-  # git-adding files from patches to force build script take them into account
-  - git add .
-  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container install-container-binary
-  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-bash-completion licenses-all
+  - cd /src/cilium
+  - go mod vendor && go mod verify
+  # Remove compile-time interface assertion in checkmate to fix newer Go versions compatibility (testing.TB interface changed).
+  # This is safe because checkmate is a transitive test dependency, its *C type is not used in Cilium production code as testing.TB,
+  # and this change just stops the compiler from failing on unused code interface checks.
+  - '[ -f vendor/github.com/cilium/checkmate/check.go ] && sed -i "/var _ testing.TB =/d" vendor/github.com/cilium/checkmate/check.go || true'
+  #
+  - |
+    {{- include "image-build.build" (set $ "BuildCommand" `make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install build-container`) | indent 4 }}
+  - make PKG_BUILD=1 SKIP_DOCS=true DESTDIR=/tmp/install install-container-binary install-bash-completion licenses-all
   - mv LICENSE.all /tmp/install/LICENSE.all
+  #
+  - cd hubble
+  - make
+  - strip hubble
+  - mkdir -p /tmp/install/usr/bin && mv hubble /tmp/install/usr/bin/hubble
+  - /tmp/install/usr/bin/hubble completion bash > /tmp/install/etc/bash_completion.d/hubble
+  #
+  - cd /src/cilium
   - cp -t /tmp/install images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+  #
+  - rm -rf /src/cilium/vendor
+  # fix compatibility with the new version of bash_completion
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/cilium-dbg
+  - sed -i 's/_get_comp_words_by_ref/_comp_get_words/' /tmp/install/etc/bash_completion.d/hubble
+  # trying reduce size of binaries
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-agent
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-bugtool
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-dbg
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-health-responder
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-mount
+  - objcopy --strip-all /tmp/install/usr/bin/cilium-sysctlfix
+  - objcopy --strip-all /tmp/install/usr/bin/hubble
 ---

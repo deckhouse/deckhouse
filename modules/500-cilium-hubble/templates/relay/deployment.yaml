@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: hubble-relay
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: hubble-relay
@@ -53,23 +53,35 @@ spec:
       containers:
         - name: hubble-relay
           {{- include "helm_lib_module_container_security_context_not_allow_privilege_escalation" . | nindent 10 }}
+            readOnlyRootFilesystem: true
           image: {{ include "helm_lib_module_image" (list . "relay") }}
           command:
             - hubble-relay
           args:
             - serve
-          {{- if .Values.debugLogging }}
+          {{- if .Values.ciliumHubble.debugLogging }}
             - --debug
           {{- end }}
           ports:
             - name: grpc
               containerPort: 4245
           readinessProbe:
-            tcpSocket:
-              port: grpc
+            grpc:
+              port: 4222
+            timeoutSeconds: 3
           livenessProbe:
-            tcpSocket:
-              port: grpc
+            grpc:
+              port: 4222
+            timeoutSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 12
+          startupProbe:
+            grpc:
+              port: 4222
+            initialDelaySeconds: 10
+            failureThreshold: 20
+            periodSeconds: 3
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
@@ -104,6 +116,14 @@ spec:
                 matchLabels:
                   app: agent
                   module: cni-cilium
+        {{- if (include "helm_lib_ha_enabled" .) }}
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: hubble-relay
+              topologyKey: kubernetes.io/hostname
+        {{- end }}
       {{- include "helm_lib_tolerations" (tuple . "monitoring") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       volumes:

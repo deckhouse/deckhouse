@@ -1,19 +1,23 @@
 {% assign revision=include.revision %}
 
 {% if revision != "ce" %}
+{% if page.ee_only == true and revision == 'ee' and page.se_support == nil %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
+{% endif %}
 {% include getting_started/global/EE_ACCESS_RU.md revision=revision %}
 <div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
 {% endif %}
 
 <div markdown="1">
 Ниже сгенерированы рекомендованные настройки для установки Deckhouse Kubernetes Platform {{ site.data.i18n[revision] }}:
-- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера{% endif %} и начальные параметры кластера.
-{% if page.platform_type == 'cloud' %}- `resources.yml` — описание ресурсов для создания после установки (настройки узлов и Ingress-контроллера).{% endif %}
+- `config.yml` — файл первичной конфигурации кластера. Содержит параметры инсталлятора{% if page.platform_type == 'cloud' %}, параметры доступа облачного провайдера, описание ресурсов для создания после установки,{% endif %} и начальные параметры кластера.
 
 **Обратите внимание**:
 - <span class="mustChange">Так выделены параметры</span>, обязательные для самостоятельного заполнения.
 - <span class="mightChange">Так выделены параметры</span>, которые вы возможно захотите изменить.
-- Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемых YAML-файлов конфигурации UTF-8 (либо удалите примечания на русском языке).
+- Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемого YAML-файла конфигурации UTF-8 (либо удалите примечания на русском языке).
 {%- if page.platform_type == 'baremetal' %}
 - Выполнять установку необходимо с **[персонального компьютера](step2.html#что-необходимо-для-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
 {%- endif %}
@@ -22,10 +26,40 @@
 {%- endif %}
 
 Создайте файл `config.yml`.
+
+{% if page.platform_code == 'bm-private' or page.platform_code == 'bm' or page.platform_code == 'red' or page.platform_code == 'spacevm' %}
+
+<div class="tabs">
+  <a id='tab_variant_worker_{{ revision }}'
+     href="javascript:void(0)"
+     class="tabs__btn tabs__btn_variant_{{ revision }} active"
+     onclick="openTabAndSaveStatus(event,'tabs__btn_variant_{{ revision }}','tabs__content_variant_{{ revision }}','block_variant_worker_{{ revision }}','dhctl-variant','worker');">
+     {% if page.lang == 'ru' %}Кластер из нескольких узлов{% else %}Master + worker{% endif %}
+  </a>
+  <a id='tab_variant_single_{{ revision }}'
+     href="javascript:void(0)"
+     class="tabs__btn tabs__btn_variant_{{ revision }}"
+     onclick="openTabAndSaveStatus(event,'tabs__btn_variant_{{ revision }}','tabs__content_variant_{{ revision }}','block_variant_single_{{ revision }}','dhctl-variant','single');">
+     {% if page.lang == 'ru' %}Кластер из единственного узла{% endif %}
+  </a>
+</div>
+
+<div id='block_variant_worker_{{ revision }}' class="tabs__content tabs__content_variant_{{ revision }} active" markdown="1">
+  {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}other{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+  {% include_file "{{ includePath }}" syntax="yaml" %}
+</div>
+
+<div id='block_variant_single_{{ revision }}' class="tabs__content tabs__content_variant_{{ revision }}" markdown="1">
+  {% capture includePathSingle %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}other{% else %}{{ revision }}{% endif %}.single.inc{% endcapture %}
+  {% include_file "{{ includePathSingle }}" syntax="yaml" %}
+</div>
+
+{% else %}
+
 {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.ru.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
-{% snippetcut name="config.yml" selector="config-yml" %}
 {% include_file "{{ includePath }}" syntax="yaml" %}
-{% endsnippetcut %}
+
+{% endif %}
 
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
@@ -45,7 +79,7 @@
 >       node-role.kubernetes.io/master: master
 > ```
 
-Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `spec.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
+Также, вы можете перечислить необходимые taint'ы узлов кластера в ModuleConfig `global` в массиве `.spec.settings.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие toleration своим компонентам.
 
 > Пример указания `customTolerationKeys` для модуля `deckhouse` и списка tolerations в массиве `customTolerationKeys` для работы остальных компонентов Deckhouse (не копируйте этот пример без изменения в вашу конфигурацию, т.к. у вас будут другие значения):
 > ```yaml
@@ -67,12 +101,15 @@
 
 <script>
   $(document).ready(function() {
-    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
-      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
-    })
-    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
-      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
-    })
+    var root = document.getElementById('block_layout_{{ revision }}');
+    if (!root) return; // на шаге 2 этого блока нет — выходим тихо
+
+    root.querySelectorAll('span').forEach(function (el) {
+      el.textContent = el.textContent.replace('<REVISION>', '{{ revision }}');
+    });
+    root.querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(function (el) {
+      el.textContent = el.textContent.replace('<REVISION>', '{{ revision }}');
+    });
   });
 </script>
 

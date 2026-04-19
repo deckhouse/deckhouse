@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +25,8 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
@@ -50,12 +53,21 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert virtualization moduleconfig: %v", err)
 	}
-	return mc.Spec.Settings["virtualMachineCIDRs"], nil
+
+	settings := mc.Spec.Settings.GetMap()
+	if len(settings) == 0 {
+		return nil, nil
+	}
+
+	return settings["virtualMachineCIDRs"], nil
 }
 
-func applyVMCIDRs(input *go_hook.HookInput) error {
-	snaps := input.Snapshots["vm-cidrs"]
-	if len(snaps) == 1 && snaps[0] != nil {
+func applyVMCIDRs(_ context.Context, input *go_hook.HookInput) error {
+	snaps, err := sdkobjectpatch.UnmarshalToStruct[[]any](input.Snapshots, "vm-cidrs")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal vm-cidrs snapshot: %w", err)
+	}
+	if len(snaps) == 1 {
 		input.Values.Set("cniCilium.internal.vmCIDRs", snaps[0])
 	}
 	return nil

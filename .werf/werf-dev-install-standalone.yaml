@@ -1,19 +1,35 @@
 ---
-image: install-standalone-builder
+image: install-standalone-builder-content
+from: {{ index $.Images "builder/scratch" }}
 final: false
-from: {{ .Images.BASE_ALPINE }}
 git:
 - add: /
-  to: /image/deckhouse
+  to: /deckhouse
   includePaths:
   - candi
+  {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-{{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env "prefix" "/image") }}
-{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions "prefix" "/image") }}
+{{ include "installer_and_installer_standalone_generic_imports" (dict "Images" $.Images "Env" $.Env) }}
+{{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+{{ include "installer_and_installer_standalone_opentofu_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
+---
+image: install-standalone-builder
+final: false
+from: {{ index $.Images "builder/alpine" }}
+import:
+- image: install-standalone-builder-content
+  add: /
+  to: /image
+  before: setup
+  includePaths:
+  - bin
+  - deckhouse
+  - plugins
+  - dhctl
 shell:
   setup:
-  {{ include "installer_standalone_setup_script" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 2 }}
+  {{ include "installer_standalone_setup_script" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG "Env" $.Env) | nindent 2 }}
 
 ---
 {{ include "installer_standalone_image" (dict "CI_COMMIT_TAG" .CI_COMMIT_TAG "Images" .Images )}}

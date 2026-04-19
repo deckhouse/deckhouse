@@ -8,7 +8,7 @@ terraform {
   required_providers {
     aws = {
       source = "hashicorp/aws"
-      version = "4.50.0"
+      version = "5.83.1"
     }
 
     random = {
@@ -44,7 +44,7 @@ locals {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "3.19.0"
+  version = "5.21.0"
 
   name = "${local.cluster_name}-vpc"
 
@@ -81,8 +81,7 @@ module "eks" {
   cluster_endpoint_public_access = true
 
   eks_managed_node_group_defaults = {
-    ami_type = "AL2_x86_64"
-
+    ami_type = "AL2023_x86_64_STANDARD"
   }
 
   cluster_security_group_additional_rules = {

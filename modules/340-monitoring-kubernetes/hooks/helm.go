@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // this hook checks helm releases (v2 and v3) and find deprecated apis
@@ -96,6 +98,11 @@ const unsupportedVersionsYAML = `
 
 "1.32":
   "flowcontrol.apiserver.k8s.io/v1beta3": ["FlowSchema", "PriorityLevelConfiguration"]
+  "admissionregistration.k8s.io/v1alpha1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
+
+"1.34":
+  "admissionregistration.k8s.io/v1beta1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
+
 `
 
 const (
@@ -154,7 +161,8 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	}
 
 	var metaConfig *config.MetaConfig
-	metaConfig, err = config.ParseConfigFromData(string(ccYaml))
+	// only cluster configuration, provider preparation and validation do not need here
+	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +180,7 @@ func rawMessageToString(message json.RawMessage) (string, error) {
 	return result, err
 }
 
-func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error {
+func handleHelmReleases(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire("helm_deprecated_apiversions")
 
 	k8sCurrentVersionRaw, ok := input.Values.GetOk("global.discovery.kubernetesVersion")
@@ -183,8 +191,16 @@ func handleHelmReleases(input *go_hook.HookInput, dc dependency.Container) error
 	k8sCurrentVersion := semver.MustParse(k8sCurrentVersionRaw.String())
 
 	var isAutomaticK8s bool
-	kubernetesVersion, ok := input.Snapshots["kubernetesVersion"]
-	if ok && len(kubernetesVersion) > 0 && kubernetesVersion[0].(string) == "Automatic" {
+	var kubernetesVersion string
+	kubernetesVersionSnapshots := input.Snapshots.Get("kubernetesVersion")
+	if len(kubernetesVersionSnapshots) > 0 {
+		err := kubernetesVersionSnapshots[0].UnmarshalTo(&kubernetesVersion)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal 'kubernetesVersion': %w", err)
+		}
+	}
+
+	if kubernetesVersion == "Automatic" {
 		isAutomaticK8s = true
 		requirements.SaveValue(K8sVersionsWithDeprecations, "initial")
 	}
@@ -408,7 +424,12 @@ func (h *helmDeprecatedAPIsProcessor) getHelm3Releases(client k8s.Client, releas
 
 			release, err := helm3DecodeRelease(string(releaseData))
 			if err != nil {
-				h.logger.Warnf("failed to decode %s/%s helm3 release: %s. Skipping", secret.Namespace, secret.Name, err)
+				h.logger.Warn(
+					"failed to decode helm3 release. Skipping",
+					slog.String("namespace", secret.Namespace),
+					slog.String("name", secret.Name),
+					dlog.Err(err),
+				)
 				continue
 			}
 			// release can contain wrong namespace (set by helm and werf) and confuse user with a wrong metric
@@ -453,7 +474,12 @@ func (h *helmDeprecatedAPIsProcessor) getHelm2Releases(client k8s.Client, releas
 
 			release, err := helm2DecodeRelease(releaseData)
 			if err != nil {
-				h.logger.Warnf("failed to decode %s/%s helm2 release: %s. Skipping", cm.Namespace, cm.Name, err)
+				h.logger.Warn(
+					"failed to decode helm2 release. Skipping",
+					slog.String("namespace", cm.Namespace),
+					slog.String("name", cm.Name),
+					dlog.Err(err),
+				)
 				continue
 			}
 
@@ -524,7 +550,7 @@ func (h *helmDeprecatedAPIsProcessor) FetchHelmManifests(client k8s.Client) chan
 				resource := new(manifestHead)
 				err := yaml.Unmarshal([]byte(manifestData), &resource)
 				if err != nil {
-					h.logger.Warnf("manifest (%s/%s) read error: %s", rel.Namespace, rel.Name, err)
+					h.logger.Warn("manifest read error", slog.String("namespace", rel.Namespace), slog.String("name", rel.Name), dlog.Err(err))
 					continue
 				}
 

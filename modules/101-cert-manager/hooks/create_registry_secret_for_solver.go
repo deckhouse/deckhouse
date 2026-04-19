@@ -17,15 +17,17 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
@@ -182,24 +184,33 @@ func prepareSolverRegistryServiceAccount(namespace string) *corev1.ServiceAccoun
 //	and this solution not generate pullSecrets name dynamically
 //	In future we want to rid all of patches in cert-manager
 //	and use vanilla cert-manager
-func handleChallenge(input *go_hook.HookInput) error {
-	d8RegistrySnap := input.Snapshots[d8RegistrySnapshot]
+func handleChallenge(_ context.Context, input *go_hook.HookInput) error {
+	d8RegistrySnap := input.Snapshots.Get(d8RegistrySnapshot)
 	if len(d8RegistrySnap) == 0 {
 		input.Logger.Warn("Registry secret not found. Skip")
 		return nil
 	}
 
-	registryCfg := d8RegistrySnap[0].(registrySecret).Config
+	var regSecret registrySecret
+	err := d8RegistrySnap[0].UnmarshalTo(&regSecret)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal d8_registry_secret snapshot: %w", err)
+	}
 
-	challengesNss := set.NewFromSnapshot(input.Snapshots[challengesSnapshot])
+	registryCfg := regSecret.Config
 
-	serviceAccountsNss := set.NewFromSnapshot(input.Snapshots[saSnapshot])
+	challengesNss := set.NewFromSnapshot(input.Snapshots.Get(challengesSnapshot))
+
+	serviceAccountsNss := set.NewFromSnapshot(input.Snapshots.Get(saSnapshot))
 
 	// namespace -> .dockerconfigjson content
 	secretsByNs := map[string]string{}
 
-	for _, sRaw := range input.Snapshots[secretsSnapshot] {
-		regSecret := sRaw.(registrySecret)
+	for regSecret, err := range sdkobjectpatch.SnapshotIter[registrySecret](input.Snapshots.Get(secretsSnapshot)) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'd8_registry_secret' snapshot: %w", err)
+		}
+
 		secretsByNs[regSecret.Namespace] = regSecret.Config
 	}
 
@@ -209,12 +220,12 @@ func handleChallenge(input *go_hook.HookInput) error {
 		// secret already exists in namespace. do not create or patch
 		if !secretExists || secretContent != registryCfg {
 			secret := prepareSolverRegistrySecret(ns, registryCfg)
-			input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+			input.PatchCollector.CreateOrUpdate(secret)
 		}
 
 		if _, saExists := serviceAccountsNss[ns]; !saExists {
 			sa := prepareSolverRegistryServiceAccount(ns)
-			input.PatchCollector.Create(sa, object_patch.UpdateIfExists())
+			input.PatchCollector.CreateOrUpdate(sa)
 		}
 	}
 
@@ -225,7 +236,9 @@ func handleChallenge(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Delete("v1", "Secret", ns, solverSecretName)
+		// NOTE: This deletion is async because synchronous deletion might hang.
+		// Kubernetes GC will handle the actual cleanup.
+		input.PatchCollector.DeleteInBackground("v1", "Secret", ns, solverSecretName)
 	}
 
 	// gc SA's
@@ -235,7 +248,9 @@ func handleChallenge(input *go_hook.HookInput) error {
 			continue
 		}
 
-		input.PatchCollector.Delete("v1", "ServiceAccount", ns, solverServiceAccountName)
+		// NOTE: This deletion is async because synchronous deletion might hang.
+		// Kubernetes GC will handle the actual cleanup.
+		input.PatchCollector.DeleteInBackground("v1", "ServiceAccount", ns, solverServiceAccountName)
 	}
 
 	return nil

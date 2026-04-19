@@ -17,12 +17,17 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
 	"github.com/flant/addon-operator/sdk"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 // There is an issue in [istio](https://github.com/istio/istio/issues/20703) with [staled solution](https://github.com/istio/istio/issues/37331)
@@ -49,16 +54,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleExternalNameService)
 
-func handleExternalNameService(input *go_hook.HookInput) error {
+func handleExternalNameService(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire("d8_istio_service")
-	snapshot := input.Snapshots["services"]
+	snapshot := input.Snapshots.Get("services")
 
-	for _, snap := range snapshot {
-		if snap == nil {
-			continue
+	for service, err := range sdkobjectpatch.SnapshotIter[externalService](snapshot) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'services' snapshot: %w", err)
 		}
-
-		service := snap.(externalService)
 
 		input.MetricsCollector.Set("d8_istio_irrelevant_service", 1, map[string]string{"namespace": service.Namespace, "name": service.Name}, metrics.WithGroup("d8_istio_service"))
 	}

@@ -1,0 +1,9 @@
+ingress-nginx:
+  fixes:
+    - summary: latest CVE fixes backported.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/12757
+      impact: >-
+        Ingress-nginx pods will restart. The validation of the generated NGINX configuration during
+        the validation of `Ingress` resources is disabled until finding a way of running validations
+        safely.
+

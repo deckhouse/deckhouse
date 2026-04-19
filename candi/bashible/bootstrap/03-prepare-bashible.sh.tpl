@@ -15,9 +15,35 @@
 # limitations under the License.
 */}}
 
-function detect_bundle() {
-  {{- .Files.Get "/deckhouse/candi/bashible/detect_bundle.sh" | nindent 2 }}
+{{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
+{{- tpl $bbnn . }}
+
+bb-d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
 }
+
+bb-discover-node-name() {
+  local discovered_name_file="/var/lib/bashible/discovered-node-name"
+  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
+
+  if [ ! -s "$discovered_name_file" ]; then
+    if [[ -s "$kubelet_crt" ]]; then
+      openssl x509 -in "$kubelet_crt" \
+        -noout -subject -nameopt multiline |
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
+    else
+    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
+      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+        hostnamectl set-hostname "$(hostname -s)"
+      fi
+    {{- end }}
+      hostname > "$discovered_name_file"
+    fi
+  fi
+}
+
+bb-discover-node-name
+export D8_NODE_HOSTNAME=$(bb-d8-node-name)
 
 function get_bundle() {
   resource="$1"
@@ -27,7 +53,7 @@ function get_bundle() {
   while true; do
     for server in {{ .normal.apiserverEndpoints | join " " }}; do
       url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
-      if d8-curl -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
       then
        return 0
       else
@@ -48,15 +74,7 @@ mkdir -p "$BOOTSTRAP_DIR" "$TMPDIR"
 # Directory contains sensitive information
 chmod 0700 $BOOTSTRAP_DIR
 
-# Detect bundle
-BUNDLE="$(detect_bundle)"
 unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
-
-{{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic" )}}
-export D8_NODE_HOSTNAME=$(hostname -s)
-{{- else }}
-export D8_NODE_HOSTNAME=$(hostname)
-{{- end }}
 
 {{- if or (eq .nodeGroup.nodeType "CloudEphemeral") (hasKey .nodeGroup "staticInstances") }}
 # Put bootstrap log information to Machine resource status if it is a cloud installation or cluster-api static machine
@@ -70,7 +88,7 @@ failure_limit=3
 while [ "$patch_pending" = true ] ; do
   for server in {{ .normal.apiserverEndpoints | join " " }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
-    until tcp_endpoint="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
+    until node_ip="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
       echo "The network is not ready for connecting to apiserver yet, waiting..."
       sleep 1
     done
@@ -87,7 +105,7 @@ while [ "$patch_pending" = true ] ; do
       -H "Accept: application/json" \
       -H "Content-Type: application/json-patch+json" \
       --cacert "$BOOTSTRAP_DIR/ca.crt" \
-      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use 'nc ${tcp_endpoint} ${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"${tcp_endpoint}:${output_log_port}\"} }]" \
+      --data "[{\"op\":\"add\",\"path\":\"/status/bootstrapStatus\", \"value\": {\"description\": \"Use curl -N 'http://${node_ip}:${output_log_port}' to get bootstrap logs.\", \"logsEndpoint\": \"http://${node_ip}:${output_log_port}\"} }]" \
       "https://$server/apis/deckhouse.io/v1alpha1/instances/${machine_name}/status" ; then
 
       echo "Successfully patched instance ${machine_name} status."
@@ -113,11 +131,11 @@ done
 
 export PATH="/opt/deckhouse/bin:$PATH"
 # Get bashible script from secret
-get_bundle bashible "${BUNDLE}.{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
+get_bundle bashible "{{ .nodeGroup.name }}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible.sh
 chmod +x $BOOTSTRAP_DIR/bashible.sh
 
 # Bashible first run
-until /var/lib/bashible/bashible.sh; do
+until bash --noprofile --norc -c /var/lib/bashible/bashible.sh; do
   echo "Error running bashible script. Retry in 10 seconds."
   sleep 10
 done

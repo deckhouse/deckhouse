@@ -1,10 +1,10 @@
-{{- $version := "2.11" }}
+{{- $version := include "get_oss_version_by_id" (list "nvme-cli" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-{{ $image_version }}
-from: {{ .Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
   add: /relocate
   to: /
   includePaths:
@@ -12,31 +12,39 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    growpart: {{ $version }}
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "nvme-cli": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
-fromArtifact: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+final: false
+fromImage: common/src-artifact
 git:
 - add: /{{ .ModulePath }}/modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /src/scripts
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  - git clone -b v{{ $version }} --depth 1 {{ .SOURCE_REPO }}/linux-nvme/nvme-cli.git /src/nvme-cli
-  - git clone -b v1.11.1 --depth 1 {{ .SOURCE_REPO }}/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
+  - git clone -b v{{ $version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/nvme-cli.git /src/nvme-cli
+  - git clone -b v1.11.1 --depth 1 $(cat /run/secrets/SOURCE_REPO)/linux-nvme/libnvme.git /src/nvme-cli/subprojects/libnvme
   - rm -rf /src/nvme-cli/.git /src/nvme-cli/subprojects/libnvme/.git
 ---
-artifact: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
-from: {{ .Images.BASE_ALT_P11 }}
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/alt" }}
 import:
-- artifact: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install

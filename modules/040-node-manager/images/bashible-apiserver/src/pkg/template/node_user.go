@@ -35,9 +35,9 @@ type NodeUser struct {
 }
 
 type NodeUserSpec struct {
-	Uid           int      `json:"uid"`
-	SshPublicKey  string   `json:"sshPublicKey,omitempty"`
-	SshPublicKeys []string `json:"sshPublicKeys,omitempty"`
+	UID           int      `json:"uid"`
+	SSHPublicKey  string   `json:"sshPublicKey,omitempty"`
+	SSHPublicKeys []string `json:"sshPublicKeys,omitempty"`
 	PasswordHash  string   `json:"passwordHash"`
 	IsSudoer      bool     `json:"isSudoer"`
 	NodeGroups    []string `json:"nodeGroups"`
@@ -45,11 +45,11 @@ type NodeUserSpec struct {
 }
 
 func (nu NodeUserSpec) IsEqual(newSpec NodeUserSpec) bool {
-	if nu.Uid != newSpec.Uid {
+	if nu.UID != newSpec.UID {
 		return false
 	}
 
-	if nu.SshPublicKey != newSpec.SshPublicKey {
+	if nu.SSHPublicKey != newSpec.SSHPublicKey {
 		return false
 	}
 
@@ -65,7 +65,7 @@ func (nu NodeUserSpec) IsEqual(newSpec NodeUserSpec) bool {
 		return false
 	}
 
-	if !slices.Equal(nu.SshPublicKeys, newSpec.SshPublicKeys) {
+	if !slices.Equal(nu.SSHPublicKeys, newSpec.SSHPublicKeys) {
 		return false
 	}
 

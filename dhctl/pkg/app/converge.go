@@ -15,6 +15,7 @@
 package app
 
 import (
+	"os"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -25,6 +26,8 @@ var (
 	ListenAddress = ":9101"
 	CheckInterval = time.Minute
 	OutputFormat  = "yaml"
+
+	CheckHasTerraformStateBeforeMigrateToTofu = false
 )
 
 func DefineConvergeExporterFlags(cmd *kingpin.CmdClause) {
@@ -34,7 +37,7 @@ func DefineConvergeExporterFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("listen-address", "Address to expose metrics").
 		Envar(configEnvName("LISTEN_ADDRESS")).
 		StringVar(&ListenAddress)
-	cmd.Flag("check-interval", "Period to check terraform state converge").
+	cmd.Flag("check-interval", "Period to check infrastructure state converge").
 		Envar(configEnvName("CHECK_INTERVAL")).
 		DurationVar(&CheckInterval)
 }
@@ -44,4 +47,27 @@ func DefineOutputFlag(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("OUTPUT")).
 		Short('o').
 		EnumVar(&OutputFormat, "yaml", "json")
+}
+
+func DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd *kingpin.CmdClause) {
+	cmd.Flag("check-has-terraform-state-before-migrate-to-tofu", "Check cluster has terraform state before migrate state to tofu.").
+		Default("false").
+		BoolVar(&CheckHasTerraformStateBeforeMigrateToTofu)
+}
+
+func ForceNoSwitchToNodeUser() bool {
+	return getEnvBool("NO_SWITCH_TO_NODE_USER")
+}
+
+func SkipDrainingNodes() bool {
+	return getEnvBool("SKIP_DRAINING_NO_NODES")
+}
+
+func getEnvBool(name string) bool {
+	envName := configEnvName(name)
+	if val, ok := os.LookupEnv(envName); ok && val == "true" {
+		return true
+	}
+
+	return false
 }

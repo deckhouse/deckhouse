@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-initContainer-privileged-true
+  namespace: testns
+spec:
+  initContainers:
+    - name: init
+      image: busybox
+      securityContext:
+        privileged: true
+  containers:
+    - name: nginx
+      image: nginx
+

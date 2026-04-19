@@ -16,6 +16,8 @@ package hooks
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -25,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -33,7 +36,8 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeAll: &go_hook.OrderedConfig{Order: 15},
+	// Order 30: run after cloud provider discovery hooks (Order 25)
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 30},
 
 	// watch for cluster's StorageClass changes
 	// in case, when there is NO StorageClass exists yet (which name in `global.defaultClusterStorageClass`)
@@ -51,23 +55,30 @@ func storageClassFilter(_ *unstructured.Unstructured) (go_hook.FilterResult, err
 	return true, nil
 }
 
-func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container) error {
+func setupDefaultStorageClass(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	const paramPath = "global.defaultClusterStorageClass"
 	defaultClusterStorageClass := input.Values.Get(paramPath).String()
 
+	// If not explicitly set by user, try to use value discovered from cloud provider
 	if defaultClusterStorageClass == "" {
-		input.Logger.Infof("Parameter `%s` not set. Skipping", paramPath)
-		return nil
+		cloudProviderDefaultSC := input.Values.Get("global.discovery.cloudProviderDefaultStorageClass").String()
+		if cloudProviderDefaultSC != "" {
+			defaultClusterStorageClass = cloudProviderDefaultSC
+			input.Logger.Info("Using default storage class from cloud provider discovery", slog.String("storage_class", defaultClusterStorageClass))
+		} else {
+			input.Logger.Info("Parameter is not set and no cloud provider default found. Skipping", slog.String("param_path", paramPath))
+			return nil
+		}
 	}
 
 	client, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	storageClasses, err := client.StorageV1().StorageClasses().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		input.Logger.Warnf("Error getting storage classes: %s", err)
+		input.Logger.Warn("Error getting storage classes", log.Err(err))
 		return nil
 	}
 
@@ -81,7 +92,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 	}
 
 	if !haveStorageClass {
-		input.Logger.Warnf("StorageClass `%s` does not exists in cluster (set in `%s` parameter). Skipping", defaultClusterStorageClass, paramPath)
+		input.Logger.Warn("StorageClass does not exists in cluster (set in parameter). Skipping", slog.String("name", defaultClusterStorageClass), slog.String("parameter_path", paramPath))
 		return nil
 	}
 
@@ -91,7 +102,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 			// it's that storage class which we want
 			if !isMarkedDefault(&sc) {
 				// we must add default-annotation to this StorageClass because it's not annotated as default
-				input.Logger.Warnf("Add default annotation to storage class %q (it specified in `global.defaultClusterStorageClass`)", sc.GetName())
+				input.Logger.Warn("Add default annotation to storage class (it specified in `global.defaultClusterStorageClass`)", slog.String("name", sc.GetName()))
 
 				patch := map[string]any{
 					"metadata": map[string]any{
@@ -101,12 +112,12 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 					},
 				}
 
-				input.PatchCollector.MergePatch(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
+				input.PatchCollector.PatchWithMerge(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
 			}
 		} else {
 			if isMarkedDefault(&sc) {
 				// we must remove default-annotation from this StorageClass because only one StorageClass (which name in defaultClusterStorageClass) can be default
-				input.Logger.Warnf("Remove default annotations from storage class %q", sc.GetName())
+				input.Logger.Warn("Remove default annotations from storage class", slog.String("name", sc.GetName()))
 
 				patch := map[string]any{
 					"metadata": map[string]any{
@@ -117,7 +128,7 @@ func setupDefaultStorageClass(input *go_hook.HookInput, dc dependency.Container)
 					},
 				}
 
-				input.PatchCollector.MergePatch(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
+				input.PatchCollector.PatchWithMerge(patch, "storage.k8s.io/v1", "StorageClass", "", sc.GetName())
 			}
 		}
 	}

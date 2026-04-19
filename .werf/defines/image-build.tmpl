@@ -1,0 +1,52 @@
+# Render build command based on svace enabled condition.
+# Passed context should contain variables:
+#   - SVACE_ENABLED - svace build toogler
+#   - SVACE_ANALYZE_SSH_USER - ssh user to connect to svace analyze server with
+#   - SVACE_ANALYZE_HOST - svace analyze server host
+#   - ProjectName - project name which will be used in svacer (report server)
+#   - Commit.Hash - build commit hash, which is used to distinct artifacts on the analyze server and to add into import custom field
+#   - SvaceBuildOptions - optional parameter; might be used for javascript and python svacing
+#   - SvaceImportSettings - dict, which can contain ProjectName and Branch fields, to override default behavior of the futher analysis job
+#   - SvaceIgnore - list of regexps to exclude folders from analysis
+# Svace build uploads gathered artifacts to the analyze server
+
+{{- define "image-build.build" }}
+{{-   if eq $.SVACE_ENABLED "true" }}
+echo "Using svace for build"
+svace build --init --clear-build-dir {{ get . "SvaceBuildOptions" }} {{ .BuildCommand }}
+{{- if hasKey . "SvaceImportSettings" }}
+  {{- $Root := . }}
+  {{- $content := "" }}
+  {{- range $key, $value := .SvaceImportSettings }}
+    {{- $content = (printf "%s%s=%s\n" $content $key (get $Root $value)) }}
+  {{- end }}
+cat > .svace-dir/import-settings <<EOF
+{{ trim $content }}
+EOF
+{{- end }}
+{{- if hasKey . "SvaceIgnore" }}
+  {{- $Root := . }}
+  {{- $content := "" }}
+  {{- range $value := .SvaceIgnore }}
+    {{- $content = (printf "%s%s\n" $content $value) }}
+  {{- end }}
+cat >> .svace-dir/svace.ignore <<EOF
+{{ trim $content }}
+EOF
+{{- end }}
+attempt=0
+retries=5
+success=0
+set +e
+while [[ $attempt -lt $retries ]]; do
+  ssh -o ConnectTimeout=10 -o ServerAliveInterval=10 -o ServerAliveCountMax=12 {{ $.SVACE_ANALYZE_SSH_USER }}@{{ $.SVACE_ANALYZE_HOST }} mkdir -p /svace-analyze/{{ $.Commit.Hash }}/{{ .ProjectName }}/.svace-dir
+  rsync -zr --timeout=10 --compress-choice=zstd --partial --append-verify .svace-dir {{ $.SVACE_ANALYZE_SSH_USER }}@{{ $.SVACE_ANALYZE_HOST }}:/svace-analyze/{{ $.Commit.Hash }}/{{ .ProjectName }}/ && success=1 && break
+  sleep 10
+  attempt=$((attempt + 1))
+done
+set -e
+[[ $success == 1 ]] && rm -rf .svace-dir || exit 1
+{{-   else }}
+{{ .BuildCommand }}
+{{-   end }}
+{{- end }}

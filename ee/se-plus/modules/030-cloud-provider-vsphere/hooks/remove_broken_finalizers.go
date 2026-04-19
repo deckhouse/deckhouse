@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hooks
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -13,6 +14,8 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 type volumeAttachment struct {
@@ -48,19 +51,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, handleVolumeAttachments)
 
-func handleVolumeAttachments(input *go_hook.HookInput) error {
-	snap := input.Snapshots["finalizers"]
+func handleVolumeAttachments(_ context.Context, input *go_hook.HookInput) error {
+	snap, err := sdkobjectpatch.UnmarshalToStruct[volumeAttachment](input.Snapshots, "finalizers")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal finalizers snapshot: %w", err)
+	}
 	if len(snap) == 0 {
 		return nil
 	}
 
-	for _, s := range snap {
-		va := s.(volumeAttachment)
+	for _, va := range snap {
 		if va.Message != "rpc error: code = Unknown desc = No VM found" {
 			continue
 		}
 
-		input.PatchCollector.Filter(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+		input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 			var v storagev1.VolumeAttachment
 			err := sdk.FromUnstructured(obj, &v)
 			if err != nil {

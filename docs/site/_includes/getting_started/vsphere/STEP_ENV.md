@@ -1,12 +1,14 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
+To install Deckhouse Kubernetes Platform on VMware vSphere, you need vSphere version `7.x` or `8.x` with support for the [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) mechanism.
+
 ## List of required vSphere resources
 
 {% alert %}
 Deckhouse uses the `ens192` interface as the default interface for virtual machines in vSphere. Therefore, when using static IP addresses in `mainNetwork`, you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
-* **User** with required set of [permissions](#creating-and-assigning-a-role).
+* **User** with required [set of privileges](#creating-and-assigning-a-role).
 * **Network** with DHCP server and access to the Internet
 * **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
 * **Cluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories) category.
@@ -15,20 +17,26 @@ Deckhouse uses the `ens192` interface as the default interface for virtual machi
 
 ## vSphere configuration
 
+{% alert level="info" %}
+To configure tags, datastore tagging, and the Deckhouse service role through the **VMware vSphere Client** UI, follow [Configuration via vSphere Client](/modules/cloud-provider-vsphere/environment.html#configuration-in-vsphere-client) in the module documentation. The steps below use **`govc` only**.
+{% endalert %}
+
 ### Installing govc
 
 You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) — to proceed with the rest of the guide.
 
-After the installation is complete, set the environment variables required to work with vCenter:
+After the installation is complete, set the environment variables required to work with vCenter.
 
-{% snippetcut %}
+{% alert level="warning" %}
+Make sure to specify the username together with the domain, for example: `username@domain.local`.
+{% endalert %}
+
 ```shell
 export GOVC_URL=example.com
 export GOVC_USERNAME=<username>@vsphere.local
 export GOVC_PASSWORD=<password>
 export GOVC_INSECURE=1
 ```
-{% endsnippetcut %}
 
 ### Creating tags and tag categories
 
@@ -36,39 +44,31 @@ Instead of "regions" and "zones", VMware vSphere provides `Datacenter` and `Clus
 
 Create a tag category using the following commands:
 
-{% snippetcut %}
 ```shell
 govc tags.category.create -d "Kubernetes Region" k8s-region
 govc tags.category.create -d "Kubernetes Zone" k8s-zone
 ```
-{% endsnippetcut %}
 
 Create tags in each category. If you intend to use multiple "zones" (`Cluster`), create a tag for each one of them:
 
-{% snippetcut %}
 ```shell
 govc tags.create -d "Kubernetes Region" -c k8s-region test-region
 govc tags.create -d "Kubernetes Zone Test 1" -c k8s-zone test-zone-1
 govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 ```
-{% endsnippetcut %}
 
 Attach the "region" tag to `Datacenter`:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>
 ```
-{% endsnippetcut %}
 
 Attach "zone" tags to `Cluster` objects:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 ```
-{% endsnippetcut %}
 
 #### Datastore configuration
 
@@ -78,7 +78,6 @@ For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on 
 
 Assign the "region" and "zone" tags to the `Datastore` objects to automatically create a `StorageClass` in the Kubernetes cluster:
 
-{% snippetcut %}
 ```shell
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
 govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
@@ -86,34 +85,62 @@ govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreN
 govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
 govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
 ```
-{% endsnippetcut %}
 
 ### Creating and assigning a role
 
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
+The role that you are asked to create next includes the privileges from the section [List of required privileges](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
-Create a role with the corresponding permissions:
+Create a role with the required privileges:
 
-{% snippetcut %}
 ```shell
 govc role.create deckhouse \
-   Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
-   Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
-   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
+  Cns.Searchable \
+  Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
+  Folder.Create Folder.Delete Folder.Move Folder.Rename \
+  Global.GlobalTag Global.SystemTag \
+  InventoryService.Tagging.AttachTag InventoryService.Tagging.CreateCategory \
+  InventoryService.Tagging.CreateTag InventoryService.Tagging.DeleteCategory \
+  InventoryService.Tagging.DeleteTag InventoryService.Tagging.EditCategory \
+  InventoryService.Tagging.EditTag InventoryService.Tagging.ModifyUsedByForCategory \
+  InventoryService.Tagging.ModifyUsedByForTag InventoryService.Tagging.ObjectAttachable \
+  Network.Assign \
+  Resource.AssignVMToPool Resource.CreatePool Resource.DeletePool Resource.EditPool Resource.RenamePool \
+  StorageProfile.View \
+  System.Anonymous System.Read System.View \
+  VApp.ApplicationConfig VApp.AssignResourcePool VApp.AssignVM VApp.Create VApp.Delete \
+  VApp.ExtractOvfEnvironment VApp.Import VApp.InstanceConfig VApp.PowerOff VApp.PowerOn VApp.ResourceConfig \
+  VirtualMachine.Config.AddExistingDisk VirtualMachine.Config.AddNewDisk VirtualMachine.Config.AddRemoveDevice \
+  VirtualMachine.Config.AdvancedConfig VirtualMachine.Config.Annotation VirtualMachine.Config.CPUCount \
+  VirtualMachine.Config.ChangeTracking VirtualMachine.Config.DiskExtend VirtualMachine.Config.DiskLease \
+  VirtualMachine.Config.EditDevice VirtualMachine.Config.ManagedBy VirtualMachine.Config.Memory \
+  VirtualMachine.Config.QueryUnownedFiles VirtualMachine.Config.RawDevice VirtualMachine.Config.ReloadFromPath \
+  VirtualMachine.Config.RemoveDisk VirtualMachine.Config.Rename VirtualMachine.Config.ResetGuestInfo \
+  VirtualMachine.Config.Resource VirtualMachine.Config.Settings VirtualMachine.Config.SwapPlacement \
+  VirtualMachine.Config.UpgradeVirtualHardware \
+  VirtualMachine.GuestOperations.Query \
+  VirtualMachine.Interact.AnswerQuestion VirtualMachine.Interact.DeviceConnection \
+  VirtualMachine.Interact.GuestControl VirtualMachine.Interact.PowerOff VirtualMachine.Interact.PowerOn \
+  VirtualMachine.Interact.Reset VirtualMachine.Interact.SetCDMedia VirtualMachine.Interact.ToolsInstall \
+  VirtualMachine.Inventory.Create VirtualMachine.Inventory.CreateFromExisting VirtualMachine.Inventory.Delete \
+  VirtualMachine.Inventory.Move \
+  VirtualMachine.Provisioning.Clone VirtualMachine.Provisioning.Customize VirtualMachine.Provisioning.DeployTemplate \
+  VirtualMachine.Provisioning.GetVmFiles VirtualMachine.Provisioning.PutVmFiles VirtualMachine.Provisioning.ReadCustSpecs \
+  VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
-{% endsnippetcut %}
 
-Assign the role to a user on the `vCenter` object:
+Assign the role to a user on the `vCenter` object.
 
-{% snippetcut %}
+{% alert level="warning" %}
+Make sure to specify the username together with the domain, for example: `username@domain.local`.
+{% endalert %}
+
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
-{% endsnippetcut %}
 
 ### Preparing a virtual machine image
 
@@ -124,4 +151,4 @@ It is recommended to use a pre-built cloud image/OVA file provided by the OS ven
 * [**CentOS**](https://cloud.centos.org/)
 * [**Rocky Linux**](https://rockylinux.org/alternative-images/) (*Generic Cloud / OpenStack* section)
 
-If you need to use your own image, please refer to the [documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-vsphere/environment.html#virtual-machine-image-requirements).
+If you need to use your own image, please refer to the [documentation](/modules/cloud-provider-vsphere/environment.html#virtual-machine-image-requirements).

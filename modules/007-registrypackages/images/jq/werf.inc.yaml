@@ -1,10 +1,10 @@
-{{- $version := .CandiVersionMap.jq.version }}
+{{- $version := include "get_oss_version_by_id" (list "jq" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
   to: /
   includePaths:
@@ -12,14 +12,18 @@ import:
   - uninstall
   - jq
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    jq: {{ $version }}
+imageSpec:
+  config:
+    labels: { "distro": "all", "version": "all", "jq": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-from: {{ $.Images.BASE_ALPINE }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
+final: false
+from: {{ index $.Images "builder/alpine" }}
 git:
 - add: /{{ $.ModulePath }}modules/007-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
   to: /
@@ -30,7 +34,7 @@ git:
     setup:
     - '**/*'
 import:
-- image: common/jq-artifact
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /jq
   before: setup

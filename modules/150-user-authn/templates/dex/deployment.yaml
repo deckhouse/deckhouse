@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: dex
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: dex
@@ -57,6 +57,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "dex")) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       serviceAccountName: dex
@@ -70,6 +71,20 @@ spec:
       - name: tls
         secret:
           secretName: dex-tls
+      {{- /* Mount Kerberos materials per LDAP provider, if configured */}}
+      {{- range $p := .Values.userAuthn.internal.providers }}
+      {{- if and (eq $p.type "LDAP") ($p.ldap) ($p.ldap.kerberos) ($p.ldap.kerberos.enabled) }}
+      {{- if not $p.ldap.kerberos.keytabSecretName }}
+        {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
+      {{- end }}
+      {{- if $p.ldap.kerberos.keytabSecretName }}
+      - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" }}
+        secret:
+          secretName: {{ $p.ldap.kerberos.keytabSecretName | quote }}
+      {{- end }}
+      {{- /* krb5.conf is not required for offline AP-REQ validation */}}
+      {{- end }}
+      {{- end }}
       {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
       - name: whitelabel-logo
         configMap:
@@ -88,7 +103,7 @@ spec:
       {{- end }}
       containers:
       - name: dex
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "dex") }}
         command: ["/usr/local/bin/dex", "serve", "/etc/dex/config/config.yaml"]
         env:
@@ -98,6 +113,9 @@ spec:
               fieldPath: metadata.namespace
         - name: DEX_EXPAND_ENV
           value: "false"
+        - name: DEX_CONTINUE_ON_CONNECTOR_FAILURE
+          value: "true"
+        {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         ports:
         - name: https
           containerPort: 5556
@@ -117,6 +135,20 @@ spec:
           mountPath: /etc/dex/config
         - name: tls
           mountPath: /etc/dex/certs
+        {{- /* Mount Kerberos materials per LDAP provider, if configured */}}
+        {{- range $p := .Values.userAuthn.internal.providers }}
+        {{- if and (eq $p.type "LDAP") ($p.ldap) ($p.ldap.kerberos) ($p.ldap.kerberos.enabled) }}
+        {{- if not $p.ldap.kerberos.keytabSecretName }}
+          {{- fail (printf "DexProvider %s: ldap.kerberos.enabled=true but ldap.kerberos.keytabSecretName is missing" $p.id) }}
+        {{- end }}
+        {{- if $p.ldap.kerberos.keytabSecretName }}
+        - name: {{ printf "kerberos-keytab-%s" $p.id | trunc 63 | trimSuffix "-" }}
+          mountPath: {{ printf "/etc/dex/kerberos/%s" $p.id | quote }}
+          readOnly: true
+        {{- end }}
+        {{- /* krb5.conf is not required for offline AP-REQ validation */}}
+        {{- end }}
+        {{- end }}
         {{- if (dig "customLogo" "enabled" false .Values.userAuthn.internal) }}
         - mountPath: /web/static/img/deckhouse-logo-icon.svg
           name: whitelabel-logo
@@ -133,7 +165,7 @@ spec:
 {{- end }}
 
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
         args:
           - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):5559"

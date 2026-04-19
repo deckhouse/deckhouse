@@ -18,12 +18,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/iancoleman/strcase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,14 +44,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -54,19 +66,32 @@ const (
 
 	maxConcurrentReconciles = 3
 	cacheSyncTimeout        = 3 * time.Minute
+
+	maxModulesLimit = 1500
+	serviceName     = "module-source-controller"
 )
 
 var ErrSettingsNotChanged = errors.New("settings not changed")
 
-func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dependency.Container, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) error {
+func RegisterController(
+	runtimeManager manager.Manager,
+	mm moduleManager,
+	edition *d8edition.Edition,
+	dc dependency.Container,
+	metricStorage metricsstorage.Storage,
+	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
+	logger *log.Logger,
+) error {
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
-		log:                  logger,
+		dc:                   dc,
+		logger:               logger,
 		moduleManager:        mm,
+		edition:              edition,
+		metricStorage:        metricStorage,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		embeddedPolicy:       embeddedPolicy,
-		dependencyContainer:  dc,
 	}
 
 	r.init.Add(1)
@@ -86,7 +111,7 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(runtimeManager).
+	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleSource{}).
 		Watches(&v1alpha1.Module{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Properties.Source}}}
@@ -106,7 +131,10 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 					return true
 				}
 				// handle enable
-				if !oldMod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) && newMod.ConditionStatus(v1alpha1.ModuleConditionEnabledByModuleConfig) {
+				// not found or !true -> true
+				if !oldMod.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
+					!oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) &&
+						newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
 					return true
 				}
 				return false
@@ -119,16 +147,23 @@ func RegisterController(runtimeManager manager.Manager, mm moduleManager, dc dep
 			},
 		})).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
-		Complete(sourceController)
+		Complete(sourceController); err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 type reconciler struct {
-	init                 *sync.WaitGroup
-	client               client.Client
-	log                  *log.Logger
-	dependencyContainer  dependency.Container
+	init   *sync.WaitGroup
+	client client.Client
+	dc     dependency.Container
+	logger *log.Logger
+
+	metricStorage metricsstorage.Storage
+
 	embeddedPolicy       *helpers.ModuleUpdatePolicySpecContainer
 	moduleManager        moduleManager
+	edition              *d8edition.Edition
 	downloadedModulesDir string
 	clusterUUID          string
 }
@@ -141,7 +176,7 @@ func (r *reconciler) preflight(ctx context.Context) error {
 	defer r.init.Done()
 
 	// wait until module manager init
-	r.log.Debug("wait until module manager is inited")
+	r.logger.Debug("wait until module manager is inited")
 	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
 		return r.moduleManager.AreModulesInited(), nil
 	}); err != nil {
@@ -150,7 +185,7 @@ func (r *reconciler) preflight(ctx context.Context) error {
 
 	r.clusterUUID = utils.GetClusterUUID(ctx, r.client)
 
-	r.log.Debug("controller is ready")
+	r.logger.Debug("controller is ready")
 
 	return nil
 }
@@ -159,20 +194,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// wait for init
 	r.init.Wait()
 
-	r.log.Debugf("reconciling the '%s' module source", req.Name)
+	r.logger.Debug("reconciling module source", slog.String("name", req.Name))
 	moduleSource := new(v1alpha1.ModuleSource)
 	if err := r.client.Get(ctx, req.NamespacedName, moduleSource); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.log.Warnf("the '%s' module source not found", req.Name)
+			r.logger.Warn("module source not found", slog.String("name", req.Name))
 			return ctrl.Result{}, nil
 		}
-		r.log.Errorf("failed to get the '%s' module source: %v", req.Name, err)
+		r.logger.Error("failed to get module source", slog.String("name", req.Name), log.Err(err))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// handle delete event
 	if !moduleSource.DeletionTimestamp.IsZero() {
-		r.log.Debugf("deleting the '%s' module source", req.Name)
+		r.logger.Debug("deleting module source", slog.String("name", req.Name))
 		return r.deleteModuleSource(ctx, moduleSource)
 	}
 
@@ -181,48 +216,72 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "handleModuleSource")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("source", source.Name))
+
+	scanInterval := defaultScanInterval
+	if interval := source.Spec.ScanInterval; interval != nil && interval.Duration > defaultScanInterval {
+		scanInterval = interval.Duration
+	}
+
 	// generate options for connecting to the registry
-	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.log)
+	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
 	// create a registry client
-	registryClient, err := r.dependencyContainer.GetRegistryClient(source.Spec.Registry.Repo, opts...)
+	registryClient, err := r.dc.GetRegistryClient(source.Spec.Registry.Repo, opts...)
 	if err != nil {
-		r.log.Errorf("failed to get registry client for the '%s' module source: %v", source.Name, err)
+		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
-			return ctrl.Result{Requeue: true}, nil
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
+			return ctrl.Result{}, uerr
 		}
 		// error can occur on wrong auth only, we don't want to requeue the source until auth is fixed
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// sync registry settings
 	if err = r.syncRegistrySettings(ctx, source); err != nil && !errors.Is(err, ErrSettingsNotChanged) {
-		r.log.Errorf("failed to sync registry settings for the '%s' module source: %v", source.Name, err)
+		r.logger.Error("failed to sync registry settings for module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
-			return ctrl.Result{Requeue: true}, nil
+			r.logger.Error("failed to update source status message", slog.String("source_name", source.Name), log.Err(uerr))
+			return ctrl.Result{}, uerr
 		}
-		return ctrl.Result{Requeue: true}, nil
+
+		return ctrl.Result{}, err
 	}
 	if err == nil {
 		// new registry settings checksum should be applied to module source
 		if err = r.client.Update(ctx, source); err != nil {
-			r.log.Errorf("failed to update the '%s' module source status: %v", source.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+			r.logger.Error("failed to update module source status", slog.String("source_name", source.Name), log.Err(err))
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
-		// requeue moduleSource after modifying annotation
-		r.log.Debugf("the '%s' module source will be requeued", source.Name)
+		// requeue module source after modifying annotation
+		r.logger.Debug("module source will be requeued", slog.String("source_name", source.Name))
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	span.AddEvent("fetch tags from the registry")
+
 	// list available modules(tags) from the registry
-	r.log.Debugf("fetch modules from the '%s' module source", source.Name)
+	r.logger.Debug("fetch modules from the module source", slog.String("source_name", source.Name))
 	pulledModules, err := registryClient.ListTags(ctx)
 	if err != nil {
-		r.log.Errorf("failed to list tags for the '%s' module source: %v", source.Name, err)
+		r.logger.Error("failed to list tags for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{}, uerr
 		}
-		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+
+		return ctrl.Result{RequeueAfter: scanInterval}, nil
+	}
+
+	span.AddEvent("successfully fetched the tags for the registry",
+		trace.WithAttributes(attribute.Int("count", len(pulledModules))))
+
+	// limit pulled module
+	if len(pulledModules) > maxModulesLimit {
+		pulledModules = pulledModules[:maxModulesLimit]
 	}
 
 	// remove the source from available sources in deleted modules
@@ -233,31 +292,44 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	for _, availableModule := range source.Status.AvailableModules {
 		if !namesSet[availableModule.Name] {
 			if err = r.cleanSourceInModule(ctx, source.Name, availableModule.Name); err != nil {
-				r.log.Errorf("failed to clean the module from the '%s' module source: %v", availableModule.Name, err)
-				return ctrl.Result{Requeue: true}, nil
+				r.logger.Error("failed to clean the module from the module source", slog.String("name", availableModule.Name), log.Err(err))
+				return ctrl.Result{}, err
 			}
 		}
 	}
 
 	if err = r.processModules(ctx, source, opts, pulledModules); err != nil {
-		r.log.Errorf("failed to process modules for the '%s' module source: %v", source.Name, err)
-		return ctrl.Result{Requeue: true}, nil
+		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
+
+		return ctrl.Result{}, err
 	}
-	r.log.Debugf("the '%s' module source reconciled", source.Name)
+
+	r.logger.Debug("module source reconciled", slog.String("source_name", source.Name), slog.String("interval", scanInterval.String()))
 
 	// everything is ok, check source on the other iterations
-	return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+	return ctrl.Result{RequeueAfter: scanInterval}, nil
 }
 
 func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.ModuleSource, opts []cr.Option, pulledModules []string) error {
-	md := downloader.NewModuleDownloader(r.dependencyContainer, r.downloadedModulesDir, source, opts)
+	ctx, span := otel.Tracer(controllerName).Start(ctx, "processModules")
+	defer span.End()
+
+	md := downloader.NewModuleDownloader(r.dc, r.downloadedModulesDir, source, r.logger.Named("downloader"), opts)
 	sort.Strings(pulledModules)
 
-	var availableModules []v1alpha1.AvailableModule
-	var pullErrorsExist bool
+	availableModules := make([]v1alpha1.AvailableModule, 0)
+	var errorsExist bool
+
 	for _, moduleName := range pulledModules {
-		if moduleName == "modules" {
-			r.log.Warn("the 'modules' is a forbidden name, skip the module.")
+		logger := r.logger.With(slog.String("module_name", moduleName))
+
+		if moduleName == "modules" || len(moduleName) > 64 {
+			logger.Warn("the module has a forbidden name, skip it")
+			continue
+		}
+
+		if errs := validation.IsDNS1123Subdomain(moduleName); len(errs) > 0 {
+			logger.Warn("the module has invalid name: must comply with RFC 1123 subdomain format, skip it")
 			continue
 		}
 
@@ -265,121 +337,198 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		for _, available := range source.Status.AvailableModules {
 			if available.Name == moduleName {
 				availableModule = available
+				break
 			}
 		}
 
-		// clear pull error
+		// clear process error
+		availableModule.Error = ""
+
+		// TODO: remove this emptify after 1.75
+		// nolint: staticcheck
 		availableModule.PullError = ""
 
-		// get update policy
-		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
+		// clear overridden
+		availableModule.Overridden = false
+
+		policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
-			return fmt.Errorf("get update policy for the '%s' module: %w", moduleName, err)
+			logger.Warn("failed to get update policy for module, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
 		}
 
 		availableModule.Policy = policy.Name
 
+		logger = logger.With(slog.String("release channel", policy.Spec.ReleaseChannel))
+
 		// create or update module
 		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			return fmt.Errorf("ensure the '%s' module: %w", moduleName, err)
-		}
+			// skip modules that require resync
+			if errors.Is(err, ErrRequireResync) {
+				availableModule.Version = "unknown"
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
 
-		if module == nil {
+			logger.Warn("failed to ensure module, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
 			availableModules = append(availableModules, availableModule)
-			// skip module
 			continue
 		}
 
+		logger = logger.With(slog.String("source_name", source.Name))
+
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
-			return fmt.Errorf("get pull override for the '%s' module: %w", moduleName, err)
+			logger.Warn("failed to get module pull override, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
 		}
+
+		// skip overridden module
 		if exists {
-			// skip overridden module
 			availableModule.Overridden = true
 			availableModules = append(availableModules, availableModule)
 			continue
 		}
 
-		var cachedChecksum = availableModule.Checksum
+		metricModuleGroup := metrics.D8ModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
+		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
-		// check if release exists
-		exists, err = r.releaseExists(ctx, source.Name, moduleName, cachedChecksum)
-		if err != nil {
-			return fmt.Errorf("check if the '%s' module has a release: %w", moduleName, err)
-		}
-		if !exists {
-			// if release does not exist, clear checksum to trigger meta downloading
-			cachedChecksum = ""
-		}
+		logger.Debug("download module meta from release channel")
 
-		// download module metadata from the specified release channel
-		r.log.Debugf("download meta from the '%s' release channel for the '%s' module for the '%s' module source", policy.Spec.ReleaseChannel, moduleName, source.Name)
-		meta, err := md.DownloadMetadataFromReleaseChannel(moduleName, policy.Spec.ReleaseChannel, cachedChecksum)
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			r.log.Warnf("failed to downloaded the '%s' module: %v", moduleName, err)
-			availableModule.PullError = err.Error()
-			availableModules = append(availableModules, availableModule)
-			pullErrorsExist = true
-			// set the downloading error phase for the module
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
-					module.Status.Phase = v1alpha1.ModulePhaseDownloadingError
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloadingError, err.Error())
-					return true
+			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) && module.Properties.Source == source.Name {
+				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				errorsExist = true
+
+				metricLabels := map[string]string{
+					"module":   moduleName,
+					"version":  availableModule.Version,
+					"registry": source.Spec.Registry.Repo,
 				}
-				return false
-			})
-			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
+
+				r.metricStorage.Grouped().GaugeSet(metricModuleGroup, metrics.D8ModuleUpdatingModuleIsNotValid, 1, metricLabels)
 			}
+
+			availableModule.Version = "unknown"
+			availableModules = append(availableModules, availableModule)
+
 			continue
 		}
 
-		if availableModule.Checksum != meta.Checksum || (meta.ModuleVersion != "" && !exists) {
-			err = utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		// update module with its metadata after meta is fetched
+		// but only if module is available to not overwrite the properties that are already set locally
+		if module.Status.Phase == v1alpha1.ModulePhaseAvailable {
+			if err := r.updateModulePropertiesFromDefinition(ctx, module, meta.ModuleDefinition, meta.ModuleVersion); err != nil {
+				logger.Error("failed to update module properties from definition", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+		}
+
+		// check if release exists
+		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
+		if err != nil {
+			logger.Error("failed to check if module has a release, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		if r.needToEnsureRelease(source, module, availableModule, meta, exists) {
+			logger.Debug("ensure release")
+
+			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
 					module.Status.Phase = v1alpha1.ModulePhaseDownloading
 					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
-					return true
 				}
-				return false
+
+				return nil
 			})
 			if err != nil {
-				return fmt.Errorf("update the '%s' module: %w", moduleName, err)
+				logger.Error("failed to update module status before fetch, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
 			}
 
-			r.log.Debugf("ensure module release for the '%s' module for the '%s' module source", moduleName, source.Name)
-			if err = r.ensureModuleRelease(ctx, source.GetUID(), source.Name, moduleName, policy.Name, meta); err != nil {
-				return fmt.Errorf("ensure module release for the '%s' module: %w", moduleName, err)
+			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+				module.Properties.Source = source.Name
+
+				return nil
+			})
+			if err != nil {
+				logger.Error("failed to update module before fetch, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
 			}
-			availableModule.Checksum = meta.Checksum
+
+			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, policy.Spec.ReleaseChannel, metricModuleGroup, opts)
+			if err != nil {
+				logger.Error("fetch module releases", log.Err(err))
+				availableModule.Error = err.Error()
+				// wipe checksum to trigger meta downloading
+				meta.Checksum = ""
+				errorsExist = true
+			}
 		}
+
+		availableModule.Checksum = meta.Checksum
+		availableModule.Version = meta.ModuleVersion
+
 		availableModules = append(availableModules, availableModule)
 	}
 
 	// update source status
-	err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
-		source.Status.Message = v1alpha1.ModuleSourceMessageReady
-		source.Status.SyncTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
+	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, source, func() error {
+		source.Status.Phase = v1alpha1.ModuleSourcePhaseActive
+		source.Status.SyncTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		source.Status.AvailableModules = availableModules
 		source.Status.ModulesCount = len(availableModules)
-		if pullErrorsExist {
-			source.Status.Message = v1alpha1.ModuleSourceMessagePullErrors
+		source.Status.Message = ""
+
+		if errorsExist {
+			source.Status.Message = v1alpha1.ModuleSourceMessageErrors
 		}
-		return true
+
+		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("update the '%s' module source status: %w", source.Name, err)
 	}
 
 	// set finalizer
-	err = utils.Update[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+	err = utils.Update(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 		if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
 			controllerutil.AddFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
+
 			return true
 		}
+
 		return false
 	})
 	if err != nil {
@@ -390,32 +539,44 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 }
 
 func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.ModuleSource) (ctrl.Result, error) {
+	if source.Status.Phase != v1alpha1.ModuleSourcePhaseTerminating {
+		source.Status.Phase = v1alpha1.ModuleSourcePhaseTerminating
+		if err := r.client.Status().Update(ctx, source); err != nil {
+			r.logger.Warn("failed to set terminating to the source", slog.String("module_source", source.GetName()), log.Err(err))
+
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
+		}
+	}
+
 	if controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
 		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
 			// list deployed ModuleReleases associated with the ModuleSource
 			releases := new(v1alpha1.ModuleReleaseList)
 			if err := r.client.List(ctx, releases, client.MatchingLabels{"source": source.Name, "status": "deployed"}); err != nil {
-				return ctrl.Result{Requeue: true}, nil
+				r.logger.Warn("failed to list releases", slog.String("module_source", source.GetName()), log.Err(err))
+
+				return ctrl.Result{}, fmt.Errorf("list: %w", err)
 			}
 
 			// prevent deletion if there are deployed releases
 			if len(releases.Items) > 0 {
-				err := utils.UpdateStatus[*v1alpha1.ModuleSource](ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
+				err := utils.UpdateStatus(ctx, r.client, source, func(source *v1alpha1.ModuleSource) bool {
 					source.Status.Message = "The source contains at least 1 deployed release and cannot be deleted. Please delete target ModuleReleases manually to continue"
 					return true
 				})
 				if err != nil {
-					r.log.Errorf("failed to update the '%s' module source status: %v", source.Name, err)
-					return ctrl.Result{Requeue: true}, nil
+					r.logger.Error("failed to update module source status", slog.String("name", source.Name), log.Err(err))
+					return ctrl.Result{}, fmt.Errorf("update status: %w", err)
 				}
+
 				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 			}
 		}
 
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists)
 		if err := r.client.Update(ctx, source); err != nil {
-			r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+			r.logger.Error("failed to update module source", slog.String("name", source.Name), log.Err(err))
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 	}
 
@@ -423,18 +584,46 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
 			for _, module := range source.Status.AvailableModules {
 				if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
-					r.log.Errorf("failed to clean source in the %q module during deleting the %q module source: %v", module.Name, source.Name, err)
-					return ctrl.Result{Requeue: true}, nil
+					r.logger.Error("failed to clean source in module during deletion of module source", slog.String("name", module.Name), slog.String("source_name", source.Name), log.Err(err))
+					return ctrl.Result{}, err
 				}
 			}
 		}
 
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 		if err := r.client.Update(ctx, source); err != nil {
-			r.log.Errorf("failed to update the '%s' module source: %v", source.Name, err)
-			return ctrl.Result{Requeue: true}, nil
+			r.logger.Error("failed to update module source", slog.String("source_name", source.Name), log.Err(err))
+			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// updateModulePropertiesFromDefinition updates module properties from the downloaded module definition.
+// Only syncs properties that come from module.yaml definition.
+func (r *reconciler) updateModulePropertiesFromDefinition(
+	ctx context.Context,
+	module *v1alpha1.Module,
+	def *moduletypes.Definition,
+	moduleVersion string,
+) error {
+	if def == nil {
+		return nil
+	}
+
+	return ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+		props := &module.Properties
+		props.Stage = def.Stage
+		props.Weight = def.Weight
+		props.Critical = def.Critical
+		props.Namespace = def.Namespace
+		props.Subsystems = def.Subsystems
+		props.ExclusiveGroup = def.ExclusiveGroup
+		props.Requirements = def.Requirements
+		props.DisableOptions = def.DisableOptions
+		props.Accessibility = def.Accessibility.ToV1Alpha1()
+		props.Version = moduleVersion
+		return nil
+	})
 }

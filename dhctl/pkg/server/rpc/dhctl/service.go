@@ -26,38 +26,44 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/fsm"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-var logTypeDHCTL = slog.String("type", "dhctl")
-
 type Service struct {
 	pb.UnimplementedDHCTLServer
 
-	podName  string
-	cacheDir string
-
-	schemaStore *config.SchemaStore
+	params ServiceParams
 }
 
-func New(podName, cacheDir string, schemaStore *config.SchemaStore) *Service {
+type ServiceParams struct {
+	TmpDir            string
+	CacheDir          string
+	PodName           string
+	PodNamespace      string
+	SchemaStore       *config.SchemaStore
+	IsDebug           bool
+	DownloadDirConfig *directoryconfig.DirectoryConfig
+}
+
+func New(params ServiceParams) *Service {
 	return &Service{
-		podName:     podName,
-		cacheDir:    cacheDir,
-		schemaStore: schemaStore,
+		params: params,
 	}
 }
 
-func operationCtx(server grpc.ServerStream) context.Context {
+func operationCtx(server grpc.ServerStream) (context.Context, context.CancelFunc) {
 	ctx := server.Context()
 
 	var operation string
@@ -79,14 +85,18 @@ func operationCtx(server grpc.ServerStream) context.Context {
 	default:
 		operation = "unknown"
 	}
+
 	go func() {
 		<-ctx.Done()
 		tomb.Shutdown(0)
 	}()
+
+	opCtx, cancel := context.WithCancel(ctx)
+
 	return logger.ToContext(
-		ctx,
+		opCtx,
 		logger.L(ctx).With(slog.String("operation", operation)),
-	)
+	), cancel
 }
 
 type serverStream[Request proto.Message, Response proto.Message] interface {
@@ -138,52 +148,48 @@ func startSender[Request, Response proto.Message](
 
 type fsmPhaseSwitcher[T proto.Message, OperationPhaseDataT any] struct {
 	f        *fsm.FiniteStateMachine
-	dataFunc func(
-		completedPhase phases.OperationPhase,
-		completedPhaseState phases.DhctlState,
-		phaseData OperationPhaseDataT,
-		nextPhase phases.OperationPhase,
-		nextPhaseCritical bool,
-	) (T, error)
-	sendCh chan T
-	next   chan error
+	dataFunc func(data phases.OnPhaseFuncData[OperationPhaseDataT]) (T, error)
+	sendCh   chan T
+	next     chan error
 }
 
-func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(
-	completedPhase phases.OperationPhase,
-	completedPhaseState phases.DhctlState,
-	phaseData OperationPhaseDataT,
-	nextPhase phases.OperationPhase,
-	nextPhaseCritical bool,
+func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(ctx context.Context) func(
+	onPhaseData phases.OnPhaseFuncData[OperationPhaseDataT],
 ) error {
-	err := b.f.Event("wait")
-	if err != nil {
-		return fmt.Errorf("changing state to waiting: %w", err)
-	}
+	return func(onPhaseData phases.OnPhaseFuncData[OperationPhaseDataT]) error {
+		err := b.f.Event("wait")
+		if err != nil {
+			return fmt.Errorf("changing state to waiting: %w", err)
+		}
 
-	data, err := b.dataFunc(
-		completedPhase,
-		completedPhaseState,
-		phaseData,
-		nextPhase,
-		nextPhaseCritical,
-	)
-	if err != nil {
-		return fmt.Errorf("switch phase data func error: %w", err)
-	}
+		data, err := b.dataFunc(onPhaseData)
+		if err != nil {
+			return fmt.Errorf("switch phase data func error: %w", err)
+		}
 
-	b.sendCh <- data
+		b.sendCh <- data
 
-	switchErr, ok := <-b.next
-	if !ok {
-		return fmt.Errorf("server stopped, cancel task")
+		var (
+			switchErr error
+			ok        bool
+		)
+
+		select {
+		case switchErr, ok = <-b.next:
+			if !ok {
+				return fmt.Errorf("server stopped, cancel task")
+			}
+		case <-ctx.Done():
+			switchErr = fmt.Errorf("%w: %w", phases.ErrStopOperationCondition, ctx.Err())
+		}
+
+		return switchErr
 	}
-	return switchErr
 }
 
 func onCheckResult(checkRes *check.CheckResult) error {
 	printableCheckRes := *checkRes
-	printableCheckRes.StatusDetails.TerraformPlan = nil
+	printableCheckRes.StatusDetails.InfrastructurePlan = nil
 
 	printableCheckResDump, err := json.MarshalIndent(printableCheckRes, "", "  ")
 	if err != nil {
@@ -198,12 +204,78 @@ func onCheckResult(checkRes *check.CheckResult) error {
 	return nil
 }
 
-func panicMessage(ctx context.Context, p any) string {
+func extractLastState() ([]byte, error) {
+	state, err := phases.ExtractDhctlState(cache.Global())
+	if err != nil {
+		return nil, fmt.Errorf("extracting last state: %w", err)
+	}
+
+	data, err := json.Marshal(state)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling last state: %w", err)
+	}
+
+	return data, nil
+}
+
+func panicResult(ctx context.Context, p any) ([]byte, error) {
 	stack := string(debug.Stack())
 
 	logger.L(ctx).Error("recovered from panic",
 		slog.Any("panic", p),
 		slog.String("stack", stack),
 	)
-	return fmt.Sprintf("panic: %v, %s", p, stack)
+
+	errs := []error{
+		fmt.Errorf("panic: %v, %s", p, stack),
+	}
+
+	lastState, err := extractLastState()
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	return lastState, errors.Join(errs...)
+}
+
+type progressTracker[T proto.Message] struct {
+	sendCh   chan T
+	dataFunc func(progress phases.Progress) T
+}
+
+func (p *progressTracker[T]) sendProgress() phases.OnProgressFunc {
+	return func(progress phases.Progress) error {
+		p.sendCh <- p.dataFunc(progress)
+
+		return nil
+	}
+}
+
+func convertProgress(p phases.Progress) *pb.Progress {
+	allPhases := make([]*pb.Progress_PhaseWithSubPhases, 0, len(p.Phases))
+
+	for _, phase := range p.Phases {
+		subPhases := make([]string, 0, len(phase.SubPhases))
+		for _, subPhase := range phase.SubPhases {
+			subPhases = append(subPhases, string(subPhase))
+		}
+
+		allPhases = append(allPhases, &pb.Progress_PhaseWithSubPhases{
+			Phase:     string(phase.Phase),
+			Action:    string(ptr.Deref(phase.Action, phases.ProgressActionDefault)),
+			SubPhases: subPhases,
+		})
+	}
+
+	return &pb.Progress{
+		Operation:         string(p.Operation),
+		Progress:          p.Progress,
+		CompletedPhase:    string(p.CompletedPhase),
+		CurrentPhase:      string(p.CurrentPhase),
+		NextPhase:         string(p.NextPhase),
+		CompletedSubPhase: string(p.CompletedSubPhase),
+		CurrentSubPhase:   string(p.CurrentSubPhase),
+		NextSubPhase:      string(p.NextSubPhase),
+		Phases:            allPhases,
+	}
 }

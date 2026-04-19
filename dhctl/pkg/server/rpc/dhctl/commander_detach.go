@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
+	"reflect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
@@ -28,7 +28,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/detach"
@@ -40,13 +42,33 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
+type detachParams struct {
+	request      *pb.CommanderDetachStart
+	sendProgress phases.OnProgressFunc
+	sendCh       chan *pb.CommanderDetachResponse
+}
+
+func (p *detachParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *detachParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.CommanderDetachResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.CommanderDetachResponse {
+			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
+}
+
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
-	ctx := operationCtx(server)
+	ctx, cancel := operationCtx(server)
+	defer cancel()
 
 	logger.L(ctx).Info("started")
 
@@ -56,11 +78,12 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CommanderDetachRequest)
 	sendCh := make(chan *pb.CommanderDetachResponse)
-	logWriter := logger.NewLogWriter(logger.L(ctx).With(logTypeDHCTL), sendCh,
-		func(lines []string) *pb.CommanderDetachResponse {
-			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+	pt := progressTracker[*pb.CommanderDetachResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.CommanderDetachResponse {
+			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	)
+	}
 
 	startReceiver[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, receiveCh, doneCh, internalErrCh)
 	startSender[*pb.CommanderDetachRequest, *pb.CommanderDetachResponse](server, sendCh, internalErrCh)
@@ -90,9 +113,16 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.commanderDetachSafe(ctx, message.Start, logWriter)
+					result := s.commanderDetachSafe(ctx, &detachParams{
+						request:      message.Start,
+						sendProgress: pt.sendProgress(),
+						sendCh:       sendCh,
+					})
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
+
+			case *pb.CommanderDetachRequest_Cancel:
+				cancel()
 
 			default:
 				logger.L(ctx).Error("got unprocessable message",
@@ -103,53 +133,50 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) commanderDetachSafe(
-	ctx context.Context,
-	request *pb.CommanderDetachStart,
-	logWriter io.Writer,
-) (result *pb.CommanderDetachResult) {
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) commanderDetachSafe(ctx context.Context, p *detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = &pb.CommanderDetachResult{Err: panicMessage(ctx, r)}
+			lastState, err := panicResult(ctx, r)
+			result = &pb.CommanderDetachResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
 
-	return s.commanderDetach(ctx, request, logWriter)
+	return s.commanderDetach(ctx, p)
 }
 
-func (s *Service) commanderDetach(
-	ctx context.Context,
-	request *pb.CommanderDetachStart,
-	logWriter io.Writer,
-) *pb.CommanderDetachResult {
+func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.CommanderDetachResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
-	defer cleanuper.Call()
+	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream: logWriter,
-		Width:     int(request.Options.LogWidth),
-	})
+	loggerFor := initDhctlLogger(ctx, p)
+
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.cacheDir
-	app.ApplyPreflightSkips(request.Options.CommonOptions.SkipPreflightChecks)
+	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
+	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
+	app.SetCacheDir(s.params.CacheDir)
+	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	log.InfoF("Task is running by DHCTL Server pod/%s\n", s.podName)
-	defer func() {
-		log.InfoF("Task done by DHCTL Server pod/%s\n", s.podName)
-	}()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = log.Process("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
 		metaConfig, err = config.ParseConfigFromData(
-			input.CombineYAMLs(request.ClusterConfig, request.ProviderSpecificClusterConfig),
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			ctx,
+			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(loggerFor),
+			),
+			s.params.DownloadDirConfig,
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing cluster meta config: %w", err)
@@ -160,11 +187,11 @@ func (s *Service) commanderDetach(
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
-	err = log.Process("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
-		if request.State != "" {
-			err = json.Unmarshal([]byte(request.State), &initialState)
+		if p.request.State != "" {
+			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
@@ -182,24 +209,31 @@ func (s *Service) commanderDetach(
 		return &pb.CommanderDetachResult{Err: err.Error()}
 	}
 
-	var sshClient *ssh.Client
-	err = log.Process("default", "Preparing SSH client", func() error {
+	var sshClient node.SSHClient
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		connectionConfig, err := config.ParseConnectionConfig(
-			request.ConnectionConfig,
-			s.schemaStore,
-			config.ValidateOptionCommanderMode(request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(request.Options.CommanderMode),
+			p.request.ConnectionConfig,
+			s.params.SchemaStore,
+			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
+			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
 		)
 		if err != nil {
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+
+		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+			err = sshClient.Start()
+			if err != nil {
+				return fmt.Errorf("cannot start sshClient: %w", err)
+			}
 		}
 		return nil
 	})
@@ -208,8 +242,8 @@ func (s *Service) commanderDetach(
 	}
 
 	var commanderUUID uuid.UUID
-	if request.Options.CommanderUuid != "" {
-		commanderUUID, err = uuid.Parse(request.Options.CommanderUuid)
+	if p.request.Options.CommanderUuid != "" {
+		commanderUUID, err = uuid.Parse(p.request.Options.CommanderUuid)
 		if err != nil {
 			return &pb.CommanderDetachResult{Err: fmt.Errorf("unable to parse commander uuid: %w", err).Error()}
 		}
@@ -217,47 +251,49 @@ func (s *Service) commanderDetach(
 
 	stateCache := cache.Global()
 
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           s.params.TmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           loggerFor,
+		IsDebug:          s.params.IsDebug,
+	})
+
 	checker := check.NewChecker(&check.Params{
 		SSHClient:     sshClient,
 		StateCache:    stateCache,
-		CommanderMode: request.Options.CommanderMode,
+		CommanderMode: p.request.Options.CommanderMode,
 		CommanderUUID: commanderUUID,
 		CommanderModeParams: commander.NewCommanderModeParams(
-			[]byte(request.ClusterConfig),
-			[]byte(request.ProviderSpecificClusterConfig),
+			[]byte(p.request.ClusterConfig),
+			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TerraformContext: terraform.NewTerraformContext(),
+		InfrastructureContext: infrastructure.NewContextWithProvider(providerGetter, loggerFor),
+		TmpDir:                s.params.TmpDir,
+		Logger:                loggerFor,
+		IsDebug:               s.params.IsDebug,
+		Embedded:              true,
 	})
 
-	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{
+	detacher := detach.NewDetacher(checker, sshClient, &detach.Params{
 		CreateDetachResources: detach.DetachResources{
-			Template: request.CreateResourcesTemplate,
-			Values:   request.CreateResourcesValues.AsMap(),
+			Template: p.request.CreateResourcesTemplate,
+			Values:   p.request.CreateResourcesValues.AsMap(),
 		},
 		DeleteDetachResources: detach.DetachResources{
-			Template: request.DeleteResourcesTemplate,
-			Values:   request.DeleteResourcesValues.AsMap(),
+			Template: p.request.DeleteResourcesTemplate,
+			Values:   p.request.DeleteResourcesValues.AsMap(),
 		},
-		OnCheckResult: onCheckResult,
+		OnCheckResult:  onCheckResult,
+		OnPhaseFunc:    func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc: p.sendProgress,
 	})
 
-	var resErrs []error
+	detachErr := detacher.Detach(ctx)
+	state, stateErr := extractLastState()
 
-	resErrs = append(resErrs, detacher.Detach(ctx))
+	err = errors.Join(detachErr, stateErr)
 
-	var resState string
-	state, err := phases.ExtractDhctlState(stateCache)
-	if err != nil {
-		resErrs = append(resErrs, fmt.Errorf("unable to extract dhctl state: %w", err))
-	} else {
-		data, err := json.Marshal(state)
-		if err != nil {
-			resErrs = append(resErrs, fmt.Errorf("unable to unmarshal dhctl state: %w", err))
-		}
-		resState = string(data)
-	}
-
-	return &pb.CommanderDetachResult{State: resState, Err: util.ErrToString(errors.Join(resErrs...))}
+	return &pb.CommanderDetachResult{State: string(state), Err: util.ErrToString(err)}
 }
 
 func (s *Service) commanderDetachServerTransitions() []fsm.Transition {

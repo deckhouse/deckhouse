@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -30,21 +31,25 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/flant/shell-operator/pkg/utils/measure"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/iancoleman/strcase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/reginjector"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	moduletools "github.com/deckhouse/deckhouse/go_lib/module"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	defaultModuleWeight = 900
 	DefaultDevVersion   = "dev"
+
+	tracerName = "downloader"
 )
 
 type ModuleDownloader struct {
@@ -53,21 +58,22 @@ type ModuleDownloader struct {
 
 	ms              *v1alpha1.ModuleSource
 	registryOptions []cr.Option
+	logger          *log.Logger
 }
 
-func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, registryOptions []cr.Option) *ModuleDownloader {
+func NewModuleDownloader(dc dependency.Container, downloadedModulesDir string, ms *v1alpha1.ModuleSource, logger *log.Logger, registryOptions []cr.Option) *ModuleDownloader {
 	return &ModuleDownloader{
 		dc:                   dc,
 		downloadedModulesDir: downloadedModulesDir,
 		ms:                   ms,
 		registryOptions:      registryOptions,
+		logger:               logger,
 	}
 }
 
 type ModuleDownloadResult struct {
 	Checksum      string
 	ModuleVersion string
-	ModuleWeight  uint32
 
 	ModuleDefinition *moduletypes.Definition
 	Changelog        map[string]any
@@ -86,7 +92,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 
 	digest, err := img.Digest()
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("digest: %w", err)
 	}
 
 	if digest.String() == checksum {
@@ -98,12 +104,13 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, err
 	}
 
-	def := md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath)
-
-	return digest.String(), def, nil
+	return digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
 }
 
-func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion string) (*DownloadStatistic, error) {
+func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleName, moduleVersion string) (*DownloadStatistic, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "DownloadByModuleVersion")
+	defer span.End()
+
 	if !strings.HasPrefix(moduleVersion, "v") {
 		moduleVersion = "v" + moduleVersion
 	}
@@ -115,47 +122,71 @@ func (md *ModuleDownloader) DownloadByModuleVersion(moduleName, moduleVersion st
 
 // DownloadMetadataFromReleaseChannel downloads only module release image with metadata: version.json, checksum.json(soon)
 // does not fetch and install the desired version on the module, only fetches its module definition
-func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (ModuleDownloadResult, error) {
-	res := ModuleDownloadResult{}
+func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ModuleDownloadResult, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "DownloadMetadataFromReleaseChannel")
+	defer span.End()
 
-	moduleVersion, checksum, changelog, err := md.fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum)
-	if err != nil {
-		return res, err
-	}
+	span.SetAttributes(attribute.String("module", moduleName))
+	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
 
-	res.Checksum = checksum
-	res.ModuleVersion = moduleVersion
-	res.Changelog = changelog
-
-	// module was not updated
-	if moduleVersion == "" {
-		return res, nil
-	}
-
-	img, err := md.fetchImage(moduleName, moduleVersion)
-	if err != nil {
-		return res, err
-	}
-
-	def, err := md.fetchModuleDefinitionFromImage(moduleName, img)
-	if err != nil {
-		return res, err
-	}
-
-	res.ModuleWeight = def.Weight
-	res.ModuleDefinition = def
-
-	return res, nil
-}
-
-// DownloadModuleDefinitionByVersion returns a module definition from the repo by the module's name and version(tag)
-func (md *ModuleDownloader) DownloadModuleDefinitionByVersion(moduleName, moduleVersion string) (*moduletypes.Definition, error) {
-	img, err := md.fetchImage(moduleName, moduleVersion)
+	releaseImageInfo, err := md.fetchModuleReleaseMetadataFromReleaseChannel(ctx, moduleName, releaseChannel)
 	if err != nil {
 		return nil, err
 	}
 
-	return md.fetchModuleDefinitionFromImage(moduleName, img)
+	res := &ModuleDownloadResult{
+		Checksum:         releaseImageInfo.Digest.String(),
+		ModuleVersion:    "v" + releaseImageInfo.Metadata.Version.String(),
+		Changelog:        releaseImageInfo.Metadata.Changelog,
+		ModuleDefinition: releaseImageInfo.Metadata.ModuleDefinition,
+	}
+
+	return res, nil
+}
+
+// DownloadReleaseImageInfoByVersion downloads only module release image with metadata: version.json
+// does not fetch and install the desired version on the module, only fetches its module definition
+func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Context, moduleName, moduleVersion string) (*ModuleDownloadResult, error) {
+	releaseImageInfo, err := md.fetchModuleReleaseMetadataByVersion(ctx, moduleName, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module release: %w", err)
+	}
+
+	res := &ModuleDownloadResult{
+		Checksum:      releaseImageInfo.Digest.String(),
+		ModuleVersion: moduleVersion,
+		Changelog:     releaseImageInfo.Metadata.Changelog,
+	}
+	if releaseImageInfo.Metadata.ModuleDefinition != nil {
+		res.ModuleDefinition = releaseImageInfo.Metadata.ModuleDefinition
+		return res, nil
+	}
+
+	md.logger.Info("can not find module definition in metadata, extracting from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+	)
+
+	// fetch module image
+	img, err := md.fetchImage(moduleName, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image: %w", err)
+	}
+
+	def, err := md.fetchModuleDefinitionFromModuleImage(moduleName, img)
+	if err != nil {
+		return nil, fmt.Errorf("fetch module definition: %w", err)
+	}
+
+	res.ModuleDefinition = def
+
+	md.logger.Info("module definition extracted from image",
+		slog.String("module_name", moduleName),
+		slog.String("module_version", moduleVersion),
+		slog.Any("def", def),
+	)
+
+	return res, nil
 }
 
 func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion string) (io.ReadCloser, error) {
@@ -168,30 +199,32 @@ func (md *ModuleDownloader) GetDocumentationArchive(moduleName, moduleVersion st
 		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
-	return moduletools.ExtractDocs(img)
+	docs, err := moduletools.ExtractDocs(img)
+	if err != nil {
+		return nil, fmt.Errorf("extract docs: %w", err)
+	}
+	return docs, nil
 }
 
-func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (v1.Image, error) {
+func (md *ModuleDownloader) fetchImage(moduleName, imageTag string) (crv1.Image, error) {
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("fetch module error: %v", err)
 	}
 
-	return regCli.Image(context.TODO(), imageTag)
+	img, err := regCli.Image(context.TODO(), imageTag)
+	if err != nil {
+		return nil, fmt.Errorf("image: %w", err)
+	}
+	return img, nil
 }
 
-func (md *ModuleDownloader) storeModule(moduleStorePath string, img v1.Image) (*DownloadStatistic, error) {
+func (md *ModuleDownloader) storeModule(moduleStorePath string, img crv1.Image) (*DownloadStatistic, error) {
 	_ = os.RemoveAll(moduleStorePath)
 
 	ds, err := md.copyModuleToFS(moduleStorePath, img)
 	if err != nil {
 		return nil, fmt.Errorf("copy module error: %v", err)
-	}
-
-	// inject registry to values
-	err = reginjector.InjectRegistryToModuleValues(moduleStorePath, md.ms)
-	if err != nil {
-		return nil, fmt.Errorf("inject registry error: %v", err)
 	}
 
 	return ds, nil
@@ -208,10 +241,10 @@ func (md *ModuleDownloader) fetchAndCopyModuleByVersion(moduleName, moduleVersio
 	return md.storeModule(moduleVersionPath, img)
 }
 
-func (md *ModuleDownloader) copyModuleToFS(rootPath string, img v1.Image) (*DownloadStatistic, error) {
+func (md *ModuleDownloader) copyModuleToFS(rootPath string, img crv1.Image) (*DownloadStatistic, error) {
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
@@ -258,7 +291,7 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 		switch hdr.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(path.Join(rootPath, hdr.Name), 0o700); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("mkdir all: %w", err)
 			}
 		case tar.TypeReg:
 			outFile, err := os.Create(path.Join(rootPath, hdr.Name))
@@ -294,66 +327,123 @@ func (md *ModuleDownloader) copyLayersToFS(rootPath string, rc io.ReadCloser) (*
 	}
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(moduleName, releaseChannel, moduleChecksum string) (
-	/* moduleVersion */ string /*newChecksum*/, string /*changelog*/, map[string]any, error) {
+// fetchModuleReleaseMetadataFromReleaseChannel get Image, Digest and release metadata by releaseChannel
+// releaseChannel must be in kebab-case
+// return error if version.json not found in metadata
+// Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName/release:$releaseChannel
+func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (*ReleaseImageInfo, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataFromReleaseChannel")
+	defer span.End()
+
+	md.logger.Info("fetching module release metadata",
+		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("release_channel", releaseChannel),
+	)
+
+	md.logger.Debug("module metadata",
+		slog.String("module_name", moduleName),
+	)
+
+	// fill releaseImageInfo.Image
 	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
 	if err != nil {
-		return "", "", nil, fmt.Errorf("fetch release image error: %v", err)
+		return nil, fmt.Errorf("fetch release image error: %w", err)
 	}
 
-	img, err := regCli.Image(context.TODO(), strcase.ToKebab(releaseChannel))
+	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, strcase.ToKebab(releaseChannel))
 	if err != nil {
-		return "", "", nil, fmt.Errorf("fetch image error: %v", err)
+		return nil, fmt.Errorf("get image info: %w", err)
 	}
 
-	digest, err := img.Digest()
-	if err != nil {
-		return "", "", nil, fmt.Errorf("fetch digest error: %v", err)
-	}
-
-	if moduleChecksum == digest.String() {
-		return "", moduleChecksum, nil, nil
-	}
-
-	moduleMetadata, err := md.fetchModuleReleaseMetadata(img)
-	if err != nil {
-		return "", digest.String(), nil, fmt.Errorf("fetch release metadata error: %v", err)
-	}
-
-	if moduleMetadata.Version == nil {
-		return "", digest.String(), nil, fmt.Errorf("module %q metadata malformed: no version found", moduleName)
-	}
-
-	return "v" + moduleMetadata.Version.String(), digest.String(), moduleMetadata.Changelog, nil
+	return releaseImageInfo, nil
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromFS(moduleName, moduleVersionPath string) *moduletypes.Definition {
+// fetchModuleReleaseMetadataByVersion get Image, Digest and release metadata by version
+// return error if version.json not found in metadata
+// Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName/release:$moduleVersion
+func (md *ModuleDownloader) fetchModuleReleaseMetadataByVersion(ctx context.Context, moduleName, moduleVersion string) (*ReleaseImageInfo, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadataByVersion")
+	defer span.End()
+
+	md.logger.Info("fetching module release metadata",
+		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("module_version", moduleVersion),
+	)
+
+	md.logger.Debug("module metadata",
+		slog.String("module_name", moduleName),
+	)
+
+	// fill releaseImageInfo.Image
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release image error: %w", err)
+	}
+
+	releaseImageInfo, err := md.getReleaseImageInfo(ctx, regCli, moduleVersion)
+	if err != nil {
+		return nil, fmt.Errorf("get image info: %w", err)
+	}
+
+	return releaseImageInfo, nil
+}
+
+// getReleaseImageInfo get Image, Digest and release metadata using imageTag with existing registry client
+// return error if version.json not found in metadata
+func (md *ModuleDownloader) getReleaseImageInfo(ctx context.Context, regCli cr.Client, imageTag string) (*ReleaseImageInfo, error) {
+	img, err := regCli.Image(ctx, imageTag)
+	if err != nil {
+		return nil, fmt.Errorf("fetch image error: %w", err)
+	}
+
+	// fill releaseImageInfo.Digest
+	digest, err := img.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("fetch digest error: %w", err)
+	}
+
+	// fill releaseImageInfo.Metadata
+	moduleMetadata, err := md.fetchModuleReleaseMetadata(ctx, img)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release metadata error: %w", err)
+	}
+	if moduleMetadata.Version == nil {
+		return nil, fmt.Errorf("metadata malformed: no version found")
+	}
+
+	releaseImageInfo := &ReleaseImageInfo{
+		Image:    img,
+		Digest:   digest,
+		Metadata: &moduleMetadata,
+	}
+
+	return releaseImageInfo, nil
+}
+
+func (md *ModuleDownloader) fetchModuleDefinitionFromFS(name, path string) *moduletypes.Definition {
 	def := &moduletypes.Definition{
-		Name:   moduleName,
+		Name:   name,
 		Weight: defaultModuleWeight,
-		Path:   moduleVersionPath,
+		Path:   path,
 	}
 
-	moduleDefFile := path.Join(moduleVersionPath, moduletypes.DefinitionFile)
+	defPath := filepath.Join(path, moduletypes.DefinitionFile)
 
-	if _, err := os.Stat(moduleDefFile); err != nil {
-		return def
-	}
-
-	f, err := os.Open(moduleDefFile)
+	// do not add os.Stat check, because os.Open will return error if file does not exist
+	f, err := os.Open(defPath)
 	if err != nil {
 		return def
 	}
 	defer f.Close()
 
-	if err = yaml.NewDecoder(f).Decode(&def); err != nil {
+	if err = yaml.NewDecoder(f).Decode(def); err != nil {
 		return def
 	}
 
 	return def
 }
 
-func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, img v1.Image) (*moduletypes.Definition, error) {
+func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName string, img crv1.Image) (*moduletypes.Definition, error) {
 	def := &moduletypes.Definition{
 		Name:   moduleName,
 		Weight: defaultModuleWeight,
@@ -361,66 +451,88 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromImage(moduleName string, im
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
-	buf := bytes.NewBuffer(nil)
-
-	if err = untarModuleDefinition(rc, buf); err != nil {
-		return def, err
+	rr := &moduleReader{
+		moduleReader: bytes.NewBuffer(nil),
 	}
 
-	if buf.Len() == 0 {
-		return def, nil
+	if err = rr.untarMetadata(rc); err != nil {
+		return def, fmt.Errorf("untar metadata: %w", err)
 	}
 
-	if err = yaml.NewDecoder(buf).Decode(&def); err != nil {
-		return def, err
+	if rr.moduleReader.Len() > 0 {
+		err = yaml.NewDecoder(rr.moduleReader).Decode(def)
+		if err != nil {
+			return nil, fmt.Errorf("yaml decode: %w", err)
+		}
 	}
 
 	return def, nil
 }
 
-func (md *ModuleDownloader) fetchModuleReleaseMetadata(img v1.Image) (ModuleReleaseMetadata, error) {
+func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img crv1.Image) (ModuleReleaseMetadata, error) {
+	_, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseMetadata")
+	defer span.End()
+
 	var meta ModuleReleaseMetadata
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return meta, err
+		return meta, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	if err = rr.untarMetadata(rc); err != nil {
-		return meta, err
+		return meta, fmt.Errorf("untar metadata: %w", err)
 	}
 
 	if rr.versionReader.Len() > 0 {
 		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return meta, err
+			return meta, fmt.Errorf("json decode: %w", err)
 		}
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var ModuleDefinition moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
+		if err != nil {
+			return meta, fmt.Errorf("unmarshal module yaml failed: %w", err)
+		}
+
+		meta.ModuleDefinition = &ModuleDefinition
 	}
 
 	if rr.changelogReader.Len() > 0 {
 		var changelog map[string]any
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
-			meta.Changelog = make(map[string]any)
-			return meta, nil
+			changelog = make(map[string]any)
 		}
+
 		meta.Changelog = changelog
 	}
 
-	return meta, err
+	if err != nil {
+		return meta, fmt.Errorf("decode: %w", err)
+	}
+	return meta, nil
 }
 
-func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
+type moduleReader struct {
+	moduleReader *bytes.Buffer
+}
+
+func (rr *moduleReader) untarMetadata(rc io.ReadCloser) error {
 	tr := tar.NewReader(rc)
 	for {
 		hdr, err := tr.Next()
@@ -428,22 +540,25 @@ func untarModuleDefinition(rc io.ReadCloser, rw io.Writer) error {
 			// end of archive
 			return nil
 		}
+
 		if err != nil {
-			return err
+			return fmt.Errorf("next: %w", err)
 		}
+
 		if strings.HasPrefix(hdr.Name, ".werf") {
 			continue
 		}
 
-		switch hdr.Name {
+		switch strings.ToLower(hdr.Name) {
 		case "module.yaml":
-			_, err = io.Copy(rw, tr)
+			_, err := io.Copy(rr.moduleReader, tr)
 			if err != nil {
-				return err
+				return fmt.Errorf("copy: %w", err)
 			}
-			return nil
 
+			return nil
 		default:
+
 			continue
 		}
 	}
@@ -466,5 +581,12 @@ func isRel(candidate, target string) bool {
 type ModuleReleaseMetadata struct {
 	Version *semver.Version `json:"version"`
 
-	Changelog map[string]any
+	Changelog        map[string]any          `json:"-"`
+	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
+}
+
+type ReleaseImageInfo struct {
+	Metadata *ModuleReleaseMetadata
+	Image    crv1.Image
+	Digest   crv1.Hash
 }

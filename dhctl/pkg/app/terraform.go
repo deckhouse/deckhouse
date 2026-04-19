@@ -16,8 +16,6 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -29,7 +27,7 @@ const (
 )
 
 var (
-	CacheDir   = filepath.Join(os.TempDir(), "dhctl")
+	CacheDir   = defaultTmpAndStateDir
 	UseTfCache = "ask"
 
 	DropCache = false
@@ -40,6 +38,8 @@ var (
 	CacheKubeNamespace       = ""
 	CacheKubeName            = ""
 	CacheKubeLabels          = make(map[string]string)
+
+	ResourceManagementTimeout = ""
 )
 
 func DefineCacheFlags(cmd *kingpin.CmdClause) {
@@ -47,7 +47,7 @@ func DefineCacheFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("CACHE_DIR")).
 		StringVar(&CacheDir)
 
-	cmd.Flag("use-cache", fmt.Sprintf(`Behaviour for using terraform state cache. May be:
+	cmd.Flag("use-cache", fmt.Sprintf(`Behaviour for using infrastructure state cache. May be:
 	%s - ask user about it (Default)
    	%s - use cache
 	%s  - don't use cache
@@ -80,4 +80,22 @@ func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("yes-i-want-to-drop-cache", "All cached information will be deleted from your local cache.").
 		Default("false").
 		BoolVar(&DropCache)
+}
+
+func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause) {
+	cmd.Flag("tf-resource-management-timeout", "Redefine infrastructure resource management timeouts").
+		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGEMENT_TIMEOUT")).
+		StringVar(&ResourceManagementTimeout)
+}
+
+func SetCacheDir(dir string) {
+	CacheDir = dir
+}
+
+func GetCacheDir() string {
+	return CacheDir
+}
+
+func GetDefaultCacheDir() string {
+	return defaultTmpAndStateDir
 }

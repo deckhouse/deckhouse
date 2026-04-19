@@ -10,6 +10,13 @@ layout: default
     </div>
     <div class="layout-sidebar__content">
       {{ content }}
+    {% unless site.mode == 'module' %}
+      {%- if page.feedback != false %}
+      <!--noindex-->
+      <!--#include virtual="/includes/feedback.html" -->
+      <!--/noindex-->
+      {%- endif %}
+    {% endunless %}
     </div>
     <div class="layout-sidebar__sidebar_right">
       {%- include toc_in_sidebar.html %}

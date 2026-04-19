@@ -1,0 +1,61 @@
+linters-settings:
+  container:
+    exclude-rules:
+      liveness-probe:
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-check-linux-kernel
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-cilium
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-kube-rbac-proxy
+      readiness-probe:
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-check-linux-kernel
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-cilium
+        - kind: DaemonSet
+          name: safe-agent-updater
+          container: pause-kube-rbac-proxy
+        - kind: Deployment
+          name: operator
+          container: operator
+      volume-mounts:
+        - kind: DaemonSet
+          name: agent
+          container: mount-cgroup
+        - kind: DaemonSet
+          name: agent
+          container: clearing-unnecessary-iptables
+        - kind: DaemonSet
+          name: agent
+          container: apply-sysctl-overwrites
+
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: agent
+        - kind: DaemonSet
+          name: safe-agent-updater
+
+  openapi:
+    exclude-rules:
+      enum:
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.extendedMetrics.properties.collectors.items.properties.name
+
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilterList.items.properties.ip_version.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilterList.items.properties.traffic_direction.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilterList.items.properties.verdict.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilterList.items.properties.drop_reason_desc.items
+
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilterList.items.properties.ip_version.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilterList.items.properties.traffic_direction.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilterList.items.properties.verdict.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilterList.items.properties.drop_reason_desc.items
+
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.fieldMaskList.items

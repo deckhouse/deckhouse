@@ -17,6 +17,7 @@ package logger
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -26,6 +27,12 @@ import (
 )
 
 type loggerCtxKey struct{}
+
+type Options struct {
+	DebugWriter   io.Writer
+	DefaultWriter io.Writer
+	Width         int
+}
 
 // NewLogger returns initialized slog logger
 func NewLogger(level *slog.LevelVar) *slog.Logger {
@@ -86,6 +93,7 @@ func ToContext(ctx context.Context, log *slog.Logger, args ...any) context.Conte
 	return context.WithValue(ctx, loggerCtxKey{}, log.With(args...))
 }
 
+//nolint:sloglint
 func L(ctx context.Context) *slog.Logger {
 	l := ctx.Value(loggerCtxKey{})
 	if l == nil {

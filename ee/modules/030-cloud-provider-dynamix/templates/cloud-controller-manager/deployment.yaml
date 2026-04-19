@@ -10,14 +10,14 @@ kind: VerticalPodAutoscaler
 metadata:
   name: cloud-controller-manager
   namespace: d8-cloud-provider-dynamix
-  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cloud-controller-manager")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: Deployment
     name: cloud-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "dynamix-cloud-controller-manager"
@@ -61,6 +61,7 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manager/secret.yaml") . | sha256sum }}
     spec:
+      automountServiceAccountToken: true
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
@@ -73,7 +74,7 @@ spec:
       serviceAccountName: cloud-controller-manager
       containers:
         - name: dynamix-cloud-controller-manager
-          {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 10 }}
           image: {{ include "helm_lib_module_image" (list . "cloudControllerManager") }}
           args:
           - --leader-elect=true

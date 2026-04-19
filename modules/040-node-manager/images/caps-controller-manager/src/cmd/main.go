@@ -16,30 +16,32 @@ limitations under the License.
 
 package main
 
+//nolint:gci
 import (
 	"flag"
 	"os"
 	"time"
 
-	"k8s.io/component-base/logs"
-	v1 "k8s.io/component-base/logs/api/v1"
-	"k8s.io/klog/v2"
-
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/component-base/logs"
+	v1 "k8s.io/component-base/logs/api/v1"
+	_ "k8s.io/component-base/logs/json/register"
+	"k8s.io/klog/v2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	//+kubebuilder:scaffold:imports
-
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1alpha1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1alpha2 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/client"
 	deckhouseiocontroller "caps-controller-manager/internal/controller/deckhouse.io"
@@ -49,7 +51,6 @@ import (
 
 var (
 	scheme     = runtime.NewScheme()
-	setupLog   = ctrl.Log.WithName("setup")
 	logOptions = logs.NewOptions()
 )
 
@@ -57,7 +58,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(infrav1.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
-	utilruntime.Must(deckhousev1.AddToScheme(scheme))
+	utilruntime.Must(deckhousev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(deckhousev1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -66,6 +68,9 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var syncPeriod time.Duration
+	var leaderElectionLeaseDuration time.Duration
+	var leaderElectionRenewDeadline time.Duration
+	var leaderElectionRetryPeriod time.Duration
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -73,21 +78,45 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.DurationVar(&syncPeriod, "sync-period", 10*time.Minute, "The minimum interval at which watched resources are reconciled (e.g. 15m).")
+	flag.DurationVar(&leaderElectionLeaseDuration, "leader-elect-lease-duration", 15*time.Second,
+		"Interval at which non-leader candidates will wait to force acquire leadership (duration string)")
+
+	flag.DurationVar(&leaderElectionRenewDeadline, "leader-elect-renew-deadline", 10*time.Second,
+		"Duration that the leading controller manager will retry refreshing leadership before giving up (duration string)")
+
+	flag.DurationVar(&leaderElectionRetryPeriod, "leader-elect-retry-period", 2*time.Second,
+		"Duration the LeaderElector clients should wait between tries of actions (duration string)")
+	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
+
+	logs.AddGoFlags(flag.CommandLine)
+
 	flag.Parse()
+	ctrl.SetLogger(klog.Background())
+	setupLog := ctrl.Log.WithName("setup")
 
 	if err := v1.ValidateAndApply(logOptions, nil); err != nil {
 		setupLog.Error(err, "unable to validate and apply log options")
 		os.Exit(1)
 	}
-	ctrl.SetLogger(klog.Background())
+
+	webhookserver := webhook.NewServer(webhook.Options{
+		Port: 9443,
+	})
+
+	metricsServerOptions := metricsserver.Options{
+		BindAddress:   metricsAddr,
+		SecureServing: false,
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Metrics:                metricsServerOptions,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "faf94607.cluster.x-k8s.io",
+		LeaderElectionID:       "controller-leader-election-caps",
+		LeaseDuration:          &leaderElectionLeaseDuration,
+		RenewDeadline:          &leaderElectionRenewDeadline,
+		RetryPeriod:            &leaderElectionRetryPeriod,
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -99,7 +128,10 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
-		SyncPeriod: &syncPeriod,
+		Cache: cache.Options{
+			SyncPeriod: &syncPeriod,
+		},
+		WebhookServer: webhookserver,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -126,7 +158,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
 		os.Exit(1)
 	}
-	if err = (&deckhousev1.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
+
+	if err = (&deckhousev1alpha1.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "StaticInstance")
+		os.Exit(1)
+	}
+
+	if err = (&deckhousev1alpha2.StaticInstance{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticInstance")
 		os.Exit(1)
 	}
@@ -143,7 +181,11 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "StaticMachine")
 		os.Exit(1)
 	}
-	if err = (&deckhousev1.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&deckhousev1alpha2.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "SSHCredentials")
+		os.Exit(1)
+	}
+	if err = (&deckhousev1alpha1.SSHCredentials{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "SSHCredentials")
 		os.Exit(1)
 	}

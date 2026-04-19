@@ -1,4 +1,4 @@
-{{- $version := "1.25" }}
+{{- $version := include "get_oss_version_by_id" (list "virt-what" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
@@ -10,13 +10,16 @@ git:
   stageDependencies:
     install:
     - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version }}  {{ $.SOURCE_REPO }}/virt-what.git /src/virt-what
+  - git clone --depth 1 --branch v{{ $version }}  $(cat /run/secrets/SOURCE_REPO)/virt-what.git /src/virt-what
   - rm -rf /src/virt-what/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-from: {{ $.Images.BASE_SCRATCH }}
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -27,16 +30,18 @@ import:
   - install
   - uninstall
   before: setup
-docker:
-  LABEL:
-    distro: all
-    version: all
-    virt-what: {{ $version }}
-  USER: 64535
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "virt-what": "{{ $version }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-from: {{ $.Images.BASE_ALPINE }}
+from: {{ index $.Images "builder/alpine" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src

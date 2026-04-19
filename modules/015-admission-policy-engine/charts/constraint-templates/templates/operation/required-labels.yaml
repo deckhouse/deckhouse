@@ -44,6 +44,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg, "details": {"missing_labels": missing}}] {
+          not input.review.operation == "DELETE"
           provided := {label | input.review.object.metadata.labels[label]}
           required := {label | label := input.parameters.labels[_].key}
           missing := required - provided
@@ -52,6 +53,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           value := input.review.object.metadata.labels[key]
           expected := input.parameters.labels[_]
           expected.key == key

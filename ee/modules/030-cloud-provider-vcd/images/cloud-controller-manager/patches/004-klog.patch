@@ -1,0 +1,156 @@
+diff --git a/cmd/ccm/main.go b/cmd/ccm/main.go
+index d71e16c9..94b810b8 100644
+--- a/cmd/ccm/main.go
++++ b/cmd/ccm/main.go
+@@ -19,7 +19,7 @@ import (
+ 	"k8s.io/component-base/logs"
+ 	_ "k8s.io/component-base/metrics/prometheus/clientgo" // load all the prometheus client-go plugins
+ 	_ "k8s.io/component-base/metrics/prometheus/version"  // for version metric registration
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"math/rand"
+ 	"net/http"
+ 	"os"
+diff --git a/pkg/ccm/cloud.go b/pkg/ccm/cloud.go
+index c6055497..909a666b 100644
+--- a/pkg/ccm/cloud.go
++++ b/pkg/ccm/cloud.go
+@@ -20,7 +20,7 @@ import (
+ 	"k8s.io/client-go/informers"
+ 	_ "k8s.io/client-go/tools/clientcmd"
+ 	cloudProvider "k8s.io/cloud-provider"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"time"
+ )
+ 
+diff --git a/pkg/ccm/loadbalancer.go b/pkg/ccm/loadbalancer.go
+index 5e69b357..378f3daa 100644
+--- a/pkg/ccm/loadbalancer.go
++++ b/pkg/ccm/loadbalancer.go
+@@ -21,7 +21,7 @@ import (
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/client-go/kubernetes"
+ 	cloudProvider "k8s.io/cloud-provider"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"strconv"
+ 	"strings"
+ )
+diff --git a/pkg/ccm/vminfocache.go b/pkg/ccm/vminfocache.go
+index 211163cb..58559f0c 100644
+--- a/pkg/ccm/vminfocache.go
++++ b/pkg/ccm/vminfocache.go
+@@ -8,7 +8,7 @@ package ccm
+ import (
+ 	"fmt"
+ 	"github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"sync"
+ 	"time"
+ 
+diff --git a/pkg/config/cloudconfig.go b/pkg/config/cloudconfig.go
+index 49f1da55..85b1565f 100644
+--- a/pkg/config/cloudconfig.go
++++ b/pkg/config/cloudconfig.go
+@@ -11,7 +11,7 @@ import (
+ 	yaml "gopkg.in/yaml.v2"
+ 	"io"
+ 	"io/ioutil"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"os"
+ 	"strings"
+ )
+diff --git a/pkg/cpisdk/rde.go b/pkg/cpisdk/rde.go
+index 665146e8..6736f152 100644
+--- a/pkg/cpisdk/rde.go
++++ b/pkg/cpisdk/rde.go
+@@ -7,7 +7,7 @@ import (
+ 	"github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdsdk"
+ 	swaggerClient "github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdswaggerclient_37_2"
+ 	"github.com/vmware/cloud-provider-for-cloud-director/release"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"strings"
+ 	"time"
+diff --git a/pkg/testingsdk/k8sclient.go b/pkg/testingsdk/k8sclient.go
+index 84624bff..eae247e7 100644
+--- a/pkg/testingsdk/k8sclient.go
++++ b/pkg/testingsdk/k8sclient.go
+@@ -11,7 +11,7 @@ import (
+ 	utilnet "k8s.io/apimachinery/pkg/util/net"
+ 	"k8s.io/apimachinery/pkg/util/wait"
+ 	"k8s.io/client-go/kubernetes"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"time"
+ )
+ 
+diff --git a/pkg/vcdsdk/auth.go b/pkg/vcdsdk/auth.go
+index e8ada2fb..62a16214 100644
+--- a/pkg/vcdsdk/auth.go
++++ b/pkg/vcdsdk/auth.go
+@@ -10,7 +10,7 @@ import (
+ 	"fmt"
+ 	swaggerClient "github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdswaggerclient_37_2"
+ 	"github.com/vmware/go-vcloud-director/v2/govcd"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"net/url"
+ )
+diff --git a/pkg/vcdsdk/client.go b/pkg/vcdsdk/client.go
+index f0708e96..84f04f2c 100644
+--- a/pkg/vcdsdk/client.go
++++ b/pkg/vcdsdk/client.go
+@@ -9,7 +9,7 @@ import (
+ 	"crypto/tls"
+ 	"fmt"
+ 	swaggerClient37 "github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdswaggerclient_37_2"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"strings"
+ 	"sync"
+diff --git a/pkg/vcdsdk/defined_entity.go b/pkg/vcdsdk/defined_entity.go
+index c5dc5fc1..e96bbb94 100644
+--- a/pkg/vcdsdk/defined_entity.go
++++ b/pkg/vcdsdk/defined_entity.go
+@@ -5,7 +5,7 @@ import (
+ 	"encoding/json"
+ 	"fmt"
+ 	swaggerClient "github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdswaggerclient_37_2"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"net/http"
+ 	"net/url"
+ 	"reflect"
+diff --git a/pkg/vcdsdk/gateway.go b/pkg/vcdsdk/gateway.go
+index a5998286..52186ef8 100644
+--- a/pkg/vcdsdk/gateway.go
++++ b/pkg/vcdsdk/gateway.go
+@@ -16,7 +16,7 @@ import (
+ 	swaggerClient "github.com/vmware/cloud-provider-for-cloud-director/pkg/vcdswaggerclient_37_2"
+ 	"github.com/vmware/go-vcloud-director/v2/govcd"
+ 	"github.com/vmware/go-vcloud-director/v2/types/v56"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"math"
+ 	"net/http"
+ 	"net/url"
+diff --git a/pkg/vcdsdk/ipam.go b/pkg/vcdsdk/ipam.go
+index 35bd49f5..b7a062ea 100644
+--- a/pkg/vcdsdk/ipam.go
++++ b/pkg/vcdsdk/ipam.go
+@@ -10,7 +10,7 @@ import (
+ 	"context"
+ 	"fmt"
+ 	"github.com/apparentlymart/go-cidr/cidr"
+-	"k8s.io/klog"
++	"k8s.io/klog/v2"
+ 	"net"
+ )
+ 

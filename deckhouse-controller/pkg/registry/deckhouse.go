@@ -23,13 +23,14 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ettle/strcase"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/iancoleman/strcase"
 	"gopkg.in/yaml.v2"
 
 	dhRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -68,6 +69,7 @@ func (svc *deckhouseReleaseService) GetDeckhouseRelease(ctx context.Context, rel
 		return nil, fmt.Errorf("fetch image: %w", err)
 	}
 
+	// TODO: see check_release with same method
 	releaseMetadata, err := svc.fetchReleaseMetadata(img)
 	if err != nil {
 		return nil, fmt.Errorf("fetch release metadata: %w", err)
@@ -99,13 +101,14 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 
 	rc, err := cr.Extract(img)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract: %w", err)
 	}
 	defer rc.Close()
 
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
+		moduleReader:    bytes.NewBuffer(nil),
 	}
 
 	err = rr.untarMetadata(rc)
@@ -116,8 +119,18 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 	if rr.versionReader.Len() > 0 {
 		err = json.NewDecoder(rr.versionReader).Decode(&meta)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode: %w", err)
 		}
+	}
+
+	if rr.moduleReader.Len() > 0 {
+		var ModuleDefinition moduletypes.Definition
+		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
+		if err != nil {
+			return nil, fmt.Errorf("unmarshal module yaml failed: %w", err)
+		}
+
+		meta.ModuleDefinition = &ModuleDefinition
 	}
 
 	if rr.changelogReader.Len() > 0 {
@@ -126,11 +139,9 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
 		if err != nil {
 			// if changelog build failed - warn about it but don't fail the release
-			fmt.Printf("Unmarshal CHANGELOG yaml failed: %s\n", err)
+			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
 
-			meta.Changelog = make(map[string]any)
-
-			return meta, nil
+			changelog = make(map[string]any)
 		}
 
 		meta.Changelog = changelog

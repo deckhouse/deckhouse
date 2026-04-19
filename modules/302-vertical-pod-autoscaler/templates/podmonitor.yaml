@@ -1,0 +1,36 @@
+{{- if (.Values.global.discovery.apiVersions | has "monitoring.coreos.com/v1/PodMonitor") }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: vpa-controllers
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      tier: vpa-controller
+  namespaceSelector:
+    matchNames:
+    - kube-system
+  podMetricsEndpoints:
+  - port: https-metrics
+    scheme: https
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+      - regex: endpoint|namespace|container
+        action: labeldrop
+      - targetLabel: tier
+        replacement: cluster
+{{/*    metricRelabelings:*/}}
+{{/*    # Vector has a problem with internal metrics registry grows unbounded.*/}}
+{{/*    # Drop metrics with high cardinality labels here to avoid overloading Prometheus instances.*/}}
+{{/*    # https://github.com/vectordotdev/vector/issues/11995*/}}
+{{/*    - regex: file*/}}
+{{/*      action: labeldrop*/}}
+{{- end }}

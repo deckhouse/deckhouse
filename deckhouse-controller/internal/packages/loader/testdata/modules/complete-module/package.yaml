@@ -1,0 +1,11 @@
+name: complete-module
+type: Module
+version: v1.0.0
+descriptions:
+  en: Complete test module
+requirements:
+  kubernetes: ">=1.28"
+  deckhouse: ">=1.60"
+module:
+  weight: 900
+  critical: false

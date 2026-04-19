@@ -6,7 +6,7 @@ metadata:
 spec:
   version: v1.0.0
   checksum: abc
-  path: /absentmodule/v1.0.0
+  path: /modules/absentmodule
 status:
   conditions:
     - address: http://10-111-111-111.d8-system.pod.cluster.local:8081

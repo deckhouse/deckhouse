@@ -1,0 +1,17 @@
+linters-settings:
+  container:
+    exclude-rules:
+      readiness-probe:
+        - kind: DaemonSet
+          name: chrony
+          container: chrony
+        - kind: DaemonSet
+          name: chrony-master
+          container: chrony
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: chrony
+        - kind: DaemonSet
+          name: chrony-master

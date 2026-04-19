@@ -1,0 +1,11 @@
+version: 3
+conversions:
+  - if has("enableHTTP10") then .dataPlane.enableHTTP10 = .enableHTTP10 | del(.enableHTTP10) else . end
+  - if has("proxyConfig") then .dataPlane.proxyConfig = .proxyConfig | del(.proxyConfig) else . end
+description:
+  ru: |
+    * Перенесите `.settings.enableHTTP10` в `.settings.dataPlane.enableHTTP10`.
+    * Перенесите `.settings.proxyConfig` в `.settings.dataPlane.proxyConfig`.
+  en: |
+    * Move `.settings.enableHTTP10` to `.settings.dataPlane.enableHTTP10`.
+    * Move `.settings.proxyConfig` to `.settings.dataPlane.proxyConfig`.

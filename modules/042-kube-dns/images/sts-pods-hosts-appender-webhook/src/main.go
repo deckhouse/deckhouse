@@ -29,6 +29,7 @@ import (
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhmutating "github.com/slok/kubewebhook/v2/pkg/webhook/mutating"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,20 +38,29 @@ type config struct {
 	keyFile  string
 }
 
+const (
+	initContainerCPURequest = "10m"
+	initContainerMemRequest = "16Mi"
+)
+
+var initContainerResourceRequests = corev1.ResourceList{
+	corev1.ResourceCPU:    resource.MustParse(initContainerCPURequest),
+	corev1.ResourceMemory: resource.MustParse(initContainerMemRequest),
+}
+
 //goland:noinspection SpellCheckingInspection
 func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Ok.")
 }
 
-func initFlags() config {
+func initFlags() (config, error) {
 	cfg := config{}
 
 	fl := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	fl.StringVar(&cfg.certFile, "tls-cert-file", "", "TLS certificate file")
 	fl.StringVar(&cfg.keyFile, "tls-key-file", "", "TLS key file")
-
-	fl.Parse(os.Args[1:])
-	return cfg
+	err := fl.Parse(os.Args[1:])
+	return cfg, err
 }
 
 func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
@@ -96,6 +106,10 @@ func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj m
 
 	runAsUser := int64(65534)
 	runAsGroup := int64(65534)
+	runAsNonRoot := true
+	readOnlyRootFileSystem := true
+	allowPrivilegeEscalation := false
+	seccompType := corev1.SeccompProfileTypeRuntimeDefault
 	initContainer := corev1.Container{
 		Name:         "render-etc-hosts-with-cluster-domain-aliases",
 		Image:        os.Getenv("INIT_CONTAINER_IMAGE"),
@@ -113,8 +127,15 @@ func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj m
 			Capabilities: &corev1.Capabilities{
 				Drop: []corev1.Capability{"all"},
 			},
-			RunAsUser:  &runAsUser,
-			RunAsGroup: &runAsGroup,
+			RunAsUser:                &runAsUser,
+			RunAsGroup:               &runAsGroup,
+			RunAsNonRoot:             &runAsNonRoot,
+			ReadOnlyRootFilesystem:   &readOnlyRootFileSystem,
+			AllowPrivilegeEscalation: &allowPrivilegeEscalation,
+			SeccompProfile:           &corev1.SeccompProfile{Type: seccompType},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: initContainerResourceRequests.DeepCopy(),
 		},
 	}
 
@@ -142,7 +163,10 @@ func main() {
 	logrusLogEntry.Logger.SetLevel(logrus.DebugLevel)
 	logger := kwhlogrus.NewLogrus(logrusLogEntry)
 
-	cfg := initFlags()
+	cfg, err := initFlags()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while init flags: %s", err)
+	}
 
 	mt := kwhmutating.MutatorFunc(addInitContainerToPod)
 

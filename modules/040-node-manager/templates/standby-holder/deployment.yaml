@@ -39,6 +39,7 @@ spec:
       containers:
       - name: reserve-resources
         image: {{ include "helm_lib_module_common_image" (list $ "pause") }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         resources:
           requests:
             cpu: {{ $ng.reserveCPU | quote }}

@@ -3,6 +3,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 git:
+{{- include "image mount points" . }}
 - add: /{{ $.ModulePath }}/modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/entrypoint.sh
   to: /entrypoint.sh
   stageDependencies:
@@ -14,11 +15,15 @@ import:
   to: /bin/etcdctl
   before: setup
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /usr/lib/locale/C.utf8
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /relocate
   to: /
   before: setup
-docker:
-  ENTRYPOINT: ["/entrypoint.sh"]
+imageSpec:
+  config:
+    entrypoint: ["/entrypoint.sh"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: common/relocate-artifact
@@ -26,3 +31,4 @@ final: false
 shell:
   install:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

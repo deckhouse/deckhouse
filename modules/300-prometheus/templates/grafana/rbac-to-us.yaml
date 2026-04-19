@@ -1,3 +1,4 @@
+{{- if .Values.prometheus.internal.grafana.enabled }}
 {{- if .Values.global.modules.publicDomainTemplate }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -25,6 +26,8 @@ roleRef:
 subjects:
 - kind: Group
   name: ingress-nginx:auth
+- kind: Group
+  name: alb:auth
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -55,3 +58,4 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: d8-monitoring
+{{- end }}

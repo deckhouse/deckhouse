@@ -15,6 +15,8 @@
 package fs
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -27,4 +29,42 @@ func RevealWildcardPaths(paths []string) []string {
 		}
 	}
 	return paths
+}
+
+func DoAbsolutePath(p string, shouldBeDir bool) (string, error) {
+	p = strings.TrimSpace(p)
+	if p == "" {
+		p = "/"
+	}
+
+	p, err := filepath.Abs(p)
+	if err != nil {
+		return "", fmt.Errorf("Cannot get absolute path for %s: %w", p, err)
+	}
+
+	p = filepath.Clean(p)
+
+	stat, err := os.Stat(p)
+	if err != nil {
+		return "", fmt.Errorf("Cannot get stat for %s: %w", p, err)
+	}
+
+	if shouldBeDir && !stat.IsDir() {
+		return "", fmt.Errorf("%s is not a directory", p)
+	}
+
+	return p, nil
+}
+
+func IsExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return false, err
 }

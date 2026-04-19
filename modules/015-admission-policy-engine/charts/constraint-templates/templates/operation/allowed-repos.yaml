@@ -32,6 +32,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           container := input.review.object.spec.containers[_]
           satisfied := [good | repo = input.parameters.repos[_] ; good = startswith(container.image, repo)]
           not any(satisfied)
@@ -39,6 +40,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           container := input.review.object.spec.initContainers[_]
           satisfied := [good | repo = input.parameters.repos[_] ; good = startswith(container.image, repo)]
           not any(satisfied)
@@ -46,6 +48,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           container := input.review.object.spec.ephemeralContainers[_]
           satisfied := [good | repo = input.parameters.repos[_] ; good = startswith(container.image, repo)]
           not any(satisfied)

@@ -22,7 +22,7 @@ import (
 )
 
 func TestVersionBackwardCompatibility(t *testing.T) {
-	newStore := newSchemaStore([]string{"/tmp"})
+	newStore := newSchemaStore(nil, []string{"/tmp"})
 
 	schema := []byte(`
 kind: ClusterConfiguration
@@ -64,7 +64,7 @@ clusterType: Cloud
 }
 
 func TestSchemaPattern(t *testing.T) {
-	newStore := newSchemaStore([]string{"/tmp"})
+	newStore := newSchemaStore(nil, []string{"/tmp"})
 
 	schema := []byte(`
 kind: ClusterConfiguration
@@ -118,7 +118,7 @@ jsonObject: " {}"
 }
 
 func TestSchemaStore(t *testing.T) {
-	newStore := newSchemaStore([]string{"/tmp"})
+	newStore := newSchemaStore(nil, []string{"/tmp"})
 
 	err := newStore.upload([]byte(`
 kind: TestKind
@@ -126,7 +126,6 @@ apiVersions:
 - apiVersion: test
   openAPISpec:
     type: object
-    additionalProperties: false
     required: [kind, apiVersion, one, two]
     properties:
       kind:
@@ -156,6 +155,17 @@ one: test
 two: test
 `,
 			false,
+		},
+		{
+			"Wrong config",
+			`
+apiVersion: test
+kind: TestKind
+one: test
+two: test
+three: test
+`,
+			true,
 		},
 		{
 			"Without version",

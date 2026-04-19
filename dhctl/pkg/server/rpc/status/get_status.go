@@ -21,5 +21,9 @@ import (
 )
 
 func (s *Service) GetStatus(context.Context, *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
-	return &pb.GetStatusResponse{RequestsByMethod: s.requestsCounter.CountRecentRequests()}, nil
+	currentRequestCount := s.requestsCounter.CountCurrentRequests()
+	return &pb.GetStatusResponse{
+		RequestsByMethod:   s.requestsCounter.CountRecentRequests(),
+		RequestsInProgress: &currentRequestCount,
+	}, nil
 }

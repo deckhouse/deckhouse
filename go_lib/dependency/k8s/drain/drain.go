@@ -18,6 +18,7 @@ package drain
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -32,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/kubernetes"
@@ -46,6 +46,8 @@ const (
 	EvictionSubresource = "pods/eviction"
 	podSkipMsgTemplate  = "pod %q has DeletionTimestamp older than %v seconds, skipping\n"
 )
+
+var ErrDrainTimeout = errors.New("drain timeout")
 
 // Helper contains the parameters to control the behaviour of drainer
 type Helper struct {
@@ -200,7 +202,6 @@ func (d *Helper) GetPodsForDeletion(nodeName string) (*PodDeleteList, []error) {
 		podList.Items = append(podList.Items, newPods.Items...)
 		return newPods, nil
 	})
-
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -291,8 +292,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 				}
 				select {
 				case <-ctx.Done():
-					// return here or we'll leak a goroutine.
-					returnCh <- fmt.Errorf("error when evicting pods/%q -n %q: global timeout reached: %v", pod.Name, pod.Namespace, globalTimeout)
+					returnCh <- ErrDrainTimeout
 					return
 				default:
 				}
@@ -360,7 +360,7 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 	}
 
 	doneCount := 0
-	var errors []error
+	var errs []error
 
 	numPods := len(pods)
 	for doneCount < numPods {
@@ -368,12 +368,12 @@ func (d *Helper) evictPods(pods []corev1.Pod, evictionGroupVersion schema.GroupV
 		case err := <-returnCh:
 			doneCount++
 			if err != nil {
-				errors = append(errors, err)
+				errs = append(errs, err)
 			}
 		}
 	}
 
-	return utilerrors.NewAggregate(errors)
+	return errors.Join(errs...)
 }
 
 func (d *Helper) deletePods(pods []corev1.Pod, getPodFn func(namespace, name string) (*corev1.Pod, error)) error {
@@ -441,7 +441,7 @@ func waitForDelete(params waitForDeleteParams) ([]corev1.Pod, error) {
 		if len(pendingPods) > 0 {
 			select {
 			case <-params.ctx.Done():
-				return false, fmt.Errorf("global timeout reached: %v", params.globalTimeout)
+				return false, ErrDrainTimeout
 			default:
 				return false, nil
 			}

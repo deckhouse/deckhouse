@@ -1,0 +1,37 @@
+@startuml
+!theme bluegray
+skinparam DefaultFontSize 16
+skinparam handwritten false
+skinparam ArrowFontStyle italic
+skinparam DefaultTextAlignment center
+skinparam backgroundColor transparent
+skinparam Shadowing false
+
+start
+
+:Module enabled;
+:ModuleRelease v1.0.0 deployed;
+:Module disabled;
+
+if (Has 72 hours passed?) then (No)
+  if (Module\nre-enabled?) then (Yes)
+    :ModuleRelease v1.0.0 activated;
+    :ModuleRelease v1.1.0 and\nv1.1.1 downloaded;
+    :Update module to v1.1.1;
+  else (No)
+    stop
+  endif
+else (Yes)
+  :ModuleRelease v1.0.0 deleted;
+
+  if (Module\nre-enabled?) then (Yes)
+    :ModuleRelease v1.1.1 deployed;
+    :Update module to v1.1.1;
+  else (No)
+    stop
+  endif
+endif
+
+:Module updated;
+stop
+@enduml

@@ -17,6 +17,9 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
 	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -24,6 +27,8 @@ import (
 	"github.com/tidwall/gjson"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -35,6 +40,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion: "v1",
 			Kind:       "Namespace",
 			// Ignore upmeter probe fake namespaces, because upmeter deletes them immediately.
+			// Ignore deckhouse and multitenancy-manager namespaces, because they are managed by Deckhouse.
 			// They do not require any labels.
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -42,7 +48,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 						Key:      "heritage",
 						Operator: metav1.LabelSelectorOpNotIn,
 						Values: []string{
-							"upmeter",
+							"upmeter", "deckhouse", "multitenancy-manager",
 						},
 					},
 				},
@@ -66,15 +72,17 @@ func applyNamespaceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	}, nil
 }
 
-func handleNamespaceConfiguration(input *go_hook.HookInput) error {
-	snap := input.Snapshots["namespaces"]
-	if len(snap) == 0 {
+func handleNamespaceConfiguration(ctx context.Context, input *go_hook.HookInput) error {
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.Snapshots, "namespaces")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
+	}
+	if len(namespaces) == 0 {
 		input.Logger.Debug("Namespaces not found. Skip")
 		return nil
 	}
 
 	configurations := input.Values.Get("namespaceConfigurator.configurations").Array()
-	var err error
 
 	for _, configuration := range configurations {
 		var configItem namespaceConfigurationItem
@@ -83,11 +91,12 @@ func handleNamespaceConfiguration(input *go_hook.HookInput) error {
 		if err != nil {
 			return err
 		}
-		err = configItem.Apply(input)
+		err = configItem.Apply(ctx, input)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -142,41 +151,45 @@ func (configItem *namespaceConfigurationItem) Load(result gjson.Result) error {
 	return nil
 }
 
-func (configItem *namespaceConfigurationItem) Apply(input *go_hook.HookInput) error {
-	for _, s := range input.Snapshots["namespaces"] {
-		ns := s.(Namespace)
+func (configItem *namespaceConfigurationItem) Apply(_ context.Context, input *go_hook.HookInput) error {
+	namespaces, err := sdkobjectpatch.UnmarshalToStruct[Namespace](input.Snapshots, "namespaces")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal namespaces snapshot: %w", err)
+	}
+
+	for _, ns := range namespaces {
 		input.Logger.Debug("Processing namespace:", ns.Name)
 
-		mergePatch := makePatch(input, &ns, configItem)
+		mergePatch := makePatch(input, ns, configItem)
 		if mergePatch != nil {
-			input.PatchCollector.MergePatch(mergePatch, "v1", "Namespace", "", ns.Name)
+			input.PatchCollector.PatchWithMerge(mergePatch, "v1", "Namespace", "", ns.Name)
 		}
 	}
 	return nil
 }
 
-func makePatch(input *go_hook.HookInput, ns *Namespace, configItem *namespaceConfigurationItem) interface{} {
+func makePatch(input *go_hook.HookInput, ns Namespace, configItem *namespaceConfigurationItem) interface{} {
 	var newAnnotations = make(map[string]interface{})
 	var newLabels = make(map[string]interface{})
 	var mergePatch interface{}
 	var matched = false
 
-	input.Logger.Debugf("Matching exclude patterns for namespace: %s\n", ns.Name)
+	input.Logger.Debug("Matching exclude patterns for namespace", slog.String("namespace", ns.Name))
 	for _, r := range configItem.ExcludePatterns {
 		if r.MatchString(ns.Name) {
-			input.Logger.Debugf("Skip configuring excluded namespace: %s\n", ns.Name)
+			input.Logger.Debug("Skip configuring excluded namespace", slog.String("namespace", ns.Name))
 			return mergePatch
 		}
 	}
 
-	input.Logger.Debugf("Matching include patterns for namespace: %s\n", ns.Name)
+	input.Logger.Debug("Matching include patterns for namespace", slog.String("namespace", ns.Name))
 	for _, r := range configItem.IncludePatterns {
 		if r.MatchString(ns.Name) {
 			matched = true
 		}
 	}
 	if !matched {
-		input.Logger.Debugf("Skip configuring not matched namespace: %s\n", ns.Name)
+		input.Logger.Debug("Skip configuring not matched namespace", slog.String("namespace", ns.Name))
 		return mergePatch
 	}
 
@@ -187,16 +200,16 @@ ALOOP:
 			if ck == nk {
 				found = true
 				if cv != nil && cv.(string) == nv {
-					input.Logger.Debugf("Annotation %s=%s already set for namespace: %s\n", ck, cv, ns.Name)
+					input.Logger.Debug("Annotation already set for namespace", slog.String("key", ck), slog.Any("value", cv), slog.String("namespace", ns.Name))
 					continue ALOOP
 				}
 			}
 		}
 		if cv == nil && !found {
-			input.Logger.Debugf("Annotation %s already unset for namespace: %s\n", ck, ns.Name)
+			input.Logger.Debug("Annotation already unset for namespace", slog.String("key", ck), slog.String("namespace", ns.Name))
 			continue ALOOP
 		}
-		input.Logger.Debugf("Setting annotation %s=%s for namespace: %s\n", ck, cv, ns.Name)
+		input.Logger.Debug("Setting annotation for namespace", slog.String("key", ck), slog.Any("value", cv), slog.String("namespace", ns.Name))
 		newAnnotations[ck] = cv
 	}
 
@@ -207,16 +220,16 @@ LLOOP:
 			if ck == nk {
 				found = true
 				if cv != nil && cv.(string) == nv {
-					input.Logger.Debugf("Label %s=%s already set for namespace: %s\n", ck, cv, ns.Name)
+					input.Logger.Debug("Label already set for namespace", slog.String("key", ck), slog.Any("value", cv), slog.String("namespace", ns.Name))
 					continue LLOOP
 				}
 			}
 		}
 		if cv == nil && !found {
-			input.Logger.Debugf("Label %s already unset for namespace: %s\n", ck, ns.Name)
+			input.Logger.Debug("Label already unset for namespace", slog.String("key", ck), slog.String("namespace", ns.Name))
 			continue LLOOP
 		}
-		input.Logger.Debugf("Setting label %s=%s for namespace: %s\n", ck, cv, ns.Name)
+		input.Logger.Debug("Setting label for namespace", slog.String("key", ck), slog.Any("value", cv), slog.String("namespace", ns.Name))
 		newLabels[ck] = cv
 	}
 

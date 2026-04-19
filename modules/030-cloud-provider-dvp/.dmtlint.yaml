@@ -1,0 +1,67 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  openapi:
+    exclude-rules:
+      enum:
+        - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+        - "properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction"
+        - "properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.virtualMachine.properties.cpu.properties.coreFraction"
+        - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+      dns-policy:
+        - kind: Deployment
+          name: cloud-controller-manager
+      liveness-probe:
+        - kind: Deployment
+          name: csi-controller
+          container: controller
+        - kind: Deployment
+          name: csi-controller
+          container: provisioner
+        - kind: Deployment
+          name: csi-controller
+          container: attacher
+        - kind: Deployment
+          name: csi-controller
+          container: resizer
+        - kind: Deployment
+          name: csi-controller
+          container: livenessprobe
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node
+      readiness-probe:
+        - kind: Deployment
+          name: csi-controller
+          container: controller
+        - kind: Deployment
+          name: csi-controller
+          container: provisioner
+        - kind: Deployment
+          name: csi-controller
+          container: attacher
+        - kind: Deployment
+          name: csi-controller
+          container: resizer
+        - kind: Deployment
+          name: csi-controller
+          container: livenessprobe
+        - kind: DaemonSet
+          name: csi-node
+          container: node-driver-registrar
+        - kind: DaemonSet
+          name: csi-node
+          container: node

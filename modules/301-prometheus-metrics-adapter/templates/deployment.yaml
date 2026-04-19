@@ -14,7 +14,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-metrics-adapter
   namespace: d8-monitoring
-  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-metrics-adapter" "workload-resource-policy.deckhouse.io" "master")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "prometheus-metrics-adapter")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -65,18 +65,19 @@ spec:
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      automountServiceAccountToken: true
       serviceAccountName: prometheus-metrics-adapter
       imagePullSecrets:
       - name: deckhouse-registry
       containers:
       - name: prometheus-metrics-adapter
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "k8sPrometheusAdapter") }}
         args:
         - --secure-port=6443
         - --tls-cert-file=/var/run/adapter-cert/tls.crt
         - --tls-private-key-file=/var/run/adapter-cert/tls.key
-        - --prometheus-url=http://127.0.0.1:8000/trickster/main/
+        - --prometheus-url=http://127.0.0.1:8000
         - --metrics-relist-interval={{ mul (.Values.global.discovery.prometheusScrapeInterval | default 30) 2 }}s
         - --config=/etc/adapter/config.yaml
         - --client-ca-file=/var/run/apiserver-proxy-client/ca.crt
@@ -105,11 +106,11 @@ spec:
             {{- include "prometheus_metrics_adapter_resources" . | nindent 12 }}
 {{- end }}
       - name: prometheus-reverse-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "prometheusReverseProxy") }}
         env:
         - name: PROMETHEUS_URL
-          value: "https://trickster.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
+          value: "https://aggregating-proxy.d8-monitoring.svc.{{ .Values.global.discovery.clusterDomain }}"
         volumeMounts:
         - mountPath: /etc/prometheus-reverse-proxy/
           name: prometheus-metrics-adapter-config

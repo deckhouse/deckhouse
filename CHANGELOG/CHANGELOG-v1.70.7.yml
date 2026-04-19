@@ -1,0 +1,26 @@
+control-plane-manager:
+  fixes:
+    - summary: fix kubeadm v1beta4 config
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14058
+deckhouse-controller:
+  fixes:
+    - summary: fix wrong behavior of Pending ModuleReleases
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14095
+ingress-nginx:
+  fixes:
+    - summary: fixed `node-selector` and `tolerations` in validator `pod`
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14084
+istio:
+  fixes:
+    - summary: Fix for collecting debugging resources in collect-debug-info about Istio
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14072
+      impact: >-
+        When called collect-debug-info command in cluster without Istio, user see errors, but
+        archive create correct
+node-local-dns:
+  fixes:
+    - summary: >-
+        Improved stability for clusters with poor node-to-node connection quality by increasing
+        node-local-dns to kube-dns healthcheck timeouts.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14075
+

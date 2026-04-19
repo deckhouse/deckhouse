@@ -24,7 +24,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Resource to store `PrometheusRule`.  [Details...](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
+            Resource to store `PrometheusRule`.  [Details...](https://deckhouse.io/modules/prometheus/faq.html#how-do-i-add-alerts-andor-recording-rules).
           required:
             - spec
           properties:

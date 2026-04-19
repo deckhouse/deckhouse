@@ -17,18 +17,20 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/pwgen"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -137,13 +139,16 @@ type bootstrapTokenSecret struct {
 	CreationTS     time.Time
 }
 
-func handleOrderBootstrapToken(input *go_hook.HookInput) error {
+func handleOrderBootstrapToken(_ context.Context, input *go_hook.HookInput) error {
 	tokensByNg := make(map[string]bootstrapTokenSecret)
 	expiredTokens := make([]bootstrapTokenSecret, 0)
 
-	snap := input.Snapshots["bootstrap_tokens"]
-	for _, sn := range snap {
-		token := sn.(bootstrapTokenSecret)
+	snaps := input.Snapshots.Get("bootstrap_tokens")
+	for token, err := range sdkobjectpatch.SnapshotIter[bootstrapTokenSecret](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'bootstrap_tokens' snapshots: %w", err)
+		}
+
 		if token.ValidFor < 0 {
 			expiredTokens = append(expiredTokens, token)
 			continue
@@ -161,15 +166,18 @@ func handleOrderBootstrapToken(input *go_hook.HookInput) error {
 
 	// Remove all expired tokens
 	for _, token := range expiredTokens {
-		input.PatchCollector.Delete("v1", "Secret", "kube-system", token.Name, object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground("v1", "Secret", "kube-system", token.Name)
 	}
 
 	// we don't want to keep tokens for deleted NodeGroups
 	input.Values.Set("nodeManager.internal.bootstrapTokens", json.RawMessage("{}"))
 
-	snap = input.Snapshots["ngs"]
-	for _, sn := range snap {
-		ng := sn.(bootstrapTokenNG)
+	snaps = input.Snapshots.Get("ngs")
+	for ng, err := range sdkobjectpatch.SnapshotIter[bootstrapTokenNG](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'ngs' snapshots: %w", err)
+		}
+
 		if !ng.NeedToken {
 			continue
 		}

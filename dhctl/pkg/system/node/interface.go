@@ -14,7 +14,12 @@
 
 package node
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+)
 
 type Interface interface {
 	Command(name string, args ...string) Command
@@ -23,14 +28,14 @@ type Interface interface {
 }
 
 type Command interface {
-	Run() error
-	Cmd()
-	Sudo()
+	Run(ctx context.Context) error
+	Cmd(ctx context.Context)
+	Sudo(ctx context.Context)
 
 	StdoutBytes() []byte
 	StderrBytes() []byte
-	Output() ([]byte, []byte, error)
-	CombinedOutput() ([]byte, error)
+	Output(context.Context) ([]byte, []byte, error)
+	CombinedOutput(context.Context) ([]byte, error)
 
 	OnCommandStart(fn func())
 	WithEnv(env map[string]string)
@@ -41,20 +46,112 @@ type Command interface {
 }
 
 type File interface {
-	Upload(srcPath, dstPath string) error
-	Download(srcPath, dstPath string) error
+	Upload(ctx context.Context, srcPath, dstPath string) error
+	Download(ctx context.Context, srcPath, dstPath string) error
 
-	UploadBytes(data []byte, remotePath string) error
-	DownloadBytes(remotePath string) ([]byte, error)
+	UploadBytes(ctx context.Context, data []byte, remotePath string) error
+	DownloadBytes(ctx context.Context, remotePath string) ([]byte, error)
 }
 
 type Script interface {
-	Execute() (stdout []byte, err error)
-	ExecuteBundle(parentDir, bundleDir string) (stdout []byte, err error)
+	Execute(context.Context) (stdout []byte, err error)
+	ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error)
 
 	Sudo()
 	WithStdoutHandler(handler func(string))
 	WithTimeout(timeout time.Duration)
 	WithEnvs(envs map[string]string)
 	WithCleanupAfterExec(doCleanup bool)
+	WithCommanderMode(enabled bool)
+	WithExecuteUploadDir(dir string)
+}
+
+type Tunnel interface {
+	Up() error
+
+	HealthMonitor(errorOutCh chan<- error)
+
+	Stop()
+
+	String() string
+}
+
+type ReverseTunnelChecker interface {
+	CheckTunnel(context.Context) (string, error)
+}
+
+type ReverseTunnelKiller interface {
+	KillTunnel(context.Context) (string, error)
+}
+
+type ReverseTunnel interface {
+	Up() error
+
+	StartHealthMonitor(ctx context.Context, checker ReverseTunnelChecker, killer ReverseTunnelKiller)
+
+	Stop()
+
+	String() string
+}
+
+type KubeProxy interface {
+	Start(useLocalPort int) (port string, err error)
+
+	StopAll()
+
+	Stop(startID int)
+}
+
+type Check interface {
+	WithDelaySeconds(seconds int) Check
+
+	AwaitAvailability(context.Context) error
+
+	CheckAvailability(context.Context) error
+
+	ExpectAvailable(context.Context) ([]byte, error)
+
+	String() string
+}
+
+type SSHLoopHandler func(s SSHClient) error
+
+type SSHClient interface {
+	// 	BeforeStart safe starting without create session. Should safe for next Start call
+	OnlyPreparePrivateKeys() error
+
+	Start() error
+
+	// Tunnel is used to open local (L) and remote (R) tunnels
+	Tunnel(address string) Tunnel
+
+	// ReverseTunnel is used to open remote (R) tunnel
+	ReverseTunnel(address string) ReverseTunnel
+
+	// Command is used to run commands on remote server
+	Command(name string, arg ...string) Command
+
+	// KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
+	KubeProxy() KubeProxy
+
+	// File is used to upload and download files and directories
+	File() File
+
+	// UploadScript is used to upload script and execute it on remote server
+	UploadScript(scriptPath string, args ...string) Script
+
+	// UploadScript is used to upload script and execute it on remote server
+	Check() Check
+
+	// Stop the client
+	Stop()
+
+	// Loop Looping all available hosts
+	Loop(fn SSHLoopHandler) error
+
+	Session() *session.Session
+
+	PrivateKeys() []session.AgentPrivateKey
+
+	RefreshPrivateKeys() error
 }

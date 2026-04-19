@@ -15,6 +15,8 @@
 package project
 
 import (
+	"fmt"
+
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,7 +37,10 @@ var schemaBuilder = runtime.NewSchemeBuilder(
 )
 
 func AddToScheme(scheme *runtime.Scheme) error {
-	return schemaBuilder.AddToScheme(scheme)
+	if err := schemaBuilder.AddToScheme(scheme); err != nil {
+		return fmt.Errorf("add to scheme: %w", err)
+	}
+	return nil
 }
 
 func Scheme() (*runtime.Scheme, error) {

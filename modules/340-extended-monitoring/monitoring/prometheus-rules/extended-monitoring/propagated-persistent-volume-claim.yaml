@@ -1,0 +1,169 @@
+- name: kubernetes.extended-monitoring.persistent-volume-claim
+  rules:
+  - alert: PersistentVolumeClaimBytesUsage
+    expr: |
+      max by (namespace, persistentvolumeclaim) (
+        (
+          (kubelet_volume_stats_capacity_bytes - kubelet_volume_stats_available_bytes)
+        /
+          kubelet_volume_stats_capacity_bytes
+        ) * 100
+      )
+      > on (namespace, persistentvolumeclaim) group_right()
+      (
+        max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-bytes-warning"})
+        * on (namespace, pod) group_right ()
+        kube_pod_spec_volumes_persistentvolumeclaims_info
+        * on (namespace, persistentvolumeclaim) group_left()
+        kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_left()
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info{job="kube-state-metrics", volumemode!="Block"}
+        )
+      )
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
+      description: |-
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
+
+        Currently volume storage usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+  - alert: PersistentVolumeClaimBytesUsage
+    expr: |
+      max by (namespace, persistentvolumeclaim) (
+        (
+          (kubelet_volume_stats_capacity_bytes - kubelet_volume_stats_available_bytes)
+        /
+          kubelet_volume_stats_capacity_bytes
+        ) * 100
+      )
+      > on (namespace, persistentvolumeclaim) group_right()
+      (
+        max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-bytes-critical"})
+        * on (namespace, pod) group_right ()
+        kube_pod_spec_volumes_persistentvolumeclaims_info
+        * on (namespace, persistentvolumeclaim) group_left()
+        kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_left()
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info{job="kube-state-metrics", volumemode!="Block"}
+        )
+      )
+    for: 5m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
+      description: |-
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-bytes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume storage capacity.
+
+        Current volume storage usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+  - alert: PersistentVolumeClaimInodesUsed
+    expr: |
+      max by (namespace, persistentvolumeclaim) (
+        (
+          kubelet_volume_stats_inodes_used
+        /
+          kubelet_volume_stats_inodes
+        ) * 100
+      )
+      > on (namespace, persistentvolumeclaim) group_right()
+      (
+        max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-inodes-warning"})
+        * on (namespace, pod) group_right ()
+        kube_pod_spec_volumes_persistentvolumeclaims_info
+        * on (namespace, persistentvolumeclaim) group_left()
+        kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_left()
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info{job="kube-state-metrics", volumemode!="Block"}
+        )
+      )
+    for: 5m
+    labels:
+      severity_level: "5"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
+      description: |-
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-warning\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
+
+        Current volume inode usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```
+
+  - alert: PersistentVolumeClaimInodesUsed
+    expr: |
+      max by (namespace, persistentvolumeclaim) (
+        (
+          kubelet_volume_stats_inodes_used
+        /
+          kubelet_volume_stats_inodes
+        ) * 100
+      )
+      > on (namespace, persistentvolumeclaim) group_right()
+      (
+        max by (namespace, pod) (extended_monitoring_pod_threshold{threshold="disk-inodes-critical"})
+        * on (namespace, pod) group_right ()
+        kube_pod_spec_volumes_persistentvolumeclaims_info
+        * on (namespace, persistentvolumeclaim) group_left()
+        kube_persistentvolumeclaim_status_phase{phase="Bound"}
+        * on (namespace, persistentvolumeclaim) group_left()
+        (
+          label_replace((kube_persistentvolume_is_local==0)^0, "volumename", "$1", "persistentvolume", "(.*)")
+          * on (volumename) group_right()
+          kube_persistentvolumeclaim_info{job="kube-state-metrics", volumemode!="Block"}
+        )
+      )
+    for: 2m
+    labels:
+      severity_level: "4"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: |-
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
+      description: |-
+        Deckhouse has detected that PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is using more than {{ printf "extended_monitoring_pod_threshold{threshold=\"disk-inodes-critical\", namespace=\"%s\", pod=\"%s\"}" $labels.namespace $labels.pod | query | first | value }}% of the volume inode capacity.
+
+        Current volume inode usage: {{ .Value }}%
+
+        PersistentVolumeClaim `{{$labels.namespace}}/{{$labels.persistentvolumeclaim}}` is used by the following pods:
+
+        ```text
+        {{range $index, $result := (print "kube_pod_spec_volumes_persistentvolumeclaims_info{namespace='" $labels.namespace "', persistentvolumeclaim='" $labels.persistentvolumeclaim "'}" | query)}}{{if not (eq $index 0)}}, {{ end }}{{ $result.Labels.pod }}{{ end }}
+        ```

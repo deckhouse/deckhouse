@@ -19,8 +19,6 @@ package template
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"hash"
 	"sort"
@@ -35,13 +33,13 @@ type ContextBuilder struct {
 
 	stepsStorage *StepsStorage
 
-	registryData     registry
+	registryData     map[string]interface{}
 	clusterInputData inputData
 	versionMap       map[string]interface{}
 	imagesDigests    map[string]map[string]string // module: { image_name: tag }
 
 	// debug function injection
-	emitStepsOutput func(string, string, map[string]string)
+	emitStepsOutput func(string, map[string]string)
 
 	moduleSourcesCA        map[string]string
 	nodeUserConfigurations map[string][]*UserConfiguration
@@ -65,7 +63,7 @@ type BashibleContextData struct {
 
 	Images     map[string]map[string]string `json:"images" yaml:"images"`
 	VersionMap map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
-	Registry   registry                     `json:"registry" yaml:"registry"`
+	Registry   map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy      map[string]interface{}       `json:"proxy" yaml:"proxy"`
 }
 
@@ -81,11 +79,14 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 	result["registry"] = bd.Registry
 	result["versionMap"] = bd.VersionMap
 	result["proxy"] = bd.Proxy
+	if bashibleData, ok := bd.VersionMap["bashible"]; ok {
+		result["bashible"] = bashibleData
+	}
 
 	return result
 }
 
-func (cb *ContextBuilder) SetRegistryData(rd registry) {
+func (cb *ContextBuilder) SetRegistryData(rd map[string]interface{}) {
 	cb.registryData = rd
 }
 
@@ -106,10 +107,6 @@ func (cb *ContextBuilder) SetInputData(data inputData) {
 		return ngi.Name() < ngj.Name()
 	})
 	cb.clusterInputData = data
-}
-
-func (cb *ContextBuilder) setStepsOutput(f func(string, string, map[string]string)) {
-	cb.emitStepsOutput = f
 }
 
 func (cb *ContextBuilder) getCloudProvider() string {
@@ -146,72 +143,71 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		versionMapWrapper: versionMapFromMap(cb.versionMap),
 		RunType:           "Normal",
 		Normal: normal{
-			ClusterDomain:      cb.clusterInputData.ClusterDomain,
-			ClusterDNSAddress:  cb.clusterInputData.ClusterDNSAddress,
-			BootstrapTokens:    cb.clusterInputData.BootstrapTokens,
-			ApiserverEndpoints: cb.clusterInputData.APIServerEndpoints,
-			KubernetesCA:       cb.clusterInputData.KubernetesCA,
-			ModuleSourcesCA:    cb.moduleSourcesCA,
+			PodSubnetNodeCIDRPrefix: cb.clusterInputData.PodSubnetNodeCIDRPrefix,
+			ClusterDomain:           cb.clusterInputData.ClusterDomain,
+			ClusterDNSAddress:       cb.clusterInputData.ClusterDNSAddress,
+			BootstrapTokens:         cb.clusterInputData.BootstrapTokens,
+			APIServerEndpoints:      cb.clusterInputData.APIServerEndpoints,
+			APIServerProxyCerts:     cb.clusterInputData.APIServerProxyCerts,
+			KubernetesCA:            cb.clusterInputData.KubernetesCA,
+			ModuleSourcesCA:         cb.moduleSourcesCA,
 		},
-		Registry:      cb.registryData,
-		Images:        cb.imagesDigests,
-		Proxy:         cb.clusterInputData.Proxy,
-		PackagesProxy: cb.clusterInputData.PackagesProxy,
+		Registry:                   cb.registryData,
+		Images:                     cb.imagesDigests,
+		Proxy:                      cb.clusterInputData.Proxy,
+		PackagesProxy:              cb.clusterInputData.PackagesProxy,
+		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
 
-	cb.clusterInputData.AllowedBundles = append(cb.clusterInputData.AllowedBundles, "common") // temporary hack for using single bundle boostrap for all bundles
-	for _, bundle := range cb.clusterInputData.AllowedBundles {
-		for _, ng := range cb.clusterInputData.NodeGroups {
-			checksumCollector, ok := hashMap[ng.Name()]
-			if !ok {
-				checksumCollector = sha256.New()
-				hashMap[ng.Name()] = checksumCollector
-			}
-			bundleContextName := fmt.Sprintf("bundle-%s-%s", bundle, ng.Name())
-			bashibleContextName := fmt.Sprintf("bashible-%s-%s", bundle, ng.Name())
-			bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, bundle, cb.clusterInputData.CloudProvider, commonContext)
-			bb.bashibleContexts[bundleContextName] = bundleNgContext
-
-			bashibleContext, err := cb.newBashibleContext(checksumCollector, bundle, ng, cb.versionMap, &bundleNgContext)
-			if err != nil {
-				errorsMap[bundleContextName] = err
-			}
-			// bashibleContext always exists. Err is only for checksum generation
-			bb.bashibleContexts[bashibleContextName] = bashibleContext
+	for _, ng := range cb.clusterInputData.NodeGroups {
+		checksumCollector, ok := hashMap[ng.Name()]
+		if !ok {
+			checksumCollector = sha256.New()
+			hashMap[ng.Name()] = checksumCollector
 		}
+		bundleContextName := fmt.Sprintf("bundle-%s", ng.Name())
+		bashibleContextName := fmt.Sprintf("bashible-%s", ng.Name())
+		bundleNgContext := cb.newBundleNGContext(ng, cb.clusterInputData.Freq, cb.clusterInputData.CloudProvider, commonContext)
+		bb.bashibleContexts[bundleContextName] = bundleNgContext
+
+		bashibleContext, err := cb.newBashibleContext(checksumCollector, ng, cb.versionMap, &bundleNgContext)
+		if err != nil {
+			errorsMap[bundleContextName] = err
+		}
+		// bashibleContext always exists. Err is only for checksum generation
+		bb.bashibleContexts[bashibleContextName] = bashibleContext
 	}
 
-	for _, bundle := range cb.clusterInputData.AllowedBundles {
-		for _, ng := range cb.clusterInputData.NodeGroups {
-			bashibleContextName := fmt.Sprintf("bashible-%s-%s", bundle, ng.Name())
-			checksumCollector := hashMap[ng.Name()]
-			checksum := fmt.Sprintf("%x", checksumCollector.Sum(nil))
-			bcr := bb.bashibleContexts[bashibleContextName]
-			bc := bcr.(bashibleContext)
-			bc.ConfigurationChecksum = checksum
-			bb.bashibleContexts[bashibleContextName] = bc
-			ngMap[ng.Name()] = []byte(checksum)
-		}
+	for _, ng := range cb.clusterInputData.NodeGroups {
+		bashibleContextName := fmt.Sprintf("bashible-%s", ng.Name())
+		checksumCollector := hashMap[ng.Name()]
+		checksum := fmt.Sprintf("%x", checksumCollector.Sum(nil))
+		bcr := bb.bashibleContexts[bashibleContextName]
+		bc := bcr.(bashibleContext)
+		bc.ConfigurationChecksum = checksum
+		bb.bashibleContexts[bashibleContextName] = bc
+		ngMap[ng.Name()] = []byte(checksum)
 	}
 
 	return bb, ngMap, errorsMap
 }
 
-func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, bundle string, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
+func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
 	bc := bashibleContext{
 		KubernetesVersion: ng.KubernetesVersion(),
-		Bundle:            bundle,
 		Normal: map[string]interface{}{
-			"apiserverEndpoints": bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
+			"apiserverEndpoints":  bundleNgContext.tplContextCommon.Normal.APIServerEndpoints,
+			"apiserverProxyCerts": bundleNgContext.tplContextCommon.Normal.APIServerProxyCerts,
 		},
 		NodeGroup: ng,
 		RunType:   "Normal",
 
-		Images:            cb.imagesDigests,
-		Registry:          &cb.registryData,
-		Proxy:             cb.clusterInputData.Proxy,
-		CloudProviderType: cb.getCloudProvider(),
-		PackagesProxy:     cb.clusterInputData.PackagesProxy,
+		Images:                     cb.imagesDigests,
+		Registry:                   cb.registryData,
+		Proxy:                      cb.clusterInputData.Proxy,
+		CloudProviderType:          cb.getCloudProvider(),
+		PackagesProxy:              cb.clusterInputData.PackagesProxy,
+		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
 
 	err := cb.generateBashibleChecksum(checksumCollector, bc, bundleNgContext, versionMap)
@@ -255,13 +251,13 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	}
 
 	// render steps
-	steps, err := cb.stepsStorage.Render("all", bc.Bundle, providerType, res)
+	steps, err := cb.stepsStorage.Render("all", providerType, res)
 	if err != nil {
 		return errors.Wrap(err, "steps render failed")
 	}
 
 	if cb.emitStepsOutput != nil {
-		cb.emitStepsOutput(bc.Bundle, bc.NodeGroup.Name(), steps)
+		cb.emitStepsOutput(bc.NodeGroup.Name(), steps)
 	}
 
 	stepsData, err := yaml.Marshal(steps)
@@ -284,13 +280,13 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	}
 
 	// render ng steps
-	ngSteps, err := cb.stepsStorage.Render("all", bc.Bundle, providerType, bundleRes, bc.NodeGroup.Name())
+	ngSteps, err := cb.stepsStorage.Render("all", providerType, bundleRes, bc.NodeGroup.Name())
 	if err != nil {
 		return errors.Wrap(err, "NG steps render failed")
 	}
 
 	if cb.emitStepsOutput != nil {
-		cb.emitStepsOutput(bc.Bundle, bc.NodeGroup.Name(), ngSteps)
+		cb.emitStepsOutput(bc.NodeGroup.Name(), ngSteps)
 	}
 
 	ngStepsData, err := yaml.Marshal(ngSteps)
@@ -303,10 +299,9 @@ func (cb *ContextBuilder) generateBashibleChecksum(checksumCollector hash.Hash, 
 	return nil
 }
 
-func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, bundle string, cloudProvider interface{}, contextCommon *tplContextCommon) bundleNGContext {
+func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, cloudProvider interface{}, contextCommon *tplContextCommon) bundleNGContext {
 	return bundleNGContext{
 		tplContextCommon:          contextCommon,
-		Bundle:                    bundle,
 		KubernetesVersion:         ng.KubernetesVersion(),
 		CRI:                       ng.CRIType(),
 		NodeGroup:                 ng,
@@ -317,10 +312,9 @@ func (cb *ContextBuilder) newBundleNGContext(ng nodeGroup, freq interface{}, bun
 }
 
 func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserConfiguration {
-
-	users := make([]*UserConfiguration, 0)
 	wildcardBundle := fmt.Sprintf("*:%s", nodeGroup)
 	totalWildcard := "*:*"
+	users := make([]*UserConfiguration, 0, len(cb.nodeUserConfigurations[wildcardBundle])+len(cb.nodeUserConfigurations[totalWildcard]))
 
 	users = append(users, cb.nodeUserConfigurations[wildcardBundle]...)
 	users = append(users, cb.nodeUserConfigurations[totalWildcard]...)
@@ -332,67 +326,15 @@ func (cb *ContextBuilder) getNodeUserConfigurations(nodeGroup string) []*UserCon
 	return users
 }
 
-func (rid *registryInputData) FromMap(m map[string][]byte) {
-	if v, ok := m["address"]; ok {
-		rid.Address = string(v)
-	}
-	if v, ok := m["path"]; ok {
-		rid.Path = string(v)
-	}
-
-	if v, ok := m["scheme"]; ok {
-		rid.Scheme = string(v)
-	}
-
-	if v, ok := m["ca"]; ok {
-		rid.CA = string(v)
-	}
-
-	if v, ok := m[".dockerconfigjson"]; ok {
-		rid.DockerConfig = v
-	}
-}
-
-func (rid registryInputData) toRegistry() registry {
-	var auth string
-
-	if len(rid.DockerConfig) > 0 {
-		var dcfg dockerCfg
-		err := json.Unmarshal(rid.DockerConfig, &dcfg)
-		if err != nil {
-			panic(err)
-		}
-
-		if registryObj, ok := dcfg.Auths[rid.Address]; ok {
-			switch {
-			case registryObj.Auth != "":
-				auth = registryObj.Auth
-			case registryObj.Username != "" && registryObj.Password != "":
-				authRaw := fmt.Sprintf("%s:%s", registryObj.Username, registryObj.Password)
-				auth = base64.StdEncoding.EncodeToString([]byte(authRaw))
-			}
-		}
-	}
-
-	return registry{
-		Address:   rid.Address,
-		Path:      rid.Path,
-		Scheme:    rid.Scheme,
-		CA:        rid.CA,
-		DockerCFG: rid.DockerConfig,
-		Auth:      auth,
-	}
-}
-
 func versionMapFromMap(m map[string]interface{}) versionMapWrapper {
 	var res versionMapWrapper
 
-	if v, ok := m["bashible"]; ok {
-		res.Bashbile = v.(map[string]interface{})
+	if v, ok := m["k8s"].(map[string]interface{}); ok {
+		res.K8s = v
 	}
 
-	if v, ok := m["k8s"]; ok {
-		res.K8s = v.(map[string]interface{})
+	if v, ok := m["bashible"].(map[string]interface{}); ok {
+		res.Bashible = v
 	}
 
 	return res
@@ -429,17 +371,17 @@ func (ng nodeGroup) CRIType() string {
 type bashibleContext struct {
 	ConfigurationChecksum string      `json:"configurationChecksum" yaml:"configurationChecksum"`
 	KubernetesVersion     string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-	Bundle                string      `json:"bundle" yaml:"bundle"`
 	Normal                interface{} `json:"normal" yaml:"normal"`
 	NodeGroup             nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
 	RunType               string      `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
-	Images            map[string]map[string]string `json:"images" yaml:"images"`
-	Registry          *registry                    `json:"registry" yaml:"registry"`
-	Proxy             map[string]interface{}       `json:"proxy" yaml:"proxy"`
-	CloudProviderType string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
-	PackagesProxy     map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
+	Images                     map[string]map[string]string `json:"images" yaml:"images"`
+	Registry                   map[string]interface{}       `json:"registry" yaml:"registry"`
+	Proxy                      map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	CloudProviderType          string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
+	PackagesProxy              map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
+	AllowedKubeletFeatureGates []string                     `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
 func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
@@ -471,8 +413,8 @@ func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
 
 // for appropriate marshalling
 type versionMapWrapper struct {
-	Bashbile map[string]interface{} `json:"bashible" yaml:"bashible"`
 	K8s      map[string]interface{} `json:"k8s" yaml:"k8s"`
+	Bashible map[string]interface{} `json:"bashible,omitempty" yaml:"bashible,omitempty"`
 }
 
 type tplContextCommon struct {
@@ -482,16 +424,16 @@ type tplContextCommon struct {
 	Normal  normal `json:"normal" yaml:"normal"`
 
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
-	Registry registry                     `json:"registry" yaml:"registry"`
+	Registry map[string]interface{}       `json:"registry" yaml:"registry"`
 
-	Proxy         map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	PackagesProxy map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
 
 type bundleNGContext struct {
 	*tplContextCommon
 
-	Bundle            string      `json:"bundle" yaml:"bundle"`
 	KubernetesVersion string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
 	CRI               string      `json:"cri" yaml:"cri"`
 	NodeGroup         nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
@@ -502,60 +444,30 @@ type bundleNGContext struct {
 	NodeUsers []*UserConfiguration `json:"nodeUsers" yaml:"nodeUsers"`
 }
 
-type bundleK8sVersionContext struct {
-	*tplContextCommon
-
-	Bundle            string `json:"bundle" yaml:"bundle"`
-	KubernetesVersion string `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-
-	CloudProvider interface{} `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-}
-
 type normal struct {
-	ClusterDomain      string            `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress  string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	BootstrapTokens    map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
-	ApiserverEndpoints []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA       string            `json:"kubernetesCA" yaml:"kubernetesCA"`
-	ModuleSourcesCA    map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
-}
-
-type registry struct {
-	Address   string `json:"address" yaml:"address"`
-	Path      string `json:"path" yaml:"path"`
-	Scheme    string `json:"scheme" yaml:"scheme"`
-	CA        string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerCFG []byte `json:"dockerCfg" yaml:"dockerCfg"`
-	Auth      string `json:"auth" yaml:"auth"`
-}
-
-// input from secret
-type registryInputData struct {
-	Address      string `json:"address" yaml:"address"`
-	Path         string `json:"path" yaml:"path"`
-	Scheme       string `json:"scheme" yaml:"scheme"`
-	CA           string `json:"ca,omitempty" yaml:"ca,omitempty"`
-	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
-}
-
-type dockerCfg struct {
-	Auths map[string]struct {
-		Auth     string `json:"auth"`
-		Username string `json:"username"`
-		Password string `json:"password"`
-	} `json:"auths"`
+	PodSubnetNodeCIDRPrefix string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress       string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	BootstrapTokens         map[string]string      `json:"bootstrapTokens" yaml:"bootstrapTokens"`
+	APIServerEndpoints      []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	APIServerProxyCerts     map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA            string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ModuleSourcesCA         map[string]string      `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
 }
 
 type inputData struct {
-	ClusterDomain      string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress  string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider      interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy              map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens    map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy      map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA       string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles     []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups         []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq               interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	PodSubnetNodeCIDRPrefix    string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain              string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress          string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	CloudProvider              interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens            map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints         []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	APIServerProxyCerts        map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA               string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                       interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }

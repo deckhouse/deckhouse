@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/url"
@@ -27,7 +28,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	"github.com/deckhouse/deckhouse/go_lib/certificate"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const configPath = `controlPlaneManager.internal.kubeSchedulerExtenders`
@@ -53,24 +57,30 @@ func extendersFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	err := sdk.FromUnstructured(obj, &extenderCR)
 	return extenderCR.Webhooks, err
 }
-func handleExtenders(input *go_hook.HookInput) error {
+func handleExtenders(_ context.Context, input *go_hook.HookInput) error {
 	type extenderConfig struct {
-		URLPrefix string `yaml:"urlPrefix" json:"urlPrefix"`
-		Weight    int    `yaml:"weight" json:"weight"`
-		Timeout   int    `yaml:"timeout" json:"timeout"`
-		Ignorable bool   `yaml:"ignorable" json:"ignorable"`
-		CAData    string `yaml:"caData" json:"caData"`
+		URLPrefix      string `yaml:"urlPrefix" json:"urlPrefix"`
+		Weight         int    `yaml:"weight" json:"weight"`
+		Timeout        int    `yaml:"timeout" json:"timeout"`
+		Ignorable      bool   `yaml:"ignorable" json:"ignorable"`
+		CAData         string `yaml:"caData" json:"caData"`
+		FilterVerb     string `yaml:"filterVerb" json:"filterVerb"`
+		PrioritizeVerb string `yaml:"prioritizeVerb" json:"prioritizeVerb"`
+		PreemptVerb    string `yaml:"preemptVerb" json:"preemptVerb"`
 	}
 	extenders := make([]extenderConfig, 0)
 
 	var clusterDomain = input.Values.Get("global.discovery.clusterDomain").String()
 	var kubernetesCABase64 = base64.StdEncoding.EncodeToString([]byte(input.Values.Get("global.discovery.kubernetesCA").String()))
+	for snapshot, err := range sdkobjectpatch.SnapshotIter[[]KubeSchedulerWebhook](input.Snapshots.Get("kube_scheduler_extenders")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'nodes' snapshot: %w", err)
+		}
 
-	for _, snapshot := range input.Snapshots["kube_scheduler_extenders"] {
-		for _, config := range snapshot.([]KubeSchedulerWebhook) {
-			err := verifyCAChain(config.ClientConfig.CABundle)
+		for _, config := range snapshot {
+			err = verifyCAChain(config.ClientConfig.CABundle)
 			if err != nil {
-				input.Logger.Warnf("failed to verify CA chain: %v, use default kubernetes CA", err)
+				input.Logger.Warn("failed to verify CA chain, use default kubernetes CA", log.Err(err))
 				config.ClientConfig.CABundle = kubernetesCABase64
 			}
 
@@ -78,12 +88,22 @@ func handleExtenders(input *go_hook.HookInput) error {
 			if err != nil {
 				return err
 			}
+
+			if config.FilterVerb == nil {
+				config.FilterVerb = ptr.To("filter") // for backward compatibility
+			}
+			if config.PrioritizeVerb == nil {
+				config.PrioritizeVerb = ptr.To("prioritize") // for backward compatibility
+			}
 			newExtender := extenderConfig{
-				URLPrefix: urlPrefix,
-				Weight:    config.Weight,
-				Timeout:   config.TimeoutSeconds,
-				Ignorable: config.FailurePolicy == "Ignore",
-				CAData:    config.ClientConfig.CABundle,
+				URLPrefix:      urlPrefix,
+				Weight:         config.Weight,
+				Timeout:        config.TimeoutSeconds,
+				Ignorable:      config.FailurePolicy == "Ignore",
+				CAData:         config.ClientConfig.CABundle,
+				FilterVerb:     *config.FilterVerb,
+				PrioritizeVerb: *config.PrioritizeVerb,
+				PreemptVerb:    config.PreemptVerb,
 			}
 			extenders = append(extenders, newExtender)
 		}
@@ -112,6 +132,9 @@ type KubeSchedulerWebhook struct {
 	FailurePolicy  string                           `json:"failurePolicy" yaml:"failurePolicy"`
 	ClientConfig   KubeSchedulerWebhookClientConfig `json:"clientConfig" yaml:"clientConfig"`
 	TimeoutSeconds int                              `json:"timeoutSeconds" yaml:"timeoutSeconds"`
+	FilterVerb     *string                          `yaml:"filterVerb,omitempty" json:"filterVerb,omitempty"`
+	PrioritizeVerb *string                          `yaml:"prioritizeVerb,omitempty" json:"prioritizeVerb,omitempty"`
+	PreemptVerb    string                           `yaml:"preemptVerb" json:"preemptVerb"`
 }
 
 type KubeSchedulerWebhookClientConfig struct {

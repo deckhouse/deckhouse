@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -25,8 +26,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -42,27 +44,34 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 `
 )
 
-func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
-	cmd := parent.Command("destroy", "Destroy Kubernetes cluster.")
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
 	app.DefineDestroyResourcesFlags(cmd)
+	app.DefineTFResourceManagementTimeout(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+
 		if !app.SanityCheck {
-			log.WarnLn(destroyApprovalsMessage)
+			logger.LogWarnLn(destroyApprovalsMessage)
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
 				return fmt.Errorf("Cleanup cluster resources disallow")
 			}
 		}
 
-		sshClient, err := ssh.NewClientFromFlags().Start()
-		if err != nil {
+		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
-		if err := terminal.AskBecomePassword(); err != nil {
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshClient, err := sshclient.NewClientFromFlags(ctx)
+		if err != nil {
 			return err
 		}
 
@@ -70,17 +79,27 @@ func DefineDestroyCommand(parent *kingpin.Application) *kingpin.CmdClause {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
-		destroyer, err := destroy.NewClusterDestroyer(&destroy.Params{
-			NodeInterface:    ssh.NewNodeInterfaceWrapper(sshClient),
-			StateCache:       cache.Global(),
-			SkipResources:    app.SkipResources,
-			TerraformContext: terraform.NewTerraformContext(),
+		destroyer, err := destroy.NewClusterDestroyer(context.TODO(), &destroy.Params{
+			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			StateCache:      cache.Global(),
+			SkipResources:   app.SkipResources,
+			LoggerProvider:  log.SimpleLoggerProvider(logger),
+			IsDebug:         app.IsDebug,
+			TmpDir:          app.TmpDirName,
+			DirectoryConfig: app.GetDirConfig(),
 		})
 		if err != nil {
 			return err
 		}
 
-		return destroyer.DestroyCluster(app.SanityCheck)
+		err = destroyer.DestroyCluster(ctx, app.SanityCheck)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to destroy cluster: %v", err)
+			tmp.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd

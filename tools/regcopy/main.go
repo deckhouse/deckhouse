@@ -115,6 +115,6 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Printf("sucessfully copied \"%s@%s\" -> \"%s@%s\"", remoteRef.String(), digest, newRef.String(), resultDigest)
+		log.Printf("successfully copied \"%s@%s\" -> \"%s@%s\"", remoteRef.String(), digest, newRef.String(), resultDigest)
 	}
 }

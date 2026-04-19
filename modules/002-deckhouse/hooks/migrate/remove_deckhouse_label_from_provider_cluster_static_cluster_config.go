@@ -17,11 +17,17 @@ limitations under the License.
 package migrate
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 const (
@@ -93,18 +99,21 @@ func filterHasLabelHeritageDeckhouse(secret *unstructured.Unstructured) (go_hook
 	return val == "deckhouse", nil
 }
 
-func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
-	removeLabelIfNeed := func(input *go_hook.HookInput, snapSecretName string) {
-		snap := input.Snapshots[snapSecretName]
-
-		if len(snap) == 0 {
-			input.Logger.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - secret not found", snapSecretName)
-			return
+func removeLabelHeritageDeckhouse(_ context.Context, input *go_hook.HookInput) error {
+	removeLabelIfNeed := func(snapSecretName string) error {
+		snapBools, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, snapSecretName)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal snapshot %q: %w", snapSecretName, err)
 		}
 
-		if !snap[0].(bool) {
-			input.Logger.Debugf("Skip removing label 'heritage: deckhouse' for secret %s - label not found", snapSecretName)
-			return
+		if len(snapBools) == 0 {
+			input.Logger.Debug("Skip removing label 'heritage: deckhouse' - secret not found", slog.String("name", snapSecretName))
+			return nil
+		}
+
+		if !snapBools[0] {
+			input.Logger.Debug("Skip removing label 'heritage: deckhouse' - label not found", slog.String("name", snapSecretName))
+			return nil
 		}
 
 		patch := map[string]interface{}{
@@ -115,13 +124,20 @@ func removeLabelHeritageDeckhouse(input *go_hook.HookInput) error {
 			},
 		}
 
-		input.Logger.Warnf("Remove label 'heritage: deckhouse' from %s", snapSecretName)
-		input.PatchCollector.MergePatch(patch, "v1", "Secret", "kube-system", snapSecretName)
+		input.Logger.Warn("Remove label 'heritage: deckhouse' from secret", slog.String("name", snapSecretName))
+		input.PatchCollector.PatchWithMerge(patch, "v1", "Secret", "kube-system", snapSecretName)
+		return nil
 	}
 
-	removeLabelIfNeed(input, clusterConfiguration)
-	removeLabelIfNeed(input, providerConfiguration)
-	removeLabelIfNeed(input, staticConfiguration)
+	if err := removeLabelIfNeed(clusterConfiguration); err != nil {
+		return err
+	}
+	if err := removeLabelIfNeed(providerConfiguration); err != nil {
+		return err
+	}
+	if err := removeLabelIfNeed(staticConfiguration); err != nil {
+		return err
+	}
 
 	return nil
 }

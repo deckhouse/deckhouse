@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   labels:
     heritage: deckhouse
-    module: deckhouse
+    module: multitenancy-manager
     backup.deckhouse.io/cluster-config: "true"
   name: projects.deckhouse.io
 spec:
@@ -85,6 +85,9 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          x-kubernetes-validations:
+            - rule: 'size(self.metadata.name) <= 53'
+              message: "Project name must be no longer than 53 characters."
           properties:
             spec:
               type: object
@@ -97,7 +100,6 @@ spec:
                   description: |
                     The name of the [ProjectTemplate](cr.html#projecttemplate) resource that defines which resources will be created in the project.
                   type: string
-                  minLength: 1
                 parameters:
                   additionalProperties:
                     x-kubernetes-preserve-unknown-fields: true
@@ -120,6 +122,22 @@ spec:
                 templateGeneration:
                   description: The last observed template`s generation
                   type: integer
+                resources:
+                  description: Rendered and skipped resources.
+                  type: object
+                  additionalProperties:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        installed:
+                          type: boolean
+                          description: Indicates if the resources were successfully rendered.
+                        names:
+                          type: array
+                          description: List of resource names.
+                          items:
+                            type: string
                 conditions:
                   type: array
                   items:
@@ -127,12 +145,15 @@ spec:
                     properties:
                       type:
                         type: string
-                      lastTransitionTime:
-                        format: date-time
-                        type: string
                       status:
                         type: string
                       message:
+                        type: string
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      lastProbeTime:
+                        format: date-time
                         type: string
                 state:
                   description: Brief description of the project status, such as Error, Deploying, Deployed, etc.

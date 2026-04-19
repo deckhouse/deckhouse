@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 	},
 }, dependency.WithExternalDependencies(
-	func(input *go_hook.HookInput, dc dependency.Container) error {
+	func(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 		k := dc.MustGetK8sClient()
 		ctx := context.TODO()
 

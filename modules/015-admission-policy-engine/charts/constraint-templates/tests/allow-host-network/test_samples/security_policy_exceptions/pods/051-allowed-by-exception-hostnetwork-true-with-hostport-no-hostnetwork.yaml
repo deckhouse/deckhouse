@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-hostnetwork-true-with-hostport-no-hostnetwork
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-hostport-only
+spec:
+  hostNetwork: false
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 5000
+          hostPort: 5000
+          protocol: TCP

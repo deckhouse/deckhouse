@@ -18,8 +18,8 @@ spec:
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
-      served: true
-      storage: true
+      served: false
+      storage: false
       deprecated: true
       schema:
         openAPIV3Schema:
@@ -45,6 +45,10 @@ spec:
                   type: string
                   description: "Scan interval for checking the image digest. If the digest changes, the module is updated."
                   default: 15s
+                rollback:
+                  type: boolean
+                  description: Indicates whether the module release should be rollback after deleting ModulePullOverride.
+                  default: false
             status:
               type: object
               properties:
@@ -74,12 +78,15 @@ spec:
           description: 'Detailed description.'
     - name: v1alpha2
       served: true
-      storage: false
+      storage: true
       schema:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the configuration.
+            Defines the resource configuration for downloading specific versions of Deckhouse modules.
+
+            > **Caution**. This resource is intended for development and debugging environments only.
+            > Using it in production clusters is not recommended. Support for the resource might be removed in future Deckhouse Kubernetes Platform versions.
           required:
             - spec
           properties:
@@ -95,6 +102,10 @@ spec:
                   type: string
                   description: Scan interval for checking the image digest. If the digest changes, the module is updated.
                   default: 15s
+                rollback:
+                  type: boolean
+                  description: Indicates whether the module release should be rollback after deleting mpo.
+                  default: false
             status:
               type: object
               properties:
@@ -122,3 +133,7 @@ spec:
           type: string
           jsonPath: .status.message
           description: Detailed description.
+        - name: Rollback
+          type: string
+          jsonPath: .spec.rollback
+          description: Indicates whether the module release should be rollback after deleting mpo.

@@ -1,4 +1,6 @@
-{{- if .Values.prometheus.internal.deployDexAuthenticator }}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if and .Values.prometheus.internal.grafana.enabled .Values.prometheus.internal.deployDexAuthenticator }}
 ---
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -10,9 +12,17 @@ spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "grafana") }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+    {{- if $moduleGateway }}
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: "prometheus"
+    {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
   signOutURL: "/logout"
+  {{- with .Values.prometheus.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
   {{- with .Values.prometheus.auth.allowedUserGroups }}
   allowedGroups:
   {{- . | toYaml | nindent 2 }}

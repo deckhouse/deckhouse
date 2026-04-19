@@ -1,0 +1,27 @@
+linters-settings:
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: Deployment
+          name: hubble-relay
+          container: hubble-relay
+        - kind: Deployment
+          name: hubble-ui
+          container: frontend
+      liveness-probe:
+        - kind: Deployment
+          name: hubble-ui
+          container: backend
+        - kind: Deployment
+          name: hubble-ui
+          container: frontend
+      readiness-probe:
+        - kind: Deployment
+          name: hubble-ui
+          container: backend
+        - kind: Deployment
+          name: hubble-ui
+          container: frontend
+  module:
+    conversions:
+      disable: true

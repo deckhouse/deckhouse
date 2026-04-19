@@ -15,11 +15,14 @@
 package config
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 
-	"golang.org/x/crypto/ssh"
 	"sigs.k8s.io/yaml"
+
+	ssh "github.com/deckhouse/lib-gossh"
 )
 
 const (
@@ -34,6 +37,7 @@ const (
 	xUnsafeRuleUpdateMasterImage = "updateMasterImage"
 
 	xRulesSSHPrivateKey = "sshPrivateKey"
+	xRulesSSHPublicKey  = "sshPublicKey"
 )
 
 var xUnsafeRulesValidators = map[string]func(oldValue, newValue json.RawMessage) error{
@@ -44,6 +48,7 @@ var xUnsafeRulesValidators = map[string]func(oldValue, newValue json.RawMessage)
 
 var xRulesValidators = map[string]func(oldValue json.RawMessage) error{
 	xRulesSSHPrivateKey: ValidateSSHPrivateKey,
+	xRulesSSHPublicKey:  ValidateSSHPublicKey,
 }
 
 func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
@@ -118,7 +123,7 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 			URN       string `yaml:"urn"`       // AzureClusterConfiguration
 			Image     string `yaml:"image"`     // GCPClusterConfiguration
 			ImageID   string `yaml:"imageID"`   // YandexClusterConfiguration
-			ImageName string `yaml:"imageName"` // OpenStackClusterConfiguration
+			ImageName string `yaml:"imageName"` // OpenStackClusterConfiguration,HuaweiCloudClusterConfiguration,DynamixClusterConfiguration
 			Template  string `yaml:"template"`  // VsphereClusterConfiguration,VCDClusterConfiguration,ZvirtClusterConfiguration
 		} `yaml:"instanceClass"`
 	}
@@ -136,33 +141,9 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 		return err
 	}
 
-	for _, images := range []struct {
-		old   string
-		new   string
-		field string
-	}{
-		{old: oldConfig.InstanceClass.AMI, new: newConfig.InstanceClass.AMI, field: "ami"},
-		{old: oldConfig.InstanceClass.URN, new: newConfig.InstanceClass.URN, field: "urn"},
-		{old: oldConfig.InstanceClass.Image, new: newConfig.InstanceClass.Image, field: "image"},
-		{old: oldConfig.InstanceClass.ImageID, new: newConfig.InstanceClass.ImageID, field: "imageID"},
-		{old: oldConfig.InstanceClass.ImageName, new: newConfig.InstanceClass.ImageName, field: "imageName"},
-		{old: oldConfig.InstanceClass.Template, new: newConfig.InstanceClass.Template, field: "template"},
-	} {
-		if images.new != "" && images.old != images.new {
-			if oldConfig.Replicas > 1 && newConfig.Replicas > 1 {
-				return fmt.Errorf(
-					"%w: can't update .masterNodeGroup.%s in multi-master cluster, functionality will be available in future versions",
-					ErrValidationRuleFailed, images.field,
-				)
-			}
-
-			return fmt.Errorf(
-				"%w: can't update .masterNodeGroup.%s in single-master cluster, functionality will be available in future versions",
-				ErrValidationRuleFailed, images.field,
-			)
-		}
-	}
-
+	// Image update is now allowed for both single-master and multi-master clusters.
+	// dhctl converge handles image updates correctly by automatically scaling to 3 replicas
+	// and back to 1 for single-master clusters if needed.
 	return nil
 }
 
@@ -193,4 +174,40 @@ func ValidateSSHPrivateKey(value json.RawMessage) error {
 	}
 
 	return nil
+}
+
+func ValidateSSHPublicKey(value json.RawMessage) error {
+	var key string
+	err := yaml.Unmarshal(value, &key)
+	if err != nil {
+		return err
+	}
+	data := []byte(key)
+
+	// only error matters, this is only point of nil error return
+	//nolint: dogsled
+	_, _, _, _, err = ssh.ParseAuthorizedKey(data)
+	if err == nil {
+		return nil
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var base64Str string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "----") || strings.Contains(line, ":") || line == "" {
+			continue
+		}
+		base64Str += line
+	}
+	keyBytes, err := base64.StdEncoding.DecodeString(base64Str)
+	if err != nil {
+		return fmt.Errorf("%w: failed to decode base64 string: %w", ErrValidationRuleFailed, err)
+	}
+	_, err = ssh.ParsePublicKey(keyBytes)
+	if err != nil {
+		return fmt.Errorf("%w: failed to parse public key: %w", ErrValidationRuleFailed, err)
+	}
+
+	return fmt.Errorf("%w: wrong public key format: please, convert it to openssh format using command like ssh-keygen -i -f key.ssh2 > key.pub", ErrValidationRuleFailed)
 }

@@ -12,6 +12,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+function discover_internal_network_cidrs() {
+  local physical_iface
+  local discovered_internal_network_cidrs
+
+  physical_iface="$(ls -l /sys/class/net/ | grep -vE "virtual|total" | grep "devices" | awk '{print $9}')"
+  if [[ "$(wc -l <<< "${physical_iface}")" -eq 1 ]]; then
+    discovered_internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
+    echo "$discovered_internal_network_cidrs"
+  else
+    bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set."
+    return 1
+  fi
+}
+
+function check_slash32_node_ip() {
+  local inet_lines
+  inet_lines="$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}')"
+  if [[ -z "$inet_lines" || "$(wc -l <<< "${inet_lines}")" -ne 1 ]]; then
+    return 1
+  fi
+
+  local inet_line="${inet_lines}"
+  local addr="${inet_line%/*}"
+  local prefix="${inet_line#*/}"
+
+  [[ "$prefix" == "32" ]] && echo "$addr"
+}
+
+
 # Ensure we have file
 touch /var/lib/bashible/discovered-node-ip
 
@@ -23,7 +52,7 @@ echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
   # For CloudEphemeral, CloudPermanent or CloudStatic node we try to discover IP from Node object
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
-  if node="$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME -o json 2> /dev/null)" ; then
+  if node="$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $(bb-d8-node-name) -o json 2> /dev/null)" ; then
     echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address])[0] // ""' > /var/lib/bashible/discovered-node-ip
   else
     bb-log-error "Unable to discover node IP for node object: No access to API server"
@@ -37,20 +66,11 @@ fi
   {{- if and (hasKey .nodeGroup "static") (hasKey .nodeGroup.static "internalNetworkCIDRs")}}
 internal_network_cidrs={{ .nodeGroup.static.internalNetworkCIDRs | join " " | quote }}
   {{- end }}
+
 if [[ -z "$internal_network_cidrs" ]]; then
-  # if internal network cidrs is not set, and the node has one interface, use its network as internal_network_cidr
-  physical_iface="$(ls -l /sys/class/net/ | grep -vE "virtual|total" | grep "devices" | awk '{print $9}')"
-  if [[ "$(wc -l <<< "${physical_iface}")" -eq 1 ]]; then
-    internal_network_cidrs="$(ip route show scope link proto kernel dev "${physical_iface}" | awk '{print $1}')"
-  else
-    bb-log-error "Cannot discover internal network CIDRs. Node has more than one interface, and StaticClusterConfiguration internalNetworkCIDRs is not set."
-    bb-log-error "Please deploy StaticClusterConfiguration with internalNetworkCIDRs set to one of the node networks:"
-    for network in $($ip_route_get_cmd | awk '{print $1}'); do
-      bb-log-error "  - $network"
-    done
-    exit 1
-  fi
+  internal_network_cidrs="$(discover_internal_network_cidrs || true)"
 fi
+
 
 function is_ip_in_cidr() {
   ip="$1"
@@ -68,11 +88,20 @@ function is_ip_in_cidr() {
 }
 
 if bb-is-ubuntu-version? 24.04 || bb-is-ubuntu-version? 22.04 || bb-is-ubuntu-version? 20.04 || bb-is-ubuntu-version? 18.04; then
-  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | .addr_info[] | .local')
+  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | select(.ifname != "lo") | .addr_info[] | .local')
 else
-  ip_in_system=$(ip -f inet -br addr | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' -o)
+  ip_in_system=$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}' | cut -d/ -f1)
 fi
 
+# DVP like case (with /32 addr)
+if [[ -z "$internal_network_cidrs" ]]; then
+  if slash32_node_ip="$(check_slash32_node_ip)"; then
+    echo "$slash32_node_ip" > /var/lib/bashible/discovered-node-ip
+    exit 0
+  fi
+fi
+
+# Other cases
 for cidr in $internal_network_cidrs; do
   for ip in $ip_in_system; do
     if is_ip_in_cidr "$ip" "$cidr"; then

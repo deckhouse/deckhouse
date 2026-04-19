@@ -1,5 +1,8 @@
 /*
-Copyright The Helm Authors.
+Copyright The Helm Authors
+Copyright 2026 Flant JSC
+
+Modifications made by Flant JSC as part of the Deckhouse project.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -190,13 +193,11 @@ func fromUnstructured(unstructuredObj *unstructured.Unstructured, obj interface{
 	return runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredObj.UnstructuredContent(), obj)
 }
 
-func generateNgBundlePairs(ngs, bundles []string) []string {
-	result := make([]string, 0)
+func generateNgPairs(ngs []string) []string {
+	result := make([]string, 0, len(ngs))
 
 	for _, ng := range ngs {
-		for _, bundle := range bundles {
-			result = append(result, fmt.Sprintf("%s:%s", bundle, ng))
-		}
+		result = append(result, fmt.Sprintf("*:%s", ng))
 	}
 
 	if len(result) == 0 {

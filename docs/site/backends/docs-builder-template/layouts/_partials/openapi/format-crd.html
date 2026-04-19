@@ -1,0 +1,81 @@
+{{/* Renders a CRD. */}}
+
+{{- $data := .data }}
+{{- $langData := .langData }}
+{{- $kind := .data.spec.names.kind }}
+{{- $kindDowncase := .data.spec.names.kind | lower }}
+
+<h2>{{ $kind }}</h2>
+
+{{- $versions := slice }}
+{{- range $data.spec.versions }}
+  {{- $versions = $versions | append (.name | lower) }}
+{{- end }}
+
+{{- $versionsSorted := split (partial "openapi/sort-api-versions" $versions ) "," }}
+
+{{- if and $data.spec.versions (gt ( $data.spec.versions | len ) 0) }}
+  {{- if gt ( $data.spec.versions | len ) 1 }}
+    <p><font size="-1">Scope: {{ $data.spec.scope }}</font></p>
+    <div class="tabs">
+    {{- $status := " active" }}
+    {{- range $versionsSorted }}
+      <a href='javascript:void(0)' class='tabs__btn tabs__btn__{{ $kindDowncase }}{{ $status }}' onclick="openTab(event, 'tabs__btn__{{ $kindDowncase }}', 'tabs__content__{{ $kindDowncase }}', '{{ $kindDowncase }}_{{ . | lower }}')">{{ . | lower }}</a>
+      {{- $status = "" }}
+    {{- end }}
+    </div>
+  {{- end }}
+
+  {{- $status := " active" }}
+  {{- range  $versionsSorted }}
+    {{- $versionName := . }}
+    {{- $versionSchema := ( index (where $data.spec.versions "name" .) 0 ).schema.openAPIV3Schema }}
+
+    {{- if eq ( $data.spec.versions | len ) 1 }}
+      <p><font size="-1">Scope: {{ $data.spec.scope }}
+      <br/>Version: {{ $versionName }}</font></p>
+    {{- end }}
+
+    {{- if gt ( $data.spec.versions | len ) 1 }}
+      <div id='{{ $kindDowncase }}_{{ $versionName | lower }}' class='tabs__content tabs__content__{{ $kindDowncase }}{{ $status }}'>
+      {{- $status = "" }}
+    {{- end }}
+
+    {{- $description :=  $versionSchema.description }}
+    {{- $langVersionData := dict }}
+    {{- if $langData.spec.versions }}
+      {{- $langVersionData =  index (where $langData.spec.versions "name" "eq" $versionName) 0 }}
+      {{- if $langVersionData.schema.openAPIV3Schema.description }}{{ $description = $langVersionData.schema.openAPIV3Schema.description }}{{ end }}
+    {{- end }}
+
+    <div class="resources__prop_description">{{ partial "openapi/format-description" $description }}</div>
+    <ul class="resources">
+      {{- range $property, $propertyData := $versionSchema.properties }}
+        
+        {{/* Checking for x-doc-skip for TOP-level properties */}}
+        {{- if reflect.IsMap $propertyData }}
+          {{- $skipValue := index $propertyData "x-doc-skip" }}
+          {{- if eq $skipValue true }}
+            {{- /* Skip this parameter entirely */}}
+            {{- continue }}
+          {{- end }}
+        {{- end }}
+        
+        {{- $propertyLangData := index $langVersionData.schema.openAPIV3Schema.properties $property }}
+
+        {{- $liClass := "" }}
+        {{- if eq $property "spec" }}
+          {{- $liClass = "top-level-toggleable" }}
+        {{/* Rendering status */}}
+        {{- else if eq $property "status" }}
+          {{- $liClass = "closed top-level-toggleable" }}
+        {{- end }}
+        {{- partial "openapi/format-schema" ( dict "name" $property "data" $propertyData "langData" $propertyLangData "parent" $versionSchema "apiVersion"  $versionName "resourceName" $kindDowncase "liClass" $liClass) }}
+
+      {{- end }}
+    </ul>
+
+    {{- if gt ( $data.spec.versions | len ) 1 }}</div>{{ end }}
+
+  {{- end }}{{/* range $data.spec.versions */}}
+{{- end }}

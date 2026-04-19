@@ -15,12 +15,17 @@
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -46,7 +51,7 @@ func applyAutoscalerResourcesFilter(obj *unstructured.Unstructured) (go_hook.Fil
 	var depl appsv1.Deployment
 	err := sdk.FromUnstructured(obj, &depl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return depl.Spec.Template.Spec.Containers[0].Resources, nil
@@ -55,14 +60,17 @@ func applyAutoscalerResourcesFilter(obj *unstructured.Unstructured) (go_hook.Fil
 // removeResourcesLimitsForClusterAutoscaler
 // If there is a Deployment kube-system/cluster-autoscaler in cluster,
 // it must not have section `resources.limits` because extended-monitoring will alert at throttling.
-func removeResourcesLimitsForClusterAutoscaler(input *go_hook.HookInput) error {
-	resourcesSnap := input.Snapshots["cluster_autoscaler_resources"]
+func removeResourcesLimitsForClusterAutoscaler(_ context.Context, input *go_hook.HookInput) error {
+	resourcesSnap, err := sdkobjectpatch.UnmarshalToStruct[corev1.ResourceRequirements](input.Snapshots, "cluster_autoscaler_resources")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal cluster_autoscaler_resources snapshot: %w", err)
+	}
 
 	if len(resourcesSnap) == 0 {
 		return nil
 	}
 
-	resources := resourcesSnap[0].(corev1.ResourceRequirements)
+	resources := resourcesSnap[0]
 	if len(resources.Limits) == 0 {
 		return nil
 	}
@@ -71,15 +79,16 @@ func removeResourcesLimitsForClusterAutoscaler(input *go_hook.HookInput) error {
 		var depl appsv1.Deployment
 		err := sdk.FromUnstructured(u, &depl)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("from unstructured: %w", err)
 		}
 
+		// Remove resource limits from the first container
 		depl.Spec.Template.Spec.Containers[0].Resources.Limits = nil
 
 		return sdk.ToUnstructured(&depl)
 	}
 
-	input.PatchCollector.Filter(filterResourceLimits, "apps/v1", "Deployment", "kube-system", "cluster-autoscaler")
+	input.PatchCollector.PatchWithMutatingFunc(filterResourceLimits, "apps/v1", "Deployment", "kube-system", "cluster-autoscaler")
 
 	return nil
 }

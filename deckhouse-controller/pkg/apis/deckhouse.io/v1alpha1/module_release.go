@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -28,21 +28,34 @@ import (
 )
 
 const (
-	ModuleReleaseResource        = "modulereleases"
-	ModuleReleaseKind            = "ModuleRelease"
-	ModuleReleasePhasePending    = "Pending"
-	ModuleReleasePhaseDeployed   = "Deployed"
-	ModuleReleasePhaseSuperseded = "Superseded"
-	ModuleReleasePhaseSuspended  = "Suspended"
-	ModuleReleasePhaseSkipped    = "Skipped"
+	ModuleReleaseResource = "modulereleases"
+	ModuleReleaseKind     = "ModuleRelease"
 
-	ModuleReleaseAnnotationApplyNow = "release.deckhouse.io/apply-now"
+	ModuleReleasePhasePending     = "Pending"
+	ModuleReleasePhaseDeployed    = "Deployed"
+	ModuleReleasePhaseSuperseded  = "Superseded"
+	ModuleReleasePhaseSuspended   = "Suspended"
+	ModuleReleasePhaseSkipped     = "Skipped"
+	ModuleReleasePhaseTerminating = "Terminating"
 
+	ModuleReleaseApprovalAnnotation            = "modules.deckhouse.io/approved"
+	ModuleReleaseAnnotationIsUpdating          = "modules.deckhouse.io/isUpdating"
+	ModuleReleaseAnnotationNotified            = "modules.deckhouse.io/notified"
+	ModuleReleaseAnnotationApplyNow            = "modules.deckhouse.io/apply-now"
 	ModuleReleaseAnnotationRegistrySpecChanged = "modules.deckhouse.io/registry-spec-changed"
+	ModuleReleaseLabelUpdatePolicy             = "modules.deckhouse.io/update-policy"
+	ModuleReleaseFinalizerExistOnFs            = "modules.deckhouse.io/exist-on-fs"
+	// ModuleReleaseFinalizerMetricsRegistered ensures that the ModuleConfigurationError metric is reset to 0
+	// before the ModuleRelease resource is deleted. Without this finalizer, the resource could be removed
+	// before the reconciler has a chance to clear the metric, leaving stale error metrics in Prometheus.
+	ModuleReleaseFinalizerMetricsRegistered      = "modules.deckhouse.io/metrics-registered"
+	ModuleReleaseAnnotationNotificationTimeShift = "modules.deckhouse.io/notification-time-shift"
+	ModuleReleaseAnnotationForce                 = "modules.deckhouse.io/force"
+	ModuleReleaseAnnotationReinstall             = "modules.deckhouse.io/reinstall"
+	ModuleReleaseAnnotationChangeCause           = "modules.deckhouse.io/change-cause"
 
-	ModuleReleaseLabelUpdatePolicy = "modules.deckhouse.io/update-policy"
-
-	ModuleReleaseFinalizerExistOnFs = "modules.deckhouse.io/exist-on-fs"
+	ModuleReleaseAnnotationDryrun            = "dryrun"
+	ModuleReleaseAnnotationTriggeredByDryrun = "triggered_by_dryrun"
 
 	ModuleReleaseLabelStatus          = "status"
 	ModuleReleaseLabelSource          = "source"
@@ -51,6 +64,8 @@ const (
 )
 
 var (
+	ModuleReleaseLabelDeployed = strings.ToLower(ModuleReleasePhaseDeployed)
+
 	ModuleReleaseGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
 		Version:  SchemeGroupVersion.Version,
@@ -65,21 +80,11 @@ var (
 
 var _ runtime.Object = (*ModuleRelease)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleReleaseList is a list of ModuleRelease resources
-type ModuleReleaseList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleRelease `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleRelease is a Module release object.
 type ModuleRelease struct {
@@ -95,7 +100,11 @@ type ModuleRelease struct {
 }
 
 func (mr *ModuleRelease) GetVersion() *semver.Version {
-	return mr.Spec.Version
+	return semver.MustParse(mr.Spec.Version)
+}
+
+func (mr *ModuleRelease) GetModuleVersion() string {
+	return "v" + semver.MustParse(mr.Spec.Version).String()
 }
 
 func (mr *ModuleRelease) GetName() string {
@@ -112,6 +121,10 @@ func (mr *ModuleRelease) GetApplyAfter() *time.Time {
 
 func (mr *ModuleRelease) GetRequirements() map[string]string {
 	requirements := make(map[string]string)
+
+	if mr.Spec.Requirements == nil {
+		return requirements
+	}
 
 	if len(mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse) > 0 {
 		requirements[DeckhouseRequirementFieldName] = mr.Spec.Requirements.ModuleReleasePlatformRequirements.Deckhouse
@@ -149,11 +162,32 @@ func (mr *ModuleRelease) GetPhase() string {
 }
 
 func (mr *ModuleRelease) GetForce() bool {
-	return false
+	// handle deckhouse release annotation too
+	v, ok := mr.Annotations[DeckhouseReleaseAnnotationForce]
+	if ok && v == "true" {
+		return true
+	}
+
+	v, ok = mr.Annotations[ModuleReleaseAnnotationForce]
+	return ok && v == "true"
+}
+
+func (mr *ModuleRelease) GetReinstall() bool {
+	return mr.Annotations[ModuleReleaseAnnotationReinstall] == "true"
 }
 
 func (mr *ModuleRelease) GetApplyNow() bool {
 	return mr.Annotations[ModuleReleaseAnnotationApplyNow] == "true"
+}
+
+func (mr *ModuleRelease) GetIsUpdating() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationIsUpdating]
+	return ok && v == "true"
+}
+
+func (mr *ModuleRelease) GetNotified() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationNotified]
+	return ok && v == "true"
 }
 
 func (mr *ModuleRelease) SetApprovedStatus(val bool) {
@@ -185,6 +219,16 @@ func (mr *ModuleRelease) GetMessage() string {
 	return mr.Status.Message
 }
 
+func (mr *ModuleRelease) GetDryRun() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationDryrun]
+	return ok && v == "true"
+}
+
+func (mr *ModuleRelease) GetTriggeredByDryRun() bool {
+	v, ok := mr.Annotations[ModuleReleaseAnnotationTriggeredByDryrun]
+	return ok && v == "true"
+}
+
 // GetModuleSource returns module source for this release
 func (mr *ModuleRelease) GetModuleSource() string {
 	for _, ref := range mr.GetOwnerReferences() {
@@ -203,7 +247,7 @@ func (mr *ModuleRelease) GetModuleName() string {
 
 // GetReleaseVersion returns the version of the release in the form of "vx.y.z"
 func (mr *ModuleRelease) GetReleaseVersion() string {
-	return "v" + mr.Spec.Version.String()
+	return "v" + semver.MustParse(mr.Spec.Version).String()
 }
 
 // GetWeight returns the weight of the related module
@@ -211,23 +255,9 @@ func (mr *ModuleRelease) GetWeight() uint32 {
 	return mr.Spec.Weight
 }
 
-func (c Changelog) DeepCopy() Changelog {
-	if c == nil {
-		return nil
-	}
-
-	data, err := json.Marshal(c)
-	if err != nil {
-		panic(err)
-	}
-
-	var out Changelog
-	err = json.Unmarshal(data, &out)
-	if err != nil {
-		panic(err)
-	}
-
-	return out
+// GetUpdateSpec returns the optional update spec of the related release
+func (mr *ModuleRelease) GetUpdateSpec() *UpdateSpec {
+	return mr.Spec.UpdateSpec
 }
 
 type ModuleReleaseRequirements struct {
@@ -241,13 +271,25 @@ type ModuleReleasePlatformRequirements struct {
 }
 
 type ModuleReleaseSpec struct {
-	ModuleName string          `json:"moduleName"`
-	Version    *semver.Version `json:"version,omitempty"`
-	Weight     uint32          `json:"weight,omitempty"`
+	ModuleName string `json:"moduleName"`
+	Version    string `json:"version,omitempty"`
+	Weight     uint32 `json:"weight,omitempty"`
 
 	ApplyAfter   *metav1.Time               `json:"applyAfter,omitempty"`
 	Requirements *ModuleReleaseRequirements `json:"requirements,omitempty"`
-	Changelog    Changelog                  `json:"changelog,omitempty"`
+	UpdateSpec   *UpdateSpec                `json:"update,omitempty"`
+	Changelog    *MappedFields              `json:"changelog,omitempty"`
+}
+
+type UpdateSpec struct {
+	Versions []UpdateConstraint `json:"versions,omitempty"`
+}
+
+// UpdateConstraint defines a semver range [from, to] where From is the minimal version that can upgrade directly
+// to the To endpoint. Values support major.minor or full semver.
+type UpdateConstraint struct {
+	From string `json:"from"`
+	To   string `json:"to"`
 }
 
 type ModuleReleaseStatus struct {
@@ -257,4 +299,14 @@ type ModuleReleaseStatus struct {
 	Message        string          `json:"message"`
 	Size           uint32          `json:"size"`
 	PullDuration   metav1.Duration `json:"pullDuration"`
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleReleaseList is a list of ModuleRelease resources
+type ModuleReleaseList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleRelease `json:"items"`
 }

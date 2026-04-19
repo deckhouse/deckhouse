@@ -22,12 +22,12 @@ import (
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
+	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
 	"caps-controller-manager/internal/event"
 )
@@ -37,14 +37,16 @@ type InstanceScope struct {
 	*Scope
 	MachineScope *MachineScope
 
-	Instance    *deckhousev1.StaticInstance
-	Credentials *deckhousev1.SSHCredentials
+	Instance      *deckhousev1.StaticInstance
+	Credentials   *deckhousev1.SSHCredentials
+	SSHLegacyMode bool
 }
 
 // NewInstanceScope creates a new instance scope.
 func NewInstanceScope(
 	scope *Scope,
 	staticInstance *deckhousev1.StaticInstance,
+	ctx context.Context,
 ) (*InstanceScope, error) {
 	if scope == nil {
 		return nil, errors.New("Scope is required when creating an InstanceScope")
@@ -60,10 +62,15 @@ func NewInstanceScope(
 
 	scope.PatchHelper = patchHelper
 
-	return &InstanceScope{
-		Scope:    scope,
-		Instance: staticInstance,
-	}, nil
+	instanceScope := &InstanceScope{
+		Scope:         scope,
+		Instance:      staticInstance,
+		SSHLegacyMode: true,
+	}
+
+	instanceScope.setLoggerContext()
+
+	return instanceScope, nil
 }
 
 // LoadSSHCredentials loads the SSHCredentials for the InstanceScope.
@@ -85,8 +92,16 @@ func (i *InstanceScope) LoadSSHCredentials(ctx context.Context, recorder *event.
 	}
 
 	i.Credentials = credentials
+	if len(i.Credentials.Spec.PrivateSSHKey) == 0 {
+		i.SSHLegacyMode = false
+	}
 
 	return nil
+}
+
+func (i *InstanceScope) AttachMachineScope(machineScope *MachineScope) {
+	i.MachineScope = machineScope
+	i.setLoggerContext()
 }
 
 // GetPhase returns the current phase of the static instance.
@@ -100,28 +115,27 @@ func (i *InstanceScope) GetPhase() deckhousev1.StaticInstanceStatusCurrentStatus
 
 // SetPhase sets the current phase of the static instance.
 func (i *InstanceScope) SetPhase(phase deckhousev1.StaticInstanceStatusCurrentStatusPhase) {
+	prevPhase := i.GetPhase()
+
 	if i.Instance.Status.CurrentStatus == nil {
 		i.Instance.Status.CurrentStatus = &deckhousev1.StaticInstanceStatusCurrentStatus{}
 	}
 
 	i.Instance.Status.CurrentStatus.Phase = phase
 	i.Instance.Status.CurrentStatus.LastUpdateTime = metav1.NewTime(time.Now().UTC())
+	i.setLoggerContext()
+
+	if prevPhase != phase {
+		i.Logger.Info("StaticInstance phase changed", "from", prevPhase, "to", phase)
+	}
 }
 
 // Patch updates the StaticInstance resource.
 func (i *InstanceScope) Patch(ctx context.Context) error {
-	conditions.SetSummary(i.Instance,
-		conditions.WithConditions(
-			infrav1.StaticInstanceBootstrapSucceededCondition,
-		),
-		conditions.WithStepCounterIf(i.Instance.ObjectMeta.DeletionTimestamp.IsZero()),
-		conditions.WithStepCounter(),
-	)
-
 	err := i.PatchHelper.Patch(
 		ctx,
 		i.Instance,
-		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+		patch.WithOwnedConditions{Conditions: []string{
 			clusterv1.ReadyCondition,
 			infrav1.StaticInstanceAddedToNodeGroupCondition,
 			infrav1.StaticInstanceBootstrapSucceededCondition,
@@ -137,8 +151,15 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 	i.Instance.Status.MachineRef = nil
 	i.Instance.Status.NodeRef = nil
 	i.Instance.Status.CurrentStatus = nil
+	i.setLoggerContext()
 
-	conditions.MarkFalse(i.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
+	conditions.Set(i.Instance, metav1.Condition{
+		Type:               infrav1.StaticInstanceBootstrapSucceededCondition,
+		Status:             metav1.ConditionFalse,
+		Reason:             infrav1.StaticInstanceWaitingForNodeRefReason,
+		Message:            "StaticInstance is pending",
+		LastTransitionTime: metav1.Now(),
+	})
 
 	i.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
@@ -153,4 +174,13 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 // Close the InstanceScope by updating the instance spec and status.
 func (i *InstanceScope) Close(ctx context.Context) error {
 	return i.Patch(ctx)
+}
+
+func (i *InstanceScope) setLoggerContext() {
+	phase := "unknown"
+	if i.Instance.Status.CurrentStatus != nil && i.Instance.Status.CurrentStatus.Phase != "" {
+		phase = string(i.Instance.Status.CurrentStatus.Phase)
+	}
+
+	i.Logger = i.Scope.Logger.WithValues("phase", phase)
 }

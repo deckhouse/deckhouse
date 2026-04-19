@@ -18,16 +18,28 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"k8s.io/klog/v2"
+	"github.com/flant/docs-builder/internal/metrics"
 )
 
 func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string, channels []string) error {
+	start := time.Now()
+	status := "ok"
+	defer func() {
+		dur := time.Since(start).Seconds()
+		svc.metrics.CounterAdd(metrics.DocsBuilderUploadTotal, 1, map[string]string{"status": status})
+		svc.metrics.HistogramObserve(metrics.DocsBuilderUploadDurationSeconds, dur, map[string]string{"status": status}, nil)
+	}()
+
 	err := svc.cleanModulesFiles(moduleName, channels)
 	if err != nil {
+		status = "fail"
+
 		return fmt.Errorf("clean module files: %w", err)
 	}
 
@@ -36,7 +48,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 	for {
 		header, err := reader.Next()
 		if err == io.EOF {
-			klog.Infof("EOF reading file")
+			svc.logger.Info("EOF reading file")
 			break
 		}
 
@@ -54,11 +66,11 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping tree %v in %s", header.Name, moduleName)
+					svc.logger.Info("skipping tree", slog.String("header_name", header.Name), slog.String("module_name", moduleName))
 					continue
 				}
 
-				klog.Infof("creating dir %q", path)
+				svc.logger.Info("creating dir", slog.String("path", path))
 				if err := os.MkdirAll(path, 0700); err != nil {
 					return fmt.Errorf("mkdir %q failed: %w", path, err)
 				}
@@ -69,10 +81,10 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					klog.Infof("skipping file %v in %s", header.Name, moduleName)
+					svc.logger.Info("skipping file", slog.String("header_name", header.Name), slog.String("module_name", moduleName))
 					continue
 				}
-				klog.Infof("creating %s", path)
+				svc.logger.Info("creating file", slog.String("path", path))
 
 				outFile, err := os.OpenFile(
 					path,
@@ -95,7 +107,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			}
 
 		default:
-			return fmt.Errorf("extract uknown type: %d in %s", header.Typeflag, header.Name)
+			return fmt.Errorf("extract unknown type: %d in %s", header.Typeflag, header.Name)
 		}
 	}
 
@@ -111,7 +123,7 @@ func (svc *Service) generateChannelMapping(moduleName, version string, channels 
 	return svc.channelMappingEditor.edit(func(m channelMapping) {
 		var versions = make(map[string]versionEntity)
 		if _, ok := m[moduleName]; ok {
-			versions = m[moduleName]["channels"]
+			versions = m[moduleName][channelMappingChannels]
 		}
 
 		for _, ch := range channels {
@@ -119,7 +131,7 @@ func (svc *Service) generateChannelMapping(moduleName, version string, channels 
 		}
 
 		m[moduleName] = map[string]map[string]versionEntity{
-			"channels": versions,
+			channelMappingChannels: versions,
 		}
 	})
 }
@@ -132,17 +144,50 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
+		// Skip internal documentation directories that should not be published
+		if hasBlockedPrefix(fileName) {
+			return "", false
+		}
 		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
 	if strings.HasPrefix(fileName, "crds") ||
 		fileName == "openapi" ||
+		fileName == "openapi/conversions" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
 		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
 	}
 
+	if fileName == "module.yaml" || fileName == "oss.yaml" {
+		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+	}
+
 	return "", false
+}
+
+func hasBlockedPrefix(path string) bool {
+	blockedDocPathPrefixes := []string{
+		"/internal",
+		"/internals",
+		"/development",
+		"/dev",
+	}
+	for _, prefix := range blockedDocPathPrefixes {
+		if !strings.HasPrefix(path, prefix) {
+			continue
+		}
+
+		if len(path) == len(prefix) {
+			return true
+		}
+
+		if path[len(prefix)] == '/' {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (svc *Service) cleanModulesFiles(moduleName string, channels []string) error {

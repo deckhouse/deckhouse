@@ -1,7 +1,0 @@
-name: snapshot-controller
-weight: 045
-description: |
-  This module enables snapshot support for compatible CSI-drivers in the Kubernetes cluster.
-
-requirements:
-  bootstrapped: true

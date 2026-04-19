@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**):
+You have to create an IAM account with the {{ page.platform_name[page.lang] }} cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating an IAM account with AWS are available in the [documentation](/modules/cloud-provider-aws/environment.html). Below, we will provide a brief overview of the necessary actions (run them on the **personal computer**):
 
 Create the `JSON specification` using the following command.
 
@@ -46,12 +46,14 @@ cat > policy.json << EOF
                 "ec2:DeleteVpc",
                 "ec2:DescribeAccountAttributes",
                 "ec2:DescribeAddresses",
+                "ec2:DescribeAddressesAttribute",
                 "ec2:DescribeAvailabilityZones",
                 "ec2:DescribeImages",
                 "ec2:DescribeInstanceAttribute",
                 "ec2:DescribeInstanceCreditSpecifications",
                 "ec2:DescribeInstances",
                 "ec2:DescribeInstanceTypes",
+                "ec2:DescribeInstanceTopology",
                 "ec2:DescribeInternetGateways",
                 "ec2:DescribeKeyPairs",
                 "ec2:DescribeNatGateways",
@@ -149,11 +151,10 @@ EOF
 {% endofftopic %}
 
 Create a new Policy based on the specification created above with `D8CloudProviderAWS` as a policy name:
-{% snippetcut %}
+
 ```shell
 aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://policy.json
 ```
-{% endsnippetcut %}
 
 > You will see the following:
 > ```yaml
@@ -174,11 +175,10 @@ aws iam create-policy --policy-name D8CloudProviderAWS --policy-document file://
   ```
 
 Create a new user:
-{% snippetcut %}
+
 ```shell
 aws iam create-user --user-name deckhouse
 ```
-{% endsnippetcut %}
 
 > You will see the following:
 > ```yaml
@@ -194,11 +194,10 @@ aws iam create-user --user-name deckhouse
   ```
 
 You need to allow access to the API and remember your `AccessKeyId` + `SecretAccessKey` values:
-{% snippetcut %}
+
 ```shell
 aws iam create-access-key --user-name deckhouse
 ```
-{% endsnippetcut %}
 
 > You will see the following:
 > ```yaml
@@ -214,8 +213,7 @@ aws iam create-access-key --user-name deckhouse
   ```
 
 Attach the specified `Policy` to the specified `User`:
-{% snippetcut %}
+
 ```shell
 aws iam attach-user-policy --user-name username --policy-arn arn:aws:iam::123:policy/D8CloudProviderAWS
 ```
-{% endsnippetcut %}

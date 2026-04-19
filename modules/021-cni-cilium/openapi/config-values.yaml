@@ -1,9 +1,23 @@
 type: object
 properties:
+  sctpEnabled:
+    type: boolean
+    default: false
+    description: |
+      Enable SCTP support for Cilium (for both incoming and outgoing traffic).
+
+      > **Note.** Cilium implements only basic SCTP support. Therefore, when using SCTP with Cilium, please be aware of the following limitations:
+
+      - The following features are not currently supported: `SCTP multi-homing`, `NetworkPolicies for pod-to-VIP`.
+      - For incoming SCTP packets port overwriting is not supported.
+        This means that applications must be published through either HostPort or Service, where the `targetPort` MUST match the `port` specified. Otherwise, the packet will be dropped.
+      - For outgoing SCTP packets, only 1:1 SNAT is supported by default.
+        In this mode, only the src_ip is replaced, while the src_port remains unchanged. If the src_port is already in use on the node, the packet will be rejected.
+        To enable src_port substitution, you must switch the `masqueradeMode` parameter to `Netfilter` mode.
   debugLogging:
     type: boolean
     default: false
-    description: Enabled debug logging for Cilium components.
+    description: Enables debug logging for Cilium components.
   labelsRegex:
     type: array
     description: |
@@ -37,7 +51,7 @@ properties:
         In this mode, masquerade will not be used if the destination IP address is within the `podSubnetCIDR` or `InternalIP`/`ExternalIP` of any of the cluster nodes.
 
       > In `BPF` mode, if `ExternalIP` other than `InternalIP` is specified for a cluster node, and that IP address is not currently assigned to any interface on the node, it will not be reachable from neighboring nodes from pods network.
-      > The `Netfilter` mode allows you to bypass this limitation, but some other features stop working, such as `EgressGateway``.
+      > The `Netfilter` mode allows you to bypass this limitation, but some other features stop working, such as `EgressGateway`.
   tunnelMode:
     type: string
     enum: ["Disabled", "VXLAN"]
@@ -52,17 +66,31 @@ properties:
     type: boolean
     default: false
     description: |
-      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      For services of the `loadBalancer` type, enables checking the source IP for compliance with [loadBalancer.sourceRanges](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
       The check is not performed if access is made from within the cluster or the `sourceRanges` parameter is empty/not specified.
       Some cloud providers support filtering of incoming traffic based on the `sourceRanges` parameter in their loadBalancer implementations. In such cases, the [cilium documentation](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
       recommends disabling the `svcSourceRangeCheck` option.
 
       Do not enable if another balancer or any type of SNAT is running in front of the services.
+  loadBalancerSourceRangeAllTypes:
+    type: boolean
+    default: true
+    description: |
+      Enable loadBalancerSourceRanges CIDR filtering for all service types, not just LoadBalancer services.
+      The corresponding NodePort and ClusterIP will also apply the CIDR filter.
+      For more detailed information, please visit the [link](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks).
   policyAuditMode:
     type: boolean
     default: false
     description: |
       Do not enforce any Network Policy. Just log allowed/disallowed connections.
+  exclusiveCNIPlugin:
+    type: boolean
+    default: true
+    description: |
+      Prevents additional CNI plugins from being enabled on cluster nodes. If the Istio module's [`dataPlane.trafficRedirectionSetupMode` setting](/modules/istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) is set to `CNIPlugin`, the option will be automatically set to `false`.
+
+      Explicitly disabling this option is recommended only when using an additional CNI or a specific CNI plugin in the cluster. An example of such a use case could be the Linkerd CNI plugin.
   bpfLBMode:
     type: string
     default: "Hybrid"
@@ -72,7 +100,26 @@ properties:
       - `SNAT` — traffic from the client to the pod (and back) passes through NAT, and accordingly the sender's address is lost.
       - `DSR` — traffic from the client to the pod passes with the sender's address preserved, and back - according to the routing rules (bypassing the balancer). This mode saves network traffic and reduces delays, but only works for TCP traffic.
       - `Hybrid` — TCP traffic is processed in DSR mode, and UDP traffic is processed in SNAT mode.
+  loadBalancerICMPReplyEnabled:
+    type: boolean
+    default: false
+    description: |
+      Enable ICMP Echo Reply generation for LoadBalancer service IPs.
 
+      When enabled, nodes respond to ICMP Echo Requests (ping) addressed to LoadBalancer external IPs.
+  activeL2NeighborDiscoveryEnabled:
+    type: boolean
+    default: true
+    description: |
+      Enables the Cilium `L2 neighbor discovery` mechanism, which helps ensure that ARP table entries are kept up-to-date on all cluster nodes.
+  extraLoadBalancerAlgorithmsEnabled:
+    type: boolean
+    default: false
+    x-experimental: true
+    description: |
+      Allows selectively overriding the load balancing algorithm using eBPF between backends for individual services. The annotation `service.cilium.io/lb-algorithm` is used for overriding with one of the following values: `random`, `maglev`, or `least-conn`.
+
+      > Note! This option requires the Linux kernel version on the nodes to be at least 5.15.
   resourcesManagement:
     description: |
       Settings for CPU and memory requests and limits by cilium agent pods.
@@ -89,7 +136,7 @@ properties:
     x-examples:
     - mode: VPA
       vpa:
-        mode: Auto
+        mode: "InPlaceOrRecreate"
         cpu:
           min: "50m"
           max: 2
@@ -106,6 +153,17 @@ properties:
         limits:
           cpu: 2
           memory: "2Gi"
+    - mode: VPA
+      vpa:
+        mode: Auto
+        cpu:
+          min: "50m"
+          max: 2
+          limitRatio: 1.5
+        memory:
+          min: "256Mi"
+          max: "2Gi"
+          limitRatio: 1.5
     properties:
       mode:
         type: string
@@ -125,7 +183,18 @@ properties:
             type: string
             description: |
               VPA operating mode.
-            enum: ['Initial', 'Auto']
+
+                 - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                   Resource values are not changed automatically afterwards.
+
+                 - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                   If in-place updates are not possible, the pod will be recreated.
+
+                 - `Auto` — VPA automatically recreates pods to apply updated resource values.
+
+                   > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                   > It is recommended to use `InPlaceOrRecreate` instead.
+            enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
             default: 'Initial'
           cpu:
             type: object
@@ -232,3 +301,30 @@ properties:
                 - type: number
                 description: |
                   Configuring memory limits.
+  encryption:
+    type: object
+    description: |
+      CNI Cilium encryption settings.
+    default: {}
+    properties:
+      mode:
+        type: string
+        enum: ["Disabled", "WireGuard"]
+        default: "Disabled"
+        description: |
+          Encryption mode:
+          - `Disabled` — encryption is disabled.
+          - `WireGuard` — enables traffic encryption between pods using WireGuard.
+
+            > Note! Before using WireGuard encryption, please ensure that the Linux kernel running on the cluster nodes has support WireGuard (either via the CONFIG_WIREGUARD=m kernel config option on Linux 5.6 and newer, or using an external WireGuard module for older kernels).
+
+            > Note! Using WireGuard may cause significant CPU consumption by Cilium agent pods.
+      nodeToNodeModeEnabled:
+        type: boolean
+        default: false
+        description: |
+          Enabling traffic encryption between nodes and pods in HostNetwork.
+
+            > Note! The node-to-node traffic from and to the control-plane nodes is left unencrypted to prevent possible communication issues when renewing WireGuard public keys. At the same time, the traffic between control-plane components is still encrypted at the application layer.
+
+          > Note! When this mode is active, `NodePort` and `HostPort` are not available from the `PodNetwork`.

@@ -13,6 +13,16 @@ metadata:
 rules:
 - apiGroups:
   - deckhouse.io
+  resources:
+  - kubeschedulerwebhookconfigurations
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
+  - deletecollection
+- apiGroups:
+  - deckhouse.io
   resourceNames:
   - control-plane-manager
   resources:

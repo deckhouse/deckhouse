@@ -1,0 +1,40 @@
+@use "components/common/_variables.scss";
+
+.packages {
+    padding: 150px 0 50px 0;
+    &__content {
+        box-sizing: border-box;
+    }
+    &__title {
+        margin-top: 0px;
+        margin-bottom: variables.$spacing-l*3;
+    }
+    &__items {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    &__item {
+        width: 45%;
+        margin-right: 0;
+        margin-bottom: 100px;
+
+        @media (min-width: variables.$container-breakpoint-lg) {
+            width: 40%;
+            margin-right: 10%;
+        }
+
+        &-title {
+            margin: 0;
+        }
+
+        &-subtitle {
+            margin-top: 0;
+            margin-bottom: variables.$spacing-s;
+            padding-bottom: variables.$spacing-s;
+            border-bottom: 2px solid variables.$color-alt
+        }
+    }
+}

@@ -13,7 +13,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -27,7 +26,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(checkRelease))
 
-func checkRelease(input *go_hook.HookInput, dc dependency.Container) error {
+func checkRelease(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	repo := input.ConfigValues.Get("okmeter.image.repository").String()
 	if repo == "" {
 		repo = "registry.okmeter.io/agent/okmeter"
@@ -36,7 +35,7 @@ func checkRelease(input *go_hook.HookInput, dc dependency.Container) error {
 	if tag == "" {
 		tag = "latest"
 	}
-	regCli, err := dc.GetRegistryClient(repo, cr.WithAuth(""))
+	regCli, err := dc.GetRegistryClient(repo)
 	if err != nil {
 		return err
 	}

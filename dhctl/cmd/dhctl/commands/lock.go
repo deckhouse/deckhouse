@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
@@ -22,9 +23,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -36,15 +40,22 @@ Lock info:
 %s
 `
 
-func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("release", "Release converge lock fully. It's remove converge lease lock from cluster regardless of owner. Be careful")
+func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSanityFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		ctx := context.Background()
+		if err := terminal.AskBecomePassword(); err != nil {
+			return err
+		}
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -57,14 +68,14 @@ func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			return err
 		}
 
-		confirm := func(lease *v1.Lease) error {
+		confirm := func(l *v1.Lease) error {
 			if app.SanityCheck {
 				return nil
 			}
 
-			info, _ := client.LockInfo(lease)
+			info, _ := lease.LockInfo(l)
 
-			if *lease.Spec.HolderIdentity == converge.AutoConvergerIdentity {
+			if *l.Spec.HolderIdentity == lock.AutoConvergerIdentity {
 				return fmt.Errorf(autoConvergerErrorFmt, info)
 			}
 
@@ -77,8 +88,8 @@ func DefineReleaseConvergeLockCommand(parent *kingpin.CmdClause) *kingpin.CmdCla
 			return nil
 		}
 
-		cnf := converge.GetLockLeaseConfig("lock-releaser")
-		return client.RemoveLease(kubeCl, cnf, confirm)
+		cnf := lock.GetLockLeaseConfig("lock-releaser")
+		return lease.RemoveLease(ctx, kubeCl, cnf, confirm)
 	})
 	return cmd
 }

@@ -26,8 +26,10 @@ const (
 	ModuleSourceResource = "modulesources"
 	ModuleSourceKind     = "ModuleSource"
 
-	ModuleSourceMessageReady      = "Ready"
-	ModuleSourceMessagePullErrors = "Some errors occurred. Inspect status for details"
+	ModuleSourcePhaseActive      = "Active"
+	ModuleSourcePhaseTerminating = "Terminating"
+
+	ModuleSourceMessageErrors = "Some errors occurred. Inspect status for details"
 
 	ModuleSourceFinalizerReleaseExists = "modules.deckhouse.io/release-exists"
 	ModuleSourceFinalizerModuleExists  = "modules.deckhouse.io/module-exists"
@@ -51,21 +53,11 @@ var (
 
 var _ runtime.Object = (*ModuleSource)(nil)
 
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ModuleSourceList is a list of ModuleSource resources
-type ModuleSourceList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []ModuleSource `json:"items"`
-}
-
 // +genclient
 // +genclient:nonNamespaced
-// +k8s:deepcopy-gen=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 
 // ModuleSource source
 type ModuleSource struct {
@@ -83,7 +75,8 @@ type ModuleSource struct {
 }
 
 type ModuleSourceSpec struct {
-	Registry ModuleSourceSpecRegistry `json:"registry"`
+	ScanInterval *metav1.Duration         `json:"scanInterval,omitempty"`
+	Registry     ModuleSourceSpecRegistry `json:"registry"`
 }
 
 type ModuleSourceSpecRegistry struct {
@@ -97,13 +90,27 @@ type ModuleSourceStatus struct {
 	SyncTime         metav1.Time       `json:"syncTime"`
 	ModulesCount     int               `json:"modulesCount"`
 	AvailableModules []AvailableModule `json:"modules"`
+	Phase            string            `json:"phase"`
 	Message          string            `json:"message"`
 }
 
 type AvailableModule struct {
-	Name       string `json:"name"`
-	Policy     string `json:"policy,omitempty"`
-	Checksum   string `json:"checksum,omitempty"`
+	Name     string `json:"name"`
+	Version  string `json:"version,omitempty"`
+	Policy   string `json:"policy,omitempty"`
+	Checksum string `json:"checksum,omitempty"`
+	Error    string `json:"error,omitempty"`
+	// Deprecated: use Error instead
 	PullError  string `json:"pullError,omitempty"`
 	Overridden bool   `json:"overridden,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+
+// ModuleSourceList is a list of ModuleSource resources
+type ModuleSourceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ModuleSource `json:"items"`
 }

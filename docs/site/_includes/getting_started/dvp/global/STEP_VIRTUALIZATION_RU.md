@@ -1,6 +1,5 @@
-Включите модуль виртуализации. В параметре [.spec.settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#virtualization) модуля укажите подсети, IP-адреса из которых будут назначаться виртуальным машинам:
+Включите модуль виртуализации. В параметре [.spec.settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) модуля укажите подсети, IP-адреса из которых будут назначаться виртуальным машинам:
 
-{% snippetcut %}
 ```shell
 sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
@@ -23,4 +22,7 @@ spec:
   version: 1
 EOF
 ```
-{% endsnippetcut %}
+
+{% alert level="warning" %}
+Подсети блока `.spec.settings.virtualMachineCIDRs` не должны пересекаться с подсетями узлов кластера, подсетью сервисов или подсетью подов (`podCIDR`).
+{% endalert %}

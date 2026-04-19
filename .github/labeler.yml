@@ -16,9 +16,7 @@ area/cicd:
 area/cloud-provider:
   - modules/030-cloud-provider-*/**
   - ee/modules/030-cloud-provider-*/**
-  - candi/cloud-providers/**
-  - ee/candi/cloud-providers/**
-
+  - ee/se-plus/modules/030-cloud-provider-*/**
 area/cluster-and-infrastructure:
   - candi/**
   - ee/candi/**
@@ -29,7 +27,6 @@ area/cluster-and-infrastructure:
   - ee/modules/040-terraform-manager/**
   - modules/011-flow-schema/**
   - modules/042-kube-dns/**
-  - modules/465-pod-reloader/**
   - modules/470-chrony/**
   - modules/600-namespace-configurator/**
   - modules/600-secret-copier/**
@@ -103,13 +100,9 @@ area/security:
   - modules/500-openvpn/**
   - ee/modules/160-multitenancy-manager/**
   - ee/modules/500-operator-trivy/**
-  - ee/modules/650-runtime-audit-engine/**
 
 area/storage:
-  - modules/031-ceph-csi/**
   - modules/031-local-path-provisioner/**
-  - modules/045-snapshot-controller/**
-  - modules/491-containerized-data-importer/**
 
 area/testing:
   - testing/**

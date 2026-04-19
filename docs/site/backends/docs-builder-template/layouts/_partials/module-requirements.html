@@ -1,0 +1,57 @@
+{{- define "module-requirements" }}
+{{- $module := .module }}
+{{- $channel := .channel }}
+
+{{- $requirements := dict }}
+{{- $moduleData := index (index site.Data.modules $module) $channel }}
+{{- $moduleMetadata := index $moduleData "module" }}
+{{- if and $moduleMetadata $moduleMetadata.requirements }}
+  {{- $requirements = $moduleMetadata.requirements }}
+{{- end }}
+
+{{- if gt (len $requirements) 0 }}
+<h2>{{ T "requirements_title" }}</h2>
+  {{- if isset $requirements "kubernetes" }}
+    {{- $formattedVersion := partial "format-version-requirement" $requirements.kubernetes }}
+    <p>{{- T "requirements_kubernetes_title" }}: {{ $formattedVersion }}.</p>
+  {{- end }}
+
+  {{- if isset $requirements "deckhouse" }}
+    {{- $formattedVersion := partial "format-version-requirement" $requirements.deckhouse }}
+    <p>{{- T "requirements_deckhouse_title" }}: {{ $formattedVersion }}.</p>
+  {{- end }}
+
+  {{- if isset $requirements "modules" }}
+  <p>{{- T "requirements_modules_title" }}:
+    <ul>
+      {{- range $key, $valueRaw := $requirements.modules }}
+        {{- /* Check is !optional presenting */}}
+        {{- $isOptional := false }}
+        {{- $version := $valueRaw }}
+        {{- if findRE `!optional` $valueRaw }}
+          {{- $isOptional = true }}
+          {{- $version = $valueRaw | replaceRE `\s*!optional\s*` "" }}
+        {{- end }}
+
+        {{- /* Format version */}}
+        {{- if eq $version ">= 0.0.0" }}
+          {{- $version = printf "%s." (T "requirements_modules_any_version") -}}
+        {{- else -}}
+          {{- $formattedVersion := partial "format-version-requirement" $version }}
+          {{- $version = printf "%s." $formattedVersion -}}
+        {{- end }}
+
+        <li class="module-requirements__item">
+          <code>{{ $key }}</code>: {{ $version }}
+          {{- if $isOptional }}
+            <span>{{- T "requirements_modules_optional_text_first" }} <a href="/modules/{{ $key }}/">{{ $key }}</a> (<a href="/products/kubernetes-platform/documentation/v1/architecture/module-development/dependencies/#{{- T "requirements_modules_optional_text_for_link"}}">{{- T "requirements_modules_more" }} </a> {{- T "requirements_modules_optional_text_second" }}).</span>
+          {{- end }}
+        </li>
+      {{- end }}
+    </ul>
+  </p>
+  {{- end }}
+
+{{- end }}
+
+{{- end }}

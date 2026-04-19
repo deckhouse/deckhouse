@@ -33,7 +33,9 @@ data:
           {{ get $transportProtocolModeDict $.Values.kubeDns.transportProtocolMode }}
 {{- end }}
         }
+{{- if not (.Values.global.enabledModules | has "node-local-dns") }}
         cache 30
+{{- end }}
         loop
         reload
         loadbalance

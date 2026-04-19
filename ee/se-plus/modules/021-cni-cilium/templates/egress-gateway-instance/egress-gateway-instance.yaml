@@ -1,5 +1,5 @@
 {{- range $egName, $egConf := $.Values.cniCilium.internal.egressGatewaysMap }}
-  {{- if eq $egConf.sourceIP.mode "VirtualIPAddress" }}
+  {{- if and ($egConf.desiredNode) (eq $egConf.sourceIP.mode "VirtualIPAddress") }}
 ---
 apiVersion: internal.network.deckhouse.io/v1alpha1
 kind: SDNInternalEgressGatewayInstance

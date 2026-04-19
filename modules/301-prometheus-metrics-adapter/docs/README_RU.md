@@ -1,6 +1,7 @@
 ---
 title: Модуль prometheus-metrics-adapter
 search: autoscaler, HorizontalPodAutoscaler 
+description: "Обеспечение работы горизонтального и вертикального масштабирования по любым метрикам в кластере Deckhouse Kubernetes Platform."
 ---
 
 Позволяет работать [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)- и [VPA](../vertical-pod-autoscaler/)-автоскейлерам по «любым» метрикам.

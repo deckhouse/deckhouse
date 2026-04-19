@@ -1,0 +1,405 @@
+diff --git a/internal/tofu/map.go b/internal/tofu/map.go
+new file mode 100644
+index 0000000000..c4a5ee921f
+--- /dev/null
++++ b/internal/tofu/map.go
+@@ -0,0 +1,149 @@
++// got from https://github.com/name212/go-cmp-utils
++// tested in repo
++package tofu
++
++import (
++	"fmt"
++	"regexp"
++
++	"github.com/google/go-cmp/cmp"
++)
++
++type MapPathComparator interface {
++	Compare(indx int, keyPathPart string) bool
++	Parts() int
++}
++
++type MapPath MapPathComparator
++
++func MapKeysFilter(paths ...MapPath) cmp.Option {
++	if len(paths) == 0 {
++		return filterOption(noFilter)
++	}
++
++	filters := make([]filter, 0, len(paths))
++	for _, p := range paths {
++		filters = append(filters, constructFilter(p))
++	}
++
++	composeFilter := func(p cmp.Path) bool {
++		for _, f := range filters {
++			if f(p) {
++				return true
++			}
++		}
++
++		return false
++	}
++
++	return filterOption(composeFilter)
++}
++
++type MapPathStringComparator []string
++
++func NewMapPathStringComparator(parts ...string) MapPathStringComparator {
++	res := make(MapPathStringComparator, 0, len(parts))
++	res = append(res, parts...)
++
++	return res
++}
++
++func (c MapPathStringComparator) Parts() int {
++	return len(c)
++}
++
++func (c MapPathStringComparator) Compare(indx int, keyPathPart string) bool {
++	if indx >= c.Parts() {
++		return false
++	}
++
++	return c[indx] == keyPathPart
++}
++
++type MapPathReComparator []*regexp.Regexp
++
++func NewMapPathReComparator(parts ...string) (MapPathReComparator, error) {
++	res := make(MapPathReComparator, 0, len(parts))
++
++	var errors []error
++	for i, pp := range parts {
++		re, err := regexp.Compile(pp)
++		if err != nil {
++			errors = append(errors, fmt.Errorf("failed to compile part %d: %w", i, err))
++			continue
++		}
++		res = append(res, re)
++	}
++
++	if len(errors) == 0 {
++		return res, nil
++	}
++
++	resError := errors[0]
++	for i := 1; i < len(errors); i++ {
++		resError = fmt.Errorf("%w\n%w", resError, errors[i])
++	}
++
++	return nil, resError
++}
++
++func NewMapPathReComparatorFromRe(parts ...*regexp.Regexp) MapPathReComparator {
++	res := make(MapPathReComparator, 0, len(parts))
++	res = append(res, parts...)
++
++	return res
++}
++
++func (c MapPathReComparator) Parts() int {
++	return len(c)
++}
++
++func (c MapPathReComparator) Compare(indx int, keyPathPart string) bool {
++	if indx >= c.Parts() {
++		return false
++	}
++
++	return c[indx].MatchString(keyPathPart)
++}
++
++type filter = func(p cmp.Path) bool
++
++func noFilter(p cmp.Path) bool {
++	return false
++}
++
++func filterOption(f filter) cmp.Option {
++	return cmp.FilterPath(f, cmp.Ignore())
++}
++
++func constructFilter(path MapPath) filter {
++	l := path.Parts()
++
++	if l == 0 {
++		return noFilter
++	}
++
++	return func(p cmp.Path) bool {
++		if len(p) != 2*l {
++			return false
++		}
++
++		result := true
++
++		for i := range l {
++			num := (2 * i) + 1
++			index, ok := p.Index(num).(cmp.MapIndex)
++			if !ok {
++				result = false
++				break
++			}
++
++			if !path.Compare(i, index.Key().String()) {
++				result = false
++				break
++			}
++		}
++
++		return result
++	}
++}
+diff --git a/internal/tofu/node_resource_abstract_instance.go b/internal/tofu/node_resource_abstract_instance.go
+index 3200163e81..3d53c53006 100644
+--- a/internal/tofu/node_resource_abstract_instance.go
++++ b/internal/tofu/node_resource_abstract_instance.go
+@@ -6,12 +6,16 @@
+ package tofu
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
+ 	"log"
++	"os"
+ 	"strings"
+ 
++	gocmp "github.com/google/go-cmp/cmp"
+ 	"github.com/hashicorp/hcl/v2"
+ 	"github.com/zclconf/go-cty/cty"
++	ctyjson "github.com/zclconf/go-cty/cty/json"
+ 
+ 	"github.com/opentofu/opentofu/internal/addrs"
+ 	"github.com/opentofu/opentofu/internal/checks"
+@@ -1844,7 +1848,7 @@ func (n *NodeAbstractResourceInstance) planDataSource(ctx EvalContext, checkRule
+ 	}
+ 
+ 	configKnown := configVal.IsWhollyKnown()
+-	depsPending := n.dependenciesHavePendingChanges(ctx)
++	depsPending := n.dependenciesHavePendingChanges(ctx, providerSchema)
+ 	// If our configuration contains any unknown values, or we depend on any
+ 	// unknown values then we must defer the read to the apply phase by
+ 	// producing a "Read" change for this resource, and a placeholder value for
+@@ -1997,7 +2001,7 @@ func (n *NodeAbstractResourceInstance) nestedInCheckBlock() (*configs.Check, boo
+ // receiver depends on has a change pending in the plan, in which case we'd
+ // need to override the usual behavior of immediately reading from the data
+ // source where possible, and instead defer the read until the apply step.
+-func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalContext) bool {
++func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalContext, providerSchema providers.ProviderSchema) bool {
+ 	nModInst := n.Addr.Module
+ 	nMod := nModInst.Module()
+ 
+@@ -2018,6 +2022,8 @@ func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalCo
+ 		}
+ 	}
+ 
++	pendingDeps := make(map[string]struct{})
++
+ 	for _, d := range depsToUse {
+ 		if d.Resource.Mode == addrs.DataResourceMode {
+ 			// Data sources have no external side effects, so they pose a need
+@@ -2041,11 +2047,199 @@ func (n *NodeAbstractResourceInstance) dependenciesHavePendingChanges(ctx EvalCo
+ 			}
+ 
+ 			if change != nil && change.Action != plans.NoOp {
+-				return true
++				if n.allowDataDepsChanges(d, change, providerSchema) {
++					pendingDeps[d.String()] = struct{}{}
++					break
++				}
+ 			}
+ 		}
+ 	}
+-	return false
++
++	return n.handleDataHavePendingDeps(pendingDeps)
++}
++
++var (
++	handleDataSourceChangesProvider          = "kubernetes"
++	handleDataSourceChangesMetadataResources = map[string]struct{}{
++		"module.additional-disk.kubernetes_manifest.additional_disk":           {},
++		"module.ipv4-address.kubernetes_manifest.ipv4_address":                 {},
++		"module.kubernetes-data-disk.kubernetes_manifest.kubernetes-data-disk": {},
++		"module.master.kubernetes_manifest.vm":                                 {},
++		"module.static-node.kubernetes_manifest.vm":                            {},
++	}
++	handleDataSourceChangesMetadataResourcesCompareOpts = MapKeysFilter(
++		NewMapPathStringComparator("metadata", "annotations"),
++		NewMapPathStringComparator("metadata", "labels"),
++	)
++)
++
++func (n *NodeAbstractResourceInstance) allowDataDepsChanges(d addrs.ConfigResource, change *plans.ResourceInstanceChangeSrc, providerSchema providers.ProviderSchema) bool {
++	depPath := d.String()
++
++	logDebug := func(f string, args ...any) {
++		f = fmt.Sprintf("[DEBUG] planDataSource handleDataDepsChanges: %s/%s: ", n.Addr, depPath) + f
++		log.Printf(f, args...)
++	}
++
++	logDebugAndAllowChange := func(f string, args ...any) bool {
++		f = f + " allow change as pending"
++		logDebug(f, args...)
++		return true
++	}
++
++	providerName := n.Config.Provider.Type
++	if providerName != handleDataSourceChangesProvider {
++		return logDebugAndAllowChange("provider '%s' should not handle changes", providerName)
++	}
++
++	if _, ok := handleDataSourceChangesMetadataResources[depPath]; !ok {
++		return logDebugAndAllowChange("dep should not handle changes")
++	}
++
++	resourceSchema, _ := providerSchema.SchemaForResourceAddr(d.Resource)
++
++	iType := resourceSchema.ImpliedType()
++
++	totalChanges, err := change.DeepCopy().Decode(iType)
++	if err != nil {
++		return logDebugAndAllowChange("cannot decode total changes: %v", err)
++	}
++
++	totalChanges.Before, _ = totalChanges.Before.UnmarkDeep()
++	totalChanges.After, _ = totalChanges.After.UnmarkDeep()
++
++	manifestMap := func(ch cty.Value) (map[string]any, error) {
++		if ch == cty.NilVal {
++			logDebug("change value is null. Returns nil")
++			return nil, nil
++		}
++
++		if ch.IsNull() {
++			logDebug("change value is null. Returns nil")
++			return nil, nil
++		}
++
++		path := cty.Path{
++			cty.GetAttrStep{Name: "manifest"},
++		}
++
++		manifest, err := path.Apply(ch)
++		if err != nil {
++			return nil, fmt.Errorf("cannot apply manifest path change for `%#v`: '%w'", manifest, err)
++		}
++
++		jv := ctyjson.SimpleJSONValue{Value: manifest}
++
++		jb, err := jv.MarshalJSON()
++		if err != nil {
++			return nil, fmt.Errorf("cannot marshal manifest `%#v`: '%w'", manifest, err)
++		}
++
++		var m map[string]any
++
++		err = json.Unmarshal(jb, &m)
++		if err != nil {
++			return nil, fmt.Errorf("cannot unmarshal manifest to map: %w", err)
++		}
++
++		return m, nil
++	}
++
++	beforeManifest, err := manifestMap(totalChanges.Before)
++	if err != nil {
++		return logDebugAndAllowChange("cannot get before manifest: %v", err)
++	}
++
++	afterManifest, err := manifestMap(totalChanges.After)
++	if err != nil {
++		return logDebugAndAllowChange("cannot get after manifest: %v", err)
++	}
++
++	marshalPretty := func(m map[string]any) string {
++		b, err := json.MarshalIndent(m, "", "  ")
++		if err != nil {
++			return fmt.Sprintf("%v", m)
++		}
++
++		return string(b)
++	}
++
++	logDebug(
++		"before manifest:\n%v\nafter manifest:\n%s",
++		marshalPretty(beforeManifest),
++		marshalPretty(afterManifest),
++	)
++
++	diffWithoutFilters := gocmp.Diff(beforeManifest, afterManifest)
++	diffWithFilters := gocmp.Diff(beforeManifest, afterManifest, handleDataSourceChangesMetadataResourcesCompareOpts)
++
++	logDebug(
++		"diff manifests:\nWithout filters:\n%s\nWith filters:\n%s",
++		diffWithoutFilters,
++		diffWithFilters,
++	)
++
++	if diffWithFilters == "" {
++		msg := "have not full diff"
++		if diffWithoutFilters != "" {
++			msg = fmt.Sprintf("have diff only in labels and/or annotations:\n%s", diffWithoutFilters)
++		}
++
++		logDebug("skip mark as pending because %s", msg)
++		return false
++	}
++
++	return logDebugAndAllowChange("have diff not in labels and/or annotations:\n%s\n", diffWithFilters)
++}
++
++func (n *NodeAbstractResourceInstance) handleDataHavePendingDeps(pendingDeps map[string]struct{}) bool {
++	logDebug := func(f string, args ...any) {
++		f = fmt.Sprintf("[DEBUG] planDataSource: %s handleDataHavePendingDeps: ", n.Addr) + f
++		log.Printf(f, args...)
++	}
++
++	withDefaultCheck := func(f string, args ...any) bool {
++		res := len(pendingDeps) > 0
++		f = f + fmt.Sprintf(" use default check result %v; pending deps %v", res, pendingDeps)
++		logDebug(f, args...)
++		return res
++	}
++
++	providerName := n.Config.Provider.Type
++
++	envProvider := strings.TrimSpace(os.Getenv("TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER"))
++	if envProvider == "" || envProvider != providerName {
++		return withDefaultCheck("provider '%s' not provided or not match with '%s'", envProvider, providerName)
++	}
++
++	logDebug("should handle skip deps for provider %s", providerName)
++
++	if len(pendingDeps) != 1 {
++		return withDefaultCheck("have no one pending deps")
++	}
++
++	skipDepsStr := os.Getenv("TF_SKIP_DEPS_FOR_DATA_SOURCES")
++	skipDepsRaw := strings.Split(skipDepsStr, ";")
++	skippedDeps := make([]string, 0, len(skipDepsRaw))
++	for _, dep := range skipDepsRaw {
++		if trimmed := strings.TrimSpace(dep); trimmed != "" {
++			skippedDeps = append(skippedDeps, trimmed)
++		}
++	}
++
++	if len(skippedDeps) == 0 {
++		return withDefaultCheck("parse zero deps from env '%s'", skipDepsStr)
++	}
++
++	for _, dep := range skippedDeps {
++		if _, ok := pendingDeps[dep]; ok {
++			logDebug("found dep for skip: '%s'. Returns do not have pending deps", dep)
++			return false
++		}
++	}
++
++	logDebug("all passed skipped deps not not match with %v. Returns have pending deps", pendingDeps)
++	return true
+ }
+ 
+ // apply deals with the main part of the data resource lifecycle: either

@@ -131,6 +131,46 @@ spec:
         memory: 23
         pods: 3
 `
+
+	deschedulerCR6 = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test6
+spec:
+  strategies:
+    removePodsViolatingTopologySpreadConstraint:
+      enabled: true
+      constraints:
+        - DoNotSchedule
+      topologyBalanceNodeFit: true
+`
+
+	deschedulerCR7 = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test7
+spec:
+  strategies:
+    removePodsHavingTooManyRestarts:
+      enabled: true
+      podRestartThreshold: 50
+`
+
+	// Simulates a Descheduler CR that was converted from v1alpha1
+	// with only deprecated strategies (e.g. removePodsViolatingNodeTaints).
+	// After conversion, all deprecated strategies are stripped and spec.strategies is empty.
+	deschedulerCRNoStrategies = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test-no-strategies
+spec: {}
+`
 )
 
 var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
@@ -161,6 +201,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - name: test
+  evictLocalStoragePods: false
   strategies:
     lowNodeUtilization:
       enabled: true
@@ -188,6 +229,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - name: test
+  evictLocalStoragePods: false
   strategies:
     lowNodeUtilization:
       enabled: true
@@ -201,6 +243,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         memory: 20
         pods: 30
 - name: test2
+  evictLocalStoragePods: false
   strategies:
     highNodeUtilization:
       enabled: false
@@ -210,10 +253,6 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         pods: 3
     lowNodeUtilization:
       enabled: false
-      targetThresholds:
-        cpu: 70
-        memory: 70
-        pods: 70
       thresholds:
         cpu: 10
         memory: 20
@@ -234,6 +273,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test3
+  evictLocalStoragePods: false
   strategies:
     highNodeUtilization:
       enabled: true
@@ -257,6 +297,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - nodeLabelSelector: node.deckhouse.io/group=test3
   name: test4
+  evictLocalStoragePods: false
   strategies:
     highNodeUtilization:
       enabled: false
@@ -264,6 +305,47 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         cpu: 14
         memory: 23
         pods: 3
+`))
+		})
+	})
+
+	Context("Cluster with Descheduler CR with no valid strategies (converted from v1alpha1 with deprecated-only strategies)", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCRNoStrategies)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run without errors and skip the CR", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`[]`))
+		})
+	})
+
+	Context("Cluster with one valid CR and one CR with no valid strategies", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR1 + deschedulerCRNoStrategies)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run without errors and include only the valid CR", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test
+  evictLocalStoragePods: false
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      targetThresholds:
+        cpu: 40
+        gpu: gpuNode
+        memory: 50
+        pods: 50
+      thresholds:
+        cpu: 10
+        memory: 20
+        pods: 30
 `))
 		})
 	})
@@ -280,6 +362,7 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
 			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
 - nodeLabelSelector: node.deckhouse.io/group in (test1,test2)
   name: test5
+  evictLocalStoragePods: false
   podLabelSelector:
     matchExpressions:
       - key: dbType
@@ -301,6 +384,48 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         cpu: 14
         memory: 23
         pods: 3
+`))
+		})
+	})
+
+	Context("Cluster with Descheduler CR with RemovePodsViolatingTopologySpreadConstraint strategy", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR6)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run without errors and include the strategy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test6
+  evictLocalStoragePods: false
+  strategies:
+    removePodsViolatingTopologySpreadConstraint:
+      enabled: true
+      constraints:
+        - DoNotSchedule
+      topologyBalanceNodeFit: true
+`))
+		})
+	})
+
+	Context("Cluster with Descheduler CR with RemovePodsHavingTooManyRestarts strategy", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR7)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run without errors and include the strategy", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test7
+  evictLocalStoragePods: false
+  strategies:
+    removePodsHavingTooManyRestarts:
+      enabled: true
+      podRestartThreshold: 50
 `))
 		})
 	})

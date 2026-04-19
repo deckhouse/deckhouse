@@ -1,0 +1,5 @@
+cni-cilium:
+  fixes:
+    - summary: Fixed 1.14 -> 1.17 migration mechanism
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15908
+

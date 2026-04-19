@@ -15,8 +15,19 @@ soon:
   ru: "скоро..."
 ce: Community Edition
 be: Basic Edition
-se: Standard Edition / Standard Edition+
+se: Standard Edition
+se-plus: Standard Edition+
 ee: Enterprise Edition
+cse: Certified Security Edition
+kubernetes-platform: Deckhouse Kubernetes Platform
+virtualization-platform: Deckhouse Virtualization Platform
+stronghold: Deckhouse Stronghold
+dkp-ce: DKP CE
+dkp-se-plus: DKP SE+
+dkp-ee: DKP EE
+dvp-ee: DVP EE
+dvp-cse: DVP CSE
+dkp-cse-pro: DKP CSE Pro
 
 common:
   of:
@@ -82,9 +93,24 @@ common:
   deprecated_parameter_hint:
     en: Support for the parameter might be removed in a later release.
     ru: Поддержка параметра может быть исключена в следующих версиях.
+  documentation:
+    en: Documentation
+    ru: Документация
+  contact_us_button:
+    en: Contact us
+    ru: Свяжитесь с нами
+  features:
+    en: "Features"
+    ru: "Возможности"
   coming_soon:
     en: "coming soon..."
     ru: "скоро..."
+  tech_support_stronghold_notice_ce:
+    en: "Technical Support and Warranty Technical Support are available if Deckhouse Stronghold CE is used as part of the commercial editions of the Deckhouse Kubernetes Platform, with a valid Deckhouse Kubernetes Platform Technical Support certificate and compliance with the Terms."
+    ru: "Техническая поддержка и Гарантийная техническая поддержка доступны при условии использования Deckhouse Stronghold CE в составе коммерческих редакций Deckhouse Kubernetes Platform, наличии действующего сертификата на Техническую поддержку Deckhouse Kubernetes Platform и выполнения Условий, опубликованных на legal.flant.ru"
+  tech_support_stronghold_notice_commercial:
+    en: "Purchased separately"
+    ru: "Приобретается отдельно"
   for_example:
     en: for example
     ru: например
@@ -106,6 +132,15 @@ common:
   pattern:
     en: pattern
     ru: шаблон
+  port:
+    en: port
+    ru: порт
+  protocol:
+    en: protocol
+    ru: протокол
+  purpose:
+    en: purpose
+    ru: назначение
   length:
     en: length
     ru: длина
@@ -145,6 +180,21 @@ common:
   search_placeholder_text:
     en: Search...
     ru: Поиск...
+  search_placeholder_text_guides:
+    en: Search for guides...
+    ru: Поиск гайдов...
+  search_placeholder_text_filter:
+    en: Enter a&nbsp;name
+    ru: Введите название
+  search_context_dkpdocs_and_modules:
+    en: The search is performed throughout DKP documentation and modules.
+    ru: Поиск выполняется по всей документации DKP и модулям.
+  search_context_modules:
+    en: The search is performed throughout modules, excluding the DKP documentation.
+    ru: Поиск выполняется по всем модулям, не включая документацию DKP.
+  search_context_only_product_docs:
+    en: The search is performed throughout the product documentation, excluding modules.
+    ru: Поиск выполняется по всей документации продукта, не включая модули.
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -163,6 +213,9 @@ common:
   all_namespaces:
     en: All namespaces
     ru: Все пространства имен
+  channel_or_version:
+    en: Channel/version
+    ru: Канал/версия
   versions:
     en: versions
     ru: версии
@@ -205,6 +258,36 @@ common:
   role:
     en: role
     ru: роль
+  related_reference_links:
+    en: Related links to API
+    ru: Ссылки на связанный API
+  related_reference_and_documentation_links:
+    en: Links to related documentation and API
+    ru: Ссылки на связанную документацию и API
+  related_additional_resources:
+    en: Additional resources
+    ru: Дополнительные ресурсы
+  related_links:
+    en: Related links
+    ru: Связанные ссылки
+  global_parameters:
+    en: Global parameters
+    ru: Глобальные параметры
+  global_crds:
+    en: Global custom resources
+    ru: Глобальные кастомные ресурсы
+  module_x_parameters:
+    en: Module <code>XXXX</code> parameters
+    ru: Параметры модуля <code>XXXX</code>
+  module_x_crds:
+    en: Module <code>XXXX</code> custom resources
+    ru: Кастомные ресурсы модуля <code>XXXX</code>
+  module_x_documentation:
+    en: Module <code>XXXX</code> documentation
+    ru: Документация модуля <code>XXXX</code>
+  module_x_cluster_configuration:
+    en: Module <code>XXXX</code> provider configuration
+    ru: Настройки провайдера модуля <code>XXXX</code>
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
@@ -217,11 +300,72 @@ common:
   crd_has_no_parameters:
     en: The CRD has no fields for configuration.
     ru: У CRD нет полей для настройки.
-
+  show_more:
+    en: Show more
+    ru: Показать ещё
+  show_details:
+    en: Show details...
+    ru: Показать подробности...
+  hide_details:
+    en: Hide details
+    ru: Скрыть подробности
+  guides_description:
+    en: Helping you achieve a goal or solve a problem with Deckhouse.
+    ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
+  breadcrumbs_link_guides:
+    en: All Guides
+    ru: Все руководства
+  additional_property_name:
+    en: item (key) name
+    ru: имя параметра (ключ объекта)
+  pattern_property_name:
+    en: regular expression for parameter name
+    ru: регулярное выражение для имени параметра
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"
     ru: "Кроме следующих параметров:<br />"
+
+feedback:
+  thanks:
+    en: Thanks for the review!
+    ru: Спасибо за&nbsp;оценку!
+  useful:
+    en: Was the page useful?
+    ru: Была&nbsp;ли страница полезна?
+  response_processed:
+    en: Your response is&nbsp;being processed, and changes can be&nbsp;made in&nbsp;5&nbsp;minutes.
+    ru: Ваш отклик обрабатыватся, внести изменения можно будет через 5&nbsp;минут
+  error_happened:
+    en: An error has occurred
+    ru: Произошла ошибка
+  try_later:
+    en: Please try again later
+    ru: Пожалуйста, попробуйте позже
+  tell_us_what_you_didnt_like:
+    en: Tell&nbsp;us what you didn&rsquo;t like.
+    ru: Расскажите, что не&nbsp;понравилось
+  not_useful:
+    en: Little useful
+    ru: Мало полезного
+  there_are_errors:
+    en: There are errors
+    ru: Есть ошибки
+  written_incomprehensibly:
+    en: It&rsquo;s written incomprehensibly
+    ru: Непонятно написано
+  outdated_information:
+    en: Outdated information
+    ru: Устаревшая информация
+  other:
+    en: Other
+    ru: Другое
+  share_the_details:
+    en: Share the details
+    ru: Поделитесь деталями
+  send:
+    en: Send
+    ru: Отправить
 
 features:
   experimental:
@@ -242,4 +386,9 @@ features:
   ee:
     en: This feature is available in Enterprise Edition only.
     ru: Доступно только в Enterprise Edition.
-
+  requiresSeparateLicense:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.
+  requiresSeparateLicenseObservability:
+    en: Licensed separately, not included in the DKP license cost.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.

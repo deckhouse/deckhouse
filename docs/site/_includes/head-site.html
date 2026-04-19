@@ -1,50 +1,46 @@
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <!-- favicon -->
-<link rel="apple-touch-icon" sizes="180x180" href="{{ site.baseurl }}/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="{{ site.baseurl }}/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="{{ site.baseurl }}/favicon-16x16.png">
-<link rel="shortcut icon" href="{{ site.baseurl }}/favicon.ico">
-<link rel="manifest" href="{{ site.baseurl }}/site.webmanifest">
-<link rel="mask-icon" href="{{ site.baseurl }}/safari-pinned-tab.svg" color="#5bbad5">
-<meta name="msapplication-TileColor" content="#603cba">
+<link rel="apple-touch-icon" href="{{ site.urls[page.lang] }}/images/favicon/logo-180.png">
+<link rel="icon" type="image/svg+xml" href="{{ site.urls[page.lang] }}/images/favicon/logo.svg">
+<link rel="icon" type="image/svg+xml" media="(prefers-color-scheme: dark)" href="{{ site.urls[page.lang] }}/images/favicon/logo-on-white.svg">
+
+<link rel="shortcut icon" href="{{ site.urls[page.lang] }}/images/favicon/favicon.ico">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="{{ site.urls[page.lang] }}/safari-pinned-tab.svg" color="#004DF2">
+<meta name="msapplication-TileColor" content="#004DF2">
 <meta name="theme-color" content="#ffffff">
 
 <!-- fonts -->
-<link href='
-{%- css_asset_tag fonts %}
-- _assets/css/font-awesome.min.css
-- _assets/css/fonts.css
-{% endcss_asset_tag -%}
-' rel='stylesheet' type='text/css' crossorigin="anonymous" />
-
+<link href='/assets/css/font-awesome.min.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/fonts.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 <!-- styles -->
-<link href='
-{%- css_asset_tag global %}
-- _assets/css/slick.css
-- _assets/css/normalize.css
-- _assets/css/syntax.css
-- _assets/css/tab.css
-- _assets/css/submenu.css
-- _assets/css/cards.css
-- _assets/css/site.scss
-- _assets/css/docs.scss
-{% endcss_asset_tag -%}
-' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/slick.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/normalize.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/syntax.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/tab.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/submenu.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/cards.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/site.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/docs.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/search-v3.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/navigation.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
+<link href='/assets/css/glightbox.min.css?v={{ assetHash }}' rel='stylesheet' type='text/css' crossorigin="anonymous" />
 
 <!-- scripts -->
-<script type="text/javascript" src="
-{%- javascript_asset_tag jquery %}
-- _assets/js/jquery.min.js
-- _assets/js/jquery.cookie.min.js
-{% endjavascript_asset_tag -%}
-"></script>
-<script type="text/javascript" src="
-{%- javascript_asset_tag global %}
-- _assets/js/bootstrap.min.js
-- _assets/js/slick.min.js
-- _assets/js/popper.min.js
-- _assets/js/tippy-bundle.umd.min.js
-{% endjavascript_asset_tag -%}
-"></script>
+<script type="text/javascript" src="/assets/js/jquery.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/jquery.cookie.min.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/bootstrap.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/slick.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/popper.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/tippy-bundle.umd.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/stickythead.min.js?v={{ assetHash }}"></script>
+
+<!-- Lunr JS for search -->
+<script type="text/javascript" src="/assets/js/lunr/lunr.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.stemmer.support.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.multi.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/lunr/lunr.ru.js?v={{ assetHash }}"></script>
 
 <script>
   $(document).ready(function() {
@@ -67,43 +63,64 @@
     tippy('[data-tippy-content]', {
       interactive: true,
       interactiveDebounce: 75,
-      placement: 'left-start',
+      appendTo: () => document.body,
+      placement: 'bottom-start',
       maxWidth: 700,
       theme: 'light-large',
       allowHTML: true,
       arrow: '<svg width="10" height="14" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 7L1 1L1 13L9 7Z" fill="#EFF3F9"/><path d="M1 1L9 7L1 13" stroke="#C4CAD4" stroke-linecap="round"/></svg>',
+      popperOptions: {
+        strategy: 'fixed',
+        modifiers: [
+          {
+            name: 'flip',
+            options: {
+              fallbackPlacements: ['left-start', 'bottom', 'top'],
+            },
+          },
+          {
+            name: 'preventOverflow',
+            options: {
+              boundary: 'viewport',
+              altAxis: true,
+              padding: 8,
+            },
+          },
+        ],
+      },
     });
   });
 </script>
 
-<script type="text/javascript" src="
-{%- javascript_asset_tag global2 %}
-- _assets/js/jquery.navgoco.min.js
-- _assets/js/anchor.min.js
-- _assets/js/toc.js
-- _assets/js/details.js
-- _assets/js/tab.js
-- _assets/js/clipboard.min.js
-{% endjavascript_asset_tag -%}
-"></script>
+<script type="text/javascript" src="/assets/js/jquery.navgoco.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/anchor.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/toc.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/details.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/tab.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/clipboard.min.js?v={{ assetHash }}"></script>
 
-<script type="text/javascript" src="
-{%- javascript_asset_tag pdf %}
-- _assets/js/pdf.min.js
-- _assets/js/pdf-slider.js
-{% endjavascript_asset_tag -%}
-"></script>
+<script type="module" src="/assets/js/pdf-slider.js?v={{ assetHash }}"></script>
 
-<script type="text/javascript" src="
-{%- javascript_asset_tag popup-form %}
-- _assets/js/popup-form.js
-{% endjavascript_asset_tag -%}
-"></script>
-<script type="text/javascript" src="
-{%- javascript_asset_tag customscripts %}
-- _assets/js/customscripts.js
-{% endjavascript_asset_tag -%}
-"></script>
+<script type="text/javascript" src="/assets/js/popup-form.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/customscripts.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/doc-version-link-resolver.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/table-sticky.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/sidebar-scroll.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/navigation.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/glightbox.min.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/zoom-image.js?v={{ assetHash }}"></script>
+
+<script type="text/javascript" src="/assets/js/language-switch.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/adaptive/header-mobile.js?v={{ assetHash }}"></script>
+
+{%- unless site.mode == "module" %}
+<script type="text/javascript" src="/assets/js/feedback.js?v={{ assetHash }}"></script>
+{%- endunless %}
 
 <script>
     $(document).ready(function() {
@@ -190,12 +207,8 @@
 <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
 <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
 <!--[if lt IE 9]>
-<script type="text/javascript" src="
-{%- javascript_asset_tag respond %}
-- _assets/js/html5shiv.js
-- _assets/js/respond.min.js
-{% endjavascript_asset_tag -%}
-"></script>
+<script type="text/javascript" src="/assets/js/html5shiv.js"></script>
+<script type="text/javascript" src="/assets/js/respond.min.js"></script>
 <![endif]-->
 
 {%- unless site.mode == "module" %}

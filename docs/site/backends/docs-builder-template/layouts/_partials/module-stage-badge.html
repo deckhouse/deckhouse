@@ -1,0 +1,35 @@
+{{- $module := .module }}
+{{- $channel := .channel }}
+{{- $moduleStageFallBackLegacy := .stageFallBackLegacy }}
+
+{{- if not (or (eq $module nil) (eq $channel nil)) }}
+  {{- $moduleData := index (index .ctx.Site.Data.modules $module) $channel }}
+  {{- $moduleMetadata := index $moduleData "module" }}
+  {{- $requirements := dict }}
+  {{- if and $moduleMetadata $moduleMetadata.requirements }}
+    {{- $requirements = $moduleMetadata.requirements }}
+  {{- end }}
+  {{- $hasRequirements := gt (len $requirements) 0 }}
+  {{- $moduleStage := index $moduleMetadata "stage" }}
+  {{- if and (or (not $moduleStage) (eq $moduleStage nil)) (ne $moduleStageFallBackLegacy nil) (gt (len $moduleStageFallBackLegacy) 0) }}
+    {{- $moduleStage = humanize $moduleStageFallBackLegacy }}
+  {{- end }}
+
+  {{- if in .ctx.Site.Data.helpers.moduleAllowedStages $moduleStage }}
+
+    {{- $statusKey := replace (lower $moduleStage) " " "_" -}}
+
+    {{- $alertLevel := "info" }}
+    {{- if or (eq $moduleStage "Experimental") (eq $moduleStage  "Preview") }}
+      {{- $alertLevel = "warning" }}
+    {{- else if eq $moduleStage "Deprecated" }}
+       {{- $alertLevel = "danger" }}
+    {{- end }}
+
+    {{- $content := printf "%s: <i data-tippy-content='%s'>%s</i>" (T "module_lifecycle_stage") (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
+    {{- if $hasRequirements }}
+      {{- $content = printf "%s <br>%s" $content (printf (T "requirements_for_alert") $module) }}
+    {{- end }}
+    {{- partial "alert" ( dict "level" $alertLevel "content" $content ) }}
+  {{- end }}
+{{- end }}

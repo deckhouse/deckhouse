@@ -1,11 +1,4 @@
-{{- $bgpPoolExists := false }}
-{{- range $ipaddressPool := .Values.metallb.addressPools }}
-  {{- if eq $ipaddressPool.protocol "bgp" }}
-    {{- $bgpPoolExists = true }}
-  {{- end }}
-{{- end }}
-
-{{- if $bgpPoolExists }}
+{{- if eq (include "is_bgp_pool_exists" .) "true" }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

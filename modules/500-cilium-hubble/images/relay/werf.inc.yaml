@@ -1,48 +1,48 @@
-{{- $ciliumVersion := "1.14.14" }}
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/Dockerfile
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/hubble-relay/download-grpc-health-probe.sh
 ---
-# Based on https://github.com/cilium/cilium/blob/v1.14.14/images/hubble-relay/Dockerfile
-artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-from: {{ $.Images.BASE_GOLANG_23_ALPINE_DEV }}
-git:
-- add: /{{ $.ModulePath }}modules/500-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
-  to: /patches
-  stageDependencies:
-    install:
-      - '**/*'
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+- image: cni-cilium/bin-cilium-src-artifact
+  add: /src/cilium
+  to: /src/cilium
+  before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - apk add --no-cache openssh-client
-  - mkdir -p ~/.ssh && echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
-  install:
-  - export GO_VERSION=${GOLANG_VERSION}
-  - export GOPROXY={{ $.GOPROXY }}
-  - export GOOS=linux GOARCH=amd64
-  - mkdir -p /go/src/github.com/cilium/cilium
-  - git clone --depth 1 --branch v{{ $ciliumVersion }} {{ $.SOURCE_REPO }}/cilium/cilium.git /go/src/github.com/cilium/cilium
-  - cd /go/src/github.com/cilium/cilium
-  - git apply /patches/*.patch --verbose
-  - go mod tidy && go mod vendor && go mod verify
-  - cd /go/src/github.com/cilium/cilium/hubble-relay
-  - make
-  - chown 64535:64535 /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
-  - chmod 0700 /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
+  {{- include "alpine packages proxy" $ | nindent 2 }}
+  - apk add --no-cache make bash binutils
+  setup:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  #
+  - cd /src/cilium
+  - go mod vendor && go mod download -x
+  - make DESTDIR=/out/linux/amd64 build-container-hubble-relay install-container-binary-hubble-relay
+  - chown 64535:64535 /out/linux/amd64/usr/bin/hubble-relay
+  - chmod 0700 /out/linux/amd64/usr/bin/hubble-relay
 ---
 # Distroless Main Image
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- artifact: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
-  add: /go/src/github.com/cilium/cilium/hubble-relay/hubble-relay
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /out/linux/amd64/usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
-- artifact: cni-cilium/gops-artifact
+- image: cni-cilium/gops-artifact
   add: /out/linux/amd64/bin/gops
   to: /bin/gops
   before: install
-docker:
-  USER: 64535
-  ENTRYPOINT: ["/usr/local/bin/hubble-relay", "serve"]
+git:
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/usr/local/bin/hubble-relay", "serve"]

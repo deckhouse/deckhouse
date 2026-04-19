@@ -12,24 +12,21 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"service-with-healthchecks/internal/agent"
 	"syscall"
 
+	"github.com/go-logr/logr"
 	_ "go.uber.org/automaxprocs" // To automatically adjust GOMAXPROCS
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.) to ensure that exec-entrypoint and run can make use of them.
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	// +kubebuilder:scaffold:imports
+
+	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
+	"service-with-healthchecks/internal/agent"
 )
 
 var (
@@ -108,12 +105,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	secretController := &agent.PostgreSQLCredentialsReconciler{
+		Client: mgr.GetClient(),
+		Logger: ctrl.Log.WithName("secret-controller"),
+		Scheme: mgr.GetScheme(),
+	}
+	if err = secretController.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PostgreSQLCredentials")
+		os.Exit(1)
+	}
+
 	serviceWithHealthchecksController := agent.NewServiceWithHealthchecksReconciler(
 		mgr.GetClient(),
 		workersCount,
 		nodeName,
 		mgr.GetScheme(),
-		ctrl.Log.WithName("agent"),
+		ctrl.Log.WithName("service-with-healthchecks-controller"),
+		secretController,
 	)
 	if err = serviceWithHealthchecksController.RunWorkers(context.Background()); err != nil {
 		setupLog.Error(err, "unable to run controller workers", "controller", "ServiceWithHealthchecks")
@@ -136,16 +144,25 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(SetupSignalHandler(serviceWithHealthchecksController, setupLog)); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
 
+func SetupSignalHandler(reconciler *agent.ServiceWithHealthchecksReconciler, logger logr.Logger) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 		<-c
-		signal.Stop(c)
-		serviceWithHealthchecksController.Shutdown()
+		logger.Info("received signal, shutting down reconciler")
+		cancel()
+		reconciler.Shutdown()
+		<-c
+		os.Exit(1) // second signal. Exit directly.
 	}()
+
+	return ctx
 }

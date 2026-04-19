@@ -4,9 +4,9 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Cluster-wide-ресурс для управления настройками RBAC и авторизацией
+            Cluster-wide-ресурс для управления настройками RBAC и авторизацией.
 
-            > Ресурс `ClusterAuthorizationRule` используется в [устаревшей ролевой модели](./#устаревшая-ролевая-модель), которая будет удалена в будущих версиях Deckhouse. Рекомендуем использовать [новую ролевую модель](./#новая-ролевая-модель).
+            > Ресурс `ClusterAuthorizationRule` используется [в текущей ролевой модели](./#текущая-ролевая-модель) и не используется в экспериментальной ролевой модели.
           properties:
             spec:
               properties:
@@ -50,9 +50,9 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) обратите внимание на следующие нюансы:
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider).
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:
@@ -114,7 +114,7 @@ spec:
                   description: |
                     Определяет доступные пространства имен на основе значений, указанных в параметре `namespaceSelector.labelSelector`.
 
-                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с метками, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
+                    Если параметр `namespaceSelector` указан, значения параметров `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**. Таким образом, будут доступны либо все пространства имен с лейблами, подпадающими под указанные в параметре `namespaceSelector.labelSelector` условия (включая системные пространства имен), либо все пространства имен (включая системные), если указан параметр `namespaceSelector.matchAny`.
 
                     Если параметр `namespaceSelector` не указан, набор доступных пространств имен определяется значением параметров `limitNamespaces` и `allowAccessToSystemNamespaces`. Если не указан ни один из параметров `namespaceSelector`, `limitNamespaces` и `allowAccessToSystemNamespaces`, будут доступны все пространства имен, за исключением системных (`kube-*`, `d8-*`, `loghouse`, `default`).
 
@@ -129,7 +129,7 @@ spec:
                         Так как с помощью параметра `labelSelector` можно предоставить доступ только к определенному перечню пространств имен, параметр `matchAny` необходим в случаях, когда нужно предоставить доступ ко всем пространствам имен.
                     labelSelector:
                       description: |
-                        Фильтр по меткам пространств имен.
+                        Фильтр по лейблам пространств имен.
 
                         Не может использоваться совместно с параметром `matchAny`.
 
@@ -140,13 +140,13 @@ spec:
                           items:
                             properties:
                               key:
-                                description: Имя метки.
+                                description: Имя лейбла.
                               operator:
                                 description: Оператор сравнения.
                               values:
-                                description: Значение метки.
+                                description: Значение лейбла.
                         matchLabels:
-                          description: Фильтр на основе совпадения/несовпадения меток.
+                          description: Фильтр на основе совпадения/несовпадения лейблов.
                 limitNamespaces:
                   description: |
                     Список разрешенных namespace в формате регулярных выражений.
@@ -164,9 +164,9 @@ spec:
 
                     [Спецификация...](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#subject-v1-rbac-authorization-k8s-io)
 
-                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/) обратите внимание на следующие нюансы:
+                    При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) обратите внимание на следующие нюансы:
                     - Для выдачи прав конкретному пользователю в качестве имени необходимо указывать его `email`.
-                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/cr.html#dexprovider).
+                    - При указании группы убедитесь, что необходимые группы допускаются к получению от провайдера, то есть указаны в соответствующем custom resource [DexProvider](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider).
                   items:
                     properties:
                       kind:

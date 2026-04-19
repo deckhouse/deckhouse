@@ -77,7 +77,7 @@ kubelet:
   containerLogMaxFiles: 4
   containerLogMaxSize: 50Mi
   maxPods: 13
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.31"
 manualRolloutID: ""
 name: stage
 nodeTemplate:
@@ -96,7 +96,6 @@ updateEpoch: "1680009541"
 
 	bc := bashibleContext{
 		KubernetesVersion: "1.26",
-		Bundle:            "bundle",
 		Normal:            map[string][]string{"apiserverEndpoints": clusterMasterAddresses},
 		NodeGroup:         ng,
 		RunType:           "Normal",
@@ -107,9 +106,34 @@ updateEpoch: "1680009541"
 			},
 		},
 
-		Registry: &registry{
-			Address: "registry.deckhouse.io",
-			Path:    "/deckhouse/ce",
+		Registry: map[string]interface{}{
+			"registryModuleEnable": true,
+			"mode":                 "unmanaged",
+			"version":              "unknown",
+			"imagesBase":           "registry.d8-system.svc/deckhouse/system",
+			"proxyEndpoints":       []interface{}{"192.168.1.1"},
+			"hosts": map[string]interface{}{
+				"registry.d8-system.svc": map[string]interface{}{
+					"mirrors": []interface{}{
+						map[string]interface{}{
+							"host":   "r.example.com",
+							"scheme": "https",
+							"ca":     "==exampleCA==",
+							"auth": map[string]interface{}{
+								"username": "user",
+								"password": "password",
+								"auth":     "auth",
+							},
+							"rewrites": []interface{}{
+								map[string]interface{}{
+									"from": "^deckhouse/system",
+									"to":   "deckhouse/ce",
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 
 		Proxy: map[string]interface{}{

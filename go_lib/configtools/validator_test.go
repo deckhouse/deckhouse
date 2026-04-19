@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -105,6 +107,18 @@ spec: {}
 `,
 			expectValid,
 		},
+		{
+			"empty spec.settings without version",
+			`
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings: {}
+`,
+			expectValid,
+		},
 
 		// Invalid cases
 		{
@@ -148,25 +162,13 @@ spec:
 `,
 			expectInvalid,
 		},
-		{
-			"empty spec.settings without version",
-			`
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: global
-spec:
-  settings: {}
-`,
-			expectInvalid,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			v := NewValidator(nil)
+			v := NewValidator(nil, conversion.NewConversionsStore())
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 			res := v.validateCR(cfg)
@@ -258,10 +260,18 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
+			const magic = 10
+			var kubeConfigManager = NewKubeConfigManagerMock(t).KubeConfigEventChMock.
+				Return(make(chan config.KubeConfigEvent, magic))
+
 			mmc := &module_manager.ModuleManagerConfig{
 				DirectoryConfig: module_manager.DirectoryConfig{
 					ModulesDir:     "testdata/validator",
 					GlobalHooksDir: "testdata/validator/global",
+					TempDir:        "testdata",
+				},
+				Dependencies: module_manager.ModuleManagerDependencies{
+					KubeConfigManager: kubeConfigManager,
 				},
 			}
 			mm := module_manager.NewModuleManager(context.Background(), mmc, log.NewNop())
@@ -269,7 +279,7 @@ spec:
 			err := mm.Init(log.NewNop())
 			g.Expect(err).ShouldNot(HaveOccurred(), "should init module manager")
 
-			v := NewValidator(mm)
+			v := NewValidator(mm, conversion.NewConversionsStore())
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 

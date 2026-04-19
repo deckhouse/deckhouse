@@ -1,49 +1,56 @@
 ---
-title: "Setup virtualization"
+title: "Set up virtualization"
 permalink: en/virtualization-platform/documentation/admin/install/steps/virtualization.html
 ---
 
-## Virtualization setup
+{% alert level=“info” %}
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
+{% endalert %}
 
-After configuring the storage, you need to enable the virtualization module. Enabling and configuring the module is done using the ModuleConfig resource.
+After configuring the storage, you need to enable the `virtualization` module. Enabling and configuring the module can be done via the web interface or using the following command:
 
-In the `spec` parameters, you need to set:
+```shell
+d8 system module enable virtualization
+```
 
-- `enabled: true` — flag to enable the module;
-- `settings.virtualMachineCIDRs` — subnets, IP addresses from which virtual machines will be assigned IPs;
-- `settings.dvcr.storage.persistentVolumeClaim.size` — size of the disk space for storing virtual machine images.
+Edit the module configuration using one of the [methods](#virtualization-module-configuration).
+
+Specify the following parameters:
+
+- [settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs): Subnets, IP addresses from which virtual machines will be assigned IPs.
+- [settings.dvcr.storage.persistentVolumeClaim.size](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-size): Size of the disk space for storing virtual machine images.
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname): The name of the StorageClass used to create the PersistentVolumeClaim (if not specified, the default StorageClass will be used).
+- [settings.dvcr.storage.type](/modules/virtualization/configuration.html#parameters-dvcr-storage-type): Specify `PersistentVolumeClaim`.
 
 Example of virtualization module configuration:
 
 ```yaml
-sudo -i d8 k create -f - <<EOF
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: virtualization
 spec:
   enabled: true
+  version: 1
   settings:
+    ingressClass: nginx # optional parameter
     dvcr:
       storage:
         persistentVolumeClaim:
           size: 50G
+          storageClassName: rv-thin-r1
         type: PersistentVolumeClaim
     virtualMachineCIDRs:
-    - 10.66.10.0/24
-    - 10.66.20.0/24
-    - 10.66.30.0/24
-  version: 1
-EOF
+      - 10.66.10.0/24
 ```
 
 Wait until all the pods of the module are in the `Running` status:
 
 ```shell
-sudo -i d8 k get po -n d8-virtualization
+d8 k get po -n d8-virtualization
 ```
 
-Example output:
+{% offtopic title="Example output..." %}
 
 ```console
 NAME                                         READY   STATUS    RESTARTS      AGE
@@ -63,3 +70,231 @@ vm-route-forge-288z7                         1/1     Running   0             10m
 vm-route-forge-829wm                         1/1     Running   0             10m
 vm-route-forge-nq9xr                         1/1     Running   0             10m
 ```
+
+{% endofftopic %}
+
+## Virtualization module configuration
+
+You can modify the configuration of the `virtualization` module through the administrator web interface or via the CLI.
+
+### Using the administrator web interface
+
+- Go to the "System" tab, then to the "Deckhouse" → "Modules" section.
+- Select the `virtualization` module from the list.
+- In the pop-up window, select the "Configuration" tab.
+- To display the settings, click the "Advanced settings" switch.
+- Configure the settings. The names of the fields on the form correspond to the names of the parameters in YAML.
+- To apply the settings, click the "Save" button.
+
+### Using CLI
+
+```shell
+d8 k edit mc virtualization
+```
+
+## Parameter description
+
+The following are descriptions of the virtualization module parameters.
+
+### Configuration version
+
+The `.spec.version` parameter defines the version of the configuration schema. The parameter structure may change between versions. The current values are given in the settings section.
+
+### Deckhouse Virtualization Container Registry (DVCR)
+
+The `.spec.settings.dvcr.storage` block configures a persistent volume for storing images:
+
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.size`: Volume size (for example, `50G`). To expand the storage, increase the value of the parameter.
+- `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`: StorageClass name (for example, `rv-thin-r1`).
+
+{% alert level="warning" %}
+Migrating images when changing the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` parameter value is not supported.
+
+When you change the DVCR StorageClass, all images stored in DVCR will be lost.
+{% endalert %}
+
+To change the DVCR StorageClass, perform the following steps:
+
+1. Change the value of the [`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) parameter.
+
+1. Delete the old PVC for DVCR using the following command:
+
+   ```shell
+   d8 k -n d8-virtualization delete pvc -l app=dvcr
+   ```
+
+1. Restart DVCR by running the following command:
+
+   ```shell
+   d8 k -n d8-virtualization rollout restart deployment dvcr
+   ```
+
+{% alert level="warning" %}
+The storage that serves the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` StorageClass must be accessible from the nodes where DVCR runs (system nodes, or worker nodes if there are no system nodes).
+{% endalert %}
+
+### Ingress settings
+
+The `.spec.settings.ingressClass` parameter defines the Ingress controller class that will be used to upload virtual machine images via the web interface or CLI.
+
+- If the parameter is not specified, the global value from the Deckhouse configuration is used.
+- The parameter is optional and should only be specified when you need to use an Ingress controller different from the global one.
+
+Example:
+
+```yaml
+spec:
+  settings:
+    ingressClass: nginx
+```
+
+{% alert level="info" %}
+
+When uploading large virtual machine images (especially over slow connections), it is recommended to increase the Ingress controller worker shutdown timeout. This prevents upload interruption during Ingress controller restart or update.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  config:
+    worker-shutdown-timeout: 1800s  # 30 minutes or more if needed
+```
+
+{% endalert %}
+
+### Network settings
+
+The `.spec.settings.virtualMachineCIDRs` block specifies subnets in CIDR format (for example, `10.66.10.0/24`). IP addresses for virtual machines are allocated from these ranges automatically or on request.
+
+Example:
+
+```yaml
+spec:
+  settings:
+    virtualMachineCIDRs:
+      - 10.66.10.0/24
+      - 10.66.20.0/24
+      - 10.77.20.0/16
+```
+
+For each subnet, the first and last IP addresses are reserved by the system and cannot be assigned to virtual machines. For example, for the `10.66.10.0/24` subnet, addresses `10.66.10.0` and `10.66.10.255` are not available for use by VMs.
+
+{% alert level="warning" %}
+The subnets in the `.spec.settings.virtualMachineCIDRs` block must not overlap with cluster node subnets, services subnet, or pods subnet (`podCIDR`).
+
+It is forbidden to delete subnets if addresses from them have already been issued to virtual machines.
+{% endalert %}
+
+### Storage class settings for images
+
+The storage class settings for images are defined in the `.spec.settings.virtualImages` parameter of the module settings.
+
+Example:
+
+```yaml
+spec:
+  #...
+  settings:
+    virtualImages:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Where:
+
+- `allowedStorageClassNames` (optional): A list of the allowed StorageClasses for creating a VirtualImage that can be explicitly specified in the resource specification.
+- `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualImage if the `.spec.persistentVolumeClaim.storageClassName` parameter is not set.
+
+### Storage class settings for disks
+
+The storage class settings for disks are defined in the `.spec.settings.virtualDisks` parameter of the module settings.
+
+Example:
+
+```yaml
+spec:
+  #...
+  settings:
+    virtualDisks:
+      allowedStorageClassNames:
+      - sc-1
+      - sc-2
+      defaultStorageClassName: sc-1
+```
+
+Where:
+
+- `allowedStorageClassNames` (optional): A list of the allowed StorageClass for creating a VirtualDisk that can be explicitly specified in the resource specification.
+- `defaultStorageClassName` (optional): The StorageClass used by default when creating a VirtualDisk if the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified.
+
+### Security event audit configuration
+
+{% alert level="warning" %}
+Not available in Community Edition.
+{% endalert %}
+
+To enable security event auditing:
+
+1. Enable [`log-shipper`](/modules/log-shipper/) and [`runtime-audit-engine`](/modules/runtime-audit-engine/) modules.
+1. Enable Kubernetes API audit by setting [`.spec.settings.apiserver.auditPolicyEnabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) in the `control-plane-manager` module.
+1. Set [`.spec.settings.audit.enabled: true`](/modules/virtualization/stable/configuration.html#parameters-audit-enabled) in the `virtualization` module:
+
+   ```yaml
+   spec:
+     settings:
+       audit:
+         enabled: true
+   ```
+
+For a complete list of configuration options, see [Configuration](/modules/virtualization/configuration.html).
+
+Events are collected by the `virtualization-audit-*` pod in the `d8-virtualization` namespace. To forward events to the cluster logging system (e.g., Loki), create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: virtualization-audit-logs
+spec:
+  destinationRefs:
+    - d8-loki
+  kubernetesPods:
+    namespaceSelector:
+      matchNames:
+        - d8-virtualization
+    labelSelector:
+      matchLabels:
+        app: virtualization-audit
+  type: KubernetesPods
+```
+
+To view events in Grafana, use a Loki query:
+
+```logql
+{namespace="d8-virtualization", pod=~"virtualization-audit-.*"}
+```
+
+Available fields in the logs:
+- `type`: Event type (Access to VM, VM Management, etc.).
+- `name`: Human-readable description.
+- `request_subject`: Username or ServiceAccount.
+- `datetime`: Event timestamp.
+- `virtualmachine_name`: Affected VM.
+- `source_ip`: Request source IP (for forbidden operations).
+
+### Security events
+
+The audit system logs the following events:
+
+- Access to VM: Connection via console, VNC, or port forward. Includes VM name, OS, versions, storage, and node address.
+- VM Management: Create, update, patch, or delete operations on [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resources.
+- VM Control Operations: Start, stop, restart, migrate, or evict via [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource.
+- Integrity Check: SHA256 verification of VM configuration. Logs when checksum changes.
+- Module Control: Create, update, or delete operations on ModuleConfig.
+- Forbidden Operations: Operations blocked by the platform. Includes user, operation, resource, source IP, and denial reason.

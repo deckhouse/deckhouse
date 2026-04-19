@@ -8,6 +8,16 @@ properties:
     x-required-for-helm:
     - currentReleaseImageName
     properties:
+      namespaces:
+        type: array
+        default: []
+        items:
+          type: string
+        x-examples:
+        - ["test1", "test2"]
+      chrootMode:
+        type: boolean
+        default: false
       releaseVersionImageHash:
         type: string
       currentReleaseImageName:
@@ -51,3 +61,9 @@ properties:
       configMapName:
         type: string
         x-examples: ["deckhouse"]
+      registry:
+        type: object
+        default: {}
+        properties:
+          mode:
+            type: string

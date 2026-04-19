@@ -26,7 +26,7 @@
 <p>Изучите дэшборды Grafana, поставляемые с Deckhouse.</p>
 <p>Имя веб-сервиса: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>Для доступа к Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<p><a href="/products/kubernetes-platform/documentation/v1/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
+<p><a href="/modules/prometheus/" target="_blank">Подробнее</a> о модуле <code>monitoring</code>.</p>
 </div>
 </div>
 {% endif %}
@@ -50,9 +50,9 @@
 🏭 <span class="cards-item__title-text">Подготовка к production</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Подготовьте ваш кластер к приему продуктивного трафика.
+Подготовьте ваш кластер к приему трафика.
 
-Воспользуйтесь нашим [чек-листом](/products/virtualization-platform/guides/going-to-production.html), чтобы убедиться, что вы ничего не забыли.
+Воспользуйтесь нашим [чек-листом](/products/virtualization-platform/guides/production.html), чтобы убедиться, что вы ничего не забыли.
 </div>
 </div>
 
@@ -69,8 +69,8 @@
 <div markdown="1">
 ## Что дальше?
 
-Подробная информация о системе в целом и по каждому компоненту Deckhouse Kubernetes Platform расположена в
-[документации](/products/kubernetes-platform/documentation/v1/).
+Подробная информация о системе в целом и по каждому компоненту платформы расположена в
+[документации](/products/virtualization-platform/documentation/admin/overview.html).
 
 По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/community/about.html#online-community).
 </div>

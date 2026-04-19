@@ -17,26 +17,29 @@ limitations under the License.
 package main
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
-
 	var err error
 	config, err = NewConfig()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
+		cancel()
 		close(config.ExitChannel)
 	}()
 
@@ -58,18 +61,37 @@ func main() {
 
 	removeOrphanFiles()
 
-	runPhase(annotateNode())
-	runPhase(waitNodeApproval())
-	runPhase(waitImageHolderContainers())
+	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
+		return annotateNode()
+	}, "annotate node"))
+
+	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
+		return waitNodeApproval()
+	}, "wait for approval"))
+
+	runPhase(DoAction(ctx, defaultBackoff, func(c context.Context) error {
+		return waitImageHolderContainers()
+	}, "wait for image holders"))
+
 	runPhase(checkEtcdManifest())
 	runPhase(checkKubeletConfig())
 	runPhase(installKubeadmConfig())
 	runPhase(installBasePKIfiles())
+	if config.EtcdArbiter {
+		runPhase(generateEtcdPerformancePatch())
+	}
 	runPhase(fillTmpDirWithPKIData())
 	runPhase(renewCertificates())
-	runPhase(renewKubeconfigs())
-	runPhase(updateRootKubeconfig())
-	runPhase(installExtraFiles())
+
+	if !config.EtcdArbiter {
+		runPhase(renewKubeconfigs())
+		runPhase(updateRootKubeconfig())
+	} else {
+		log.Info("ETCD_ARBITER mode: creating only admin.conf for kubeadm")
+		runPhase(renewAdminKubeconfig())
+	}
+
+	runPhase(syncExtraFiles())
 	runPhase(convergeComponents())
 	runPhase(config.writeLastAppliedConfigurationChecksum())
 
@@ -82,9 +104,10 @@ func main() {
 
 func httpServerClose() {
 	if err := server.Close(); err != nil {
-		log.Fatalf("HTTP close error: %v", err)
+		log.Fatal("HTTP close error", slog.String("error", err.Error()))
 	}
 }
+
 func runPhase(err error) {
 	if err == nil {
 		return

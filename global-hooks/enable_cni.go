@@ -15,7 +15,9 @@
 package hooks
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -23,6 +25,8 @@ import (
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/go_lib/set"
@@ -84,7 +88,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func applyMCFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	v, _, err := unstructured.NestedBool(obj.UnstructuredContent(), "spec", "enabled")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("nested bool: %w", err)
 	}
 
 	if !v {
@@ -98,7 +102,7 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	var cm v1core.Secret
 	err := sdk.FromUnstructured(obj, &cm)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("from unstructured: %w", err)
 	}
 
 	cni, ok := cm.Data["cni"]
@@ -109,12 +113,15 @@ func applyCniConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult,
 	return nil, nil
 }
 
-func enableCni(input *go_hook.HookInput) error {
+func enableCni(_ context.Context, input *go_hook.HookInput) error {
 	requirements.RemoveValue(cniConfigurationSettledKey)
 
-	cniNameSnap := input.Snapshots["cni_name"]
-	deckhouseMCSnap := input.Snapshots["deckhouse_mc"]
+	cniNameSnap, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "cni_name")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal cni_name snapshot: %w", err)
+	}
 
+	deckhouseMCSnap := input.Snapshots.Get("deckhouse_mc")
 	explicitlyEnabledCNIs := set.NewFromSnapshot(deckhouseMCSnap)
 
 	if len(cniNameSnap) == 0 {
@@ -124,20 +131,19 @@ func enableCni(input *go_hook.HookInput) error {
 
 	if len(explicitlyEnabledCNIs) > 1 {
 		requirements.SaveValue(cniConfigurationSettledKey, "false")
-		return fmt.Errorf("more then one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
+		return fmt.Errorf("more than one CNI enabled: %v", explicitlyEnabledCNIs.Slice())
 	} else if len(explicitlyEnabledCNIs) == 1 {
-		input.Logger.Infof("enabled CNI from Deckhouse ModuleConfig: %s", explicitlyEnabledCNIs.Slice()[0])
+		input.Logger.Info("enabled CNI from Deckhouse ModuleConfig", slog.String("cni", explicitlyEnabledCNIs.Slice()[0]))
 		return nil
 	}
-
 	// nor any CNI enabled directly via MC, found default CNI from secret
-	cniToEnable := cniNameSnap[0].(string)
+	cniToEnable := cniNameSnap[0]
 	if _, ok := cniNameToModule[cniToEnable]; !ok {
-		input.Logger.Warnf("Incorrect cni name: '%v'. Skip", cniToEnable)
+		input.Logger.Warn("Incorrect cni name. Skip", slog.String("cni", cniToEnable))
 		return nil
 	}
 
-	input.Logger.Infof("enabled CNI by secret: %s", cniToEnable)
+	input.Logger.Info("enabled CNI by secret", slog.String("cni", cniToEnable))
 	input.Values.Set(cniNameToModule[cniToEnable], true)
 	return nil
 }

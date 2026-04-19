@@ -68,7 +68,8 @@ type ClusterLogDestinationSpec struct {
 	// Add rateLimit for sink
 	RateLimit RateLimitSpec `json:"rateLimit,omitempty"`
 
-	Buffer *Buffer `json:"buffer,omitempty"`
+	Buffer          *Buffer              `json:"buffer,omitempty"`
+	Transformations []TransformationSpec `json:"transformations,omitempty"`
 }
 
 type ClusterLogDestinationStatus struct {
@@ -106,9 +107,14 @@ type CommonTLSClientCert struct {
 
 type CommonTLSSpec struct {
 	CommonTLSClientCert `json:"clientCrt,omitempty"`
-	CAFile              string `json:"caFile,omitempty"`
-	VerifyHostname      *bool  `json:"verifyHostname,omitempty"`
-	VerifyCertificate   *bool  `json:"verifyCertificate,omitempty"`
+	SecretRef           *SecretRef `json:"secretRef,omitempty"`
+	CAFile              string     `json:"caFile,omitempty"`
+	VerifyHostname      *bool      `json:"verifyHostname,omitempty"`
+	VerifyCertificate   *bool      `json:"verifyCertificate,omitempty"`
+}
+
+type SecretRef struct {
+	Name string `json:"name,omitempty"`
 }
 
 type EncodingCodec = string
@@ -121,8 +127,15 @@ const (
 	EncodingCodecGELF   EncodingCodec = "GELF"
 )
 
+type CEFEncoding struct {
+	DeviceVendor  string `json:"deviceVendor,omitempty"`
+	DeviceProduct string `json:"deviceProduct,omitempty"`
+	DeviceVersion string `json:"deviceVersion,omitempty"`
+}
+
 type CommonEncoding struct {
 	Codec EncodingCodec `json:"codec"`
+	CEF   CEFEncoding   `json:"cef,omitempty"`
 }
 
 type LokiSpec struct {

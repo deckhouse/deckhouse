@@ -9,7 +9,7 @@ metadata:
   resourceVersion: "1001"
 spec:
   checksum: zxc
-  path: /testmodule/dev
+  path: /modules/testmodule
   version: mpo-tag
 status:
   conditions:

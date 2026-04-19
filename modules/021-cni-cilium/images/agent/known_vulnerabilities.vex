@@ -1,0 +1,38 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-46521c2aa62c064cd1a854f470eef8288baab5bb530a3fcdce78453624e88f57",
+  "author": "Deckhouse \u003ccontact @deckhouse.io\u003e",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2024-12797"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@43.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Библиотека cryptography используется как зависимость в скриптах для сборки и тестирования проекта, а не в самом продукте Envoy. Эти скрипты не задействуют уязвимую функцию, связанную с аутентификацией по 'сырым' публичным ключам (Raw Public Key), поэтому уязвимый код никогда не выполняется.",
+      "timestamp": "2025-10-14T07:34:04.028912Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33726"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cilium/cilium@v1.17.4"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33726 не эксплуатируема в Deckhouse, поскольку функция Per-Endpoint Routing не используется и не может быть включена пользователем самостоятельно, а именно её активация является обязательным условием для реализации данной уязвимости.",
+      "timestamp": "2026-04-02T14:53:20.279471Z"
+    }
+  ],
+  "timestamp": "2025-10-14T07:34:04Z",
+  "last_updated": "2026-04-02T14:53:20Z"
+}

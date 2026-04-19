@@ -1,0 +1,98 @@
+@use "components/common/_variables.scss";
+
+.gs-steps {
+    position: relative;
+    width: 90%;
+    margin: 45px auto 125px;
+    &__points {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    &__point {
+        position: relative;
+        text-decoration: none !important;
+        &-num {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 30px;
+            height: 30px;
+            box-sizing: border-box;
+            border: 2px solid transparent;
+            transform: rotate(45deg);
+
+            background: variables.$color-smooth;
+            color: #999;
+            &_future {
+                font-weight: variables.$font-weight-semibold;
+                background: variables.$color-smooth;
+                color: #999 !important;
+            }
+            &_active {
+                font-weight: variables.$font-weight-semibold;
+                background: variables.$color-alt;
+                color: variables.$color-inverse !important;
+            }
+            &_past {
+                font-weight: variables.$font-weight-semibold;
+                background: variables.$color-alt;
+                color: variables.$color-inverse !important;
+            }
+            span {
+                transform: rotate(-45deg);
+            }
+        }
+        &-title {
+            position: absolute;
+            left: 50%;
+            top: 45px;
+            transform: translateX(-50%);
+            font-size: variables.$font-size-base;
+            font-weight: variables.$font-weight-semibold;
+
+            text-align: center;
+            width: 125px;
+            color: variables.$color-alt !important;
+
+            @media (min-width: variables.$container-breakpoint-lg) {
+                width: 150px;
+            }
+
+            &_future {
+                color: #999 !important;
+            }
+        }
+        &:hover &-num_future,
+        &:hover &-num_past {
+            color: variables.$color-inverse !important;
+            background: variables.$color-main;
+            border-color: transparent;
+            text-decoration: none !important;
+        }
+        &:hover &-title:not(.gs-steps__point-title_active) {
+            color: variables.$color-main !important;
+        }
+    }
+    &__sections {
+        width: 100%;
+        position: absolute;
+        left: 0;
+        top: 13px;
+        z-index: -1;
+
+        display: flex;
+        flex-direction: row;
+    }
+    &__section {
+        flex: 1;
+        height: 3px;
+        background: variables.$color-smooth;
+        &_past {
+            background: variables.$color-alt;
+        }
+    }
+}

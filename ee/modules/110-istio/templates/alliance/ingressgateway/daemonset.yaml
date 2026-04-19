@@ -14,7 +14,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: ingressgateway
   namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
@@ -53,6 +53,7 @@ spec:
       {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
       serviceAccountName: alliance-ingressgateway
+      automountServiceAccountToken: true
   {{- if $.Values.istio.alliance.ingressGateway.nodeSelector }}
       nodeSelector:
         {{- $.Values.istio.alliance.ingressGateway.nodeSelector | toYaml | nindent 8 }}
@@ -65,7 +66,6 @@ spec:
       - name: deckhouse-registry
       containers:
       - name: istio-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         args:
         - proxy
         - router
@@ -143,7 +143,7 @@ spec:
           value: {{ include "istioNetworkName" $ }}
         - name: ISTIO_META_CLUSTER_ID
           value: {{ $.Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
-  {{- if $.Values.istio.enableHTTP10 }}
+  {{- if $.Values.istio.dataPlane.enableHTTP10 }}
         - name: ISTIO_META_HTTP10
           value: "1"
   {{- end }}
@@ -174,6 +174,11 @@ spec:
           periodSeconds: 2
           timeoutSeconds: 3
           failureThreshold: 30
+        securityContext:
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
+          readOnlyRootFilesystem: true
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}

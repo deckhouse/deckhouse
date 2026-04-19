@@ -1,0 +1,27 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  name: follow-obj
+spec:
+  mode: FollowObject
+  followObjectRef:
+    apiVersion: v1
+    kind: Pod
+    namespace: default
+    name: my-pod
+    uid: befc4950-0348-494d-af5e-94d65ad0d03e
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2025-12-03T11:55:50Z"
+  name: my-pod
+  namespace: default
+  resourceVersion: "476558680"
+  uid: befc4950-0348-494d-af5e-94d65ad0d03e
+spec:
+  containers:
+  - image: nginx
+    imagePullPolicy: Always
+    name: my-container
+    resources: {}

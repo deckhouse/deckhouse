@@ -1,0 +1,26 @@
+linters-settings:
+  module:
+    oss:
+      disable: true
+  container:
+    exclude-rules:
+      read-only-root-filesystem:
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-proxy
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: nodeport-bind-address
+      liveness-probe:
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-proxy
+      readiness-probe:
+        - kind: DaemonSet
+          name: d8-kube-proxy
+          container: kube-proxy
+  templates:
+    exclude-rules:
+      pdb:
+        - kind: DaemonSet
+          name: d8-kube-proxy

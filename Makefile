@@ -38,6 +38,12 @@ ifeq ($(PLATFORM_NAME), x86_64)
 	TRDL_ARCH = amd64
 	CRANE_ARCH = x86_64
 	GH_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), aarch64)
+	YQ_ARCH = amd64
+	CRANE_ARCH = x86_64
+	TRDL_ARCH = amd64
+	CRANE_ARCH = x86_64
+	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
@@ -104,11 +110,10 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 1.54.2
-TRIVY_VERSION= 0.55.0
+TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
-GH_VERSION = 2.52.0
+GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
 
 ##@ General
@@ -146,20 +151,30 @@ bin/yq: bin ## Install yq deps for update-patchversion script.
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
-	docker run --rm -v ${PWD}:/deckhouse-src --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
+	export DMT_METRICS_URL="${DMT_METRICS_URL}"
+	export DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}"
+	docker run --rm -v ${PWD}:/deckhouse-src -e DMT_METRICS_URL="${DMT_METRICS_URL}" -e DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -vet=off ./testing/openapi_cases/
+	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test ./deckhouse-controller/... -v
+	go test -timeout=${TESTS_TIMEOUT} -cover -race ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
+
+.PHONY: test-all
+test-all: go-check
+	$(call iterateAllGoModules,Running go test with race and cover in,go test -cover -race -timeout=${TESTS_TIMEOUT} ./...)
+
+.PHONY: test-draft-all
+test-draft-all: go-check
+	$(call iterateAllGoModules,Running go test in,go test ./...)
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
@@ -167,14 +182,37 @@ validate: ## Check common patterns through all modules.
 
 bin/golangci-lint:
 	mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- ${GOLANGCI_LINT_VERSION}
 
 .PHONY: lint lint-fix
-lint: ## Run linter.
+lint: golangci-lint ## Run linter.
 	golangci-lint run
 
-lint-fix: ## Fix lint violations.
+lint-fix: golangci-lint ## Fix lint violations.
 	golangci-lint run --fix
+
+# Generic function to iterate over all directories with go.mod
+# Usage: $(call iterateAllGoModules,message,command)
+define iterateAllGoModules
+	@FAILED=0; \
+	for dir in $$(find . -name "go.mod" -type f -exec dirname {} \; ); do \
+		echo ""; \
+		echo "============================================================"; \
+		echo "$(1) in $$dir"; \
+		echo "============================================================"; \
+		echo ""; \
+		(cd $$dir && $(2)) || FAILED=1; \
+	done; \
+	exit $$FAILED
+endef
+
+.PHONY: lint-all
+lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
+
+.PHONY: lint-fix-all
+lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
+	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
@@ -199,13 +237,17 @@ lint-markdown-fix: ## Run markdown linter and fix problems automatically.
 		--config testing/markdownlint.yaml -p testing/.markdownlintignore "**/*.md" --fix && (echo 'Fixed successfully.')
 
 lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
-	@werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
+	@bin/werf config render | awk 'NR!=1 {print}' | go run ./tools/lint-src-artifact/lint-src-artifact.go
 
 ##@ Generate
 
+## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: bin/werf ## Run all generate-* jobs in bulk.
-	cd tools; go generate
+generate: generate-kubernetes generate-tools generate-docs generate-werf
+
+.PHONY: generate-tools
+generate-tools:
+	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
@@ -215,8 +257,7 @@ bin/regcopy: bin ## App to copy docker images to the Deckhouse registry
 
 bin/trivy-${TRIVY_VERSION}/trivy:
 	mkdir -p bin/trivy-${TRIVY_VERSION}
-	# curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b ./bin/trivy-${TRIVY_VERSION} v${TRIVY_VERSION}
-	curl --header "PRIVATE-TOKEN: ${TRIVY_TOKEN}" https://${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/deckhouse-trivy/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
+	curl ${DECKHOUSE_PRIVATE_REPO}/api/v4/projects/${TRIVY_PROJECT_ID}/packages/generic/trivy-v${TRIVY_VERSION}/v${TRIVY_VERSION}/trivy -o bin/trivy-${TRIVY_VERSION}/trivy
 
 .PHONY: trivy
 bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
@@ -224,38 +265,56 @@ bin/trivy: bin bin/trivy-${TRIVY_VERSION}/trivy
 	chmod u+x bin/trivy-${TRIVY_VERSION}/trivy
 	ln -s ${PWD}/bin/trivy-${TRIVY_VERSION}/trivy bin/trivy
 
-.PHONY: cve-report cve-base-images
+.PHONY: cve-report
 cve-report: bin/trivy bin/jq ## Generate CVE report for a Deckhouse release.
   ##~ Options: SEVERITY=CRITICAL,HIGH REPO=registry.deckhouse.io TAG=v1.30.0
-	./tools/cve/d8-images.sh
+	./tools/cve/d8_images_cve_scan.sh
 
-cve-base-images: bin/trivy bin/jq ## Check CVE in our base images.
+cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
   ##~ Options: SEVERITY=CRITICAL,HIGH
-	./tools/cve/base-images.sh
+	./tools/cve/check-non-root.sh
 
 ##@ Documentation
 
+MODULE_PATH ?=
+CHANNEL ?= alpha
+MODULE_VERSION ?= v0.1.0
+
 .PHONY: docs
-docs: ## Run containers with the documentation.
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --env local --repo ":local"
-	echo "Open http://localhost to access the documentation..."
+docs: bin/werf ## Run containers with the documentation.
+	@echo "Building documentation containers..."
+	@echo -n "werf: "; bin/werf version
+	@$(MAKE) -C docs/site free-port-80
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+
+.PHONY: docs-external-module
+docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.
+  ##~ Options: MODULE_PATH=/path/to/module [CHANNEL=alpha] [MODULE_VERSION=v0.1.0]
+	MODULE_PATH="$(MODULE_PATH)" CHANNEL="$(CHANNEL)" MODULE_VERSION="$(MODULE_VERSION)" ./tools/docs/external-module-docs.sh
+	@echo "Building documentation containers..."
+	@echo -n "werf: "; bin/werf version
+	@$(MAKE) -C docs/site free-port-80
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
+
+.PHONY: docs-external-module-clean
+docs-external-module-clean: ## Remove generated external module documentation output.
+	rm -rf docs/site/backends/docs-builder-template/public
+	@echo "Removed docs/site/backends/docs-builder-template/public"
 
 .PHONY: docs-dev
-docs-dev: ## Run containers with the documentation in the dev mode (allow uncommited files).
-	export WERF_REPO=:local
-	export SECONDARY_REPO=""
-	export DOC_API_URL=dev
-	export DOC_API_KEY=dev
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
-	cd docs/documentation/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
-	cd docs/site/; werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local"
-	echo "Open http://localhost to access the documentation..."
+docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
+	@echo "Building documentation containers (dev mode)..."
+	@echo -n "werf: "; bin/werf version;
+	@$(MAKE) -C docs/site free-port-80
+	@cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
+	echo "Open http://localhost/products/kubernetes-platform/documentation/v1/ to access DKP documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
-	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+	echo "Removing documentation related containers..."
+	@docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
@@ -268,7 +327,6 @@ docs-spellcheck: ## Check the spelling in the documentation.
 
 lint-doc-spellcheck-pr:
 	@docker run --rm -v ${PWD}:/spelling -v ${PWD}/tools/docs/spelling:/app ${SPELLCHECKER_IMAGE} /app/check_diff.sh
-	#@cd tools/docs/spelling && werf run docs-spell-checker --dev --docker-options="--entrypoint=sh" -- /app/check_diff.sh
 
 .PHONY: docs-spellcheck-generate-dictionary
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
@@ -302,22 +360,30 @@ bin/crane: bin ## Install crane deps for update-patchversion script.
 	curl -sSfL https://github.com/google/go-containerregistry/releases/download/v0.10.0/go-containerregistry_$(OS_NAME)_$(CRANE_ARCH).tar.gz | tar -xzf - crane && mv crane bin/crane && chmod +x bin/crane
 
 bin/trdl: bin
-	curl -sSfL https://tuf.trdl.dev/targets/releases/0.6.3/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl
-	chmod +x bin/trdl
-
-bin/werf: bin bin/trdl ## Install werf for images-digests generator.
-	@bash -c 'trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2'
-	@if command -v bin/werf >/dev/null 2>&1; then \
-		trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 1.2 stable; \
-	else \
-		trdl --home-dir bin/.trdl --no-self-update=true update werf 1.2 stable; \
-		ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 1.2 stable | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
+	@if ! command -v bin/trdl >/dev/null 2>&1; then \
+		curl -sSfL https://tuf.trdl.dev/targets/releases/0.7.0/$(TRDL_PLATFORM)-$(TRDL_ARCH)/bin/trdl -o bin/trdl; \
+		chmod +x bin/trdl; \
 	fi
 
+bin/werf: bin bin/trdl ## Install werf for images-digests generator.
+		@bash -c 'bin/trdl --home-dir bin/.trdl add werf https://tuf.werf.io 1 b7ff6bcbe598e072a86d595a3621924c8612c7e6dc6a82e919abe89707d7e3f468e616b5635630680dd1e98fc362ae5051728406700e6274c5ed1ad92bea52a2';
+		@if command -v bin/werf >/dev/null 2>&1; then \
+			bin/trdl --home-dir bin/.trdl --no-self-update=true update --in-background werf 2 alpha; \
+		else \
+			bin/trdl --home-dir bin/.trdl --no-self-update=true update werf 2 alpha; \
+			ln -sf $$(bin/trdl --home-dir bin/.trdl bin-path werf 2 alpha | sed 's|^.*/bin/\(.trdl.*\)|\1/werf|') bin/werf; \
+		fi;
+
 bin/gh: bin ## Install gh cli.
+ifeq ($(OS_NAME), Darwin)
 	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
 	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
 	rm bin/gh.zip
+else
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
+	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
+	rm bin/gh.tar.gz
+endif
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
@@ -325,9 +391,15 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 
 ##@ Lib helm
 .PHONY: update-lib-helm
-update-lib-helm: ## Update lib-helm.
+update-lib-helm: yq ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
 	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+
+.PHONY: update-base-images-versions
+update-base-images-versions:
+	##~ Options: version=vMAJOR.MINOR.PATCH
+	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
+	$(MAKE) render-workflow
 
 ##@ Build
 .PHONY: build
@@ -371,23 +443,17 @@ set-build-envs:
   ifeq ($(DECKHOUSE_REGISTRY_HOST),)
  		export DECKHOUSE_REGISTRY_HOST=registry.deckhouse.io
   endif
-  ifeq ($(OBSERVABILITY_SOURCE_REPO),)
-  	export OBSERVABILITY_SOURCE_REPO=https://example.com
-  endif
   ifeq ($(DECKHOUSE_PRIVATE_REPO),)
   	export DECKHOUSE_PRIVATE_REPO=https://github.com
-  endif
-  ifeq ($(STRONGHOLD_PULL_TOKEN=),)
-  	export STRONGHOLD_PULL_TOKEN="token"
   endif
 
 	export WERF_REPO=$(DEV_REGISTRY_PATH)
 	export REGISTRY_SUFFIX=$(shell echo $(WERF_ENV) | tr '[:upper:]' '[:lower:]')
 	export SECONDARY_REPO=--secondary-repo $(DECKHOUSE_REGISTRY_HOST)/deckhouse/$(REGISTRY_SUFFIX)
 
-build: set-build-envs ## Build Deckhouse images.
+build: bin/werf set-build-envs ## Build Deckhouse images.
 	##~ Options: FOCUS=image-name
-	werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
+	bin/werf build --parallel=true --parallel-tasks-limit=5 --platform linux/amd64 --save-build-report=true --build-report-path images_tags_werf.json $(SECONDARY_REPO) $(FOCUS)
   ifeq ($(FOCUS),)
     ifneq ($(CI_COMMIT_REF_SLUG),)
 				@# By default in the Github CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches.
@@ -416,9 +482,9 @@ build: set-build-envs ## Build Deckhouse images.
 				docker image push $$DST && \
 				docker image rmi $$DST || true
 
-				SRC="$(shell jq -r '.Images."e2e-terraform".DockerImageName' images_tags_werf.json)" && \
-				DST="$(DEV_REGISTRY_PATH)/e2e-terraform:pr$(CI_COMMIT_REF_SLUG)" && \
-				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-terraform' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
+				SRC="$(shell jq -r '.Images."e2e-opentofu-eks".DockerImageName' images_tags_werf.json)" && \
+				DST="$(DEV_REGISTRY_PATH)/e2e-opentofu-eks:pr$(CI_COMMIT_REF_SLUG)" && \
+				echo "⚓️ 💫 [$(date -u)] Publish 'e2e-opentofu-eks' image to dev-registry using tag 'pr$(CI_COMMIT_REF_SLUG)'" && \
 				docker pull $$SRC && \
 				docker image tag $$SRC $$DST && \
 				docker image push $$DST && \
@@ -426,5 +492,193 @@ build: set-build-envs ## Build Deckhouse images.
     endif
   endif
 
-build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
-	werf config render --dev
+build-render: bin/werf set-build-envs ## render werf.yaml for build Deckhouse images.
+	bin/werf config render --dev
+
+GO=$(shell which go)
+GIT=$(shell which git)
+
+.PHONY: go-check
+go-check:
+	$(call error-if-empty,$(GO),go)
+
+.PHONY: go-module-version
+go-module-version: go-check
+	@echo "go get $(shell go list ./deckhouse-controller/cmd/deckhouse-controller)@$(shell git rev-parse HEAD)"
+
+.PHONY: tidy-all
+tidy-all: go-check
+	$(call iterateAllGoModules,Running go mod tidy in,go mod tidy)
+
+##@ Dependencies
+
+WHOAMI ?= $(shell whoami)
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+DECKHOUSE_CLI ?= $(LOCALBIN)/d8
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CLIENT_GEN ?= $(LOCALBIN)/client-gen
+INFORMER_GEN ?= $(LOCALBIN)/informer-gen
+LISTER_GEN ?= $(LOCALBIN)/lister-gen
+YQ = $(LOCALBIN)/yq
+
+## TODO: remap in yaml file (version.yaml or smthng)
+## Tool Versions
+GOLANGCI_LINT_VERSION = v2.8.0
+DECKHOUSE_CLI_VERSION ?= v0.29.20
+CONTROLLER_TOOLS_VERSION ?= v0.18.0
+CODE_GENERATOR_VERSION ?= v0.33.8
+YQ_VERSION ?= v4.47.2
+
+## Generate werf
+.PHONY: generate-werf
+generate-werf: yq ## Generate changes in werf files.
+  ##~ Options: GOLANGCI_LINT_VERSION=vX.Y.Z
+	@if [ -n "$(GOLANGCI_LINT_VERSION)" ]; then \
+		sed -i 's/export GOLANGCI_LINT_VERSION=v[0-9.]\+/export GOLANGCI_LINT_VERSION=$(GOLANGCI_LINT_VERSION)/' .werf/werf-golang-ci-lint.yaml; \
+		echo "Updated golangci-lint version to $(GOLANGCI_LINT_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
+	else \
+		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
+	fi
+
+
+## Generate tools documentation
+.PHONY: generate-docs
+generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+	@$(DECKHOUSE_CLI) --version
+	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
+	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+
+## Generate codebase for deckhouse-controllers kubernetes entities
+.PHONY: generate-kubernetes
+generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-generate informer-gen-generate
+
+## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+.PHONY: controller-gen-generate
+controller-gen-generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
+
+.PHONY: manifests
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@echo "Removing old CRDs..."
+	@rm -rf ./bin/crd
+	@echo "Generating CRDs..."
+	@-$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases 2>&1
+	@echo "Copying CRDs to deckhouse-controller/crds..."
+	@cp bin/crd/bases/deckhouse.io_applications.yaml deckhouse-controller/crds/application.yaml
+	@cp bin/crd/bases/deckhouse.io_packagerepositoryoperations.yaml deckhouse-controller/crds/packagerepositoryoperation.yaml
+	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
+	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
+	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
+
+## Generate clientset
+.PHONY: client-gen-generate
+client-gen-generate: client-gen
+	$(CLIENT_GEN) \
+		--clientset-name "versioned" \
+		--input-base "" \
+		--input "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1,github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset" \
+		--output-dir "./deckhouse-controller/pkg/client/clientset" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt"
+
+## Generate listers (required for informers)
+.PHONY: lister-gen-generate
+lister-gen-generate: lister-gen
+	$(LISTER_GEN) \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-dir "./deckhouse-controller/pkg/client/listers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Generate informers
+.PHONY: informer-gen-generate
+informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
+	$(INFORMER_GEN) \
+		--versioned-clientset-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned" \
+		--listers-package "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers" \
+		--output-pkg "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers" \
+		--output-dir "./deckhouse-controller/pkg/client/informers" \
+		--go-header-file "./deckhouse-controller/hack/boilerplate.go.txt" \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1 \
+		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
+
+## Tool installations
+
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+## Download deckhouse-cli locally if necessary.
+.PHONY: deckhouse-cli
+deckhouse-cli:
+	@if [ -f "$(DECKHOUSE_CLI)" ]; then \
+		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
+		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
+			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
+			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
+		else \
+			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
+		fi; \
+	else \
+		echo "d8 not found, downloading..."; \
+		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
+	fi
+
+## Download client-gen locally if necessary.
+.PHONY: client-gen
+client-gen: $(CLIENT_GEN)
+$(CLIENT_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CLIENT_GEN),k8s.io/code-generator/cmd/client-gen,$(CODE_GENERATOR_VERSION))
+
+## Download lister-gen locally if necessary.
+.PHONY: lister-gen
+lister-gen: $(LISTER_GEN)
+$(LISTER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(LISTER_GEN),k8s.io/code-generator/cmd/lister-gen,$(CODE_GENERATOR_VERSION))
+
+## Download informer-gen locally if necessary.
+.PHONY: informer-gen
+informer-gen: $(INFORMER_GEN)
+$(INFORMER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(INFORMER_GEN),k8s.io/code-generator/cmd/informer-gen,$(CODE_GENERATOR_VERSION))
+
+## Download controller-gen locally if necessary.
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN)
+$(CONTROLLER_GEN): $(LOCALBIN)
+	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
+
+.PHONY: yq
+yq: $(YQ) ## Download yq locally if necessary.
+$(YQ): $(LOCALBIN)
+	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
+
+# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
+# $1 - target path with name of binary
+# $2 - package url which can be installed
+# $3 - specific version of package
+define go-install-tool
+@[ -f "$(1)-$(3)" ] || { \
+set -e; \
+package=$(2)@$(3) ;\
+echo "Downloading $${package}" ;\
+rm -f $(1) || true ;\
+GOBIN=$(LOCALBIN) go install $${package} ;\
+mv $(1) $(1)-$(3) ;\
+} ;\
+ln -sf $(1)-$(3) $(1)
+endef
+
+define error-if-empty
+@if [[ -z $(1) ]]; then echo "$(2) not installed"; false; fi
+endef

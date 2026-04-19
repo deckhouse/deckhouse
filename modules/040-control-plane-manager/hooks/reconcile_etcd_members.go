@@ -19,6 +19,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -27,6 +28,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
@@ -47,6 +51,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"node-role.kubernetes.io/control-plane": "",
+				},
+			},
+			FilterFunc: reconcicleEtcdFilterNode,
+		},
+		{
+			Name:       "etcd_arbiter_node",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"node.deckhouse.io/etcd-arbiter": "",
 				},
 			},
 			FilterFunc: reconcicleEtcdFilterNode,
@@ -92,18 +107,25 @@ type recicleEtcdNode struct {
 	Name string
 }
 
-func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container) error {
-	snap := input.Snapshots["master_nodes"]
+func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	snapsM := input.Snapshots.Get("master_nodes")
+	snapsEO := input.Snapshots.Get("etcd_arbiter_node")
+	snaps := make([]pkg.Snapshot, 0, len(snapsM)+len(snapsEO))
+	snaps = append(snaps, snapsM...)
+	snaps = append(snaps, snapsEO...)
 
-	if len(snap) == 0 {
-		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
+	if len(snaps) == 0 {
+		input.Logger.Debug("No ETCD Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 
-	etcdServersEndpoints := make([]string, 0, len(snap))
-	discoveredMasterMap := make(map[string]string, len(snap))
-	for _, s := range snap {
-		node := s.(recicleEtcdNode)
+	etcdServersEndpoints := make([]string, 0, len(snaps))
+	discoveredEtcdNodesMap := make(map[string]string, len(snaps))
+	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over ETCD Nodes snapshots: %v", err)
+		}
+
 		if node.Name == "" {
 			return fmt.Errorf("node_name should not be empty")
 		}
@@ -111,7 +133,7 @@ func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container)
 			return fmt.Errorf("ip should not be empty")
 		}
 
-		discoveredMasterMap[node.Name] = node.IP
+		discoveredEtcdNodesMap[node.Name] = node.IP
 		etcdServersEndpoints = append(etcdServersEndpoints, fmt.Sprintf("https://%s:2379", node.IP))
 	}
 
@@ -132,29 +154,22 @@ func handleRecicleEtcdMembers(input *go_hook.HookInput, dc dependency.Container)
 		return errors.Wrap(err, "list etcd members failed")
 	}
 
-	// external etcd members, we dont need to delete them
-	externalRaw := input.Values.Get("controlPlaneManager.etcd.externalMembersNames").Array()
-	externalMembers := make(map[string]bool, len(externalRaw))
-	for _, res := range externalRaw {
-		externalMembers[res.String()] = true
-	}
-
-	removeList := make([]uint64, 0)
+	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
-		if _, ok := externalMembers[mem.Name]; ok {
-			// dont delete external members
-			continue
-		}
-		if _, ok := discoveredMasterMap[mem.Name]; !ok {
-			removeList = append(removeList, mem.ID)
+		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
+			removeListIDs = append(removeListIDs, mem.ID)
+			input.Logger.Warn("added etcd member to remove list", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
 		}
 	}
 
-	if len(removeList) == len(etcdMembersResp.Members) {
+	input.Logger.Warn("etcd members to remove", slog.Any("removeListIDs", removeListIDs))
+
+	if len(removeListIDs) == len(etcdMembersResp.Members) {
 		return fmt.Errorf("attempting do delete every single member from etcd cluster. Exiting")
 	}
 
-	for _, rm := range removeList {
+	for _, rm := range removeListIDs {
+		input.Logger.Warn("removing etcd member", slog.Uint64("memberID", rm))
 		_, err = etcdcli.MemberRemove(ctx, rm)
 		if err != nil {
 			return errors.Wrap(err, "remove etcd member failed")

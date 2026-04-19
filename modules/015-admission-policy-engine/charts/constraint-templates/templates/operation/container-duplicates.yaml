@@ -22,6 +22,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           container := input_containers_envs[_]
           cdata := container.envs[_]
           count(cdata) > 1
@@ -29,6 +30,7 @@ spec:
         }
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           cdata := input_containers[_]
           count(cdata) > 1
           msg := sprintf("Pod <%v> has duplicated container names: '%v'", [input.review.object.metadata.name, cdata[0]])

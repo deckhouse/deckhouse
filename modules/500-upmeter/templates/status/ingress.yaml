@@ -1,4 +1,6 @@
 {{- if .Values.global.modules.publicDomainTemplate }}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -13,6 +15,8 @@ metadata:
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.upmeter.auth.status.externalAuthentication }}
     nginx.ingress.kubernetes.io/auth-signin: {{ .Values.upmeter.auth.status.externalAuthentication.authSignInURL }}
     nginx.ingress.kubernetes.io/auth-url: {{ .Values.upmeter.auth.status.externalAuthentication.authURL }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   {{- else }}
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
@@ -69,6 +73,7 @@ metadata:
       proxy_ssl_certificate_key /etc/nginx/ssl/client.key;
       proxy_ssl_protocols TLSv1.2;
       proxy_ssl_session_reuse on;
+      {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET"
 spec:
@@ -106,6 +111,24 @@ spec:
   - {{ include "helm_lib_module_public_domain" (list . "status") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
+    kind: ClusterIssuer
+  {{- end }}
+  {{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: status-httproute
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls-status") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "status") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "status") }}
+  issuerRef:
+    name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
     kind: ClusterIssuer
   {{- end }}
 {{- end }}

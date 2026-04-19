@@ -15,67 +15,112 @@
 package commands
 
 import (
+	"context"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 
+	"github.com/name212/govalue"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/converge"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	state_terraform "github.com/deckhouse/deckhouse/dhctl/pkg/state/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
+	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terraform"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-func DefineTerraformConvergeExporterCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("converge-exporter", "Run terraform converge exporter.")
+func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		exporter := operations.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
-		exporter.Start()
+		logger := log.GetDefaultLogger()
+
+		exporter := operations.NewConvergeExporter(operations.ExporterParams{
+			Address:  app.ListenAddress,
+			Path:     app.MetricsPath,
+			Interval: app.CheckInterval,
+			TmpDir:   app.TmpDirName,
+			Logger:   logger,
+			IsDebug:  app.IsDebug,
+		})
+		exporter.Start(context.Background())
 		return nil
 	})
 	return cmd
 }
 
-func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	cmd := parent.Command("check", "Check differences between state of Kubernetes cluster and Terraform state.")
+func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		log.InfoLn("Check started ...\n")
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+		logger.LogInfoLn("Check started ...\n")
 
-		sshClient, err := ssh.NewInitClientFromFlags(true)
+		// Skip AskBecomePassword for terraform check as it will be requested later during SSH operations
+		if err := terminal.AskBastionPassword(); err != nil {
+			return err
+		}
+
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
 
-		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ssh.NewNodeInterfaceWrapper(sshClient))
+		if govalue.IsNil(sshClient) && !app.KubeConfigInCluster {
+			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl terraform check --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
+		}
+
+		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}
 
-		metaConfig, err := config.ParseConfigInCluster(kubeCl)
+		metaConfig, err := config.ParseConfigInCluster(
+			ctx,
+			kubeCl,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(logger),
+			),
+			app.GetDirConfig(),
+		)
 		if err != nil {
 			return err
 		}
 
-		metaConfig.UUID, err = state_terraform.GetClusterUUID(kubeCl)
+		metaConfig.UUID, err = infrastructurestate.GetClusterUUID(ctx, kubeCl)
 		if err != nil {
 			return err
 		}
 
-		statistic, err := converge.CheckState(kubeCl, metaConfig, terraform.NewTerraformContext(), converge.CheckStateOptions{})
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           app.TmpDirName,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           logger,
+			IsDebug:          app.IsDebug,
+		})
+
+		provider, err := providerGetter(ctx, metaConfig)
+		if err != nil {
+			return err
+		}
+
+		statistic, needMigrationToTofu, err := check.CheckState(
+			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter, logger), check.CheckStateOptions{}, false,
+		)
 		if err != nil {
 			return err
 		}
@@ -86,7 +131,12 @@ func DefineTerraformCheckCommand(parent *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		fmt.Print(string(data))
-		return nil
+
+		if provider.NeedToUseTofu() && needMigrationToTofu {
+			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
+		}
+
+		return provider.Cleanup()
 	})
 	return cmd
 }

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +kubebuilder:object:generate=true
+// +groupName=deckhouse.io
 package v1alpha1
 
 import (
@@ -60,14 +62,29 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleSourceList{},
 		&ModuleRelease{},
 		&ModuleReleaseList{},
-		&ModuleUpdatePolicy{},
-		&ModuleUpdatePolicyList{},
-		&ModulePullOverride{},
-		&ModulePullOverrideList{},
 		&ModuleDocumentation{},
 		&ModuleDocumentationList{},
+		&ModuleSettingsDefinition{},
+		&ModuleSettingsDefinitionList{},
 		&DeckhouseRelease{},
 		&DeckhouseReleaseList{},
+		&ObjectKeeper{},
+		&ObjectKeeperList{},
+		// Package system types
+		&PackageRepository{},
+		&PackageRepositoryList{},
+		&PackageRepositoryOperation{},
+		&PackageRepositoryOperationList{},
+		&ApplicationPackageVersion{},
+		&ApplicationPackageVersionList{},
+		&ApplicationPackage{},
+		&ApplicationPackageList{},
+		&Application{},
+		&ApplicationList{},
+		&ModulePackageVersion{},
+		&ModulePackageVersionList{},
+		&ModulePackage{},
+		&ModulePackageList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

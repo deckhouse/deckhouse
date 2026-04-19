@@ -17,12 +17,17 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -34,7 +39,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "ConfigMap",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-user-authn", "d8-user-authz", "d8-runtime-audit-engine"},
+					MatchNames: []string{"d8-user-authn", "d8-user-authz", "d8-runtime-audit-engine", "d8-system"},
 				},
 			},
 			LabelSelector: &v1.LabelSelector{
@@ -63,12 +68,15 @@ type discoveryCM struct {
 	Data      map[string]string
 }
 
-func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
-	snap := input.Snapshots["auth-cm"]
-	var authZData, authNData, auditData map[string]string
+func handleAuthDiscoveryModules(_ context.Context, input *go_hook.HookInput) error {
+	authCMs, err := sdkobjectpatch.UnmarshalToStruct[discoveryCM](input.Snapshots, "auth-cm")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal auth-cm: %w", err)
+	}
 
-	for _, s := range snap {
-		cm := s.(discoveryCM)
+	var authZData, authNData, auditData, deckhouseData map[string]string
+
+	for _, cm := range authCMs {
 		switch cm.Namespace {
 		case "d8-user-authn":
 			authNData = cm.Data
@@ -78,6 +86,9 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 
 		case "d8-runtime-audit-engine":
 			auditData = cm.Data
+
+		case "d8-system":
+			deckhouseData = cm.Data
 		}
 	}
 
@@ -155,5 +166,12 @@ func handleAuthDiscoveryModules(input *go_hook.HookInput) error {
 		input.Values.Remove(runtimeAuditWebhookURLPath)
 		input.Values.Remove(runtimeAuditWebhookCAPath)
 	}
+
+	if plugins, ok := deckhouseData["disableAdmissionPlugins"]; ok {
+		input.Values.Set("controlPlaneManager.internal.disableAdmissionPlugins", plugins)
+	} else {
+		input.Values.Remove("controlPlaneManager.internal.disableAdmissionPlugins")
+	}
+
 	return nil
 }

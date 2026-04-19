@@ -16,7 +16,9 @@ spec:
     solvers:
     - http01:
         ingress:
-          {{- if hasKey .Values.global.modules "ingressClass" }}
+          {{- if hasKey .Values.certManager "ingressClassHttp01" }}
+          ingressClassName: {{ .Values.certManager.ingressClassHttp01 }}
+          {{- else if hasKey .Values.global.modules "ingressClass" }}
           ingressClassName: {{ .Values.global.modules.ingressClass }}
           {{- end }}
           podTemplate:
@@ -35,5 +37,8 @@ spec:
                 - key: "dedicated.deckhouse.io"
                   operator: "Equal"
                   value: "cert-manager"
+              {{- if and (.Values.certManager) (.Values.certManager.letsencrypt) (hasKey .Values.certManager.letsencrypt "resources") }}
+              resources:
+              {{ .Values.certManager.letsencrypt.resources | toYaml | nindent 16 }}
+              {{- end }}                                   
 {{- end }}
-

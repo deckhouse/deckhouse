@@ -17,23 +17,25 @@ package docs
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func TestAssembleErrorRegexp(t *testing.T) {
+func TestModuleNameFromErrorPathRegexp(t *testing.T) {
 	input := "error building site: assemble: \"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\": EOF looking for end YAML front matter delimiter"
 
-	path, ok := getAssembleErrorPath(input)
-	if !ok || path != "/app/hugo/content/modules/moduleName/BROKEN.md" {
-		t.Fatalf("unedxpcted path %q", path)
+	moduleName, ok := getModuleNameFromErrorPath(input)
+	if !ok || moduleName != "moduleName" {
+		t.Fatalf("unexpected module name %q", moduleName)
 	}
 }
 
-func TestAssembleErrorWithColorRegexp(t *testing.T) {
+func TestModuleNameFromErrorPathWithColorRegexp(t *testing.T) {
 	input := "error building site: assemble: \x1b[1;36m\"/app/hugo/content/modules/moduleName/BROKEN.md:1:1\"\x1b[0m: EOF looking for end YAML front matter delimiter"
 
-	path, ok := getAssembleErrorPath(input)
-	if !ok || path != "/app/hugo/content/modules/moduleName/BROKEN.md" {
-		t.Fatalf("unedxpcted path %q", path)
+	moduleName, ok := getModuleNameFromErrorPath(input)
+	if !ok || moduleName != "moduleName" {
+		t.Fatalf("unexpected module name %q", moduleName)
 	}
 }
 
@@ -43,8 +45,8 @@ func TestGetModulePath(t *testing.T) {
 		expected string
 	}{
 		{
-			filePath: "/app/hugo/content/modules/moduleName/alpha/BROKEN.md",
-			expected: "/app/hugo/content/modules/moduleName/alpha",
+			filePath: "/app/hugo/content/modules/moduleName/BROKEN.md",
+			expected: "/app/hugo/content/modules/moduleName",
 		},
 	}
 
@@ -73,7 +75,10 @@ func TestParseModulePath(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.modulePath, func(t *testing.T) {
-			moduleName, channel := parseModulePath(test.modulePath)
+			svc := &Service{
+				logger: log.NewNop(),
+			}
+			moduleName, channel := svc.parseModulePath(test.modulePath)
 			if moduleName != test.moduleName {
 				t.Errorf("unexpected module name %q", moduleName)
 			}

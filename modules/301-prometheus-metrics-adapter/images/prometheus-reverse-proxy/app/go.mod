@@ -1,6 +1,6 @@
 module prometheus-reverse-proxy
 
-go 1.17
+go 1.23
 
 require (
 	github.com/felixge/httpsnoop v1.0.3

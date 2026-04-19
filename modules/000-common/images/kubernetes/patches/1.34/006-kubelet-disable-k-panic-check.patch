@@ -1,0 +1,12 @@
+diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
+index c65053cd678..5d1cb33510f 100644
+--- a/pkg/kubelet/cm/container_manager_linux.go
++++ b/pkg/kubelet/cm/container_manager_linux.go
+@@ -451,7 +451,6 @@ func setupKernelTunables(option KernelTunableBehavior) error {
+ 	desiredState := map[string]int{
+ 		utilsysctl.VMOvercommitMemory: utilsysctl.VMOvercommitMemoryAlways,
+ 		utilsysctl.VMPanicOnOOM:       utilsysctl.VMPanicOnOOMInvokeOOMKiller,
+-		utilsysctl.KernelPanic:        utilsysctl.KernelPanicRebootTimeout,
+ 		utilsysctl.KernelPanicOnOops:  utilsysctl.KernelPanicOnOopsAlways,
+ 		utilsysctl.RootMaxKeys:        utilsysctl.RootMaxKeysSetting,
+ 		utilsysctl.RootMaxBytes:       utilsysctl.RootMaxBytesSetting,

@@ -6,7 +6,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: agent
   namespace: d8-{{ $.Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "agent" "workload-resource-policy.deckhouse.io" "every-node")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "agent")) | nindent 2 }}
 spec:
   {{- include "helm_lib_resources_management_vpa_spec"  (list "apps/v1" "DaemonSet" "agent" "cilium-agent" .Values.cniCilium.resourcesManagement ) | nindent 2}}
   {{- if (eq .Values.cniCilium.resourcesManagement.mode "VPA") }}

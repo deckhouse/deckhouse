@@ -17,8 +17,9 @@ package ssh
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh/session"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
 func TestSSHHostChecks(t *testing.T) {

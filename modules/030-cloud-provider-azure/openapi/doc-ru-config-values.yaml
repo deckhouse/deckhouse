@@ -13,7 +13,7 @@ properties:
           * присутствующий StorageClass в кластере, имеющий default-аннотацию;
           * первый (по алфавиту) StorageClass из тех, что создаются модулем.
 
-          > **Параметр устарел.** Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](../../deckhouse-configure-global.html#parameters-defaultclusterstorageclass).
+          > **Параметр устарел.** Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
       provision:
         description: |
           Дополнительные StorageClass'ы для Azure ultra disks.
@@ -29,7 +29,7 @@ properties:
                 Дополнительную информацию можно найти в [документации Azure](https://docs.microsoft.com/ru-ru/azure/storage/common/storage-account-overview#types-of-storage-accounts).
             cachingMode:
               description: |
-                Желаемый режим кэширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`.
+                Желаемый режим кеширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`.
 
                 Дополнительную информацию можно найти в [документации Azure](https://docs.microsoft.com/ru-ru/azure/virtual-machines/premium-storage-performance#disk-caching).
             diskIOPSReadWrite:

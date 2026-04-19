@@ -1,0 +1,7 @@
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/init
+git:
+{{- include "image mount points" . }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

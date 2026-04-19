@@ -1,0 +1,56 @@
+kind: GCPCloudDiscoveryData
+apiVersions:
+- apiVersion: deckhouse.io/v1
+  openAPISpec:
+    type: object
+    x-examples:
+    - apiVersion: deckhouse.io/v1
+      kind: GCPCloudDiscoveryData
+      networkName: test
+      subnetworkName: test
+      zones: ["test"]
+      disableExternalIP: true
+      instances:
+        image: ubuntu
+        diskSizeGb: 50
+        diskType: test
+        networkTags: ["test"]
+    additionalProperties: false
+    required: [apiVersion, kind, networkName, subnetworkName, zones]
+    properties:
+      apiVersion:
+        type: string
+        enum: [deckhouse.io/v1, deckhouse.io/v1alpha1]
+      kind:
+        type: string
+        enum: [GCPCloudDiscoveryData]
+      networkName:
+        type: string
+      subnetworkName:
+        type: string
+      zones:
+        type: array
+        minItems: 1
+        items:
+          type: string
+      disableExternalIP:
+        type: boolean
+      instances:
+        type: object
+        additionalProperties: false
+        required: [image, diskSizeGb, diskType, networkTags]
+        properties:
+          image:
+            type: string
+          diskSizeGb:
+            type: integer
+          diskType:
+            type: string
+          networkTags:
+            type: array
+            items:
+              type: string
+          labels:
+            type: object
+            additionalProperties:
+              type: string

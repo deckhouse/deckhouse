@@ -1,10 +1,10 @@
-{{- $version := "1.16.2" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/cert-manager-controller-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/cert-manager-controller-artifact
   add: /acmesolver-linux-amd64
   to: /bin/acmesolver
   before: setup
-docker:
-  ENTRYPOINT: ["/bin/acmesolver"]
+imageSpec:
+  config:
+    entrypoint: ["/bin/acmesolver"]

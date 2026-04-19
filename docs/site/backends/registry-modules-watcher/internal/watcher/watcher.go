@@ -19,12 +19,12 @@ import (
 	"time"
 
 	v1 "k8s.io/api/coordination/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/klog"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const leaseLabel = "deckhouse.io/documentation-builder-sync"
@@ -33,16 +33,19 @@ const resyncTimeout = time.Minute
 type watcher struct {
 	kClient   *kubernetes.Clientset
 	namespace string
+	logger    *log.Logger
 }
 
-func New(kClient *kubernetes.Clientset, namespace string) *watcher {
+// nolint: revive
+func New(kClient *kubernetes.Clientset, namespace string, logger *log.Logger) *watcher {
 	return &watcher{
 		kClient:   kClient,
 		namespace: namespace,
+		logger:    logger,
 	}
 }
 
-func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(backend string)) {
+func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(ctx context.Context, backend string)) {
 	tweakListOptions := func(options *metav1.ListOptions) {
 		options.LabelSelector = leaseLabel
 	}
@@ -55,40 +58,41 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 	)
 
 	informer := factory.Coordination().V1().Leases().Informer()
+	// nolint:errcheck
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			lease, ok := obj.(*v1.Lease)
 			if !ok {
-				klog.Error("cast object to lease error")
+				w.logger.Error("cast object to lease error")
 				return
 			}
 
 			if lease != nil {
 				holderIdentity := lease.Spec.HolderIdentity
 				if holderIdentity != nil {
-					addHandler(*holderIdentity)
+					addHandler(ctx, *holderIdentity)
 					return
 				}
 			}
 
-			klog.Error(`lease "holderIdentity" is empty`)
+			w.logger.Error(`lease "holderIdentity" is empty`)
 		},
 		DeleteFunc: func(obj interface{}) {
 			lease, ok := obj.(*v1.Lease)
 			if !ok {
-				klog.Error("cast object to lease error")
+				w.logger.Error("cast object to lease error")
 				return
 			}
 
 			if lease != nil {
 				holderIdentity := lease.Spec.HolderIdentity
 				if holderIdentity != nil {
-					deleteHandler(*holderIdentity)
+					deleteHandler(ctx, *holderIdentity)
 					return
 				}
 			}
 
-			klog.Error(`lease "holderIdentity" is empty`)
+			w.logger.Error(`lease "holderIdentity" is empty`)
 		},
 	})
 
@@ -96,6 +100,6 @@ func (w *watcher) Watch(ctx context.Context, addHandler, deleteHandler func(back
 
 	// Wait for the first sync of the informer cache, should not take long
 	if !cache.WaitForCacheSync(ctx.Done(), informer.HasSynced) {
-		klog.Fatalf("unable to sync caches: %v", ctx.Err())
+		w.logger.Fatal("unable to sync caches", log.Err(ctx.Err()))
 	}
 }

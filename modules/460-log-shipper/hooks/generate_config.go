@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/url"
@@ -25,13 +27,15 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/composer"
@@ -88,28 +92,38 @@ func filterLogShipperTokenSecret(obj *unstructured.Unstructured) (go_hook.Filter
 	return string(secret.Data["token"]), nil
 }
 
-func filterLokiEndpoints(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	endpoints := new(corev1.Endpoints)
+func filterLogShipperTLSSecrets(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := new(corev1.Secret)
+	err := sdk.FromUnstructured(obj, secret)
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
 
-	err := sdk.FromUnstructured(obj, endpoints)
+func filterLokiEndpointSlice(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	endpointSlice := new(discoveryv1.EndpointSlice)
+
+	err := sdk.FromUnstructured(obj, endpointSlice)
 	if err != nil {
 		return nil, err
 	}
 
 	var lokiEndpoint endpoint
 
-	for _, subset := range endpoints.Subsets {
-		for _, p := range subset.Ports {
-			if p.Name == "loki" {
-				lokiEndpoint.port = strconv.FormatInt(int64(p.Port), 10)
+	for _, p := range endpointSlice.Ports {
+		if p.Name != nil && *p.Name == "loki" {
+			lokiEndpoint.port = strconv.FormatInt(int64(*p.Port), 10)
 
-				break
-			}
+			break
 		}
+	}
 
-		for _, address := range subset.Addresses {
-			lokiEndpoint.addresses = append(lokiEndpoint.addresses, address.IP)
+	for _, ep := range endpointSlice.Endpoints {
+		if ep.Conditions.Ready != nil && !*ep.Conditions.Ready {
+			continue
 		}
+		lokiEndpoint.addresses = append(lokiEndpoint.addresses, ep.Addresses...)
 	}
 
 	return lokiEndpoint, nil
@@ -118,6 +132,17 @@ func filterLokiEndpoints(obj *unstructured.Unstructured) (go_hook.FilterResult, 
 type endpoint struct {
 	addresses []string
 	port      string
+}
+
+func mergeEndpoints(endpoints []endpoint) endpoint {
+	var merged endpoint
+	for _, ep := range endpoints {
+		if ep.port != "" {
+			merged.port = ep.port
+		}
+		merged.addresses = append(merged.addresses, ep.addresses...)
+	}
+	return merged
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -165,60 +190,145 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: filterLogShipperTokenSecret,
 		},
 		{
-			Name:       "loki_endpoint",
+			Name:       "tls-secrets",
 			ApiVersion: "v1",
-			Kind:       "Endpoints",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{MatchNames: []string{
+					"d8-log-shipper",
+				}},
+			},
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"log-shipper.deckhouse.io/watch-secret": "true"},
+			},
+			FilterFunc: filterLogShipperTLSSecrets,
+		},
+		{
+			Name:       "loki_endpoint",
+			ApiVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{
 					"d8-monitoring",
 				}},
 			},
-			NameSelector: &types.NameSelector{MatchNames: []string{
-				"loki",
-			}},
-			FilterFunc: filterLokiEndpoints,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"kubernetes.io/service-name": "loki"},
+			},
+			FilterFunc: filterLokiEndpointSlice,
 		},
 	},
 }, generateConfig)
 
-func generateConfig(input *go_hook.HookInput) error {
-	if len(input.Snapshots["namespace"]) < 1 {
+func extractTLSSpecFromSecrets(name string, input *go_hook.HookInput) (v1alpha1.CommonTLSSpec, error) {
+	for secret, err := range sdkobjectpatch.SnapshotIter[corev1.Secret](input.Snapshots.Get("tls-secrets")) {
+		if err != nil {
+			continue
+		}
+		if secret.Name == name {
+			return v1alpha1.CommonTLSSpec{
+				CAFile: string(secret.Data["ca.pem"]),
+				CommonTLSClientCert: v1alpha1.CommonTLSClientCert{
+					CertFile: string(secret.Data["crt.pem"]),
+					KeyFile:  string(secret.Data["key.pem"]),
+					KeyPass:  string(secret.Data["keyPass"]),
+				},
+			}, nil
+		}
+	}
+	return v1alpha1.CommonTLSSpec{}, fmt.Errorf("secret %s not found", name)
+}
+
+func getTLSSpec(dest *v1alpha1.ClusterLogDestination) (*v1alpha1.CommonTLSSpec, error) {
+	typeSpecMap := map[string]*v1alpha1.CommonTLSSpec{
+		"Elasticsearch": &dest.Spec.Elasticsearch.TLS,
+		"Vector":        &dest.Spec.Vector.TLS,
+		"Loki":          &dest.Spec.Loki.TLS,
+		"Splunk":        &dest.Spec.Splunk.TLS,
+		"Logstash":      &dest.Spec.Logstash.TLS,
+		"Socket":        &dest.Spec.Socket.TCP.TLS,
+		"Kafka":         &dest.Spec.Kafka.TLS,
+	}
+
+	if tlsSpec, found := typeSpecMap[dest.Spec.Type]; found {
+		return tlsSpec, nil
+	}
+
+	return nil, fmt.Errorf("unsupported destination type: %s", dest.Spec.Type)
+}
+
+func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec) {
+	encodeBase64 := func(str string) string {
+		return base64.StdEncoding.EncodeToString([]byte(str))
+	}
+
+	if source.CAFile != "" {
+		dst.CAFile = encodeBase64(source.CAFile)
+	}
+
+	if source.CommonTLSClientCert.CertFile != "" {
+		dst.CommonTLSClientCert.CertFile = encodeBase64(source.CommonTLSClientCert.CertFile)
+	}
+
+	if source.CommonTLSClientCert.KeyPass != "" {
+		dst.CommonTLSClientCert.KeyPass = encodeBase64(source.CommonTLSClientCert.KeyPass)
+	}
+
+	if source.CommonTLSClientCert.KeyFile != "" {
+		dst.CommonTLSClientCert.KeyFile = encodeBase64(source.CommonTLSClientCert.KeyFile)
+	}
+}
+
+func generateConfig(_ context.Context, input *go_hook.HookInput) error {
+	if len(input.Snapshots.Get("namespace")) < 1 {
 		// there is no namespace to manipulate the config map, the hook will create it later on afterHelm
 		input.Values.Set("logShipper.internal.activated", false)
 		return nil
 	}
 
-	destSnap := input.Snapshots["cluster_log_destination"]
-	tokenSnap := input.Snapshots["token"]
+	destinations, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ClusterLogDestination](input.Snapshots, "cluster_log_destination")
+	if err != nil {
+		return fmt.Errorf("unmarshal destinations: %w", err)
+	}
+
+	tokens, err := sdkobjectpatch.UnmarshalToStruct[string](input.Snapshots, "token")
+	if err != nil {
+		return fmt.Errorf("unmarshal token: %w", err)
+	}
 
 	var token string
-
-	if len(tokenSnap) > 0 {
-		token = tokenSnap[0].(string)
+	if len(tokens) > 0 {
+		token = tokens[0]
 	}
 
-	lokiEndpointSnap := input.Snapshots["loki_endpoint"]
-
-	var lokiEndpoint endpoint
-
-	if len(lokiEndpointSnap) > 0 {
-		lokiEndpoint = lokiEndpointSnap[0].(endpoint)
+	lokiEndpointSlices, err := sdkobjectpatch.UnmarshalToStruct[endpoint](input.Snapshots, "loki_endpoint")
+	if err != nil {
+		return fmt.Errorf("unmarshal loki endpoint: %w", err)
 	}
+	lokiEndpoint := mergeEndpoints(lokiEndpointSlices)
 
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
-	var destinations []v1alpha1.ClusterLogDestination
+	for _, destination := range destinations {
+		destinationTLSSpec, err := getTLSSpec(&destination)
+		if err != nil {
+			return errors.Wrap(err, "failed to get tls spec")
+		}
+		if destinationTLSSpec.SecretRef != nil && destinationTLSSpec.SecretRef.Name != "" {
+			secretTLSSpec, err := extractTLSSpecFromSecrets(destinationTLSSpec.SecretRef.Name, input)
+			if err != nil {
+				return errors.Wrap(err, "failed to extract tls data from secret")
+			}
+			overrideTLSSpec(secretTLSSpec, destinationTLSSpec)
+		}
 
-	for _, destination := range destSnap {
-		dest := destination.(v1alpha1.ClusterLogDestination)
-
-		if dest.Spec.Type != "Loki" || token == "" {
-			destinations = append(destinations, dest)
+		if destination.Spec.Type != "Loki" || token == "" {
+			destinations = append(destinations, destination)
 
 			continue
 		}
 
-		d, err := migrateClusterLogDestinationLoki(dest, clusterDomain, lokiEndpoint, token)
+		d, err := migrateClusterLogDestinationLoki(destination, clusterDomain, lokiEndpoint, token)
 		if err != nil {
 			return errors.Wrap(err, "failed to migrate cluster log destination loki")
 		}
@@ -226,7 +336,12 @@ func generateConfig(input *go_hook.HookInput) error {
 		destinations = append(destinations, *d)
 	}
 
-	configContent, err := composer.FromInput(input, destinations).Do()
+	composerFromInput, err := composer.FromInput(input, destinations)
+	if err != nil {
+		return err
+	}
+
+	configContent, err := composerFromInput.Do()
 	if err != nil {
 		return err
 	}
@@ -235,9 +350,8 @@ func generateConfig(input *go_hook.HookInput) error {
 	input.Values.Set("logShipper.internal.activated", activated)
 
 	if !activated {
-		input.PatchCollector.Delete(
-			"v1", "Secret", "d8-log-shipper", "d8-log-shipper-config",
-			object_patch.InBackground())
+		input.PatchCollector.DeleteInBackground(
+			"v1", "Secret", "d8-log-shipper", "d8-log-shipper-config")
 		return nil
 	}
 
@@ -257,7 +371,7 @@ func generateConfig(input *go_hook.HookInput) error {
 		},
 		Data: map[string][]byte{"vector.json": configContent},
 	}
-	input.PatchCollector.Create(secret, object_patch.UpdateIfExists())
+	input.PatchCollector.CreateOrUpdate(secret)
 
 	event := &eventsv1.Event{
 		TypeMeta: metav1.TypeMeta{

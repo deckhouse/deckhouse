@@ -8,7 +8,7 @@ description: Examples of using the log-shipper Deckhouse module. Examples of mod
 ## Getting logs from all cluster pods and sending them to Loki
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: all-logs
@@ -27,12 +27,14 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
-## Reading pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
+Specify `d8-loki` in the ClusterLoggingConfig [destinationRefs](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-destinationrefs) field to send logs to the loki cluster module. More examples [in the documentation](/modules/loki/examples.html).
+
+## Reading Pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
 
 Reading logs from `namespace=whispers` with label `app=booking` and storing them into Loki and Elasticsearch:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: whispers-booking-logs
@@ -40,8 +42,11 @@ spec:
   type: KubernetesPods
   kubernetesPods:
     namespaceSelector:
-      matchNames:
-        - whispers
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [whispers]
     labelSelector:
       matchLabels:
         app: booking
@@ -134,7 +139,7 @@ The path `/loki/api/v1/push` has to be removed from the previously used Loki URL
 
 This documentation expects that you [have created an API key](https://grafana.com/docs/grafana-cloud/reference/create-api-key/).
 
-![Grafana cloud API key](../../images/log-shipper/grafana_cloud.png)
+![Grafana cloud API key](images/grafana_cloud.png)
 
 Firstly, you should encode your token with Base64.
 
@@ -399,7 +404,7 @@ spec:
 Apply the following `ClusterLoggingConfig` to collect logs from the `events-exporter` pod:
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubernetes-events
@@ -410,8 +415,11 @@ spec:
       matchLabels:
         app: events-exporter
     namespaceSelector:
-      matchNames:
-      - d8-monitoring
+      labelSelector:
+        matchExpressions:
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values: [d8-monitoring]
   destinationRefs:
   - loki-storage
 ```
@@ -426,7 +434,7 @@ Users can apply the following filters to logs:
 ### Collect only logs of the `nginx` container
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: nginx-logs
@@ -443,7 +451,7 @@ spec:
 ### Collect logs without the string containing `GET /status" 200`
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: all-logs
@@ -461,7 +469,7 @@ spec:
 ### Audit of kubelet events
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: kubelet-audit-logs
@@ -481,7 +489,7 @@ spec:
 ### Deckhouse system logs
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: system-logs
@@ -508,10 +516,404 @@ If you need logs from only one or from a small group of a Pods, try to use the k
 {%- endalert %}
 {% raw %}
 
-## Collect logs from production namespaces using the namespace label selector option
+## Log transformations
+
+### Transforming logs into a structured object
+
+You can use the `ParseMessage` transformation
+to convert a string in the `message` field into a structured object.
+If multiple `ParseMessage` transformations are used, the one that parses the string must be applied last.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: string-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: String
+        string:
+          targetField: msg
+```
+
+Example original log entry:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "msg": "/docker-entrypoint.sh: Configuration complete; ready for start up"
+  }
+}
+```
+
+### Transforming logs in Klog format into a structured object
+
+You can use the `ParseMessage` transformation
+to parse logs in Klog format and convert them into a structured object.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: klog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Klog
+```
+
+Example original log entry:
+
+```text
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "file":"klog.go",
+  "id":28133,
+  "level":"info",
+  "line":70,
+  "message":"hello from klog",
+  "timestamp":"2025-05-05T17:59:40.692994Z"
+  }
+}
+```
+
+### Transforming logs in Syslog format into a structured object
+
+You can use the `ParseMessage` transformation
+to parse logs in Syslog format and convert them into a structured object.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: syslog-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Syslog
+```
+
+Example original log entry:
+
+```text
+<13>1 2020-03-13T20:45:38.119Z dynamicwireless.name non 2426 ID931 [exampleSDID@32473 iut="3" eventSource= "Application" eventID="1011"] Try to override the THX port, maybe it will reboot the neural interface!
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "appname": "non",
+  "exampleSDID@32473": {
+    "eventID": "1011",
+    "eventSource": "Application",
+    "iut": "3"
+  },
+  "facility": "user",
+  "hostname": "dynamicwireless.name",
+  "message": "Try to override the THX port, maybe it will reboot the neural interface!",
+  "msgid": "ID931",
+  "procid": 2426,
+  "severity": "notice",
+  "timestamp": "2020-03-13T20:45:38.119Z",
+  "version": 1
+  }
+}
+```
+
+### Transforming logs in CLF format into a structured object
+
+You can use the `ParseMessage` transformation
+to parse logs in CLF format and convert them into a structured object.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: clf-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: CLF
+```
+
+Example original log entry:
+
+```text
+127.0.0.1 bob frank [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "host": "127.0.0.1",
+  "identity": "bob",
+  "message": "GET /apache_pb.gif HTTP/1.0",
+  "method": "GET",
+  "path": "/apache_pb.gif",
+  "protocol": "HTTP/1.0",
+  "size": 2326,
+  "status": 200,
+  "timestamp": "2000-10-10T20:55:36Z",
+  "user": "frank"
+  }
+}
+```
+
+### Transforming logs in Logfmt format into a structured object
+
+You can use the `ParseMessage` transformation
+to parse logs in Logfmt format and convert them into a structured object.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: logfmt-to-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: Logfmt
+```
+
+Example original log entry:
+
+```text
+@timestamp=\"Sun Jan 10 16:47:39 EST 2021\" level=info msg=\"Stopping all fetchers\" tag#production=stopping_fetchers id=ConsumerFetcherManager-1382721708341 module=kafka.consumer.ConsumerFetcherManager
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "@timestamp": "Sun Jan 10 16:47:39 EST 2021",
+  "id": "ConsumerFetcherManager-1382721708341",
+  "level": "info",
+  "module": "kafka.consumer.ConsumerFetcherManager",
+  "msg": "Stopping all fetchers",
+  "tag#production": "stopping_fetchers"
+  }
+}
+```
+
+### Parsing JSON and reducing the nesting depth
+
+You can use the `ParseMessage` transformation to parse log entries in JSON format.
+Using the `depth` parameter, you can control the nesting depth.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+        json:
+          depth: 1
+```
+
+Example original log entry:
+
+```text
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "level" : "{ \"severity\": \"info\" }",
+  "msg" : "fetching.module.release"
+  }
+}
+```
+
+### Example of parsing mixed-format entries into a structured object
+
+The string transformation must be applied last.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: parse-json
+spec:
+  ...
+  transformations:
+  - action: ParseMessage
+    parseMessage:
+      sourseFormat: JSON
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: Klog
+  - action: ParseMessage
+    parseMessage:
+      sourceFormat: String
+        string:
+          targetField: "text"
+```
+
+Example original log entry:
+
+```text
+/docker-entrypoint.sh: Configuration complete; ready for start up
+{"level" : { "severity": "info" },"msg" : "fetching.module.release"}
+I0505 17:59:40.692994   28133 klog.go:70] hello from klog
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "text": "/docker-entrypoint.sh: Configuration complete; ready for start up"
+  }
+}
+{... "message": {
+  "level" : "{ "severity": "info" }",
+  "msg" : "fetching.module.release"
+  }
+}
+{... "message": {
+  "file":"klog.go",
+  "id":28133,
+  "level":"info",
+  "line":70,
+  "message":"hello from klog",
+  "timestamp":"2025-05-05T17:59:40.692994Z"
+  }
+}
+```
+
+### Replacing labels
+
+You can use the `ReplaceKeys` transformation to replace `source` with `target` in the specified label keys.
+
+> To apply the `ReplaceKeys` transformation to the `message` field or its nested fields,
+> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: replace-dot
+spec:
+  ...
+  transformations:
+    - action: ReplaceKeys
+      replaceKeys:
+        source: "."
+        target: "_"
+        labels:
+          - .pod_labels
+```
+
+Example original log entry:
+
+```text
+{"msg" : "fetching.module.release"} # Pod label pod.app=test
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "msg" : "fetching.module.release"
+  },
+  "pod_labels": {
+    "pod_app": "test"
+  }
+}
+```
+
+### Removing labels
+
+You can use the `DropLabels` transformation to remove specific labels from log messages.
+
+> To apply the `DropLabels` transformation to the `message` field or its nested fields,
+> the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: drop-label
+spec:
+  ...
+  transformations:
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - .example
+```
+
+#### Example of removing a specific label from a structured message
+
+The following example shows how you can remove a label from a structured JSON message.
+The `ParseMessage` transformation is applied first to parse the message,
+followed by `DropLabels` to remove the specified label.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLogDestination
+metadata:
+  name: drop-label
+spec:
+  ...
+  transformations:
+    - action: ParseMessage
+      parseMessage:
+        sourceFormat: JSON
+    - action: DropLabels
+      dropLabels:
+        labels:
+          - .message.example
+```
+
+Example original log entry:
+
+```text
+{"msg" : "fetching.module.release", "example": "test"}
+```
+
+Transformed result:
+
+```json
+{... "message": {
+  "msg" : "fetching.module.release"
+  }
+}
+```
+
+## Collect logs from production namespaces using the namespace label selector option
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLoggingConfig
 metadata:
   name: production-logs

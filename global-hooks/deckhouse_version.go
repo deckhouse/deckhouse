@@ -15,18 +15,21 @@
 package hooks
 
 import (
+	"context"
 	"os"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
 }, discoverDeckhouseVersion)
 
-func discoverDeckhouseVersion(input *go_hook.HookInput) error {
+func discoverDeckhouseVersion(_ context.Context, input *go_hook.HookInput) error {
 	versionFile := "/deckhouse/version"
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
 		versionFile = os.Getenv("D8_VERSION_TMP_FILE")
@@ -35,7 +38,7 @@ func discoverDeckhouseVersion(input *go_hook.HookInput) error {
 	version := "unknown"
 	content, err := os.ReadFile(versionFile)
 	if err != nil {
-		input.Logger.Warnf("cannot get deckhouse version: %v", err)
+		input.Logger.Warn("cannot get deckhouse version", log.Err(err))
 	} else {
 		version = strings.TrimSuffix(string(content), "\n")
 	}

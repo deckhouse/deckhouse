@@ -6,7 +6,12 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package ee
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"log/slog"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,11 +22,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
+	sdkpkg "github.com/deckhouse/module-sdk/pkg"
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
 	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var (
@@ -39,7 +48,7 @@ type IstioFederationDiscoveryCrdInfo struct {
 	PrivateMetadataEndpoint  string
 }
 
-func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc go_hook.MetricsCollector, endpoint string, isError float64) {
+func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkpkg.MetricsCollector, endpoint string, isError float64) {
 	labels := map[string]string{
 		"federation_name": i.Name,
 		"endpoint":        endpoint,
@@ -58,7 +67,7 @@ func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchCol
 		},
 	}
 
-	pc.MergePatch(patch, "deckhouse.io/v1alpha1", "IstioFederation", "", i.Name, object_patch.WithSubresource("/status"))
+	pc.PatchWithMerge(patch, "deckhouse.io/v1alpha1", "IstioFederation", "", i.Name, object_patch.WithSubresource("/status"))
 	return nil
 }
 
@@ -106,28 +115,25 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(federationDiscovery))
 
-func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) error {
+func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	input.MetricsCollector.Expire(federationMetricsGroup)
 
 	if !input.Values.Get("istio.federation.enabled").Bool() {
 		return nil
 	}
 	if !input.Values.Get("istio.internal.remoteAuthnKeypair.priv").Exists() {
-		input.Logger.Warnf("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
+		input.Logger.Warn("authn keypair for signing requests to remote metadata endpoints isn't generated yet, retry in 1min")
 		return nil
 	}
 
 	var myTrustDomain = input.Values.Get("global.discovery.clusterDomain").String()
 
-	for _, federation := range input.Snapshots["federations"] {
-		federationInfo := federation.(IstioFederationDiscoveryCrdInfo)
-		if federationInfo.TrustDomain == myTrustDomain {
-			continue
-		}
+	federations, err := sdkobjectpatch.UnmarshalToStruct[IstioFederationDiscoveryCrdInfo](input.Snapshots, "federations")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal federations snapshot: %w", err)
 	}
 
-	for _, federation := range input.Snapshots["federations"] {
-		federationInfo := federation.(IstioFederationDiscoveryCrdInfo)
+	for _, federationInfo := range federations {
 		if federationInfo.TrustDomain == myTrustDomain {
 			continue
 		}
@@ -135,6 +141,16 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
 		var httpOption []http.Option
+		protocolMap := map[string]string{
+			"https":    "TLS",
+			"tls":      "TLS",
+			"http":     "HTTP",
+			"http2":    "HTTP2",
+			"grpc":     "HTTP2",
+			"grpc-web": "HTTP2",
+		}
+
+		defaultProtocol := "TCP"
 
 		if federationInfo.ClusterCA != "" {
 			caCerts := [][]byte{[]byte(federationInfo.ClusterCA)}
@@ -145,23 +161,23 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 
 		bodyBytes, statusCode, err := lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PublicMetadataEndpoint, "")
 		if err != nil {
-			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warn("cannot fetch public metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		if statusCode != 200 {
-			input.Logger.Warnf("cannot fetch public metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PublicMetadataEndpoint, federationInfo.Name, statusCode)
+			input.Logger.Warn("cannot fetch public metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name), slog.Int("http_code", statusCode))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &publicMetadata)
 		if err != nil {
-			input.Logger.Warnf("cannot unmarshal public metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warn("cannot unmarshal public metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
 		if publicMetadata.ClusterUUID == "" || publicMetadata.AuthnKeyPub == "" || publicMetadata.RootCA == "" {
-			input.Logger.Warnf("bad public metadata format in endpoint %s for IstioFederation %s", federationInfo.PublicMetadataEndpoint, federationInfo.Name)
+			input.Logger.Warn("bad public metadata format in endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
@@ -181,37 +197,67 @@ func federationDiscovery(input *go_hook.HookInput, dc dependency.Container) erro
 		}
 		bearerToken, err := jwt.GenerateJWT(privKey, claims, time.Minute)
 		if err != nil {
-			input.Logger.Warnf("can't generate auth token for endpoint %s of IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warn("can't generate auth token for endpoint of IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
-			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warn("cannot fetch private metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		if statusCode != 200 {
-			input.Logger.Warnf("cannot fetch private metadata endpoint %s for IstioFederation %s (HTTP Code %d)", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, statusCode)
+			input.Logger.Warn("cannot fetch private metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), slog.Int("http_code", statusCode))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		err = json.Unmarshal(bodyBytes, &privateMetadata)
 		if err != nil {
-			input.Logger.Warnf("cannot unmarshal private metadata endpoint %s for IstioFederation %s, error: %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name, err.Error())
+			input.Logger.Warn("cannot unmarshal private metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		if privateMetadata.IngressGateways == nil || privateMetadata.PublicServices == nil {
-			input.Logger.Warnf("bad private metadata format in endpoint %s for IstioFederation %s", federationInfo.PrivateMetadataEndpoint, federationInfo.Name)
+			input.Logger.Warn("bad private metadata format in endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 0)
+		updatePortProtocols(privateMetadata.PublicServices, defaultProtocol, protocolMap)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "private", privateMetadata)
 		if err != nil {
 			return err
 		}
+		var countServices = 0
+		if privateMetadata.PublicServices != nil {
+			countServices = len(*privateMetadata.PublicServices)
+		}
+		input.Logger.Info(fmt.Sprintf("Cluster name: %s connected successfully, published services: %s", myTrustDomain, strconv.Itoa(countServices)))
 	}
 	return nil
+}
+
+func updatePortProtocols(services *[]eeCrd.FederationPublicServices, defaultProtocol string, protocolMap map[string]string) {
+	keys := make([]string, 0, len(protocolMap))
+	for key := range protocolMap {
+		keys = append(keys, key)
+	}
+	slices.SortFunc(keys, func(a, b string) int { return len(b) - len(a) })
+	for serviceIndex := range *services {
+		service := &(*services)[serviceIndex]
+		for portIndex, port := range service.Ports {
+			port.Protocol = defaultProtocol
+			portNameParts := strings.SplitN(port.Name, "-", 2)
+			basePortName := portNameParts[0]
+			for _, keyword := range keys {
+				protocol := protocolMap[keyword]
+				if strings.Contains(basePortName, keyword) {
+					port.Protocol = protocol
+					break
+				}
+			}
+			service.Ports[portIndex] = port
+		}
+	}
 }

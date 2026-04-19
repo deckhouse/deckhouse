@@ -17,22 +17,26 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 
+	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
 	"bashible-apiserver/pkg/apiserver"
 	"bashible-apiserver/pkg/apiserver/readyz"
 	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
-
-	"bashible-apiserver/pkg/apis/bashible/v1alpha1"
+	"bashible-apiserver/pkg/requestlog"
+	"bashible-apiserver/pkg/util/retry"
 )
 
 // BashibleServerOptions contains state for master/api server
@@ -54,6 +58,8 @@ func NewBashibleServerOptions(out, errOut io.Writer) *BashibleServerOptions {
 		StdErr: errOut,
 	}
 	o.RecommendedOptions.Etcd = nil
+	o.RecommendedOptions.Features.EnableProfiling = true
+
 	return o
 }
 
@@ -87,7 +93,7 @@ func NewCommandStartBashibleServer(defaults *BashibleServerOptions, stopCh <-cha
 
 // Validate validates BashibleServerOptions
 func (o BashibleServerOptions) Validate(args []string) error {
-	errors := make([]error, 0)
+	errors := make([]error, 0, len(o.RecommendedOptions.Validate()))
 	errors = append(errors, o.RecommendedOptions.Validate()...)
 	return utilerrors.NewAggregate(errors)
 }
@@ -105,13 +111,21 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
+	serverConfig.BuildHandlerChainFunc = func(apiHandler http.Handler, c *genericapiserver.Config) http.Handler {
+		return genericapiserver.DefaultBuildHandlerChain(requestlog.WithRequestLogging(apiHandler), c)
+	}
 
-	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		bashibleopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
 	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
-	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+	if err := retry.DoWithRetry(context.Background(), "apply recommended options (authn/authz)", retry.DefaultKubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+			return false, err
+		}
+		return true, nil
+	}); err != nil {
 		return nil, err
 	}
 
@@ -120,7 +134,12 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIConfig.Info.Title = "Bashible"
 	serverConfig.OpenAPIConfig.Info.Version = "0.1"
-	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+	if err := retry.DoWithRetry(context.Background(), "apply recommended options (authn/authz)", retry.DefaultKubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+			return false, err
+		}
+		return true, nil
+	}); err != nil {
 		return nil, err
 	}
 
@@ -131,9 +150,16 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 	}
 	serverConfig.ReadyzChecks = append(serverConfig.ReadyzChecks, deployHealthChecker)
 
+	ctrlManager, err := apiserver.NewCtrlManager()
+	if err != nil {
+		return nil, fmt.Errorf("error creating ctr manager: %w", err)
+	}
+
 	config := &apiserver.Config{
 		GenericConfig: serverConfig,
-		ExtraConfig:   apiserver.ExtraConfig{},
+		ExtraConfig: apiserver.ExtraConfig{
+			CtrlManager: ctrlManager,
+		},
 	}
 	return config, nil
 }
@@ -158,5 +184,22 @@ func (o BashibleServerOptions) RunBashibleServer(stopCh <-chan struct{}) error {
 		},
 	)
 
-	return server.GenericAPIServer.PrepareRun().Run(stopCh)
+	// make context
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		<-stopCh
+		cancel()
+	}()
+
+	// run ApiServer and CtrManager
+	g, errCtx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return server.CtrlManager.Start(errCtx)
+	})
+	g.Go(func() error {
+		return server.GenericAPIServer.PrepareRun().Run(errCtx.Done())
+	})
+	return g.Wait()
 }

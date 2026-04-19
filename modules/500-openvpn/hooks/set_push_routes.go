@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"context"
+
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -37,7 +39,7 @@ const (
 // setPushToClientRoutes create routes list for client
 // from module config values and global discovery.
 // Routes in list are unique.
-func setPushToClientRoutes(input *go_hook.HookInput) error {
+func setPushToClientRoutes(_ context.Context, input *go_hook.HookInput) error {
 	routes := set.New()
 
 	userDefinedSubnets, ok := input.ConfigValues.GetOk(clientRoutesValuesPath)

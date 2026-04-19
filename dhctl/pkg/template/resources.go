@@ -83,6 +83,14 @@ func (r *Resource) String() string {
 	return fmt.Sprintf("%s - %s/%s", r.GVK.String(), r.Object.GetNamespace(), r.Object.GetName())
 }
 
+func (r *Resource) DetailedGVKString() string {
+	group := ""
+	if r.GVK.Group != "" {
+		group = "Group=" + r.GVK.Group + ", "
+	}
+	return group + "ApiVersion=" + r.GVK.Version + ", Kind=" + r.GVK.Kind
+}
+
 type Resources []*Resource
 
 func (r Resources) Len() int {
@@ -173,7 +181,7 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 }
 
 func (r Resources) String() string {
-	s := make([]string, 0)
+	s := make([]string, 0, len(r))
 	for _, rr := range r {
 		s = append(s, fmt.Sprintf("%v", rr.Object.Object))
 	}
@@ -204,4 +212,9 @@ func ParseResources(path string, data map[string]interface{}) (Resources, error)
 func BigFileSplit(content string) []string {
 	bigFileTmp := strings.TrimSpace(content)
 	return input.YAMLSplitRegexp.Split(bigFileTmp, -1)
+}
+
+type ResourceRef struct {
+	Kind string
+	Name string
 }

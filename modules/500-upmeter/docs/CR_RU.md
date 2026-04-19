@@ -1,5 +1,5 @@
 ---
-title: "Модуль upmeter: Custom Resources"
+title: "Мониторинг SLA кластера: кастомные ресурсы"
 ---
 
 <!-- SCHEMA -->

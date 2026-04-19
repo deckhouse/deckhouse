@@ -18,7 +18,6 @@ import (
 	"context"
 	"log/slog"
 	"net"
-	"time"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -36,36 +35,45 @@ import (
 	rc "github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/requests_counter"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/status"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/validation"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-// Full method example: /dhctl.DHCTL/Check
-const singlethreadedMethodsPrefix = "/dhctl.DHCTL"
-
-// The period during which data on the number of recent endpoint requests is collected
-const requestsCounterMaxDuration = time.Hour * 2
+const SinglethreadedMethodsPrefix = "/dhctl.DHCTL" // full method example: /dhctl.DHCTL/Check
 
 // Serve starts GRPC server
-func Serve(network, address string, parallelTasksLimit int) error {
+func Serve(params settings.ServerParams) error {
+	if err := params.Validate(); err != nil {
+		return err
+	}
+
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
 	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
 
+	dhctlProxy, err := NewStreamDirector(StreamDirectorParams{
+		MethodsPrefix: SinglethreadedMethodsPrefix,
+		TmpDir:        params.TmpDir,
+	})
+
+	if err != nil {
+		return err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
 	defer close(done)
-	sem := make(chan struct{}, parallelTasksLimit)
+	sem := make(chan struct{}, params.ParallelTasksLimit)
 
-	dhctlProxy := NewStreamDirector(log, singlethreadedMethodsPrefix)
-
-	requestsCounter := rc.New(requestsCounterMaxDuration)
+	requestsCounter := rc.New(params.RequestsCounterMaxDuration, sem)
 	requestsCounter.Run(ctx)
 
 	log.Info(
 		"starting grpc server",
-		slog.String("network", network),
-		slog.String("address", address),
+		slog.String("network", params.Network),
+		slog.String("address", params.Address),
+		slog.String("tmp_dir", params.TmpDir),
 	)
 	tomb.RegisterOnShutdown("server", func() {
 		log.Info("stopping grpc server")
@@ -74,25 +82,19 @@ func Serve(network, address string, parallelTasksLimit int) error {
 		log.Info("grpc server stopped")
 	})
 
-	listener, err := net.Listen(network, address)
-	if err != nil {
-		log.Error("failed to listen", logger.Err(err))
-		return err
-	}
-
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptors.UnaryLogger(log),
 			logging.UnaryServerInterceptor(interceptors.Logger()),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.UnaryParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
+			interceptors.UnaryParallelTasksLimiter(sem, SinglethreadedMethodsPrefix),
 			interceptors.UnaryRequestsCounter(requestsCounter),
 		),
 		grpc.ChainStreamInterceptor(
 			interceptors.StreamLogger(log),
 			logging.StreamServerInterceptor(interceptors.Logger()),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.StreamParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
+			interceptors.StreamParallelTasksLimiter(sem, SinglethreadedMethodsPrefix),
 			interceptors.StreamRequestsCounter(requestsCounter),
 		),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(dhctlProxy.Director())),
@@ -101,12 +103,13 @@ func Serve(network, address string, parallelTasksLimit int) error {
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
 	healthService := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(s, healthService)
+	healthService.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// grpcurl -plaintext host:port describe
 	reflection.Register(s)
 
 	// init services
-	validationService := validation.New(config.NewSchemaStore())
+	validationService := validation.New(config.NewSchemaStore(params.DownloadDirConfig))
 	statusService := status.New(requestsCounter)
 
 	// register services
@@ -118,6 +121,13 @@ func Serve(network, address string, parallelTasksLimit int) error {
 
 		s.GracefulStop()
 	}()
+
+	listener, err := net.Listen(params.Network, params.Address)
+	if err != nil {
+		log.Error("failed to listen", logger.Err(err))
+		return err
+	}
+	log.Debug("grpc server listening, accepting connections")
 
 	if err = s.Serve(listener); err != nil {
 		log.Error("failed to serve", logger.Err(err))

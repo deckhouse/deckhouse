@@ -137,7 +137,7 @@ func convertEnv() error {
 		if !strings.HasSuffix(splitedParam[0], paramSuffix) {
 			continue
 		}
-		newParamName := strings.TrimRight(splitedParam[0], paramSuffix)
+		newParamName := strings.TrimSuffix(splitedParam[0], paramSuffix)
 		_, ok := os.LookupEnv(newParamName)
 		if ok {
 			return fmt.Errorf("error: both %s and %s are set (but are exclusive)", newParamName, splitedParam[0])
@@ -160,7 +160,6 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 	}
 
 	for _, plugin := range strings.Split(gfInstallPlugins, ",") {
-
 		if strings.Contains(plugin, ";") {
 			part := strings.Split(plugin, ";")
 			cmd := exec.Command(

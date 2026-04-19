@@ -31,6 +31,7 @@ spec:
         package d8.operation_policies
 
         violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
           required := input.parameters.policy
           container := input.review.object.spec.containers[_]
           provided := container.imagePullPolicy

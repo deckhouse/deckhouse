@@ -1,3 +1,5 @@
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if .Values.documentation.internal.deployDexAuthenticator }}
 ---
 apiVersion: deckhouse.io/v1
@@ -10,12 +12,21 @@ spec:
   applicationDomain: {{ include "helm_lib_module_public_domain" (list . "documentation") }}
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
+    {{- if $moduleGateway }}
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: "documentation"
+    {{- end }}
   {{- end }}
   applicationIngressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
+  {{- with .Values.documentation.auth.allowedUserEmails }}
+  allowedEmails:
+  {{- . | toYaml | nindent 2 }}
+  {{- end }}
   {{- with .Values.documentation.auth.allowedUserGroups }}
   allowedGroups:
   {{- . | toYaml | nindent 2 }}
   {{- end }}
+  {{- include "helm_lib_tolerations" (tuple . "system") | nindent 2 }}
   {{- if (include "helm_lib_ha_enabled" .) }}
   highAvailability: true
   {{- else }}

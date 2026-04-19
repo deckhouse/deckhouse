@@ -1,0 +1,10 @@
+${user_data}
+
+#cloud-config
+hostname: ${host_name}
+prefer_fqdn_over_hostname: false
+ssh_authorized_keys:
+  - "${ssh_public_key}"
+
+users:
+- default
