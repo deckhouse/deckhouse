@@ -19,8 +19,10 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -190,11 +192,17 @@ func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, contro
 			logs = append(logs, l)
 			log.DebugLn(l)
 		})
+		
 		cmd.Sudo()
 
 		_, err := cmd.Execute(ctx)
 		if err != nil {
-			log.ErrorLn(strings.Join(logs, "\n"))
+			stderr := ""
+			var exitErr *exec.ExitError
+			if errors.As(err, &exitErr) {
+				stderr = string(exitErr.Stderr)
+			}
+			log.ErrorF("%s\nstderr:\n%s\n", strings.Join(logs, "\n"), stderr)
 			return fmt.Errorf("run %s: %w", scriptPath, err)
 		}
 		return nil

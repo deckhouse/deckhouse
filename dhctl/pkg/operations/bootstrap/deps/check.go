@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
 )
 
 type LoopsParams struct {
@@ -95,7 +97,14 @@ func (c *DependenciesChecker) Check(ctx context.Context) error {
 }
 
 func (c *DependenciesChecker) checkShell(ctx context.Context) error {
-	return c.loggerProvider().Process(log.ProcessBootstrap, "Check user's shell is bash", func() error {
+	logger := c.loggerProvider()
+	return logger.Process(log.ProcessBootstrap, "Check user's shell is bash", func() error {
+		if _, ok := c.nodeInterface.(*local.NodeInterface); ok {
+			shell := os.ExpandEnv("$SHELL")
+			logger.DebugF("Local interface. Expanded SHELL: '%s'", shell)
+			return c.isBash(shell)
+		}
+
 		loopParams := retry.SafeCloneOrNewParams(c.loopsParams.Shell, checkDepsDefaultOpts...).
 			Clone(
 				retry.WithName("Check shell is bash"),
@@ -116,11 +125,7 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 					strOut = "not set"
 				}
 
-				if !strings.Contains(strOut, "bash") {
-					return fmt.Errorf("%w. Current shell: %s", ErrShellIsNotBash, strOut)
-				}
-
-				return nil
+				return c.isBash(strOut)
 			})
 		if err != nil {
 			return err
@@ -130,6 +135,14 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 		return nil
 	})
 
+}
+
+func (c *DependenciesChecker) isBash(out string) error {
+	if !strings.Contains(out, "bash") {
+		return fmt.Errorf("%w. Current shell: %s", ErrShellIsNotBash, out)
+	}
+
+	return nil
 }
 
 func (c *DependenciesChecker) checkDependencies(ctx context.Context) error {
