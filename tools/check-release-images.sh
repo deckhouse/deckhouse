@@ -95,8 +95,7 @@ TAG=""
 parse_args "$@"
 check_requirements
 
-RELEASE_TAG=$(echo "$TAG" | cut -d. -f1,2 | sed 's/^v//')
-INSTALL_IMAGE_PATH=${REGISTRY_URL}/${EDITION}/install:release-${RELEASE_TAG}
+INSTALL_IMAGE_PATH=${REGISTRY_URL}/deckhouse/${EDITION}/install:${TAG}
 
 if [ -n "`docker ps -a| grep d8-install-${EDITION}-${TAG}`" ]; then
   cleanup

@@ -18,7 +18,7 @@
 
 name: Build and test for main branch
 
-# On every push to main branch. Release branches use workflow build-and-test_pre-release.yml only.
+# On every push to main branch.
 on:
   push:
     branches:
@@ -200,6 +200,7 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
 
       # </template: import_secrets>
@@ -314,6 +315,7 @@ jobs:
           DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
@@ -341,7 +343,7 @@ jobs:
           # - Build using dev-registry as primary and deckhouse registry as secondary.
           # - Push dev and dev/install images with prNUM tags and push to dev-registry.
           # The "release" mode builds branches and tags:
-          # - Build using dev-registry as primary (werf); copy to deckhouse registry for Git tags.
+          # - Build using deckhouse registry as final and dev-registry as primary.
           # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
           # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
 
@@ -367,7 +369,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
           DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
@@ -427,28 +428,16 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-<<<<<<< HEAD
       - name: Check DKP images manifests in stage registry
-=======
-      - name: Check DKP images manifests in dev registry
->>>>>>> 8b90cd8d45 (refactor: change release build)
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-<<<<<<< HEAD
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
           ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
-=======
-          DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DEV_REGISTRY_HOST}/${REGISTRY_PATH}/
->>>>>>> 8b90cd8d45 (refactor: change release build)
 
 
 
