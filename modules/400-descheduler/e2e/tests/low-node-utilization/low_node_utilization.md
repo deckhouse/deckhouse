@@ -8,7 +8,7 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 ## Prerequisites
 
-- Multi-node Kubernetes cluster (minimum 2 nodes)
+- Multi-node Kubernetes cluster (minimum 3(include master-node) nodes)
 - Descheduler pre-installed in the `d8-descheduler` namespace
 - Chainsaw CLI installed. See `../../E2E.md` for instructions.
 
@@ -47,4 +47,4 @@ chainsaw test --test-dir ./tests/low-node-utilization/
 ## Pass/Fail Criteria
 
 - **Pass:** Descheduler logs show `LowNodeUtilization` execution; pods get evicted and redistributed
-- **Fail:** Fewer than 2 nodes, descheduler not found, or plugin doesn't execute within 15 minutes
+- **Fail:** Fewer than 3 nodes, descheduler not found, or plugin doesn't execute within 10 minutes, if `deschedulingInterval: Frequent` is used.
