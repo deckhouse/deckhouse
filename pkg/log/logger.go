@@ -19,13 +19,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/DataDog/gostackparse"
@@ -56,9 +56,9 @@ const (
 type Logger struct {
 	*logger
 
-	addSourceVar *AddSourceVar
-	level        *slog.LevelVar
-	name         string
+	addSource *atomic.Bool
+	level     *slog.LevelVar
+	name      string
 
 	slogHandler Handler
 }
@@ -72,28 +72,24 @@ type Options struct {
 	TimeFunc    func(t time.Time) time.Time
 }
 
-// WithLevel sets the logging level
 func WithLevel(level slog.Level) Option {
 	return func(o *Options) {
 		o.Level = level
 	}
 }
 
-// WithOutput sets the output writer
 func WithOutput(output io.Writer) Option {
 	return func(o *Options) {
 		o.Output = output
 	}
 }
 
-// WithHandlerType sets the handler type
 func WithHandlerType(handlerType HandlerType) Option {
 	return func(o *Options) {
 		o.HandlerType = handlerType
 	}
 }
 
-// WithTimeFunc sets the time function
 func WithTimeFunc(timeFunc func(t time.Time) time.Time) Option {
 	return func(o *Options) {
 		o.TimeFunc = timeFunc
@@ -119,15 +115,13 @@ func NewLogger(opts ...Option) *Logger {
 	}
 
 	l := &Logger{
-		addSourceVar: new(AddSourceVar),
-		level:        new(slog.LevelVar),
+		addSource: &atomic.Bool{},
+		level:     new(slog.LevelVar),
 	}
 
 	l.SetLevel(Level(options.Level))
 
-	// getting absolute binary path
 	binaryPath := filepath.Dir(os.Args[0])
-	// if it's go-build temporary folder
 	if strings.Contains(binaryPath, "go-build") {
 		binaryPath, _ = filepath.Abs("./../")
 	}
@@ -137,48 +131,24 @@ func NewLogger(opts ...Option) *Logger {
 		sourceFormat = " %s:%d "
 	}
 
-	handlerOpts := &slog.HandlerOptions{
-		AddSource: true,
-		Level:     l.level,
-		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
-			switch a.Key {
-			// skip standard fields
-			case slog.LevelKey, slog.MessageKey, slog.TimeKey:
-				return slog.Attr{}
-			case slog.SourceKey:
-				if !*l.addSourceVar.Source() {
-					return slog.Attr{}
-				}
-
-				s, ok := a.Value.Any().(*slog.Source)
-				if !ok {
-					a.Key = "_source"
-
-					return a
-				}
-
-				a.Value = slog.StringValue(fmt.Sprintf(sourceFormat,
-					// trim all folders before project root
-					// trim first '/'
-					strings.TrimPrefix(s.File, binaryPath)[1:],
-					s.Line,
-				))
-			}
-
-			return a
-		},
-	}
-
+	var enc encoder
 	switch options.HandlerType {
-	case JSONHandlerType:
-		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
 	case TextHandlerType:
-		l.slogHandler = NewTextHandler(options.Output, handlerOpts, options.TimeFunc)
+		enc = textEncoder{}
 	default:
-		l.slogHandler = NewJSONHandler(options.Output, handlerOpts, options.TimeFunc)
+		enc = jsonEncoder{}
 	}
 
-	l.logger = slog.New(l.slogHandler.WithAttrs(nil))
+	l.slogHandler = newHandler(handlerConfig{
+		output:       options.Output,
+		timeFn:       options.TimeFunc,
+		encoder:      enc,
+		addSource:    l.addSource,
+		level:        l.level,
+		sourceFormat: sourceFormat,
+		binaryPath:   binaryPath,
+	})
+	l.logger = slog.New(l.slogHandler)
 
 	return l
 }
@@ -188,7 +158,7 @@ func (l *Logger) GetLevel() Level {
 }
 
 func (l *Logger) SetLevel(level Level) {
-	l.addSourceVar.Set(slog.Level(level) <= slog.LevelDebug)
+	l.addSource.Store(slog.Level(level) <= slog.LevelDebug)
 
 	l.level.Set(slog.Level(level))
 }
@@ -199,28 +169,28 @@ func (l *Logger) SetOutput(w io.Writer) {
 
 func (l *Logger) Named(name string) *Logger {
 	return &Logger{
-		logger:       slog.New(l.Handler().(Handler).Named(name)),
-		addSourceVar: l.addSourceVar,
-		level:        l.level,
-		name:         l.name,
+		logger:    slog.New(l.Handler().(Handler).Named(name)),
+		addSource: l.addSource,
+		level:     l.level,
+		name:      l.name,
 	}
 }
 
 func (l *Logger) With(args ...any) *Logger {
 	return &Logger{
-		logger:       l.logger.With(args...),
-		addSourceVar: l.addSourceVar,
-		level:        l.level,
-		name:         l.name,
+		logger:    l.logger.With(args...),
+		addSource: l.addSource,
+		level:     l.level,
+		name:      l.name,
 	}
 }
 
 func (l *Logger) WithGroup(name string) *Logger {
 	return &Logger{
-		logger:       l.logger.WithGroup(name),
-		addSourceVar: l.addSourceVar,
-		level:        l.level,
-		name:         l.name,
+		logger:    l.logger.WithGroup(name),
+		addSource: l.addSource,
+		level:     l.level,
+		name:      l.name,
 	}
 }
 
@@ -231,8 +201,24 @@ func (l *Logger) Error(msg string, args ...any) {
 	l.Log(ctx, LevelError.Level(), msg, args...)
 }
 
+func (l *Logger) ErrorContext(ctx context.Context, msg string, args ...any) {
+	ctx = logContext.SetCustomKeyContext(ctx)
+	ctx = logContext.SetStackTraceContext(ctx, getStack())
+
+	l.Log(ctx, LevelError.Level(), msg, args...)
+}
+
 func (l *Logger) Fatal(msg string, args ...any) {
 	ctx := logContext.SetCustomKeyContext(context.Background())
+	ctx = logContext.SetStackTraceContext(ctx, getStack())
+
+	l.Log(ctx, LevelFatal.Level(), msg, args...)
+
+	os.Exit(1)
+}
+
+func (l *Logger) FatalContext(ctx context.Context, msg string, args ...any) {
+	ctx = logContext.SetCustomKeyContext(ctx)
 	ctx = logContext.SetStackTraceContext(ctx, getStack())
 
 	l.Log(ctx, LevelFatal.Level(), msg, args...)
@@ -266,25 +252,11 @@ func ParseLevel(rawLogLevel string) (Level, error) {
 	case "fatal":
 		return LevelFatal, nil
 	default:
-		return LevelInfo, errors.New("no level found")
+		return LevelInfo, errors.New("unknown log level: " + rawLogLevel)
 	}
 }
 
 func LogLevelFromStr(rawLogLevel string) Level {
-	switch strings.ToLower(rawLogLevel) {
-	case "trace":
-		return LevelTrace
-	case "debug":
-		return LevelDebug
-	case "info":
-		return LevelInfo
-	case "warn":
-		return LevelWarn
-	case "error":
-		return LevelError
-	case "fatal":
-		return LevelFatal
-	default:
-		return LevelInfo
-	}
+	level, _ := ParseLevel(rawLogLevel)
+	return level
 }

@@ -88,6 +88,7 @@ func Error(msg string, args ...any) {
 
 func ErrorContext(ctx context.Context, msg string, args ...any) {
 	ctx = logContext.SetCustomKeyContext(ctx)
+	ctx = logContext.SetStackTraceContext(ctx, getStack())
 	Default().Log(ctx, LevelError.Level(), msg, args...)
 }
 
