@@ -192,7 +192,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, contro
 			logs = append(logs, l)
 			log.DebugLn(l)
 		})
-		
+
 		cmd.Sudo()
 
 		_, err := cmd.Execute(ctx)
