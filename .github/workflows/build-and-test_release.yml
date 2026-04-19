@@ -536,13 +536,11 @@ jobs:
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
           else
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-          # Release tag build, set deckhouse registry as final
-          export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -596,16 +594,16 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
+      - name: Check DKP images manifests in stage registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
 
 
       - uses: actions/setup-python@v5.6.0
@@ -615,13 +613,77 @@ jobs:
       - name: Copy attestations
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
           export IMAGES_TAGS_PATH=./images_tags_werf.json
           python .github/scripts/python/copy_attestations.py
+
+      - name: Promote images from stage to prod
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        run: |
+          set -euo pipefail
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+          STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+          PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+          promote_with_att() {
+            local SUBPATH="$1"
+            local REPO_SRC REPO_DST SRC DST
+            if [[ -z "${SUBPATH}" ]]; then
+              REPO_SRC="${STAGE_PATH}"
+              REPO_DST="${PROD_PATH}"
+            else
+              REPO_SRC="${STAGE_PATH}/${SUBPATH}"
+              REPO_DST="${PROD_PATH}/${SUBPATH}"
+            fi
+            SRC="${REPO_SRC}:${IMAGE_TAG}"
+            DST="${REPO_DST}:${IMAGE_TAG}"
+            echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
+            regctl image copy "${SRC}" "${DST}"
+            local DIGEST
+            DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
+            if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
+              echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
+              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
+            fi
+          }
+
+          promote_with_att ""
+          promote_with_att "install"
+          promote_with_att "install-standalone"
+          promote_with_att "release-channel"
+
+          DIGESTS_JSON="$(mktemp)"
+          trap 'rm -f "${DIGESTS_JSON}"' EXIT
+
+          # Promote from images_digests.json
+          if regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+            echo "⚓️ 💫 [$(date -u)] Promoting component images from images_digests.json (by digest)"
+            STAGE_PATH="${STAGE_REGISTRY_HOST}/sys/deckhouse-oss"
+            while IFS= read -r IMG_DIGEST; do
+              [[ -z "${IMG_DIGEST}" ]] && continue
+              SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
+              DST_REF="${PROD_PATH}@${IMG_DIGEST}"
+              echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
+              regctl image copy "${SRC_REF}" "${DST_REF}"
+            done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+          else
+            echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest-based promotion"
+          fi
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -938,13 +1000,11 @@ jobs:
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
           else
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-          # Release tag build, set deckhouse registry as final
-          export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -998,16 +1058,16 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
+      - name: Check DKP images manifests in stage registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
 
 
       - uses: actions/setup-python@v5.6.0
@@ -1017,13 +1077,77 @@ jobs:
       - name: Copy attestations
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
           export IMAGES_TAGS_PATH=./images_tags_werf.json
           python .github/scripts/python/copy_attestations.py
+
+      - name: Promote images from stage to prod
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        run: |
+          set -euo pipefail
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+          STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+          PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+          promote_with_att() {
+            local SUBPATH="$1"
+            local REPO_SRC REPO_DST SRC DST
+            if [[ -z "${SUBPATH}" ]]; then
+              REPO_SRC="${STAGE_PATH}"
+              REPO_DST="${PROD_PATH}"
+            else
+              REPO_SRC="${STAGE_PATH}/${SUBPATH}"
+              REPO_DST="${PROD_PATH}/${SUBPATH}"
+            fi
+            SRC="${REPO_SRC}:${IMAGE_TAG}"
+            DST="${REPO_DST}:${IMAGE_TAG}"
+            echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
+            regctl image copy "${SRC}" "${DST}"
+            local DIGEST
+            DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
+            if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
+              echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
+              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
+            fi
+          }
+
+          promote_with_att ""
+          promote_with_att "install"
+          promote_with_att "install-standalone"
+          promote_with_att "release-channel"
+
+          DIGESTS_JSON="$(mktemp)"
+          trap 'rm -f "${DIGESTS_JSON}"' EXIT
+
+          # Promote from images_digests.json
+          if regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+            echo "⚓️ 💫 [$(date -u)] Promoting component images from images_digests.json (by digest)"
+            STAGE_PATH="${STAGE_REGISTRY_HOST}/sys/deckhouse-oss"
+            while IFS= read -r IMG_DIGEST; do
+              [[ -z "${IMG_DIGEST}" ]] && continue
+              SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
+              DST_REF="${PROD_PATH}@${IMG_DIGEST}"
+              echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
+              regctl image copy "${SRC_REF}" "${DST_REF}"
+            done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+          else
+            echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest-based promotion"
+          fi
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1340,13 +1464,11 @@ jobs:
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
           else
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-          # Release tag build, set deckhouse registry as final
-          export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -1400,16 +1522,16 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
+      - name: Check DKP images manifests in stage registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
 
 
       - uses: actions/setup-python@v5.6.0
@@ -1419,13 +1541,77 @@ jobs:
       - name: Copy attestations
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
           export IMAGES_TAGS_PATH=./images_tags_werf.json
           python .github/scripts/python/copy_attestations.py
+
+      - name: Promote images from stage to prod
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        run: |
+          set -euo pipefail
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+          STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+          PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+          promote_with_att() {
+            local SUBPATH="$1"
+            local REPO_SRC REPO_DST SRC DST
+            if [[ -z "${SUBPATH}" ]]; then
+              REPO_SRC="${STAGE_PATH}"
+              REPO_DST="${PROD_PATH}"
+            else
+              REPO_SRC="${STAGE_PATH}/${SUBPATH}"
+              REPO_DST="${PROD_PATH}/${SUBPATH}"
+            fi
+            SRC="${REPO_SRC}:${IMAGE_TAG}"
+            DST="${REPO_DST}:${IMAGE_TAG}"
+            echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
+            regctl image copy "${SRC}" "${DST}"
+            local DIGEST
+            DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
+            if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
+              echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
+              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
+            fi
+          }
+
+          promote_with_att ""
+          promote_with_att "install"
+          promote_with_att "install-standalone"
+          promote_with_att "release-channel"
+
+          DIGESTS_JSON="$(mktemp)"
+          trap 'rm -f "${DIGESTS_JSON}"' EXIT
+
+          # Promote from images_digests.json
+          if regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+            echo "⚓️ 💫 [$(date -u)] Promoting component images from images_digests.json (by digest)"
+            STAGE_PATH="${STAGE_REGISTRY_HOST}/sys/deckhouse-oss"
+            while IFS= read -r IMG_DIGEST; do
+              [[ -z "${IMG_DIGEST}" ]] && continue
+              SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
+              DST_REF="${PROD_PATH}@${IMG_DIGEST}"
+              echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
+              regctl image copy "${SRC_REF}" "${DST_REF}"
+            done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+          else
+            echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest-based promotion"
+          fi
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1730,13 +1916,11 @@ jobs:
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
           else
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-          # Release tag build, set deckhouse registry as final
-          export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -1790,16 +1974,16 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
+      - name: Check DKP images manifests in stage registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
 
 
       - uses: actions/setup-python@v5.6.0
@@ -1809,13 +1993,77 @@ jobs:
       - name: Copy attestations
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
           export IMAGES_TAGS_PATH=./images_tags_werf.json
           python .github/scripts/python/copy_attestations.py
+
+      - name: Promote images from stage to prod
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        run: |
+          set -euo pipefail
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+          STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+          PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+          promote_with_att() {
+            local SUBPATH="$1"
+            local REPO_SRC REPO_DST SRC DST
+            if [[ -z "${SUBPATH}" ]]; then
+              REPO_SRC="${STAGE_PATH}"
+              REPO_DST="${PROD_PATH}"
+            else
+              REPO_SRC="${STAGE_PATH}/${SUBPATH}"
+              REPO_DST="${PROD_PATH}/${SUBPATH}"
+            fi
+            SRC="${REPO_SRC}:${IMAGE_TAG}"
+            DST="${REPO_DST}:${IMAGE_TAG}"
+            echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
+            regctl image copy "${SRC}" "${DST}"
+            local DIGEST
+            DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
+            if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
+              echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
+              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
+            fi
+          }
+
+          promote_with_att ""
+          promote_with_att "install"
+          promote_with_att "install-standalone"
+          promote_with_att "release-channel"
+
+          DIGESTS_JSON="$(mktemp)"
+          trap 'rm -f "${DIGESTS_JSON}"' EXIT
+
+          # Promote from images_digests.json
+          if regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+            echo "⚓️ 💫 [$(date -u)] Promoting component images from images_digests.json (by digest)"
+            STAGE_PATH="${STAGE_REGISTRY_HOST}/sys/deckhouse-oss"
+            while IFS= read -r IMG_DIGEST; do
+              [[ -z "${IMG_DIGEST}" ]] && continue
+              SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
+              DST_REF="${PROD_PATH}@${IMG_DIGEST}"
+              echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
+              regctl image copy "${SRC_REF}" "${DST_REF}"
+            done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+          else
+            echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest-based promotion"
+          fi
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2120,13 +2368,11 @@ jobs:
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
           else
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-          # Release tag build, set deckhouse registry as final
-          export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -2180,16 +2426,16 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
+      - name: Check DKP images manifests in stage registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
 
 
       - uses: actions/setup-python@v5.6.0
@@ -2199,13 +2445,77 @@ jobs:
       - name: Copy attestations
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
           export IMAGES_TAGS_PATH=./images_tags_werf.json
           python .github/scripts/python/copy_attestations.py
+
+      - name: Promote images from stage to prod
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        run: |
+          set -euo pipefail
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+          STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+          PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+          promote_with_att() {
+            local SUBPATH="$1"
+            local REPO_SRC REPO_DST SRC DST
+            if [[ -z "${SUBPATH}" ]]; then
+              REPO_SRC="${STAGE_PATH}"
+              REPO_DST="${PROD_PATH}"
+            else
+              REPO_SRC="${STAGE_PATH}/${SUBPATH}"
+              REPO_DST="${PROD_PATH}/${SUBPATH}"
+            fi
+            SRC="${REPO_SRC}:${IMAGE_TAG}"
+            DST="${REPO_DST}:${IMAGE_TAG}"
+            echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
+            regctl image copy "${SRC}" "${DST}"
+            local DIGEST
+            DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
+            if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
+              echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
+              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
+            fi
+          }
+
+          promote_with_att ""
+          promote_with_att "install"
+          promote_with_att "install-standalone"
+          promote_with_att "release-channel"
+
+          DIGESTS_JSON="$(mktemp)"
+          trap 'rm -f "${DIGESTS_JSON}"' EXIT
+
+          # Promote from images_digests.json
+          if regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+            echo "⚓️ 💫 [$(date -u)] Promoting component images from images_digests.json (by digest)"
+            STAGE_PATH="${STAGE_REGISTRY_HOST}/sys/deckhouse-oss"
+            while IFS= read -r IMG_DIGEST; do
+              [[ -z "${IMG_DIGEST}" ]] && continue
+              SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
+              DST_REF="${PROD_PATH}@${IMG_DIGEST}"
+              echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
+              regctl image copy "${SRC_REF}" "${DST_REF}"
+            done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+          else
+            echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest-based promotion"
+          fi
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2510,13 +2820,11 @@ jobs:
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
 
           # Registry path to publish images for Git tags.
-          if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+          if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
           else
           SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
-          # Release tag build, set deckhouse registry as final
-          export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
           # The Git tag may contain a '+' sign, so use slugify for this situation.
           # Slugify doesn't change a tag with safe-only characters.
@@ -2570,16 +2878,16 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
+      - name: Check DKP images manifests in stage registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         id: check_images
         env:
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
         run: |
           EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}
 
 
       - uses: actions/setup-python@v5.6.0
@@ -2589,13 +2897,77 @@ jobs:
       - name: Copy attestations
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
         run: |
           export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
           export IMAGES_TAGS_PATH=./images_tags_werf.json
           python .github/scripts/python/copy_attestations.py
+
+      - name: Promote images from stage to prod
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        env:
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{ needs.git_info.outputs.ci_commit_tag }}
+        run: |
+          set -euo pipefail
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+
+          IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
+
+          STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+          PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+          promote_with_att() {
+            local SUBPATH="$1"
+            local REPO_SRC REPO_DST SRC DST
+            if [[ -z "${SUBPATH}" ]]; then
+              REPO_SRC="${STAGE_PATH}"
+              REPO_DST="${PROD_PATH}"
+            else
+              REPO_SRC="${STAGE_PATH}/${SUBPATH}"
+              REPO_DST="${PROD_PATH}/${SUBPATH}"
+            fi
+            SRC="${REPO_SRC}:${IMAGE_TAG}"
+            DST="${REPO_DST}:${IMAGE_TAG}"
+            echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
+            regctl image copy "${SRC}" "${DST}"
+            local DIGEST
+            DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
+            if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
+              echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
+              regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
+            fi
+          }
+
+          promote_with_att ""
+          promote_with_att "install"
+          promote_with_att "install-standalone"
+          promote_with_att "release-channel"
+
+          DIGESTS_JSON="$(mktemp)"
+          trap 'rm -f "${DIGESTS_JSON}"' EXIT
+
+          # Promote from images_digests.json
+          if regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+            echo "⚓️ 💫 [$(date -u)] Promoting component images from images_digests.json (by digest)"
+            STAGE_PATH="${STAGE_REGISTRY_HOST}/sys/deckhouse-oss"
+            while IFS= read -r IMG_DIGEST; do
+              [[ -z "${IMG_DIGEST}" ]] && continue
+              SRC_REF="${STAGE_PATH}@${IMG_DIGEST}"
+              DST_REF="${PROD_PATH}@${IMG_DIGEST}"
+              echo "⚓️ 💫 [$(date -u)] Promoting '${SRC_REF}' -> '${DST_REF}'"
+              regctl image copy "${SRC_REF}" "${DST_REF}"
+            done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+          else
+            echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest-based promotion"
+          fi
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
