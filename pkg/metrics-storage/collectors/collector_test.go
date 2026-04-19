@@ -16,6 +16,7 @@ package collectors_test
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -162,6 +163,104 @@ func TestEdgeCases(t *testing.T) {
 	require.Len(t, gaugeMetrics, 1)
 }
 
+// TestMetricValue tests the generic MetricValue type
+func TestMetricValue(t *testing.T) {
+	t.Run("float64 set and get", func(t *testing.T) {
+		mv := collectors.NewMetricValue(0.0)
+		assert.Equal(t, 0.0, mv.Get())
+
+		mv.Set(42.5)
+		assert.Equal(t, 42.5, mv.Get())
+
+		mv.Set(-10.0)
+		assert.Equal(t, -10.0, mv.Get())
+	})
+
+	t.Run("float64 add", func(t *testing.T) {
+		mv := collectors.NewMetricValue(10.0)
+		result := mv.Add(5.0)
+		assert.Equal(t, 15.0, result)
+		assert.Equal(t, 15.0, mv.Get())
+
+		result = mv.Add(-3.0)
+		assert.Equal(t, 12.0, result)
+		assert.Equal(t, 12.0, mv.Get())
+	})
+
+	t.Run("uint64 set and get", func(t *testing.T) {
+		mv := collectors.NewMetricValue(uint64(0))
+		assert.Equal(t, uint64(0), mv.Get())
+
+		mv.Set(uint64(100))
+		assert.Equal(t, uint64(100), mv.Get())
+	})
+
+	t.Run("uint64 add", func(t *testing.T) {
+		mv := collectors.NewMetricValue(uint64(10))
+		result := mv.Add(uint64(5))
+		assert.Equal(t, uint64(15), result)
+		assert.Equal(t, uint64(15), mv.Get())
+	})
+
+	t.Run("string set and get", func(t *testing.T) {
+		mv := collectors.NewMetricValue("")
+		assert.Equal(t, "", mv.Get())
+
+		mv.Set("hello")
+		assert.Equal(t, "hello", mv.Get())
+	})
+
+	t.Run("int set and get", func(t *testing.T) {
+		mv := collectors.NewMetricValue(0)
+		mv.Set(42)
+		assert.Equal(t, 42, mv.Get())
+
+		result := mv.Add(8)
+		assert.Equal(t, 50, result)
+		assert.Equal(t, 50, mv.Get())
+	})
+
+	t.Run("concurrent access", func(t *testing.T) {
+		mv := collectors.NewMetricValue(uint64(0))
+		var wg sync.WaitGroup
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				mv.Add(uint64(1))
+			}()
+		}
+		wg.Wait()
+		assert.Equal(t, uint64(100), mv.Get())
+	})
+}
+
+// TestNewConstCollectorOptions tests the ConstCollectorOptions constructor
+func TestNewConstCollectorOptions(t *testing.T) {
+	t.Run("no options", func(t *testing.T) {
+		opts := collectors.NewConstCollectorOptions()
+		assert.Equal(t, "", opts.Group)
+	})
+
+	t.Run("with group", func(t *testing.T) {
+		opts := collectors.NewConstCollectorOptions(collectors.WithGroup("my_group"))
+		assert.Equal(t, "my_group", opts.Group)
+	})
+
+	t.Run("empty group", func(t *testing.T) {
+		opts := collectors.NewConstCollectorOptions(collectors.WithGroup(""))
+		assert.Equal(t, "", opts.Group)
+	})
+
+	t.Run("last group option wins", func(t *testing.T) {
+		opts := collectors.NewConstCollectorOptions(
+			collectors.WithGroup("first"),
+			collectors.WithGroup("second"),
+		)
+		assert.Equal(t, "second", opts.Group)
+	})
+}
+
 // TestUpdateLabelsNoChange tests that UpdateLabels doesn't change anything when no new labels are added
 func TestUpdateLabelsNoChange(t *testing.T) {
 	// Create collectors
@@ -237,4 +336,58 @@ func collectMetrics(collector collectors.ConstCollector) []prometheus.Metric {
 	}
 
 	return metrics
+}
+
+// Benchmarks
+
+func BenchmarkHashMetric_NoGroup(b *testing.B) {
+	labelValues := []string{"value1", "value2", "value3"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collectors.HashMetric("", labelValues)
+	}
+}
+
+func BenchmarkHashMetric_WithGroup(b *testing.B) {
+	labelValues := []string{"value1", "value2", "value3"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collectors.HashMetric("test_group", labelValues)
+	}
+}
+
+func BenchmarkHashMetric_ManyLabels(b *testing.B) {
+	labelValues := make([]string, 20)
+	for i := range labelValues {
+		labelValues[i] = fmt.Sprintf("value_%d", i)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collectors.HashMetric("group", labelValues)
+	}
+}
+
+func BenchmarkMetricValue_Add_Float64(b *testing.B) {
+	mv := collectors.NewMetricValue(0.0)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mv.Add(1.0)
+	}
+}
+
+func BenchmarkMetricValue_Add_Uint64(b *testing.B) {
+	mv := collectors.NewMetricValue(uint64(0))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mv.Add(uint64(1))
+	}
+}
+
+func BenchmarkMetricValue_SetGet_Float64(b *testing.B) {
+	mv := collectors.NewMetricValue(0.0)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		mv.Set(float64(i))
+		_ = mv.Get()
+	}
 }

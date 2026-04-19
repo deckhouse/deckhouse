@@ -15,7 +15,7 @@
 package collectors
 
 import (
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -63,17 +63,40 @@ func (c *ConstCounterCollector) Add(value float64, labels map[string]string, opt
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	options := NewConstCollectorOptions(opts...)
+	group := resolveGroup(opts)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	metricHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(group, labelValues)
 
 	storedMetric, ok := c.collection[metricHash]
 	if !ok {
 		storedMetric = GroupedCounterMetric{
 			Value:       NewMetricValue(uint64(value)),
 			LabelValues: labelValues,
-			Group:       options.Group,
+			Group:       group,
+		}
+	} else {
+		storedMetric.Value.Add(uint64(value))
+	}
+
+	c.collection[metricHash] = storedMetric
+}
+
+// AddWithGroup is like Add but takes the group as a direct parameter,
+// avoiding the closure allocation from WithGroup.
+func (c *ConstCounterCollector) AddWithGroup(value float64, labels map[string]string, group string) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	labelValues := labelspkg.LabelValues(labels, c.labelNames)
+	metricHash := HashMetric(group, labelValues)
+
+	storedMetric, ok := c.collection[metricHash]
+	if !ok {
+		storedMetric = GroupedCounterMetric{
+			Value:       NewMetricValue(uint64(value)),
+			LabelValues: labelValues,
+			Group:       group,
 		}
 	} else {
 		storedMetric.Value.Add(uint64(value))
@@ -146,7 +169,7 @@ func (c *ConstCounterCollector) UpdateLabels(labels []string) {
 	}
 
 	// Sort labels for consistency
-	sort.Strings(c.labelNames)
+	slices.Sort(c.labelNames)
 
 	// Create new description and collection with updated labels
 	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)

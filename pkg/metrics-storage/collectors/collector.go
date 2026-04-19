@@ -15,7 +15,6 @@
 package collectors
 
 import (
-	"hash/fnv"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -69,21 +68,34 @@ type MetricDescription struct {
 	ConstLabels map[string]string
 }
 
-const labelsSeparator = byte(255)
+const (
+	labelsSeparator = byte(255)
+	fnvOffset64     = uint64(14695981039346656037)
+	fnvPrime64      = uint64(1099511628211)
+)
 
 func HashMetric(group string, labelValues []string) uint64 {
-	hasher := fnv.New64a()
+	h := fnvOffset64
 
 	if group != "" {
-		_, _ = hasher.Write([]byte(group))
-		_, _ = hasher.Write([]byte{labelsSeparator})
+		for i := 0; i < len(group); i++ {
+			h ^= uint64(group[i])
+			h *= fnvPrime64
+		}
+		h ^= uint64(labelsSeparator)
+		h *= fnvPrime64
 	}
 
-	for _, labelValue := range labelValues {
-		_, _ = hasher.Write([]byte(labelValue))
-		_, _ = hasher.Write([]byte{labelsSeparator})
+	for _, lv := range labelValues {
+		for i := 0; i < len(lv); i++ {
+			h ^= uint64(lv[i])
+			h *= fnvPrime64
+		}
+		h ^= uint64(labelsSeparator)
+		h *= fnvPrime64
 	}
-	return hasher.Sum64()
+
+	return h
 }
 
 type ConstCollectorOptions struct {
@@ -109,4 +121,15 @@ func NewConstCollectorOptions(opts ...ConstCollectorOption) *ConstCollectorOptio
 	}
 
 	return options
+}
+
+func resolveGroup(opts []ConstCollectorOption) string {
+	if len(opts) == 0 {
+		return ""
+	}
+	var o ConstCollectorOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return o.Group
 }

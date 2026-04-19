@@ -255,16 +255,12 @@ func (m *MetricStorage) ApplyBatchOperations(ops []operation.MetricOperation, la
 
 	// Group operations by 'Group' value.
 	groupedOps := make(map[string][]operation.MetricOperation)
-	nonGroupedOps := make([]operation.MetricOperation, 0)
+	nonGroupedOps := make([]operation.MetricOperation, 0, len(ops))
 
 	for _, op := range ops {
 		if op.Group == "" {
 			nonGroupedOps = append(nonGroupedOps, op)
 			continue
-		}
-
-		if _, ok := groupedOps[op.Group]; !ok {
-			groupedOps[op.Group] = make([]operation.MetricOperation, 0)
 		}
 
 		groupedOps[op.Group] = append(groupedOps[op.Group], op)

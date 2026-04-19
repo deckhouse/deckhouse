@@ -17,6 +17,7 @@ package storage
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,7 +34,7 @@ var _ prometheus.Collector = (*GroupedVault)(nil)
 type GroupedVault struct {
 	collectors map[string]collectors.ConstCollector
 
-	mu         sync.Mutex
+	mu         sync.RWMutex
 	registry   *prometheus.Registry
 	registerer prometheus.Registerer
 
@@ -92,6 +93,20 @@ func (v *GroupedVault) Collector() prometheus.Collector {
 	}
 
 	return v
+}
+
+// labelsKnown checks that every key in labels exists in sortedNames.
+// sortedNames must be sorted. Zero allocations.
+func labelsKnown(labels map[string]string, sortedNames []string) bool {
+	if len(labels) > len(sortedNames) {
+		return false
+	}
+	for k := range labels {
+		if _, found := slices.BinarySearch(sortedNames, k); !found {
+			return false
+		}
+	}
+	return true
 }
 
 // ExpireGroupMetrics takes each collector in collectors and clear all metrics by group.
@@ -231,6 +246,17 @@ func (v *GroupedVault) RegisterHistogram(name string, labelNames []string, bucke
 }
 
 func (v *GroupedVault) CounterAdd(group string, name string, value float64, labels map[string]string) {
+	v.mu.RLock()
+	collector, ok := v.collectors[name]
+	if ok {
+		if c, ok := collector.(*collectors.ConstCounterCollector); ok && labelsKnown(labels, c.LabelNames()) {
+			v.mu.RUnlock()
+			c.AddWithGroup(value, labels, group)
+			return
+		}
+	}
+	v.mu.RUnlock()
+
 	c, err := v.RegisterCounter(name, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error(
@@ -244,10 +270,21 @@ func (v *GroupedVault) CounterAdd(group string, name string, value float64, labe
 		return
 	}
 
-	c.Add(value, labels, collectors.WithGroup(group))
+	c.AddWithGroup(value, labels, group)
 }
 
 func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels map[string]string) {
+	v.mu.RLock()
+	collector, ok := v.collectors[name]
+	if ok {
+		if c, ok := collector.(*collectors.ConstGaugeCollector); ok && labelsKnown(labels, c.LabelNames()) {
+			v.mu.RUnlock()
+			c.SetWithGroup(value, labels, group)
+			return
+		}
+	}
+	v.mu.RUnlock()
+
 	c, err := v.RegisterGauge(name, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error(
@@ -261,10 +298,21 @@ func (v *GroupedVault) GaugeSet(group string, name string, value float64, labels
 		return
 	}
 
-	c.Set(value, labels, collectors.WithGroup(group))
+	c.SetWithGroup(value, labels, group)
 }
 
 func (v *GroupedVault) GaugeAdd(group string, name string, value float64, labels map[string]string) {
+	v.mu.RLock()
+	collector, ok := v.collectors[name]
+	if ok {
+		if c, ok := collector.(*collectors.ConstGaugeCollector); ok && labelsKnown(labels, c.LabelNames()) {
+			v.mu.RUnlock()
+			c.AddWithGroup(value, labels, group)
+			return
+		}
+	}
+	v.mu.RUnlock()
+
 	c, err := v.RegisterGauge(name, labelspkg.LabelNames(labels))
 	if err != nil {
 		v.logger.Error(
@@ -278,10 +326,21 @@ func (v *GroupedVault) GaugeAdd(group string, name string, value float64, labels
 		return
 	}
 
-	c.Add(value, labels, collectors.WithGroup(group))
+	c.AddWithGroup(value, labels, group)
 }
 
 func (v *GroupedVault) HistogramObserve(group string, name string, value float64, labels map[string]string, buckets []float64) {
+	v.mu.RLock()
+	collector, ok := v.collectors[name]
+	if ok {
+		if c, ok := collector.(*collectors.ConstHistogramCollector); ok && labelsKnown(labels, c.LabelNames()) {
+			v.mu.RUnlock()
+			c.ObserveWithGroup(value, labels, group)
+			return
+		}
+	}
+	v.mu.RUnlock()
+
 	c, err := v.RegisterHistogram(name, labelspkg.LabelNames(labels), buckets)
 	if err != nil {
 		v.logger.Error(
@@ -296,12 +355,12 @@ func (v *GroupedVault) HistogramObserve(group string, name string, value float64
 		return
 	}
 
-	c.Observe(value, labels, collectors.WithGroup(group))
+	c.ObserveWithGroup(value, labels, group)
 }
 
 func (v *GroupedVault) Describe(ch chan<- *prometheus.Desc) {
-	v.mu.Lock()
-	defer v.mu.Unlock()
+	v.mu.RLock()
+	defer v.mu.RUnlock()
 
 	for _, collector := range v.collectors {
 		collector.Describe(ch)
@@ -309,8 +368,8 @@ func (v *GroupedVault) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (v *GroupedVault) Collect(ch chan<- prometheus.Metric) {
-	v.mu.Lock()
-	defer v.mu.Unlock()
+	v.mu.RLock()
+	defer v.mu.RUnlock()
 
 	for _, collector := range v.collectors {
 		collector.Collect(ch)

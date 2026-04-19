@@ -15,7 +15,7 @@
 package collectors
 
 import (
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -62,17 +62,40 @@ func (c *ConstGaugeCollector) Add(value float64, labels map[string]string, opts 
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	options := NewConstCollectorOptions(opts...)
+	group := resolveGroup(opts)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	metricHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(group, labelValues)
 
 	storedMetric, ok := c.collection[metricHash]
 	if !ok {
 		storedMetric = GroupedGaugeMetric{
 			Value:       NewMetricValue(value),
 			LabelValues: labelValues,
-			Group:       options.Group,
+			Group:       group,
+		}
+	} else {
+		storedMetric.Value.Add(value)
+	}
+
+	c.collection[metricHash] = storedMetric
+}
+
+// AddWithGroup is like Add but takes the group as a direct parameter,
+// avoiding the closure allocation from WithGroup.
+func (c *ConstGaugeCollector) AddWithGroup(value float64, labels map[string]string, group string) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	labelValues := labelspkg.LabelValues(labels, c.labelNames)
+	metricHash := HashMetric(group, labelValues)
+
+	storedMetric, ok := c.collection[metricHash]
+	if !ok {
+		storedMetric = GroupedGaugeMetric{
+			Value:       NewMetricValue(value),
+			LabelValues: labelValues,
+			Group:       group,
 		}
 	} else {
 		storedMetric.Value.Add(value)
@@ -85,17 +108,39 @@ func (c *ConstGaugeCollector) Set(value float64, labels map[string]string, opts 
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	options := NewConstCollectorOptions(opts...)
+	group := resolveGroup(opts)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	metricHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(group, labelValues)
 
 	storedMetric, ok := c.collection[metricHash]
 	if !ok {
 		storedMetric = GroupedGaugeMetric{
 			Value:       NewMetricValue(value),
 			LabelValues: labelValues,
-			Group:       options.Group,
+			Group:       group,
+		}
+	}
+
+	storedMetric.Value.Set(value)
+	c.collection[metricHash] = storedMetric
+}
+
+// SetWithGroup is like Set but takes the group as a direct parameter,
+// avoiding the closure allocation from WithGroup.
+func (c *ConstGaugeCollector) SetWithGroup(value float64, labels map[string]string, group string) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	labelValues := labelspkg.LabelValues(labels, c.labelNames)
+	metricHash := HashMetric(group, labelValues)
+
+	storedMetric, ok := c.collection[metricHash]
+	if !ok {
+		storedMetric = GroupedGaugeMetric{
+			Value:       NewMetricValue(value),
+			LabelValues: labelValues,
+			Group:       group,
 		}
 	}
 
@@ -167,7 +212,7 @@ func (c *ConstGaugeCollector) UpdateLabels(labels []string) {
 	}
 
 	// Sort labels for consistency
-	sort.Strings(c.labelNames)
+	slices.Sort(c.labelNames)
 
 	// Create new description and collection with updated labels
 	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
