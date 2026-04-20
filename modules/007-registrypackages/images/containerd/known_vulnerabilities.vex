@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-f80cd91b36d545749726987cea9ab19348fca2ab9f04d7af8b0d3021bd9ca032",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 4,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -45,8 +45,22 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Для эксплуатации уязвимости CVE-2026-39882 в containerd должен быть запущен и настроен экспортер трассировки OpenTelemetry. В поставке Deckhouse по умолчанию не заданы необходимые для этого переменные окружения, а также нет настроек, позволяющих включить данную функциональность, что исключает выполнение уязвимого кода.",
       "timestamp": "2026-04-14T07:04:36.441143Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-20T07:36:13.872368Z"
     }
   ],
   "timestamp": "2026-03-04T09:36:23Z",
-  "last_updated": "2026-04-14T07:04:36Z"
+  "last_updated": "2026-04-20T07:36:13Z"
 }
