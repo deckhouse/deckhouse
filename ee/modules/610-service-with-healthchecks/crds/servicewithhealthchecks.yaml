@@ -30,7 +30,7 @@ spec:
             type: object
           spec:
             description: |
-              Defines the desired state of `servicewithHealthchecks`.
+              Defines the desired state of ServiceWithHealthchecks.
 
               For the ServiceWithHealthchecks load balancers you create to work, the following conditions must be met:
 
