@@ -665,13 +665,13 @@ annotations:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Алгоритм обновления (для примера, с версии `1.21` на версию `1.25`):
   * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.25"]`).
-  * Дождаться появления соответствующего пода `istiod-v1x25-xxx-yyy` в неймспейсе `d8-istio`.
-  * Для каждого прикладного неймспейса, где включен Istio:
-    * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x25`;
-    * по очереди пересоздать поды в неймспейсе, параллельно контролируя работоспособность приложения.
-  * Поменять настройку `globalVersion` на `1.25` и удалить `additionalVersions`.
-  * Убедиться, что старый под `istiod` удалился.
-  * Поменять лейблы прикладных неймспейсов на `istio-injection: enabled`.
+* Дождаться появления соответствующего пода `istiod-v1x25-xxx-yyy` в неймспейсе `d8-istio`.
+* Для каждого прикладного неймспейса, где включен Istio:
+  * поменять лейбл `istio-injection: enabled` на `istio.io/rev: v1x25`;
+  * по очереди пересоздать поды в неймспейсе, параллельно контролируя работоспособность приложения.
+* Поменять настройку `globalVersion` на `1.25` и удалить `additionalVersions`.
+* Убедиться, что старый под `istiod` удалился.
+* Поменять лейблы прикладных неймспейсов на `istio-injection: enabled`.
 
 Чтобы найти все поды под управлением старой ревизии Istio (в примере — версия 21), выполните команду:
 
