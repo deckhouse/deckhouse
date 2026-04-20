@@ -10,8 +10,9 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook/metrics"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

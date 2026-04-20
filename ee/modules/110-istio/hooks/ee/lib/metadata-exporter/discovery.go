@@ -182,10 +182,8 @@ func (c *CommonInfo) fetchPublicMetadata(d *Discovery) (bool, error) {
 			return true, nil
 		}
 		c.setMetricMetadataEndpointError(d, scope, 0)
-		err := c.patchMetadataCache(d, scope, meta)
-		if err != nil {
-			return false, err
-		}
+		c.patchMetadataCache(d, scope, meta)
+
 		c.ClusterUUID = meta.ClusterUUID
 		c.publicMetadata = &meta
 		return false, nil
@@ -208,10 +206,8 @@ func (c *MulticlusterCrdInfo) fetchPrivateMetadata(d *Discovery) (bool, error) {
 			return true, nil
 		}
 		c.setMetricMetadataEndpointError(d, scope, 0)
-		err := c.patchMetadataCache(d, scope, meta)
-		if err != nil {
-			return false, err
-		}
+		c.patchMetadataCache(d, scope, meta)
+
 		return false, nil
 	}
 }
@@ -245,10 +241,8 @@ func (c *FederationCrdInfo) fetchPrivateMetadata(d *Discovery) (bool, error) {
 
 		c.setMetricMetadataEndpointError(d, scope, 0)
 		c.updatePortProtocols(meta.PublicServices, defaultProtocol, protocolMap)
-		err := c.patchMetadataCache(d, scope, meta)
-		if err != nil {
-			return false, err
-		}
+		c.patchMetadataCache(d, scope, meta)
+
 		var countServices = 0
 		if meta.PublicServices != nil {
 			countServices = len(*meta.PublicServices)
@@ -258,7 +252,7 @@ func (c *FederationCrdInfo) fetchPrivateMetadata(d *Discovery) (bool, error) {
 	}
 }
 
-func (c *CommonInfo) patchMetadataCache(d *Discovery, scope discoveryScope, meta interface{}) error {
+func (c *CommonInfo) patchMetadataCache(d *Discovery, scope discoveryScope, meta interface{}) {
 	patch := map[string]interface{}{
 		"status": map[string]interface{}{
 			"metadataCache": map[string]interface{}{
@@ -268,7 +262,6 @@ func (c *CommonInfo) patchMetadataCache(d *Discovery, scope discoveryScope, meta
 		},
 	}
 	d.input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1alpha1", c.AllianceKind, "", c.Name, object_patch.WithSubresource("/status"))
-	return nil
 }
 
 func (c *CommonInfo) fetchMetadata(d *Discovery, scope discoveryScope) ([]byte, bool) {
