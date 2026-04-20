@@ -59,7 +59,7 @@ Virtualization сontroller состоит из следующих компоне
 
    * **virtualization-api**.
 
-2. **Virtualization-controller** — контроллер, управляющий кастомными ресурсами основной `Virtualization.deckhouse.io` API Group. Virtualization-controller ограничен в изменени большей часть лейблов, аннотаций и атрибутов спецификации ресурсов. Virtualization-controller разрешено вносить следующие изменения в кастомные ресурсы:
+2. **Virtualization-controller** — контроллер, управляющий кастомными ресурсами основной `Virtualization.deckhouse.io` API Group. Virtualization-controller ограничен в изменении большей части лейблов, аннотаций и атрибутов спецификации ресурсов. Virtualization-controller разрешено вносить следующие изменения в кастомные ресурсы:
 
    - добавление и удаление finalizers в атрибуте `metadata.finalizers`;
    - добавление и удаление owners в атрибуте `metadata.ownerReferences`;
