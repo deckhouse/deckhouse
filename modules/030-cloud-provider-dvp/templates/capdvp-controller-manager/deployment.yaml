@@ -40,6 +40,8 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 {{- $_ := set $capiConfig "additionalEnv" (include "capdvp_controller_manager_envs" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capdvp_controller_manager_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $capiConfig "additionalPodLabels" (include "capdvp_controller_manager_pod_labels" . | fromYaml) -}}
+{{- $_ := set $capiConfig "hostNetwork" true -}}
+{{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
 {{- $_ := set $capiConfig "vpaEnabled" true -}}
 
 {{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}
