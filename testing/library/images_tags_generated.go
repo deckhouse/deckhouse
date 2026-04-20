@@ -175,6 +175,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cniMigrationController":         "imageHash-common-cniMigrationController",
 		"cniMigrationInitChecker":        "imageHash-common-cniMigrationInitChecker",
 		"coredns":                        "imageHash-common-coredns",
+		"corednsVexArtifact":             "imageHash-common-corednsVexArtifact",
 		"csiExternalAttacher131":         "imageHash-common-csiExternalAttacher131",
 		"csiExternalAttacher132":         "imageHash-common-csiExternalAttacher132",
 		"csiExternalAttacher133":         "imageHash-common-csiExternalAttacher133",
@@ -394,6 +395,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"nodeLocalDns": map[string]interface{}{
 		"coredns":                    "imageHash-nodeLocalDns-coredns",
+		"corednsVexArtifact":         "imageHash-nodeLocalDns-corednsVexArtifact",
 		"iptablesLoop":               "imageHash-nodeLocalDns-iptablesLoop",
 		"iptablesWrapperInit":        "imageHash-nodeLocalDns-iptablesWrapperInit",
 		"safeUpdater":                "imageHash-nodeLocalDns-safeUpdater",
