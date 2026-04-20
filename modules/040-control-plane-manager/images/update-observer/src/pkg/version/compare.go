@@ -109,30 +109,21 @@ func Hops(sourceVersion, desiredVersion string) int {
 
 // ComponentSteps returns how many minor-version upgrade steps the given component
 // has already completed relative to the sourceVersion->desiredVersion migration.
-// When hops == 0 (versions equal or sourceVersion unparseable), returns 1 if the
-// component is at the desired version and 0 otherwise.
+// The result is always within [0, Hops(sourceVersion, desiredVersion)].
+// Returns 0 if any version is unparseable or if there is no migration in progress
+// (hops == 0); the idle "healthy cluster = 100%" interpretation belongs to the
+// caller that computes the overall progress ratio.
 func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int {
-	srcMinor, hasSrc := MinorInt(sourceVersion)
-	dstMinor, hasDst := MinorInt(desiredVersion)
-	compMinor, hasComp := MinorInt(componentVersion)
-	if !hasDst || !hasComp {
+	src, okSrc := MinorInt(sourceVersion)
+	dst, okDst := MinorInt(desiredVersion)
+	comp, okComp := MinorInt(componentVersion)
+	if !okSrc || !okDst || !okComp {
 		return 0
 	}
 
-	hops := 0
-	if hasSrc {
-		hops = calculateHops(srcMinor, dstMinor)
-	}
-
+	hops := calculateHops(src, dst)
 	if hops == 0 {
-		// No version migration in progress (source == desired or source is unknown).
-		// Return 1 if the component is already at the desired version so that
-		// StepsCompleted / totalSteps reflects 100% for a healthy, idle cluster.
-		if compMinor == dstMinor {
-			return 1
-		}
 		return 0
 	}
-
-	return min(calculateHops(srcMinor, compMinor), hops)
+	return min(calculateHops(src, comp), hops)
 }
