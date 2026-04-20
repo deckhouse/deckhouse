@@ -20,6 +20,7 @@ import (
 	"log/slog"
 	"strings"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,21 +34,28 @@ import (
 
 // Service processes status events and updates Application conditions.
 type Service struct {
-	client client.Client
-	getter getter
-	mapper condmapper.Mapper
-	logger *log.Logger
+	client         client.Client
+	getter         getter
+	settingsGetter settingsGetter
+	mapper         condmapper.Mapper
+	logger         *log.Logger
 }
 
 type getter func(name string) status.Status
 
+// settingsGetter returns the effective settings (user config merged with
+// config-schema defaults) for a loaded application by "namespace.name" key.
+// Returns nil if the app is not tracked by the runtime.
+type settingsGetter func(name string) addonutils.Values
+
 // NewService creates a new status service with default condition specs.
-func NewService(client client.Client, getter getter, logger *log.Logger) *Service {
+func NewService(client client.Client, getter getter, settingsGetter settingsGetter, logger *log.Logger) *Service {
 	return &Service{
-		client: client,
-		getter: getter,
-		mapper: buildMapper(),
-		logger: logger.Named("status-service"),
+		client:         client,
+		getter:         getter,
+		settingsGetter: settingsGetter,
+		mapper:         buildMapper(),
+		logger:         logger.Named("status-service"),
 	}
 }
 
@@ -131,6 +139,12 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	// And this means we can commit the resulted version.
 	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionReadyInCluster) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
+
+		if settings := s.settingsGetter(ev); settings != nil {
+			if raw, err := json.Marshal(settings); err == nil {
+				app.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
+			}
+		}
 	}
 
 	raw, _ := json.Marshal(packageStatus.Tracking)

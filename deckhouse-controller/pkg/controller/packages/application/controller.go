@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -72,6 +73,7 @@ type packageOperator interface {
 	UpdateApp(repo registry.Remote, inst packageoperator.App)
 	RemoveApp(namespace, name string)
 	Status() *packagestatus.Service
+	GetAppSettings(name string) addonutils.Values
 }
 
 func RegisterController(
@@ -97,7 +99,7 @@ func RegisterController(
 		return fmt.Errorf("add preflight: %w", err)
 	}
 
-	r.status = status.NewService(r.client, operator.Status().GetStatus, r.logger)
+	r.status = status.NewService(r.client, operator.Status().GetStatus, operator.GetAppSettings, r.logger)
 	r.status.Start(context.Background(), operator.Status().GetCh())
 
 	applicationController, err := controller.New(controllerName, runtimeManager, controller.Options{
