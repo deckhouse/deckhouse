@@ -118,7 +118,7 @@ type ApplicationStatus struct {
 	// with config-schema defaults) that drove the most recent successful apply.
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +optional
-	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration,omitempty"`
+	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration"`
 
 	// Conditions represent the latest available observations of the application's state.
 	// +optional
