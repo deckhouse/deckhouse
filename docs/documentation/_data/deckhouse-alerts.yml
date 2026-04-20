@@ -3144,6 +3144,54 @@ alerts:
         Obsolete antiopa_secret_copier=yes label detected.
       severity: "9"
       markupFormat: markdown
+    - name: D8SignatureErrorsDetected
+      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ee
+      description: |-
+        There have been errors while reading/writing signed data from etcd.
+        Errors may occur due to the following factors:
+
+        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
+        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
+        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
+        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
+
+        To investigate which records are generating alerts, follow instructions below.
+
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        A significant number of signature errors detected.
+      severity: "2"
+      markupFormat: markdown
+    - name: D8SignatureErrorsDetected
+      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ee
+      description: |-
+        There have been errors while reading/writing signed data from etcd.
+        Errors can arise due to the following factors:
+
+        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
+        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
+        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
+        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
+
+        To investigate which records are generating alerts, follow instructions below.
+
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        A significant number of signature errors detected.
+      severity: "7"
+      markupFormat: markdown
     - name: D8SmokeMiniNotBoundPersistentVolumeClaims
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml
       moduleUrl: 500-upmeter

@@ -36,7 +36,7 @@ import (
 //go:generate go run ./build.go --edition all
 
 const (
-	modulesTestsName            = "modules-tests-%s.yaml"
+	modulesTestsName           = "modules-tests-%s.yaml"
 	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
 	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
 	candiFileName              = "candi-%s.yaml"
@@ -552,6 +552,16 @@ func (e *executor) executeEdition(editionName string) {
 	deleteRevisionFiles("modules*-%s.yaml", editionName)
 	deleteRevisionFiles("candi*-%s.yaml", editionName)
 
+	defer func() {
+		if err := excludeAddEntryDuplicate(editionName, modulesWithExcludeFileName); err != nil {
+			log.Fatalf("%v", err)
+		}
+
+		if err := excludeAddEntryDuplicate(editionName, modulesTestsName); err != nil {
+			log.Fatalf("%v", err)
+		}
+	}()
+
 	modulesDict := make(map[string]string)
 	availableModules := make(map[string]struct{})
 	for _, ed := range e.Editions {
@@ -664,6 +674,82 @@ func (e *executor) executeEdition(editionName string) {
 	}
 
 	log.Fatalf("Unknown Deckhouse edition %q", editionName)
+}
+
+func excludeAddEntryDuplicate(ed string, path string) error {
+	nameWithEdition := fmt.Sprintf(path, ed)
+	full := includePath(nameWithEdition)
+	contentYAML, err := os.ReadFile(full)
+	if err != nil {
+		return fmt.Errorf("cannot read %s for remove duplicates: %w", full, err)
+	}
+
+	var entries []addEntry
+
+	err = yaml.Unmarshal(contentYAML, &entries)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal %s to remove duplicates: %w", full, err)
+	}
+
+	targets := make(map[string][]int)
+
+	for i, e := range entries {
+		indexes, ok := targets[e.To]
+		if !ok {
+			indexes = make([]int, 0, 2)
+		}
+		indexes = append(indexes, i)
+		targets[e.To] = indexes
+	}
+
+	toRemove := make(map[int]struct{})
+
+	for f, indexes := range targets {
+		l := len(indexes)
+		if l < 2 {
+			continue
+		}
+
+		last := entries[indexes[l-1]]
+		log.Printf(
+			"Found %d duplicates in edition %s for target %s for file %s Keep %s\n",
+			l,
+			ed,
+			path,
+			f,
+			last.Add,
+		)
+
+		for _, ii := range indexes[:l-1] {
+			toRemove[ii] = struct{}{}
+		}
+	}
+
+	res := make([]addEntry, 0, len(entries)-len(toRemove))
+
+	for i, e := range entries {
+		if _, ok := toRemove[i]; ok {
+			log.Printf("Skip duplicate entry %d for edition %s", i, ed)
+			continue
+		}
+
+		res = append(res, e)
+	}
+
+	resContent, err := yaml.Marshal(res)
+	if err != nil {
+		return fmt.Errorf("failed to marshal for %s to remove duplicates: %w", full, err)
+	}
+
+	if err := os.Remove(full); err != nil {
+		return fmt.Errorf("failed to remove %s to remove duplicates: %w", full, err)
+	}
+
+	if err := writeToFile(nameWithEdition, resContent); err != nil {
+		return fmt.Errorf("failed to write to %s after remove duplicates: %w", full, err)
+	}
+
+	return nil
 }
 
 func writeToFile(path string, content []byte) error {

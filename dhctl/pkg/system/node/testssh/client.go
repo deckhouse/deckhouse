@@ -679,6 +679,7 @@ func (f *File) Upload(ctx context.Context, srcPath, dstPath string) error {
 
 	return f.uploadFn(data, dstPath)
 }
+
 func (f *File) Download(ctx context.Context, srcPath, dstPath string) error {
 	data, err := f.DownloadBytes(ctx, srcPath)
 	if err != nil {

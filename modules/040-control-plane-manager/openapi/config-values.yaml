@@ -259,7 +259,7 @@ properties:
             type: object
             default: {}
             description: 'Settings type LoadBalancer'
-            properties: 
+            properties:
               enabled:
                 type: boolean
                 default: false
