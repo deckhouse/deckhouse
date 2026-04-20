@@ -125,10 +125,9 @@ func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int 
 	}
 
 	if hops == 0 {
-		// No version migration in progress: track whether the component reached the desired
-		// version. For control-plane components, Failed ones are excluded by the caller so
-		// this effectively measures health. For nodes there is no Failed state — a node is
-		// always counted, so 1 simply means "kubelet is at the desired version".
+		// No version migration in progress (source == desired or source is unknown).
+		// Return 1 if the component is already at the desired version so that
+		// StepsCompleted / totalSteps reflects 100% for a healthy, idle cluster.
 		if compMinor == dstMinor {
 			return 1
 		}
