@@ -278,8 +278,6 @@ func PrepareControlPlaneArtifacts(
 	})
 }
 
-var errEmptyRemoteFile = errors.New("empty content")
-
 func readRemoteFile(ctx context.Context, nodeInterface node.Interface, path string) (string, error) {
 	cmd := nodeInterface.Command("cat", path)
 	cmd.Sudo(ctx)
@@ -299,19 +297,10 @@ func readRemoteFile(ctx context.Context, nodeInterface node.Interface, path stri
 		output = output[idx+len("SUDO-SUCCESS"):]
 	}
 
-	value := strings.TrimSpace(output)
-	if value == "" {
-		return "", fmt.Errorf("read remote file %s: %w", path, errEmptyRemoteFile)
-	}
-
-	return value, nil
+	return strings.TrimSpace(output), nil
 }
 
-// readRemoteFileWithRetry wraps readRemoteFile with a short retry loop so that
-// transient SSH errors (connection drops, sudo banner glitches, etc.) right
-// after a bootstrap script run do not abort the whole pipeline. It deliberately
-// stops retrying on errEmptyRemoteFile, which signals a real bug in the script
-// that produced the file, not a network flake.
+// readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
 func readRemoteFileWithRetry(ctx context.Context, nodeInterface node.Interface, path string) (string, error) {
 	const (
 		attempts = 5
@@ -320,11 +309,6 @@ func readRemoteFileWithRetry(ctx context.Context, nodeInterface node.Interface, 
 
 	var value string
 	err := retry.NewLoop(fmt.Sprintf("Read remote file %s", path), attempts, wait).
-		BreakIf(func(err error) bool {
-			// Stop retrying if the file is reachable but its content is empty:
-			// no amount of retries will populate it.
-			return errors.Is(err, errEmptyRemoteFile)
-		}).
 		RunContext(ctx, func() error {
 			v, err := readRemoteFile(ctx, nodeInterface, path)
 			if err != nil {
