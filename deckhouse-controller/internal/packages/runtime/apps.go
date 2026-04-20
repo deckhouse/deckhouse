@@ -105,7 +105,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 		return
 	}
 
-	r.status.ClearRuntimeConditions(name)
+	r.status.ClearStatus(name)
 
 	tasks := []queue.Task{
 		taskdownload.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),

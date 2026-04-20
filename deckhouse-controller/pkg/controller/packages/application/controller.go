@@ -71,7 +71,7 @@ type moduleManager interface {
 type packageOperator interface {
 	UpdateApp(repo registry.Remote, inst packageoperator.App)
 	RemoveApp(namespace, name string)
-	Status() *packagestatus.Service
+	Status() *packagestatus.Registry
 }
 
 func RegisterController(

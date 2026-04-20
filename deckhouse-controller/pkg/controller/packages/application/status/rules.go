@@ -40,24 +40,22 @@ const (
 
 // core conditions checked for install/ready states
 var coreConds = []string{
-	string(status.ConditionDownloaded),
 	string(status.ConditionReadyOnFilesystem),
 	string(status.ConditionReadyInRuntime),
 	string(status.ConditionReadyInCluster),
-	string(status.ConditionRequirementsMet),
 }
 
 // managed conditions for operational state
 var managedConds = []string{
 	string(status.ConditionReadyInRuntime),
 	string(status.ConditionReadyInCluster),
-	string(status.ConditionHooksProcessed),
+	string(status.ConditionHooksReady),
 }
 
 // config conditions for configuration state
 var configConds = []string{
-	string(status.ConditionSettingsValid),
-	string(status.ConditionHooksProcessed),
+	string(status.ConditionConfigured),
+	string(status.ConditionHooksReady),
 	string(status.ConditionHelmApplied),
 }
 
@@ -113,18 +111,25 @@ func updateInstalledRule() condmapper.Rule {
 }
 
 // readyRule: True when package is operational.
+// ReadyInRuntime=False with reason=Pending is a transient state triggered by a Deckhouse
+// restart (runtime rebuild) — the workload in the cluster is still running, so Ready
+// should not flip to False. Managed still flips to False via managedRule since DH can't
+// actively manage the package until its runtime is back.
 func readyRule() condmapper.Rule {
 	return condmapper.Rule{
 		Type:   ConditionReady,
 		TrueIf: condmapper.IsTrue(string(status.ConditionReadyInCluster)),
 		FalseIf: condmapper.Or(
-			condmapper.AnyFalse(coreConds...),
+			condmapper.AnyFalse(
+				string(status.ConditionReadyOnFilesystem),
+				string(status.ConditionReadyInCluster),
+			),
 			condmapper.And(
-				condmapper.Not(condmapper.ExtTrue(ConditionInstalled)),
-				condmapper.Or(
-					condmapper.IsTrue(string(status.ConditionWaitConverge)),
-					condmapper.IsTrue(string(status.ConditionRequirementsMet)),
-				),
+				condmapper.AnyFalse(string(status.ConditionReadyInRuntime)),
+				condmapper.Not(condmapper.HasReason(
+					string(status.ConditionReadyInRuntime),
+					string(status.ConditionReasonPending),
+				)),
 			),
 		),
 	}
@@ -147,10 +152,7 @@ func managedRule() condmapper.Rule {
 		TrueIf: condmapper.AllTrue(managedConds...),
 		FalseIf: condmapper.And(
 			condmapper.ExtTrue(ConditionInstalled),
-			condmapper.Or(
-				condmapper.AnyFalse(managedConds...),
-				condmapper.IsTrue(string(status.ConditionWaitConverge)),
-			),
+			condmapper.AnyFalse(managedConds...),
 		),
 	}
 }

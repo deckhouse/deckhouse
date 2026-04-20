@@ -147,7 +147,7 @@ func (s *Service) buildMapperStatus(versionChanged bool, external []metav1.Condi
 	for _, cond := range internal {
 		mapperStatus.Internal[string(cond.Type)] = metav1.Condition{
 			Type:    string(cond.Type),
-			Status:  cond.Status,
+			Status:  metav1.ConditionStatus(cond.Status),
 			Reason:  string(cond.Reason),
 			Message: cond.Message,
 		}
@@ -170,7 +170,7 @@ func (s *Service) buildMapperStatus(versionChanged bool, external []metav1.Condi
 // internalConditionIsTrue checks if an internal condition with the given name has status True.
 func internalConditionIsTrue(conditions []status.Condition, condName status.ConditionType) bool {
 	for _, cond := range conditions {
-		if cond.Type == condName && cond.Status == metav1.ConditionTrue {
+		if cond.Type == condName && cond.Status == status.ConditionTrue {
 			return true
 		}
 	}

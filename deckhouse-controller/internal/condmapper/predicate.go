@@ -36,6 +36,17 @@ func IsTrue(cond string) Predicate {
 	}
 }
 
+// HasReason checks if an internal condition has a specific reason, regardless of status.
+func HasReason(cond, reason string) Predicate {
+	return func(s State) match {
+		c, ok := s.Internal[cond]
+		if ok && c.Reason == reason {
+			return match{Ok: true, Source: cond}
+		}
+		return match{}
+	}
+}
+
 // AllTrue checks if all conditions are True. Returns first condition as source.
 func AllTrue(conds ...string) Predicate {
 	return func(s State) match {

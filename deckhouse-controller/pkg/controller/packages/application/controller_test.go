@@ -445,6 +445,6 @@ func (o *operatorStub) RemoveApp(_, _ string) {
 	return
 }
 
-func (o *operatorStub) Status() *packagestatus.Service {
-	return packagestatus.NewService()
+func (o *operatorStub) Status() *packagestatus.Registry {
+	return packagestatus.NewRegistry()
 }

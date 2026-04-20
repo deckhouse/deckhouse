@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -33,6 +34,14 @@ import (
 
 const (
 	tracerName = "installer"
+)
+
+const (
+	ConditionReasonDownload         status.ConditionReason = "DownloadFailed"
+	ConditionReasonCreatePackageDir status.ConditionReason = "CreatePackageDirFailed"
+	ConditionReasonRemoveOldVersion status.ConditionReason = "RemoveOldVersionFailed"
+	ConditionReasonCreateSymlink    status.ConditionReason = "CreateSymlinkFailed"
+	ConditionReasonCheckVersion     status.ConditionReason = "CheckVersionFailed"
 )
 
 // Installer handles package lifecycle using symlinks instead of dm-verity mounts.
@@ -94,7 +103,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 
 	// download/extract into <downloaded>/<version> directory
 	if err := i.registry.Download(ctx, repo, versionPath, name, version); err != nil {
-		return newDownloadErr(err)
+		return status.NewError(ConditionReasonDownload, err)
 	}
 
 	return nil
@@ -130,26 +139,26 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	// Use Lstat to avoid following the symlink
 	if _, err := os.Lstat(deployed); err == nil {
 		if err = os.Remove(deployed); err != nil {
-			return newRemoveOldVersionErr(err)
+			return status.NewError(ConditionReasonRemoveOldVersion, err)
 		}
 	}
 
 	// Create parent directory if it does not exist (for new clusters).
 	if err := os.MkdirAll(filepath.Dir(deployed), 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+		return status.NewError(ConditionReasonCreatePackageDir, err)
 	}
 
 	// <downloaded>/<version>
 	versionPath := filepath.Join(downloaded, version)
 	if _, err := os.Stat(versionPath); err != nil {
-		return newCheckVersionErr(err)
+		return status.NewError(ConditionReasonCheckVersion, err)
 	}
 
 	// Create new symlink pointing to permanent location
 	if err := os.Symlink(versionPath, deployed); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreateSymlinkErr(err)
+		return status.NewError(ConditionReasonCreateSymlink, err)
 	}
 
 	return nil
@@ -172,7 +181,7 @@ func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name st
 		}
 
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckMountErr(err)
+		return err
 	}
 
 	// clear package dir

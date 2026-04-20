@@ -16,24 +16,21 @@ package enable
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
-
-	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
-	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
-	shtypes "github.com/flant/shell-operator/pkg/hook/types"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hooksync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
+	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
+	shtypes "github.com/flant/shell-operator/pkg/hook/types"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 const (
@@ -62,12 +59,6 @@ type nelmI interface {
 	ResumeMonitor(name string)
 }
 
-// statusService provides condition updates and error handling.
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 // queueService allows enqueuing hook sync tasks to separate queues.
 type queueService interface {
 	Enqueue(ctx context.Context, name string, task queue.Task, opts ...queue.EnqueueOption)
@@ -80,13 +71,13 @@ type task struct {
 
 	nelm   nelmI
 	queue  queueService
-	status statusService
+	status *status.Registry
 
 	logger *log.Logger
 }
 
 // NewTask creates a startup task that will initialize hooks and run OnStartup bindings.
-func NewTask(pkg packageI, nelm nelmI, queueService queueService, status statusService, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, nelm nelmI, queueService queueService, status *status.Registry, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:    pkg,
 		nelm:   nelm,
@@ -107,20 +98,12 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("startup package")
 
-	t.status.HandleError(t.pkg.GetName(), &status.Error{
-		Err: errors.New("startup package"),
-		Conditions: []status.Condition{
-			{
-				Type:   status.ConditionWaitConverge,
-				Status: metav1.ConditionFalse,
-			},
-		},
-	})
+	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInRuntime)
 
 	// Step 1: Enable kubernetes/schedule hooks - registers watchers and cron schedules
 	infos, err := t.initializeHooks(ctx)
 	if err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksReady, err)
 
 		return fmt.Errorf("initialize hooks: %w", err)
 	}
@@ -156,7 +139,7 @@ func (t *task) Execute(ctx context.Context) error {
 
 	// Step 3: Run package startup hooks (onStartup binding)
 	if err = t.startupPackage(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksReady, err)
 		return fmt.Errorf("startup package: %w", err)
 	}
 

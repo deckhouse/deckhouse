@@ -75,7 +75,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 		return
 	}
 
-	r.status.ClearRuntimeConditions(name)
+	r.status.ClearStatus(name)
 
 	tasks := []queue.Task{
 		taskdownload.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),

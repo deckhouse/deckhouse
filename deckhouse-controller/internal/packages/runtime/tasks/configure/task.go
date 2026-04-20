@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package applysettings
+package configure
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	taskTracer = "apply-settings"
+	taskTracer = "configure"
 )
 
 // packageI abstracts the package operations needed for settings management.
@@ -43,12 +43,6 @@ type packageI interface {
 	ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error)
 }
 
-// statusService provides condition updates and error handling for package status.
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 // task validates and applies new settings to a package.
 // On success, sets ConditionSettingsValid to True.
 // On failure, wraps errors with appropriate status conditions.
@@ -56,13 +50,13 @@ type task struct {
 	pkg      packageI
 	settings addonutils.Values
 
-	status statusService
+	status *status.Registry
 
 	logger *log.Logger
 }
 
 // NewTask creates a task that will validate and apply the given settings.
-func NewTask(pkg packageI, settings addonutils.Values, status statusService, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, settings addonutils.Values, status *status.Registry, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:      pkg,
 		settings: settings,
@@ -72,25 +66,25 @@ func NewTask(pkg packageI, settings addonutils.Values, status statusService, log
 }
 
 func (t *task) String() string {
-	return "ApplySettings"
+	return "Configure"
 }
 
 // Execute validates settings and applies them to the package.
 // Sets ConditionSettingsValid on success or delegates error handling to status service.
 func (t *task) Execute(ctx context.Context) error {
 	if err := t.applySettings(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionConfigured, err)
 		return fmt.Errorf("apply settings: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionSettingsValid)
+	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionConfigured)
 
 	return nil
 }
 
 // applySettings validates and applies settings to application
 func (t *task) applySettings(ctx context.Context) error {
-	ctx, span := otel.Tracer(taskTracer).Start(ctx, "ApplySettings")
+	ctx, span := otel.Tracer(taskTracer).Start(ctx, "applySettings")
 	defer span.End()
 
 	t.logger.Debug("apply settings")

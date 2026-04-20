@@ -49,12 +49,6 @@ type nelmI interface {
 	ResumeMonitor(name string)
 }
 
-// statusService provides condition updates and error handling.
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 // task executes a hook in response to a Kubernetes event or schedule trigger.
 // Created by the event handler when monitors detect changes.
 type task struct {
@@ -66,14 +60,14 @@ type task struct {
 	onValuesChanged func(name string)
 
 	nelm   nelmI
-	status statusService
+	status *status.Registry
 
 	logger *log.Logger
 }
 
 // NewTask creates a task to run a hook with the given binding context.
 // The binding context contains event details (added/modified/deleted objects).
-func NewTask(pkg packageI, hook string, bctx []bctx.BindingContext, onValuesChange func(name string), nelm nelmI, status statusService, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, hook string, bctx []bctx.BindingContext, onValuesChange func(name string), nelm nelmI, status *status.Registry, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:             pkg,
 		hook:            hook,
@@ -93,7 +87,7 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("run hook")
 	if err := t.runPackageHook(ctx); err != nil {
-		t.status.HandleError(t.pkg.GetName(), err)
+		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksReady, err)
 		return fmt.Errorf("run hook '%s': %w", t.hook, err)
 	}
 

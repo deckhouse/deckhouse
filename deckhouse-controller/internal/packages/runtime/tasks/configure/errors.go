@@ -12,18 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package applysettings
+package configure
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
 // Condition reasons for settings-related failures.
 const (
 	ConditionReasonValidationFailed status.ConditionReason = "ValidationFailed"
-	ConditionReasonApplySettings    status.ConditionReason = "ApplySettings"
 )
 
 // newApplySettingsErr wraps an error with conditions that mark both
@@ -31,14 +28,7 @@ const (
 // service properly reflects validation or apply failures.
 func newApplySettingsErr(err error) error {
 	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionSettingsValid,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonValidationFailed,
-				Message: err.Error(),
-			},
-		},
+		Err:    err,
+		Reason: ConditionReasonValidationFailed,
 	}
 }

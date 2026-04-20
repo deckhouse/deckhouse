@@ -42,7 +42,7 @@ type installerI interface {
 	Install(ctx context.Context, downloaded, deployed, name, version string) error
 }
 
-type statusService interface {
+type statusRegistry interface {
 	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 }
@@ -56,7 +56,7 @@ type task struct {
 	repository registry.Remote
 
 	installer installerI
-	status    statusService
+	status    *status.Registry
 
 	logger *log.Logger
 }
@@ -64,7 +64,7 @@ type task struct {
 // NewAppTask creates an Install task for an Application package.
 // The downloaded path is apps/{repo}/{name}, and deployed path is apps/deployed/{instance}.
 // Instance name allows multiple installations of the same package.
-func NewAppTask(instance, name, version string, repo registry.Remote, installer installerI, status statusService, logger *log.Logger) queue.Task {
+func NewAppTask(instance, name, version string, repo registry.Remote, installer installerI, status *status.Registry, logger *log.Logger) queue.Task {
 	return &task{
 		name:       instance,
 		version:    version,
@@ -79,7 +79,7 @@ func NewAppTask(instance, name, version string, repo registry.Remote, installer 
 
 // NewModuleTask creates an Install task for a Module package.
 // The downloaded path is modules/{name}, and deployed path is modules/{name}.
-func NewModuleTask(name, version string, repo registry.Remote, installer installerI, status statusService, logger *log.Logger) queue.Task {
+func NewModuleTask(name, version string, repo registry.Remote, installer installerI, status *status.Registry, logger *log.Logger) queue.Task {
 	return &task{
 		name:       name,
 		version:    version,
@@ -107,7 +107,7 @@ func (t *task) Execute(ctx context.Context) error {
 	// install (mount) package
 	logger.Debug("install package")
 	if err := t.installer.Install(ctx, t.downloaded, t.deployed, t.name, t.version); err != nil {
-		t.status.HandleError(t.name, err)
+		t.status.HandleError(t.name, status.ConditionReadyOnFilesystem, err)
 		return fmt.Errorf("install package: %w", err)
 	}
 

@@ -15,8 +15,6 @@
 package run
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
@@ -24,38 +22,14 @@ import (
 const (
 	ConditionReasonBeforeHelmHooksFailed status.ConditionReason = "BeforeHelmHooksFailed"
 	ConditionReasonAfterHelmHooksFailed  status.ConditionReason = "AfterHelmHooksFailed"
-	ConditionReasonHelmUpgradeFailed     status.ConditionReason = "HelmUpgradeFailed"
 )
-
-// newHelmUpgradeErr wraps an error when Helm install/upgrade fails.
-// Sets ReadyInRuntime and ReadyInCluster to False.
-func newHelmUpgradeErr(err error) error {
-	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionReadyInCluster,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonHelmUpgradeFailed,
-				Message: err.Error(),
-			},
-		},
-	}
-}
 
 // newBeforeHelmHookErr wraps an error when BeforeHelm hooks fail.
 // Sets HooksProcessed and ReadyInRuntime to False.
 func newBeforeHelmHookErr(err error) error {
 	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionHooksProcessed,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonBeforeHelmHooksFailed,
-				Message: err.Error(),
-			},
-		},
+		Err:    err,
+		Reason: ConditionReasonBeforeHelmHooksFailed,
 	}
 }
 
@@ -63,14 +37,7 @@ func newBeforeHelmHookErr(err error) error {
 // Sets HooksProcessed and ReadyInRuntime to False.
 func newAfterHelmHookErr(err error) error {
 	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionHooksProcessed,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonAfterHelmHooksFailed,
-				Message: err.Error(),
-			},
-		},
+		Err:    err,
+		Reason: ConditionReasonAfterHelmHooksFailed,
 	}
 }

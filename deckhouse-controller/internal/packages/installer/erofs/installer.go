@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -36,6 +37,19 @@ import (
 
 const (
 	tracerName = "installer"
+)
+
+const (
+	ConditionReasonCreatePackageDir status.ConditionReason = "CreatePackageDirFailed"
+	ConditionReasonGetRootHash      status.ConditionReason = "GetRootHashFailed"
+	ConditionReasonGetImageReader   status.ConditionReason = "GetImageReaderFailed"
+	ConditionReasonImageByTar       status.ConditionReason = "ImageByTarFailed"
+
+	ConditionReasonUnmount            status.ConditionReason = "UnmountFailed"
+	ConditionReasonCloseDeviceMapper  status.ConditionReason = "CloseDeviceMapperFailed"
+	ConditionReasonComputeHash        status.ConditionReason = "ComputeHashFailed"
+	ConditionReasonCreateDeviceMapper status.ConditionReason = "CreateDeviceMapperFailed"
+	ConditionReasonMount              status.ConditionReason = "MountFailed"
 )
 
 // Installer handles package lifecycle using erofs images with dm-verity integrity.
@@ -93,13 +107,13 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
 	if err := os.MkdirAll(filepath.Dir(imagePath), 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreatePackageDirErr(err)
+		return status.NewError(ConditionReasonCreatePackageDir, err)
 	}
 
 	rootHash, err := i.registry.GetImageRootHash(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newGetRootHashErr(err)
+		return status.NewError(ConditionReasonGetRootHash, err)
 	}
 
 	// skip download if image exists and passes integrity check
@@ -116,14 +130,14 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	img, err := i.registry.GetImageReader(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newGetImageReaderErr(err)
+		return status.NewError(ConditionReasonGetImageReader, err)
 	}
 	defer img.Close()
 
 	logger.Debug("create erofs image by package image", slog.String("path", imagePath))
 	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newImageByTarErr(err)
+		return status.NewError(ConditionReasonImageByTar, err)
 	}
 
 	return nil
@@ -165,13 +179,13 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	logger.Debug("unmount old erofs image", slog.String("path", deployed))
 	if err := verity.Unmount(ctx, deployed); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newUnmountErr(err)
+		return status.NewError(ConditionReasonUnmount, err)
 	}
 
 	logger.Debug("close old device mapper")
 	if err := verity.CloseMapper(ctx, name); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCloseDeviceMapperErr(err)
+		return status.NewError(ConditionReasonCloseDeviceMapper, err)
 	}
 
 	// compute dm-verity root hash for integrity verification during reads
@@ -179,20 +193,20 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	rootHash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newComputeHashErr(err)
+		return status.NewError(ConditionReasonComputeHash, err)
 	}
 
 	// setup dm-verity device mapper with root hash for runtime integrity checks
 	logger.Debug("create device mapper", slog.String("path", deployed))
 	if err = verity.CreateMapper(ctx, name, imagePath, rootHash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreateDeviceMapperErr(err)
+		return status.NewError(ConditionReasonCreateDeviceMapper, err)
 	}
 
 	logger.Debug("mount erofs image mapper", slog.String("path", deployed))
 	if err = verity.Mount(ctx, name, deployed); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newMountErr(err)
+		return status.NewError(ConditionReasonMount, err)
 	}
 
 	return nil

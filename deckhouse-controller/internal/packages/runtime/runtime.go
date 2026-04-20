@@ -45,7 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
+	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
@@ -85,7 +85,7 @@ type Runtime struct {
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
 	installer        installerI         // Downloads and mounts package images
 
-	status      *status.Service     // Tracks per-package condition chain
+	status      *status.Registry    // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
 	debugServer *debug.Server       // Unix socket debug API
 
@@ -130,7 +130,7 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
-	r.status = status.NewService()
+	r.status = status.NewRegistry()
 
 	reg := registry.NewService(dc, logger)
 
@@ -516,18 +516,18 @@ func (r *Runtime) schedulePackage(name string) {
 		return
 	}
 
-	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
+	r.status.SetConditionTrue(name, status.ConditionReadyInRuntime)
 
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}
@@ -547,7 +547,7 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 		return
 	}
 
-	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
+	r.status.SetConditionFalse(name, status.ConditionReadyInRuntime, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
@@ -588,7 +588,7 @@ func (r *Runtime) Stop() {
 }
 
 // Status returns package status service for external access
-func (r *Runtime) Status() *status.Service {
+func (r *Runtime) Status() *status.Registry {
 	return r.status
 }
 

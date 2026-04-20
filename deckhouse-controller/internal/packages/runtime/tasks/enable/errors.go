@@ -15,8 +15,6 @@
 package enable
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
@@ -30,15 +28,8 @@ const (
 // Sets HooksProcessed and ReadyInRuntime to False.
 func newStartupHookErr(err error) error {
 	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionHooksProcessed,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonStartupHooksFailed,
-				Message: err.Error(),
-			},
-		},
+		Err:    err,
+		Reason: ConditionReasonStartupHooksFailed,
 	}
 }
 
@@ -46,14 +37,7 @@ func newStartupHookErr(err error) error {
 // Sets ReadyInRuntime to False - package cannot proceed without hooks.
 func newInitHooksErr(err error) error {
 	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionHooksProcessed,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonInitHooksFailed,
-				Message: err.Error(),
-			},
-		},
+		Err:    err,
+		Reason: ConditionReasonInitHooksFailed,
 	}
 }

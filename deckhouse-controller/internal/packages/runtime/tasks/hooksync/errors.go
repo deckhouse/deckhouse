@@ -15,8 +15,6 @@
 package hooksync
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
@@ -29,14 +27,7 @@ const (
 // Sets HooksProcessed and ReadyInRuntime to False.
 func newEventHookErr(err error) error {
 	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionHooksProcessed,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonEventHookFailed,
-				Message: err.Error(),
-			},
-		},
+		Err:    err,
+		Reason: ConditionReasonEventHookFailed,
 	}
 }

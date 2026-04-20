@@ -43,6 +43,14 @@ const (
 	templatesDir = "templates"  // Helm templates directory
 )
 
+const (
+	ConditionReasonRender           status.ConditionReason = "RenderFailed"
+	ConditionReasonCheckChart       status.ConditionReason = "CheckChartFailed"
+	ConditionReasonCreateValuesFile status.ConditionReason = "CreateValuesFileFailed"
+	ConditionReasonCheckRelease     status.ConditionReason = "CheckReleaseFailed"
+	ConditionReasonApplyManifest    status.ConditionReason = "ApplyManifestFailed"
+)
+
 var ErrPackageNotHelm = errors.New("package not helm")
 
 // Package provides access to package data needed for Helm operations.
@@ -61,13 +69,13 @@ type Service struct {
 	client         *nelm.Client // nelm client for Helm operations
 	monitorManager *monitor.Manager
 
-	status *status.Service
+	status *status.Registry
 
 	logger *log.Logger
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, status *status.Registry, logger *log.Logger) *Service {
 	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
 		"heritage": "deckhouse",
 	}))
@@ -203,7 +211,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	isHelm, err := s.isHelmChart(pkg.GetPath())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckChartError(err)
+		return status.NewError(ConditionReasonCheckChart, err)
 	}
 
 	if !isHelm {
@@ -213,7 +221,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	valuesPath, err := s.createTmpValuesFile(pkg.GetName(), pkg.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCreateValuesError(err)
+		return status.NewError(ConditionReasonCreateValuesFile, err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
@@ -230,7 +238,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newRenderError(err)
+		return status.NewError(ConditionReasonRender, err)
 	}
 
 	// Calculate checksum to detect changes in rendered manifests
@@ -240,7 +248,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, namespace, pkg.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newCheckReleaseError(err)
+		return status.NewError(ConditionReasonCheckRelease, err)
 	}
 
 	if !shouldUpgrade {
@@ -262,7 +270,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newInstallChartError(err)
+		return status.NewError(ConditionReasonApplyManifest, err)
 	}
 
 	s.monitorManager.AddMonitor(namespace, pkg.GetName(), renderedManifests)

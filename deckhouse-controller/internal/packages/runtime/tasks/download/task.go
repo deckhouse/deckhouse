@@ -40,11 +40,6 @@ type downloaderI interface {
 	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
 }
 
-type statusService interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 type task struct {
 	name        string
 	packageName string
@@ -54,12 +49,12 @@ type task struct {
 	repository registry.Remote
 
 	downloader downloaderI
-	status     statusService
+	status     *status.Registry
 
 	logger *log.Logger
 }
 
-func NewModuleTask(name, version string, repo registry.Remote, downloader downloaderI, status statusService, logger *log.Logger) queue.Task {
+func NewModuleTask(name, version string, repo registry.Remote, downloader downloaderI, status *status.Registry, logger *log.Logger) queue.Task {
 	return &task{
 		name:        name,
 		packageName: name,
@@ -72,7 +67,7 @@ func NewModuleTask(name, version string, repo registry.Remote, downloader downlo
 	}
 }
 
-func NewAppTask(instance, name, version string, repo registry.Remote, downloader downloaderI, status statusService, logger *log.Logger) queue.Task {
+func NewAppTask(instance, name, version string, repo registry.Remote, downloader downloaderI, status *status.Registry, logger *log.Logger) queue.Task {
 	return &task{
 		downloaded:  filepath.Join(appsDownloadedDir, repo.Name, name),
 		packageName: name,
@@ -99,11 +94,9 @@ func (t *task) Execute(ctx context.Context) error {
 	// download package from repository
 	logger.Debug("download package")
 	if err := t.downloader.Download(ctx, t.repository, t.downloaded, t.packageName, t.version); err != nil {
-		t.status.HandleError(t.name, err)
+		t.status.HandleError(t.name, status.ConditionReadyOnFilesystem, err)
 		return fmt.Errorf("download package: %w", err)
 	}
-
-	t.status.SetConditionTrue(t.name, status.ConditionDownloaded)
 
 	return nil
 }

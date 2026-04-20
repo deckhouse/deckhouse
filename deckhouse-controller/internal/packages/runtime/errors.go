@@ -15,8 +15,6 @@
 package runtime
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
@@ -28,14 +26,7 @@ const (
 // Used when the package fails to load from its filesystem path.
 func newLoadFailedErr(err error) error {
 	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonLoadFailed,
-				Message: err.Error(),
-			},
-		},
+		Err:    err,
+		Reason: ConditionReasonLoadFailed,
 	}
 }
