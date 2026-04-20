@@ -35,7 +35,7 @@ description: Архитектура модуля csi-s3 в Deckhouse Kubernetes 
    * **controller** — основной контейнер;
    * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомного ресурса ModuleConfig.
 
-1. **CSI-драйвер (s3)** — реализация CSI-драйвера для provisioner `ru.yandex.s3.csi`. С архитектурой CSI-драйвера `csi-s3` можно ознакомиться [на странице описания CSI-драйвера](../storage/csi-drivers/csi-driver-s3.html).
+1. **CSI-драйвер (s3)** — реализация CSI-драйвера для provisioner `ru.yandex.s3.csi`. С архитектурой CSI-драйвера `csi-s3` можно ознакомиться [на странице описания CSI-драйвера](../../storage/csi-drivers/csi-driver-s3.html).
 
 ## Взаимодействия модуля
 

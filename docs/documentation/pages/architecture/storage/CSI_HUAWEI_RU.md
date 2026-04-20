@@ -40,7 +40,7 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 * **controller** — основной контейнер;
 * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для валидации StorageClass.
 
-1. **CSI-драйвер (huawei)** — реализация CSI-драйвера для `csi.huawei.com` provisioner. С архитектурой CSI-драйвера `csi-huawei` можно ознакомиться [в соответствующем разделе документации](../storage/csi-drivers/csi-driver-huawei.html).
+1. **CSI-драйвер (huawei)** — реализация CSI-драйвера для `csi.huawei.com` provisioner. С архитектурой CSI-драйвера `csi-huawei` можно ознакомиться [в соответствующем разделе документации](../../storage/csi-drivers/csi-driver-huawei.html).
 
   CSI-драйвер `csi-huawei` обслуживает следующие [кастомные ресурсы](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
 

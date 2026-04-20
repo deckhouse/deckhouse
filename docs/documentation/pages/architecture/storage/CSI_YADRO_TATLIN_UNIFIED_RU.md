@@ -40,7 +40,7 @@ description: Архитектура модуля csi-yadro-tatlin-unified в Dec
 * **controller** — основной контейнер;
 * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки ресурсов StorageClass.
 
-1. **CSI-драйвер (yadro-tatlin-unified)** — реализация CSI-драйвера для provisioner `csi-tatlinunified.yadro.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI-драйвер (yadro-tatlin-unified)** — реализация CSI-драйвера для provisioner `csi-tatlinunified.yadro.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [на странице описания CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
 1. **Scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler. Реализует специфичную для подов логику размещения при использовании томов СХД Yadro.Tatlin. При планировании подов учитываются селекторы узлов, заданные в кастомном ресурсе YadroTatlinUnifiedStorageConnection в параметрах `controlPlane` и `dataPlane`.
 
