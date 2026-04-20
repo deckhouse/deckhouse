@@ -1,0 +1,4 @@
+- name: d8.deckhouse.telemetry-modules
+  rules:
+    - record: d8_telemetry_module_version
+      expr: deckhouse_mm_module_enabled
