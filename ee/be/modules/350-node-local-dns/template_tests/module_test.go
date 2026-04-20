@@ -59,18 +59,5 @@ var _ = Describe("Module :: node-local-dns :: helm template", func() {
 			Expect(strings.Contains(corefile, "template IN PTR ip6.arpa {\n          rcode NXDOMAIN\n      }")).To(BeTrue())
 		})
 
-		It("Should bind coredns to IPv4 only with cilium when IPv6 is disabled", func() {
-			hec.ValuesSetFromYaml("global.enabledModules", `["cni-cilium"]`)
-			hec.ValuesSet("nodeLocalDns.disableIPv6", true)
-			hec.HelmRender()
-			Expect(hec.RenderError).ShouldNot(HaveOccurred())
-
-			configMap := hec.KubernetesResource("ConfigMap", "kube-system", "node-local-dns")
-			Expect(configMap.Exists()).To(BeTrue())
-
-			corefile := configMap.Field("data.Corefile").String()
-			Expect(strings.Contains(corefile, "bind 0.0.0.0")).To(BeTrue())
-		})
-
 	})
 })

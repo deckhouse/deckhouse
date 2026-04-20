@@ -53,9 +53,6 @@ data:
       prometheus 127.0.0.1:4224
       health 127.0.0.1:9225
 {{- else }}
-{{- if .Values.nodeLocalDns.disableIPv6 }}
-      bind 0.0.0.0
-{{- end }}
       prometheus 127.0.0.1:4224
       health 0.0.0.0:9225
 {{- end }}
