@@ -38,12 +38,18 @@ check_container_running() {
   done
 }
 
+echo "Waiting for kubernetes-api-proxy container..."
 check_container_running "kubernetes-api-proxy"
+
+echo "Copying PKI and kubeconfigs to /etc/kubernetes..."
 cp -r {{ $manifestsDir}}/pki /etc/kubernetes/
 cp {{ $kubeconfigDir }}/{admin.conf,controller-manager.conf,scheduler.conf,super-admin.conf} /etc/kubernetes/
+
+echo "Starting etcd static pod..."
 cp {{ $manifestsDir}}/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
 check_container_running "etcd"
 
+echo "Rendering AuthenticationConfiguration for kube-apiserver..."
 mkdir -p /etc/kubernetes/deckhouse/extra-files
 bb-sync-file /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml - << EOF
 apiVersion: apiserver.config.k8s.io/v1beta1
@@ -56,6 +62,7 @@ anonymous:
   - path: /healthz
 EOF
 
+echo "Starting control-plane static pods (kube-apiserver, kube-controller-manager, kube-scheduler)..."
 cp {{ $manifestsDir}}/kube-apiserver.yaml /etc/kubernetes/manifests/kube-apiserver.yaml
 cp {{ $manifestsDir}}/kube-scheduler.yaml /etc/kubernetes/manifests/kube-scheduler.yaml
 cp {{ $manifestsDir}}/kube-controller-manager.yaml /etc/kubernetes/manifests/kube-controller-manager.yaml
@@ -64,6 +71,7 @@ check_container_running "kube-apiserver"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
 
+echo "Bootstrapping RBAC and labeling/tainting control-plane node..."
 kubectl --kubeconfig=/etc/kubernetes/super-admin.conf create clusterrolebinding kubeadm:cluster-admins --clusterrole=cluster-admin --group=kubeadm:cluster-admins
 kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane=""
 kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(bb-d8-node-name)" node-role.kubernetes.io/control-plane:NoSchedule
@@ -71,7 +79,7 @@ kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(bb-d8-node-name)" 
 # CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
 
-# Upload pki for deckhouse
+echo "Uploading PKI bundle to kube-system/d8-pki secret..."
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system delete secret d8-pki || true
 bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system create secret generic d8-pki \
   --from-file=ca.crt=/etc/kubernetes/pki/ca.crt \
@@ -88,4 +96,6 @@ if [ ! -f /root/.kube/config ]; then
   mkdir -p /root/.kube
   ln -s /etc/kubernetes/admin.conf /root/.kube/config
 fi
+
+echo "Control-plane bootstrap finished successfully."
 
