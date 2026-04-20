@@ -18,7 +18,7 @@ import:
   add: /relocate
   to: /
   before: setup
-- from: {{ index $.Images "base/python" }}
+- image: base/python
   add: /
   to: /
   before: install
