@@ -269,7 +269,7 @@ steps:
     run: |
       EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}/deckhouse
+      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${STAGE_REGISTRY_HOST}/deckhouse/
 
   {!{ if eq $buildType "release" }!}
   - uses: {!{ index (ds "actions") "actions/setup-python" }!}
@@ -361,7 +361,7 @@ steps:
     run: |
       EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse
+      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
 
   - name: Save build report
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
