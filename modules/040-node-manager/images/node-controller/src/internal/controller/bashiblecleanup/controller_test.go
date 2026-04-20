@@ -64,7 +64,7 @@ func TestReconcile_NodeWithLabelAndTaint_RemovesBoth(t *testing.T) {
 			Name: "node-1",
 			Labels: map[string]string{
 				bashibleFirstRunFinishedLabel: "",
-				"other-label":                "keep",
+				"other-label":                 "keep",
 			},
 		},
 		Spec: corev1.NodeSpec{

@@ -63,8 +63,8 @@ func CacheOptions() (cache.Options, client.Options) {
 			},
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "Machine"):           machineNS,
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
-			newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):              machineNS,
-			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):    machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):               machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):     machineNS,
 		},
 	}
 
