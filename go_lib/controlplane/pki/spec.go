@@ -150,6 +150,9 @@ func getLeafCertSpec(name LeafCertName) certSpec[LeafCertName] {
 						"kubernetes.default.svc",
 						fmt.Sprintf("kubernetes.default.svc.%s", domain),
 					},
+					IPs: []net.IP{
+						net.IPv4(127, 0, 0, 1),
+					},
 				}
 
 				if cfg.NodeName != "" {
