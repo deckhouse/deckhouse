@@ -15,13 +15,13 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -52,9 +52,9 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineDestroyResourcesFlags(cmd)
 	app.DefineTFResourceManagementTimeout(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
 
 		if !app.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
@@ -79,7 +79,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
-		destroyer, err := destroy.NewClusterDestroyer(context.TODO(), &destroy.Params{
+		destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
 			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
 			StateCache:      cache.Global(),
 			SkipResources:   app.SkipResources,
@@ -101,6 +101,4 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-
-	return cmd
 }

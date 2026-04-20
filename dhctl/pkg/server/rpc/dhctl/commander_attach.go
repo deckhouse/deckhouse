@@ -182,7 +182,7 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	defer logBeforeExit()
 
 	var sshClient node.SSHClient
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
 			s.params.SchemaStore,

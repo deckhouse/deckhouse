@@ -48,10 +48,12 @@ func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache boo
 		log.WarnLn(bootstrapAbortCheckMessage)
 	}
 
-	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(ctx, forceAbortFromCache) })
+	return log.ProcessCtx(ctx, "bootstrap", "Abort", func(ctx context.Context) error {
+		return b.doRunBootstrapAbort(ctx, forceAbortFromCache)
+	})
 }
 
-func (b *ClusterBootstrapper) initSSHClient() error {
+func (b *ClusterBootstrapper) initSSHClient(ctx context.Context) error {
 	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil // Local runs don't use ssh client.
@@ -143,7 +145,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
 	}
 
-	err = log.Process("common", "Get cluster UUID from the cache", func() error {
+	err = log.ProcessCtx(ctx, "common", "Get cluster UUID from the cache", func(ctx context.Context) error {
 		uuid, err := stateCache.Load("uuid")
 		if err != nil {
 			return err
@@ -157,7 +159,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	// init ssh client is safe if master hosts not found (error in base infra)
-	if err := b.initSSHClient(); err != nil {
+	if err := b.initSSHClient(ctx); err != nil {
 		return err
 	}
 

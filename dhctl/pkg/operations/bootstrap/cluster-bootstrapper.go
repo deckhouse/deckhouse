@@ -334,7 +334,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	printBanner()
 
-	clusterUUID, err := generateClusterUUID(stateCache)
+	clusterUUID, err := generateClusterUUID(ctx, stateCache)
 	if err != nil {
 		return err
 	}
@@ -711,9 +711,10 @@ func printBanner() {
 	log.InfoLn(banner)
 }
 
-func generateClusterUUID(stateCache state.Cache) (string, error) {
+func generateClusterUUID(ctx context.Context, stateCache state.Cache) (string, error) {
 	var clusterUUID string
-	err := log.Process("bootstrap", "Cluster UUID", func() error {
+
+	return clusterUUID, log.ProcessCtx(ctx, "bootstrap", "Cluster UUID", func(ctx context.Context) error {
 		ok, err := stateCache.InCache("uuid")
 		if err != nil {
 			return err
@@ -741,10 +742,15 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 		}
 		return nil
 	})
-	return clusterUUID, err
 }
 
-func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, infrastructureContext *infrastructure.Context) error {
+func bootstrapAdditionalNodesForCloudCluster(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+	masterAddressesForSSH map[string]string,
+	infrastructureContext *infrastructure.Context,
+) error {
 	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global()); err != nil {
 		return err
 	}
@@ -815,7 +821,7 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 		return nil
 	}
 
-	return log.Process("bootstrap", "Create Resources", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Create Resources", func(ctx context.Context) error {
 		var err error
 		checkers := make([]resources.Checker, 0)
 		if !skipChecks {

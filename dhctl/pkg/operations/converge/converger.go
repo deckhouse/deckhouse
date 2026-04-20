@@ -151,10 +151,6 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return err
 		}
 
-		if err != nil {
-			return err
-		}
-
 		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err
@@ -491,7 +487,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}, nil
 }
 
-func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Duration) error {
+func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
 	if err := c.applyParams(); err != nil {
 		return err
 	}

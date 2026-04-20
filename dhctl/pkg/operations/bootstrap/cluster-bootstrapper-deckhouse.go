@@ -43,8 +43,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
-	err = metaConfig.LoadInstallerVersion()
-	if err != nil {
+	if err := metaConfig.LoadInstallerVersion(); err != nil {
 		return err
 	}
 
@@ -56,8 +55,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	installConfig.KubeadmBootstrap = app.KubeadmBootstrap
 	installConfig.MasterNodeSelector = app.MasterNodeSelector
 
-	err = terminal.AskBecomePassword()
-	if err != nil {
+	if err := terminal.AskBecomePassword(); err != nil {
 		return err
 	}
 	if err := terminal.AskBastionPassword(); err != nil {

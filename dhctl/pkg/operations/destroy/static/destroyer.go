@@ -177,14 +177,17 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	if len(ips) > 0 {
-		err := logger.LogProcess("default", "Get internal node IP for passed control-plane host", func() error {
+		err := logger.LogProcessCtx(ctx, "default", "Get internal node IP for passed control-plane host", func(ctx context.Context) error {
 			file := sshClient.File()
+
 			bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 			if err != nil {
 				return err
 			}
+
 			hostToExclude = strings.TrimSpace(string(bytes))
 			logger.LogDebugF("Got internal node IP for passed control-plane host: %s\n", hostToExclude)
+
 			return nil
 		})
 		if err != nil {

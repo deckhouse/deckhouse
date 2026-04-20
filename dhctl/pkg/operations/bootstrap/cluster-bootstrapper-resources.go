@@ -76,11 +76,12 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		}
 	}
 
-	return log.Process("bootstrap", "Create resources", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Create resources", func(ctx context.Context) error {
 		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, b.NodeInterface)
 		if err != nil {
 			return err
 		}
+
 		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
 		if err != nil {
 			return err

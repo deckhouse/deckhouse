@@ -150,7 +150,7 @@ func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) erro
 		return err
 	}
 
-	return logger.LogProcess("common", "Delete resources from the Kubernetes cluster", func() error {
+	return logger.LogProcessCtx(ctx, "common", "Delete resources from the Kubernetes cluster", func(ctx context.Context) error {
 		return d.deleteEntities(ctx, kubeCl)
 	})
 }

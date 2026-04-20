@@ -15,17 +15,17 @@
 package commands
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os/exec"
 	"path"
 	"strings"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
@@ -35,8 +35,9 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -48,14 +49,12 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		err = sshCl.Start()
-		if err != nil {
+
+		if err := sshCl.Start(); err != nil {
 			return err
 		}
 
-		err = sshCl.Check().AwaitAvailability(ctx)
-
-		if err != nil {
+		if err := sshCl.Check().AwaitAvailability(ctx); err != nil {
 			return fmt.Errorf("check connection: %v", err)
 		}
 
@@ -63,7 +62,6 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-	return cmd
 }
 
 func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -79,9 +77,11 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("dst", "destination path").Short('d').StringVar(&DstPath)
 	cmd.Flag("data", "data to test uploadbytes method").StringVar(&Data)
 	cmd.Flag("way", "transfer direction: 'up' to upload to remote or 'down' to download from remote").Short('w').StringVar(&Direction)
-	cmd.Action(func(c *kingpin.ParseContext) error {
+
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		log.DebugLn("scp: start ssh-agent")
-		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -93,8 +93,8 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		err = sshCl.Start()
-		if err != nil {
+
+		if err := sshCl.Start(); err != nil {
 			return err
 		}
 
@@ -138,8 +138,6 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-
-	return cmd
 }
 
 func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -153,8 +151,9 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Flag("sudo", "source path").Short('s').
 		BoolVar(&Sudo)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -166,42 +165,45 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
+
 		cmd := sshClient.UploadScript(ScriptPath)
 		if Sudo {
 			cmd.Sudo()
 		}
+
 		var stdout []byte
 		stdout, err = cmd.Execute(ctx)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				return fmt.Errorf("script '%s' error: %w stderr: %s", ScriptPath, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("script '%s' error: %w", ScriptPath, err)
 		}
+
 		log.InfoF("stdout: %s\n", strings.Trim(string(stdout), "\n "))
 		log.InfoF("Got %d symbols\n", len(stdout))
+
 		return nil
 	})
-
-	return cmd
 }
 
 func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	var ScriptName string
-	var BundleDir string
-
 	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
+
+	var bundleDirFlag string
+	var scriptNameFlag string
+
 	cmd.Flag("bundle-dir", "path of a bundle root directory").
 		Short('d').
-		StringVar(&BundleDir)
+		StringVar(&bundleDirFlag)
 	cmd.Flag("bundle-script", "path of a bundle main script").
 		Short('s').
-		StringVar(&ScriptName)
+		StringVar(&scriptNameFlag)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -214,21 +216,22 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		cmd := sshClient.UploadScript(ScriptName)
+		cmd := sshClient.UploadScript(scriptNameFlag)
 		cmd.Sudo()
-		parentDir := path.Dir(BundleDir)
-		bundleDir := path.Base(BundleDir)
-		stdout, err := cmd.ExecuteBundle(context.Background(), parentDir, bundleDir)
+
+		parentDir := path.Dir(bundleDirFlag)
+		bundleDir := path.Base(bundleDirFlag)
+
+		stdout, err := cmd.ExecuteBundle(ctx, parentDir, bundleDir)
 		if err != nil {
-			var ee *exec.ExitError
-			if errors.As(err, &ee) {
+			if ee, ok := errors.AsType[*exec.ExitError](err); ok {
 				return fmt.Errorf("bundle '%s' error: %w\nstderr: %s\n", bundleDir, err, string(ee.Stderr))
 			}
 			return fmt.Errorf("bundle '%s' error: %w", bundleDir, err)
 		}
+
 		log.InfoF("Got %d symbols\n", len(stdout))
+
 		return nil
 	})
-
-	return cmd
 }

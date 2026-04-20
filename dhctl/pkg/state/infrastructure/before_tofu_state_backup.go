@@ -140,7 +140,7 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 }
 
 func (t *TofuMigrationStateBackuper) BackupStates(ctx context.Context) error {
-	return t.logger.LogProcess("default", "Backup infrastructure states before migrate to opentofu", func() error {
+	return t.logger.LogProcessCtx(ctx, "default", "Backup infrastructure states before migrate to opentofu", func(ctx context.Context) error {
 		return t.doBackupStates(ctx)
 	})
 }
@@ -249,7 +249,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 	}
 
 	for ngName, ng := range ngs {
-		err = t.logger.LogProcess("default", fmt.Sprintf("Save infrastructure backup nodes states for commander for node group %s", ngName), func() error {
+		err = t.logger.LogProcessCtx(ctx, "default", fmt.Sprintf("Save infrastructure backup nodes states for commander for node group %s", ngName), func(ctx context.Context) error {
 			for node, st := range ng.State {
 				err := retry.NewLoop(fmt.Sprintf("Save infrastructure backup state for node %s states for commander", node), 1, 5*time.Second).
 					WithLogger(t.logger).

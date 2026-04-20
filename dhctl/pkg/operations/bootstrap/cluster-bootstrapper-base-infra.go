@@ -70,7 +70,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 		stateCache.Delete(state.TombstoneKey)
 	}
 
-	clusterUUID, err := generateClusterUUID(stateCache)
+	clusterUUID, err := generateClusterUUID(ctx, stateCache)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	defer cleanup()
 
-	return log.Process("bootstrap", "Cloud infrastructure", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
 		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
 		if err != nil {
 			return err

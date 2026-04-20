@@ -163,7 +163,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
@@ -184,7 +184,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		return &pb.CheckResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {

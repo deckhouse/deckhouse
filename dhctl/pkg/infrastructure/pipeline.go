@@ -112,21 +112,19 @@ func ApplyPipeline(
 	extractFn func(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error),
 ) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
-	pipelineFunc := func() error {
-		err := r.Init(ctx)
-		if err != nil {
+
+	pipelineFunc := func(ctx context.Context) (err error) {
+		if err := r.Init(ctx); err != nil {
 			return err
 		}
 
-		err = r.Plan(ctx, false, false)
-		if err != nil {
+		if err := r.Plan(ctx, false, false); err != nil {
 			return err
 		}
 
 		defer func() { extractedData, err = extractFn(ctx, r) }()
 
-		err = r.Apply(ctx)
-		if err != nil {
+		if err := r.Apply(ctx); err != nil {
 			return err
 		}
 
@@ -135,7 +133,8 @@ func ApplyPipeline(
 	}
 
 	logger := r.GetLogger()
-	err := logger.LogProcess("infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+	err := logger.LogProcessCtx(ctx, "infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+
 	return extractedData, err
 }
 
