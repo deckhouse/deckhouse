@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,30 +21,41 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 	"github.com/go-jose/go-jose/v4"
 	"gopkg.in/yaml.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	tlsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/tls"
 )
 
 const (
 	privKeyFilename = "signature-private.jwk"
 	pubKeyFilename  = "signature-public.jwks"
+	configFilename  = "encryption-config.yaml"
 
-	SignaturePath        = app.NodeDeckhouseDirectoryPath + `/signature`
-	KubernetesConfigPath = `/etc/kubernetes`
-	KubernetesPkiPath    = KubernetesConfigPath + `/pki`
-	DeckhousePath        = KubernetesConfigPath + `/deckhouse`
+	signaturePath        = app.NodeDeckhouseDirectoryPath + `/signature`
+	kubernetesConfigPath = `/etc/kubernetes`
+	kubernetesPkiPath    = kubernetesConfigPath + `/pki`
 )
+
+var (
+	createSigDirDefaultOpts = retry.AttemptsWithWaitOpts(10, 10*time.Second)
+)
+
+type LoopsParams struct {
+	CreateSigDir retry.Params
+}
+
+type ModuleSettings interface {
+	SignatureMode() (string, error)
+}
 
 type EncryptionConfiguration struct {
 	APIVersion string    `yaml:"apiVersion"`
@@ -61,14 +72,15 @@ type Signature struct {
 type TimeFunc func() time.Time
 
 type BootstrapPreparator struct {
-	settings       *SettingsExtractor
+	settings       ModuleSettings
 	nodeInterface  node.Interface
 	loggerProvider log.LoggerProvider
 	timeNow        TimeFunc
 	dirPathPrefix  string
+	loopsParams    LoopsParams
 }
 
-func NewBootstrapPreparator(settings *SettingsExtractor, loggerProvider log.LoggerProvider, nodeInterface node.Interface) *BootstrapPreparator {
+func NewBootstrapPreparator(settings ModuleSettings, nodeInterface node.Interface, loggerProvider log.LoggerProvider) *BootstrapPreparator {
 	return &BootstrapPreparator{
 		settings:       settings,
 		nodeInterface:  nodeInterface,
@@ -85,13 +97,19 @@ func (p *BootstrapPreparator) WithTimeFunc(f TimeFunc) *BootstrapPreparator {
 	return p
 }
 
+func (p *BootstrapPreparator) WithLoopsParams(l LoopsParams) *BootstrapPreparator {
+	p.loopsParams = l
+
+	return p
+}
+
 func (p *BootstrapPreparator) WithDirPrefix(pr string) *BootstrapPreparator {
 	p.dirPathPrefix = pr
 
 	return p
 }
 
-func (p *BootstrapPreparator) Prepare(ctx context.Context) error {
+func (p *BootstrapPreparator) PrepareModule(ctx context.Context) error {
 	logger := p.loggerProvider()
 
 	signatureMode, err := p.settings.SignatureMode()
@@ -105,43 +123,36 @@ func (p *BootstrapPreparator) Prepare(ctx context.Context) error {
 	}
 
 	return logger.Process(log.ProcessBootstrap, "Configure signature certificates for control-plane", func() error {
-		logger.DebugF("Got signature mode: %s. Start preparing control-plane signature", signatureMode)
-
-		certs, err := tlsutils.GenerateCertificate("signature", "apiserver", tlsutils.CertKeyTypeED25519, 365)
-		if err != nil {
-			return fmt.Errorf("Cannot generate tls certificate: %w", err)
-		}
-
-		keys, err := p.generateKeys(certs, p.timeNow())
-		if err != nil {
-			return err
-		}
-
-		encConfig, err := p.encryptionConfig(signatureMode)
-		if err != nil {
-			return err
-		}
-
-		if err := p.createSignatureDir(ctx); err != nil {
-			return err
-		}
-
+		return p.generateKeysAndUpload(ctx, signatureMode)
 	})
+}
 
-	log.InfoF("Upload files\n")
-	files := map[string][]byte{
-		filepath.Join(filepath.Join(folderPathPrefix, SignaturePath), privKeyFilename):          privJSON,
-		filepath.Join(filepath.Join(folderPathPrefix, SignaturePath), pubKeyFilename):           jwksJSON,
-		filepath.Join(filepath.Join(folderPathPrefix, SignaturePath), "encryption-config.yaml"): yamlData,
-	}
-	for filePath, content := range files {
-		err = nodeInterface.File().UploadBytes(ctx, content, filePath)
-		if err != nil {
-			return fmt.Errorf("create file %s: %v", filePath, err)
-		}
-	}
-	return nil
+func (p *BootstrapPreparator) Module() string {
+	return moduleName
+}
 
+func (p *BootstrapPreparator) generateKeysAndUpload(ctx context.Context, signatureMode string) error {
+	p.loggerProvider().DebugF("Got signature mode: %s. Start preparing control-plane signature", signatureMode)
+
+	certs, err := tlsutils.GenerateCertificate("signature", "apiserver", tlsutils.CertKeyTypeED25519, 365)
+	if err != nil {
+		return fmt.Errorf("Cannot generate tls certificate: %w", err)
+	}
+
+	keys, err := p.generateKeys(certs, p.timeNow())
+	if err != nil {
+		return err
+	}
+
+	encConfig, err := p.encryptionConfig(signatureMode)
+	if err != nil {
+		return err
+	}
+
+	return p.uploadSignatureFiles(ctx, &signature{
+		keys:   keys,
+		config: encConfig,
+	})
 }
 
 type keys struct {
@@ -170,7 +181,7 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 		return nil, fmt.Errorf("Cannot marshal private key JWK: %w", err)
 	}
 
-	logger.InfoF("Generate key for signature")
+	logger.DebugF("Generate key for signature")
 	pubKeyCert, err := x509.ParseCertificate(certs.Certificate[0])
 	if err != nil {
 		return nil, fmt.Errorf("Cannot parse certificate: %w", err)
@@ -181,7 +192,7 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 		return nil, fmt.Errorf("Unexpected public key type %T, expected ed25519.PublicKey", pubKeyCert.PublicKey)
 	}
 
-	logger.InfoF("Generate certificate for signature")
+	logger.DebugF("Generate certificate for signature")
 	pubJWK := jose.JSONWebKey{
 		Key:          pubKey,
 		KeyID:        timeNow,
@@ -205,16 +216,18 @@ func (p *BootstrapPreparator) generateKeys(certs *tls.Certificate, now time.Time
 }
 
 func (p *BootstrapPreparator) encryptionConfig(signatureMode string) ([]byte, error) {
-	p.loggerProvider().InfoF("Generate encryption config")
+	p.loggerProvider().DebugF("Generate encryption config")
+
 	config := EncryptionConfiguration{
 		APIVersion: "apiserver.config.k8s.io/v1",
 		Kind:       "EncryptionConfiguration",
 		Signature: Signature{
-			PrivKeyPath: fs.JoinLinux(KubernetesPkiPath, privKeyFilename),
-			PubKeyPath:  fs.JoinLinux(KubernetesPkiPath, pubKeyFilename),
+			PrivKeyPath: fs.JoinLinux(kubernetesPkiPath, privKeyFilename),
+			PubKeyPath:  fs.JoinLinux(kubernetesPkiPath, pubKeyFilename),
 			Mode:        strings.ToLower(signatureMode),
 		},
 	}
+
 	yamlData, err := yaml.Marshal(&config)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot marshal EncryptionConfiguration: %w", err)
@@ -228,31 +241,41 @@ func (p *BootstrapPreparator) signaturePath(parts ...string) string {
 	if p.dirPathPrefix != "" {
 		full = append(full, p.dirPathPrefix)
 	}
-	full = append(full, SignaturePath)
+
+	full = append(full, signaturePath)
 	full = append(full, parts...)
-	return fs.JoinLinux(full...)
+
+	path := fs.JoinLinux(full...)
+
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	return path
 }
 
 func (p *BootstrapPreparator) createSignatureDir(ctx context.Context) error {
 	signaturePath := p.signaturePath()
 
-	p.loggerProvider().DebugF("Create signature dir %s", signaturePath)
+	logger := p.loggerProvider()
 
-	err := retry.NewLoop(fmt.Sprintf("Prepare %s", signaturePath), 30, 10*time.Second).RunContext(ctx, func() error {
+	logger.DebugF("Create signature dir %s", signaturePath)
+
+	loopParams := retry.SafeCloneOrNewParams(p.loopsParams.CreateSigDir, createSigDirDefaultOpts...).
+		Clone(
+			retry.WithName("Prepare %s", signaturePath),
+			retry.WithLogger(logger),
+		)
+
+	return retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		cmd := p.nodeInterface.Command("sh", "-c", fmt.Sprintf("umask 0022 ; mkdir -p -m 1777 %s", signaturePath))
 		cmd.Sudo(ctx)
 		if err := cmd.Run(ctx); err != nil {
-			return fmt.Errorf("mkdir -p -m 1777 %s: %w", signaturePath, err)
+			return fmt.Errorf("Cannot create signature dir: mkdir -p -m 1777 %s: %w", signaturePath, err)
 		}
 
 		return nil
 	})
-
-	if err != nil {
-		return fmt.Errorf("Cannot create signature dir %s: %w", signaturePath, err)
-	}
-
-	return nil
 }
 
 type signature struct {
@@ -261,5 +284,23 @@ type signature struct {
 }
 
 func (p *BootstrapPreparator) uploadSignatureFiles(ctx context.Context, sig *signature) error {
-	
+	if err := p.createSignatureDir(ctx); err != nil {
+		return err
+	}
+
+	p.loggerProvider().DebugF("Upload signature files")
+	files := map[string][]byte{
+		p.signaturePath(privKeyFilename): sig.privateKeyJSON,
+		p.signaturePath(pubKeyFilename):  sig.jwksJSON,
+		p.signaturePath(configFilename):  sig.config,
+	}
+
+	for filePath, content := range files {
+		err := p.nodeInterface.File().UploadBytes(ctx, content, filePath)
+		if err != nil {
+			return fmt.Errorf("Cannot create file %s: %w", filePath, err)
+		}
+	}
+
+	return nil
 }

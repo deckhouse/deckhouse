@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 const (
 	NoSignatureMode      = ""
 	defaultSignatureMode = "Migrate"
+	moduleName           = "control-plane-manager"
 )
 
 type SettingsExtractor struct {
@@ -37,6 +38,7 @@ type SettingsExtractor struct {
 
 func NewSettingsExtractor(cfg *config.MetaConfig, edition string, loggerProvider log.LoggerProvider) *SettingsExtractor {
 	return &SettingsExtractor{
+		cfg:            cfg,
 		edition:        edition,
 		loggerProvider: loggerProvider,
 	}
@@ -58,11 +60,11 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 
 	logger.DebugF("Got cse edition try to extract signature mode")
 
-	mc := e.cfg.FindModuleConfig("control-plane-manager")
+	mc := e.cfg.FindModuleConfig(moduleName)
 
 	logAndReturnDefaultMode := func(msg string, args ...any) (string, error) {
 		msg = fmt.Sprintf(msg, args...)
-		logger.DebugF("%s Returns default signature mode '%s'", msg, defaultSignatureMode)
+		logger.DebugF("%s. Returns default signature mode '%s'", msg, defaultSignatureMode)
 		return defaultSignatureMode, nil
 	}
 

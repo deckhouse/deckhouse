@@ -44,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/module/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
@@ -59,6 +60,11 @@ import (
 const (
 	BastionHostCacheKey = "bastion-hosts"
 )
+
+type ModulePreparator interface {
+	PrepareModule(ctx context.Context) error
+	Module() string
+}
 
 type BashiblePipelineParams struct {
 	// Node
@@ -112,6 +118,8 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	loggerProvider := params.LoggerProvider
 	devicePath := params.DevicePath
 
+	logger := loggerProvider()
+
 	depsChecker := deps.NewDependenciesChecker(params.Node, loggerProvider)
 	if err := depsChecker.Check(ctx); err != nil {
 		return err
@@ -120,7 +128,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	templateController := template.NewTemplateController("")
 	bashible := dhbashible.NewRunner(nodeInterface, loggerProvider)
 
-	err := log.Process("bootstrap", "Preparing bootstrap", func() error {
+	err := logger.Process(dhctllog.ProcessBootstrap, "Preparing bootstrap", func() error {
 		log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
 		if err := template.PrepareBootstrap(templateController, nodeIP, cfg, dc); err != nil {
@@ -140,7 +148,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	if ready {
-		log.Success("Bashible already run! Skip bashible install\n")
+		logger.Success("Bashible already run! Skip bashible install")
 		return nil
 	}
 
@@ -171,10 +179,34 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
+	modulesPreparators := getModulesPreparators(params)
+	for _, preparator := range modulesPreparators {
+		logger.DebugF("Starting prepare module %s", preparator.Module())
+		if err := preparator.PrepareModule(ctx); err != nil {
+			return err
+		}
+	}
+
 	return bashible.ExecuteBundle(ctx, dhbashible.ExecuteBundleParams{
 		BundleDir:     templateController.TmpDir,
 		CommanderMode: params.CommanderMode,
 	})
+}
+
+func getModulesPreparators(params *BashiblePipelineParams) []ModulePreparator {
+	controlPlaneSettings := controlplane.NewSettingsExtractor(
+		params.MetaConfig,
+		config.GetEdition(),
+		params.LoggerProvider,
+	)
+
+	return []ModulePreparator{
+		controlplane.NewBootstrapPreparator(
+			controlPlaneSettings,
+			params.Node,
+			params.LoggerProvider,
+		),
+	}
 }
 
 func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, controller *template.Controller) error {
@@ -192,7 +224,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, contro
 			logs = append(logs, l)
 			log.DebugLn(l)
 		})
-		
+
 		cmd.Sudo()
 
 		_, err := cmd.Execute(ctx)
