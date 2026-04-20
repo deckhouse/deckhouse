@@ -220,8 +220,7 @@
       "ee"
     ],
     "tags": [
-      "ml/ai",
-      "core"
+      "ml/ai"
     ],
     "external": "true",
     "path": "/modules/gpu/"
