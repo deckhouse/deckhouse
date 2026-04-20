@@ -1,16 +1,94 @@
+diff --git a/pkg/cloudprovider/huaweicloud/huaweicloud.go b/pkg/cloudprovider/huaweicloud/huaweicloud.go
+index 11c95a18..17b5fe26 100644
+--- a/pkg/cloudprovider/huaweicloud/huaweicloud.go
++++ b/pkg/cloudprovider/huaweicloud/huaweicloud.go
+@@ -28,7 +28,7 @@ import (
+ 	gocache "github.com/patrickmn/go-cache"
+ 	"google.golang.org/grpc/codes"
+ 	"google.golang.org/grpc/status"
+-	"k8s.io/api/core/v1"
++	v1 "k8s.io/api/core/v1"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+@@ -42,7 +42,7 @@ import (
+ 	"k8s.io/client-go/tools/leaderelection"
+ 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+ 	"k8s.io/client-go/tools/record"
+-	"k8s.io/cloud-provider"
++	cloudprovider "k8s.io/cloud-provider"
+ 	"k8s.io/cloud-provider/options"
+ 	servicehelper "k8s.io/cloud-provider/service/helpers"
+ 	"k8s.io/klog/v2"
+@@ -379,7 +379,7 @@ func (h *CloudProvider) GetLoadBalancer(ctx context.Context, clusterName string,
+ 		return nil, false, cloudprovider.ImplementedElsewhere
+ 	}
+ 
+-	LBVersion, err := getLoadBalancerVersion(service)
++	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
+ 	if err != nil {
+ 		return nil, false, err
+ 	}
+@@ -397,7 +397,7 @@ func (h *CloudProvider) GetLoadBalancerName(ctx context.Context, clusterName str
+ 		return ""
+ 	}
+ 
+-	LBVersion, err := getLoadBalancerVersion(service)
++	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
+ 	if err != nil {
+ 		return ""
+ 	}
+@@ -418,7 +418,7 @@ func (h *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName stri
+ 	h.mutexLock.Lock(key)
+ 	defer h.mutexLock.Unlock(key)
+ 
+-	LBVersion, err := getLoadBalancerVersion(service)
++	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
+ 	if err != nil {
+ 		return nil, err
+ 	}
+@@ -439,7 +439,7 @@ func (h *CloudProvider) UpdateLoadBalancer(ctx context.Context, clusterName stri
+ 	h.mutexLock.Lock(key)
+ 	defer h.mutexLock.Unlock(key)
+ 
+-	LBVersion, err := getLoadBalancerVersion(service)
++	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -460,7 +460,7 @@ func (h *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterNa
+ 	h.mutexLock.Lock(key)
+ 	defer h.mutexLock.Unlock(key)
+ 
+-	LBVersion, err := getLoadBalancerVersion(service)
++	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -473,8 +473,8 @@ func (h *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterNa
+ 	return provider.EnsureLoadBalancerDeleted(ctx, clusterName, service)
+ }
+ 
+-func getLoadBalancerVersion(service *v1.Service) (LoadBalanceVersion, error) {
+-	class := service.Annotations[ElbClass]
++func getLoadBalancerVersion(service *v1.Service, defaultClass string) (LoadBalanceVersion, error) {
++	class := getStringFromSvsAnnotation(service, ElbClass, defaultClass)
+ 
+ 	switch class {
+ 	case "elasticity":
 diff --git a/pkg/config/loadbalancerconfig.go b/pkg/config/loadbalancerconfig.go
+index 144ebe51..6168dc01 100644
 --- a/pkg/config/loadbalancerconfig.go
 +++ b/pkg/config/loadbalancerconfig.go
-@@ -70,6 +70,7 @@ type LoadBalancerOptions struct {
- 	DisableCreateSecurityGroup bool   `json:"disable-create-security-group"`
+@@ -71,6 +71,7 @@ type LoadBalancerOptions struct {
  	LoadBalancerClass          string `json:"loadbalancer-class"`
  	BusinessName               string `json:"business-name"`
  	PrimaryNic                 string `json:"primary-nic"`
 +	DefaultELBClass            string `json:"default-elb-class"`
  }
-
+ 
  type HealthCheckOption struct {
-@@ -155,6 +156,12 @@ func (l *LoadBalancerOptions) initDefaultValue() {
+@@ -156,6 +157,12 @@ func (l *LoadBalancerOptions) initDefaultValue() {
  	if l.LBProvider == "" {
  		l.LBProvider = "vlb"
  	}
@@ -23,62 +101,3 @@ diff --git a/pkg/config/loadbalancerconfig.go b/pkg/config/loadbalancerconfig.go
  	l.HealthCheckOption = HealthCheckOption{
  		Timeout:    HealthCheckTimeout,
  		MaxRetries: HealthCheckMaxRetries,
-diff --git a/pkg/cloudprovider/huaweicloud/huaweicloud.go b/pkg/cloudprovider/huaweicloud/huaweicloud.go
---- a/pkg/cloudprovider/huaweicloud/huaweicloud.go
-+++ b/pkg/cloudprovider/huaweicloud/huaweicloud.go
-@@ -379,7 +379,7 @@ func (h *CloudProvider) GetLoadBalancer(ctx context.Context, clusterName string,
- 	if !h.isSupportedSvc(service) {
- 		return nil, false, cloudprovider.ImplementedElsewhere
- 	}
--	LBVersion, err := getLoadBalancerVersion(service)
-+	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
- 	if err != nil {
- 		return nil, false, err
- 	}
-@@ -397,7 +397,7 @@ func (h *CloudProvider) GetLoadBalancerName(ctx context.Context, clusterName str
- 	if !h.isSupportedSvc(service) {
- 		return ""
- 	}
--	LBVersion, err := getLoadBalancerVersion(service)
-+	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
- 	if err != nil {
- 		return ""
- 	}
-@@ -418,7 +418,7 @@ func (h *CloudProvider) EnsureLoadBalancer(ctx context.Context, clusterName stri
- 	h.mutexLock.Lock(key)
- 	defer h.mutexLock.Unlock(key)
-
--	LBVersion, err := getLoadBalancerVersion(service)
-+	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
- 	if err != nil {
- 		return nil, err
- 	}
-@@ -439,7 +439,7 @@ func (h *CloudProvider) UpdateLoadBalancer(ctx context.Context, clusterName stri
- 	h.mutexLock.Lock(key)
- 	defer h.mutexLock.Unlock(key)
-
--	LBVersion, err := getLoadBalancerVersion(service)
-+	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
- 	if err != nil {
- 		return err
- 	}
-@@ -460,7 +460,7 @@ func (h *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterNa
- 	h.mutexLock.Lock(key)
- 	defer h.mutexLock.Unlock(key)
-
--	LBVersion, err := getLoadBalancerVersion(service)
-+	LBVersion, err := getLoadBalancerVersion(service, h.loadbalancerOpts.DefaultELBClass)
- 	if err != nil {
- 		return err
- 	}
-@@ -476,8 +476,8 @@ func (h *CloudProvider) EnsureLoadBalancerDeleted(ctx context.Context, clusterNa
- 	return provider.EnsureLoadBalancerDeleted(ctx, clusterName, service)
- }
-
--func getLoadBalancerVersion(service *v1.Service) (LoadBalanceVersion, error) {
--	class := service.Annotations[ElbClass]
-+func getLoadBalancerVersion(service *v1.Service, defaultClass string) (LoadBalanceVersion, error) {
-+	class := getStringFromSvsAnnotation(service, ElbClass, defaultClass)
-
- 	switch class {
- 	case "elasticity":
