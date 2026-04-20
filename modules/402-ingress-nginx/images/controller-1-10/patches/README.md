@@ -168,3 +168,9 @@ This patch updates the way config_hash controller metric is calculated so that a
 ### 029-fix-cve-2026-4342.patch
 
 This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.
+
+### 031-fix-cve-2025-15566.patch
+
+This patch fixes CVE-2025-15566
+
+https://github.com/kubernetes/kubernetes/issues/136789
