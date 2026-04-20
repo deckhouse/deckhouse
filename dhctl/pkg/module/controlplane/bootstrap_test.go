@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/deckhouse/lib-dhctl/pkg/log"
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
+
+	"github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -193,11 +194,11 @@ func TestPrepare(t *testing.T) {
 			assertCommands: assertCreateSignDir,
 		},
 		{
-			name:           "upload err",
-			mode:           "Enforce",
-			uploadsErr:     fmt.Errorf("not copy"),
-			isErr:          true,
-			assertUploads:  func(t *testing.T, m map[string][]byte) {
+			name:       "upload err",
+			mode:       "Enforce",
+			uploadsErr: fmt.Errorf("not copy"),
+			isErr:      true,
+			assertUploads: func(t *testing.T, m map[string][]byte) {
 				require.True(t, len(m) != 3, "not upload all files with error got %d", len(m))
 			},
 			assertCommands: assertCreateSignDir,

@@ -24,10 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/lib-dhctl/pkg/log"
-	"github.com/deckhouse/lib-dhctl/pkg/retry"
 	"github.com/go-jose/go-jose/v4"
 	"gopkg.in/yaml.v2"
+
+	"github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"

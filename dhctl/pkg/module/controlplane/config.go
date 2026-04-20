@@ -17,8 +17,9 @@ package controlplane
 import (
 	"fmt"
 
-	"github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/name212/govalue"
+
+	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
@@ -95,4 +96,3 @@ func (e *SettingsExtractor) SignatureMode() (string, error) {
 
 	return signature, nil
 }
-
