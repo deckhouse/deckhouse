@@ -7,6 +7,6 @@ spec:
     highNodeUtilization:
       enabled: true
       thresholds:
-        cpu: 20
-        memory: 20
-        pods: 20
+        cpu: 55
+        memory: 65
+        pods: 50

@@ -13,42 +13,127 @@ spec:
     - name: assert-descheduler-ready
       description: Verify that the descheduler deployment exists and is ready
       try:
-        - assert:
+        - description: Check descheduler deployment has ready replicas
+          assert:
             file: ../common/assert-descheduler-ready.yaml
 
     - name: check-minimum-nodes
-      description: Verify that the cluster has at least 2 nodes for the consolidation test
+      description: Verify that the cluster has at least 2 worker nodes for the consolidation test
       try:
-        - script:
+        - description: Count worker nodes and verify at least 2 exist
+          script:
             content: |
-              NODE_COUNT=$(kubectl get nodes --no-headers | wc -l | tr -d ' ')
-              echo "$NODE_COUNT"
+              NODE_COUNT=$(kubectl get nodes --no-headers -l 'node-role.kubernetes.io/control-plane!=' | wc -l | tr -d ' ')
+              echo "Worker node count: $NODE_COUNT"
+              [ "$NODE_COUNT" -ge 2 ]
+            check:
+              ($error == null): true
+
+    - name: create-spread-workload
+      description: Create a Deployment with topology spread to distribute pods across worker nodes
+      try:
+        - description: Create spread Deployment with topology constraints
+          create:
+            file: files/spread-deployment.yaml
+      catch:
+        - description: Show pod status on failure
+          get:
+            apiVersion: v1
+            kind: Pod
+        - description: Show events on failure
+          events: {}
+
+    - name: wait-deployment-ready
+      description: Wait for the spread Deployment to have all replicas available
+      try:
+        - description: Wait for Deployment Available condition
+          wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: spread-deployment
+            timeout: 120s
+            for:
+              condition:
+                name: Available
+                value: 'True'
+        - description: Assert Deployment has 3 ready replicas
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: spread-deployment
+              status:
+                readyReplicas: 3
+
+    - name: assert-pods-spread
+      description: Verify pods are distributed across multiple nodes
+      try:
+        - description: Check pods are on at least 2 nodes
+          script:
+            content: |
+              NODE_COUNT=$(kubectl get pods -n "$NAMESPACE" -l e2e-test=high-node-utilization \
+                -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | sort -u | wc -l | tr -d ' ')
+              echo "Pods are spread across $NODE_COUNT node(s)"
               [ "$NODE_COUNT" -ge 2 ]
             check:
               ($error == null): true
 
     - name: apply-descheduler-cr
-      description: Create Descheduler CR with HighNodeUtilization strategy
+      description: Create Descheduler CR with HighNodeUtilization strategy (after workload is stable)
       try:
-        - apply:
+        - description: Apply the Descheduler CR manifest
+          apply:
             file: files/descheduler-cr.yaml
-        - assert:
+        - description: Assert the Descheduler CR exists
+          assert:
             resource:
               apiVersion: deckhouse.io/v1alpha2
               kind: Descheduler
               metadata:
                 name: e2e-high-node-utilization
       cleanup:
-        - delete:
+        - description: Delete the Descheduler CR
+          delete:
             ref:
               apiVersion: deckhouse.io/v1alpha2
               kind: Descheduler
               name: e2e-high-node-utilization
 
-    - name: wait-descheduler-restart
-      description: Wait for descheduler to restart with the new policy from CR
+    - name: assert-configmap-updated
+      description: Verify that Deckhouse reconciled the CR into the descheduler policy ConfigMap
       try:
-        - wait:
+        - description: Assert ConfigMap data contains the e2e-high-node-utilization profile
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'e2e-high-node-utilization')): true
+      catch:
+        - description: Show ConfigMap content on failure
+          get:
+            apiVersion: v1
+            kind: ConfigMap
+            name: descheduler-policy
+            namespace: d8-descheduler
+        - description: Show Descheduler CRs on failure
+          get:
+            apiVersion: deckhouse.io/v1alpha2
+            kind: Descheduler
+        - description: Show events in descheduler namespace
+          events:
+            namespace: d8-descheduler
+
+    - name: wait-descheduler-ready
+      description: Wait for descheduler deployment to be ready with the new policy
+      try:
+        - description: Wait for descheduler deployment Available condition
+          wait:
             apiVersion: apps/v1
             kind: Deployment
             name: descheduler
@@ -58,147 +143,55 @@ spec:
               condition:
                 name: Available
                 value: 'True'
-        - assert:
+        - description: Assert descheduler has ready replicas
+          assert:
             file: ../common/assert-descheduler-ready.yaml
       catch:
-        - describe:
+        - description: Describe descheduler deployment on failure
+          describe:
             apiVersion: apps/v1
             kind: Deployment
             name: descheduler
             namespace: d8-descheduler
-        - get:
+        - description: Show descheduler pods on failure
+          get:
             apiVersion: v1
             kind: Pod
             namespace: d8-descheduler
             selector: app=descheduler
-        - events:
-            namespace: d8-descheduler
-        - podLogs:
-            namespace: d8-descheduler
-            selector: app=descheduler
-
-    - name: create-spread-workload
-      description: Spread one pause pod per node to make all nodes underutilized
-      try:
-        - script:
-            content: |
-              NODES=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name')
-              INDEX=1
-              for NODE in $NODES; do
-                echo "Creating spread-pod-$INDEX on node $NODE"
-                kubectl run spread-pod-$INDEX \
-                  --namespace "$NAMESPACE" \
-                  --image=registry.k8s.io/pause:3.9 \
-                  --overrides="{\"spec\":{\"nodeName\":\"$NODE\"}}"
-                INDEX=$((INDEX + 1))
-              done
-            check:
-              ($error == null): true
-      catch:
-        - get:
-            apiVersion: v1
-            kind: Pod
-        - events: {}
-
-    - name: wait-pods-ready
-      description: Wait for all spread pods to become ready
-      try:
-        - wait:
-            apiVersion: v1
-            kind: Pod
-            name: spread-pod-1
-            timeout: 60s
-            for:
-              condition:
-                name: Ready
-                value: 'True'
-        - wait:
-            apiVersion: v1
-            kind: Pod
-            name: spread-pod-2
-            timeout: 60s
-            for:
-              condition:
-                name: Ready
-                value: 'True'
-
-    - name: assert-pods-running
-      description: Assert that spread pods are in Running phase
-      try:
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: spread-pod-1
-              status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: spread-pod-2
-              status:
-                phase: Running
-
-    - name: trigger-descheduler-cycle
-      description: Restart descheduler to force an immediate descheduling cycle with the current workload
-      try:
-        - script:
-            content: |
-              kubectl rollout restart deployment/descheduler -n d8-descheduler
-            check:
-              ($error == null): true
-        - wait:
-            apiVersion: apps/v1
-            kind: Deployment
-            name: descheduler
-            namespace: d8-descheduler
-            timeout: 120s
-            for:
-              condition:
-                name: Available
-                value: 'True'
-      catch:
-        - describe:
-            apiVersion: apps/v1
-            kind: Deployment
-            name: descheduler
-            namespace: d8-descheduler
-        - events:
+        - description: Show events in descheduler namespace
+          events:
             namespace: d8-descheduler
 
     - name: wait-for-descheduler-cycle
-      description: Wait for descheduler to execute the HighNodeUtilization plugin after restart
+      description: Wait for descheduler to execute the HighNodeUtilization plugin
       try:
-        - script:
-            timeout: 120s
+        - description: Poll descheduler logs for HighNodeUtilization execution
+          script:
+            timeout: 420s
             content: |
-              for i in $(seq 1 24); do
-                if kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --since=2m 2>/dev/null | grep -q "HighNodeUtilization"; then
+              DESCHEDULER_POD=$(kubectl get pods -n d8-descheduler -l app=descheduler -o jsonpath='{.items[0].metadata.name}')
+              echo "Watching logs of pod: $DESCHEDULER_POD"
+              for i in $(seq 1 80); do
+                if kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler 2>/dev/null | grep -q "HighNodeUtilization"; then
                   echo "HighNodeUtilization plugin has executed"
                   exit 0
                 fi
                 sleep 5
               done
               echo "Timed out waiting for HighNodeUtilization to execute"
+              kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler 2>/dev/null | tail -50
               exit 1
             check:
               ($error == null): true
       catch:
-        - describe:
+        - description: Describe descheduler pod on failure
+          describe:
             apiVersion: v1
             kind: Pod
             namespace: d8-descheduler
             selector: app=descheduler
-        - get:
-            apiVersion: v1
-            kind: Pod
-            namespace: d8-descheduler
-            selector: app=descheduler
-        - events:
-            namespace: d8-descheduler
-        - podLogs:
+        - description: Show descheduler pod logs on failure
+          podLogs:
             namespace: d8-descheduler
             selector: app=descheduler
