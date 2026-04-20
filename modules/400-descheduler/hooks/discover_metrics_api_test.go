@@ -87,4 +87,21 @@ var _ = Describe("Modules :: descheduler :: hooks :: discover_metrics_api ::", f
 			Expect(f.ValuesGet("descheduler.internal.isMetricsServerEnabled").Bool()).To(BeTrue())
 		})
 	})
+
+	Context("metrics.k8s.io APIService is removed after being present", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(apiServiceMetricsV1Beta1))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.isMetricsServerEnabled").Bool()).To(BeTrue())
+
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("Should set isMetricsServerEnabled back to false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.isMetricsServerEnabled").Bool()).To(BeFalse())
+		})
+	})
 })
