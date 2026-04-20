@@ -29,7 +29,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 {{- end -}}
 
 {{- define "vsphere_ccm_volume_mounts" -}}
-- mountPath: /etc/kubernetes/pkiдел
+ - mountPath: /etc/kubernetes/pki
   name: k8s-certs
   readOnly: true
 - mountPath: /etc/cloud-controller-manager-config
