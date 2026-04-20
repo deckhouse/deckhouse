@@ -215,6 +215,17 @@
     "external": "true",
     "path": "/modules/csi-yadro-tatlin-unified/stable/"
   },
+  "gpu": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "ai",
+      "core"
+    ],
+    "external": "true",
+    "path": "/modules/gpu/"
+  },
   "delivery-kit": {
     "editions": [
       "cse-lite",
