@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
 )
 
 // ClusterLogDestination specify output for logs stream
@@ -84,9 +86,9 @@ type LokiAuthSpec struct {
 
 // RateLimitSpec is throttle-transform configuration.
 type RateLimitSpec struct {
-	LinesPerMinute *int32   `json:"linesPerMinute,omitempty"`
-	KeyField       string   `json:"keyField,omitempty"`
-	Excludes       []Filter `json:"excludes,omitempty"`
+	LinesPerMinute *int32            `json:"linesPerMinute,omitempty"`
+	KeyField       string            `json:"keyField,omitempty"`
+	Excludes       []v1alpha1.Filter `json:"excludes,omitempty"`
 }
 
 type ElasticsearchAuthSpec struct {
