@@ -27,24 +27,24 @@ The Level 2 C4 architecture of the [`csi-huawei`](/modules/csi-huawei/) module a
 
 The module consists of the following components:
 
-1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-huawei/stable/cr.html):
+1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-huawei/cr.html):
 
-* HuaweiStorageConnection: Parameters for connecting to Huawei storage systems.
-* HuaweiStorageClass: Defines configuration for Kubernetes StorageClass.
+    * HuaweiStorageConnection: Parameters for connecting to Huawei storage systems.
+    * HuaweiStorageClass: Defines configuration for Kubernetes StorageClass.
 
-  HuaweiStorageClass defines the resource pool name, filesystem type, and reclaim policy.
+    HuaweiStorageClass defines the resource pool name, filesystem type, and reclaim policy.
 
-  It consists of the following containers:
+    It consists of the following containers:
 
-* **controller**: Main container.
-* **webhooks**: Sidecar container implementing a webhook server for StorageClass validation.
+    * **controller**: Main container.
+    * **webhooks**: Sidecar container implementing a webhook server for StorageClass validation.
 
 1. **CSI driver (huawei)**: CSI driver implementation for the `csi.huawei.com` provisioner. To study the architecture of the `csi-huawei` CSI driver, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-huawei.html).
 
-  The `csi-huawei` CSI driver reconciles the following [custom resources](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
+    The `csi-huawei` CSI driver reconciles the following [custom resources](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
 
-* StorageBackendClaim: A request to connect to Huawei storage.
-* StorageBackendContent: Description of the actual connection to Huawei storage.
+    * StorageBackendClaim: A request to connect to Huawei storage.
+    * StorageBackendContent: Description of the actual connection to Huawei storage.
 
 ## Module interactions
 
@@ -52,9 +52,9 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-  * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
-  * Reconciles HuaweiStorageConnection, HuaweiStorageClass, StorageBackendClaim, and StorageBackendContent custom resources.
-  * Creates StorageClass resources.
+    * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
+    * Reconciles HuaweiStorageConnection, HuaweiStorageClass, StorageBackendClaim, and StorageBackendContent custom resources.
+    * Creates StorageClass resources.
 
 1. **Huawei storage system**: Creates and deletes volumes, and attaches/detaches volumes to/from nodes.
 

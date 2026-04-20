@@ -27,19 +27,19 @@ The Level 2 C4 architecture of the [`csi-scsi-generic`](/modules/csi-scsi-generi
 
 The module consists of the following components:
 
-1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-scsi-generic/stable/cr.html):
+1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-scsi-generic/cr.html):
 
-* SCSITarget: Description of a storage connection endpoint (iSCSI/FC).
-* SCSIDevice: Description of a discovered SCSI device.
-* PendingResizeRequest: A request for deferred PVC expansion when the requested size is larger than the current device size.
-* SCSIStorageClass: Defines configuration for Kubernetes StorageClass.
+    * SCSITarget: Description of a storage connection endpoint (iSCSI/FC).
+    * SCSIDevice: Description of a discovered SCSI device.
+    * PendingResizeRequest: A request for deferred PVC expansion when the requested size is larger than the current device size.
+    * SCSIStorageClass: Defines configuration for Kubernetes StorageClass.
 
-  SCSIStorageClass defines the device selector (`scsiDeviceSelector`), reclaim policy, and volume cleanup parameters.
+    SCSIStorageClass defines the device selector (`scsiDeviceSelector`), reclaim policy, and volume cleanup parameters.
 
-  It consists of the following containers:
+    It consists of the following containers:
 
-* **controller**: Main container.
-* **iscsi-command-service**: Sidecar container implementing SCSI device discovery.
+    * **controller**: Main container.
+    * **iscsi-command-service**: Sidecar container implementing SCSI device discovery.
 
 1. **CSI driver (`csi-scsi-generic`)**: CSI driver implementation for the `scsi-generic.csi.storage.deckhouse.io` provisioner. To study the architecture of the `csi-scsi-generic` CSI driver, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-scsi-generic.html).
 
@@ -49,8 +49,8 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-  * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
-  * Reconciles BlockDeviceFilter, SCSITarget, SCSIDevice, PendingResizeRequest, and SCSIStorageClass custom resources.
-  * Creates StorageClass resources.
+    * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
+    * Reconciles BlockDeviceFilter, SCSITarget, SCSIDevice, PendingResizeRequest, and SCSIStorageClass custom resources.
+    * Creates StorageClass resources.
 
 1. **SCSI-connected storage systems**: Orchestrates the use of available SCSI devices, including their binding and cleanup, as well as node attachment.

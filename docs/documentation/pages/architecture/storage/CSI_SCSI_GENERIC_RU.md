@@ -28,19 +28,19 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-scsi-generic/stable/cr.html):
+1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-scsi-generic/cr.html):
 
-* SCSITarget — описание точки подключения к СХД (iSCSI/FC);
-* SCSIDevice — описание обнаруженного SCSI-устройства;
-* PendingResizeRequest — заявка на отложенное расширение PVC, если запрошенный размер больше текущего размера устройства;
-* SCSIStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+    * SCSITarget — описание точки подключения к СХД (iSCSI/FC);
+    * SCSIDevice — описание обнаруженного SCSI-устройства;
+    * PendingResizeRequest — заявка на отложенное расширение PVC, если запрошенный размер больше текущего размера устройства;
+    * SCSIStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
-  В SCSIStorageClass задаются селектор устройств (`scsiDeviceSelector`), reclaim policy и параметры очистки тома.
+    В SCSIStorageClass задаются селектор устройств (`scsiDeviceSelector`), reclaim policy и параметры очистки тома.
 
-  Состоит из следующих контейнеров:
+    Состоит из следующих контейнеров:
 
-* **controller** — основной контейнер;
-* **iscsi-command-service** — сайдкар-контейнер, реализующий обнаружение SCSI-устройств.
+    * **controller** — основной контейнер;
+    * **iscsi-command-service** — сайдкар-контейнер, реализующий обнаружение SCSI-устройств.
 
 1. **CSI-драйвер (`csi-scsi-generic`)** — реализация CSI-драйвера для `scsi-generic.csi.storage.deckhouse.io` provisioner. С архитектурой CSI-драйвера `scsi-scsi-generic` можно ознакомиться [в соответствующем разделе документации](../../storage/csi-drivers/csi-driver-scsi-generic.html).
 
@@ -50,8 +50,8 @@ description: Архитектура модуля csi-scsi-generic в Deckhouse K
 
 1. **Kube-apiserver**:
 
-  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
-  * работа с кастомными ресурсами BlockDeviceFilter, SCSITarget, SCSIDevice, PendingResizeRequest и SCSIStorageClass;
-  * создание ресурса StorageClass.
+    * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
+    * работа с кастомными ресурсами BlockDeviceFilter, SCSITarget, SCSIDevice, PendingResizeRequest и SCSIStorageClass;
+    * создание ресурса StorageClass.
 
 1. **СХД с подключением по SCSI** — оркестрация использования уже доступных SCSI-устройств, их привязка/очистка и подключение на узлах.

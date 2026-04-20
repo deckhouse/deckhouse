@@ -27,7 +27,7 @@ The Level 2 C4 architecture of the [`csi-s3`](/modules/csi-s3/) module and its i
 
 The module consists of the following components:
 
-1. **Controller**: A controller that reconciles the [S3StorageClass](/modules/csi-s3/stable/cr.html) custom resource. The S3StorageClass resource defines configuration for a Kubernetes StorageClass that uses the `ru.yandex.s3.csi` provisioner.
+1. **Controller**: A controller that reconciles the [S3StorageClass](/modules/csi-s3/cr.html) custom resource. The S3StorageClass resource defines configuration for a Kubernetes StorageClass that uses the `ru.yandex.s3.csi` provisioner.
 
    It consists of the following containers:
 
@@ -42,9 +42,9 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-  * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, Secret, and StorageClass resources.
-  * Reconciles S3StorageClass and ModuleConfig custom resources.
-  * Creates StorageClass and Secret resources.
+   * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, Secret, and StorageClass resources.
+   * Reconciles S3StorageClass and ModuleConfig custom resources.
+   * Creates StorageClass and Secret resources.
 
 1. **S3 storage**: Creates and deletes volumes, and attaches/detaches volumes to/from nodes.
 

@@ -73,8 +73,8 @@ The following external components interact with the driver:
 
 1. [Kubelet](../../kubernetes-and-scheduling/kubelet.html):
 
-  * Checks CSI driver livenessProbe.
-  * Registers the Node Plugin.
-  * Calls `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, and `NodeUnpublishVolume` RPCs in the Node Plugin.
+* Checks CSI driver livenessProbe.
+* Registers the Node Plugin.
+* Calls `NodeStageVolume`, `NodeUnstageVolume`, `NodePublishVolume`, and `NodeUnpublishVolume` RPCs in the Node Plugin.
 
    [Kubelet](../../kubernetes-and-scheduling/kubelet.html) interacts with the Node Plugin over gRPC via a Unix socket.

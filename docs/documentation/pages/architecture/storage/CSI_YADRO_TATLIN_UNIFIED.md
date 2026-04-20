@@ -27,23 +27,23 @@ The Level 2 C4 architecture of the [`csi-yadro-tatlin-unified`](/modules/csi-yad
 
 The module consists of the following components:
 
-1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-yadro-tatlin-unified/stable/cr.html):
+1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-yadro-tatlin-unified/cr.html):
 
-* YadroTatlinUnifiedStorageConnection: Parameters for connecting to YADRO TATLIN.UNIFIED storage systems.
-* YadroTatlinUnifiedStorageClass: Defines configuration for creating Kubernetes StorageClass that uses the `csi-tatlinunified.yadro.com` provisioner.
+    * YadroTatlinUnifiedStorageConnection: Parameters for connecting to YADRO TATLIN.UNIFIED storage systems.
+    * YadroTatlinUnifiedStorageClass: Defines configuration for creating Kubernetes StorageClass that uses the `csi-tatlinunified.yadro.com` provisioner.
 
-  YadroTatlinUnifiedStorageClass defines connection parameters (YadroTatlinUnifiedStorageConnection), as well as resource pool name, filesystem type, and reclaim policy.
+    YadroTatlinUnifiedStorageClass defines connection parameters (YadroTatlinUnifiedStorageConnection), as well as resource pool name, filesystem type, and reclaim policy.
 
-  It consists of the following containers:
+    It consists of the following containers:
 
-* **controller**: Main container.
-* **webhook**: Sidecar container implementing a webhook server for StorageClass resource validation.
+    * **controller**: Main container.
+    * **webhook**: Sidecar container implementing a webhook server for StorageClass resource validation.
 
 1. **CSI driver (yadro-tatlin-unified)**: CSI driver implementation for the `csi-tatlinunified.yadro.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../../storage/csi-drivers/csi-driver-nfs.html).
 
 1. **Scheduler-extender**: A single-container component that acts as an extender for kube-scheduler. It implements scheduling logic specific to pods using volumes from YADRO TATLIN.UNIFIED storage systems. During scheduling, node selectors defined in the YadroTatlinUnifiedStorageConnection custom resource under the `controlPlane` and `dataPlane` parameters are taken into account.
 
-  The component may be absent if node selectors are not set in the YadroTatlinUnifiedStorageConnection custom resource.
+    The component may be absent if node selectors are not set in the YadroTatlinUnifiedStorageConnection custom resource.
 
 ## Module interactions
 
@@ -51,9 +51,9 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-  * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
-  * Reconciles YadroTatlinUnifiedStorageConnection and YadroTatlinUnifiedStorageClass custom resources.
-  * Creates StorageClass resources.
+    * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
+    * Reconciles YadroTatlinUnifiedStorageConnection and YadroTatlinUnifiedStorageClass custom resources.
+    * Creates StorageClass resources.
 
 1. **YADRO TATLIN.UNIFIED storage system**: Creates and deletes volumes, and attaches/detaches volumes to/from nodes.
 

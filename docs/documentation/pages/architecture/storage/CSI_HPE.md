@@ -27,21 +27,21 @@ The Level 2 C4 architecture of the [`csi-hpe`](/modules/csi-hpe/) module and its
 
 The module consists of the following components:
 
-1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-hpe/stable/cr.html):
+1. **Controller**: A controller that reconciles the following [custom resources](/modules/csi-hpe/cr.html):
 
-* HPEStorageConnection: Parameters for connecting to HPE storage systems.
-* HPEStorageClass: Defines configuration for Kubernetes StorageClass.
+    * HPEStorageConnection: Parameters for connecting to HPE storage systems.
+    * HPEStorageClass: Defines configuration for Kubernetes StorageClass.
 
-  HPEStorageClass defines the connection protocol, resource pool name, filesystem type, and reclaim policy.
+    HPEStorageClass defines the connection protocol, resource pool name, filesystem type, and reclaim policy.
 
-  The controller also synchronizes the `storage.deckhouse.io/csi-hpe-node` label on cluster nodes according to the [`spec.settings.nodeSelector`](/modules/csi-hpe/configuration.html) value in the ModuleConfig custom resource.
+    The controller also synchronizes the `storage.deckhouse.io/csi-hpe-node` label on cluster nodes according to the [`spec.settings.nodeSelector`](/modules/csi-hpe/configuration.html) value in the ModuleConfig custom resource.
 
-  It consists of the following containers:
+    It consists of the following containers:
 
-* **controller**: Main container.
-* **webhooks**: Sidecar container implementing a webhook server for StorageClass validation.
+    * **controller**: Main container.
+    * **webhooks**: Sidecar container implementing a webhook server for StorageClass validation.
 
-1. **CSI driver (hpe)**: CSI driver implementation for the `csi.hpe.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../cluster-and-infrastructure/infrastructure/csi-driver.html).
+1. **CSI driver (hpe)**: CSI driver implementation for the `csi.hpe.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
 1. **Primera3par-csp**: A service container provider (Container Storage Provider, CSP) required for the CSI driver to work with HPE Primera and 3PAR storage systems. It is responsible for communication between Kubernetes and storage arrays, session management, path replication, and provides multipath access to storage for reliability and fault tolerance.
 
@@ -51,9 +51,9 @@ The module interacts with the following components:
 
 1. **Kube-apiserver**:
 
-  * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
-  * Reconciles HPEStorageConnection and HPEStorageClass custom resources.
-  * Creates and updates VolumeSnapshotClass, Secret, and StorageClass resources.
+    * Watches PersistentVolume, PersistentVolumeClaim, VolumeAttachment, and StorageClass resources.
+    * Reconciles HPEStorageConnection and HPEStorageClass custom resources.
+    * Creates and updates VolumeSnapshotClass, Secret, and StorageClass resources.
 
 1. **HPE storage system**: Creates, deletes, and manages volumes, and provides multipath data access.
 

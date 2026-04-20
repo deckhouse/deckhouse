@@ -28,7 +28,7 @@ description: Архитектура модуля csi-s3 в Deckhouse Kubernetes 
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий кастомный ресурс [S3StorageClass](/modules/csi-s3/stable/cr.html). Ресурс S3StorageClass определяет  конфигурацию для создаваемого Kubernetes StorageClass, который использует provisioner `ru.yandex.s3.csi`.
+1. **Controller** — контроллер, обслуживающий кастомный ресурс [S3StorageClass](/modules/csi-s3/cr.html). Ресурс S3StorageClass определяет  конфигурацию для создаваемого Kubernetes StorageClass, который использует provisioner `ru.yandex.s3.csi`.
 
    Состоит из следующих контейнеров:
 
@@ -43,9 +43,9 @@ description: Архитектура модуля csi-s3 в Deckhouse Kubernetes 
 
 1. **Kube-apiserver**:
 
-  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, Secret и StorageClass;
-  * работа с кастомными ресурсами S3StorageClass и ModuleConfig;
-  * создание ресурсов StorageClass и Secret.
+   * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, Secret и StorageClass;
+   * работа с кастомными ресурсами S3StorageClass и ModuleConfig;
+   * создание ресурсов StorageClass и Secret.
 
 1. **S3-хранилище** — создание и удаление томов, подключение и отключение томов от узлов.
 

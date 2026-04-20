@@ -28,24 +28,24 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 
 Модуль состоит из следующих компонентов:
 
-1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-huawei/stable/cr.html):
+1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-huawei/cr.html):
 
-* HuaweiStorageConnection — параметры подключения к СХД Huawei;
-* HuaweiStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+    * HuaweiStorageConnection — параметры подключения к СХД Huawei;
+    * HuaweiStorageClass — определяет конфигурацию для Kubernetes StorageClass.
 
-  В HuaweiStorageClass задается название пула ресурсов, тип файловой системы и reclaim policy.
+    В HuaweiStorageClass задается название пула ресурсов, тип файловой системы и reclaim policy.
 
-  Состоит из следующих контейнеров:
+    Состоит из следующих контейнеров:
 
-* **controller** — основной контейнер;
-* **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для валидации StorageClass.
+    * **controller** — основной контейнер;
+    * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для валидации StorageClass.
 
 1. **CSI-драйвер (huawei)** — реализация CSI-драйвера для `csi.huawei.com` provisioner. С архитектурой CSI-драйвера `csi-huawei` можно ознакомиться [в соответствующем разделе документации](../../storage/csi-drivers/csi-driver-huawei.html).
 
-  CSI-драйвер `csi-huawei` обслуживает следующие [кастомные ресурсы](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
+    CSI-драйвер `csi-huawei` обслуживает следующие [кастомные ресурсы](https://github.com/Huawei/eSDK_K8S_Plugin/blob/master/helm/esdk/crds/backend/):
 
-* StorageBackendClaim — запрос на подключение к СХД Huawei;
-* StorageBackendContent — описание фактического подключения к СХД Huawei.
+    * StorageBackendClaim — запрос на подключение к СХД Huawei;
+    * StorageBackendContent — описание фактического подключения к СХД Huawei.
 
 ## Взаимодействия модуля
 
@@ -53,9 +53,9 @@ description: Архитектура модуля csi-huawei в Deckhouse Kuberne
 
 1. **Kube-apiserver**:
 
-  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
-  * работа с кастомными ресурсами HuaweiStorageConnection, HuaweiStorageClass, StorageBackendClaim, StorageBackendContent;
-  * создание ресурса StorageClass.
+    * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
+    * работа с кастомными ресурсами HuaweiStorageConnection, HuaweiStorageClass, StorageBackendClaim, StorageBackendContent;
+    * создание ресурса StorageClass.
 
 1. **СХД Huawei** — создание и удаление томов, подключение и отключение томов от узлов.
 
