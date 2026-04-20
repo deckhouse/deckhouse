@@ -29,6 +29,7 @@ config:
       - VAULT_ADDR
       - VAULT_ROLE
       - VAULT_JWT
+      - WERF_SIGN_KEY
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY
