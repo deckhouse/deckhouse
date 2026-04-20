@@ -64,6 +64,16 @@
     "external": "true",
     "path": "/modules/code/stable/"
   },
+  "gpu": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "ml/ai"
+    ],
+    "external": "true",
+    "path": "/modules/gpu/"
+  },
   "managed-cassandra": {
     "editions": [
       "ee"
