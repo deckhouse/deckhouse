@@ -153,6 +153,9 @@ spec:
         app: {{ $fullname }}
         cluster.x-k8s.io/provider: {{ $capiProviderName }}
         control-plane: controller-manager
+        {{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+        security.deckhouse.io/security-policy-exception: {{ $fullname }}
+        {{- end }}
       {{- with $additionalPodLabels }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
