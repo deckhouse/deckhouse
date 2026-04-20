@@ -19,11 +19,13 @@ package operationsapprover
 import (
 	"context"
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 	"fmt"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -101,13 +103,13 @@ func getPredicates() predicate.Predicate {
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger.Info("Reconcile started")
 
-	nodes := &controlplanev1alpha1.ControlPlaneNodeList{}
-	if err := r.client.List(ctx, nodes, &client.ListOptions{}); err != nil {
+	nodes, err := r.getNodeCounts(ctx)
+	if err != nil {
+		logger.Error("failed to get node count", log.Err(err))
 		return reconcile.Result{}, err
 	}
-
-	if len(nodes.Items) == 0 {
-		logger.Warn("no control plane nodes found")
+	if nodes.isZero() {
+		logger.Warn("nodes not found")
 		return reconcile.Result{}, nil
 	}
 
@@ -115,13 +117,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	if err := r.client.List(ctx, operations); err != nil {
 		return reconcile.Result{}, err
 	}
-
 	if len(operations.Items) == 0 {
 		logger.Warn("no control plane operations found")
 		return reconcile.Result{}, nil
 	}
 
-	approver := newApprover(len(nodes.Items), operations.Items)
+	approver := newApprover(nodes, operations.Items)
 
 	for _, unapprovedOperation := range approver.approveQueue {
 		canApprove := approver.tryApprove(unapprovedOperation)
@@ -137,4 +138,22 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *reconciler) getNodeCounts(ctx context.Context) (nodeCounts, error) {
+	var nodes nodeCounts
+
+	masterList := &corev1.NodeList{}
+	if err := r.client.List(ctx, masterList, client.MatchingLabels{constants.ControlPlaneNodeLabelKey: ""}); err != nil {
+		return nodeCounts{}, fmt.Errorf("failed to list master nodes: %w", err)
+	}
+	nodes.masters = len(masterList.Items)
+
+	arbiterList := &corev1.NodeList{}
+	if err := r.client.List(ctx, arbiterList, client.MatchingLabels{constants.EtcdArbiterNodeLabelKey: ""}); err != nil {
+		return nodeCounts{}, fmt.Errorf("failed to list arbiter nodes: %w", err)
+	}
+	nodes.arbiters = len(arbiterList.Items)
+
+	return nodes, nil
 }

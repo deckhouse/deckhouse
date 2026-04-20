@@ -21,8 +21,10 @@ The controller recomputes approvals for the full operation set on each trigger.
 Approval pipeline stages:
 
 1. `Etcd` (global concurrency limit = `1`)
-2. `KubeAPIServer` (limit = `max(1, nodesCount-1)`)
+   - Calculated from total quorum membership: `masters + arbiters`
+2. `KubeAPIServer` (limit = `max(1, masters-1)`)
 3. `KubeControllerManager`, `KubeScheduler` (same limit as stage 2)
+   - Workload components run exclusively on master nodes
 
 Rules:
 
@@ -34,18 +36,23 @@ Rules:
 
 ## Reconciliation Logic
 
-1. List all `ControlPlaneNode` objects to get node count.
+1. Query node topology to determine:
+   - Count of master nodes (labeled with `node.deckhouse.io/control-plane=""`)
+   - Count of arbiter nodes (labeled with `node.deckhouse.io/etcd-arbiter=""`)
 2. List all `ControlPlaneOperation` objects.
 3. Split operations into:
-- approved and non-terminal (already occupy slots)
-- unapproved (approval queue)
+   - approved and non-terminal (already occupy slots)
+   - unapproved (approval queue)
 4. Seed stage counters from approved non-terminal operations.
 5. Iterate queue and try to reserve slot for each operation.
 6. Patch `spec.approved=true` when reservation succeeds.
 
 ## Logic Basis
 
-- Safety first for etcd: strict single-flight.
-- Control-plane workload rollout: allow `N-1` parallel updates, keep at least one node not updating in multi-node setups.
-- Determinism: stable sort and explicit stage graph.
+- **Node topology awareness**: Master and arbiter nodes are counted separately:
+  - Etcd limit includes both masters and arbiters (full quorum for etcd safety)
+  - Workload component limits use only master node count (apiserver, controller-manager, scheduler run on masters only)
+- **Safety first for etcd**: Strict single-flight to maintain quorum consensus safety.
+- **Control-plane workload rollout**: Allow `N-1` parallel updates (where N = master count), keep at least one node not updating in multi-node setups.
+- **Determinism**: Stable sort and explicit stage graph.
 

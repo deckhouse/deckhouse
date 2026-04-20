@@ -32,20 +32,20 @@ var approvePipeline = []pipelineStage{
 		components: []controlplanev1alpha1.OperationComponent{
 			controlplanev1alpha1.OperationComponentEtcd,
 		},
-		concurrencyLimitFn: etcdConcurrencyLimit,
+		concurrencyLimitFn: getConcurrencyLimit,
 	},
 	{
 		components: []controlplanev1alpha1.OperationComponent{
 			controlplanev1alpha1.OperationComponentKubeAPIServer,
 		},
-		concurrencyLimitFn: controlPlaneWorkloadConcurrencyLimit,
+		concurrencyLimitFn: getConcurrencyLimit,
 	},
 	{
 		components: []controlplanev1alpha1.OperationComponent{
 			controlplanev1alpha1.OperationComponentKubeControllerManager,
 			controlplanev1alpha1.OperationComponentKubeScheduler,
 		},
-		concurrencyLimitFn: controlPlaneWorkloadConcurrencyLimit,
+		concurrencyLimitFn: getConcurrencyLimit,
 	},
 }
 
@@ -53,7 +53,7 @@ var approvePipeline = []pipelineStage{
 // This slice is the single source of truth for stage order, membership, and per-stage concurrency policy.
 type pipelineStage struct {
 	components         []controlplanev1alpha1.OperationComponent
-	concurrencyLimitFn func(nodesCount int) int
+	concurrencyLimitFn func(nodes nodeCounts, c controlplanev1alpha1.OperationComponent) int
 }
 
 // pipelineStageIndex returns the stage index of c in controlPlaneApprovePipeline, or -1 if unknown.
@@ -86,12 +86,12 @@ type component struct {
 // newApprover builds an approver for one reconcile pass: partitions operations into
 // approved && !Completed and unapproved, sorts both by pipeline stage,
 // seeds the chain, and exposes unapproved operations via approveQueue iteration order.
-func newApprover(nodesCount int, operations []controlplanev1alpha1.ControlPlaneOperation) *approver {
+func newApprover(nodes nodeCounts, operations []controlplanev1alpha1.ControlPlaneOperation) *approver {
 	approvedOperations, unapprovedOperations := partitionOperationsByApprovalState(operations)
 	sortOperationsByPipelineOrder(approvedOperations)
 	sortOperationsByPipelineOrder(unapprovedOperations)
 
-	approveChain := buildApproveChain(nodesCount)
+	approveChain := buildApproveChain(nodes)
 	approveChain.seedApprovedOperations(approvedOperations)
 
 	return &approver{
@@ -129,20 +129,19 @@ func sortOperationsByPipelineOrder(operations []controlplanev1alpha1.ControlPlan
 	})
 }
 
-func buildApproveChain(nodesCount int) *approveLink {
+func buildApproveChain(nodes nodeCounts) *approveLink {
 	if len(approvePipeline) == 0 {
 		return nil
 	}
 
 	links := make([]*approveLink, len(approvePipeline))
 	for i, stage := range approvePipeline {
-		limit := stage.concurrencyLimitFn(nodesCount)
 		components := make(map[controlplanev1alpha1.OperationComponent]*component, len(stage.components))
 
 		for _, c := range stage.components {
 			components[c] = &component{
-				concurrencyLimit:          limit,
-				approvedOperationsPerNode: make(map[string]int, nodesCount),
+				concurrencyLimit:          stage.concurrencyLimitFn(nodes, c),
+				approvedOperationsPerNode: make(map[string]int),
 			}
 		}
 
@@ -177,12 +176,8 @@ func (link *approveLink) seedApprovedOperation(approvedOperation controlplanev1a
 
 	component := link.components[approvedOperation.Spec.Component]
 
-	if _, exists := component.approvedOperationsPerNode[approvedOperation.Spec.NodeName]; !exists {
-		component.approvedOperationsPerNode[approvedOperation.Spec.NodeName] = 0
-	}
-
 	component.approvedOperationsTotal++
-	component.approvedOperationsPerNode[approvedOperation.Spec.NodeName] = component.approvedOperationsPerNode[approvedOperation.Spec.NodeName] + 1
+	component.approvedOperationsPerNode[approvedOperation.Spec.NodeName]++
 }
 
 func (link *approveLink) tryReserveApproval(unapprovedOperation controlplanev1alpha1.ControlPlaneOperation) bool {
@@ -204,16 +199,12 @@ func (link *approveLink) tryReserveApproval(unapprovedOperation controlplanev1al
 		return false
 	}
 
-	if _, exists := component.approvedOperationsPerNode[unapprovedOperation.Spec.NodeName]; !exists {
-		component.approvedOperationsPerNode[unapprovedOperation.Spec.NodeName] = 0
-	}
-
 	if component.approvedOperationsPerNode[unapprovedOperation.Spec.NodeName] >= maxPerComponentPerNodeOperations {
 		return false
 	}
 
 	component.approvedOperationsTotal++
-	component.approvedOperationsPerNode[unapprovedOperation.Spec.NodeName] = component.approvedOperationsPerNode[unapprovedOperation.Spec.NodeName] + 1
+	component.approvedOperationsPerNode[unapprovedOperation.Spec.NodeName]++
 
 	return true
 }
@@ -236,11 +227,34 @@ func (link *approveLink) hasAnyApprovedOperation() bool {
 	return false
 }
 
-func etcdConcurrencyLimit(nodesCount int) int {
-	_ = nodesCount
+type nodeCounts struct {
+	masters  int
+	arbiters int
+}
+
+func (c nodeCounts) isZero() bool {
+	return c.masters+c.arbiters == 0
+}
+
+// Arbiters run etcd only; workload components (apiserver, etc.) run on master nodes exclusively.
+// For etcd the limit accounts for the full quorum membership (masters + arbiters).
+// For all other components only master nodes count.
+func getConcurrencyLimit(nodes nodeCounts, c controlplanev1alpha1.OperationComponent) int {
+	switch c {
+	case controlplanev1alpha1.OperationComponentEtcd:
+		return etcdConcurrencyLimit(nodes.masters + nodes.arbiters)
+	default:
+		return controlPlaneWorkloadConcurrencyLimit(nodes.masters)
+	}
+}
+
+// TODO: the limit is hardcoded to 1 until we settle on a quorum-safe formula,
+// e.g. (n-1)/2 for a cluster of n etcd members (masters + arbiters).
+func etcdConcurrencyLimit(nodes int) int {
+	_ = nodes
 	return 1
 }
 
-func controlPlaneWorkloadConcurrencyLimit(nodesCount int) int {
-	return max(1, nodesCount-1)
+func controlPlaneWorkloadConcurrencyLimit(nodes int) int {
+	return max(1, nodes-1)
 }

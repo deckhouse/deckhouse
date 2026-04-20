@@ -31,7 +31,7 @@ func TestNewApprover_ConcurrencyLimits(t *testing.T) {
 
 	t.Run("single node uses workload limit 1", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(1, nil)
+		a := newApprover(nodeCounts{masters: 1}, nil)
 		etcd := a.approveChain.components[controlplanev1alpha1.OperationComponentEtcd]
 		require.Equal(t, 1, etcd.concurrencyLimit)
 		api := a.approveChain.nextLink.components[controlplanev1alpha1.OperationComponentKubeAPIServer]
@@ -40,7 +40,7 @@ func TestNewApprover_ConcurrencyLimits(t *testing.T) {
 
 	t.Run("three nodes workload limit is nodesCount-1", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		api := a.approveChain.nextLink.components[controlplanev1alpha1.OperationComponentKubeAPIServer]
 		require.Equal(t, 2, api.concurrencyLimit)
 	})
@@ -51,21 +51,21 @@ func TestApprover_TryApprove_Etcd(t *testing.T) {
 
 	t.Run("allows first etcd operation", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		op := newOperation("etcd-1", "node-a", controlplanev1alpha1.OperationComponentEtcd, false)
 		require.True(t, a.tryApprove(op))
 	})
 
 	t.Run("rejects second etcd while first is reserved in same approver", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("etcd-1", "node-a", controlplanev1alpha1.OperationComponentEtcd, false)))
 		require.False(t, a.tryApprove(newOperation("etcd-2", "node-b", controlplanev1alpha1.OperationComponentEtcd, false)))
 	})
 
 	t.Run("rejects second etcd on same node", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("etcd-1", "node-a", controlplanev1alpha1.OperationComponentEtcd, false)))
 		require.False(t, a.tryApprove(newOperation("etcd-2", "node-a", controlplanev1alpha1.OperationComponentEtcd, false)))
 	})
@@ -75,7 +75,7 @@ func TestApprover_TryApprove_Etcd(t *testing.T) {
 		seed := []controlplanev1alpha1.ControlPlaneOperation{
 			newOperation("etcd-running", "node-a", controlplanev1alpha1.OperationComponentEtcd, true),
 		}
-		a := newApprover(3, seed)
+		a := newApprover(nodeCounts{masters: 3}, seed)
 		require.False(t, a.tryApprove(newOperation("etcd-new", "node-b", controlplanev1alpha1.OperationComponentEtcd, false)))
 	})
 }
@@ -85,27 +85,27 @@ func TestApprover_TryApprove_StageOrdering(t *testing.T) {
 
 	t.Run("blocks apiserver while etcd stage has reservation", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("e1", "n1", controlplanev1alpha1.OperationComponentEtcd, false)))
 		require.False(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 	})
 
 	t.Run("allows apiserver when etcd stage is empty", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 	})
 
 	t.Run("blocks kcm while apiserver stage has reservation", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 		require.False(t, a.tryApprove(newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
 	})
 
 	t.Run("allows kcm and scheduler concurrently on same pipeline stage", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
 		require.True(t, a.tryApprove(newOperation("s1", "n2", controlplanev1alpha1.OperationComponentKubeScheduler, false)))
 	})
@@ -117,7 +117,7 @@ func TestApprover_TryApprove_WorkloadConcurrencyAndPerNode(t *testing.T) {
 	t.Run("allows up to workload concurrency limit on distinct nodes", func(t *testing.T) {
 		t.Parallel()
 		// 3 nodes -> limit 2 for apiserver
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 		require.True(t, a.tryApprove(newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 		require.False(t, a.tryApprove(newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
@@ -125,7 +125,7 @@ func TestApprover_TryApprove_WorkloadConcurrencyAndPerNode(t *testing.T) {
 
 	t.Run("rejects second apiserver on same node", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 		require.False(t, a.tryApprove(newOperation("a2", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 	})
@@ -136,7 +136,7 @@ func TestApprover_TryApprove_OutOfChainComponents(t *testing.T) {
 
 	t.Run("HotReload is not approvable via default chain", func(t *testing.T) {
 		t.Parallel()
-		a := newApprover(3, nil)
+		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.False(t, a.tryApprove(newOperation("hr1", "n1", controlplanev1alpha1.OperationComponentHotReload, false)))
 	})
 }
@@ -147,7 +147,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 	t.Run("unapproved operation is only in approveQueue", func(t *testing.T) {
 		t.Parallel()
 		op := newOperation("x", "n1", controlplanev1alpha1.OperationComponentEtcd, false)
-		a := newApprover(1, []controlplanev1alpha1.ControlPlaneOperation{op})
+		a := newApprover(nodeCounts{masters: 1}, []controlplanev1alpha1.ControlPlaneOperation{op})
 		require.Empty(t, a.approveChain.components[controlplanev1alpha1.OperationComponentEtcd].approvedOperationsPerNode)
 		require.Len(t, a.approveQueue, 1)
 		require.Equal(t, "x", a.approveQueue[0].Name)
@@ -156,7 +156,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 	t.Run("approved and incompleted is seed only empty queue", func(t *testing.T) {
 		t.Parallel()
 		op := newOperation("x", "n1", controlplanev1alpha1.OperationComponentEtcd, true)
-		a := newApprover(1, []controlplanev1alpha1.ControlPlaneOperation{op})
+		a := newApprover(nodeCounts{masters: 1}, []controlplanev1alpha1.ControlPlaneOperation{op})
 		require.Empty(t, a.approveQueue)
 		require.Equal(t, 1, a.approveChain.components[controlplanev1alpha1.OperationComponentEtcd].approvedOperationsTotal)
 	})
@@ -170,7 +170,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 			Reason:             "Test",
 			LastTransitionTime: metav1.Now(),
 		})
-		a := newApprover(1, []controlplanev1alpha1.ControlPlaneOperation{op})
+		a := newApprover(nodeCounts{masters: 1}, []controlplanev1alpha1.ControlPlaneOperation{op})
 		require.Empty(t, a.approveQueue)
 		require.Zero(t, a.approveChain.components[controlplanev1alpha1.OperationComponentEtcd].approvedOperationsTotal)
 	})
@@ -180,7 +180,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 		api := newOperation("aaa-apiserver", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)
 		etcd := newOperation("zzz-etcd", "n2", controlplanev1alpha1.OperationComponentEtcd, false)
 		kcm := newOperation("m-kcm", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)
-		a := newApprover(1, []controlplanev1alpha1.ControlPlaneOperation{api, etcd, kcm})
+		a := newApprover(nodeCounts{masters: 1}, []controlplanev1alpha1.ControlPlaneOperation{api, etcd, kcm})
 		require.Equal(t, []string{"zzz-etcd", "aaa-apiserver", "m-kcm"}, []string{
 			a.approveQueue[0].Name, a.approveQueue[1].Name, a.approveQueue[2].Name,
 		})
