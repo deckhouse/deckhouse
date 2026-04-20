@@ -104,8 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const uppercaseAcronyms = { 'ml': 'ML', 'ai': 'AI', 'ci': 'CI', 'cd': 'CD', 'api': 'API' };
+
   function capitalizeWords(value) {
-    return value.trim().split(/\s+/).map(word => (word ? word.charAt(0).toUpperCase() + word.slice(1) : word)).join(' ');
+    return value.trim().split(/(\s+|(?=[/])|(?<=[/]))/).map(part => {
+      const lower = part.toLowerCase();
+      if (uppercaseAcronyms[lower]) return uppercaseAcronyms[lower];
+      return part ? part.charAt(0).toUpperCase() + part.slice(1) : part;
+    }).join('');
   }
 
   function markEmptyCheckboxes() {
