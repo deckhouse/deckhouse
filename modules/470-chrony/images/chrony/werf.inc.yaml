@@ -31,11 +31,14 @@ import:
   add: /src/chrony
   to: /src
   before: install
+git:
+{{ include "gcc compiler wrapper git" . }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache automake autoconf libtool build-base bison asciidoctor libcap-dev libcap-static
   install:
+  {{- include "gcc compiler wrapper shell" . | nindent 2 }}
   - cd /src
   - echo "{{ $version }}" > version.txt
   - CFLAGS="-static" LDFLAGS="-static" ./configure --prefix=/opt/chrony-static

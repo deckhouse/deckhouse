@@ -48,11 +48,14 @@ import:
   add: /src
   to: /src
   before: setup
+git:
+{{ include "gcc compiler wrapper git" . }}
 shell:
   install:
   {{- include "alpine packages proxy" . | nindent 2 }}
   - apk add --no-cache make build-base gcc binutils
   setup:
+  {{- include "gcc compiler wrapper shell" . | nindent 2 }}
   - cd /src/which
   - export CFLAGS="-static -O2 -s"
   - export LDFLAGS="-static"
