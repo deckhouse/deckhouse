@@ -52,5 +52,4 @@ shell:
   - apk add --no-cache upx
   install:
   - cd /src/rpp-get && GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-w -s" -o /rpp-get .
-  - upx -9 /rpp-get
   - mv /src/scripts/* /

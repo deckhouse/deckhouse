@@ -7,21 +7,15 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
 fromImage: common/distroless
 fromCacheVersion: "2025-07-25-3"
 import:
-- image: common/kubernetes-artifact-{{ $image_version }}
-  add: /src/_output/bin
-  to: /
-  includePaths:
-  - kubeadm
-  before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/controller
-  to: /controller
+  add: /control-plane-manager
+  to: /control-plane-manager
   before: install
 git:
 {{- include "image mount points" $ }}
 imageSpec:
   config:
-    entrypoint: ["/controller"]
+    entrypoint: ["/control-plane-manager"]
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
 {{- end }}
@@ -35,6 +29,10 @@ import:
   add: /src
   to: /src
   before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib/controlplane
+  to: /go_lib/controlplane
+  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -43,15 +41,31 @@ secrets:
 shell:
   install:
     - cd /src
-    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o controller controller.go node.go util.go pki.go kubeconfig.go converge.go config.go handlers.go etcd.go
+    {{ if $.isEE}}
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-node.SignatureEnabled=true"
+    {{ else }}
+    - export ETCD_SIGN_ENABLED="-X control-plane-manager/internal/controllers/control-plane-node.SignatureEnabled=false"
+    {{ end }}
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $BUILD_TAGS -ldflags="-s -w $ETCD_SIGN_ENABLED" -o /control-plane-manager .
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025-07-25-3"
 fromImage: common/src-artifact
 final: false
 git:
-- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/controller
+- add: /{{ $.ModulePath }}modules/040-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
   to: /src
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}go_lib/controlplane
+  to: /go_lib/controlplane
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'

@@ -17,6 +17,7 @@ package fs
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -159,4 +160,12 @@ func IsInSystemDirs(dir string) (bool, []string) {
 	}
 
 	return false, GetSystemDirectories()
+}
+
+// JoinLinux
+// because in future we can use dhctl from windows
+// but we can to install to linux only
+// we should use / separator for routines
+func JoinLinux(elem ...string) string {
+	return path.Join(elem...)
 }

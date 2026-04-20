@@ -900,6 +900,42 @@ alerts:
         Controller pod isn't running on node {{ $labels.node }}.
       severity: "6"
       markupFormat: markdown
+    - name: D8ControlPlaneNodeMaintenanceModeEnabled
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane node `{{ $labels.node }}` has maintenance mode enabled with label `control-plane-manager.deckhouse.io/maintenance`.
+        While this label is present, the control plane is not managed by `control-plane-manager`.
+
+        If maintenance is complete, remove the label:
+
+        ```bash
+        d8 k label cpn {{ $labels.node }} control-plane-manager.deckhouse.io/maintenance-
+        ```
+      summary: |
+        Maintenance mode is enabled for control-plane node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8ControlPlaneOperationRunningTooLong
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been running or retrying for more than 10 minutes.
+
+        Check the corresponding ControlPlaneOperation and logs of the `d8-control-plane-manager` Pod on that node:
+
+        ```bash
+        d8 k get cpo {{ $labels.operation }} -o yaml
+        d8 k -n kube-system logs -l app=d8-control-plane-manager --field-selector spec.nodeName={{ $labels.node }}
+        ```
+      summary: |
+        Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
+      severity: "4"
+      markupFormat: markdown
     - name: D8CustomPrometheusRuleFoundInCluster
       sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
       moduleUrl: 340-monitoring-custom
@@ -3064,6 +3100,54 @@ alerts:
       summary: |
         Obsolete antiopa_secret_copier=yes label detected.
       severity: "9"
+      markupFormat: markdown
+    - name: D8SignatureErrorsDetected
+      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ee
+      description: |-
+        There have been errors while reading/writing signed data from etcd.
+        Errors may occur due to the following factors:
+
+        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
+        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
+        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
+        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
+
+        To investigate which records are generating alerts, follow instructions below.
+
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        A significant number of signature errors detected.
+      severity: "2"
+      markupFormat: markdown
+    - name: D8SignatureErrorsDetected
+      sourceFile: ee/modules/040-control-plane-manager/monitoring/prometheus-rules/signature.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ee
+      description: |-
+        There have been errors while reading/writing signed data from etcd.
+        Errors can arise due to the following factors:
+
+        - **Incorrect Data Format or Type**: Data is in an incorrect format or type, preventing proper processing.
+        - **Invalid Digital Signature**: The signature fails to verify the authenticity of the data.
+        - **Data Corruption**: Files or data are corrupted, impeding correct reading.
+        - **Unauthorized Modification**: Data has been altered after signing, compromising its integrity.
+
+        To investigate which records are generating alerts, follow instructions below.
+
+        Log into the server with label `instance={{`{{ $labels.instance }}`}}` and inspect the audit log using the following command:
+        ```bash
+        jq 'select(.annotations["deckhouse.io/signature"])' /var/log/kube-audit/audit.log
+        ```
+      summary: |
+        A significant number of signature errors detected.
+      severity: "7"
       markupFormat: markdown
     - name: D8SmokeMiniNotBoundPersistentVolumeClaims
       sourceFile: modules/500-upmeter/monitoring/prometheus-rules/alerting.yaml

@@ -70,6 +70,7 @@ git:
   - bundles
   - common-steps
   - bootstrap
+  - bb_node_ip.sh.tpl
   - bashible.sh.tpl
   - lib.sh.tpl
   {{- if eq .Env "CE" }}

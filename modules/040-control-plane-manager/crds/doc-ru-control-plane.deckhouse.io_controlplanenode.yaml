@@ -1,0 +1,240 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает желаемое и наблюдаемое состояние компонентов control plane на конкретном узле: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
+
+            Ресурс создаётся и обновляется модулем `control-plane-manager` автоматически. Создавать и редактировать его вручную не требуется.
+
+            Используется для диагностики состояния control plane на узле:
+            * колонки `ETCD`, `APISERVER`, `CONTROLLERMANAGER`, `SCHEDULER` (`kubectl get cpn`) показывают готовность каждого компонента;
+            * колонка `CERTIFICATES` показывает общее состояние сертификатов;
+            * `spec.components` содержит ожидаемые отпечатки конфигурации, `status.components` — фактически применённые.
+          properties:
+            spec:
+              description: |
+                Желаемое состояние компонентов control plane на узле.
+              properties:
+                caChecksum:
+                  description: |
+                    Контрольная сумма секрета `d8-pki` с CA-сертификатами, которая должна быть применена ко всем компонентам узла.
+                components:
+                  description: |
+                    Содержит ожидаемые контрольные суммы конфигурации и PKI для каждого компонента control plane.
+
+                    Если значение в `spec.components.<component>.checksums` отличается от соответствующего значения в `status.components.<component>.checksums`, модуль запускает операцию ControlPlaneOperation, чтобы привести компонент к желаемому состоянию.
+                  properties:
+                    etcd:
+                      description: |
+                        Желаемое состояние компонента etcd.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Контрольная сумма PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Контрольная сумма CA-сертификатов, применённых к компоненту.
+                    kube-apiserver:
+                      description: |
+                        Желаемое состояние компонента kube-apiserver.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Контрольная сумма PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Контрольная сумма CA-сертификатов, применённых к компоненту.
+                    kube-controller-manager:
+                      description: |
+                        Желаемое состояние компонента kube-controller-manager.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Контрольная сумма PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Контрольная сумма CA-сертификатов, применённых к компоненту.
+                    kube-scheduler:
+                      description: |
+                        Желаемое состояние компонента kube-scheduler.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Контрольная сумма PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Контрольная сумма CA-сертификатов, применённых к компоненту.
+            status:
+              description: |
+                Наблюдаемое состояние компонентов control plane на узле.
+              properties:
+                caChecksum:
+                  description: |
+                    Фактически применённая контрольная сумма CA-сертификатов.
+                components:
+                  description: |
+                    Наблюдаемое состояние каждого компонента: применённые контрольные суммы и сроки действия сертификатов.
+                  properties:
+                    etcd:
+                      description: |
+                        Наблюдаемое состояние компонента etcd.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённая контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Применённая контрольная сумма PKI-настроек.
+                            ca:
+                              description: |
+                                Применённая контрольная сумма CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
+
+                            Заполняется на этапе `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения этапа `CertObserve` для компонента.
+                    kube-apiserver:
+                      description: |
+                        Наблюдаемое состояние компонента kube-apiserver.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённая контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Применённая контрольная сумма PKI-настроек.
+                            ca:
+                              description: |
+                                Применённая контрольная сумма CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
+
+                            Заполняется на этапе `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения этапа `CertObserve` для компонента.
+                    kube-controller-manager:
+                      description: |
+                        Наблюдаемое состояние компонента kube-controller-manager.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённая контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Применённая контрольная сумма PKI-настроек.
+                            ca:
+                              description: |
+                                Применённая контрольная сумма CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
+
+                            Заполняется на этапе `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения этапа `CertObserve` для компонента.
+                    kube-scheduler:
+                      description: |
+                        Наблюдаемое состояние компонента kube-scheduler.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые контрольные суммы компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённая контрольная сумма манифеста статического пода компонента и связанных конфигурационных файлов.
+                            pki:
+                              description: |
+                                Применённая контрольная сумма PKI-настроек.
+                            ca:
+                              description: |
+                                Применённая контрольная сумма CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Срок действия сертификатов компонента в формате «имя файла сертификата → время истечения (`NotAfter`)».
+
+                            Заполняется на этапе `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения этапа `CertObserve` для компонента.
+                conditions:
+                  description: |
+                    Список условий, отражающих готовность компонентов control plane на узле.
+
+                    Возможные типы условий:
+
+                    * `EtcdReady` — etcd на узле работает и принимает запросы (колонка `ETCD`);
+                    * `APIServerReady` — kube-apiserver работает и принимает запросы (колонка `APISERVER`);
+                    * `ControllerManagerReady` — kube-controller-manager работает (колонка `CONTROLLERMANAGER`);
+                    * `SchedulerReady` — kube-scheduler работает (колонка `SCHEDULER`);
+                    * `CertificatesHealthy` — все сертификаты компонентов узла действительны и до истечения остаётся достаточно времени (колонка `CERTIFICATES`).
+
+                    Если значение `status` равно `False`, причину сбоя можно посмотреть в полях `reason` и `message`.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип условия в CamelCase или в формате `foo.example.com/CamelCase`.
+                      status:
+                        description: |
+                          Статус условия.
+                      reason:
+                        description: |
+                          Машиночитаемая причина текущего состояния условия.
+                      message:
+                        description: |
+                          Человекочитаемое описание текущего состояния условия.
+                      lastTransitionTime:
+                        description: |
+                          Время последнего изменения статуса условия.
+                      observedGeneration:
+                        description: |
+                          Значение `.metadata.generation`, для которого было рассчитано условие.
