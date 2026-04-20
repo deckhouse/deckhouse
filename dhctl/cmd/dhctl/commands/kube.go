@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -105,7 +106,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		return log.Process("bootstrap", "Wait for Deckhouse to become Ready", func() error {
+		return log.ProcessCtx(ctx, "bootstrap", "Wait for Deckhouse to become Ready", func(ctx context.Context) error {
 			kubeCl := client.NewKubernetesClient().
 				WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 

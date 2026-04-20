@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -52,11 +53,9 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		return log.Process("default", "Remove Deckhouse️", func() error {
+		return log.ProcessCtx(ctx, "default", "Remove Deckhouse️", func(ctx context.Context) error {
 			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(
-					ssh.NewNodeInterfaceWrapper(sshClient),
-				)
+				WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 
 			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
@@ -120,7 +119,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return nil
 		}
 
-		return log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
+		return log.ProcessCtx(ctx, "bootstrap", "Create Deckhouse Deployment", func(ctx context.Context) error {
 			kubeCl := client.NewKubernetesClient().
 				WithNodeInterface(
 					ssh.NewNodeInterfaceWrapper(sshClient),

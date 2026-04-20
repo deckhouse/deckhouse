@@ -242,7 +242,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
-		CreateFunc: func(manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
 			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
@@ -250,7 +250,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 
 			return nil
 		},
-		UpdateFunc: func(manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 			data, err := json.Marshal(manifest.(*apiv1.Secret))
 			if err != nil {
 				return err
@@ -273,6 +273,6 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 
 	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).
 		RunContext(ctx, func() error {
-			return task.CreateOrUpdate()
+			return task.CreateOrUpdate(ctx)
 		})
 }

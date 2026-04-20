@@ -58,7 +58,7 @@ func TestBootstrapGetNodesFromCache(t *testing.T) {
 		stateCache, err := cache.NewStateCache(dir)
 		require.NoError(t, err)
 
-		result, err := BootstrapGetNodesFromCache(&config.MetaConfig{ClusterPrefix: "test"}, stateCache)
+		result, err := BootstrapGetNodesFromCache(t.Context(), &config.MetaConfig{ClusterPrefix: "test"}, stateCache)
 		require.NoError(t, err)
 
 		require.Len(t, result["master"], 2)

@@ -14,10 +14,14 @@
 
 package controller
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+import (
+	"context"
 
-func saveInCacheIfNotExists(cache state.Cache, name string, state []byte) error {
-	ok, err := cache.InCache(name)
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
+
+func saveInCacheIfNotExists(ctx context.Context, cache state.Cache, name string, state []byte) error {
+	ok, err := cache.InCache(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -26,5 +30,5 @@ func saveInCacheIfNotExists(cache state.Cache, name string, state []byte) error 
 		return nil
 	}
 
-	return cache.Save(name, state)
+	return cache.Save(ctx, name, state)
 }

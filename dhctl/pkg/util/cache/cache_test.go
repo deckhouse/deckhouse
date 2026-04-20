@@ -46,7 +46,7 @@ func TestNewTempStateCache(t *testing.T) {
 
 		tests.RunStateCacheTests(t, stateCache)
 
-		ok, err := stateCache.InCache(".tombstone")
+		ok, err := stateCache.InCache(t.Context(), ".tombstone")
 
 		require.NoError(t, err)
 		require.True(t, ok)

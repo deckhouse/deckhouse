@@ -153,7 +153,7 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 	stateCache := cache.NewTestCache()
 
 	pec := phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil)
-	require.NoError(t, pec.InitPipeline(stateCache))
+	require.NoError(t, pec.InitPipeline(t.Context(), stateCache))
 
 	abortParams := &GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,

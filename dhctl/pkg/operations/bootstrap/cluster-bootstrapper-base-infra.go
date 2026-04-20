@@ -58,7 +58,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
@@ -66,8 +66,8 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	stateCache := cache.Global()
 
 	if app.DropCache {
-		stateCache.Clean()
-		stateCache.Delete(state.TombstoneKey)
+		stateCache.Clean(ctx)
+		stateCache.Delete(ctx, state.TombstoneKey)
 	}
 
 	clusterUUID, err := generateClusterUUID(ctx, stateCache)

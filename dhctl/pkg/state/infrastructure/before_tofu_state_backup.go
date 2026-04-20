@@ -222,7 +222,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 		return nil
 	}
 
-	base, ngs, err := getNodesFromCache(t.commanderMode.MetaConfig, t.commanderMode.Cache)
+	base, ngs, err := getNodesFromCache(ctx, t.commanderMode.MetaConfig, t.commanderMode.Cache)
 	if err != nil {
 		return err
 	}
@@ -232,7 +232,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 		RunContext(ctx, func() error {
 			name := baseInfraBackupSecretName + ".terraform.backup"
 
-			ok, err := t.commanderMode.Cache.InCache(name)
+			ok, err := t.commanderMode.Cache.InCache(ctx, name)
 			if err != nil {
 				return err
 			}
@@ -241,7 +241,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 				return nil
 			}
 
-			return t.commanderMode.Cache.Save(name, base)
+			return t.commanderMode.Cache.Save(ctx, name, base)
 		})
 
 	if err != nil {
@@ -256,7 +256,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 					RunContext(ctx, func() error {
 						name := "tf-" + node + ".terraform.backup"
 
-						ok, err := t.commanderMode.Cache.InCache(name)
+						ok, err := t.commanderMode.Cache.InCache(ctx, name)
 						if err != nil {
 							return err
 						}
@@ -265,7 +265,7 @@ func (t *TofuMigrationStateBackuper) saveBackupStatesForCommander(ctx context.Co
 							return nil
 						}
 
-						return t.commanderMode.Cache.Save(name, st)
+						return t.commanderMode.Cache.Save(ctx, name, st)
 					})
 
 				if err != nil {

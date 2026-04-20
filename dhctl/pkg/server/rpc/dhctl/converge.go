@@ -219,6 +219,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 			}
 		}
 		err = cache.InitWithOptions(
+			ctx,
 			cachePath,
 			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
 		)
@@ -328,7 +329,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	result, convergeErr := converger.Converge(ctx)
 	resultData, marshalResultErr := json.Marshal(result)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(convergeErr, stateErr, marshalResultErr)
 

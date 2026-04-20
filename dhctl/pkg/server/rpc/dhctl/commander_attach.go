@@ -240,7 +240,7 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 
 	result, attachErr := attacher.Attach(ctx)
 	resultData, marshalResultErr := json.Marshal(result)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(attachErr, stateErr, marshalResultErr)
 

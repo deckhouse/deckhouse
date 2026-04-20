@@ -15,13 +15,15 @@
 package phases
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
 type DhctlState map[string][]byte
 
-func ExtractDhctlState(stateCache state.Cache) (res DhctlState, err error) {
-	err = stateCache.Iterate(func(k string, v []byte) error {
+func ExtractDhctlState(ctx context.Context, stateCache state.Cache) (res DhctlState, err error) {
+	err = stateCache.Iterate(ctx, func(k string, v []byte) error {
 		if res == nil {
 			res = make(map[string][]byte)
 		}

@@ -54,7 +54,7 @@ func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 			return errors.New(msg)
 		}
 
-		if err := e.state.SavePostBootstrapScriptResult(resultToSetState); err != nil {
+		if err := e.state.SavePostBootstrapScriptResult(ctx, resultToSetState); err != nil {
 			log.ErrorF("Post bootstrap script result was not saved: %v", err)
 		}
 

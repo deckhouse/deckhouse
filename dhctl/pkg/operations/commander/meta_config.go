@@ -25,7 +25,7 @@ import (
 )
 
 func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger) (*config.MetaConfig, error) {
-	clusterUUIDBytes, err := stateCache.Load("uuid")
+	clusterUUIDBytes, err := stateCache.Load(ctx, "uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
 	}

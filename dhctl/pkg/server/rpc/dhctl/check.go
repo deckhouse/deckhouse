@@ -186,6 +186,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 
 	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
+
 		var initialState phases.DhctlState
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
@@ -193,13 +194,17 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
 		}
+
 		err = cache.InitWithOptions(
+			ctx,
 			cachePath,
 			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
 		)
+
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -274,13 +279,13 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	}()
 
 	resultData, marshalErr := json.Marshal(result)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(checkErr, marshalErr, stateErr)
 
 	if result != nil {
 		// todo: move onCheckResult call to check.Check() func (as in converge)
-		_ = onCheckResult(result)
+		_ = onCheckResult(ctx, result)
 	}
 
 	return &pb.CheckResult{

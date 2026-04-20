@@ -282,7 +282,7 @@ func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 	err = errors.Join(abortErr, stateErr)
 
 	return &pb.AbortResult{State: string(state), Err: util.ErrToString(err)}

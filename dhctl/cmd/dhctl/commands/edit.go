@@ -60,9 +60,14 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		return operations.SecretEdit(kubeCl, name, "kube-system", secret, dataKey, map[string]string{
-			"name": name,
-		}, app.GetDirConfig())
+		return operations.SecretEdit(
+			ctx,
+			kubeCl,
+			name, "kube-system", secret, dataKey, map[string]string{
+				"name": name,
+			},
+			app.GetDirConfig(),
+		)
 	})
 }
 

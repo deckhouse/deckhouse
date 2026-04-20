@@ -75,7 +75,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if err = cache.Init(sshClient.Check().String()); err != nil {
+		if err = cache.Init(ctx, sshClient.Check().String()); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 

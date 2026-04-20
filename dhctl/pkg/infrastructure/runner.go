@@ -282,7 +282,7 @@ func (r *Runner) Init(ctx context.Context) error {
 		stateName := r.stateName()
 		r.statePath = r.stateCache.GetPath(stateName)
 
-		hasState, err := r.stateCache.InCache(stateName)
+		hasState, err := r.stateCache.InCache(ctx, stateName)
 		if err != nil {
 			return err
 		}
@@ -308,7 +308,7 @@ func (r *Runner) Init(ctx context.Context) error {
 				}
 			}
 
-			stateData, err := r.stateCache.Load(stateName)
+			stateData, err := r.stateCache.Load(ctx, stateName)
 			if err != nil {
 				return err
 			}

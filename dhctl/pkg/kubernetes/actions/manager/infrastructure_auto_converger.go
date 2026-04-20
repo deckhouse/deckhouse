@@ -22,7 +22,7 @@ import (
 )
 
 func RestartAutoConverger(ctx context.Context, kubeClProvider kubernetes.KubeClientProvider) error {
-	return log.Process("default", "Restart auto converger", func() error {
+	return log.ProcessCtx(ctx, "default", "Restart auto converger", func(ctx context.Context) error {
 		return checkAndRestartDeployment(ctx, kubeClProvider, "terraform-auto-converger")
 	})
 }

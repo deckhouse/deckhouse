@@ -306,7 +306,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 	err = errors.Join(bootstrapErr, stateErr)
 
 	return &pb.BootstrapResult{State: string(state), Err: util.ErrToString(err)}
