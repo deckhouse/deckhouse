@@ -7,6 +7,8 @@ The `csi-vsphere` module provides Container Storage Interface (CSI) support for 
 
 This module is specifically designed for **static Kubernetes clusters** (non-cloud) deployed on VMware vSphere and works independently from the [cloud-provider-vsphere](/modules/cloud-provider-vsphere/) module. It integrates with vSphere datastores to provide persistent storage capabilities through the vSphere CSI driver.
 
+> Use `csi-vsphere` module when the cluster cannot use the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module, but dynamic provisioning of volumes in the vSphere infrastructure is required.ut you still need dynamic volume provisioning on vSphere.
+
 The module deploys the VMware vSphere CSI driver components that:
 
 - **Automatically discover vSphere datastores**: Reads discovery data from the `d8-cloud-provider-discovery-data` secret to identify available datastores and their topology.
@@ -14,6 +16,14 @@ The module deploys the VMware vSphere CSI driver components that:
 - **Provision persistent volumes**: Dynamically creates persistent volumes on vSphere datastores when PersistentVolumeClaims are created.
 - **Support volume operations**: Handles volume creation, deletion, attachment, detachment, and online resizing (in Default mode).
 - **Implement topology awareness**: Uses zone and region labels for proper volume placement according to vSphere cluster topology.
+
+## System requirements
+
+To use the module in a cluster, the following system requirements must be met:
+
+- All cluster nodes must be virtual machines created with vSphere tooling.
+- The vSphere VM name must **exactly match** the node hostname in the Deckhouse Kubernetes Platform cluster.
+- Each VM must have `disk.EnableUUID:TRUE` set so the platform can identify attached volumes reliably.
 
 ## Architecture
 
@@ -64,6 +74,12 @@ The module automatically:
    - `allowVolumeExpansion: true` (Default mode only).
    - `volumeBindingMode: WaitForFirstConsumer`: Ensures volumes are created in the same zone as the pod.
    - Topology constraints matching vSphere regions and zones.
+
+## Default StorageClass and exclusions
+
+The module automatically creates a StorageClass for each Datastore and DatastoreCluster from the zones.
+
+To set the default StorageClass for a cluster, use the global parameter [`defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass). To filter out unwanted StorageClass objects, specify exclusion patterns in the [`storageClass.exclude`](configuration.html#parameters-storageclass-exclude) parameter.
 
 ## Volume lifecycle
 

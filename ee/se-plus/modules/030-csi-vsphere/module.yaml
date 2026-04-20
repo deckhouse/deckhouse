@@ -3,7 +3,7 @@ weight: 30
 subsystems:
   - infrastructure
 namespace: d8-csi-vsphere
-stage: General Availability
+stage: Deprecated
 descriptions:
   en: Provides CSI for for VMware vSphere environments.
   ru: Предоставляет CSI для сред VMware vSphere.
