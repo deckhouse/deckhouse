@@ -108,6 +108,16 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 
 			require.NoError(suite.T(), err)
 		})
+		suite.Run("When upgrade is in progress across multiple versions", func() {
+			suite.setupController(suite.fetchTestFileData("upgrade-three-hops.yaml"))
+
+			_, err := suite.controller.Reconcile(
+				suite.ctx,
+				reconcile.Request{},
+			)
+
+			require.NoError(suite.T(), err)
+		})
 	})
 }
 
