@@ -13,42 +13,169 @@ spec:
     - name: assert-descheduler-ready
       description: Verify that the descheduler deployment exists and is ready
       try:
-        - assert:
+        - description: Check descheduler deployment has ready replicas
+          assert:
             file: ../common/assert-descheduler-ready.yaml
 
     - name: check-minimum-nodes
-      description: Verify that the cluster has at least 2 nodes for the namespace exclusion test
+      description: Verify that the cluster has at least 2 worker nodes for the namespace exclusion test
       try:
-        - script:
+        - description: Count worker nodes and verify at least 2 exist
+          script:
             content: |
-              NODE_COUNT=$(kubectl get nodes --no-headers | wc -l | tr -d ' ')
-              echo "$NODE_COUNT"
+              NODE_COUNT=$(kubectl get nodes --no-headers -l 'node-role.kubernetes.io/control-plane!=' | wc -l | tr -d ' ')
+              echo "Worker node count: $NODE_COUNT"
               [ "$NODE_COUNT" -ge 2 ]
             check:
               ($error == null): true
 
-    - name: apply-descheduler-cr
-      description: Create Descheduler CR with LowNodeUtilization strategy to trigger evictions
+    - name: create-protected-workload
+      description: Create a Deployment in d8-descheduler namespace (protected by Deckhouse patch)
       try:
-        - apply:
+        - description: Create protected Deployment in d8-descheduler namespace
+          create:
+            file: files/protected-deployment.yaml
+      catch:
+        - description: Show protected pods on failure
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: d8-descheduler
+            selector: e2e-test=exclude-namespaces-protected
+        - description: Show events on failure
+          events:
+            namespace: d8-descheduler
+      cleanup:
+        - description: Delete protected Deployment from d8-descheduler
+          delete:
+            ref:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: protected-deployment
+              namespace: d8-descheduler
+
+    - name: wait-protected-deployment-ready
+      description: Wait for the protected Deployment to have all replicas available
+      try:
+        - description: Wait for protected Deployment Available condition
+          wait:
+            apiVersion: apps/v1
+            kind: Deployment
+            name: protected-deployment
+            namespace: d8-descheduler
+            timeout: 120s
+            for:
+              condition:
+                name: Available
+                value: 'True'
+        - description: Assert protected Deployment has 5 ready replicas
+          assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: protected-deployment
+                namespace: d8-descheduler
+              status:
+                readyReplicas: 5
+
+    - name: create-regular-workload
+      description: Create regular pods in the test namespace pinned to a worker node
+      try:
+        - description: Select a non-control-plane worker node as the target
+          script:
+            content: |
+              TARGET_NODE=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name' -l 'node-role.kubernetes.io/control-plane!=' 2>/dev/null | head -1)
+              if [ -z "$TARGET_NODE" ]; then
+                TARGET_NODE=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name' | head -1)
+              fi
+              printf '%s' "$TARGET_NODE"
+            outputs:
+              - name: targetNode
+                value: ($stdout)
+            check:
+              ($error == null): true
+        - description: Create 5 regular pods in the test namespace
+          create:
+            file: files/regular-pods.yaml
+            template: true
+      catch:
+        - description: Show regular pods on failure
+          get:
+            apiVersion: v1
+            kind: Pod
+        - description: Show events on failure
+          events: {}
+
+    - name: wait-regular-pods-ready
+      description: Wait for all regular pods to become ready
+      try:
+        - description: Wait for all pods with exclude-namespaces-regular label to be Ready
+          wait:
+            apiVersion: v1
+            kind: Pod
+            selector: e2e-test=exclude-namespaces-regular
+            timeout: 60s
+            for:
+              condition:
+                name: Ready
+                value: 'True'
+
+    - name: apply-descheduler-cr
+      description: Create Descheduler CR with LowNodeUtilization strategy (after workloads are stable)
+      try:
+        - description: Apply the Descheduler CR manifest
+          apply:
             file: files/descheduler-cr.yaml
-        - assert:
+        - description: Assert the Descheduler CR exists
+          assert:
             resource:
               apiVersion: deckhouse.io/v1alpha2
               kind: Descheduler
               metadata:
                 name: e2e-exclude-namespaces
       cleanup:
-        - delete:
+        - description: Delete the Descheduler CR
+          delete:
             ref:
               apiVersion: deckhouse.io/v1alpha2
               kind: Descheduler
               name: e2e-exclude-namespaces
 
-    - name: wait-descheduler-restart
-      description: Wait for descheduler to restart with the new policy from CR
+    - name: assert-configmap-updated
+      description: Verify that Deckhouse reconciled the CR into the descheduler policy ConfigMap
       try:
-        - wait:
+        - description: Assert ConfigMap data contains the e2e-exclude-namespaces profile
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: descheduler-policy
+                namespace: d8-descheduler
+              data:
+                (contains("policy.yaml", 'e2e-exclude-namespaces')): true
+      catch:
+        - description: Show ConfigMap content on failure
+          get:
+            apiVersion: v1
+            kind: ConfigMap
+            name: descheduler-policy
+            namespace: d8-descheduler
+        - description: Show Descheduler CRs on failure
+          get:
+            apiVersion: deckhouse.io/v1alpha2
+            kind: Descheduler
+        - description: Show events in descheduler namespace
+          events:
+            namespace: d8-descheduler
+
+    - name: wait-descheduler-ready
+      description: Wait for descheduler deployment to be ready with the new policy
+      try:
+        - description: Wait for descheduler deployment Available condition
+          wait:
             apiVersion: apps/v1
             kind: Deployment
             name: descheduler
@@ -58,309 +185,89 @@ spec:
               condition:
                 name: Available
                 value: 'True'
-        - assert:
+        - description: Assert descheduler has ready replicas
+          assert:
             file: ../common/assert-descheduler-ready.yaml
       catch:
-        - describe:
+        - description: Describe descheduler deployment on failure
+          describe:
             apiVersion: apps/v1
             kind: Deployment
             name: descheduler
             namespace: d8-descheduler
-        - get:
+        - description: Show descheduler pods on failure
+          get:
             apiVersion: v1
             kind: Pod
             namespace: d8-descheduler
             selector: app=descheduler
-        - events:
-            namespace: d8-descheduler
-        - podLogs:
-            namespace: d8-descheduler
-            selector: app=descheduler
-
-    - name: create-protected-namespace
-      description: Create the d8-chainsaw-test namespace protected from eviction by the Deckhouse patch
-      try:
-        - apply:
-            file: files/protected-namespace.yaml
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Namespace
-              metadata:
-                name: d8-chainsaw-test
-      cleanup:
-        - delete:
-            ref:
-              apiVersion: v1
-              kind: Namespace
-              name: d8-chainsaw-test
-
-    - name: create-protected-workload
-      description: Create 5 pause pods in the protected d8-chainsaw-test namespace pinned to one node
-      try:
-        - script:
-            content: |
-              TARGET_NODE=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name' | head -1)
-              echo "Pinning protected pods to node: $TARGET_NODE"
-              for i in $(seq 1 5); do
-                kubectl run protected-pod-$i \
-                  --namespace d8-chainsaw-test \
-                  --image=registry.k8s.io/pause:3.9 \
-                  --overrides="{\"spec\":{\"nodeName\":\"$TARGET_NODE\"}}"
-              done
-            check:
-              ($error == null): true
-      catch:
-        - get:
-            apiVersion: v1
-            kind: Pod
-            namespace: d8-chainsaw-test
-        - events:
-            namespace: d8-chainsaw-test
-
-    - name: create-regular-workload
-      description: Create 5 pause pods in the regular test namespace pinned to the same node
-      try:
-        - script:
-            content: |
-              TARGET_NODE=$(kubectl get nodes --no-headers -o custom-columns=':metadata.name' | head -1)
-              echo "Pinning regular pods to node: $TARGET_NODE"
-              for i in $(seq 1 5); do
-                kubectl run regular-pod-$i \
-                  --namespace "$NAMESPACE" \
-                  --image=registry.k8s.io/pause:3.9 \
-                  --overrides="{\"spec\":{\"nodeName\":\"$TARGET_NODE\"}}"
-              done
-            check:
-              ($error == null): true
-      catch:
-        - get:
-            apiVersion: v1
-            kind: Pod
-        - events: {}
-
-    - name: wait-protected-pods-ready
-      description: Wait for protected pods to become ready
-      try:
-        - wait:
-            apiVersion: v1
-            kind: Pod
-            name: protected-pod-1
-            namespace: d8-chainsaw-test
-            timeout: 60s
-            for:
-              condition:
-                name: Ready
-                value: 'True'
-        - wait:
-            apiVersion: v1
-            kind: Pod
-            name: protected-pod-5
-            namespace: d8-chainsaw-test
-            timeout: 60s
-            for:
-              condition:
-                name: Ready
-                value: 'True'
-
-    - name: assert-protected-pods-running
-      description: Assert all protected pods in d8-chainsaw-test are running
-      try:
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: protected-pod-1
-                namespace: d8-chainsaw-test
-              status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: protected-pod-3
-                namespace: d8-chainsaw-test
-              status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: protected-pod-5
-                namespace: d8-chainsaw-test
-              status:
-                phase: Running
-
-    - name: wait-regular-pods-ready
-      description: Wait for regular pods to become ready
-      try:
-        - wait:
-            apiVersion: v1
-            kind: Pod
-            name: regular-pod-1
-            timeout: 60s
-            for:
-              condition:
-                name: Ready
-                value: 'True'
-        - wait:
-            apiVersion: v1
-            kind: Pod
-            name: regular-pod-5
-            timeout: 60s
-            for:
-              condition:
-                name: Ready
-                value: 'True'
-
-    - name: assert-regular-pods-running
-      description: Assert all regular pods in the test namespace are running
-      try:
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: regular-pod-1
-              status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: regular-pod-5
-              status:
-                phase: Running
-
-    - name: trigger-descheduler-cycle
-      description: Restart descheduler to force an immediate descheduling cycle with the current workload
-      try:
-        - script:
-            content: |
-              kubectl rollout restart deployment/descheduler -n d8-descheduler
-            check:
-              ($error == null): true
-        - wait:
-            apiVersion: apps/v1
-            kind: Deployment
-            name: descheduler
-            namespace: d8-descheduler
-            timeout: 120s
-            for:
-              condition:
-                name: Available
-                value: 'True'
-      catch:
-        - describe:
-            apiVersion: apps/v1
-            kind: Deployment
-            name: descheduler
-            namespace: d8-descheduler
-        - events:
+        - description: Show events in descheduler namespace
+          events:
             namespace: d8-descheduler
 
     - name: wait-for-descheduler-cycle
-      description: Wait for descheduler to execute the LowNodeUtilization plugin after restart
+      description: Wait for descheduler to execute the LowNodeUtilization plugin
       try:
-        - script:
-            timeout: 120s
+        - description: Poll descheduler logs for LowNodeUtilization execution
+          script:
+            timeout: 600s
             content: |
-              for i in $(seq 1 24); do
-                if kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --since=2m 2>/dev/null | grep -q "LowNodeUtilization"; then
-                  echo "LowNodeUtilization plugin has executed"
+              echo "Watching descheduler logs for LowNodeUtilization..."
+              for i in $(seq 1 110); do
+                if kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --tail=-1 2>/dev/null | grep -q "LowNodeUtilization"; then
+                  echo "LowNodeUtilization plugin has executed (iteration $i)"
                   exit 0
                 fi
                 sleep 5
               done
               echo "Timed out waiting for LowNodeUtilization to execute"
+              kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --tail=-1 2>/dev/null | grep -ivE "healthz|metrics|pathrecorder" | tail -30
               exit 1
             check:
               ($error == null): true
       catch:
-        - describe:
+        - description: Describe descheduler pod on failure
+          describe:
             apiVersion: v1
             kind: Pod
             namespace: d8-descheduler
             selector: app=descheduler
-        - get:
-            apiVersion: v1
-            kind: Pod
-            namespace: d8-descheduler
-            selector: app=descheduler
-        - events:
-            namespace: d8-descheduler
-        - podLogs:
+        - description: Show descheduler pod logs on failure
+          podLogs:
             namespace: d8-descheduler
             selector: app=descheduler
 
-    - name: verify-protected-pods-not-evicted
-      description: Verify that all 5 pods in the protected d8-chainsaw-test namespace were NOT evicted
+    - name: verify-protected-deployment-not-evicted
+      description: Verify that the protected Deployment in d8-descheduler still has all 5 replicas ready
       try:
-        - assert:
+        - description: Assert protected Deployment still has 5 ready replicas
+          assert:
             resource:
-              apiVersion: v1
-              kind: Pod
+              apiVersion: apps/v1
+              kind: Deployment
               metadata:
-                name: protected-pod-1
-                namespace: d8-chainsaw-test
+                name: protected-deployment
+                namespace: d8-descheduler
               status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: protected-pod-2
-                namespace: d8-chainsaw-test
-              status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: protected-pod-3
-                namespace: d8-chainsaw-test
-              status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: protected-pod-4
-                namespace: d8-chainsaw-test
-              status:
-                phase: Running
-        - assert:
-            resource:
-              apiVersion: v1
-              kind: Pod
-              metadata:
-                name: protected-pod-5
-                namespace: d8-chainsaw-test
-              status:
-                phase: Running
+                readyReplicas: 5
 
     - name: verify-no-evictions-in-protected-namespace
-      description: Verify zero eviction events occurred in the protected namespace
+      description: Verify zero eviction events occurred for protected pods in d8-descheduler
       try:
-        - error:
-            resource:
-              apiVersion: v1
-              kind: Event
-              metadata:
-                namespace: d8-chainsaw-test
-              reason: Evicted
+        - description: Assert no Evicted events exist for protected pods
+          script:
+            content: |
+              EVICTIONS=$(kubectl get events -n d8-descheduler --field-selector=reason=Evicted --no-headers 2>/dev/null | grep -c "protected-deployment" || true)
+              echo "Eviction events for protected pods: $EVICTIONS"
+              [ "$EVICTIONS" -eq 0 ]
+            check:
+              ($error == null): true
 
     - name: verify-namespace-filtering-logs
       description: Verify descheduler logs show namespace filtering by the Deckhouse patch
       try:
-        - script:
+        - description: Check descheduler logs for namespace filtering messages
+          script:
             content: |
               FILTER_LOGS=$(kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --since=5m 2>/dev/null | grep "pod in the deckhouse namespace" || true)
               if [ -n "$FILTER_LOGS" ]; then

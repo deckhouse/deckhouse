@@ -7,10 +7,10 @@ spec:
     lowNodeUtilization:
       enabled: true
       thresholds:
-        cpu: 20
-        memory: 20
-        pods: 20
-      targetThresholds:
-        cpu: 50
-        memory: 50
+        cpu: 55
+        memory: 65
         pods: 50
+      targetThresholds:
+        cpu: 70
+        memory: 80
+        pods: 70

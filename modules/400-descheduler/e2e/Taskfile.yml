@@ -6,27 +6,32 @@ tasks:
   run:
     desc: Run all descheduler e2e tests
     cmds:
-      - chainsaw test --test-dir ./tests/
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/ --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
 
   run:verbose:
     desc: Run all descheduler e2e tests with verbose output
     cmds:
-      - chainsaw test --test-dir ./tests/ --full-name
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/ --full-name --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
 
   run:low-node-utilization:
     desc: Run LowNodeUtilization e2e test
     cmds:
-      - chainsaw test --test-dir ./tests/low-node-utilization/
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/low-node-utilization/ --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
 
   run:high-node-utilization:
     desc: Run HighNodeUtilization e2e test
     cmds:
-      - chainsaw test --test-dir ./tests/high-node-utilization/
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/high-node-utilization/ --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
 
   run:exclude-namespaces:
     desc: Run exclude-namespaces-from-processing e2e test
     cmds:
-      - chainsaw test --test-dir ./tests/exclude-namespaces-from-processing/
+      - mkdir -p ./reports/
+      - chainsaw test --test-dir ./tests/exclude-namespaces-from-processing/ --report-format JUNIT-TEST --report-name chainsaw-report --report-path ./reports/
 
   dry-run:
     desc: Validate all test YAML without executing (no cluster required)
@@ -37,8 +42,3 @@ tasks:
     desc: Run all tests and pause on failure for debugging
     cmds:
       - chainsaw test --test-dir ./tests/ --pause-on-failure --fail-fast
-
-  run:report:
-    desc: Run all tests and generate a JSON report
-    cmds:
-      - chainsaw test --test-dir ./tests/ --report-format JSON --report-name chainsaw-report --report-path ./reports/

@@ -170,17 +170,16 @@ spec:
           script:
             timeout: 420s
             content: |
-              DESCHEDULER_POD=$(kubectl get pods -n d8-descheduler -l app=descheduler -o jsonpath='{.items[0].metadata.name}')
-              echo "Watching logs of pod: $DESCHEDULER_POD"
+              echo "Watching descheduler logs for HighNodeUtilization..."
               for i in $(seq 1 80); do
-                if kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler 2>/dev/null | grep -q "HighNodeUtilization"; then
+                if kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --tail=-1 2>/dev/null | grep -q "HighNodeUtilization"; then
                   echo "HighNodeUtilization plugin has executed"
                   exit 0
                 fi
                 sleep 5
               done
               echo "Timed out waiting for HighNodeUtilization to execute"
-              kubectl logs -n d8-descheduler "$DESCHEDULER_POD" -c descheduler 2>/dev/null | tail -50
+              kubectl logs -n d8-descheduler -l app=descheduler -c descheduler --tail=-1 2>/dev/null | tail -50
               exit 1
             check:
               ($error == null): true
