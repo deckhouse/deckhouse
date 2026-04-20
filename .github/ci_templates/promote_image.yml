@@ -117,11 +117,11 @@
 - name: Check DKP images manifests in public registry ({!{$edition}!})
   env:
     WERF_ENV: {!{$edition}!}
-    STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
   run: |
     EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-    ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_HOST}/deckhouse/"
+    ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
 
 {!{ end }!}
 

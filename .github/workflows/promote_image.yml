@@ -326,11 +326,11 @@ jobs:
           - name: Check DKP images manifests in public registry (CE)
             env:
               WERF_ENV: CE
-              STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+              DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
             run: |
               EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_HOST}/deckhouse/"
+              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
 
 
   promote_EE:
@@ -557,11 +557,11 @@ jobs:
           - name: Check DKP images manifests in public registry (EE)
             env:
               WERF_ENV: EE
-              STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+              DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
             run: |
               EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_HOST}/deckhouse/"
+              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
 
 
   promote_FE:
@@ -788,11 +788,11 @@ jobs:
           - name: Check DKP images manifests in public registry (FE)
             env:
               WERF_ENV: FE
-              STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+              DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
             run: |
               EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_HOST}/deckhouse/"
+              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
 
 
   promote_BE:
@@ -1019,11 +1019,11 @@ jobs:
           - name: Check DKP images manifests in public registry (BE)
             env:
               WERF_ENV: BE
-              STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+              DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
             run: |
               EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_HOST}/deckhouse/"
+              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
 
 
   promote_SE:
@@ -1250,11 +1250,11 @@ jobs:
           - name: Check DKP images manifests in public registry (SE)
             env:
               WERF_ENV: SE
-              STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+              DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
             run: |
               EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_HOST}/deckhouse/"
+              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
 
 
   promote_SE_plus:
@@ -1481,11 +1481,11 @@ jobs:
           - name: Check DKP images manifests in public registry (SE-plus)
             env:
               WERF_ENV: SE-plus
-              STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+              DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
             run: |
               EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_HOST}/deckhouse/"
+              ./tools/check-release-images.sh --tag "${CI_COMMIT_TAG}" --edition "${EDITION}" --images-path "${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/"
 
 
 
