@@ -7,7 +7,7 @@ spec:
           properties:
             spec:
               description: |
-                ServiceWithHealthchecks — схема для API `servicewithhealthchecks`.condition.type
+                Описывает желаемое состояние ServiceWithHealthchecks.
 
                 Чтобы создаваемые балансировщики ServiceWithHealthchecks работали, необходимо выполнение следующих условий:
 
