@@ -43868,6 +43868,11 @@
               "shorthand": "",
               "global": false
             },
+            "skip-vex-images": {
+              "description": "Do not pull VEX images.",
+              "shorthand": "",
+              "global": false
+            },
             "source": {
               "description": "Source registry to pull Deckhouse images from.",
               "shorthand": "",
