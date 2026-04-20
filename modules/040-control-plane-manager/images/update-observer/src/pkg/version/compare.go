@@ -134,11 +134,5 @@ func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int 
 		return 0
 	}
 
-	var steps int
-	if dstMinor > srcMinor {
-		steps = compMinor - srcMinor
-	} else {
-		steps = srcMinor - compMinor
-	}
-	return min(steps, hops)
+	return min(calculateHops(srcMinor, compMinor), hops)
 }
