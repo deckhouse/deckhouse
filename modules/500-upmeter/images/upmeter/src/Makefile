@@ -40,11 +40,11 @@ fmt:
 	$(GOLANGCILINT_BIN) run ./... -c .golangci.yaml --fix
 
 test:
-	go test -race ./...
+	go run gotest.tools/gotestsum@latest -- -race ./...
 
 ci: deps lint
 	tmpfile=$(mktemp /tmp/coverage-report.XXXXXX)
-	go test -cover -coverprofile=${tmpfile} -vet=off ./pkg/... \
+	go run gotest.tools/gotestsum@latest -- -cover -coverprofile=${tmpfile} -vet=off ./pkg/... \
         && echo "Coverage: $(go tool cover -func  ${tmpfile} | grep total | awk '{print $3}')" \
         && echo "Success!" \
         || exit 1

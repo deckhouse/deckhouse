@@ -48,7 +48,7 @@ shell:
   install:
   - cd /src
   - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
-  - go test ./... -v
+  - go run gotest.tools/gotestsum@latest -- ./... -v
   - go build -ldflags="-s -w" -o loop main.go
   - chown -R 64535:64535 /src/
   - chmod 0700 /src/loop

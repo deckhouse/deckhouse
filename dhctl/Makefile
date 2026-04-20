@@ -130,23 +130,23 @@ test: check-vars
 	@echo "Warning! For passing ./pkg/infrastructureprovider/ you should prepare /dhctl-tests dir with opentofu and terraform binaries and yandex and gcp plugins and /deckhouse dir with cloud providers config. Or add SKIP_PROVIDER_TEST=true env for skip. Or use make test-skip-cloud-providers "
 	@echo "Warning! For passing all ./pkg/infrastructureprovider/ you should set YANDEX_CLOUD_CONFIG and GCP_CLOUD_CONFIG See check-cloud-providers-vars target"
 	@echo "Warning! For passing all ./pkg/system/node/gossh/ you should be able to run docker containers. Or add SKIP_GOSSH_TEST=true env for skip. Or use test-skip-gossh "
-	go test -v -p 1 $(TEST_PACKAGES)
+	go run gotest.tools/gotestsum@latest -- -v -p 1 $(TEST_PACKAGES)
 
 test-skip-cloud-providers: check-vars
-	SKIP_PROVIDER_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+	SKIP_PROVIDER_TEST=true go run gotest.tools/gotestsum@latest -- -v -p 1 $(TEST_PACKAGES)
 
 test-skip-gossh: check-vars
-	SKIP_GOSSH_TEST=true go test -v -p 1 $(TEST_PACKAGES)
+	SKIP_GOSSH_TEST=true go run gotest.tools/gotestsum@latest -- -v -p 1 $(TEST_PACKAGES)
 
 check-cloud-providers-vars:
 	@[ "${YANDEX_CLOUD_CONFIG}" ] || ( echo "YANDEX_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with yandex without-nat layout"; exit 1 )
 	@[ "${GCP_CLOUD_CONFIG}" ] || ( echo "GCP_CLOUD_CONFIG is not set. Should path to dhctl bootstrap config with gcp without-nat layout"; exit 1 )
 
 test-cloud-providers: check-vars check-cloud-providers-vars
-	go test -v -p 1 ./pkg/infrastructureprovider/...
+	go run gotest.tools/gotestsum@latest -- -v -p 1 ./pkg/infrastructureprovider/...
 
 test-race: check-vars
-	go test -race -p 1 $(TEST_PACKAGES)
+	go run gotest.tools/gotestsum@latest -- -race -p 1 $(TEST_PACKAGES)
 
 deps: bin/golangci-lint bin/gofumpt bin/protoc
 	go mod tidy

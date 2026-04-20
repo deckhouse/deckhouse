@@ -151,7 +151,7 @@ bin/yq: bin ## Install yq deps for update-patchversion script.
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
 tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	go run gotest.tools/gotestsum@latest -- -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
@@ -160,25 +160,25 @@ dmt-lint:
 
 
 tests-openapi: ## Run tests against modules openapi values schemas.
-	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
+	go run gotest.tools/gotestsum@latest -- -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
 tests-controller: ## Run deckhouse-controller unit tests.
-	go test -timeout=${TESTS_TIMEOUT} -cover -race ./deckhouse-controller/... -v
+	go run gotest.tools/gotestsum@latest -- -timeout=${TESTS_TIMEOUT} -cover -race ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
 
 .PHONY: test-all
 test-all: go-check
-	$(call iterateAllGoModules,Running go test with race and cover in,go test -cover -race -timeout=${TESTS_TIMEOUT} ./...)
+	$(call iterateAllGoModules,Running go test with race and cover in,go run gotest.tools/gotestsum@latest -- -cover -race -timeout=${TESTS_TIMEOUT} ./...)
 
 .PHONY: test-draft-all
 test-draft-all: go-check
-	$(call iterateAllGoModules,Running go test in,go test ./...)
+	$(call iterateAllGoModules,Running go test in,go run gotest.tools/gotestsum@latest -- ./...)
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
-	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
+	go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
 
 bin/golangci-lint:
 	mkdir -p bin
