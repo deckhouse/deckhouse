@@ -42,11 +42,6 @@ type installerI interface {
 	Install(ctx context.Context, downloaded, deployed, name, version string) error
 }
 
-type statusRegistry interface {
-	SetConditionTrue(name string, cond status.ConditionType)
-	HandleError(name string, err error)
-}
-
 type task struct {
 	name       string
 	version    string

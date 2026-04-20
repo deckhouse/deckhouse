@@ -98,8 +98,6 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("startup package")
 
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInRuntime)
-
 	// Step 1: Enable kubernetes/schedule hooks - registers watchers and cron schedules
 	infos, err := t.initializeHooks(ctx)
 	if err != nil {

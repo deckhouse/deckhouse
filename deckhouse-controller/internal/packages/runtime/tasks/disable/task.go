@@ -104,8 +104,6 @@ func (t *task) Execute(ctx context.Context) error {
 
 	t.queueService.Remove(fmt.Sprintf("%s/sync", t.pkg.GetName()))
 
-	t.status.ClearStatus(t.pkg.GetName())
-
 	return nil
 }
 

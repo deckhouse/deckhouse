@@ -131,7 +131,7 @@ func (t *task) runPackage(ctx context.Context) error {
 	if err := t.pkg.RunHooksByBinding(ctx, addontypes.BeforeHelm); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksReady, newBeforeHelmHookErr(err))
-		return nil
+		return err
 	}
 
 	t.logger.Debug("run nelm upgrade")
