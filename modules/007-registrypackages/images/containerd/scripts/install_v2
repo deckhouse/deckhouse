@@ -34,6 +34,7 @@ EOF
 cp -f containerd containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
 rm -f /opt/deckhouse/bin/containerd-shim-runc-v1
 
+
 if test -f pidumount; then
     cp -f pidumount /opt/deckhouse/bin
 fi
