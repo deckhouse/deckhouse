@@ -88,7 +88,7 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 
 	isReady := false
 
-	err := retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+	return isReady, retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
 		cmd := r.nodeInterface.Command("cat", endPipelineFileMark)
 		cmd.Sudo(ctx)
 		cmd.WithTimeout(10 * time.Second)
@@ -103,12 +103,6 @@ func (r *Runner) AlreadyRun(ctx context.Context) (bool, error) {
 
 		return nil
 	})
-
-	if err != nil {
-		return false, err
-	}
-
-	return isReady, nil
 }
 
 type ExecuteBundleParams struct {
@@ -171,6 +165,7 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 
 func (r *Runner) cleanupPreviousBashibleIfNeed(ctx context.Context) error {
 	logger := r.loggerProvider()
+
 	return logger.Process("bootstrap", "Cleanup previous bashible run if need", func() error {
 		logger.DebugF("Gettting bashible pids")
 		pids, err := r.getBashiblePIDs(ctx)

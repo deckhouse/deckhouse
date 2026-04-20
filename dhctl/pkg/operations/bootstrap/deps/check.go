@@ -134,7 +134,6 @@ func (c *DependenciesChecker) checkShell(ctx context.Context) error {
 		c.loggerProvider().InfoF("OK!")
 		return nil
 	})
-
 }
 
 func (c *DependenciesChecker) isBash(out string) error {
@@ -153,7 +152,7 @@ func (c *DependenciesChecker) checkDependencies(ctx context.Context) error {
 				retry.WithLogger(c.loggerProvider()),
 			)
 
-		runErr := retry.NewSilentLoopWithParams(loopParams).
+		return retry.NewSilentLoopWithParams(loopParams).
 			BreakIf(c.depsErrorBreakPredicate).
 			RunContext(ctx, func() error {
 				output, err := c.runBinariesCheckScript(ctx)
@@ -163,12 +162,6 @@ func (c *DependenciesChecker) checkDependencies(ctx context.Context) error {
 
 				return c.processBinariesCheckResult(output)
 			})
-
-		if runErr != nil {
-			return runErr
-		}
-
-		return nil
 	})
 }
 
