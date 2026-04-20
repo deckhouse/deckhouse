@@ -150,6 +150,9 @@ properties:
           Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
 
           Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
+
+          Параметр необходим для включения шифрования в etcd для Custom Resources, у которых поля помечены
+          маркером `x-kubernetes-sensitive-data: true` (см. feature gate `CRDSensitiveData`).
           > **Важно!** Этот режим нельзя отключить!
   etcd:
     description: |

@@ -145,3 +145,45 @@ spec:
 Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Защита чувствительных полей Custom Resources
+
+Feature gate `CRDSensitiveData` обеспечивает защиту на уровне полей для CRD, помеченных маркером
+`x-kubernetes-sensitive-data: true`. Реализован в виде патча к `kube-apiserver` (apiextensions-apiserver)
+и поддерживает версии Kubernetes, начиная с 1.31.
+
+Если хотя бы одно поле в схеме CRD помечено `x-kubernetes-sensitive-data: true`, ко всем Custom Resources
+этого типа применяются следующие меры защиты:
+
+- **Шифрование в etcd** — весь Custom Resource шифруется тем же трансформером, что и Kubernetes Secrets.
+  Требует включения параметра [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled).
+- **Фильтрация полей на основе RBAC** — при запросах `get`/`list`/`watch` чувствительные поля удаляются
+  из ответа API, если у вызывающей стороны нет прав `get`/`list`/`watch` на сабресурс `<resource>/sensitive`.
+- **Маскировка в журнале аудита** — значения чувствительных полей всегда заменяются на `"******"`
+  в журнале аудита, независимо от прав RBAC и уровня аудита.
+
+Для включения функции установите `apiserver.encryptionEnabled` в `true` и добавьте `CRDSensitiveData`
+в параметр [`enabledFeatureGates`](configuration.html#parameters-enabledFeatureGates):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+    enabledFeatureGates:
+      - CRDSensitiveData
+```
+
+{% alert level="warning" %}
+Включение `encryptionEnabled` необратимо.
+Включение feature gate `CRDSensitiveData` приводит к перезапуску `kube-apiserver`.
+{% endalert %}
+
+Подробнее: раздел [FAQ](faq.html#как-защитить-чувствительные-поля-custom-resources) и
+[примеры](examples.html#crd-с-чувствительными-полями).

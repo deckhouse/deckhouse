@@ -1299,3 +1299,58 @@ To update the certificates, do the following on each master node:
    ```shell
    kubeadm certs renew all
    ```
+
+## How do I protect sensitive fields in Custom Resources?
+
+To protect sensitive fields in CRD schemas (passwords, tokens, keys) from unauthorized API access,
+unencrypted etcd storage, and exposure in audit logs, use the `CRDSensitiveData` feature gate
+together with the `x-kubernetes-sensitive-data` schema marker.
+
+### Requirements
+
+1. Enable etcd encryption in the `control-plane-manager` ModuleConfig (this action cannot be undone):
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
+
+1. Enable the `CRDSensitiveData` feature gate (causes a restart of `kube-apiserver`):
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+       enabledFeatureGates:
+         - CRDSensitiveData
+   ```
+
+1. Mark sensitive fields in the CRD schema with `x-kubernetes-sensitive-data: true`.
+
+1. Grant access to sensitive fields via the `<resource>/sensitive` subresource in RBAC rules
+   for users and service accounts that require full data access.
+
+### Protections applied
+
+| Protection | Description |
+|---|---|
+| etcd encryption | The entire Custom Resource is encrypted at rest using the AES-CBC transformer (same as Kubernetes Secrets). |
+| API field filtering | Sensitive fields are stripped from `get`/`list`/`watch` responses unless the caller has access to the `<resource>/sensitive` subresource. |
+| Audit log masking | Sensitive field values are replaced with `"******"` in all audit events, regardless of the caller's RBAC permissions or audit level. |
+
+See the [examples section](examples.html#crd-with-sensitive-fields) for a complete walkthrough.

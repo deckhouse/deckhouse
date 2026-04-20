@@ -1310,3 +1310,58 @@ Kubelet использует клиентский TLS-сертификат (`/va
    ```shell
    kubeadm certs renew all
    ```
+
+## Как защитить чувствительные поля Custom Resources?
+
+Для защиты чувствительных полей схем CRD (пароли, токены, ключи) от несанкционированного доступа через API,
+хранения в etcd в незашифрованном виде и попадания в журнал аудита используйте feature gate `CRDSensitiveData`
+совместно с маркером схемы `x-kubernetes-sensitive-data`.
+
+### Требования
+
+1. Включите шифрование etcd в ModuleConfig `control-plane-manager` (это действие необратимо):
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
+
+1. Включите feature gate `CRDSensitiveData` (приводит к перезапуску `kube-apiserver`):
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+       enabledFeatureGates:
+         - CRDSensitiveData
+   ```
+
+1. Пометьте чувствительные поля в схеме CRD маркером `x-kubernetes-sensitive-data: true`.
+
+1. Для пользователей и ServiceAccount, которым нужен доступ к полным данным, добавьте в правила RBAC
+   разрешение на сабресурс `<resource>/sensitive`.
+
+### Применяемые меры защиты
+
+| Защита | Описание |
+|---|---|
+| Шифрование в etcd | Весь Custom Resource шифруется при хранении с помощью трансформера AES-CBC (аналогично Kubernetes Secrets). |
+| Фильтрация полей в API | Чувствительные поля удаляются из ответов на `get`/`list`/`watch`, если у вызывающей стороны нет прав на сабресурс `<resource>/sensitive`. |
+| Маскировка в журнале аудита | Значения чувствительных полей заменяются на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита. |
+
+Полный пример использования — в разделе [примеры](examples.html#crd-с-чувствительными-полями).

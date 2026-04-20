@@ -145,3 +145,45 @@ The Kubernetes version update (controlled by the [kubernetesVersion](/products/k
 More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Protecting sensitive fields in Custom Resources
+
+The `CRDSensitiveData` feature gate enables field-level protection for Custom Resource Definition (CRD) fields
+marked with `x-kubernetes-sensitive-data: true`. It is delivered as a patch to `kube-apiserver`
+(apiextensions-apiserver) and supports Kubernetes versions 1.31 and newer.
+
+When at least one field in a CRD schema is marked with `x-kubernetes-sensitive-data: true`,
+the following protections are applied to all Custom Resources of that type:
+
+- **etcd encryption** — the entire Custom Resource is encrypted using the same transformer as Kubernetes Secrets.
+  Requires [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) to be `true`.
+- **RBAC-based field filtering** — on `get`/`list`/`watch` requests, sensitive fields are stripped from the API
+  response unless the caller has `get`/`list`/`watch` permissions on the `<resource>/sensitive` subresource.
+- **Audit log masking** — sensitive field values are always replaced with `"******"` in audit logs,
+  regardless of the caller's RBAC permissions or audit level.
+
+To enable the feature, set `apiserver.encryptionEnabled` to `true` and add `CRDSensitiveData` to
+[`enabledFeatureGates`](configuration.html#parameters-enabledFeatureGates):
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+    enabledFeatureGates:
+      - CRDSensitiveData
+```
+
+{% alert level="warning" %}
+Enabling `encryptionEnabled` cannot be undone.
+Enabling the `CRDSensitiveData` feature gate causes a restart of `kube-apiserver`.
+{% endalert %}
+
+See the [FAQ section](faq.html#how-do-i-protect-sensitive-fields-in-custom-resources) and
+[examples](examples.html#crd-with-sensitive-fields) for detailed usage instructions.

@@ -23,3 +23,128 @@ webhooks:
     caBundle: ABCD=
   timeoutSeconds: 5
 ```
+
+## CRD с чувствительными полями
+
+В примере показано, как защитить чувствительные поля Custom Resource с помощью feature gate
+`CRDSensitiveData` и маркера схемы `x-kubernetes-sensitive-data`.
+
+### 1. Включите шифрование и feature gate
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+    enabledFeatureGates:
+      - CRDSensitiveData
+```
+
+### 2. Определите CRD с чувствительными полями
+
+Поля, помеченные `x-kubernetes-sensitive-data: true`, будут шифроваться в etcd и удаляться
+из ответов API для вызывающих сторон без доступа к сабресурсу `<resource>/sensitive`.
+
+```yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dbconfigs.example.com
+spec:
+  group: example.com
+  scope: Namespaced
+  names:
+    plural: dbconfigs
+    singular: dbconfig
+    kind: DbConfig
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                host:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                  x-kubernetes-sensitive-data: true
+```
+
+### 3. Настройте RBAC
+
+Предоставьте доступ к чувствительным полям через сабресурс `<resource>/sensitive`:
+
+```yaml
+# Обычная роль: может читать ресурс, но чувствительные поля будут удалены из ответа.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dbconfig-reader
+rules:
+- apiGroups: ["example.com"]
+  resources: ["dbconfigs"]
+  verbs: ["get", "list", "watch"]
+---
+# Привилегированная роль: может читать полные данные, включая чувствительные поля.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dbconfig-sensitive-reader
+rules:
+- apiGroups: ["example.com"]
+  resources: ["dbconfigs"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["example.com"]
+  resources: ["dbconfigs/sensitive"]
+  verbs: ["get", "list", "watch"]
+```
+
+### 4. Результат
+
+Пользователь с ролью `dbconfig-reader` увидит ресурс с удалёнными чувствительными полями:
+
+```json
+{
+  "spec": {
+    "host": "db.example.com",
+    "username": "admin"
+  }
+}
+```
+
+Пользователь с ролью `dbconfig-sensitive-reader` увидит полные данные:
+
+```json
+{
+  "spec": {
+    "host": "db.example.com",
+    "username": "admin",
+    "password": "s3cr3t"
+  }
+}
+```
+
+В журнале аудита значения чувствительных полей всегда маскируются, независимо от прав вызывающей стороны:
+
+```json
+{
+  "spec": {
+    "host": "db.example.com",
+    "username": "admin",
+    "password": "******"
+  }
+}
+```
