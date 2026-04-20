@@ -140,5 +140,5 @@ func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int 
 	} else {
 		steps = srcMinor - compMinor
 	}
-	return max(0, min(steps, hops))
+	return min(steps, hops)
 }
