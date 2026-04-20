@@ -16,10 +16,6 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 {{- end -}}
 
 {{- define "vsphere_ccm_envs" -}}
-- name: HOST_IP
-  valueFrom:
-    fieldRef:
-      fieldPath: status.hostIP
 - name: SKIP_NODE_DELETION
   value: "1"
 {{- if .Values.cloudProviderVsphere.internal.providerClusterConfiguration.nsxt }}
