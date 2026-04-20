@@ -19,7 +19,7 @@ spec:
   trafficPolicy:
     connectionPool:
       tcp:
-        maxConnections: 100 # Максимальное число содинений в сторону host, суммарно для всех эндпоинтов.
+        maxConnections: 100 # Максимальное число соединений в сторону host, суммарно для всех эндпоинтов.
       http:
         maxRequestsPerConnection: 10 # Каждые 10 запросов, соединение будет пересоздаваться.
     outlierDetection:
@@ -656,7 +656,7 @@ annotations:
 
 ## Обновление Istio
 
-## Обновление control plane Istio
+### Обновление control plane Istio
 
 * Deckhouse Kubernetes Platform позволяет установить несколько версий control plane одновременно:
   * Одна глобальная, обслуживает неймспейсы или поды без явного указания версии (лейбл у неймспейсов `istio-injection: enabled`). Настраивается параметром [`globalVersion`](configuration.html#parameters-globalversion).
