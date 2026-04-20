@@ -32,4 +32,11 @@ For the ServiceWithHealthchecks load balancers you create to work, the following
 
 {% endalert %}
 
+{% alert level="warning" %}
+Enabling the module does not automatically replace existing Service resources with ServiceWithHealthcheck resources. To replace existing services with ServiceWithHealthcheck, follow these steps:
+
+* Create ServiceWithHealthcheck resources with the same names and parameters as the existing Service resources you want to replace. When creating a ServiceWithHealthcheck, specify the required [`healthchecks`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck) parameters.
+* Delete the Service resources that you want to replace with ServiceWithHealthcheck.
+{% endalert %}
+
 <!-- SCHEMA -->

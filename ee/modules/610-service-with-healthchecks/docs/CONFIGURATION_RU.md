@@ -32,4 +32,11 @@ title: "Модуль service-with-healthchecks: настройки"
 
 {% endalert %}
 
+{% alert level="warning" %}
+После включения модуля не происходит автоматическая замена имеющихся ресурсов типа Service на ServiceWithHealthcheck. Для замены имеющихся сервисов на использование ServiceWithHealthcheck выполните следующие действия:
+
+* Создайте ресурсы ServiceWithHealthcheck с такими же именами и параметрами, как существующие ресурсы Service, которые нужно заменить. При создании ServiceWithHealthcheck укажите обязательные параметры [`healthchecks`](cr.html#servicewithhealthchecks-v1alpha1-spec-healthcheck).
+* Удалите ресурсы Service, которые требуется заменить ServiceWithHealthcheck.
+{% endalert %}
+
 <!-- SCHEMA -->
