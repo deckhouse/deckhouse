@@ -125,10 +125,10 @@ func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int 
 	}
 
 	if hops == 0 {
-		// No version migration in progress: track component health instead of version steps.
-		// Callers exclude Failed components before calling this function, so reaching here
-		// means the component is Updating or UpToDate. Returning 1 when at the desired
-		// version means "healthy and done"; 0 means "not yet at desired version".
+		// No version migration in progress: track whether the component reached the desired
+		// version. For control-plane components, Failed ones are excluded by the caller so
+		// this effectively measures health. For nodes there is no Failed state — a node is
+		// always counted, so 1 simply means "kubelet is at the desired version".
 		if compMinor == dstMinor {
 			return 1
 		}
