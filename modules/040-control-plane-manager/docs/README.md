@@ -152,6 +152,8 @@ The `CRDSensitiveData` feature gate enables field-level protection for Custom Re
 marked with `x-kubernetes-sensitive-data: true`. It is delivered as a patch to `kube-apiserver`
 (apiextensions-apiserver) and supports Kubernetes versions 1.31 and newer.
 
+The marker is allowed only on leaf fields (strings, numbers, booleans) and on objects or arrays (in which case the entire subtree is treated as sensitive). Placing the marker at the schema root is forbidden and will be rejected by the API server when the CRD is applied.
+
 When at least one field in a CRD schema is marked with `x-kubernetes-sensitive-data: true`,
 the following protections are applied to all Custom Resources of that type:
 

@@ -1341,6 +1341,7 @@ together with the `x-kubernetes-sensitive-data` schema marker.
    ```
 
 1. Mark sensitive fields in the CRD schema with `x-kubernetes-sensitive-data: true`.
+   The marker is allowed only on leaf fields and on objects or arrays (the whole subtree becomes sensitive). Placing the marker at the schema root is forbidden and will be rejected when the CRD is applied.
 
 1. Grant access to sensitive fields via the `<resource>/sensitive` subresource in RBAC rules
    for users and service accounts that require full data access.
