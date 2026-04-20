@@ -2,9 +2,7 @@
 prometheus.deckhouse.io/rules-watcher-enabled: "true"
 extended-monitoring.deckhouse.io/enabled: ""
 security.deckhouse.io/pod-policy: "restricted"
-{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
 security.deckhouse.io/enable-security-policy-check: "true"
-{{- end }}
 {{- end }}
 ---
 apiVersion: v1
