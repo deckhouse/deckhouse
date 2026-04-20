@@ -152,4 +152,4 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
-  d8CliVersion: v0.29.20
+  d8CliVersion: v0.29.29
