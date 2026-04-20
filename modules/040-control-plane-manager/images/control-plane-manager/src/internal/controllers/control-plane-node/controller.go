@@ -1085,6 +1085,6 @@ func findExpiringCertsMessage(cpn *controlplanev1alpha1.ControlPlaneNode) string
 }
 
 func isMaintenanceMode(cpn *controlplanev1alpha1.ControlPlaneNode) bool {
-	_, exists := cpn.Labels["maintenance"]
+	_, exists := cpn.Labels[constants.MaintenanceModeLabelKey]
 	return exists
 }

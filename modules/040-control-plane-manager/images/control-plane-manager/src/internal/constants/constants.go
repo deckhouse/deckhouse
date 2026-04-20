@@ -32,6 +32,7 @@ const (
 	EtcdArbiterNodeLabelKey             = "node.deckhouse.io/etcd-arbiter"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
+	MaintenanceModeLabelKey             = "control-plane-manager.deckhouse.io/maintenance"
 	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"
 	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
 	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
