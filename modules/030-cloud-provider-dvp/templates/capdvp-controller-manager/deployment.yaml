@@ -2,12 +2,6 @@
 checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registration.yaml") . | toString) (include (print $.Template.BasePath "/capdvp-controller-manager/secret.yaml") . | toString) | sha256sum }}
 {{- end -}}
 
-{{- define "capdvp_controller_manager_pod_labels" -}}
-  {{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
-security.deckhouse.io/security-policy-exception: capdvp-controller-manager
-  {{- end }}
-{{- end -}}
-
 {{- define "capdvp_controller_manager_args" -}}
 - "--leader-elect"
 {{- end -}}
@@ -39,9 +33,9 @@ security.deckhouse.io/security-policy-exception: capdvp-controller-manager
 {{- $_ := set $capiConfig "additionalArgs" (include "capdvp_controller_manager_args" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalEnv" (include "capdvp_controller_manager_envs" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capdvp_controller_manager_pod_annotations" . | fromYaml) -}}
-{{- $_ := set $capiConfig "additionalPodLabels" (include "capdvp_controller_manager_pod_labels" . | fromYaml) -}}
 {{- $_ := set $capiConfig "hostNetwork" true -}}
 {{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
+{{- $_ := set $capiConfig "securityPolicyExceptionEnabled" true -}}
 {{- $_ := set $capiConfig "vpaEnabled" true -}}
 
 {{- include "helm_lib_capi_controller_manager_manifests" (list . $capiConfig) }}
