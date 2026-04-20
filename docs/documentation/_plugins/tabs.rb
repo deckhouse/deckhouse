@@ -11,11 +11,10 @@ module Jekyll
         markup = markup.strip
         raise SyntaxError, "#{tag_name}: group name is required. Usage: {% tabs group_name %}" if markup.empty?
 
-        m = markup.match(/^(\S+)(?:\s+store_key="([^"]*)")?/)
-        raise SyntaxError, "#{tag_name}: invalid syntax. Usage: {% tabs group_name [store_key=\"key\"] %}" unless m
+        m = markup.match(/^(\S+)/)
+        raise SyntaxError, "#{tag_name}: invalid syntax. Usage: {% tabs group_name %}" unless m
 
         @group = m[1]
-        @store_key = m[2]
       end
 
       def render(context)
@@ -31,10 +30,10 @@ module Jekyll
         cont_class  = "tabs__content_#{@group}"
 
         buttons = tabs.each_with_index.map do |tab, i|
-          block_id   = "block_#{@group}_#{slugify(tab[:label])}"
-          active     = i == 0 ? " active" : ""
-          store_args = @store_key && tab[:store_val] ? ", '#{@store_key}', '#{tab[:store_val]}'" : ""
-          %Q(<a href="javascript:void(0)" class="tabs__btn #{btn_class}#{active}" onclick="openTabAndSaveStatus(event, '#{btn_class}', '#{cont_class}', '#{block_id}'#{store_args});">#{tab[:label]}</a>)
+          block_id  = "block_#{@group}_#{slugify(tab[:label])}"
+          store_val = slugify(tab[:label])
+          active    = i == 0 ? " active" : ""
+          %Q(<a href="javascript:void(0)" class="tabs__btn #{btn_class}#{active}" data-store-key="#{@group}" data-store-val="#{store_val}" onclick="openTabAndSaveStatus(event, '#{btn_class}', '#{cont_class}', '#{block_id}', '#{@group}', '#{store_val}');">#{tab[:label]}</a>)
         end
 
         panels = tabs.each_with_index.map do |tab, i|
@@ -59,11 +58,10 @@ module Jekyll
       def initialize(tag_name, markup, tokens)
         super
 
-        m = markup.strip.match(/^"([^"]+)"(?:\s+store_val="([^"]*)")?/)
-        raise SyntaxError, "#{tag_name}: tab label is required. Usage: {% tab \"Label\" [store_val=\"val\"] %}" unless m
+        m = markup.strip.match(/^"([^"]+)"/)
+        raise SyntaxError, "#{tag_name}: tab label is required. Usage: {% tab \"Label\" %}" unless m
 
-        @label     = m[1]
-        @store_val = m[2]
+        @label = m[1]
       end
 
       def render(context)
@@ -75,7 +73,7 @@ module Jekyll
         converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
         html = converter.convert(content).gsub(/\n/, '')
 
-        context.registers[:tabs_stack].last << { label: @label, html: html, store_val: @store_val }
+        context.registers[:tabs_stack].last << { label: @label, html: html }
 
         ""
       end
