@@ -1,11 +1,8 @@
 {{- define "zvirt_ccm_args" -}}
-- --leader-elect=true
 - --cloud-provider=zvirt
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node,cloud-node-lifecycle
-- --bind-address=127.0.0.1
-- --secure-port=10471
 - --v=4
 {{- end -}}
 
@@ -18,20 +15,6 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 {{- end -}}
 
 {{- define "zvirt_ccm_envs" -}}
-# KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are needed on the bootstrap phase to make CCM work without kube-proxy
-{{- if not .Values.global.clusterIsBootstrapped }}
-- name: KUBERNETES_SERVICE_HOST
-  valueFrom:
-    fieldRef:
-      apiVersion: v1
-      fieldPath: status.hostIP
-- name: KUBERNETES_SERVICE_PORT
-  value: "6443"
-{{- end }}
-- name: HOST_IP
-  valueFrom:
-    fieldRef:
-      fieldPath: status.hostIP
 - name: ZVIRT_API_URL
   valueFrom:
     secretKeyRef:
