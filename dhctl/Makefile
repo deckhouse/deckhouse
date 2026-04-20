@@ -50,6 +50,10 @@ ifndef RPP_SIGN_CHECK
 	RPP_SIGN_CHECK = false
 endif
 
+ifndef EDITION
+	EDITION = FE
+endif
+
 # Set platform for deps
 ifndef PROTOC_PLATFORM
 	ifeq ($(OS), linux)
@@ -122,8 +126,15 @@ generate: protoc
 generate-preflight-checks:
 	@go generate hack/gen_preflight_checks/main.go
 
+define BUILD_VARIABLES
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.Edition=$(EDITION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)
+endef
+
 build: check-vars
-	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' $(BUILD_VARIABLES)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build/test/check-digests:
 	@if [ ! -f "$(DEV_IMAGES_DIGESTS)" ]; then \

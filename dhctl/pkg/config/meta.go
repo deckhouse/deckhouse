@@ -678,6 +678,22 @@ func (m *MetaConfig) LoadImagesDigests() error {
 	return nil
 }
 
+// FindModuleConfig
+// if not found returns nil
+func (m *MetaConfig) FindModuleConfig(module string) *ModuleConfig {
+	if len(m.ModuleConfigs) == 0 {
+		return nil
+	}
+
+	for _, moduleConfig := range m.ModuleConfigs {
+		if moduleConfig.Name == module {
+			return moduleConfig
+		}
+	}
+
+	return nil
+}
+
 func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
