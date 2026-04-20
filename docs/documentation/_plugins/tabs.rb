@@ -71,7 +71,7 @@ module Jekyll
 
         site = context.registers[:site]
         converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
-        html = converter.convert(content).gsub(/\n/, '')
+        html = collapse_inter_block_newlines(converter.convert(content))
 
         context.registers[:tabs_stack].last << { label: @label, html: html }
 
