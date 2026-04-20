@@ -30,6 +30,7 @@ config:
       - VAULT_ROLE
       - VAULT_JWT
       - WERF_SIGN_KEY
+      - TRANSIT_SECRET_ENGINE_PATH
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY
