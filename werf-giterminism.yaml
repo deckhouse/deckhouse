@@ -14,6 +14,7 @@ config:
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
+      - VAULT_ADDR
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowEnvVariables:
@@ -25,6 +26,9 @@ config:
       - COSIGN_TRANSIT_SECRET_ENGINE_PATH
       - ACTIONS_ID_TOKEN_REQUEST_TOKEN
       - ACTIONS_ID_TOKEN_REQUEST_URL
+      - VAULT_ADDR
+      - VAULT_ROLE
+      - VAULT_JWT
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY
