@@ -22,14 +22,14 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
-- id: COSIGN_VAULT_ADDRESS
-  env: COSIGN_VAULT_ADDRESS
-- id: COSIGN_VAULT_KEY
-  env: COSIGN_VAULT_KEY
-- id: COSIGN_AUTH_ROLE
-  env: COSIGN_AUTH_ROLE
-- id: COSIGN_TRANSIT_SECRET_ENGINE_PATH
-  env: COSIGN_TRANSIT_SECRET_ENGINE_PATH
+- id: VAULT_ADDR
+  env: VAULT_ADDR
+- id: SIGN_KEY
+  env: WERF_SIGN_KEY
+- id: VAULT_AUTH_ROLE
+  env: WERF_VAULT_AUTH_ROLE
+- id: TRANSIT_SECRET_ENGINE_PATH
+  env: TRANSIT_SECRET_ENGINE_PATH
 - id: ACTIONS_ID_TOKEN_REQUEST_TOKEN
   env: ACTIONS_ID_TOKEN_REQUEST_TOKEN
 - id: ACTIONS_ID_TOKEN_REQUEST_URL
@@ -52,10 +52,10 @@ shell:
   install:
   - export REGISTRY_USER="$(cat /run/secrets/REGISTRY_USER)"
   - export REGISTRY_PASSWORD="$(cat /run/secrets/REGISTRY_PASSWORD)"
-  - export VAULT_ADDR="$(cat /run/secrets/COSIGN_VAULT_ADDRESS)"
-  - export COSIGN_VAULT_KEY="$(cat /run/secrets/COSIGN_VAULT_KEY)"
-  - export COSIGN_AUTH_ROLE="$(cat /run/secrets/COSIGN_AUTH_ROLE)"
-  - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/COSIGN_TRANSIT_SECRET_ENGINE_PATH)"
+  - export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
+  - export SIGN_KEY="$(cat /run/secrets/SIGN_KEY)"
+  - export VAULT_AUTH_ROLE="$(cat /run/secrets/VAULT_AUTH_ROLE)"
+  - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/TRANSIT_SECRET_ENGINE_PATH)"
   - export ACTIONS_ID_TOKEN_REQUEST_TOKEN="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)"
   - export ACTIONS_ID_TOKEN_REQUEST_URL="$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)"
   - >
@@ -67,7 +67,7 @@ shell:
       echo "Actions token empty";
     fi
   - >
-    export VAULT_TOKEN="$(curl -fX POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${COSIGN_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
+    export VAULT_TOKEN="$(curl -fX POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${VAULT_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')"
   - >
     if [ -n "${VAULT_TOKEN}" ]; then
       echo "Received Vault token";
@@ -82,7 +82,7 @@ shell:
       --registry-password="${REGISTRY_PASSWORD}" \
       --predicate /.trivyignore.yaml \
       --type custom \
-      --key hashivault://${COSIGN_VAULT_KEY} \
+      --key ${SIGN_KEY} \
       --tlog-upload=false \
       -y -d \
       "${IMAGE_REPO}@${IMAGE_DIGEST}"
