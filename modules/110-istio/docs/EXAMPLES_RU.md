@@ -294,7 +294,7 @@ spec:
 
 Для работы с Ingress NGINX требуется подготовить:
 
-* Ingress-контроллер, добавив к нему сайдкар от Istio. В нашем случае включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
+* Ingress-контроллер, добавив к нему сайдкар от Istio. В нашем случае — включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
   * `nginx.ingress.kubernetes.io/upstream-vhost: myservice.myns.svc` — с данной аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
@@ -691,7 +691,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 ## Настройка ресурсов istio-proxy sidecar
 
-Для переопределения глобальных ограничений ресурсов для сайдкара istio-proxy в отдельных рабочих нагрузках происходит через аннотации. Поддерживаются следующие аннотации:
+Для переопределения глобальных ограничений ресурсов для сайдкара istio-proxy в отдельных рабочих нагрузках используются аннотации. Поддерживаются следующие аннотации:
 
 ### Поддерживаемые аннотации
 
