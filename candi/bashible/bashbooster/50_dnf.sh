@@ -45,6 +45,10 @@ bb-dnf-repo?() {
 }
 
 bb-dnf-package?() {
+    if [ "$(bb-check-dnf)" = "yum" ]; then
+        bb-yum-package? "$@"
+        return
+    fi
     bb-set-proxy
     trap bb-unset-proxy RETURN
     dnf list installed "$1" &>/dev/null

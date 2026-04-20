@@ -106,7 +106,7 @@ func moduleConfigValidationHandler(
 					return rejectResult("delete the ModulePullOverride before deleting the module config")
 				}
 
-				metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, 0, map[string]string{"module": cfg.GetName()})
+				metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, 0, map[string]string{metrics.LabelModule: cfg.GetName()})
 				// if module is already disabled - we don't need to warn user about disabling module
 				return allowResult(nil)
 			}
@@ -135,16 +135,18 @@ func moduleConfigValidationHandler(
 				}
 
 				// Fallback: check from Module CR (when module not downloaded, but properties synced from registry).
-				// Create: reject if module not found.
-				m := new(v1alpha1.Module)
-				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
-					if apierrors.IsNotFound(err) {
-						return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+				// Create: reject if module not found. Skip for "global" - it has no Module CR.
+				if cfg.Name != "global" {
+					m := new(v1alpha1.Module)
+					if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
+						if apierrors.IsNotFound(err) {
+							return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+						}
+						return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 					}
-					return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
-				}
-				if m.IsExperimental() && !allowExperimentalModules {
-					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+					if m.IsExperimental() && !allowExperimentalModules {
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+					}
 				}
 			}
 		case kwhmodel.OperationUpdate:
@@ -184,14 +186,16 @@ func moduleConfigValidationHandler(
 				}
 
 				// Fallback: check from Module CR (when module not downloaded, but properties synced from registry).
-				// Update: skip if not found (common code handles with warning). Use "else if" to avoid accessing empty object.
-				m := new(v1alpha1.Module)
-				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
-					if !apierrors.IsNotFound(err) {
-						return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+				// Update: skip if not found (common code handles with warning). Skip for "global" - it has no Module CR.
+				if cfg.Name != "global" {
+					m := new(v1alpha1.Module)
+					if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
+						if !apierrors.IsNotFound(err) {
+							return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+						}
+					} else if m.IsExperimental() && !allowExperimentalModules {
+						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 					}
-				} else if m.IsExperimental() && !allowExperimentalModules {
-					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 				}
 			}
 
@@ -264,27 +268,30 @@ func moduleConfigValidationHandler(
 			warnings = append(warnings, res.Warning)
 		}
 
-		metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, allowedToDisableMetric, map[string]string{"module": cfg.GetName()})
+		metricStorage.GaugeSet(metrics.D8ModuleConfigAllowedToDisable, allowedToDisableMetric, map[string]string{metrics.LabelModule: cfg.GetName()})
 
 		module, err := moduleStorage.GetModuleByName(cfg.Name)
 		if err != nil {
 			return allowResult(warnings)
 		}
-		exclusiveGroup := module.GetModuleExclusiveGroup()
-		if exclusiveGroup != nil {
-			modules := moduleStorage.GetModulesByExclusiveGroup(*exclusiveGroup)
 
-			for _, moduleName := range modules {
-				// if any module with same unique key enabled, return error
-				if moduleManager.IsModuleEnabled(moduleName) && moduleName != cfg.Name {
-					return rejectResult(
-						fmt.Sprintf(
-							"can't enable module %q because different module %q with same exclusiveGroup %s enabled",
-							cfg.Name,
-							moduleName,
-							*exclusiveGroup,
-						),
-					)
+		if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+			exclusiveGroup := module.GetModuleExclusiveGroup()
+			if exclusiveGroup != nil {
+				modules := moduleStorage.GetModulesByExclusiveGroup(*exclusiveGroup)
+
+				for _, moduleName := range modules {
+					// if any module with same unique key enabled, return error
+					if moduleManager.IsModuleEnabled(moduleName) && moduleName != cfg.Name {
+						return rejectResult(
+							fmt.Sprintf(
+								"can't enable module %q because different module %q with same exclusiveGroup %s enabled",
+								cfg.Name,
+								moduleName,
+								*exclusiveGroup,
+							),
+						)
+					}
 				}
 			}
 		}

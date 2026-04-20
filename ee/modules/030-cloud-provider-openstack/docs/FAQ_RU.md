@@ -4,7 +4,7 @@ title: "Cloud provider — OpenStack: FAQ"
 
 ## Как настроить LoadBalancer?
 
-> **Внимание!** Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
+> **Внимание.** Для корректного определения клиентского IP-адреса необходимо использовать LoadBalancer с поддержкой Proxy Protocol.
 
 ### Пример IngressNginxController
 
@@ -281,3 +281,7 @@ Expected HTTP response code [202] when accessing
 [POST https://public.infra.myfavourite-cloud-provider.ru:8776/v3/555555555555/volumes/bb5a275b-3f30-4916-9480-9efe4b6dfba5/action], but got 406 instead
 {"computeFault": {"message": "Version 3.42 is not supported by the API. Minimum is 3.0 and maximum is 3.27.", "code": 406}}
 ```
+
+## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
+
+Если переключение на заказ узлов в менее приоритетных группах занимает много времени, воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).

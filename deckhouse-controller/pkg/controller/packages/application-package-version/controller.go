@@ -18,21 +18,22 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path"
+	"path/filepath"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metautils "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -40,25 +41,34 @@ import (
 const (
 	controllerName = "d8-application-package-version-controller"
 
+	// maxConcurrentReconciles is set to 1 to serialize status and label patches,
+	// preventing conflicts on the same ApplicationPackageVersion resource.
 	maxConcurrentReconciles = 1
-	requeueTime             = 30 * time.Second
+
+	defaultRequeue = 15 * time.Second
+
+	schemaTypeSettings = iota
+	schemaTypeValues
 )
 
+// reconciler promotes draft ApplicationPackageVersion resources by loading
+// package metadata from the registry image and removing the draft label.
 type reconciler struct {
-	client client.Client
-	logger *log.Logger
-	dc     dependency.Container
+	client   client.Client
+	logger   *log.Logger
+	registry *registry.Service
+	dc       dependency.Container
 }
 
-func RegisterController(
-	runtimeManager manager.Manager,
-	dc dependency.Container,
-	logger *log.Logger,
-) error {
+// RegisterController creates and registers the ApplicationPackageVersion controller.
+// It watches ApplicationPackageVersion resources and reconciles draft versions by
+// fetching metadata from the package registry and promoting them to non-draft status.
+func RegisterController(runtimeManager manager.Manager, dc dependency.Container, logger *log.Logger) error {
 	r := &reconciler{
-		client: runtimeManager.GetClient(),
-		logger: logger,
-		dc:     dc,
+		client:   runtimeManager.GetClient(),
+		logger:   logger,
+		registry: registry.NewService(dc, logger),
+		dc:       dc,
 	}
 
 	applicationPackageVersionController, err := controller.New(controllerName, runtimeManager, controller.Options{
@@ -74,22 +84,25 @@ func RegisterController(
 		Complete(applicationPackageVersionController)
 }
 
+// Reconcile handles a single ApplicationPackageVersion event. Draft resources
+// are promoted by loading metadata; deleted resources have their finalizers removed
+// once no Application references remain (usedByCount == 0).
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	res := ctrl.Result{}
+	logger := r.logger.With(slog.String("name", req.Name))
 
-	r.logger.Debug("reconciling ApplicationPackageVersion", slog.String("name", req.Name))
+	logger.Debug("reconcile resource")
 
 	apv := new(v1alpha1.ApplicationPackageVersion)
 	if err := r.client.Get(ctx, req.NamespacedName, apv); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Debug("application package version not found", slog.String("name", req.Name))
+			logger.Debug("resource not found")
 
-			return res, nil
+			return ctrl.Result{}, nil
 		}
 
-		r.logger.Warn("failed to get application package version", slog.String("name", req.Name), log.Err(err))
+		logger.Warn("failed to get resource", log.Err(err))
 
-		return res, err
+		return ctrl.Result{}, err
 	}
 
 	// handle delete event
@@ -97,307 +110,270 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.handleDelete(ctx, apv)
 	}
 
-	// add finalizer if it is not set
-	if !controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
-		r.logger.Debug("adding finalizer to application package version", slog.String("name", apv.Name))
-
-		patch := client.MergeFrom(apv.DeepCopy())
-
-		controllerutil.AddFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
-
-		err := r.client.Patch(ctx, apv, patch)
-		if err != nil {
-			return res, fmt.Errorf("add finalizer to ApplicationPackageVersion %s: %w", apv.Name, err)
-		}
-	}
-
-	// skip handle for non drafted resources
-	if !apv.IsDraft() {
-		r.logger.Debug("package is not draft", slog.String("package_name", apv.Name))
-
-		return res, nil
-	}
-
 	// handle create/update events
-	err := r.handleCreateOrUpdate(ctx, apv)
-	if err != nil {
-		r.logger.Warn("failed to handle application package version", slog.String("name", req.Name), log.Err(err))
+	if err := r.handleCreateOrUpdate(ctx, apv); err != nil {
+		logger.Warn("failed to handle application package version", log.Err(err))
 
-		return ctrl.Result{RequeueAfter: requeueTime}, nil
+		return ctrl.Result{}, err
 	}
 
-	return res, nil
+	return ctrl.Result{}, nil
 }
 
+// handleCreateOrUpdate processes draft ApplicationPackageVersions through a promotion pipeline:
+//  1. Fetch the package image from the registry using the repository config
+//  2. Extract metadata (package.yaml, changelog.yaml, version.json) from the image tar
+//  3. Populate status.packageMetadata with the extracted information
+//  4. Set the MetadataLoaded condition to True
+//  5. Check if the package image exists in the registry and label accordingly
+//  6. Add a finalizer and remove the draft label, completing promotion
+//
+// Non-draft resources are skipped since they have already been promoted.
 func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) error {
-	original := apv.DeepCopy()
-	logger := r.logger.With(slog.String("name", apv.Name))
+	logger := r.logger.With(
+		slog.String("name", apv.Name),
+		slog.String("package", apv.Spec.PackageName),
+		slog.String("version", apv.Spec.PackageVersion),
+		slog.String("repository", apv.Spec.PackageRepositoryName))
 
-	logger.Debug("handling ApplicationPackageVersion")
-	defer logger.Debug("handle ApplicationPackageVersion complete")
+	// Non-draft APVs have already been promoted — nothing to do.
+	if !apv.IsDraft() {
+		logger.Debug("package is not draft")
 
-	// Get registry credentials from PackageRepository resource
-	var packageRepo v1alpha1.PackageRepository
-	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.PackageRepositoryName}, &packageRepo)
-	if err != nil {
-		r.SetConditionFalse(
+		return nil
+	}
+
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: apv.Spec.PackageRepositoryName}, repo); err != nil {
+		original := apv.DeepCopy()
+		r.setMetadataLoadedConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.PackageRepositoryName, err.Error()),
+			fmt.Sprintf("failed to get repository '%s': %s", apv.Spec.PackageRepositoryName, err.Error()),
 		)
 
-		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
-		if patchErr != nil {
-			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
+		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", apv.Name, err)
 		}
 
-		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.PackageRepositoryName, err)
+		return fmt.Errorf("get repository '%s': %w", apv.Spec.PackageRepositoryName, err)
 	}
 
-	logger.Debug("got package repository", slog.String("repo", packageRepo.Spec.Registry.Repo))
+	remote := registry.BuildRemote(repo)
+	version := apv.Spec.PackageVersion
+	versionPath := filepath.Join(apv.Spec.PackageName, "version")
 
-	// Create go registry client from credentials from PackageRepository
-	// example path: registry.deckhouse.io/sys/deckhouse-oss/packages/$package/version:$version
-	registryPath := path.Join(packageRepo.Spec.Registry.Repo, apv.Spec.PackageName, "version")
-
-	logger.Debug("registry path", slog.String("path", registryPath))
-
-	opts := utils.GenerateRegistryOptions(&utils.RegistryConfig{
-		DockerConfig: packageRepo.Spec.Registry.DockerCFG,
-		CA:           packageRepo.Spec.Registry.CA,
-		Scheme:       packageRepo.Spec.Registry.Scheme,
-		// UserAgent: ,
-	}, r.logger)
-
-	registryClient, err := r.dc.GetRegistryClient(registryPath, opts...)
+	img, err := r.registry.GetImageReader(ctx, remote, versionPath, version)
 	if err != nil {
-		r.SetConditionFalse(
+		original := apv.DeepCopy()
+		r.setMetadataLoadedConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
-			v1alpha1.ApplicationPackageVersionConditionReasonGetRegistryClientErr,
-			fmt.Sprintf("failed to get registry client: %s", err.Error()),
-		)
-
-		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
-		if patchErr != nil {
-			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
-		}
-
-		return fmt.Errorf("get registry client for %s: %w", apv.Name, err)
-	}
-
-	// Get package.yaml from image
-	img, err := registryClient.Image(ctx, apv.Spec.PackageVersion)
-	if err != nil {
-		r.SetConditionFalse(
-			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
-			fmt.Sprintf("failed to get image: %s", err.Error()),
+			fmt.Sprintf("get image: %s", err.Error()),
 		)
 
-		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
-		if patchErr != nil {
-			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
+		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", apv.Name, err)
 		}
 
-		return fmt.Errorf("get image for %s: %w", apv.Name+":"+apv.Spec.PackageVersion, err)
+		return fmt.Errorf("get image for '%s': %w", apv.Name, err)
 	}
 
-	packageMeta, err := r.fetchPackageMetadata(ctx, img)
+	meta, err := r.parseVersionMetadataByImage(ctx, img)
 	if err != nil {
-		r.SetConditionFalse(
+		original := apv.DeepCopy()
+		r.setMetadataLoadedConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
-			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
+			fmt.Sprintf("fetch package metadata: %s", err.Error()),
 		)
 
-		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
-		if patchErr != nil {
-			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
+		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", apv.Name, err)
 		}
 
-		return fmt.Errorf("failed to fetch package metadata %s: %w", apv.Name, err)
+		return fmt.Errorf("fetch package metadata '%s': %w", apv.Name, err)
 	}
 
-	if packageMeta.PackageDefinition != nil {
-		logger.Debug("got metadata from package.yaml", slog.String("meta_name", packageMeta.PackageDefinition.Name))
+	original := apv.DeepCopy()
+	if err = r.setPackageMetadata(apv, meta); err != nil {
+		r.setMetadataLoadedConditionFalse(
+			apv,
+			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
+			fmt.Sprintf("fetch package metadata: %s", err.Error()),
+		)
+
+		if err := r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("patch status '%s': %w", apv.Name, err)
+		}
+
+		return fmt.Errorf("set package metadata '%s': %w", apv.Name, err)
 	}
 
-	// Patch the status
-	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
+	r.setMetadataLoadedConditionTrue(apv)
 
-	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
-
-	logger.Debug("patch package version status")
-	err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
-	if err != nil {
-		return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, err)
+	if err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch status '%s': %w", apv.Name, err)
 	}
 
-	// Delete label "draft" and patch the main object
 	original = apv.DeepCopy()
+
+	if apv.Labels == nil {
+		apv.Labels = make(map[string]string)
+	}
+
+	// Check whether the package image exists in the registry and label accordingly.
+	// The image may legitimately not exist (e.g. metadata-only bundle), so both outcomes are valid.
+	if _, err = r.registry.GetImageDigest(ctx, remote, apv.Spec.PackageName, version); err != nil {
+		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "false"
+	} else {
+		apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry] = "true"
+	}
+
+	// Finalizer prevents deletion while Applications reference this version.
+	if !controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
+		controllerutil.AddFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
+	}
 
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
 
-	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
-	if err != nil {
-		return fmt.Errorf("patch ApplicationPackageVersion %s: %w", apv.Name, err)
+	if err = r.client.Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch '%s': %w", apv.Name, err)
 	}
 
 	return nil
 }
 
+// handleDelete removes the finalizer from the ApplicationPackageVersion once it is
+// no longer referenced by any Application (usedByCount == 0). While references exist,
+// the reconcile is requeued every 15 seconds to wait for Applications to release the APV.
 func (r *reconciler) handleDelete(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
-	logger := r.logger.With(slog.String("name", apv.Name))
-	logger.Debug("deleting ApplicationPackageVersion")
-	defer logger.Debug("delete ApplicationPackageVersion complete")
-
-	res := ctrl.Result{}
+	logger := r.logger.With(
+		slog.String("name", apv.Name),
+		slog.String("package", apv.Spec.PackageName),
+		slog.String("version", apv.Spec.PackageVersion),
+		slog.String("repository", apv.Spec.PackageRepositoryName))
 
 	if apv.Status.UsedByCount > 0 {
-		logger.Warn("application package version is used by applications, skipping deletion", slog.Int("used_by_count", apv.Status.UsedByCount))
-
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: defaultRequeue}, nil
 	}
 
 	if controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
 		logger.Debug("removing finalizer from application package version")
 
-		patch := client.MergeFrom(apv.DeepCopy())
+		original := apv.DeepCopy()
 
 		controllerutil.RemoveFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
 
-		err := r.client.Patch(ctx, apv, patch)
-		if err != nil {
-			return res, fmt.Errorf("remove finalizer from ApplicationPackageVersion %s: %w", apv.Name, err)
+		if err := r.client.Patch(ctx, apv, client.MergeFrom(original)); err != nil {
+			logger.Warn("failed to remove finalizer", log.Err(err))
+
+			return ctrl.Result{}, fmt.Errorf("remove finalizer from '%s': %w", apv.Name, err)
 		}
 	}
 
-	return res, nil
+	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) SetConditionTrue(apv *v1alpha1.ApplicationPackageVersion, condType string) *v1alpha1.ApplicationPackageVersion {
-	time := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range apv.Status.Conditions {
-		if cond.Type == condType {
-			apv.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionTrue {
-				apv.Status.Conditions[idx].LastTransitionTime = time
-				apv.Status.Conditions[idx].Status = corev1.ConditionTrue
-			}
-
-			apv.Status.Conditions[idx].Reason = ""
-			apv.Status.Conditions[idx].Message = ""
-
-			return apv
-		}
-	}
-
-	apv.Status.Conditions = append(apv.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
-		Type:               condType,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
+// setMetadataLoadedConditionTrue sets the condition MetadataLoaded to True, clearing reason and message.
+func (r *reconciler) setMetadataLoadedConditionTrue(apv *v1alpha1.ApplicationPackageVersion) {
+	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
+		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
+		Status:             metav1.ConditionTrue,
+		Reason:             "Succeeded",
+		ObservedGeneration: apv.Generation,
+		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
 	})
-
-	return apv
 }
 
-func (r *reconciler) SetConditionFalse(apv *v1alpha1.ApplicationPackageVersion, condType string, reason string, message string) *v1alpha1.ApplicationPackageVersion {
-	time := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range apv.Status.Conditions {
-		if cond.Type == condType {
-			apv.Status.Conditions[idx].LastProbeTime = time
-			if cond.Status != corev1.ConditionFalse {
-				apv.Status.Conditions[idx].LastTransitionTime = time
-				apv.Status.Conditions[idx].Status = corev1.ConditionFalse
-			}
-
-			apv.Status.Conditions[idx].Reason = reason
-			apv.Status.Conditions[idx].Message = message
-
-			return apv
-		}
-	}
-
-	apv.Status.Conditions = append(apv.Status.Conditions, v1alpha1.ApplicationPackageVersionCondition{
-		Type:               condType,
-		Status:             corev1.ConditionFalse,
+// setMetadataLoadedConditionFalse sets the condition MetadataLoaded to  False with a reason and message.
+func (r *reconciler) setMetadataLoadedConditionFalse(apv *v1alpha1.ApplicationPackageVersion, reason, message string) {
+	metautils.SetStatusCondition(&apv.Status.Conditions, metav1.Condition{
+		Type:               v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
+		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
-		LastProbeTime:      time,
-		LastTransitionTime: time,
+		ObservedGeneration: apv.Generation,
+		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
 	})
-
-	return apv
 }
 
-func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *PackageDefinition) *v1alpha1.ApplicationPackageVersion {
-	if pd == nil {
-		return apv
+// setPackageMetadata projects parsed package metadata onto the ApplicationPackageVersion
+// status. It overwrites Status.PackageMetadata with the stage, localized descriptions,
+// runtime requirements, and changelog extracted from the package image, then delegates
+// to setPackageSchema for the settings and values OpenAPI schemas. A nil meta is a
+// no-op, so callers may invoke this unconditionally after a best-effort parse.
+func (r *reconciler) setPackageMetadata(apv *v1alpha1.ApplicationPackageVersion, meta *packageMetadata) error {
+	if meta == nil {
+		return nil
 	}
 
 	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
-		Category: pd.Category,
-		Stage:    pd.Stage,
-	}
-	if pd.Description != nil {
-		apv.Status.PackageMetadata.Description = &v1alpha1.PackageDescription{
-			Ru: pd.Description.Ru,
-			En: pd.Description.En,
-		}
-	}
-	if pd.Licensing != nil {
-		apv.Status.PackageMetadata.Licensing = &v1alpha1.PackageLicensing{
-			Editions: convertLicensingEditions(pd.Licensing.Editions),
-		}
-	}
-
-	if pd.Requirements != nil {
-		apv.Status.PackageMetadata.Requirements = &v1alpha1.PackageRequirements{
-			Deckhouse:  pd.Requirements.Deckhouse,
-			Kubernetes: pd.Requirements.Kubernetes,
-			Modules:    pd.Requirements.Modules,
-		}
+		Stage: meta.definition.Stage,
+		Description: &v1alpha1.PackageDescription{
+			Ru: meta.definition.Descriptions.Ru,
+			En: meta.definition.Descriptions.En,
+		},
+		Requirements: &v1alpha1.PackageRequirements{
+			Deckhouse:  meta.definition.Requirements.Deckhouse,
+			Kubernetes: meta.definition.Requirements.Kubernetes,
+			Modules:    meta.definition.Requirements.Modules,
+		},
+		Changelog: &v1alpha1.PackageChangelog{
+			Features: meta.changelog.Features,
+			Fixes:    meta.changelog.Fixes,
+		},
 	}
 
-	if pd.VersionCompatibilityRules != nil {
-		if pd.VersionCompatibilityRules.Upgrade.From != "" || pd.VersionCompatibilityRules.Downgrade.To != "" {
-			apv.Status.PackageMetadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
-				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
-					From:             pd.VersionCompatibilityRules.Upgrade.From,
-					AllowSkipPatches: int(pd.VersionCompatibilityRules.Upgrade.AllowSkipPatches),
-					AllowSkipMinor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMinor),
-					AllowSkipMajor:   int(pd.VersionCompatibilityRules.Upgrade.AllowSkipMajor),
-				},
-				Downgrade: &v1alpha1.PackageVersionCompatibilityRule{
-					To:               pd.VersionCompatibilityRules.Downgrade.To,
-					AllowSkipPatches: int(pd.VersionCompatibilityRules.Downgrade.AllowSkipPatches),
-					AllowSkipMinor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMinor),
-					AllowSkipMajor:   int(pd.VersionCompatibilityRules.Downgrade.AllowSkipMajor),
-					MaxRollback:      int(pd.VersionCompatibilityRules.Downgrade.MaxRollback),
-				},
-			}
-		}
+	if err := setPackageSchema(apv, schemaTypeSettings, meta.rawSettingsSchema); err != nil {
+		return fmt.Errorf("set settings schema: %w", err)
 	}
 
-	return apv
+	if err := setPackageSchema(apv, schemaTypeValues, meta.rawValuesSchema); err != nil {
+		return fmt.Errorf("set values schema: %w", err)
+	}
+
+	return nil
 }
 
-func convertLicensingEditions(editions map[string]PackageEdition) map[string]v1alpha1.PackageEdition {
-	if editions == nil {
+// setPackageSchema parses a raw YAML/JSON OpenAPI v3 schema and stores it on the
+// ApplicationPackageVersion status under either SettingsSchema or ValuesSchema,
+// selected by schemaType. The schema is wrapped in a lightweight envelope that
+// recognises the x-config-version marker used by packages to version their schema
+// format. An empty rawSchema is treated as "no schema supplied" and returns nil
+// without touching the status. Unknown schemaType values are silently ignored.
+func setPackageSchema(apv *v1alpha1.ApplicationPackageVersion, schemaType int, rawSchema []byte) error {
+	if len(rawSchema) == 0 {
 		return nil
 	}
-	result := make(map[string]v1alpha1.PackageEdition)
-	for k, v := range editions {
-		result[k] = v1alpha1.PackageEdition{
-			Available: v.Available,
-		}
+
+	type schemaVersion struct {
+		Version string `json:"x-config-version"`
+		apiextensionsv1.JSONSchemaProps
 	}
-	return result
+
+	jsonSchema := &schemaVersion{
+		Version: "1",
+	}
+	if err := yaml.Unmarshal(rawSchema, jsonSchema); err != nil {
+		return fmt.Errorf("invalid JSON schema: %w", err)
+	}
+
+	if apv.Status.PackageSchemas == nil {
+		apv.Status.PackageSchemas = new(v1alpha1.ApplicationPackageVersionStatusSchemas)
+	}
+
+	switch schemaType {
+	case schemaTypeSettings:
+		apv.Status.PackageSchemas.SettingsSchema = &apiextensionsv1.CustomResourceValidation{
+			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
+		}
+	case schemaTypeValues:
+		apv.Status.PackageSchemas.ValuesSchema = &apiextensionsv1.CustomResourceValidation{
+			OpenAPIV3Schema: &jsonSchema.JSONSchemaProps,
+		}
+	default:
+	}
+
+	return nil
 }

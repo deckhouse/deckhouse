@@ -46,7 +46,7 @@ spec:
       containers:
         - name: web
           image: {{ index .Values.werf.image "web-frontend" }}
-          {{- include "resources" . | nindent 10 }}
+          {{- include "resources-moduleslibrary-web" . | nindent 10 }}
           ports:
           - containerPort: 8080
             name: http
@@ -91,7 +91,7 @@ spec:
             - "/app/server"
             - "-highAvailability={{pluck .Values.werf.env .Values.docsBuilder.highAvailability | first | default .Values.docsBuilder.highAvailability._default}}"
           image: {{ index .Values.werf.image "website-docs/builder" }}
-          {{- include "resources" . | nindent 10 }}
+          {{- include "resources-moduleslibrary-builder" . | nindent 10 }}
           env:
             - name: HUGO_ENVIRONMENT
               value: production
@@ -142,6 +142,9 @@ spec:
               name: modules-searchindex-en
             - mountPath: "/mount/public/ru/search"
               name: modules-searchindex-ru
+            - mountPath: "/app/hugo-init/data/embedded_modules_list.json"
+              name: embedded-modules-history-data
+              subPath: embedded_modules_list.json
       volumes:
         - name: nginx-config
           configMap:
@@ -161,6 +164,9 @@ spec:
           emptyDir: {}
         - name: modules-searchindex-ru
           emptyDir: {}
+        - name: embedded-modules-history-data
+          configMap:
+            name: embedded-modules-history-data
 ---
 apiVersion: v1
 kind: Service
@@ -192,7 +198,8 @@ spec:
     kind: Deployment
     name: moduleslibrary
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: {{ pluck .Values.werf.env .Values.vpa.updateMode | first | default .Values.vpa.updateMode._default | quote }}
+
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

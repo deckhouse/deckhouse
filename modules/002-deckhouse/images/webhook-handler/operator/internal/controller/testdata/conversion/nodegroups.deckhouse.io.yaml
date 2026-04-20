@@ -1,0 +1,113 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConversionWebhook
+metadata:
+  name: nodegroups.deckhouse.io
+context:
+  - name: cluster_config
+    kubernetes:
+      apiVersion: v1
+      kind: Secret
+      queue: "cache-cluster-config"
+      namespace:
+        nameSelector:
+          matchNames: ["kube-system"]
+      nameSelector:
+        matchNames:
+          - d8-provider-cluster-configuration
+      jqFilter: '.data."cloud-provider-cluster-configuration.yaml" // ""'
+conversions:
+  - from: v1alpha1
+    to: v1alpha2
+    handler:
+      python: |
+        def v1alpha1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
+            obj = DotMap(o)
+
+            obj.apiVersion = "deckhouse.io/v1alpha2"
+            if "docker" in obj.spec:
+                if "cri" not in obj.spec:
+                    obj.spec.cri = DotMap({})
+                obj.spec.cri.docker = obj.spec.docker
+                del obj.spec.docker
+
+            if "kubernetesVersion" in obj.spec:
+                del obj.spec.kubernetesVersion
+
+            if "static" in obj:
+                del obj.static
+
+            return None, obj.toDict()
+
+  - from: v1alpha2
+    to: v1alpha1
+    handler:
+      python: |
+        def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
+            obj = DotMap(o)
+
+            obj.apiVersion = "deckhouse.io/v1alpha1"
+
+            if "cri" in obj.spec:
+                if "docker" in obj.spec.cri:
+                    obj.spec.docker = obj.spec.cri.docker
+                    del obj.spec.cri.docker
+
+            return None, obj.toDict()
+
+  - from: v1alpha2
+    to: v1
+    handler:
+      python: |
+        def v1alpha2_to_v1(self, o: dict) -> typing.Tuple[str | None, dict]:
+            obj = DotMap(o)
+
+            obj.apiVersion = "deckhouse.io/v1"
+
+            try:
+                provider_config_yaml = base64.standard_b64decode(self._snapshots["cluster_config"][0]["filterResult"])
+            except Exception as e:
+                return f"Cannot decode provider cluster configuration: {e}", {}
+
+            try:
+                provider_config = yaml.safe_load(provider_config_yaml)
+            except Exception as e:
+                return f"Cannot parse provider cluster configuration: {e}", {}
+
+            ng_name = obj.metadata.name
+            ng_type = obj.spec.nodeType
+            if ng_type == "Cloud":
+                ng_type = "CloudEphemeral"
+            elif ng_type == "Hybrid":
+                found_in_permanent = False
+                if ng_name == "master":
+                    found_in_permanent = True
+                else:
+                    if "nodeGroups" in provider_config:
+                        for ng in provider_config["nodeGroups"]:
+                            if ng["name"] == ng_name:
+                                found_in_permanent = True
+                                break
+                ng_type = "CloudPermanent" if found_in_permanent else "CloudStatic"
+
+            obj.spec.nodeType = ng_type
+
+            return None, obj.toDict()
+
+  - from: v1
+    to: v1alpha2
+    handler:
+      python: |
+        def v1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
+            obj = DotMap(o)
+
+            obj.apiVersion = "deckhouse.io/v1alpha2"
+
+            ng_type = obj.spec.nodeType
+            if ng_type == "CloudEphemeral":
+                ng_type = "Cloud"
+            elif ng_type == "CloudPermanent" or ng_type == "CloudStatic":
+                ng_type = "Hybrid"
+
+            obj.spec.nodeType = ng_type
+
+            return None, obj.toDict()

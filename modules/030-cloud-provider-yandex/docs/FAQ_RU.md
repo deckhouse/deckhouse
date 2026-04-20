@@ -72,7 +72,7 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    dhctl bootstrap-phase base-infra --config config.yml
    ```
 
-2. Создайте bastion-хост:
+1. Создайте bastion-хост:
 
    ```shell
    yc compute instance create \
@@ -82,14 +82,22 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    --memory 2 \
    --cores 2 \
    --core-fraction 100 \
-   --ssh-key ~/.ssh/id_rsa.pub \
+   --ssh-key ~/.ssh/<SSH_PUBLIC_KEY_FILE> \
    --zone ru-central1-a \
    --public-address 178.154.226.159
    ```
 
-3. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кеш Terraform ответьте `y`:
+   > Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
+
+1. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кеш Terraform ответьте `y`:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_rsa --config=/config.yml
+   --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
+
+   > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
+
+## Что делать, если переключение на заказ узлов в менее приоритетных группах занимает много времени?
+
+Если переключение на заказ узлов в менее приоритетных группах занимает много времени (например, когда для групп узлов с preemptible-инстансами установлен наивысший приоритет и при недоступности таких инстансов заказ узлов из других групп происходит очень долго), воспользуйтесь [инструкцией](/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-переключение-на-заказ-узлов-в-менее-приоритетных).

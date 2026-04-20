@@ -17,11 +17,13 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -30,14 +32,52 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func GetLabelSelector(label string, operator selection.Operator, vals []string) (string, error) {
-	selector := labels.NewSelector()
-	r, err := labels.NewRequirement(label, operator, vals)
-	if err != nil {
-		return "", err
+type LabelSelector struct {
+	Label    string
+	Operator selection.Operator
+	Vals     []string
+}
+
+func GetLabelSelector(selectors []LabelSelector) (string, error) {
+	if len(selectors) == 0 {
+		return "", fmt.Errorf("Pass empty label selectors to GetLabelSelector")
 	}
-	selector = selector.Add(*r)
+
+	requirements := make([]labels.Requirement, 0, len(selectors))
+
+	for i, s := range selectors {
+		r, err := labels.NewRequirement(s.Label, s.Operator, s.Vals)
+		if err != nil {
+			return "", fmt.Errorf(
+				"Cannot create requirement for selector [%d] %s/%s[%s]: %w",
+				i,
+				s.Label,
+				s.Operator,
+				strings.Join(s.Vals, ", "),
+				err,
+			)
+		}
+
+		requirements = append(requirements, *r)
+	}
+
+	selector := labels.NewSelector()
+	selector = selector.Add(requirements...)
 	return selector.String(), nil
+}
+
+func GetMasterNodeGroupLabelSelector(selectors ...LabelSelector) (string, error) {
+	withNg := []LabelSelector{
+		{
+			Label:    global.NodeGroupLabel,
+			Operator: selection.Equals,
+			Vals:     []string{global.MasterNodeGroupName},
+		},
+	}
+
+	withNg = append(withNg, selectors...)
+
+	return GetLabelSelector(withNg)
 }
 
 func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {

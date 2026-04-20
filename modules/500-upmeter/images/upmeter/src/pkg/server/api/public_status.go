@@ -129,7 +129,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Status: StatusNoData.String(),
 		})
 		w.WriteHeader(http.StatusOK)
-		w.Write(out)
+		_, _ = w.Write(out)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		Rows:   statuses,
 		Status: totalStatus.String(),
 	})
-	w.Write(out)
+	_, _ = w.Write(out)
 }
 
 // getGroupStatusList returns the most recent complete episode. If peek is true, then 30s episodes

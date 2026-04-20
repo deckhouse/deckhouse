@@ -59,3 +59,7 @@ this prevents kubelet from accidentally processing backup files or other non-man
 See issues:
 - https://github.com/kubernetes/kubernetes/issues/55596
 - https://github.com/kubernetes/kubernetes/issues/129364 -> https://github.com/kubernetes/kubernetes/pull/105695
+
+### set-usage-GOPROXY.patch
+
+Removes GOPROXY=off from the build so that our value is used when building the image.

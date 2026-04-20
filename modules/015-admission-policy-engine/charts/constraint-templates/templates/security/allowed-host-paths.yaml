@@ -100,12 +100,12 @@ spec:
 
               build_hostpath_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("HostPath volume is not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("HostPath volume is not allowed, pod: %v. | %v | %v | %v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_hostpath_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("HostPath volume is not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+                msg := sprintf("HostPath volume is not allowed, pod: %v. | %v | %v", [pod_name, actual_value, allowed_by_policy])
               }
 
               ### SecurityPolicy logic

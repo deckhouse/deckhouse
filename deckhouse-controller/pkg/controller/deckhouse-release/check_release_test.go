@@ -30,6 +30,7 @@ import (
 	"github.com/gojuno/minimock/v3"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/iancoleman/strcase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -158,8 +159,6 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"v1.16.0"}, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(targetImage, nil)
-		// Note: Image("v1.16.0") is not called because actual (v1.16.0) >= target (v1.16.0),
-		// so getNewVersions returns empty. Suspend annotation is updated using channel metadata.
 
 		suite.setupController("existed-release-suspended.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
@@ -183,6 +182,29 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		suite.setupController("deployed-release-suspended.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("Release image not found in registry", func() {
+		targetImage := &fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{
+					FilesContent: map[string]string{`version.json`: `{"version": "v1.16.0"}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+			},
+		}
+		// Digest fails — version tag v1.16.0 doesn't exist in release-channel repo.
+		// This simulates a mirror registry with only channel tags (e.g., "beta").
+		// Expected: error returned (no metric set), fetcher will retry on next cycle.
+		dependency.TestDC.CRClient.DigestMock.Return("", &transport.Error{StatusCode: 404})
+		dependency.TestDC.CRClient.ImageMock.Return(targetImage, nil)
+
+		suite.setupController("no-version-tags-in-registry.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.Error(suite.T(), err)
+		assert.Contains(suite.T(), err.Error(), "not found in registry")
 	})
 
 	suite.Run("New release suspended", func() {
@@ -220,8 +242,6 @@ func (suite *ControllerTestSuite) TestCheckDeckhouseRelease() {
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{"v1.16.0"}, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, testDeckhouseVersion).Then(testDeckhouseVersionImage, nil)
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(targetImage, nil)
-		// Note: Image("v1.16.0") is not called because actual (v1.16.0) >= target (v1.16.0),
-		// so getNewVersions returns empty. Suspend annotation is updated using channel metadata.
 
 		suite.setupController("resume-suspended-release.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
@@ -856,6 +876,7 @@ func newMockedContainerWithData(t minimock.Tester, versionInChannel string, tags
 	dc.CRClientMap = map[string]cr.Client{}
 
 	deckhouseVersionsMock = deckhouseVersionsMock.ListTagsMock.Return(tags, nil)
+	deckhouseVersionsMock.DigestMock.Optional().Return("sha256:test", nil)
 
 	dc.CRClientMap["my.registry.com/deckhouse/release-channel"] = deckhouseVersionsMock.ImageMock.Set(func(_ context.Context, imageTag string) (v1.Image, error) {
 		_, err := semver.NewVersion(imageTag)

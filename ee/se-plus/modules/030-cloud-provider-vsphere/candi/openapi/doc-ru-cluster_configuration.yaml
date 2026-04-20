@@ -167,7 +167,7 @@ apiVersions:
           description: |
             Отключение синхронизации времени со стороны vSphere.
 
-            > **Внимание!** Отключение этого параметра не отключает NTP-демоны в гостевой ОС, а лишь отключает корректировки времени со стороны ESXi.
+            > **Внимание.** Отключение этого параметра не отключает NTP-демоны в гостевой ОС, а лишь отключает корректировки времени со стороны ESXi.
         externalNetworkNames:
           description: |
             Имена сетей (не полный путь, а просто имя), подключенных к виртуальным машинам и используемых `vsphere-cloud-controller-manager` для проставления ExternalIP в `.status.addresses` в Node API объект.
@@ -213,7 +213,12 @@ apiVersions:
             server:
               description: Хост или IP-адрес vCenter сервера.
             username:
-              description: Login ID.
+              description: |
+                Имя пользователя.
+
+                > **Внимание.** Обязательно указывайте имя пользователя вместе с доменом, например: `username@domain.local`.
+                >
+                > Уточнить домен можно в панели управления vCenter.
             password:
               description: Пароль.
             insecure:

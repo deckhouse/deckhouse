@@ -28,10 +28,8 @@ memory: 10Mi
   {{- $_ := set $images $componentWithSuffix (get $.Values.global.modulesImages.digests.controlPlaneManager $componentWithSuffix) }}
   {{- $_ := set $imageHolders $componentWithSuffix (printf "image-holder-%s" ($component | kebabcase)) }}
 {{- end }}
-{{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.digests.controlPlaneManager.kubeApiserverHealthcheck }}
 {{- $_ := set $images "etcd" $.Values.global.modulesImages.digests.controlPlaneManager.etcd }}
 
-{{- $_ := set $imageHolders "kubeApiserverHealthcheck" "image-holder-kube-apiserver-healthcheck" }}
 {{- $_ := set $imageHolders "etcd" "image-holder-etcd" }}
 
 {{- $registry := dict }}
@@ -54,7 +52,11 @@ memory: 10Mi
 {{- $_ := set $tpl_context "resourcesRequestsMemoryControlPlane" .Values.global.internal.modules.resourcesRequests.memoryControlPlane }}
 
 {{- $allowedKubernetesVersions := list }}
-{{- range $key, $_ := $tpl_context.k8s }}
+{{- $automaticVersion := ""}}
+{{- range $key, $value := $tpl_context.k8s }}
+  {{- if $value.default}}
+    {{- $automaticVersion = (toString $key)}}
+  {{- end }}
   {{- $allowedKubernetesVersions = append $allowedKubernetesVersions (toString $key) }}
 {{- end }}
 
@@ -104,6 +106,9 @@ memory: 10Mi
   {{- end }}
   {{- if hasKey .Values.controlPlaneManager.apiserver "admissionPlugins" }}
     {{ $_ := set $tpl_context.apiserver "admissionPlugins" .Values.controlPlaneManager.apiserver.admissionPlugins }}
+  {{- end }}
+  {{- if hasKey .Values.controlPlaneManager.internal "disableAdmissionPlugins" }}
+    {{ $_ := set $tpl_context.apiserver "disableAdmissionPlugins" .Values.controlPlaneManager.internal.disableAdmissionPlugins }}
   {{- end }}
   {{- if hasKey .Values.controlPlaneManager.apiserver "auditLog" }}
     {{ $_ := set $tpl_context.apiserver "auditLog" .Values.controlPlaneManager.apiserver.auditLog }}
@@ -163,9 +168,7 @@ extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- if $tpl_context.apiserver.secretEncryptionKey }}
 extra-file-secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.apiserver.secretEncryptionKey) | b64enc }}
   {{- end }}
-{{- if $tpl_context.apiserver.oidcIssuerURL }}
 extra-file-authentication-config.yaml: {{ include "authenticationConfiguration" $tpl_context | b64enc }}
-{{- end }}
 extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
 extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
 extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
@@ -353,6 +356,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: ALLOWED_KUBERNETES_VERSIONS
+          value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
+        - name: AUTOMATIC_KUBERNETES_VERSION
+          value: {{ $automaticVersion | quote }}
         {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet

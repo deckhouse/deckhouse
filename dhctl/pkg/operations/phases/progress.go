@@ -32,6 +32,7 @@ type ProgressTracker struct {
 	mx       sync.Mutex
 
 	onProgressFunc func(Progress) error
+	clusterConfig  ClusterConfig
 }
 
 type Progress struct {
@@ -83,7 +84,7 @@ type ProgressOpts struct {
 }
 
 func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error) *ProgressTracker {
-	phases, _ := operationPhases(operation)
+	phases, _ := operationPhases(operation, phasesOpts{})
 
 	return &ProgressTracker{
 		progress:       Progress{Operation: operation, Progress: 0, Phases: phases},
@@ -91,11 +92,24 @@ func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error
 	}
 }
 
+// SetClusterConfig sets the cluster config and syncs the phase list immediately.
+// Call as soon as meta config is parsed, before any phase is reported.
+func (p *ProgressTracker) SetClusterConfig(cfg ClusterConfig) {
+	p.mx.Lock()
+	defer p.mx.Unlock()
+
+	if p.clusterConfig == cfg {
+		return
+	}
+
+	phases, _ := operationPhases(p.progress.Operation, phasesOpts{clusterConfig: cfg})
+	p.clusterConfig = cfg
+	p.progress.Phases = phases
+}
+
 // FindLastCompletedPhase returns the last completed phase when completedPhase is empty
 // It determines the phase preceding nextPhase, indicating if phases were skipped
-func (p *ProgressTracker) FindLastCompletedPhase(
-	completedPhase, nextPhase OperationPhase,
-) (OperationPhase, bool) {
+func (p *ProgressTracker) FindLastCompletedPhase(completedPhase, nextPhase OperationPhase) (OperationPhase, bool) {
 	if completedPhase != "" {
 		return completedPhase, false
 	}
@@ -104,22 +118,21 @@ func (p *ProgressTracker) FindLastCompletedPhase(
 		return completedPhase, false
 	}
 
-	phases, ok := operationPhases(p.progress.Operation)
-	if !ok {
-		return completedPhase, false
-	}
+	p.mx.Lock()
+	defer p.mx.Unlock()
 
-	nextPhaseIndex := slices.IndexFunc(phases, func(phases PhaseWithSubPhases) bool {
+	nextPhaseIndex := slices.IndexFunc(p.progress.Phases, func(phases PhaseWithSubPhases) bool {
 		return phases.Phase == nextPhase
 	})
 
-	return nOrEmpty(phases, nextPhaseIndex-1).Phase, true
+	return nOrEmpty(p.progress.Phases, nextPhaseIndex-1).Phase, true
 }
 
-// Progress updates the progress state with a completed phase or subphase
-// It recalculates current/next phases and triggers the onProgress callback
+// Progress updates the progress state with a completed phase or subphase.
+// currentPhase is the phase we're in now; when non-empty it is used as-is (so progress is correct when phases are skipped).
+// When empty, current phase is inferred as the next in list after completedPhase.
 func (p *ProgressTracker) Progress(
-	completedPhase OperationPhase, completedSubPhase OperationSubPhase, opts ProgressOpts,
+	completedPhase, currentPhase OperationPhase, completedSubPhase OperationSubPhase, opts ProgressOpts,
 ) error {
 	if p.onProgressFunc == nil {
 		return nil
@@ -128,8 +141,8 @@ func (p *ProgressTracker) Progress(
 	p.mx.Lock()
 
 	var progress Progress
-	if completedPhase == "" && completedSubPhase == "" || completedPhase != "" {
-		progress = calculatePhaseProgress(p.progress, completedPhase, opts)
+	if (completedPhase == "" && completedSubPhase == "") || completedPhase != "" {
+		progress = calculatePhaseProgress(p.progress, completedPhase, currentPhase, opts)
 	} else {
 		progress = calculateSubPhaseProgress(p.progress, completedSubPhase, opts)
 	}
@@ -224,10 +237,8 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 	return p.onProgressFunc(clonedProgress)
 }
 
-func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts ProgressOpts) Progress {
-	// return progress as is if there is no known phases for given operation
-	phases, ok := operationPhases(p.Operation)
-	if !ok {
+func calculatePhaseProgress(p Progress, completedPhase, currentPhase OperationPhase, opts ProgressOpts) Progress {
+	if len(p.Phases) == 0 {
 		return p
 	}
 
@@ -240,22 +251,34 @@ func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts Prog
 
 	// return 0 progress if no completed phase
 	if completedPhase == "" {
-		firstPhase := nOrEmpty(phases, 0)
+		firstPhase := nOrEmpty(p.Phases, 0)
 
 		progress.CurrentPhase = firstPhase.Phase
-		progress.NextPhase = nOrEmpty(phases, 1).Phase
+		progress.NextPhase = nOrEmpty(p.Phases, 1).Phase
 		progress.CurrentSubPhase = nOrEmpty(firstPhase.SubPhases, 0)
 		return progress
 	}
 
-	completedPhaseIndex := slices.IndexFunc(phases, func(phases PhaseWithSubPhases) bool {
-		return phases.Phase == completedPhase
+	completedPhaseIndex := slices.IndexFunc(p.Phases, func(ph PhaseWithSubPhases) bool {
+		return ph.Phase == completedPhase
 	})
 	if completedPhaseIndex == -1 {
 		// return progress as is if there is no known completedPhase for given operation
 		return p
 	}
+
 	currentPhaseIndex := completedPhaseIndex + 1
+	if currentPhase != "" {
+		idx := slices.IndexFunc(p.Phases, func(ph PhaseWithSubPhases) bool { return ph.Phase == currentPhase })
+		if idx > completedPhaseIndex {
+			for i := completedPhaseIndex + 1; i < idx; i++ {
+				if p.Phases[i].Action == nil {
+					p.Phases[i].Action = ptr.To(ProgressActionSkip)
+				}
+			}
+			currentPhaseIndex = idx
+		}
+	}
 
 	// iterate over all previous phases, if action was nil, set action
 	// if current action is skip, then skip all previous nil actions
@@ -266,33 +289,31 @@ func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts Prog
 	}
 
 	// get current phase and first sub phase if exists
-	curPhase := nOrEmpty(phases, currentPhaseIndex)
-	nextPhase := nOrEmpty(phases, currentPhaseIndex+1)
+	curPhase := nOrEmpty(p.Phases, currentPhaseIndex)
+	nextPhase := nOrEmpty(p.Phases, currentPhaseIndex+1)
 
 	progress.CurrentPhase = curPhase.Phase
 	progress.NextPhase = nextPhase.Phase
 	progress.CurrentSubPhase = nOrEmpty(curPhase.SubPhases, 0)
 	progress.NextSubPhase = nOrEmpty(curPhase.SubPhases, 1)
 
-	progress.Progress = max(float64(currentPhaseIndex)/float64(len(phases)), p.Progress)
+	progress.Progress = max(float64(currentPhaseIndex)/float64(len(p.Phases)), p.Progress)
 
 	return progress
 }
 
 func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, _ ProgressOpts) Progress {
-	// return progress as is if there is no known phases for given operation
-	phases, ok := operationPhases(p.Operation)
-	if !ok {
-		return p
-	}
-
 	var currentPhase PhaseWithSubPhases
 
-	for _, phase := range phases {
+	for _, phase := range p.Phases {
 		if phase.Phase == p.CurrentPhase {
 			currentPhase = phase
 			break
 		}
+	}
+	if currentPhase.Phase == "" {
+		// return progress as is if there is no known current phase in the list
+		return p
 	}
 
 	completedSubPhaseIndex := slices.Index(currentPhase.SubPhases, completedSubPhase)
@@ -315,7 +336,7 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, 
 	progress.CurrentSubPhase = nOrEmpty(currentPhase.SubPhases, currentSubPhaseIndex)
 	progress.NextSubPhase = nOrEmpty(currentPhase.SubPhases, currentSubPhaseIndex+1)
 
-	progress.Progress += (1 / float64(len(phases))) / float64(len(currentPhase.SubPhases))
+	progress.Progress += (1 / float64(len(p.Phases))) / float64(len(currentPhase.SubPhases))
 
 	return progress
 }

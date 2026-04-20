@@ -9,6 +9,14 @@ properties:
     type: object
     default: {}
     properties:
+      cniMigrationEnabled:
+        type: boolean
+        default: false
+      cniMigrationName:
+        type: string
+      cniMigrationWebhooksDisable:
+        type: boolean
+        default: false
       modules:
         default: {}
         additionalProperties: false
@@ -41,8 +49,6 @@ properties:
                 minimum: 0
                 x-examples: [ 536870912 ]
                 default: 0
-  clusterConfiguration:
-    $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   clusterIsBootstrapped:
     type: boolean
     description: |
@@ -98,6 +104,14 @@ properties:
           Default storage class for cluster
           It gets form storage class annotated as "storageclass.beta.kubernetes.io/is-default-class" or "storageclass.kubernetes.io/is-default-class"
         x-examples: [ "default" ]
+      cloudProviderDefaultStorageClass:
+        type: string
+        # it is name of resource in kubernetes
+        pattern: '[a-z0-9]([\-a-z0-9\.]*[a-z0-9])?'
+        description: |
+          Default storage class discovered from cloud provider in parent cluster.
+          Used as fallback when global.defaultClusterStorageClass is not explicitly set by user.
+        x-examples: [ "fast-ssd" ]
       clusterDNSAddress:
         type: string
         pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$'
@@ -179,6 +193,20 @@ properties:
         description: |
           Nested level of virtualization.
         x-examples: [ 1 ]
+      gatewayAPIDefaultGateway:
+        type: object
+        properties:
+          name:
+            type: string
+          namespace:
+            type: string
+        required:
+          - name
+          - namespace
+        description: |
+          The name of the discovered default Gateway used for Deckhouse modules if Gateway API is used.
+  clusterConfiguration:
+    $ref: '/deckhouse/candi/openapi/cluster_configuration.yaml#/apiVersions/0/openAPISpec'
   modulesImages:
     additionalProperties: true
     type: object

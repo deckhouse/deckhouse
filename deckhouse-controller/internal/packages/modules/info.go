@@ -22,6 +22,8 @@ import (
 
 type Info struct {
 	Name       string            `json:"name" yaml:"name"`
+	Running    bool              `json:"running" yaml:"running"`
+	Path       string            `json:"path" yaml:"path"`
 	Definition Definition        `json:"definition" yaml:"definition"`
 	Repository registry.Remote   `json:"repository" yaml:"repository"`
 	Digests    map[string]string `json:"digests" yaml:"digests"`
@@ -37,6 +39,8 @@ func (m *Module) GetInfo() Info {
 
 	return Info{
 		Name:       m.name,
+		Running:    m.running.Load(),
+		Path:       m.path,
 		Definition: m.definition,
 		Repository: m.repository,
 		Digests:    m.digests,

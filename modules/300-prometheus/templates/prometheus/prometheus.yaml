@@ -267,9 +267,10 @@ spec:
       {{ $key }}: {{ $value | quote }}
       {{- end }}
     {{- end }}
-    {{- if .spec.writeRelabelConfigs }}
     writeRelabelConfigs:
-      {{- .spec.writeRelabelConfigs | toYaml | nindent 6 }}
+      {{- with .spec.writeRelabelConfigs }}
+      {{- . | toYaml | nindent 6 }}
+      {{- end }}
       {{- with $externalLabels }}
       {{- range $key, $value := . }}
       - sourceLabels: [{{ $key }}]
@@ -278,7 +279,6 @@ spec:
         replacement: {{ $value | quote }}
       {{- end }}
       {{- end }}
-    {{- end }}
     {{- if .spec.tlsConfig }}
       {{- $tlsConfig := .spec.tlsConfig | deepCopy }}
       {{- if .spec.tlsConfig.ca }}

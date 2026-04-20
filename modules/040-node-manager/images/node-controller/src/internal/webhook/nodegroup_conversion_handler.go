@@ -121,6 +121,7 @@ func (h *NodeGroupConversionHandler) loadProviderConfig(ctx context.Context) (*P
 	config := &ProviderClusterConfiguration{}
 
 	secret := &corev1.Secret{}
+	conversionLog.V(1).Info("reading Secret", "namespace", "kube-system", "name", "d8-provider-cluster-configuration")
 	err := h.Client.Get(ctx, types.NamespacedName{
 		Namespace: "kube-system",
 		Name:      "d8-provider-cluster-configuration",
@@ -347,5 +348,7 @@ func (h *NodeGroupConversionHandler) writeError(w http.ResponseWriter, uid strin
 			},
 		},
 	}
-	json.NewEncoder(w).Encode(review)
+	if err := json.NewEncoder(w).Encode(review); err != nil {
+		conversionLog.Error(err, "failed to encode error response")
+	}
 }

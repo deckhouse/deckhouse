@@ -116,7 +116,7 @@ func convergeComponents() error {
 		components = []string{"etcd"}
 		log.Info("ETCD_ARBITER mode: skipping control-plane components")
 	} else {
-		components = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
+		components = []string{"kube-apiserver", "etcd", "kube-controller-manager", "kube-scheduler"}
 	}
 
 	for _, v := range components {

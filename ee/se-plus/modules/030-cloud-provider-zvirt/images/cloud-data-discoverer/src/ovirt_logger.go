@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
 
@@ -28,17 +29,17 @@ func (o *oVirtLogger) WithContext(_ context.Context) ovirtclientlog.Logger {
 }
 
 func (o *oVirtLogger) Debugf(format string, args ...interface{}) {
-	o.logger.Debugf(format, args...)
+	o.logger.Debug(fmt.Sprintf(format, args...))
 }
 
 func (o *oVirtLogger) Infof(format string, args ...interface{}) {
-	o.logger.Infof(format, args...)
+	o.logger.Info(fmt.Sprintf(format, args...))
 }
 
 func (o *oVirtLogger) Warningf(format string, args ...interface{}) {
-	o.logger.Warnf(format, args...)
+	o.logger.Warn(fmt.Sprintf(format, args...))
 }
 
 func (o *oVirtLogger) Errorf(format string, args ...interface{}) {
-	o.logger.Errorf(format, args...)
+	o.logger.Error(fmt.Sprintf(format, args...))
 }

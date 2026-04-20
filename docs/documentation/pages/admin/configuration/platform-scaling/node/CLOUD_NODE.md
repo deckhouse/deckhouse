@@ -110,7 +110,7 @@ Key scaling parameters are defined in the [`cloudInstances`](/modules/node-manag
 - `maxPerZone`: The maximum number of nodes that can be created per zone. This defines the upper scaling limit.
 - `maxUnavailablePerZone`: Limits the number of unavailable nodes during updates, deletions, or creation.
 - `standby`: Optional parameter that allows pre-provisioning standby nodes.
-- `priority`: Integer priority of the group. When scaling, `Cluster Autoscaler` prefers groups with a higher `priority` value. This allows you to define scaling order among multiple NodeGroups.
+- `priority`: Integer priority of the group. When scaling, `Cluster Autoscaler` prefers groups with a higher `priority` value. This allows you to define scaling order among multiple NodeGroups. You can control the rate at which nodes are switched to lower-priority groups on demand (for more details, see the [FAQ](../../../../faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in)).
 
 Example configuration of a NodeGroup with autoscaling:
 
@@ -625,7 +625,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    * Generate a pair of SSH keys with an empty passphrase **on the server**:
 
      ```shell
-     ssh-keygen -t rsa -f caps-id -C "" -N ""
+     ssh-keygen -t ed25519 -f caps-id -C "" -N ""
      ```
 
      The public and private keys of the `caps` user will be stored in the `caps-id.pub` and `caps-id` files in the current directory on the server.

@@ -1,9 +1,23 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-8a9dfe37d09b0d07a4b05b9b988170ebfdcf9c880fec4727cc44fe12ecaaa70b",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 3,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 7,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T12:23:23.010201Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2025-47914"
@@ -31,8 +45,36 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
       "timestamp": "2025-12-22T13:54:24.983231Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость представляет собой обход авторизации на стороне gRPC-сервера через отсутствие ведущего слеша в псевдозаголовке :path. Для эксплуатации требуется, чтобы приложение запускало gRPC-сервер с перехватчиками авторизации на основе путей (grpc/authz) и имело политику с deny-правилами и fallback allow-правилом. Descheduler использует google.golang.org/grpc исключительно как клиентскую библиотеку для подключения к Kubernetes API server. Он не запускает gRPC-сервер и не использует серверную авторизацию на основе путей, поэтому уязвимый код не исполняется.",
+      "timestamp": "2026-04-07T11:44:30.123456Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 связана с вызовом команды kenv по неабсолютному пути на операционных системах BSD и Solaris (PATH hijacking, CWE-426). Компоненты Deckhouse, включая Descheduler, собираются с GOOS=linux и выполняются в контейнерах на Linux; уязвимый путь выполнения в этой среде отсутствует.",
+      "timestamp": "2026-04-14T12:00:00.000000Z"
     }
   ],
   "timestamp": "2025-12-22T13:43:52Z",
-  "last_updated": "2025-12-22T13:54:34Z"
+  "last_updated": "2026-04-14T12:00:00Z"
 }

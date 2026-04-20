@@ -12,6 +12,7 @@ linters:
     - gocritic
     - govet
     - ineffassign
+    - makezero
     - misspell
     - musttag
     - nonamedreturns

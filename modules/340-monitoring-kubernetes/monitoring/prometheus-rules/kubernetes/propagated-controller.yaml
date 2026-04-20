@@ -64,7 +64,7 @@
                       label_replace (
                         # controller_type
                         label_replace (
-                          kube_pod_owner{owner_kind!="ReplicaSet"}
+                          kube_pod_owner{owner_kind!~"ReplicaSet|Internal.*", pod!~"d8[a-z0-9]+-.*"}
                           * on (namespace, pod) group_left(node) sum by (node, namespace, pod) (kube_pod_info),
                         "controller_type", "$1", "owner_kind", "(.*)"),
                       "controller_name", "$1", "owner_name", "(.*)"),
@@ -75,6 +75,50 @@
             "controller", "sts/$1", "controller", "StatefulSet/(.*)"),
           "controller", "job/$1", "controller", "Job/(.*)"),
         "controller", "certificate/$1", "controller", "Certificate/(.*)")
+      )
+  # virt-launcher pod -> VirtualMachine
+  - record: kube_controller_pod
+    expr: |-
+      max by(job, node, namespace, controller, controller_name, controller_type, pod)
+      (
+        label_replace (
+        # controller = vm/<vm-name>
+          label_replace (
+          # controller_type = VirtualMachine
+            label_replace (
+            # controller_name = VM name (from owner_name)
+              kube_pod_owner{owner_kind="InternalVirtualizationVirtualMachineInstance"}
+              * on (namespace, pod) group_left(node) sum by (node, namespace, pod) (kube_pod_info),
+            "controller_name", "$1", "owner_name", "(.*)"),
+          "controller_type", "VirtualMachine", "", ""),
+        "controller", "vm/$1", "controller_name", "(.*)")
+      )
+  # hp-volume pod -> VirtualMachine (through virt-launcher)
+  - record: kube_controller_pod
+    expr: |-
+      max by(job, node, namespace, controller, controller_name, controller_type, pod)
+      (
+        label_replace (
+        # controller = vm/<vm-name>
+          label_replace (
+          # controller_type = VirtualMachine
+            label_replace (
+            # controller_name = VM name (from vm_name label obtained through join)
+              (
+                kube_pod_owner{owner_kind="Pod"}
+                * on(namespace, owner_name) group_left(vm_name)
+                # rename pod -> owner_name on virt-launcher side for join,
+                # save original owner_name (VM name) as vm_name
+                label_replace(
+                  label_replace(
+                    kube_pod_owner{owner_kind="InternalVirtualizationVirtualMachineInstance"},
+                  "vm_name", "$1", "owner_name", "(.*)"),
+                "owner_name", "$1", "pod", "(.*)")
+              )
+              * on (namespace, pod) group_left(node) sum by (node, namespace, pod) (kube_pod_info),
+            "controller_name", "$1", "vm_name", "(.*)"),
+          "controller_type", "VirtualMachine", "", ""),
+        "controller", "vm/$1", "controller_name", "(.*)")
       )
   - record: kube_controller_replicas
     expr: |-

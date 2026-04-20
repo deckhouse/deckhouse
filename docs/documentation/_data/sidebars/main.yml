@@ -390,26 +390,6 @@ entries:
                     ru: Гибридный кластер
                   url: /admin/integrations/hybrid/overview.html
             - title:
-                en: Platform update
-                ru: Обновление платформы
-              folders:
-                - title:
-                    en: Overview
-                    ru: Обзор
-                  url: /admin/configuration/update/
-                - title:
-                    en: Configuring updates
-                    ru: Настройка обновлений
-                  url: /admin/configuration/update/configuration.html
-                - title:
-                    en: Configuring notifications
-                    ru: Настройка уведомлений
-                  url: /admin/configuration/update/notifications.html
-                - title:
-                    en: FAQ
-                    ru: FAQ
-                  url: /admin/configuration/update/faq.html
-            - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
               folders:
@@ -453,10 +433,6 @@ entries:
                         en: Scaling and changing master nodes
                         ru: Масштабирование и изменение master-узлов
                       url: /admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html
-                    - title:
-                        en: Updating Kubernetes and versioning
-                        ru: Обновление Kubernetes и управление версиями
-                      url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
                 - title:
                     en: Node management
                     ru: Управление узлами
@@ -542,9 +518,9 @@ entries:
                         ru: Настройка визуализации сетевого стека кластера
                       url: /admin/configuration/network/internal/visualization.html
                     - title:
-                        en: Switching CNI from Flannel to Cilium
-                        ru: Переключение CNI с Flannel на Cilium
-                      url: /admin/configuration/network/internal/flannel-to-cilium.html
+                        en: Switching CNI from Flannel or Simple bridge to Cilium
+                        ru: Переключение CNI с Flannel или Simple bridge на Cilium
+                      url: /admin/configuration/network/internal/flannel-simple-to-cilium.html
                 - title:
                     en: Incoming traffic balancing
                     ru: Балансировка входящего трафика
@@ -609,6 +585,18 @@ entries:
                      en: Network policy configuration
                      ru: Настройка сетевых политик
                   url: /admin/configuration/network/policy/configuration.html
+                - title:
+                    en: SDN
+                    ru: SDN
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /admin/configuration/network/sdn/
+                    - title:
+                        en: Configuring SDN in a DKP cluster
+                        ru: Настройка SDN в кластере DKP
+                      url: /admin/configuration/network/sdn/configure.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
@@ -866,6 +854,26 @@ entries:
                 ru: Назначение лейблов пространствам имён
               url: /admin/configuration/label-assignment.html
         - title:
+            en: Platform update
+            ru: Обновление платформы
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /admin/configuration/update/
+            - title:
+                en: Configuring updates
+                ru: Настройка обновлений
+              url: /admin/configuration/update/configuration.html
+            - title:
+                en: Configuring notifications
+                ru: Настройка уведомлений
+              url: /admin/configuration/update/notifications.html
+            - title:
+                en: Updating Kubernetes and versioning
+                ru: Обновление Kubernetes и управление версиями
+              url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+        - title:
             en: Platform uninstalling
             ru: Удаление платформы
           url: /uninstalling/
@@ -920,6 +928,18 @@ entries:
                     en: ALB
                     ru: ALB
                   url: /user/network/ingress/alb.html
+            - title:
+                en: SDN
+                ru: SDN
+              folders:
+                - title:
+                    en: Additional networks for application pods
+                    ru: Дополнительные сети для прикладных подов
+                  url: /user/network/sdn/dedicated.html
+                - title:
+                    en: Connecting physical network interfaces to DPDK application pods
+                    ru: Подключение физических сетевых интерфейсов к подам DPDK-приложений
+                  url: /user/network/sdn/underlay.html
             - title:
                 en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
@@ -1036,6 +1056,10 @@ entries:
                 ru: Обзор
               url: /user/monitoring/
             - title:
+                en: Dashboards
+                ru: Дашборды
+              url: /user/monitoring/dashboards.html
+            - title:
                 en: Configuring application monitoring
                 ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
@@ -1094,15 +1118,14 @@ entries:
             ru: Обзор
           url: /architecture/
         - title:
-            en: TODO Overview
-            ru: TODO Обзор
-          url: /architecture/architecture-overview.html
+            en: System requirements
+            ru: Системные требования
           draft: true
+          url: /architecture/system-requirements/
         - title:
-            en: TODO Installation
-            ru: TODO Установка
-          url: /architecture/installation.html
-          draft: true
+            en: DKP architecture (C4 model)
+            ru: Архитектура DKP (модель C4)
+          url: /architecture/c4-model.html
         - title:
             en: Modules
             ru: Модули
@@ -1160,69 +1183,269 @@ entries:
             ru: Обновление
           url: /architecture/updating.html
         - title:
-            en: Logging
-            ru: Логирование
+            en: Deckhouse subsystem
+            ru: Подсистема Deckhouse
           folders:
             - title:
-                en: Log collection and delivery
-                ru: Сбор и доставка логов
-              url: /architecture/logging/delivery.html
+                en: Overview
+                ru: Обзор
+              url: /architecture/deckhouse/
             - title:
-                en: Short-term storage
-                ru: Кратковременное хранение
-              url: /architecture/logging/storage.html
+                en: Direct mode of registry module
+                ru: Режим Direct модуля registry
+              url: /architecture/deckhouse/registry-direct-mode.html
         - title:
-            en: VPA
-            ru: VPA
-          url: /architecture/vpa.html
-        - title:
-            en: Authentication
-            ru: Аутентификация
-          url: /architecture/authentication.html
-        - title:
-            en: Node management
-            ru: Управление узлами
-          url: /architecture/node.html
-        - title:
-            en: Monitoring
-            ru: Мониторинг
-          url: /architecture/monitoring/
-        - title:
-            en: Network
-            ru: Сеть
+            en: Kubernetes & Scheduling subsystem
+            ru: Подсистема Kubernetes & Scheduling
           folders:
-          - title:
-              en: Cluster architecture with Istio enabled
-              ru: Архитектура кластера с включенным Istio
-            url: /architecture/network/cluster-with-istio.html
-          - title:
-              en: Application service architecture with Istio enabled
-              ru: Архитектура прикладного сервиса с включенным Istio
-            url: /architecture/network/service-with-istio.html
-          - title:
-              en: Caching DNS server in a cluster
-              ru: Кеширующий DNS-сервер в кластере
-            url: /architecture/network/dns-caching.html
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/kubernetes-and-scheduling/
+            - title:
+                en: Cluster control plane
+                ru: Control plane кластера
+              url: /architecture/kubernetes-and-scheduling/control-plane.html
+            - title:
+                en: Kubelet
+                ru: Kubelet
+              url: /architecture/kubernetes-and-scheduling/kubelet.html
+            - title:
+                en: Cluster control plane management
+                ru: Управление компонентами control plane кластера
+              url: /architecture/kubernetes-and-scheduling/control-plane-management.html
+            - title:
+                en: Vertical Pod Autoscaling
+                ru: Вертикальное масштабирование
+              url: /architecture/kubernetes-and-scheduling/vpa.html
         - title:
-            en: Multitenancy
-            ru: Мультитенантность
-          url: /architecture/multitenancy/
-        - title:
-            en: Security
-            ru: Безопасность
+            en: Cluster & Infrastructure subsystem
+            ru: Подсистема Cluster & Infrastructure
           folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/cluster-and-infrastructure/
+            - title:
+                en: Node management
+                ru: Управление узлами
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /architecture/cluster-and-infrastructure/node-management/overview.html
+                - title:
+                    en: Bashible
+                    ru: Bashible
+                  url: /architecture/cluster-and-infrastructure/node-management/bashible.html
+                - title:
+                    en: Node-manager module
+                    ru: Модуль node-manager
+                  url: /architecture/cluster-and-infrastructure/node-management/node-manager.html
+                - title:
+                    en: CloudEphemeral node management
+                    ru: Управление CloudEphemeral-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html
+                - title:
+                    en: CloudPermanent node management
+                    ru: Управление CloudPermanent-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html
+                - title:
+                    en: CloudStatic node management
+                    ru: Управление CloudStatic-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html
+                - title:
+                    en: Static node management
+                    ru: Управление Static-узлами
+                  url: /architecture/cluster-and-infrastructure/node-management/static-nodes.html
+                - title:
+                    en: Hybrid node group and cluster management
+                    ru: Управление гибридными группами узлов и кластерами
+                  url: /architecture/cluster-and-infrastructure/node-management/hybrid-nodegroups-and-clusters.html
+            - title:
+                en: Cloud providers
+                ru: Облачные провайдеры
+              folders:
+                - title:
+                    en: Cloud-provider-aws module
+                    ru: Модуль cloud-provider-aws
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-aws.html
+                - title:
+                    en: Cloud-provider-azure module
+                    ru: Модуль cloud-provider-azure
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-azure.html
+                - title:
+                    en: Cloud-provider-dvp module
+                    ru: Модуль cloud-provider-dvp
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html
+                - title:
+                    en: Cloud-provider-dynamix module
+                    ru: Модуль cloud-provider-dynamix
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dynamix.html
+                - title:
+                    en: Cloud-provider-gcp module
+                    ru: Модуль cloud-provider-gcp
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-gcp.html
+                - title:
+                    en: Cloud-provider-huaweicloud module
+                    ru: Модуль cloud-provider-huaweicloud
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-huaweicloud.html
+                - title:
+                    en: Cloud-provider-openstack module
+                    ru: Модуль cloud-provider-openstack
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-openstack.html
+                - title:
+                    en: Cloud-provider-vcd module
+                    ru: Модуль cloud-provider-vcd
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vcd.html
+                - title:
+                    en: Cloud-provider-vsphere module
+                    ru: Модуль cloud-provider-vsphere
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html
+                - title:
+                    en: Cloud-provider-yandex module
+                    ru: Модуль cloud-provider-yandex
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
+                - title:
+                    en: Cloud-provider-zvirt module
+                    ru: Модуль cloud-provider-zvirt
+                  url: /architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-zvirt.html
+            - title:
+                en: Infrastructure components
+                ru: Инфраструктурные компоненты
+              folders:
+                - title:
+                    en: Terraform-manager module
+                    ru: Модуль terraform-manager
+                  url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
+                - title:
+                    en: CSI driver
+                    ru: CSI-драйвер
+                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-driver.html
+                - title:
+                    en: CSI driver (VMware vSphere)
+                    ru: CSI-драйвер (VMware vSphere)
+                  url: /architecture/cluster-and-infrastructure/infrastructure/csi-vsphere.html
+        - title:
+            en: IAM subsystem
+            ru: Подсистема IAM
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/iam/
+            - title:
+                en: Authentication
+                ru: Аутентификация
+              url: /architecture/iam/authentication.html
+            - title:
+                en: Multitenancy
+                ru: Мультитенантность
+              url: /architecture/iam/multitenancy.html
+            - title:
+                en: User-authn module
+                ru: Модуль user-authn
+              url: /architecture/iam/user-authn.html
+        - title:
+            en: Security subsystem
+            ru: Подсистема Security
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/security/
             - title:
                 en: Integrity control
                 ru: Контроль целостности
               url: /architecture/security/integrity-control.html
             - title:
-                en: Architecture of security event audit
-                ru: Архитектура аудита событий безопасности
+                en: Security events audit
+                ru: Аудит событий безопасности
               url: /architecture/security/runtime-audit.html
         - title:
-            en: Direct mode architecture (registry)
-            ru: Архитектура режима Direct (registry)
-          url: /architecture/registry-direct-mode.html
+            en: Network subsystem
+            ru: Подсистема Network
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/network/
+            - title:
+                en: Ingress-nginx module
+                ru: Модуль ingress-nginx
+              url: /architecture/network/ingress-nginx.html
+            - title:
+                en: Metallb module
+                ru: Модуль metallb
+              url: /architecture/network/metallb.html
+            - title:
+                en: Cluster-level Istio architecture
+                ru: Архитектура Istio на уровне кластера
+              url: /architecture/network/cluster-with-istio.html
+            - title:
+                en: Application service architecture with Istio enabled
+                ru: Архитектура прикладного сервиса с включенным Istio
+              url: /architecture/network/service-with-istio.html
+            - title:
+                en: Caching DNS server in a cluster
+                ru: Кеширующий DNS-сервер в кластере
+              url: /architecture/network/dns-caching.html
+        - title:
+            en: Storage subsystem
+            ru: Подсистема Storage
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/storage/
+            - title:
+                en: Local-path-provisioner module
+                ru: Модуль local-path-provisioner
+              url: /architecture/storage/local-path-provisioner.html
+            - title:
+                en: Snapshot-controller module
+                ru: Модуль snapshot-controller
+              url: /architecture/storage/snapshot-controller.html
+            - title:
+                en: Sds-local-volume module
+                ru: Модуль sds-local-volume
+              url: /architecture/storage/sds-local-volume.html
+            - title:
+                en: Sds-node-configurator module
+                ru: Модуль sds-node-configurator
+              url: /architecture/storage/sds-node-configurator.html
+            - title:
+                en: Storage system modules
+                ru: Модули системы хранения
+              folders:
+                - title:
+                    en: Csi-nfs module
+                    ru: Модуль csi-nfs
+                  url: /architecture/storage/external/csi-nfs.html
+            - title:
+                en: CSI drivers
+                ru: CSI-драйверы
+              folders:
+                - title:
+                    en: NFS CSI driver
+                    ru: CSI-драйвер NFS
+                  url: /architecture/storage/csi-drivers/csi-driver-nfs.html
+        - title:
+            en: Observability subsystem
+            ru: Подсистема Observability
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/observability/
+            - title:
+                en: Monitoring
+                ru: Мониторинг
+              url: /architecture/observability/monitoring.html
+            - title:
+                en: Logging modules
+                ru: Модули логирования
+              url: /architecture/observability/logging.html
     - title:
         en: Reference
         ru: Справка

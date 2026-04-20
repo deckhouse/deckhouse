@@ -1,25 +1,19 @@
 ---
-{{- $istioVersion := "1.25.2" }}
+{{- $istioVersion := include "get_oss_version_by_id" (list "istio-1-25" $ ) }}
 {{- $istioImageVersion := (printf "v%s" (replace "." "x" $istioVersion)) }} {{- /* 1.25.2 -> v1x25x2 */}}
 {{- $istioProxyCacheRev := "v1.25.2-abc32af61f354196bc8d1a011faf8dacc4dc12d7-v1" }}
 {{- $istioProxyDepsRev := "v1.25.2-abc32af61f354196bc8d1a011faf8dacc4dc12d7-v1" }}
 {{- $llvmRev := "llvmorg-14.0.6" }}
 {{- $goVersion := "1.23.1" }}
 {{- $protocVersion := "22.3" }}
-{{- $bazelVersions := "6.5.0" }}
+{{- $bazelVersion := "6.5.0" }}
 {{- $iptables_version := "1.8.9" }}
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
-{{- $source := "https://github.com" }}
-{{- $sourceraw := "https://raw.githubusercontent.com" }}
-{{- if $.DistroPackagesProxy }}
-  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
-  {{- $sourceraw = printf "http://%s/repository/githubusercontent" $.DistroPackagesProxy }}
-{{- end }}
 ---
 # Based on https://github.com/istio/istio/blob/1.25.2/docker/Dockerfile.base
 #      and https://github.com/istio/istio/blob/1.25.2/pilot/docker/Dockerfile.proxyv2
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: common/alt-p11
+fromImage: common/distroless
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/istio/tools/packaging/common/envoy_bootstrap.json
@@ -39,6 +33,18 @@ import:
   owner: 1337
   group: 1337
   after: setup
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libc.so.6
+  to: /lib64/libc.so.6
+  before: install
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/libm.so.6
+  to: /lib64/libm.so.6
+  before: install
+- from: {{ index $.Images "libs/glibc-v2.41" }}
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /lib64/ld-linux-x86-64.so.2
+  before: install
 - image: {{ .ModuleName }}/{{ .ImageName }}-binaries-artifact
   add: /relocate
   to: /
@@ -60,27 +66,19 @@ import:
   before: setup
 git:
 {{- include "image mount points" . }}
-shell:
-  beforeInstall:
-  {{- include "alt packages proxy" . | nindent 2 }}
-  - apt-get install -y ca-certificates
-  - update-ca-trust
-  - apt-get clean
-  - rm -rf  /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
-  install:
-  - useradd -m --uid 1337 istio-proxy
-  - echo istio-proxy ALL=NOPASSWD:ALL | tee -a /etc/sudoers
 imageSpec:
   config:
     user: "1337:1337"
-    env: { "ISTIO_META_ISTIO_PROXY_SHA": "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489", "ISTIO_META_ISTIO_VERSION": "{{ $istioVersion }}" }
+    env: 
+      ISTIO_META_ISTIO_PROXY_SHA: "istio-proxy:78bd2d9b284978e170a49cd13decd5f952544489"
+      ISTIO_META_ISTIO_VERSION: {{ $istioVersion }}
     workingDir: "/"
     entrypoint: ["/usr/local/bin/pilot-agent"]
 ---
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-agent-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
@@ -180,11 +178,11 @@ shell:
 #=====================================================================================================
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-golang-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 ---
 image: {{ $.ModuleName }}/{{ .ImageName }}-build-image-artifact
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -228,8 +226,8 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - go version
   # Install protoc and plugins
-  - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
-  - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
+  - git archive --remote "$(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoyproxy_deps.git" HEAD "protoc/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" | tar -C /tmp -xvf -
+  - unzip /tmp/protoc/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip -x readme.txt -d /usr/local && rm -r /tmp/protoc
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   - git clone --depth 1 --branch cmd/protoc-gen-go-grpc/v1.3.0 $(cat /run/secrets/SOURCE_REPO)/grpc/grpc-go.git /src/grpc-go
   - git clone --depth 1 --branch v1.30.0 $(cat /run/secrets/SOURCE_REPO)/protocolbuffers/protobuf-go.git /src/protobuf-go
@@ -244,20 +242,10 @@ shell:
   - rm -rf /src/protobuf-go
   - rm -rf /src/protoc-gen-go-json
   - rm -rf /src/protoc-gen-doc
-  # Install multiversion bazel
-  - bazel_versions=({{ $bazelVersions }})
-  # install bazel wrapper script in the path, it automatically recognises `.bazelversion` and `USE_BAZEL_VERSIONS`, if neither are set it picks latest
-  - curl --fail --show-error --silent --location "{{ $sourceraw }}/bazelbuild/bazel/refs/tags/${bazel_versions[-1]}/scripts/packages/bazel.sh" --output /usr/local/bin/bazel
-  - chmod +x /usr/local/bin/bazel
-  - |
-    for bazel_version in ${bazel_versions[@]} ; do
-      # instead of using installer script, download binaries directly, as installer script doesn't append version suffix,
-      # so for multiple versions to be usable files will need to moved around, which would be more tedious
-      long_binary_name="bazel-${bazel_version}-linux-x86_64"
-      curl --fail --show-error --silent --location {{ $source }}/bazelbuild/bazel/releases/download/${bazel_version}/${long_binary_name} --output "/usr/local/bin/${long_binary_name}"
-      chmod +x "/usr/local/bin/${long_binary_name}"
-      USE_BAZEL_VERSION="${bazel_version}" bazel version # to extract all binaries properly
-    done
+  - git archive --remote "$(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoyproxy_deps.git" HEAD "bazel/{{ $bazelVersion }}/bazel-{{ $bazelVersion }}-linux-x86_64" | tar -C /tmp -xvf -
+  - mv "/tmp/bazel/{{ $bazelVersion }}/bazel-{{ $bazelVersion }}-linux-x86_64" "/usr/local/bin/bazel"
+  - chmod +x "/usr/local/bin/bazel"
+  - rm -r /tmp/bazel
 imageSpec:
   config:
     env: {"GOROOT": "/usr/local/go", "GOPATH": "/go", "PATH": "${PATH}:${GOROOT}/bin:${GOPATH}/bin", "GOOS": "linux", "GOARCH": "amd64"}

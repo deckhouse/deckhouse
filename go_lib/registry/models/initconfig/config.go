@@ -35,50 +35,60 @@ type Config struct {
 	RegistryCA        string `json:"registryCA,omitempty" yaml:"registryCA,omitempty"`
 }
 
-func (config *Config) ApplyConfig(userConfig Config) {
-	*config = Config{
+func New() Config {
+	return Config{
 		ImagesRepo:     constant.DefaultImagesRepo,
 		RegistryScheme: string(constant.DefaultScheme),
 	}
-
-	// Set user config
-	userConfig.ImagesRepo = strings.TrimRight(strings.TrimSpace(userConfig.ImagesRepo), "/")
-	if userConfig.ImagesRepo != "" {
-		config.ImagesRepo = userConfig.ImagesRepo
-	}
-
-	if userConfig.RegistryScheme != "" {
-		config.RegistryScheme = userConfig.RegistryScheme
-	}
-
-	if userConfig.RegistryDockerCfg != "" {
-		config.RegistryDockerCfg = userConfig.RegistryDockerCfg
-	}
-
-	if userConfig.RegistryCA != "" {
-		config.RegistryCA = userConfig.RegistryCA
-	}
 }
 
-func (config Config) ToRegistrySettings() (module_config.RegistrySettings, error) {
-	registrySettings := module_config.RegistrySettings{
-		ImagesRepo: config.ImagesRepo,
-		Scheme:     constant.ToScheme(config.RegistryScheme),
-		CA:         config.RegistryCA,
+func (c Config) Merge(other *Config) Config {
+	out := c
+
+	if other == nil {
+		return out
 	}
 
-	if config.RegistryDockerCfg == "" {
+	if other.ImagesRepo != "" {
+		out.ImagesRepo = other.ImagesRepo
+	}
+
+	if other.RegistryScheme != "" {
+		out.RegistryScheme = other.RegistryScheme
+	}
+
+	if other.RegistryDockerCfg != "" {
+		out.RegistryDockerCfg = other.RegistryDockerCfg
+	}
+
+	if other.RegistryCA != "" {
+		out.RegistryCA = other.RegistryCA
+	}
+
+	return out
+}
+
+func (c Config) ToRegistrySettings() (module_config.RegistrySettings, error) {
+	imagesRepo := strings.TrimRight(strings.TrimSpace(c.ImagesRepo), "/")
+
+	registrySettings := module_config.RegistrySettings{
+		ImagesRepo: imagesRepo,
+		Scheme:     constant.ToScheme(c.RegistryScheme),
+		CA:         c.RegistryCA,
+	}
+
+	if c.RegistryDockerCfg == "" {
 		return registrySettings, nil
 	}
 
 	// Validate and pars dockerCfg
-	address, _ := helpers.SplitAddressAndPath(config.ImagesRepo)
+	address, _ := helpers.SplitAddressAndPath(imagesRepo)
 
-	if err := validateRegistryDockerCfg(config.RegistryDockerCfg, address); err != nil {
+	if err := validateRegistryDockerCfg(c.RegistryDockerCfg, address); err != nil {
 		return module_config.RegistrySettings{}, fmt.Errorf("failed to validate registryDockerCfg: %w", err)
 	}
 
-	dockerCfgDecode, err := base64.StdEncoding.DecodeString(config.RegistryDockerCfg)
+	dockerCfgDecode, err := base64.StdEncoding.DecodeString(c.RegistryDockerCfg)
 	if err != nil {
 		return module_config.RegistrySettings{}, fmt.Errorf("failed to decode registryDockerCfg: %w", err)
 	}

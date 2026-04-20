@@ -20,10 +20,6 @@ entries:
           ru: Создание группы для пользователей
         url: /code/documentation/admin/configuration/group.html
       - title:
-          en: Configuring MergeRequestApprovals
-          ru: Настройка MergeRequestApprovals
-        url: /code/documentation/admin/configuration/mr-approvals.html
-      - title:
           en: Monitoring and control
           ru: Мониторинг и управление
         url: /code/documentation/admin/configuration/monitoring.html

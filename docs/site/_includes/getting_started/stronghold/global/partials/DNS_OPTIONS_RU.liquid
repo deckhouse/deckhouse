@@ -27,6 +27,7 @@
           <li><b title="Например, <em>&quot;istio-api-proxy-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">istio-api-proxy</b></li>
           <li><b title="Например,  <em>&quot;kubeconfig-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">kubeconfig</b></li>
           <li><b title="Например,  <em>&quot;openvpn-admin-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">openvpn-admin</b></li>
+          <li><b title="Например,  <em>&quot;registry-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">registry</b></li>
           <li><b title="Например,  <em>&quot;prometheus-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">prometheus</b></li>
           <li><b title="Например, <em>&quot;status-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">status</b></li>
           <li><b title="Например,  <em>&quot;upmeter-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">upmeter</b></li>
@@ -67,7 +68,7 @@ BALANCER_IP='<BALANCER_IP>'
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Добавьте записи в файл <code>/etc/hosts</code>:</p>
 {% snippetcut %}
 ```shell
-for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin registry prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
 {% endsnippetcut %}
 </li>

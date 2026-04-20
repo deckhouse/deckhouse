@@ -21,12 +21,8 @@ import (
 )
 
 const (
-	PostBootstrapResultCacheKey               = "post-bootstrap-result"
-	ManifestCreatedInClusterCacheKey          = "tf-state-and-manifests-in-cluster"
-	PreflightBootstrapCloudResultCacheKey     = "preflight-bootstrap-cloud-result"
-	PreflightBootstrapPostCloudResultCacheKey = "preflight-bootstrap-post-cloud-result"
-	PreflightBootstrapGlobalResultCacheKey    = "preflight-bootstrap-global-result"
-	PreflightBootstrapStaticResultCacheKey    = "preflight-bootstrap-static-result"
+	PostBootstrapResultCacheKey      = "post-bootstrap-result"
+	ManifestCreatedInClusterCacheKey = "tf-state-and-manifests-in-cluster"
 )
 
 type State struct {
@@ -55,42 +51,14 @@ func (s *State) PostBootstrapScriptResult() ([]byte, error) {
 	return s.cache.Load(PostBootstrapResultCacheKey)
 }
 
-func (s *State) SetGlobalPreflightchecksWasRan() error {
-	return s.cache.Save(PreflightBootstrapGlobalResultCacheKey, []byte("yes"))
-}
-
-func (s *State) GlobalPreflightchecksWasRan() (bool, error) {
-	preflightcachefile, err := s.cache.InCache(PreflightBootstrapGlobalResultCacheKey)
-	return preflightcachefile, err
-}
-
-func (s *State) SetCloudPreflightchecksWasRan() error {
-	return s.cache.Save(PreflightBootstrapCloudResultCacheKey, []byte("yes"))
-}
-
-func (s *State) SetPostCloudPreflightchecksWasRan() error {
-	return s.cache.Save(PreflightBootstrapPostCloudResultCacheKey, []byte("yes"))
-}
-
-func (s *State) CloudPreflightchecksWasRan() (bool, error) {
-	preflightcachefile, err := s.cache.InCache(PreflightBootstrapCloudResultCacheKey)
-	return preflightcachefile, err
-}
-
-func (s *State) PostCloudPreflightchecksWasRan() (bool, error) {
-	preflightcachefile, err := s.cache.InCache(PreflightBootstrapPostCloudResultCacheKey)
-	return preflightcachefile, err
-}
-
-func (s *State) SetStaticPreflightchecksWasRan() error {
-	return s.cache.Save(PreflightBootstrapStaticResultCacheKey, []byte("yes"))
-}
-
-func (s *State) StaticPreflightchecksWasRan() (bool, error) {
-	preflightcachefile, err := s.cache.InCache(PreflightBootstrapStaticResultCacheKey)
-	return preflightcachefile, err
-}
-
 func (s *State) Clean() {
 	s.cache.Clean()
+}
+
+func (s *State) Save(key string, data []byte) error {
+	return s.cache.Save(key, data)
+}
+
+func (s *State) InCache(key string) (bool, error) {
+	return s.cache.InCache(key)
 }

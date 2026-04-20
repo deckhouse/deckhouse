@@ -25,11 +25,16 @@ on:
     types:
       - created
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   detect_pr_by_label:
     concurrency: source_pr
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.milestone != null && contains(github.event.pull_request.labels.*.name, 'status/backport') }}
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       release_branch: ${{ steps.from_milestone.outputs.release_branch }}
       commit: ${{ steps.from_milestone.outputs.commit }}
@@ -49,7 +54,7 @@ jobs:
   detect_pr_by_comment:
     concurrency: source_pr
     if: ${{ github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.state == 'closed' && github.event.pull_request.user.login != 'deckhouse-BOaTswain' && !contains(github.event.issue.labels.*.name, 'issue/release') }}
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       release_branch: ${{ steps.comment_info.outputs.branch }}
       commit: ${{ steps.pr_info.outputs.commit }}
@@ -82,7 +87,7 @@ jobs:
             core.setOutput('commit', response.data.merge_commit_sha)
 
   backport_to_release_branch:
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     needs: [detect_pr_by_label, detect_pr_by_comment]
     if: always() && (needs.detect_pr_by_label.outputs.release_branch || needs.detect_pr_by_comment.outputs.release_branch)
     steps:
@@ -97,6 +102,7 @@ jobs:
             commit=${{needs.detect_pr_by_comment.outputs.commit}}
             prNumber=${{needs.detect_pr_by_comment.outputs.pr_number}}
           fi
+
           echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
           echo "commit=${commit}" >> $GITHUB_OUTPUT
           echo "pr_number=${prNumber}" >> $GITHUB_OUTPUT
@@ -118,13 +124,13 @@ jobs:
           fetch-depth: 0
       - name: Cherry pick
         id: cherry_pick_pr
-        uses: deckhouse/backport-action@v1.0.0
+        uses: deckhouse/backport-action@v1.1.0
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
           SOURCE_PR_NUMBER: ${{ steps.prepare.outputs.pr_number }}
         with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           committer: "deckhouse-BOaTswain <89150800+deckhouse-boatswain@users.noreply.github.com>"
           branch: ${{ env.RELEASE_BRANCH }}
           commit: ${{ env.COMMIT_SHA }}
@@ -135,14 +141,14 @@ jobs:
         if: always()
         uses: actions-ecosystem/action-remove-labels@v1
         with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          github_token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           number: ${{ steps.prepare.outputs.pr_number }}
           labels: "status/backport"
       - name: Add success label
         if: steps.cherry_pick_pr.conclusion == 'success'
         uses: actions-ecosystem/action-add-labels@v1
         with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          github_token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           number: ${{ steps.prepare.outputs.pr_number }}
           labels: "status/backport/success"
       - name: Add successful comment
@@ -153,7 +159,7 @@ jobs:
           cherry_pr_url: ${{ steps.cherry_pick_pr.outputs.cherry_pr_url }}
         uses: peter-evans/create-or-update-comment@v2
         with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           issue-number: ${{ steps.prepare.outputs.pr_number }}
           reactions: hooray
           body: "Cherry pick PR [${{ env.cherry_pr_number }}](${{ env.cherry_pr_url }}) to the branch [${{ env.release_branch }}](https://github.com/${{github.repository}}/tree/${{ env.release_branch }}) successful!"
@@ -161,17 +167,17 @@ jobs:
         if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
         uses: actions-ecosystem/action-add-labels@v1
         with:
-          github_token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          github_token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           number: ${{ steps.prepare.outputs.pr_number }}
           labels: "status/backport/failed"
       - name: Add error comment
         if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
         uses: peter-evans/create-or-update-comment@v2
         env:
-          error_message: ${{ steps.cherry_pick_pr.outputs.error_message }}
-          common_error: "Backport failed. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
+          error_message: "Backport failed ⚠️. ${{ steps.cherry_pick_pr.outputs.error_message }}"
+          common_error: "Backport failed ⚠️. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
         with:
-          token: ${{ secrets.BOATSWAIN_GITHUB_TOKEN }}
+          token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           issue-number: ${{ steps.prepare.outputs.pr_number }}
           reactions: "confused"
           body: ${{ env.error_message || env.common_error }}

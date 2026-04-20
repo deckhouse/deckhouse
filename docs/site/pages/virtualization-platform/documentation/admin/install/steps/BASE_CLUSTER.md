@@ -147,7 +147,7 @@ Where:
    ```shell
    dhctl bootstrap \
      --ssh-host=54.43.32.21 \
-     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/ \
      --config=/config.yaml --ask-become-pass
    ```
 
@@ -253,7 +253,7 @@ Example of using the preflight skip flag:
 
   ```shell
       dhctl bootstrap \
-      --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+      --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
       --config=/config.yml \
       --preflight-skip-all-checks 
   ```

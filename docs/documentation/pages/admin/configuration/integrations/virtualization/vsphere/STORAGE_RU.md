@@ -11,7 +11,7 @@ lang: ru
 - Datastore — для размещения root-дисков виртуальных машин;
 - CNS-диски (Container Native Storage) — для автоматического создания PersistentVolume’ов через CSI.
 
-Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, тегированных как `zone`.  
+Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.  
 Можно указать:
 
 - имя StorageClass по умолчанию ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default));
@@ -25,7 +25,7 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-vsphere
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     storageClass:
@@ -79,6 +79,10 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 1. На узле, где находится под, выполните команду `d8 k uncordon <имя_узла>`.
 
 ## Настройка Datastore
+
+{% alert %}
+Pазметку **Datastore** также можно сделать через **vSphere Client** по инструкции [«Настройка через vSphere Client»](authorization.html#настройка-datastore-с-использованием-vsphere-client). Ниже описана настройка через **`govc`**.
+{% endalert %}
 
 Для корректной работы PersistentVolume необходимо, чтобы datastore был доступен на всех ESXi.
 

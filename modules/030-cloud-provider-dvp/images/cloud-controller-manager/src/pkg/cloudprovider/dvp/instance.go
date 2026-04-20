@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package dvp
 
 import (
@@ -22,6 +23,7 @@ import (
 	"fmt"
 
 	"dvp-common/api"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"

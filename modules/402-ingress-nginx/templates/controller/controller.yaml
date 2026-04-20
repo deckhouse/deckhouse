@@ -217,7 +217,8 @@ spec:
         name: controller
         {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         securityContext:
-          readOnlyRootFilesystem: true
+          seccompProfile:
+            type: Unconfined
           runAsNonRoot: false
           runAsUser: 0
           runAsGroup: 0
@@ -234,6 +235,8 @@ spec:
             - ALL
         {{- else }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
+          seccompProfile:
+            type: Unconfined
           capabilities:
             add:
             - SYS_CHROOT
@@ -421,7 +424,6 @@ spec:
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
-          readOnlyRootFilesystem: true
         resources:
           requests:
             memory: 20Mi
@@ -431,7 +433,6 @@ spec:
           - mountPath: /var/files
             name: telemetry-config-file
       - name: kube-rbac-proxy
-        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $context "kubeRbacProxy") }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
           readOnlyRootFilesystem: true

@@ -1,28 +1,13 @@
 {
-  "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
-  },
-  "editable": true,
+  "description": "Istio Performance Dashboard version 1.25.5",
+  "editable": false,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 48,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "collapsed": true,
+      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "$ds_prometheus"
@@ -34,30 +19,7 @@
         "y": 0
       },
       "id": 21,
-      "panels": [
-        {
-          "gridPos": {
-            "h": 6,
-            "w": 24,
-            "x": 0,
-            "y": 1
-          },
-          "id": 19,
-          "options": {
-            "code": {
-              "language": "plaintext",
-              "showLineNumbers": false,
-              "showMiniMap": false
-            },
-            "content": "The charts on this dashboard are intended to show Istio main components cost in terms of resources utilization under steady load.\n\n- **vCPU / 1k rps:** shows vCPU utilization by the main Istio components normalized by 1000 requests/second. When idle or low traffic, this chart will be blank. The curve for istio-proxy refers to the services sidecars only.\n- **vCPU:** vCPU utilization by Istio components, not normalized.\n- **Memory:** memory footprint for the components. Telemetry and policy are normalized by 1k rps, and no data is shown  when there is no traffic. For ingress and istio-proxy, the data is per instance.\n- **Bytes transferred / sec:** shows the number of bytes flowing through each Istio component.\n\n\n",
-            "mode": "markdown"
-          },
-          "pluginVersion": "10.4.5",
-          "title": "Performance Dashboard README",
-          "transparent": true,
-          "type": "text"
-        }
-      ],
+      "panels": [],
       "targets": [
         {
           "datasource": {
@@ -71,6 +33,29 @@
       "type": "row"
     },
     {
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "id": 19,
+      "links": [],
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "The charts on this dashboard are intended to show Istio main components cost in terms of resources utilization under steady load.\n\n- **vCPU / 1k rps:** shows vCPU utilization by the main Istio components normalized by 1000 requests/second. When idle or low traffic, this chart will be blank. The curve for istio-proxy refers to the services sidecars only.\n- **vCPU:** vCPU utilization by Istio components, not normalized.\n- **Memory:** memory footprint for the components. Telemetry and policy are normalized by 1k rps, and no data is shown  when there is no traffic. For ingress and istio-proxy, the data is per instance.\n- **Bytes transferred / sec:** shows the number of bytes flowing through each Istio component.\n\n\n",
+        "mode": "markdown"
+      },
+      "pluginVersion": "10.1.5",
+      "title": "Performance Dashboard README",
+      "transparent": true,
+      "type": "text"
+    },
+    {
       "collapsed": false,
       "datasource": {
         "type": "prometheus",
@@ -80,7 +65,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 1
+        "y": 7
       },
       "id": 6,
       "panels": [],
@@ -107,7 +92,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -122,7 +106,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -160,9 +144,10 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 8
       },
       "id": 4,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -175,14 +160,14 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__rate_interval])) / (round(sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval])), 0.001)/1000))",
+          "expr": "(sum(irate(container_cpu_usage_seconds_total{pod=~\"istio-ingressgateway-.*\",container=\"istio-proxy\"}[$__rate_interval])) / (round(sum(irate(istio_requests_total{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval])), 0.001)/1000))",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 1,
@@ -194,7 +179,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "(sum(rate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[$__rate_interval]))/ (round(sum(rate(istio_requests_total[$__rate_interval])), 0.001)/1000))/ (sum(rate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[$__rate_interval])) >bool 10)",
+          "expr": "(sum(irate(container_cpu_usage_seconds_total{namespace!=\"istio-system\",container=\"istio-proxy\"}[$__rate_interval]))/ (round(sum(irate(istio_requests_total[$__rate_interval])), 0.001)/1000))/ (sum(irate(istio_requests_total{source_workload=\"istio-ingressgateway\"}[$__rate_interval])) >bool 10)",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -215,7 +200,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -230,7 +214,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -268,9 +252,10 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 2
+        "y": 8
       },
       "id": 7,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -283,7 +268,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -321,7 +306,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 16
       },
       "id": 13,
       "panels": [],
@@ -348,7 +333,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -363,7 +347,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -401,9 +385,10 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 17
       },
       "id": 902,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -416,7 +401,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -455,7 +440,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -470,7 +454,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -508,9 +492,10 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 17
       },
       "id": 11,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -523,14 +508,14 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(istio_response_bytes_sum{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval]))",
+          "expr": "sum(irate(istio_response_bytes_sum{source_workload=\"istio-ingressgateway\", reporter=\"source\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-ingressgateway",
@@ -541,7 +526,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(istio_response_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval])) + sum(rate(istio_request_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval]))",
+          "expr": "sum(irate(istio_response_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval])) + sum(irate(istio_request_bytes_sum{source_workload_namespace!=\"istio-system\", reporter=\"source\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "istio-proxy",
@@ -561,7 +546,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 25
       },
       "id": 17,
       "panels": [],
@@ -588,7 +573,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -603,7 +587,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -641,9 +625,10 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 26
       },
       "id": 15,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -656,7 +641,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -683,7 +668,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 34
       },
       "id": 71,
       "panels": [],
@@ -710,7 +695,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -725,7 +709,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -761,11 +745,12 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 12,
+        "w": 6,
         "x": 0,
-        "y": 29
+        "y": 35
       },
       "id": 72,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -778,7 +763,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -788,7 +773,7 @@
           "expr": "sum(container_memory_working_set_bytes{container=\"istio-proxy\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -808,7 +793,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -823,7 +807,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -859,11 +843,12 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 12,
-        "x": 12,
-        "y": 29
+        "w": 6,
+        "x": 6,
+        "y": 35
       },
       "id": 73,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -876,7 +861,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -886,13 +871,110 @@
           "expr": "sum(rate(container_cpu_usage_seconds_total{container=\"istio-proxy\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
         }
       ],
       "title": "vCPU",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 35
+      },
+      "id": 702,
+      "links": [],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.1.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "expr": "sum(container_fs_usage_bytes{container=\"istio-proxy\"})",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "Total (k8s)",
+          "refId": "A",
+          "step": 2
+        }
+      ],
+      "title": "Disk",
       "type": "timeseries"
     },
     {
@@ -905,7 +987,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 42
       },
       "id": 69,
       "panels": [],
@@ -932,7 +1014,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -947,7 +1028,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -983,11 +1064,12 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 8,
+        "w": 6,
         "x": 0,
-        "y": 37
+        "y": 43
       },
       "id": 5,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1000,7 +1082,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -1010,7 +1092,7 @@
           "expr": "process_virtual_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
           "instant": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Virtual Memory",
           "refId": "I",
           "step": 2
@@ -1022,7 +1104,7 @@
           },
           "expr": "process_resident_memory_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Resident Memory",
           "refId": "H",
           "step": 2
@@ -1035,7 +1117,7 @@
           "expr": "go_memstats_heap_sys_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "heap sys",
           "refId": "A"
         },
@@ -1047,7 +1129,7 @@
           "expr": "go_memstats_heap_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": true,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "heap alloc",
           "refId": "D"
         },
@@ -1058,7 +1140,7 @@
           },
           "expr": "go_memstats_alloc_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Alloc",
           "refId": "F",
           "step": 2
@@ -1071,7 +1153,7 @@
           "expr": "go_memstats_heap_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Heap in-use",
           "refId": "E",
           "step": 2
@@ -1083,7 +1165,7 @@
           },
           "expr": "go_memstats_stack_inuse_bytes{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Stack in-use",
           "refId": "G",
           "step": 2
@@ -1096,7 +1178,7 @@
           "expr": "sum(container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"})",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Total (k8s)",
           "refId": "C",
           "step": 2
@@ -1109,7 +1191,7 @@
           "expr": "container_memory_working_set_bytes{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "{{ container }} (k8s)",
           "refId": "B",
           "step": 2
@@ -1129,7 +1211,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1144,7 +1225,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1180,11 +1261,12 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 37
+        "w": 6,
+        "x": 6,
+        "y": 43
       },
       "id": 602,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1197,7 +1279,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -1207,7 +1289,7 @@
           "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval]))",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Total (k8s)",
           "refId": "A",
           "step": 2
@@ -1220,7 +1302,7 @@
           "expr": "sum(rate(container_cpu_usage_seconds_total{container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}[$__rate_interval])) by (container)",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "{{ container }} (k8s)",
           "refId": "B",
           "step": 2
@@ -1230,10 +1312,10 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "rate(process_cpu_seconds_total{app=\"istiod\"}[$__rate_interval])",
+          "expr": "irate(process_cpu_seconds_total{app=\"istiod\"}[$__rate_interval])",
           "format": "time_series",
           "hide": false,
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "pilot (self-reported)",
           "refId": "C",
           "step": 2
@@ -1253,7 +1335,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1268,7 +1349,118 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "stepAfter",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 12,
+        "y": 43
+      },
+      "id": 74,
+      "links": [],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.1.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "expr": "process_open_fds{app=\"istiod\"}",
+          "format": "time_series",
+          "hide": true,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "Open FDs (pilot)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "expr": "container_fs_usage_bytes{ container=~\"discovery|istio-proxy\", pod=~\"istiod-.*\"}",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{ container }}",
+          "refId": "B",
+          "step": 2
+        }
+      ],
+      "title": "Disk",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -1304,11 +1496,12 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 37
+        "w": 6,
+        "x": 18,
+        "y": 43
       },
       "id": 402,
+      "links": [],
       "options": {
         "legend": {
           "calcs": [],
@@ -1321,7 +1514,7 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.1.5",
       "targets": [
         {
           "datasource": {
@@ -1330,7 +1523,7 @@
           },
           "expr": "go_goroutines{app=\"istiod\"}",
           "format": "time_series",
-          "intervalFactor": 1,
+          "intervalFactor": 2,
           "legendFormat": "Number of Goroutines",
           "refId": "A",
           "step": 2
@@ -1340,7 +1533,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "10s",
+  "refresh": "30s",
   "schemaVersion": 39,
   "tags": [],
   "templating": {
@@ -1353,8 +1546,8 @@
         },
         "hide": 0,
         "includeAll": false,
-        "multi": false,
         "label": "Prometheus",
+        "multi": false,
         "name": "ds_prometheus",
         "options": [],
         "query": "prometheus",
@@ -1398,5 +1591,6 @@
   "timezone": "",
   "title": "Istio Performance Dashboard",
   "uid": "vu8e0VWZk",
-  "version": 23
+  "version": 2,
+  "weekStart": ""
 }

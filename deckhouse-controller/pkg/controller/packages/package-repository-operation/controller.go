@@ -29,10 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -47,9 +44,6 @@ const (
 
 	// packageTypeLabel is a label on Docker images that indicates the package type
 	packageTypeLabel = "io.deckhouse.package.type"
-
-	// TODO: unify constant
-	packageTypeApplication = "Application"
 
 	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
@@ -107,17 +101,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, err
 	}
 
-	// handle delete event
+	// handle delete event - no cleanup needed, child resources are owned by PackageRepository
 	if !operation.DeletionTimestamp.IsZero() {
 		logger.Debug("deleting package repository operation")
-
-		err := r.delete(ctx, operation)
-		if err != nil {
-			logger.Warn("failed to delete package repository operation", log.Err(err))
-
-			return res, err
-		}
-
 		return res, nil
 	}
 
@@ -173,6 +159,27 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 		op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository] = op.Spec.PackageRepositoryName
 	}
 
+	// Ensure ownerReference to PackageRepository is set (for cascade deletion via GC).
+	// Auto-created operations get this at creation time, manually created ones need enrichment.
+	if !hasPackageRepositoryOwnerRef(op) {
+		repo := new(v1alpha1.PackageRepository)
+		if err := r.client.Get(ctx, client.ObjectKey{Name: op.Spec.PackageRepositoryName}, repo); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("get package repository for owner ref: %w", err)
+			}
+			// Repository not found - skip ownerRef, operation will be processed without it
+		} else {
+			update = true
+			op.OwnerReferences = append(op.OwnerReferences, metav1.OwnerReference{
+				APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+				Kind:       v1alpha1.PackageRepositoryGVK.Kind,
+				Name:       repo.Name,
+				UID:        repo.UID,
+				Controller: &[]bool{true}[0],
+			})
+		}
+	}
+
 	if update {
 		if err := r.client.Patch(ctx, op, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patch operation labels: %w", err)
@@ -182,6 +189,16 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// hasPackageRepositoryOwnerRef checks if the operation already has an ownerReference to a PackageRepository.
+func hasPackageRepositoryOwnerRef(op *v1alpha1.PackageRepositoryOperation) bool {
+	for _, ref := range op.OwnerReferences {
+		if ref.Kind == v1alpha1.PackageRepositoryGVK.Kind {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
@@ -282,7 +299,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 			reason,
 			message,
 		)
@@ -310,7 +327,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 			v1alpha1.PackageRepositoryOperationReasonPackageListingFailed,
 			message,
 		)
@@ -345,7 +362,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 	// Check if operation already has a failed condition - skip processing if so
 	for _, cond := range operation.Status.Conditions {
-		if cond.Type == v1alpha1.PackageRepositoryOperationConditionProcessed && cond.Status == corev1.ConditionFalse {
+		if cond.Type == v1alpha1.PackageRepositoryOperationConditionCompleted && cond.Status == corev1.ConditionFalse {
 			logger.Debug("operation already has failed condition, skipping processing")
 			return res, nil
 		}
@@ -380,7 +397,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 		r.SetConditionFalse(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 			reason,
 			message,
 		)
@@ -416,7 +433,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 		r.SetConditionTrue(
 			operation,
-			v1alpha1.PackageRepositoryOperationConditionProcessed,
+			v1alpha1.PackageRepositoryOperationConditionCompleted,
 		)
 
 		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
@@ -473,49 +490,87 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
-	// Create or update ApplicationPackage or ClusterApplicationPackage
-	err := svc.EnsureApplicationPackage(ctx, currentPackage.Name)
-	if err != nil {
-		r.logger.Error("failed to ensure package resource",
-			slog.String("package", currentPackage.Name),
-			log.Err(err))
-	}
-
 	processResult, err := svc.ProcessPackageVersions(ctx, currentPackage.Name, operation)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
 			log.Err(err))
-		// Continue with next package even if this one fails
 	}
 
-	// Remove processed package from queue
+	// Processing failed entirely - record error and move to next package
+	if processResult == nil {
+		return r.dequeuePackageWithError(ctx, operation, currentPackage.Name, err)
+	}
+
+	// Ensure the appropriate package resource based on detected type.
+	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
+	switch processResult.PackageType {
+	case packageTypeModule:
+		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure module package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
+	case packageTypeApplication:
+		if ensureErr := svc.EnsureApplicationPackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure application package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
+	}
+
+	return r.dequeuePackageWithResult(ctx, operation, currentPackage.Name, processResult)
+}
+
+func (r *reconciler) dequeuePackageWithError(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, packageName string, processErr error) (ctrl.Result, error) {
 	original := operation.DeepCopy()
+
 	if len(operation.Status.Packages.Discovered) > 0 {
 		operation.Status.Packages.Discovered = operation.Status.Packages.Discovered[1:]
 	}
+	if operation.Status.Packages != nil {
+		operation.Status.Packages.ProcessedOverall++
+	}
 
+	operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
+		Name: packageName,
+		Errors: []v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
+			{Message: processErr.Error()},
+		},
+	})
+
+	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
+		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+	}
+	return ctrl.Result{Requeue: true}, nil
+}
+
+func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, packageName string, result *PackageProcessResult) (ctrl.Result, error) {
+	original := operation.DeepCopy()
+
+	if len(operation.Status.Packages.Discovered) > 0 {
+		operation.Status.Packages.Discovered = operation.Status.Packages.Discovered[1:]
+	}
 	if operation.Status.Packages != nil {
 		operation.Status.Packages.ProcessedOverall++
 	}
 
 	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
-		Name: currentPackage.Name,
-		Type: processResult.PackageType,
+		Name:          packageName,
+		Type:          string(result.PackageType),
+		FoundVersions: result.FoundVersions,
 	})
 
-	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(processResult.Failed))
-	for _, failedVersion := range processResult.Failed {
+	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))
+	for _, fv := range result.Failed {
 		failedList = append(failedList, v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
-			Version: failedVersion.Name,
-			Error:   failedVersion.Error,
+			Version: fv.Name,
+			Message: fv.Error,
 		})
 	}
-
-	// Only add to Failed list if there were actual failures
 	if len(failedList) > 0 {
 		operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
-			Name:   currentPackage.Name,
+			Name:   packageName,
 			Errors: failedList,
 		})
 	}
@@ -523,8 +578,6 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
-
-	// Requeue to process next package
 	return ctrl.Result{Requeue: true}, nil
 }
 
@@ -560,23 +613,6 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 		logger.Debug("deleting old operation", slog.String("name", op.Name))
 		if err := r.client.Delete(ctx, &op); err != nil {
 			return fmt.Errorf("delete old operation: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
-	r.logger.Info("deleting PackageRepositoryOperation", slog.String("name", operation.Name))
-
-	// Remove finalizer if present
-	if controllerutil.ContainsFinalizer(operation, "packages.deckhouse.io/finalizer") {
-		original := operation.DeepCopy()
-
-		controllerutil.RemoveFinalizer(operation, "packages.deckhouse.io/finalizer")
-
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return err
 		}
 	}
 
@@ -639,43 +675,6 @@ func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOper
 	})
 
 	return operation
-}
-
-func (r *reconciler) setOperationFailed(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, condType, reason, message string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionFalse(
-		operation,
-		condType,
-		reason,
-		message,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, phase string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.Phase = phase
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionTrue(
-		operation,
-		v1alpha1.PackageRepositoryOperationConditionProcessed,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {

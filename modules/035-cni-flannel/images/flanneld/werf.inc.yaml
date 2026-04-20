@@ -1,7 +1,6 @@
-{{- $flannel_version := "0.27.4" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-entrypoint-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -20,7 +19,7 @@ shell:
   - go build -ldflags="-s -w" -o /entrypoint main.go
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
@@ -63,7 +62,7 @@ shell:
   install:
   - mkdir -p /src/flannel
   - cd /src/flannel
-  - git clone --depth 1 --branch v{{ $flannel_version }} $(cat /run/secrets/SOURCE_REPO)/flannel-io/flannel.git . && rm -rf /src/flannel/.git
+  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "flannel" $ ) }} $(cat /run/secrets/SOURCE_REPO)/flannel-io/flannel.git . && rm -rf /src/flannel/.git
   - git apply /patches/*.patch --verbose
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}

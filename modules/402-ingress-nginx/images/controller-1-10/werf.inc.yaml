@@ -1,4 +1,5 @@
-{{- $controllerBranch := "controller-v1.10.4" }}
+{{- $controllerVersion := include "get_oss_version_by_id" (list "ingress-nginx-1-10" $ ) }}
+{{- $controllerBranch := printf "controller-v%s" $controllerVersion }}
 {{- $controllerUser := "deckhouse" }}
 {{- $controllerUID := "64535" }}
 
@@ -63,11 +64,17 @@ shell:
   - patch -p1 < /patches/022-ingress-update-status.patch
   - patch -p1 < /patches/023-use-proxy-real-ip-cidr-v2.patch
   - patch -p1 < /patches/024-cve-03022026-controller.patch
+  - patch -p1 < /patches/026-lua_ingress-use-request-host-for-https-redirect.patch
+  - patch -p1 < /patches/027-fix-rewrite-target-cve.patch
+  - patch -p1 < /patches/028-stable-config-hash-metric-02.patch
+  - patch -p1 < /patches/030-fix-ingress-store-initial-sync.patch
+  - patch -p1 < /patches/031-fix-cve-2025-15566.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
   - patch -p1 < /patches/007-auth-cookie-always.patch
   - patch -p1 < /patches/025-cve-03022026-rootfs.patch
+  - patch -p1 < /patches/029-fix-cve-2026-4342.patch
   # pass env for build
   - cd /src/ingress-nginx
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
@@ -119,7 +126,7 @@ shell:
   - luarocks-5.1 install lua-iconv-7-3.src.rock
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-controller-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -267,22 +274,27 @@ shell:
   - cp -a /usr/bin/curl /chroot/usr/bin/curl
   - cp -a /lib64/* /chroot/lib64/
   - rm -rf /chroot/lib64/apt /chroot/lib64/debug /chroot/lib64/games
-  - cp -a /usr/lib64/libcurl* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libstdc++* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libbrotli* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libxml2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libyajl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libmaxminddb.* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgsasl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnfnetlink.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libntlm.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnetfilter_conntrack.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libnghttp2.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpsl.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libssh2.so* /chroot/usr/lib64/
+  - |
+    for lib in \
+      /usr/lib64/libcurl* \
+      /usr/lib64/libstdc++* \
+      /usr/lib64/libbrotli* \
+      /usr/lib64/libxml2.so* \
+      /usr/lib64/libyajl.so* \
+      /usr/lib64/libmaxminddb.* \
+      /usr/lib64/libgsasl.so* \
+      /usr/lib64/libnfnetlink.so* \
+      /usr/lib64/libntlm.so* \
+      /usr/lib64/libnetfilter_conntrack.so* \
+      /usr/lib64/libnghttp2.so* \
+      /usr/lib64/libpsl.so* \
+      /usr/lib64/libssh2.so* \
+      /usr/lib64/libgrpc++.so* \
+      /usr/lib64/libpcre.so*; do
+      [ -e "$lib" ] || continue
+      cp -a "$lib" /chroot/usr/lib64/
+    done
   - cp -a /usr/lib64/gconv /chroot/usr/lib64/
-  - cp -a /usr/lib64/libgrpc++.so* /chroot/usr/lib64/
-  - cp -a /usr/lib64/libpcre.so* /chroot/usr/lib64/
   - cp -a /usr/lib/valgrind /chroot/usr/lib/
   - cp -a /etc/nginx/* /chroot/etc/nginx/
   - cp -a /usr/local/bin /chroot/usr/local/
@@ -323,11 +335,11 @@ import:
   to: /wait-shutdown
   before: setup
 # required by the wait-shutdown utility
-- image: tools/procps
+- from: {{ index $.Images "tools/procps" }}
   add: /bin/pkill
   to: /usr/bin/pkill
   before: setup
-- image: tools/procps
+- from: {{ index $.Images "tools/procps" }}
   add: /bin/pgrep
   to: /usr/bin/pgrep
   before: setup
@@ -362,8 +374,8 @@ shell:
   - adduser -r -u {{ $controllerUID }} -g {{ $controllerUID }} -d /usr/local/nginx -s /sbin/nologin -c {{ $controllerUser }} {{ $controllerUser }}
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/nginx
   - chown {{ $controllerUser }}:{{ $controllerUser }} /usr/bin/curl
+  - mkdir -p /chroot/var/log/valgrind /chroot/tmp/nginx
   - chmod 1777 /tmp /chroot/tmp /chroot/tmp/nginx
-  - mkdir -p /chroot/var/log/valgrind
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - setcap cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare
   - setcap cap_net_bind_service=+ep /chroot/usr/local/nginx/sbin/nginx
@@ -414,7 +426,6 @@ shell:
 imageSpec:
   config:
     workingDir: /
-    user: "{{ $controllerUser }}"
     expose: ["80", "443"]
     entrypoint: ["/usr/bin/dumb-init", "--"]
     cmd: ["/nginx-ingress-controller"]

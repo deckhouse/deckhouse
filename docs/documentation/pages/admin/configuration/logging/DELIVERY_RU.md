@@ -15,7 +15,7 @@ DKP позволяет:
 - обогащать логи метаданными Kubernetes;
 - использовать буферизацию логов для повышения производительности.
 
-Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../../../architecture/logging/delivery.html).
+Общий механизм сбора, доставки и фильтрации логов подробно описан [в разделе «Архитектура»](../../../architecture/observability/logging.html).
 
 Администраторам DKP доступна настройка сбора и отправки логов с помощью трёх кастомных ресурсов:
 
@@ -195,8 +195,8 @@ spec:
 ```
 
 {% alert level="info" %}
-`destination` не поддерживает метки пода для индексирования.
-Чтобы добавить нужные метки, используйте [опцию `extraLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels):
+`destination` не поддерживает лейблы пода для индексирования.
+Чтобы добавить нужные лейблы, используйте [опцию `extraLabels`](/modules/log-shipper/cr.html#clusterlogdestination-v1alpha1-spec-extralabels):
 
 ```yaml
 extraLabels:

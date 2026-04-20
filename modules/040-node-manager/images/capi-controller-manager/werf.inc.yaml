@@ -1,4 +1,4 @@
-{{- $version := "1.11.3" }}
+{{- $version := include "get_oss_version_by_id" (list "cluster-api" $ )  -}}
 ---
 image: {{ .ModuleName }}/capi-controller-manager
 fromImage: common/distroless
@@ -30,7 +30,7 @@ shell:
   - rm -rf .git hack test
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact

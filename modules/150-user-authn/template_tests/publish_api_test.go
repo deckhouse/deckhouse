@@ -40,6 +40,7 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		hec.ValuesSet("userAuthn.internal.kubernetesDexClientAppSecret", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.crt", "plainstring")
 		hec.ValuesSet("userAuthn.internal.dexTLS.key", "plainstring")
+		hec.ValuesSet("userAuthn.internal.dexTLS.ca", "plainstring")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("userAuthn.internal.selfSignedCA.key", "test")
 
@@ -190,7 +191,7 @@ tls.key: KEYKEYKEY
 			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "kubeconfig-generator").Exists()).To(BeTrue())
 			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").String()).To(
-				Equal("if ($http_authorization ~ \"^(.*)Basic(.*)$\") {\n  rewrite ^(.*)$ /basic-auth$1;\n}\n"))
+				Equal("if ($http_authorization ~ \"^(.*)Basic(.*)$\") {\n  rewrite ^(.*)$ /basic-auth$1;\n}\nlocation ~ ^/(healthz|livez|readyz) {\n  deny all;\n  return 403;\n}\n"))
 			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))

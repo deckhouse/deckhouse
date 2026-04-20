@@ -1538,7 +1538,7 @@ spec:
                           type: string
                           description: |
                             MIG configuration name.
-                            
+
                             Standard `all-*` profiles are supported (the same partitioning applied to all GPUs), as well as the `custom` value, which allows defining partitioning individually for each GPU.
                           x-doc-default: all-1g.5gb
                         customConfigs:
@@ -1843,7 +1843,7 @@ spec:
                       description: |
                         Priority of the node group.
 
-                        When scaling a cluster, the autoscaler will first select node groups with a higher priority set. If several node groups have the same priority, the autoscaler randomly selects a group of them.
+                        When scaling a cluster, the autoscaler will first select node groups with a higher priority set. If several node groups have the same priority, the autoscaler randomly selects a group of them. You can control the rate at which nodes are switched to lower-priority groups on demand (for more details, see the [FAQ](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in)).
 
                         Using priorities can be convenient to prefer ordering cheaper nodes (for example, spot instances) over more expensive ones.
                     maxUnavailablePerZone:
@@ -2372,27 +2372,41 @@ spec:
                 fencing:
                   type: object
                   description: |
-                    Enable fencing controller for this group.
+                    Enable fencing controller for this node group.
                   required: [mode]
                   properties:
                     mode:
                       type: string
                       enum:
                         - "Watchdog"
+                        - "Notify"
                       description: |
-                        Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
+                        Fencing operating modes:
+                        - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster. Also in this mode, the fencing agent monitors the nodes available in the cluster.
+                        - `Notify`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots). In this mode, the fencing agent monitors the nodes available in the cluster.
 
-                        The Watchdog implementation includes the following components:
+                        When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
 
-                        - Fencing-agent — a DaemonSet that is deployed on a specific group of nodes (NodeGroups).
-
-                          Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog.
-
-                          A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
-
-                        - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
-
-
+                        How the fencing-agent works:
+                        - Opens `/dev/watchdog` and sets the `node-manager.deckhouse.io/fencing-enabled` label on the node.
+                        - Joins a gossip cluster (`memberlist`) with other fencing-agents in the same NodeGroup.
+                        - Regularly checks quorum (availability of a majority of nodes in the NodeGroup).
+                        - If quorum is not reached (`quorum=false`), performs a fallback check of Kubernetes API availability.
+                        - If quorum is present or the Kubernetes API is available, the agent resets the watchdog timer.
+                        - If neither quorum nor Kubernetes API access is available, the watchdog timer stops being reset, expires, and triggers a kernel panic followed by a node reboot.
+                        - Watches the maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, and `update.node.deckhouse.io/disruption-approved` to temporarily disable the watchdog during planned maintenance operations.
+                    watchdog:
+                      type: object
+                      properties:
+                        timeout:
+                          type: string
+                          pattern: "^[0-9]+[smh]{1}$"
+                          default: 60s
+                          description: |
+                            Watchdog timeout duration. Should be specified in seconds, minutes or hours.
+                          x-doc-default: 60s
+                      required:
+                        - timeout
               oneOf:
                 - properties:
                     nodeType:

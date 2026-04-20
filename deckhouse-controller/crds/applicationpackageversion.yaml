@@ -20,7 +20,7 @@ spec:
     - jsonPath: .spec.packageName
       name: Package
       type: string
-    - jsonPath: .spec.packageRepository
+    - jsonPath: .spec.packageRepositoryName
       name: Repository
       type: string
     - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime
@@ -77,42 +77,63 @@ spec:
                 description: Conditions represent the latest available observations
                   of the package version's state.
                 items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
-                    lastProbeTime:
-                      description: |-
-                        Timestamp of when the condition was last probed.
-                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
-                      format: date-time
-                      type: string
                     lastTransitionTime:
                       description: |-
-                        Last time the condition transitioned from one status to another.
-                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        Human-readable message indicating details about last transition.
-                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
                       type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
                     reason:
                       description: |-
-                        Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
-                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: |-
-                        Status of the condition.
-                        Can be True, False, Unknown.
-                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
                       type: string
                     type:
-                      description: |-
-                        Type of the condition.
-                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               packageMetadata:
                 description: Metadata about the package such as description, requirements,
                   etc.
@@ -227,6 +248,29 @@ spec:
                             type: string
                         type: object
                     type: object
+                type: object
+              packageSchemas:
+                description: Schemas for validating settings and values passed to
+                  the package.
+                properties:
+                  settingsSchema:
+                    description: |-
+                      SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
+                      settings of the package. Stored as an opaque object because its contents
+                      form a recursive JSON schema that cannot be expressed structurally in a
+                      CRD; the controller validates this subtree in Go when loading package
+                      metadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  valuesSchema:
+                    description: |-
+                      ValuesSchema is the OpenAPI v3 schema used to validate the effective
+                      values (defaults merged with settings) passed to the package's hooks and
+                      charts. Stored as an opaque object because its contents form a recursive
+                      JSON schema that cannot be expressed structurally in a CRD; the
+                      controller validates this subtree in Go when loading package metadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                 type: object
               usedBy:
                 description: Information about applications that are using this package

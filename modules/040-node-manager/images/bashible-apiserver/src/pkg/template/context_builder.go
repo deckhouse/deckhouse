@@ -147,7 +147,8 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 			ClusterDomain:           cb.clusterInputData.ClusterDomain,
 			ClusterDNSAddress:       cb.clusterInputData.ClusterDNSAddress,
 			BootstrapTokens:         cb.clusterInputData.BootstrapTokens,
-			ApiserverEndpoints:      cb.clusterInputData.APIServerEndpoints,
+			APIServerEndpoints:      cb.clusterInputData.APIServerEndpoints,
+			APIServerProxyCerts:     cb.clusterInputData.APIServerProxyCerts,
 			KubernetesCA:            cb.clusterInputData.KubernetesCA,
 			ModuleSourcesCA:         cb.moduleSourcesCA,
 		},
@@ -195,7 +196,8 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 	bc := bashibleContext{
 		KubernetesVersion: ng.KubernetesVersion(),
 		Normal: map[string]interface{}{
-			"apiserverEndpoints": bundleNgContext.tplContextCommon.Normal.ApiserverEndpoints,
+			"apiserverEndpoints":  bundleNgContext.tplContextCommon.Normal.APIServerEndpoints,
+			"apiserverProxyCerts": bundleNgContext.tplContextCommon.Normal.APIServerProxyCerts,
 		},
 		NodeGroup: ng,
 		RunType:   "Normal",
@@ -443,13 +445,14 @@ type bundleNGContext struct {
 }
 
 type normal struct {
-	PodSubnetNodeCIDRPrefix string            `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
-	ClusterDomain           string            `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress       string            `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	BootstrapTokens         map[string]string `json:"bootstrapTokens" yaml:"bootstrapTokens"`
-	ApiserverEndpoints      []string          `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	KubernetesCA            string            `json:"kubernetesCA" yaml:"kubernetesCA"`
-	ModuleSourcesCA         map[string]string `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
+	PodSubnetNodeCIDRPrefix string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string                 `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress       string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	BootstrapTokens         map[string]string      `json:"bootstrapTokens" yaml:"bootstrapTokens"`
+	APIServerEndpoints      []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	APIServerProxyCerts     map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA            string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ModuleSourcesCA         map[string]string      `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
 }
 
 type inputData struct {
@@ -461,6 +464,7 @@ type inputData struct {
 	BootstrapTokens            map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
 	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 	APIServerEndpoints         []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	APIServerProxyCerts        map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
 	KubernetesCA               string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
 	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`

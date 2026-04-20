@@ -1,0 +1,49 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+from: {{ index $.Images "builder/src" }}
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+  - cd /src
+  - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o /cni-migration-init-checker ./cmd/main.go
+  - chmod 0755 /cni-migration-init-checker
+  - chown 64535:64535 /cni-migration-init-checker
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "base/distroless" }}
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /cni-migration-init-checker
+    to: /cni-migration-init-checker
+    before: setup
+imageSpec:
+  config:
+    workingDir: /
+    entrypoint: ["/cni-migration-init-checker"]

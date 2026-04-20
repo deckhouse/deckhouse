@@ -1,9 +1,43 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-c2167a7b3cc90a41182606ceaec2db0b24311690a9a2f974d6190b35c543bd2e",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.34.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.33.0"
+        },
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.28.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T14:40:21.010201Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 связана с подменой PATH при вызове команды kenv на платформах BSD и Solaris в OpenTelemetry-Go. Образ cluster-autoscaler в Deckhouse собирается и выполняется под Linux; kenv относится к BSD/Solaris и в этом окружении не задействуется, эксплуатация в рамках поддерживаемого сценария невозможна.",
+      "timestamp": "2026-04-14T12:00:00.000000Z"
+    },
     {
       "vulnerability": {
         "name": "CVE-2025-1767"
@@ -59,7 +93,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость затрагивает runc при запуске контейнеров, позволяя перенаправление записей в /proc на другие файлы через специальные условия. Cluster-autoscaler не использует runc для запуска контейнеров и управляет только масштабированием узлов Kubernetes через API, уязвимый код не исполняется.",
       "timestamp": "2025-11-07T09:55:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость связана с обходом авторизации на стороне gRPC-сервера через некорректный путь в заголовке :path без ведущего слеша. Cluster-autoscaler не запускает gRPC-сервер и не использует серверные авторизационные интерцепторы gRPC. Библиотека google.golang.org/grpc используется только как транзитивная зависимость для клиентских операций через Kubernetes и etcd библиотеки. Уязвимый серверный код не исполняется.",
+      "timestamp": "2026-03-23T09:38:11.040030Z"
     }
   ],
-  "timestamp": "2025-10-10T11:41:47Z"
+  "timestamp": "2026-03-04T14:40:21Z",
+  "last_updated": "2026-04-14T12:00:00Z"
 }

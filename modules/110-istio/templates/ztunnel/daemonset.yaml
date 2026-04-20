@@ -1,34 +1,29 @@
-{{- if and ($.Values.istio.internal.enableAmbientMode) (eq (first $.Values.istio.internal.operatorVersionsToInstall) "1.25") }}
-    {{- $versions := .Values.istio.internal.operatorVersionsToInstall }}
-    {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
-        {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
-        {{ $imageSuffix := get $versionInfo "imageSuffix" }}
-        {{- $revision := get $versionInfo "revision" }}
-        {{- $fullVersion := get $versionInfo "fullVersion" }}
+{{- $version := $.Values.istio.internal.globalVersion }}
+{{- $versionInfo := get .Values.istio.internal.versionMap $version }}
+{{- $imageSuffix := get $versionInfo "imageSuffix" }}
+{{- $revision := get $versionInfo "revision" }}
+{{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 
-        {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+{{- if and ($.Values.istio.internal.enableAmbientMode) ($supportsAmbient) }}
+{{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: ztunnel-{{ $revision }}
+  name: ztunnel
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" "ztunnel")) | nindent 2 }}
 spec:
-{{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "DaemonSet" (printf "ztunnel-%s" $revision) "discovery" $.Values.istio.dataPlane.ztunnel.resourcesManagement ) | nindent 2 }}
+{{ include "helm_lib_resources_management_vpa_spec" (list "apps/v1" "DaemonSet" "ztunnel" "istio-proxy" $.Values.istio.dataPlane.ztunnel.resourcesManagement ) | nindent 2 }}
 {{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: ztunnel-{{ $revision }}
+  name: ztunnel
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict 
       "app" "ztunnel"
-      "app.kubernetes.io/name" "ztunnel"
-      "app.kubernetes.io/instance" (print $revision "-ztunnel")
-      "app.kubernetes.io/version" $fullVersion
-      "app.kubernetes.io/part-of" "istio"
   )) | nindent 2 }}
 spec:
   updateStrategy:
@@ -44,10 +39,6 @@ spec:
           "app" "ztunnel"
           "sidecar.istio.io/inject" "false"
           "istio.io/dataplane-mode" "none"
-          "app.kubernetes.io/name" "ztunnel"
-          "app.kubernetes.io/instance" (print $revision "-ztunnel")
-          "app.kubernetes.io/version" $fullVersion
-          "app.kubernetes.io/part-of" "istio"
       )) | nindent 6 }}
       annotations:
         sidecar.istio.io/inject: "false"
@@ -71,8 +62,7 @@ spec:
           name: ztunnel-stats
           protocol: TCP
         resources:
-            {{ include "helm_lib_resources_management_pod_resources" (list $.Values.istio.dataPlane.ztunnel.resourcesManagement) | nindent 14 }}
-            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 14 }}
+          {{- include "helm_lib_resources_management_pod_resources" (list $.Values.istio.dataPlane.ztunnel.resourcesManagement) | nindent 10 }}
         imagePullPolicy: IfNotPresent
         securityContext:
           # K8S docs are clear that CAP_SYS_ADMIN *or* privileged: true
@@ -162,5 +152,4 @@ spec:
       # pprof needs a writable /tmp, and we don't have that thanks to `readOnlyRootFilesystem: true`, so mount one
       - name: tmp
         emptyDir: {}
-    {{- end }}
 {{- end }}

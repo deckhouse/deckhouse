@@ -232,9 +232,9 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 	defer span.End()
 
 	metricLabels := map[string]string{
-		"module":   f.moduleName,
-		"version":  f.targetReleaseMeta.ModuleVersion,
-		"registry": f.source.Spec.Registry.Repo,
+		metrics.LabelModule:   f.moduleName,
+		metrics.LabelVersion:  f.targetReleaseMeta.ModuleVersion,
+		metrics.LabelRegistry: f.source.Spec.Registry.Repo,
 	}
 
 	logger := f.logger.With(
@@ -275,7 +275,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 
 	// create release if deployed release and new release are in updating sequence
 	actual := releaseForUpdate
-	metricLabels["actual_version"] = "v" + actual.GetVersion().String()
+	metricLabels[metrics.LabelActualVersion] = "v" + actual.GetVersion().String()
 	if isUpdatingSequence(actual.GetVersion(), newSemver) {
 		logger.Debug("from deployed")
 
@@ -376,7 +376,7 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		if ensureErr != nil {
 			err = errors.Join(err, ensureErr)
 
-			metricLabels["version"] = "v" + ver.String()
+			metricLabels[metrics.LabelVersion] = "v" + ver.String()
 
 			if errors.Is(ensureErr, ErrModuleIsCorrupted) {
 				f.metricStorage.Grouped().GaugeSet(f.metricGroupName, metrics.D8ModuleUpdatingModuleIsNotValid, 1, metricLabels)

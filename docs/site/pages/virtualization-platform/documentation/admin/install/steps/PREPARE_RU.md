@@ -87,7 +87,7 @@ lang: ru
    - Сгенерируйте SSH-ключ, который будет использоваться для доступа к узлам:
 
      ```shell
-     ssh-keygen -t rsa -b 4096 -f dvp-install-key -N "" -C "dvp-node" -v
+     ssh-keygen -t ed25519 -b 4096 -f dvp-install-key -N "" -C "dvp-node" -v
      ```
 
    - Используя установленный пароль, разрешите подключение по ключу:

@@ -4,17 +4,17 @@
   {{- $context := index . 0 }}
 
   {{- $image := index . 1 | trimAll "\"" }}
-  {{- $imageDigest := index $context.Runtime.Package.Digests $image }}
+  {{- $imageDigest := index $context.Application.Package.Digests $image }}
   {{- if not $imageDigest }}
   {{- fail (printf "Image %s has no digest" $image) }}
   {{- end }}
 
-  {{- $registryBase := $context.Runtime.Package.Registry.repository }}
+  {{- $registryBase := $context.Application.Package.Registry.repository }}
   {{- if not $registryBase }}
   {{- fail "Registry base is not set" }}
   {{- end }}
 
-  {{- $packageName := $context.Runtime.Package.Name }}
+  {{- $packageName := $context.Application.Package.Name }}
   {{- if not $packageName }}
   {{- fail "Package name is not set" }}
   {{- end }}

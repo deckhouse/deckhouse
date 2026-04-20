@@ -128,25 +128,25 @@ spec:
               build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 container_name != ""
                 exception_allowed != ""
-                msg := sprintf("SELinux options are not allowed, pod: %v, container %v.\n%v\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("SELinux options are not allowed, pod: %v, container %v. | %v | %v | %v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 container_name != ""
                 exception_allowed == ""
-                msg := sprintf("SELinux options are not allowed, pod: %v, container %v.\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy])
+                msg := sprintf("SELinux options are not allowed, pod: %v, container %v. | %v | %v", [pod_name, container_name, actual_value, allowed_by_policy])
               }
 
               build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 container_name == ""
                 exception_allowed != ""
-                msg := sprintf("SELinux options are not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("SELinux options are not allowed, pod: %v. | %v | %v | %v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 container_name == ""
                 exception_allowed == ""
-                msg := sprintf("SELinux options are not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+                msg := sprintf("SELinux options are not allowed, pod: %v. | %v | %v", [pod_name, actual_value, allowed_by_policy])
               }
 
               allowed_by_any_seLinuxOptions(options) if {

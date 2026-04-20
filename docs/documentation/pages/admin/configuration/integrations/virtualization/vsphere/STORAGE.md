@@ -27,7 +27,7 @@ kind: ModuleConfig
 metadata:
   name: cloud-provider-vsphere
 spec:
-  version: 1
+  version: 2
   enabled: true
   settings:
     storageClass:
@@ -42,12 +42,12 @@ spec:
 DKP supports Online Resize PersistentVolume starting with vSphere 7.0U2.
 However, due to CSI and vSphere API specifics, additional steps are required after resizing a PVC:
 
-1. Run `kubectl cordon <node_name>`.
+1. Run `d8 k cordon <node_name>`.
 1. Delete the Pod that uses the PVC.
 1. Wait for the resize operation to complete:
    - Ensure the PVC no longer has the `Resizing` condition.
    - It's safe to ignore the `FileSystemResizePending` status.
-1. Run `kubectl uncordon <node_name>`.
+1. Run `d8 k uncordon <node_name>`.
 
 ## Load balancing
 
@@ -87,6 +87,14 @@ Due to [specifics](https://github.com/kubernetes-csi/external-resizer/issues/44)
 1. On the node hosting the Pod, run `d8 k uncordon <node_name>`
 
 ## Datastore configuration
+
+{% alert %}
+You can also tag **Datastore** objects through the **VMware vSphere Client** — follow [Datastore configuration](authorization.html#configuring-datastore-in-vsphere-client) in the connection and authorization guide. The steps below use **`govc` only**.
+{% endalert %}
+
+{% alert level="warning" %}
+For dynamic `PersistentVolume` provisioning, a `Datastore` must be available on **each** ESXi host (shared datastore).
+{% endalert %}
 
 For PersistentVolume to function correctly, the datastore must be accessible from all ESXi hosts.
 

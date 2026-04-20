@@ -4,7 +4,7 @@ permalink: en/admin/integrations/hybrid/overview.html
 ---
 
 Deckhouse Kubernetes Platform (DKP) can use cloud provider resources to expand the capacity of static clusters.
-Currently, integration is supported with [OpenStack](../public/openstack/connection-and-authorization.html) and [vSphere](../virtualization/vsphere/authorization.html)-based clouds.
+Currently, integration is supported with [OpenStack](../public/openstack/connection-and-authorization.html), [Yandex Cloud](../public/yandex/authorization.html), and [VMware vCloud Director (VCD)](../virtualization/vcd/connection-and-authorization.html).
 
 A hybrid cluster is a Kubernetes cluster that combines bare-metal nodes with nodes running on vSphere or OpenStack.
 To create such a cluster, an L2 network must be available between all nodes.
@@ -12,26 +12,6 @@ To create such a cluster, an L2 network must be available between all nodes.
 {% alert level="info" %}
 The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudEphemeral nodes added to a hybrid cluster with Static master nodes.
 To do this, use the [`instancePrefix`](/modules/node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
-{% endalert %}
-
-## Hybrid cluster with vSphere
-
-Follow these steps:
-
-1. Remove `flannel` from the `kube-system` namespace:
-
-   ```shell
-   kubectl -n kube-system delete ds flannel-ds
-   ```
-
-1. Configure the integration and set the required parameters.
-
-{% alert level="warning" %}
-`Cloud-controller-manager` synchronizes state between vSphere and Kubernetes,
-removing nodes from Kubernetes that are not present in vSphere.
-In a hybrid cluster, this behavior is not always desirable.
-Therefore, any Kubernetes node not launched with the `--cloud-provider=external` flag will be automatically ignored.
-DKP automatically sets `static://` in the `.spec.providerID` field of such nodes, which `cloud-controller-manager` then ignores.
 {% endalert %}
 
 ## Hybrid cluster with OpenStack
@@ -116,7 +96,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
      cloudID: CLOUD_ID
      folderID: FOLDER_ID
      serviceAccountJSON: '{"id":"ajevk1dp8f9...--END PRIVATE KEY-----\n"}'
-   sshPublicKey: <ssh-rsa SSHKEY>
+   sshPublicKey: <SSH_PUBLIC_KEY>
    ```
 
    Parameter descriptions:

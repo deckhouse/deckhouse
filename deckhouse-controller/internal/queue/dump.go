@@ -15,6 +15,7 @@
 package queue
 
 import (
+	"slices"
 	"time"
 
 	"sigs.k8s.io/yaml"
@@ -38,13 +39,15 @@ type dumpTask struct {
 }
 
 // Dump creates dump of all queues
-func (s *Service) Dump() []byte {
+func (s *Service) Dump(include ...string) []byte {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	queues := make(map[string]dumpQueue, len(s.queues))
 	for name, q := range s.queues {
-		queues[name] = q.dump()
+		if len(include) == 0 || slices.Contains(include, q.name) {
+			queues[name] = q.dump()
+		}
 	}
 
 	d := dump{

@@ -25,7 +25,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#destinationrule -->
 
-Подробнее ознакомиться с DestinationRule можно в документации [istio](https://istio.io/v1.19/docs/reference/config/networking/destination-rule/).
+Подробнее ознакомиться с DestinationRule можно в документации [istio](https://istio.io/v1.21/docs/reference/config/networking/destination-rule/).
 Используйте этот ресурс, чтобы:
 
 * Определить стратегию балансировки трафика между эндпоинтами сервиса:

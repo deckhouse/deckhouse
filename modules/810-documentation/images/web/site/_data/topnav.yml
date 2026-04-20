@@ -15,5 +15,5 @@ topnav:
     - title: Модули
       url: /modules/
     - title: Лицензионное соглашение
-      external_url: https://deckhouse.ru/license/
-      ee_only: true
+      url: /license-agreement.html
+      editions: [BE, SE, SE-plus, EE, FE]

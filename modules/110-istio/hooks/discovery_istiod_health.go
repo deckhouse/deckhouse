@@ -45,7 +45,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Schedule: []go_hook.ScheduleConfig{
 		{
-			Name:    "disocvery_istiod_health",
+			Name:    "discovery_istiod_health",
 			Crontab: "*/5 * * * *",
 		},
 	},

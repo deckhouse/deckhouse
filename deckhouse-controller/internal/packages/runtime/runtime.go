@@ -30,7 +30,11 @@ import (
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"github.com/go-chi/chi/v5"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/util/retry"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
+	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -41,11 +45,16 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
+	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
+	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
+	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -62,12 +71,14 @@ const (
 // Runtime orchestrates the full lifecycle of application packages: discovery,
 // installation, hook execution, Helm release management, and removal.
 //
-// It delegates package state to lifecycle.Store (the single source of truth),
-// task execution to queue.Service (one queue per package), and cluster
-// coordination to the scheduler, NELM, and hook event systems.
+// State is split across three structures, all protected by r.mu:
+//   - packages (lifecycle.Store): contexts and pending settings — the cancellation
+//     and change-detection layer, type-agnostic
+//   - apps: loaded Application instances, keyed by name
+//   - modules: loaded Module instances, keyed by name
 //
-// All package mutations flow through lifecycle.Store callbacks, ensuring
-// atomicity between state changes and task enqueueing.
+// Task execution is delegated to queue.Service (one queue per package), and
+// cluster coordination to the scheduler, NELM, and hook event systems.
 type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
@@ -82,9 +93,12 @@ type Runtime struct {
 	scheduleManager   schedulemanager.ScheduleManager     // Cron-based schedule triggers
 	kubeEventsManager kubeeventsmanager.KubeEventsManager // Watches Kubernetes resources for hooks
 
-	mu      sync.RWMutex
-	apps    *lifecycle.Store[*apps.Application]
-	modules *lifecycle.Store[*modules.Module]
+	mu       sync.RWMutex
+	packages *lifecycle.Store
+	apps     map[string]*apps.Application
+	modules  map[string]*modules.Module
+
+	addonModuleManager moduleManagerI
 
 	logger *log.Logger
 }
@@ -99,17 +113,20 @@ type installerI interface {
 // moduleManagerI provides access to global values for version getters and bootstrap checks.
 type moduleManagerI interface {
 	GetGlobal() *addonmodules.GlobalModule
+	IsModuleEnabled(name string) bool
 }
 
 // New creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
+func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
-	r.apps = lifecycle.NewStore[*apps.Application]()
-	r.modules = lifecycle.NewStore[*modules.Module]()
+	r.apps = make(map[string]*apps.Application)
+	r.modules = make(map[string]*modules.Module)
+	r.packages = lifecycle.NewStore()
 
 	// Initialize foundational services
+	r.addonModuleManager = moduleManager
 	r.logger = logger.Named("package-runtime")
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
@@ -127,7 +144,7 @@ func New(moduleManager moduleManagerI, dc dependency.Container, logger *log.Logg
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks
-	r.buildScheduler(moduleManager)
+	r.buildScheduler(cli)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
@@ -160,24 +177,40 @@ func New(moduleManager moduleManagerI, dc dependency.Container, logger *log.Logg
 
 // registerDebugServer starts a Unix socket HTTP server exposing debug endpoints
 // for package state introspection (/packages/dump, /packages/queues/dump, /packages/render/{name}).
-func (r *Runtime) registerDebugServer(sockerPath string) error {
+func (r *Runtime) registerDebugServer(socketPath string) error {
 	r.debugServer = debug.NewServer(r.logger)
-	if err := r.debugServer.Start(sockerPath); err != nil {
+	if err := r.debugServer.Start(socketPath); err != nil {
 		return fmt.Errorf("start debug server: %w", err)
 	}
 
-	r.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, _ *http.Request) {
+	r.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write(r.Dump()) //nolint:errcheck
+		if name := req.URL.Query().Get("name"); name != "" {
+			w.Write(r.DumpByName(name)) //nolint:errcheck
+		} else {
+			w.Write(r.Dump()) //nolint:errcheck
+		}
 	})
 
-	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, _ *http.Request) {
+	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 
-		w.Write(r.queueService.Dump()) //nolint:errcheck
+		queues := r.collectQueues(req.URL.Query().Get("name"))
+		w.Write(r.queueService.Dump(queues...)) //nolint:errcheck
+	})
+
+	r.debugServer.Register(http.MethodGet, "/packages/scheduler/dump", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+
+		if name := req.URL.Query().Get("name"); name != "" {
+			w.Write(r.scheduler.DumpByName(name)) //nolint:errcheck
+		} else {
+			w.Write(r.scheduler.Dump()) //nolint:errcheck
+		}
 	})
 
 	r.debugServer.Register(http.MethodGet, "/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
@@ -190,7 +223,7 @@ func (r *Runtime) registerDebugServer(sockerPath string) error {
 		rendered, err := r.renderManifests(req.Context(), packageName)
 		if err != nil {
 			if errors.Is(err, nelm.ErrPackageNotHelm) {
-				http.Error(w, fmt.Sprintf("package %s is not a Helm chart", packageName), http.StatusBadRequest)
+				http.Error(w, "package has no Helm chart", http.StatusBadRequest)
 				return
 			}
 			http.Error(w, fmt.Sprintf("render failed: %v", err), http.StatusInternalServerError)
@@ -200,6 +233,34 @@ func (r *Runtime) registerDebugServer(sockerPath string) error {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(rendered)) //nolint:errcheck
+	})
+
+	r.debugServer.Register(http.MethodGet, "/packages/snapshots/{name}", func(w http.ResponseWriter, req *http.Request) {
+		packageName := chi.URLParam(req, "name")
+		if packageName == "" {
+			http.Error(w, "package name is required", http.StatusBadRequest)
+			return
+		}
+
+		r.mu.RLock()
+		app := r.apps[packageName]
+		mod := r.modules[packageName]
+		r.mu.RUnlock()
+
+		var data []byte
+		switch {
+		case app != nil:
+			data = app.GetHookSnapshotsDump()
+		case mod != nil:
+			data = mod.GetHookSnapshotsDump()
+		default:
+			http.Error(w, "package not found", http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/yaml")
+		w.WriteHeader(http.StatusOK)
+		w.Write(data) //nolint:errcheck
 	})
 
 	return nil
@@ -305,7 +366,7 @@ func (r *Runtime) buildNelmService() error {
 		return fmt.Errorf("cache sync failed")
 	}
 
-	r.nelmService = nelm.NewService(cache, r.runApp, r.logger)
+	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.status, r.logger)
 
 	return nil
 }
@@ -324,9 +385,9 @@ func (r *Runtime) buildNelmService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
+func (r *Runtime) buildScheduler(cli kclient.Client) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
-		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
 		if len(discovery) == 0 {
 			return nil, fmt.Errorf("discovery section not found in global values")
 		}
@@ -345,7 +406,7 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 	}
 
 	kubernetesVersionGetter := func() (*semver.Version, error) {
-		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
+		discovery := r.addonModuleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
 		if len(discovery) == 0 {
 			return nil, fmt.Errorf("discovery section not found in global values")
 		}
@@ -365,7 +426,7 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 
 	// Bootstrap condition checks if cluster initialization is complete
 	bootstrapCondition := func() bool {
-		value, ok := moduleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
+		value, ok := r.addonModuleManager.GetGlobal().GetValues(false)[bootstrappedGlobalValue]
 		if !ok {
 			return false
 		}
@@ -378,13 +439,123 @@ func (r *Runtime) buildScheduler(moduleManager moduleManagerI) {
 		return bootstrapped
 	}
 
+	// Dependency getter returns the version of enabled module
+	dependencyGetter := func(name string) *semver.Version {
+		if !r.addonModuleManager.IsModuleEnabled(name) {
+			return nil
+		}
+
+		module := new(v1alpha1.Module)
+		err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+			return cli.Get(context.Background(), kclient.ObjectKey{Name: name}, module)
+		})
+
+		if err != nil {
+			return nil
+		}
+
+		// set a default version for modules overridden by ModulePullOverride (MPOS)
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
+			return semver.MustParse("v2.0.0")
+		}
+
+		version, err := semver.NewVersion(module.GetVersion())
+		if err != nil {
+			return nil
+		}
+
+		return version
+	}
+
 	r.scheduler = schedule.NewScheduler(
-		r.logger,
 		schedule.WithBootstrapCondition(bootstrapCondition),
+		schedule.WithDependencyGetter(dependencyGetter),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
-		schedule.WithKubeVersionGetter(kubernetesVersionGetter),
-		schedule.WithOnEnable(r.enableApp),
-		schedule.WithOnDisable(r.disableApp))
+		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
+}
+
+// Run starts the scheduler event loop in a background goroutine. It listens for
+// schedule and disable events from the scheduler and dispatches them to the
+// appropriate handler, driving the enable/disable lifecycle for all packages.
+func (r *Runtime) Run() {
+	go func() {
+		for event := range r.scheduler.Ch() {
+			switch event.Kind {
+			case schedule.EventSchedule:
+				r.schedulePackage(event.Name)
+			case schedule.EventDisable:
+				r.disablePackage(event.Name, event.Reason, event.Message)
+			default:
+			}
+		}
+	}()
+}
+
+// schedulePackage handles scheduler enable events by enqueueing
+// ApplySettings → Startup → Run tasks for the named package.
+//
+// ApplySettings reads the latest pending settings from the Store and validates/applies
+// them to the loaded package instance. This is the single point where settings reach
+// the runtime — both initial load and settings-only changes flow through here.
+//
+// The Run task carries an onDone callback that calls scheduler.Complete, letting the
+// scheduler know the package has finished its run cycle.
+//
+// Both schedulePackage and disablePackage use EventSchedule, so enqueueing here
+// implicitly cancels any in-flight disable context for the same package.
+func (r *Runtime) schedulePackage(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	onDone := queue.WithOnDone(func() {
+		r.scheduler.Complete(name)
+	})
+
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	if ctx == nil {
+		return
+	}
+
+	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
+
+	settings := r.packages.GetPendingSettings(name)
+
+	if pkg := r.apps[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
+	}
+
+	if pkg := r.modules[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
+	}
+}
+
+// disablePackage handles scheduler disable events by enqueueing a Disable task that
+// tears down the package's hooks and Helm release.
+//
+// Both disablePackage and schedulePackage use EventSchedule, so enqueueing the disable
+// task here implicitly cancels any in-flight startup/run context for the same package.
+func (r *Runtime) disablePackage(name, reason, msg string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	if ctx == nil {
+		return
+	}
+
+	r.status.SetConditionFalse(name, status.ConditionRequirementsMet, reason, msg)
+
+	if pkg := r.apps[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+	}
+
+	if pkg := r.modules[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+	}
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
@@ -411,6 +582,9 @@ func (r *Runtime) Stop() {
 	// Stop accepting and processing new tasks
 	r.hookEventHandler.Stop()
 	r.queueService.Stop()
+
+	// Close scheduler event channel
+	r.scheduler.Stop()
 }
 
 // Status returns package status service for external access
@@ -421,4 +595,9 @@ func (r *Runtime) Status() *status.Service {
 // Scheduler returns package scheduler for external access
 func (r *Runtime) Scheduler() *schedule.Scheduler {
 	return r.scheduler
+}
+
+// CheckConstraints checks constraints in scheduler
+func (r *Runtime) CheckConstraints(constraints schedule.Constraints) error {
+	return r.scheduler.CheckConstraints(constraints)
 }

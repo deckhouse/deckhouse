@@ -103,7 +103,7 @@ func (t *TofuMigrationStateBackuper) doBackupStates(ctx context.Context) error {
 		t.logger.LogInfoF("Backup secret %s for base infrastructure state exists. Skip backup.\n", baseInfraBackupSecretName)
 	}
 
-	secrets, err := GetNodesStateSecretsFromCluster(ctx, t.kubeProvider.KubeClient())
+	secrets, err := GetNodesStateSecretsFromCluster(ctx, t.kubeProvider.KubeClient(), "all nodes")
 	if err != nil {
 		return err
 	}

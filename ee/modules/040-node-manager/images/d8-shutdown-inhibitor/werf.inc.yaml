@@ -15,7 +15,7 @@ git:
     - '**/*'
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-fromImage: base/scratch
+from: {{ index $.Images "base/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /
@@ -37,7 +37,7 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src

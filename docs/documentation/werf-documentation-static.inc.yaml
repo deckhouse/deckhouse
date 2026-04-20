@@ -32,12 +32,11 @@ shell:
         cd _data
         yq eval-all -i 'select(fileIndex == 0) * {"k8s": select(fileIndex == 1).k8s, "d8": select(fileIndex == 1).d8}' supported_versions.yml version_map.yml
 
-        echo '[] Converting editions structure...'
-        yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+        {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 8 }}
 
 {{ if ne .ModuleName "website-docs" }}
         # Syncing file from the documentation to the main site...
-        cp /srv/jekyll-data/documentation/_plugins/{jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb,navigation_helper.rb} /srv/jekyll-data/site/_plugins/
+        cp /srv/jekyll-data/documentation/_plugins/{alert.rb,codeblock_unknown_lang_fallback.rb,jekyll_asset_pipeline.rb,custom_filters.rb,utils.rb,breadcrumbs_generator.rb,sidebar_custom.rb,offtopic.rb,navigation_helper.rb} /srv/jekyll-data/site/_plugins/
         cp /srv/jekyll-data/documentation/_assets/js/search.js /srv/jekyll-data/site/_assets/
 
         # "Converting public documentation links to internal relative..."
@@ -82,11 +81,11 @@ shell:
         rm -rf /app/_site/documentation/compare/
 {{ end }}
 import:
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: setup
@@ -124,7 +123,6 @@ git:
     - site/pages/stronghold
 {{ end }}
   stageDependencies:
-    install: ['site/Gemfile','site/Gemfile.lock']
     setup: '**/*'
 {{ if ne .ModuleName "website-docs" }}
 - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/_includes/footer.html
@@ -132,6 +130,13 @@ git:
   stageDependencies:
     setup:
     - '**/*'
+{{ if ne .Edition "CE" }}
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/site/pages/LICENSE_AGREEMENT_RU.md
+  to: /srv/jekyll-data/documentation/pages/LICENSE_AGREEMENT_RU.md
+  stageDependencies:
+    setup:
+    - '**/*'
+{{ end }}
 {{ end }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-git-section-modules-bundles.inc.yaml" .ModulePath)) . }}

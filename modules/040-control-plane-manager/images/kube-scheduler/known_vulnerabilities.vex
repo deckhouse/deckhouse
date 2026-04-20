@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 5,
   "statements": [
     {
       "vulnerability": {
@@ -87,7 +87,50 @@
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Уязвимость невозможно эксплуатировать в рамках Deckhouse, так как для включения openTelemetry в компонентах control-plane необходимо добавить специальный ресурс TracingConfiguration (https://opentelemetry.io/blog/2023/k8s-runtime-observability/). Поскольу у пользователя нет возможности применять свою конфигурацию для control-plane компонентов, возможности включить openTelemetry нет.",
       "timestamp": "2025-11-26T08:49:10.258937Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
+      "timestamp": "2026-03-04T09:44:07.004056Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 невозможно эксплуатировать в kube-scheduler в рамках Deckhouse: компонент не использует path-based gRPC авторизационные интерцепторы с deny-правилами и fallback allow. grpc-go присутствует как транзитивная зависимость, однако серверный путь исполнения с уязвимой логикой не задействован.",
+      "timestamp": "2026-03-24T10:19:29.339272Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux.",
+      "timestamp": "2026-04-10T08:27:39.297274Z"
     }
   ],
-  "timestamp": "2025-11-07T13:55:00Z"
+  "timestamp": "2025-11-07T13:55:00Z",
+  "last_updated": "2026-04-10T08:27:39Z"
 }

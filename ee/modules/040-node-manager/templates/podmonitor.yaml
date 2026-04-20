@@ -19,6 +19,13 @@ spec:
   podMetricsEndpoints:
   - port: metrics
     scheme: http
+    metricRelabelings:
+    - sourceLabels: [namespace]
+      targetLabel: exported_namespace
+    - sourceLabels: [pod]
+      targetLabel: exported_pod
+    - action: labeldrop
+      regex: "^(namespace|pod)$"
     relabelings:
     - regex: endpoint|namespace|pod|service
       action: labeldrop

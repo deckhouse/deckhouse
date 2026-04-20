@@ -119,6 +119,13 @@ This patch adds the --status-service-label flag, allowing the controller to defi
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
 
+### 019-removed-deprecated-patches.patch (Already applied in nginx 1.29.5)
+
+This patch is no longer needed because the related changes are already included in nginx `1.29.5`.
+### 020-lua_ingress-use-request-host-for-https-redirect.patch
+
+This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.
+
 ### cve-03022026.patch (Already exist)
 
 Fixes the following CVEs:
@@ -127,3 +134,24 @@ CVE-2026-24512
 CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+### 021-go-mod.patch
+
+This patch sets go version to 1.25.7 to comply with current Deckhouse build image.
+
+### 022-stable-config-hash-metric-04.patch
+
+This patch updates the way config_hash controller metric is calculated so that all pods of a controller report the same value
+
+### 023-fix-cve-2026-4342.patch
+
+This patch fixes the CVE-2026-4342 https://github.com/kubernetes/kubernetes/issues/137893.
+
+### 024-fix-ingress-store-initial-sync.patch
+
+There is a race condition on Ingress-NGINX controller start that may result in controller forming incomplete NGINX configuration (not processing some ingress objects).
+The fix is to use registration when checking if informer has been synced.
+
+### 025-santize-xff-headers-when-redirecting-from-www.patch
+
+This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.

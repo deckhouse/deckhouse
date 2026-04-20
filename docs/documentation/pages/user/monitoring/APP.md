@@ -9,7 +9,7 @@ Deckhouse Kubernetes Platform (DKP) supports four ways to connect an application
 | Connection method | Description |
 | ------------------ | -------- |
 | [Via labels and annotations](#configuring-metrics-collection-via-labels-and-annotations) | The simplest and fastest method, requiring only metadata to be added to a Service or Pod. Allows you to configure basic monitoring parameters. |
-| [Using PodMonitor or ServiceMonitor](#configuring-metrics-collection-using-podmonitor-or-servicemonitor-resources) | An advanced monitoring configuration method for cases where Prometheus relabeling rules are required. Provides flexible control over metrics collection and label processing. This approach is suitable for complex monitoring scenarios but requires a deeper understanding of Prometheus and its scraping mechanism. |
+| [Using PodMonitor or ServiceMonitor](#configuring-metrics-collection-using-podmonitor-or-servicemonitor-resources) | An advanced monitoring configuration method for cases where Prometheus relabeling rules are required. Provides flexible control over metrics collection and label processing and lets you add custom labels into metrics. This approach is suitable for complex monitoring scenarios but requires a deeper understanding of Prometheus and its scraping mechanism. |
 | [Using ScrapeConfig](#configuring-metrics-collection-via-scrape_configs-using-the-scrapeconfig-resource) | A monitoring configuration method that is as close as possible to the native Prometheus configuration structure. Provides full control over scrape settings, including relabeling, and allows collecting metrics both from Kubernetes and from targets located outside the cluster. |
 | [Availability monitoring using blackbox-exporter](#configuring-metrics-collection-using-blackbox-exporter) | A method for monitoring endpoint availability using probes. It is integrated using [blackbox-exporter](https://github.com/prometheus/blackbox_exporter/), which must be installed in the cluster separately. |
 
@@ -239,6 +239,48 @@ To connect an application to the monitoring system using one of these resources,
 
    If necessary, configure additional settings using the reference for available resource parameters:
    [PodMonitor](/modules/operator-prometheus/cr.html#podmonitor), [ServiceMonitor](/modules/operator-prometheus/cr.html#servicemonitor).
+
+### Adding custom labels to metrics
+
+If you need to add additional labels directly to the collected metrics,
+use metric relabeling rules (via the [`metricRelabelings`](/modules/operator-prometheus/cr.html#podmonitor-v1-spec-podmetricsendpoints-metricrelabelings) parameter).
+
+The example below shows a PodMonitor resource that adds the label `application` with the value `dotnet` to the collected metrics:
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: example-app
+  namespace: frontend
+  labels:
+    prometheus: main
+spec:
+  selector:
+    matchLabels:
+      app: example-app
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+      metricRelabelings:
+        - targetLabel: application
+          replacement: dotnet
+          action: Replace
+```
+
+After applying this rule, an additional label will appear in the metrics:
+
+```text
+http_requests_total{
+  application="dotnet",
+  code="404",
+  container="example-app",
+  instance="10.111.5.69:8080",
+  namespace="frontend",
+  pod="example-app-75476c469d-rqq4s"
+}
+```
 
 ## Configuring metrics collection via scrape_configs using the ScrapeConfig resource
 

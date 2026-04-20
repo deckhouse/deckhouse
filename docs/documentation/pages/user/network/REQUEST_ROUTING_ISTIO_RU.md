@@ -15,7 +15,7 @@ lang: ru
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/istio-cr.html#virtualservice -->
 
-Подробнее ознакомиться с VirtualService можно в документации [istio](https://istio.io/v1.19/docs/reference/config/networking/virtual-service/).
+Подробнее ознакомиться с VirtualService можно в документации [istio](https://istio.io/v1.21/docs/reference/config/networking/virtual-service/).
 
 Использование VirtualService опционально, классические сервисы продолжают работать, если их функционала достаточно. С помощью этого ресурса можно настроить маршрутизацию запросов:
 

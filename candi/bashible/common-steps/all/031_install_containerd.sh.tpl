@@ -34,6 +34,11 @@ post-install() {
     systemctl enable containerd-deckhouse.service
     bb-flag-set containerd-need-restart
   fi
+
+  if [[ "${PACKAGE}" == "selinux-policy" ]]; then
+    bb-log-info "Setting reboot flag due to selinux-policy installation"
+    bb-flag-set reboot
+  fi
 }
 
 cntrd_version_change_check() {
@@ -47,6 +52,19 @@ cntrd_version_change_check() {
 }
 
 command -v containerd &>/dev/null && cntrd_version_change_check
+
+if bb-is-distro-like? "rhel"; then
+  if bb-dnf-package? "selinux-policy"; then
+    if ! bb-dnf-package? "container-selinux"; then
+      bb-log-info "Installing container-selinux"
+      bb-dnf-install "container-selinux"
+    fi
+  else
+    bb-log-info "Installing selinux-policy and container-selinux"
+    bb-dnf-install "selinux-policy"
+    bb-dnf-install "container-selinux"
+  fi
+fi
 
 {{- $containerd := "containerd1730"}}
 {{- if eq .cri "ContainerdV2" }}

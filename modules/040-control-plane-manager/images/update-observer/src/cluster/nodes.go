@@ -19,7 +19,6 @@ package cluster
 import (
 	"fmt"
 
-	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
 
 	"update-observer/pkg/version"
@@ -33,14 +32,14 @@ type NodesState struct {
 
 func GetNodesState(nodes []corev1.Node, desiredVersion string) (*NodesState, error) {
 	res := &NodesState{
-		versions: version.NewUniqueAggregator(semver.Sort),
+		versions: version.NewUniqueAggregator(),
 	}
 
 	var err error
 	for _, node := range nodes {
 		res.DesiredCount++
 		v := node.Status.NodeInfo.KubeletVersion
-		v, err = version.NormalizeAndTrimPatch(v)
+		v, err = version.Normalize(v)
 		if err != nil {
 			return nil, fmt.Errorf("failed to normalize version of node '%s': %w", node.Name, err)
 		}

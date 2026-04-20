@@ -67,4 +67,38 @@ webhooks:
           - "true"
       - key: istio.io/rev
         operator: DoesNotExist
+{{- /* Case 3a: Default revision for namespace (istio.io/rev=default on namespace) */}}
+{{ include "mwh_common_global" (list . "namespace-default-rev-") }}
+  namespaceSelector:
+    matchExpressions:
+      - key: istio-injection
+        operator: DoesNotExist
+      - key: istio.io/rev
+        operator: In
+        values:
+          - "default"
+  objectSelector:
+    matchExpressions:
+      - key: sidecar.istio.io/inject
+        operator: NotIn
+        values:
+          - "false"
+{{- /* Case 3b: Default revision for pod (istio.io/rev=default on pod, namespace without rev) */}}
+{{ include "mwh_common_global" (list . "object-default-rev-") }}
+  namespaceSelector:
+    matchExpressions:
+      - key: istio-injection
+        operator: DoesNotExist
+      - key: istio.io/rev
+        operator: DoesNotExist
+  objectSelector:
+    matchExpressions:
+      - key: sidecar.istio.io/inject
+        operator: NotIn
+        values:
+          - "false"
+      - key: istio.io/rev
+        operator: In
+        values:
+          - "default"
 

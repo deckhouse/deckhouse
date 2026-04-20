@@ -1,3 +1,0 @@
-dirs:
-- /kiali-configuration
-- /kiali-override-secrets/login-token-signing-key

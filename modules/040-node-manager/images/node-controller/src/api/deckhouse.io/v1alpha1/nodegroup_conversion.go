@@ -23,19 +23,19 @@ import (
 )
 
 // ConvertTo converts this NodeGroup (v1alpha1) to the Hub version (v1).
-func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
+func (ng *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1.NodeGroup)
 
 	// Convert ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
+	dst.ObjectMeta = ng.ObjectMeta
 
 	// Convert Spec using custom conversion function
-	if err := Convert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec(&src.Spec, &dst.Spec, nil); err != nil {
+	if err := ConvertV1alpha1NodeGroupSpecToV1NodeGroupSpec(&ng.Spec, &dst.Spec, nil); err != nil {
 		return err
 	}
 
 	// Convert Status
-	if err := convertStatusTo(&src.Status, &dst.Status); err != nil {
+	if err := convertStatusTo(&ng.Status, &dst.Status); err != nil {
 		return err
 	}
 
@@ -43,19 +43,19 @@ func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 // ConvertFrom converts the Hub version (v1) to this NodeGroup (v1alpha1).
-func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
+func (ng *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1.NodeGroup)
 
 	// Convert ObjectMeta
-	dst.ObjectMeta = src.ObjectMeta
+	ng.ObjectMeta = src.ObjectMeta
 
 	// Convert Spec using custom conversion function
-	if err := Convert_v1_NodeGroupSpec_To_v1alpha1_NodeGroupSpec(&src.Spec, &dst.Spec, nil); err != nil {
+	if err := ConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(&src.Spec, &ng.Spec, nil); err != nil {
 		return err
 	}
 
 	// Convert Status
-	if err := convertStatusFrom(&src.Status, &dst.Status); err != nil {
+	if err := convertStatusFrom(&src.Status, &ng.Status); err != nil {
 		return err
 	}
 
@@ -63,14 +63,14 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 }
 
 // ConvertTo converts NodeGroupList (v1alpha1) to the Hub version (v1).
-func (src *NodeGroupList) ConvertTo(dstRaw conversion.Hub) error {
+func (ng *NodeGroupList) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*v1.NodeGroupList)
 
-	dst.ListMeta = src.ListMeta
-	dst.Items = make([]v1.NodeGroup, len(src.Items))
+	dst.ListMeta = ng.ListMeta
+	dst.Items = make([]v1.NodeGroup, len(ng.Items))
 
-	for i := range src.Items {
-		if err := src.Items[i].ConvertTo(&dst.Items[i]); err != nil {
+	for i := range ng.Items {
+		if err := ng.Items[i].ConvertTo(&dst.Items[i]); err != nil {
 			return err
 		}
 	}
@@ -79,14 +79,14 @@ func (src *NodeGroupList) ConvertTo(dstRaw conversion.Hub) error {
 }
 
 // ConvertFrom converts NodeGroupList from the Hub version (v1) to v1alpha1.
-func (dst *NodeGroupList) ConvertFrom(srcRaw conversion.Hub) error {
+func (ng *NodeGroupList) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*v1.NodeGroupList)
 
-	dst.ListMeta = src.ListMeta
-	dst.Items = make([]NodeGroup, len(src.Items))
+	ng.ListMeta = src.ListMeta
+	ng.Items = make([]NodeGroup, len(src.Items))
 
 	for i := range src.Items {
-		if err := dst.Items[i].ConvertFrom(&src.Items[i]); err != nil {
+		if err := ng.Items[i].ConvertFrom(&src.Items[i]); err != nil {
 			return err
 		}
 	}

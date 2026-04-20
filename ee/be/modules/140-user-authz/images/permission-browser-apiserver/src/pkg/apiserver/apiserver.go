@@ -8,6 +8,7 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -231,6 +233,24 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		go mtEngine.StartRenewConfigLoop(ctx.Done())
 	}
 
+	// Create resource scope cache for background discovery refresh
+	var scopeCache *resolver.ResourceScopeCache
+	if initRes.clientset != nil {
+		scopeCache = resolver.NewResourceScopeCache(initRes.clientset.Discovery())
+		go scopeCache.StartRefreshLoop(ctx.Done())
+		klog.Info("Resource scope cache initialized and refresh loop started")
+
+		// Ensure readiness fails until the cache has been populated at least once.
+		if err := genericServer.AddReadyzChecks(healthz.NamedCheck("resource-scope-cache", func(_ *http.Request) error {
+			if !scopeCache.HasData() {
+				return fmt.Errorf("resource scope cache is empty")
+			}
+			return nil
+		})); err != nil {
+			klog.Warningf("Failed to add resource-scope-cache readyz check: %v", err)
+		}
+	}
+
 	// Create namespace resolver for AccessibleNamespace API
 	var nsResolver *resolver.NamespaceResolver
 	if initRes.informerFactory != nil {
@@ -241,7 +261,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 			rbacInformers.RoleBindings().Lister(),
 			rbacInformers.ClusterRoles().Lister(),
 			rbacInformers.ClusterRoleBindings().Lister(),
-			initRes.clientset.Discovery(),
+			scopeCache,
 			mtEngine,
 		)
 		klog.Info("Namespace resolver initialized for AccessibleNamespace API")

@@ -92,7 +92,7 @@ func (c *dsPodsReadinessChecker) Check() check.Error {
 	ds, err := c.dsRepo.Get()
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return check.ErrFail(err.Error())
+			return check.ErrFail("%s", err.Error())
 		}
 		return check.ErrUnknown("getting DaemonSet: %v", err)
 	}
@@ -106,7 +106,7 @@ func (c *dsPodsReadinessChecker) Check() check.Error {
 	// Filter node names of interest
 	nodeNames := findDaemonSetNodeNames(nodes, ds)
 	if err = c.verifyPods(pods, nodeNames); err != nil {
-		return check.ErrFail(err.Error())
+		return check.ErrFail("%s", err.Error())
 	}
 	return nil
 }

@@ -2,7 +2,7 @@
 # <template: check_changelog_template>
 check_changelog:
   name: Check changelog
-  runs-on: "regular"
+  runs-on: "ubuntu-latest"
   steps:
   {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}
     - name: Check for tag
@@ -36,6 +36,7 @@ runs-on: [self-hosted, large]
 outputs:
   tests_image_name: ${{ steps.build.outputs.tests_image_name }}
 steps:
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 {!{ if eq $buildType "release" }!}
   {!{ tmpl.Exec "started_at_output" $ctx | strings.Indent 2 }!}
 {!{ end }!}
@@ -50,7 +51,6 @@ steps:
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO_GIT" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
-  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
@@ -65,12 +65,13 @@ steps:
   {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
   {!{ end }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
+  {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
 
-  - name: Set up Go 1.24
+  - name: Set up Go 1.25
     uses: actions/setup-go@v5
     with:
-      go-version: '1.24'
+      go-version: '1.25'
       cache: false
 
   - name: Run go generate
@@ -84,6 +85,7 @@ steps:
   - name: Build and push deckhouse images
     id: build
     env:
+      WERF_PARALLEL_TASKS_LIMIT: 3
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}
@@ -98,15 +100,14 @@ steps:
       DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
 {!{- end }!}
 {!{- if eq $buildType "release" }!}
-      GHCR_IO_REGISTRY_USER: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-      GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+      GHCR_IO_REGISTRY_USER: ${{ github.actor }}
+      GHCR_IO_REGISTRY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
       DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
       DECKHOUSE_REGISTRY_USER : ${{ secrets.DECKHOUSE_REGISTRY_USER }}
       DECKHOUSE_REGISTRY_PASSWORD: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
 {!{- end }!}
       SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
       CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-      OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
       DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
       COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
       COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
@@ -173,11 +174,6 @@ steps:
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-      # Temporary directory is moved to ensure
-      TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-      echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-      mkdir -p "$TEMP_WORKDIR"
-
     {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
       STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
@@ -199,7 +195,7 @@ steps:
 
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
-      IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+      IMAGE_TAG=$(d8-build dk slugify --format docker-tag "${CI_COMMIT_TAG}")
       export WERF_DISABLE_META_TAGS=true
     {!{- else if eq $buildType "pre-release" }!}
       # The Git tag may contain a '+' sign, so use slugify for this situation.
@@ -219,14 +215,11 @@ steps:
       IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
     {!{- end }!}
 
-      type werf && source $(werf ci-env github --verbose --as-file)
-      werf build \
+      type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+      d8-build dk build \
         --parallel=true --parallel-tasks-limit=10 \
         --save-build-report=true \
-        --tmp-dir="$TEMP_WORKDIR" \
         --build-report-path images_tags_werf.json
-
-      cp images_tags_werf.json "$TEMP_WORKDIR"
 
       # Publish images for Git branch.
       if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -266,8 +259,8 @@ steps:
       echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
       # Filter out data from build report
-      egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-      mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+      egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+      mv images_tags_werf_filtered.json images_tags_werf.json
 
   - name: Check DKP images manifests in public registry
     if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -293,7 +286,7 @@ steps:
     run: |
       export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
       export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
-      export IMAGES_TAGS_PATH=${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+      export IMAGES_TAGS_PATH=./images_tags_werf.json
       python .github/scripts/python/copy_attestations.py
   {!{- end }!}
 
@@ -302,8 +295,11 @@ steps:
     uses: {!{ index (ds "actions") "actions/upload-artifact" }!}
     with:
       name: build_report_${{ env.WERF_ENV }}
-      path: |
-        ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+      path: images_tags_werf.json
+
+  - name: Cleanup workdir
+    if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+    run: rm images_tags_werf.json
 
 # </template: build_template>
 {!{ end }!}

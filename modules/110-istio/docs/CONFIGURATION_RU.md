@@ -21,4 +21,4 @@ d8 k -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller
 d8 k -n d8-istio delete secret/kiali-basic-auth
 ```
 
-> **Внимание!** Параметр `auth.password` больше не поддерживается.
+> **Внимание.** Параметр `auth.password` больше не поддерживается.

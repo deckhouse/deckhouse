@@ -103,7 +103,7 @@ func TestServiceAccountSubjectMatching(t *testing.T) {
 
 // TestHasNamespacedRules tests detection of namespaced rules
 func TestHasNamespacedRules(t *testing.T) {
-	r := &NamespaceResolver{}
+	r := &NamespaceResolver{scopeCache: newTestScopeCache()}
 
 	tests := []struct {
 		name     string
@@ -441,49 +441,23 @@ func TestResolveAccessibleNamespaces_NoUser(t *testing.T) {
 	assert.Nil(t, namespaces)
 }
 
-// TestGetPreferredGroupVersion tests the group version resolution
-func TestGetPreferredGroupVersion(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	r := &NamespaceResolver{discoveryClient: client.Discovery()}
-
-	tests := []struct {
-		name          string
-		group         string
-		expectVersion string
-		expectError   bool
-	}{
-		{
-			name:          "core API group returns v1",
-			group:         "",
-			expectVersion: "v1",
-			expectError:   false,
-		},
-		{
-			name:        "unknown group returns error",
-			group:       "unknown.example.com",
-			expectError: true,
-		},
+// TestIsResourceNamespaced_WithScopeCache tests resource namespace detection via scope cache
+func TestIsResourceNamespaced_WithScopeCache(t *testing.T) {
+	scopeCache := NewResourceScopeCache(nil)
+	// Manually populate the cache for testing
+	scopeCache.mu.Lock()
+	scopeCache.scopeMap = map[string]bool{
+		"/pods":                                  true,
+		"/services":                              true,
+		"apps/deployments":                       true,
+		"/namespaces":                            false,
+		"/nodes":                                 false,
+		"rbac.authorization.k8s.io/clusterroles": false,
 	}
+	scopeCache.mu.Unlock()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gv, err := r.getPreferredGroupVersion(tt.group)
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expectVersion, gv)
-			}
-		})
-	}
-}
+	r := &NamespaceResolver{scopeCache: scopeCache}
 
-// TestIsResourceNamespaced_WithDiscovery tests resource namespace detection
-func TestIsResourceNamespaced_WithDiscovery(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	r := &NamespaceResolver{discoveryClient: client.Discovery()}
-
-	// Test common known resources (cached, no discovery needed)
 	assert.True(t, r.isResourceNamespaced("", "pods"), "pods should be namespaced")
 	assert.True(t, r.isResourceNamespaced("", "services"), "services should be namespaced")
 	assert.True(t, r.isResourceNamespaced("apps", "deployments"), "deployments should be namespaced")
@@ -492,20 +466,65 @@ func TestIsResourceNamespaced_WithDiscovery(t *testing.T) {
 	assert.False(t, r.isResourceNamespaced("rbac.authorization.k8s.io", "clusterroles"), "clusterroles should be cluster-scoped")
 }
 
-// TestIsResourceNamespaced_NilDiscovery tests fail-open behavior without discovery
-func TestIsResourceNamespaced_NilDiscovery(t *testing.T) {
-	r := &NamespaceResolver{discoveryClient: nil}
+// TestIsResourceNamespaced_NilScopeCache tests fail-closed behavior without scope cache
+func TestIsResourceNamespaced_NilScopeCache(t *testing.T) {
+	r := &NamespaceResolver{scopeCache: nil}
 
-	// Known resources should still work
-	assert.True(t, r.isResourceNamespaced("", "pods"))
-	assert.False(t, r.isResourceNamespaced("", "namespaces"))
+	// Without scope cache, everything should be assumed cluster-scoped (fail-closed)
+	assert.False(t, r.isResourceNamespaced("", "pods"),
+		"should assume cluster-scoped when scope cache is nil")
+	assert.False(t, r.isResourceNamespaced("", "namespaces"),
+		"should assume cluster-scoped when scope cache is nil")
+	assert.False(t, r.isResourceNamespaced("custom.example.com", "unknownresource"),
+		"unknown resource should be assumed cluster-scoped when scope cache is nil")
+}
 
-	// Unknown resources should return true (fail-open)
-	assert.True(t, r.isResourceNamespaced("custom.example.com", "unknownresource"),
-		"unknown resource should be assumed namespaced when discovery is nil")
+// TestIsResourceNamespaced_UnknownResource tests fail-closed for unknown resources
+func TestIsResourceNamespaced_UnknownResource(t *testing.T) {
+	scopeCache := NewResourceScopeCache(nil)
+	// Populate with some known resources
+	scopeCache.mu.Lock()
+	scopeCache.scopeMap = map[string]bool{
+		"/pods": true,
+	}
+	scopeCache.mu.Unlock()
+
+	r := &NamespaceResolver{scopeCache: scopeCache}
+
+	// Unknown resource should return false (fail-closed)
+	assert.False(t, r.isResourceNamespaced("unknown.example.com", "unknownresource"),
+		"unknown resource should be assumed cluster-scoped")
 }
 
 // Helper functions
+
+// newTestScopeCache creates a ResourceScopeCache pre-populated with well-known resources.
+// This is used in tests because fake.NewSimpleClientset does not expose real API resources
+// via discovery, so we populate the cache manually.
+func newTestScopeCache() *ResourceScopeCache {
+	c := NewResourceScopeCache(nil)
+	c.mu.Lock()
+	c.scopeMap = map[string]bool{
+		// Core namespaced
+		"/pods": true, "/services": true, "/configmaps": true, "/secrets": true,
+		"/serviceaccounts": true, "/endpoints": true, "/events": true,
+		"/persistentvolumeclaims": true, "/replicationcontrollers": true,
+		// Core cluster-scoped
+		"/namespaces": false, "/nodes": false, "/persistentvolumes": false,
+		// Apps
+		"apps/deployments": true, "apps/replicasets": true, "apps/statefulsets": true,
+		"apps/daemonsets": true, "apps/controllerrevisions": true,
+		// Batch
+		"batch/jobs": true, "batch/cronjobs": true,
+		// RBAC
+		"rbac.authorization.k8s.io/roles": true, "rbac.authorization.k8s.io/rolebindings": true,
+		"rbac.authorization.k8s.io/clusterroles": false, "rbac.authorization.k8s.io/clusterrolebindings": false,
+		// Networking
+		"networking.k8s.io/ingresses": true, "networking.k8s.io/networkpolicies": true,
+	}
+	c.mu.Unlock()
+	return c
+}
 
 func setupResolver(t *testing.T, objs []runtime.Object, mtEngine *multitenancy.Engine) *NamespaceResolver {
 	client := fake.NewSimpleClientset(objs...)
@@ -540,7 +559,7 @@ func setupResolver(t *testing.T, objs []runtime.Object, mtEngine *multitenancy.E
 		roleBindingLister:        roleBindingLister,
 		clusterRoleLister:        clusterRoleLister,
 		clusterRoleBindingLister: clusterRoleBindingLister,
-		discoveryClient:          client.Discovery(),
+		scopeCache:               newTestScopeCache(),
 		mtEngine:                 mtEngine,
 	}
 }

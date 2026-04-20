@@ -21,6 +21,7 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -49,8 +50,8 @@ func NewOutputExecutor(params OutputExecutorParams, logger log.Logger) (*OutputE
 	}, nil
 }
 
-func (e *OutputExecutor) Output(ctx context.Context, statePath string, outFielda ...string) ([]byte, error) {
-	_, out, err := terraformOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
+func (e *OutputExecutor) Output(ctx context.Context, opts infrastructure.OutputOpts) ([]byte, error) {
+	_, out, err := terraformOutputRun(ctx, e.params.RunExecutorParams, opts.StatePath, opts.OutFields...)
 
 	return out, err
 }

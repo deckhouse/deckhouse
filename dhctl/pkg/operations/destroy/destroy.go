@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -52,7 +53,7 @@ type infraDestroyer interface {
 }
 
 type metaConfigPopulator interface {
-	PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
 }
 
 type Params struct {
@@ -72,9 +73,10 @@ type Params struct {
 
 	InfrastructureContext *infrastructure.Context
 
-	TmpDir         string
-	LoggerProvider log.LoggerProvider
-	IsDebug        bool
+	TmpDir          string
+	LoggerProvider  log.LoggerProvider
+	IsDebug         bool
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
 func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
@@ -142,8 +144,9 @@ type ClusterDestroyer struct {
 
 	pipeline phases.DefaultPipeline
 
-	d8Destroyer   *deckhouse.Destroyer
-	infraProvider *infraDestroyerProvider
+	d8Destroyer     *deckhouse.Destroyer
+	infraProvider   *infraDestroyerProvider
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
 // NewClusterDestroyer
@@ -237,8 +240,9 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 		pipeline: pipeline,
 
-		d8Destroyer:   d8Destroyer,
-		infraProvider: infraProvider,
+		d8Destroyer:     d8Destroyer,
+		infraProvider:   infraProvider,
+		DirectoryConfig: params.DirectoryConfig,
 	}, nil
 }
 
@@ -254,7 +258,7 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	}
 
 	// populate cluster state in cache
-	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx)
+	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.DirectoryConfig)
 	if err != nil {
 		return err
 	}
@@ -263,6 +267,8 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 	if err != nil {
 		return err
 	}
+
+	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
 	err = destroyer.Prepare(ctx)
 	if err != nil {

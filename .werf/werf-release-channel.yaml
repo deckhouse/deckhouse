@@ -1,6 +1,6 @@
 ---
 image: release-channel-version-prebuild
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 dependencies:
 - image: dev
   before: setup
@@ -8,7 +8,7 @@ dependencies:
   - type: ImageDigest
     targetEnv: deckhouseImageDigest
 import:
-- image: tools/yq
+- from: {{ index $.Images "tools/yq" }}
   add: /usr/bin/yq
   to: /usr/bin/yq
   before: install
@@ -44,7 +44,7 @@ git:
 
 ---
 image: release-channel-version
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: release-channel-version-prebuild
   add: /

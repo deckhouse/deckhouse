@@ -1,4 +1,5 @@
 dirs:
+- /chroot/tmp
 - /chroot/var/lib/nginx
 - /chroot/var/log/nginx
 - /chroot/etc/nginx/ssl/

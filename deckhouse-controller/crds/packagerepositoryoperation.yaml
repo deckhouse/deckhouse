@@ -11,6 +11,8 @@ spec:
     kind: PackageRepositoryOperation
     listKind: PackageRepositoryOperationList
     plural: packagerepositoryoperations
+    shortNames:
+    - pro
     singular: packagerepositoryoperation
   scope: Cluster
   versions:
@@ -18,12 +20,15 @@ spec:
     - jsonPath: .status.packages.total
       name: Count
       type: integer
-    - jsonPath: .status.conditions[?(@.type=='Processed')].status
-      name: Processed
+    - jsonPath: .status.conditions[?(@.type=='Completed')].status
+      name: Completed
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Processed')].message
+    - jsonPath: .status.conditions[?(@.type=='Completed')].message
       name: MSG
       type: string
+    - jsonPath: .status.completionTime
+      name: CompletionTime
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -133,14 +138,14 @@ spec:
                             this package.
                           items:
                             properties:
-                              error:
-                                description: Error message.
+                              message:
+                                description: Message of the error.
                                 type: string
                               version:
                                 description: Version of the package that failed.
                                 type: string
                             required:
-                            - error
+                            - message
                             - version
                             type: object
                           type: array
@@ -156,6 +161,9 @@ spec:
                     description: List of packages successfully processed.
                     items:
                       properties:
+                        foundVersions:
+                          description: Number of versions found during this operation.
+                          type: integer
                         name:
                           description: Name of the processed package.
                           type: string

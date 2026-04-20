@@ -25,7 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -126,7 +126,8 @@ func (r *StaticClusterReconciler) reconcile(
 		Port: int32(port),
 	}
 
-	clusterScope.StaticCluster.Status.Ready = true
+	clusterReady := true
+	clusterScope.StaticCluster.Status.Initialization.Provisioned = &clusterReady
 
 	err = clusterScope.Patch(ctx)
 	if err != nil {

@@ -71,10 +71,31 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		fmt.Sprintf("TF_DATA_DIR=%s", dataDir),
 	)
 
-	cmd.Env = infraexec.ReplaceHomeDirEnv(envs, params.RootDir)
+	envs = appendLogEnvs(envs)
 
-	// always use dug log for write its to debug log file
-	cmd.Env = append(cmd.Env, "TF_LOG=INFO")
+	// this uses for skip destructive changes after migration to ready resource
+	// in cloud provider dvp, because changing depends_on data source produce
+	// destructive changes
+	skipDataDeps := []string{
+		"module.additional-disk.kubernetes_resource_ready_v1.additional_disk",
+		"module.ipv4-address.kubernetes_resource_ready_v1.ipv4_address",
+		"module.kubernetes-data-disk.kubernetes_resource_ready_v1.kubernetes-data-disk",
+		"module.master.kubernetes_resource_ready_v1.vm",
+		"module.static-node.kubernetes_resource_ready_v1.vm",
+		// module.root-disk.kubernetes_resource_ready_v1.root-disk was not added because
+		// it does not contain data source for disk
+	}
+
+	envs = append(
+		envs,
+		fmt.Sprintf("TF_SKIP_DEPS_FOR_DATA_SOURCES_PROVIDER=kubernetes"),
+		fmt.Sprintf(
+			"TF_SKIP_DEPS_FOR_DATA_SOURCES=%s",
+			strings.Join(skipDataDeps, ";"),
+		),
+	)
+
+	cmd.Env = infraexec.ReplaceHomeDirEnv(envs, params.RootDir)
 
 	cmd.Env = append(
 		cmd.Env,
@@ -86,4 +107,38 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 	log.DebugF("Tofu Command envs:\n %s\n", strings.Join(cmd.Env, " "))
 
 	return cmd
+}
+
+func appendLogEnvs(envs []string) []string {
+	const (
+		coreEnv     = "TF_LOG_CORE"
+		providerEnv = "TF_LOG_PROVIDER"
+	)
+
+	coreVal := "INFO"
+	providerVal := "INFO"
+
+	for _, e := range envs {
+		if strings.HasPrefix(e, coreEnv) {
+			log.DebugF("Found opentofu core log env %s\n", e)
+			coreVal = ""
+			continue
+		}
+
+		if strings.HasPrefix(e, providerEnv) {
+			log.DebugF("Found opentofu provider log env %s\n", e)
+			providerVal = ""
+			continue
+		}
+	}
+
+	if coreVal != "" {
+		envs = append(envs, fmt.Sprintf("%s=%s", coreEnv, coreVal))
+	}
+
+	if providerVal != "" {
+		envs = append(envs, fmt.Sprintf("%s=%s", providerEnv, providerVal))
+	}
+
+	return envs
 }

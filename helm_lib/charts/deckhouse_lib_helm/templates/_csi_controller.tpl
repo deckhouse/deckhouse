@@ -84,6 +84,7 @@ memory: 50Mi
   {{- $resizerEnabled := dig "resizerEnabled" true $config }}
   {{- $syncerEnabled := dig "syncerEnabled" false $config }}
   {{- $topologyEnabled := dig "topologyEnabled" true $config }}
+  {{- $capacityEnabled := dig "capacityEnabled" true $config }}
   {{- $runAsRootUser := dig "runAsRootUser" false $config }}
   {{- $extraCreateMetadataEnabled := dig "extraCreateMetadataEnabled" false $config }}
   {{- $controllerImage := $config.controllerImage | required "$config.controllerImage is required" }}
@@ -115,6 +116,7 @@ memory: 50Mi
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
   {{- $forceCsiControllerPrivilegedContainer := $config.forceCsiControllerPrivilegedContainer | default false }}
   {{- $dnsPolicy := $config.dnsPolicy | default "ClusterFirstWithHostNet" }}
+  {{- $securityPolicyExceptionEnabled := $config.securityPolicyExceptionEnabled | default false }}
 
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
 
@@ -237,6 +239,9 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
+        {{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+        security.deckhouse.io/security-policy-exception: {{ $fullname }}
+        {{- end }}
       {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiControllerPodAnnotations) }}
       annotations:
       {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
@@ -301,8 +306,10 @@ spec:
         - "--leader-election-lease-duration=30s"
         - "--leader-election-renew-deadline=20s"
         - "--leader-election-retry-period=5s"
+  {{- if $capacityEnabled }}
         - "--enable-capacity"
         - "--capacity-ownerref-level=2"
+  {{- end }}
   {{- if $extraCreateMetadataEnabled }}
         - "--extra-create-metadata=true"
   {{- end }}
@@ -553,7 +560,107 @@ spec:
         {{- $additionalControllerVolumes | toYaml | nindent 6 }}
       {{- end }}
 
+{{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: {{ $fullname }}
+  namespace: d8-{{ $context.Chart.Name }}
+spec:
+{{- if or $forceCsiControllerPrivilegedContainer $runAsRootUser (eq $csiControllerHostNetwork "true") (ne $csiControllerHostPID "false") }}
+  {{- if or $forceCsiControllerPrivilegedContainer $runAsRootUser }}
+  securityContext:
+    {{- if $forceCsiControllerPrivilegedContainer }}
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow privileged mode for CSI Controller.
+          The CSI Controller requires privileged access to perform storage management operations that need direct access to host resources, including device management and volume lifecycle control.
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_ADMIN
+      metadata:
+        description: |
+          Allow SYS_ADMIN capability for CSI Controller.
+          The CSI Controller requires SYS_ADMIN capability to perform privileged storage management operations such as volume provisioning, snapshotting, and direct interaction with the storage backend.
+    {{- end }}
+    {{- if $runAsRootUser }}
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          Allow running as root user (UID 0) for CSI Controller.
+          The CSI Controller requires root privileges to interact with storage backends, manage volume lifecycle operations, and access cloud provider APIs.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Allow running as root for CSI Controller.
+          The CSI Controller requires root access for storage management operations that need elevated privileges to interact with the underlying infrastructure.
+    {{- end }}
   {{- end }}
+  {{- if or (eq $csiControllerHostNetwork "true") (ne $csiControllerHostPID "false") }}
+  network:
+    {{- if eq $csiControllerHostNetwork "true" }}
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for CSI Controller.
+          The CSI Controller requires host network access to communicate with cloud provider API endpoints for volume provisioning, attachment, snapshot, and lifecycle management operations.
+    {{- end }}
+    {{- if ne $csiControllerHostPID "false" }}
+    hostPID:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host PID namespace access for CSI Controller.
+          The CSI Controller requires host PID namespace access to interact with host processes for storage operations and coordinate with system-level services.
+    {{- end }}
+  {{- end }}
+  {{- $hasHostPathVolumes := false }}
+  {{- if $additionalControllerVolumes }}
+    {{- range $vol := $additionalControllerVolumes }}
+      {{- if $vol.hostPath }}
+        {{- $hasHostPathVolumes = true }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if $hasHostPathVolumes }}
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          Allow hostPath volume type for CSI Controller.
+          The CSI Controller requires hostPath volumes for accessing host-level resources needed for storage management operations specific to the cloud provider implementation.
+    hostPath:
+      allowedValues:
+    {{- range $volume := $additionalControllerVolumes }}
+      {{- if $volume.hostPath }}
+      {{- $readOnly := false }}
+        {{- range $volumeMount := $additionalControllerVolumeMounts }}
+          {{- if eq $volumeMount.name $volume.name }}
+            {{- $readOnly = (default false $volumeMount.readOnly) }}
+          {{- end }}
+        {{- end }}
+        - path: {{ $volume.hostPath.path }}
+          readOnly: {{ $readOnly }}
+          metadata:
+            description: |
+              Allow access to additional hostPath volume at {{ $volume.hostPath.path }}.
+              This hostPath volume is required by the CSI Controller for storage management operations specific to the cloud provider implementation.
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end }}
 
 

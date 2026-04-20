@@ -62,6 +62,12 @@ spec:
                   dockerCfg:
                     description: Docker configuration for authentication.
                     type: string
+                  login:
+                    description: Login for authentication.
+                    type: string
+                  password:
+                    description: Password for authentication.
+                    type: string
                   repo:
                     description: Repository path in the registry.
                     type: string
@@ -90,6 +96,8 @@ spec:
                 description: Conditions represent the latest available observations
                   of the repository's state.
                 items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-

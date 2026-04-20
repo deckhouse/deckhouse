@@ -125,12 +125,16 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   _editionsToFillWith = _editionsFullList.reject { |key| key.start_with?("cse")  }
   site.data['modules']['all'].each do |moduleName, moduleData|
     editions = []
-    if moduleData.has_key?("editionMinimumAvailable") then
+    if moduleData.has_key?("editions") then
+      editions = editions | moduleData['editions'] if moduleData.has_key?("editions")
+    elsif moduleData.has_key?("editionMinimumAvailable") then
       _index = _editionsToFillWith.find_index(moduleData['editionMinimumAvailable'])
       editions = _editionsToFillWith.slice(_index, _editionsToFillWith.length())
     else
-      editions = editions | moduleData['editions'] if moduleData.has_key?("editions")
+
     end
+
+    # This data is a merged data from the repo/editions.yaml, docs/documentation/_data/modules/editions-addition.json.
     site.data['editions'].each do |edition, editionData|
       editions = editions | [edition] if editionData.has_key?("includeModules") && editionData['includeModules'].include?(moduleName)
       editions.delete(edition) if editionData.has_key?("excludeModules") && editionData['excludeModules'].include?(moduleName)

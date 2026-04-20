@@ -1,8 +1,8 @@
 type: object
 properties:
-  ebpfExporterEnabled:
+  oomKillsExporterEnabled:
     description: |
-      Флаг отключения ebpf_exporter для случаев, когда его работа создает проблемы в нормальной работе узлов.
+      Флаг отключения oom-kills-exporter для случаев, когда его работа создает проблемы в нормальной работе узлов.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.

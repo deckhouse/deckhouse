@@ -28,12 +28,17 @@ import (
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
 func TestParseConfigFromData(t *testing.T) {
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 	clusterConfig := `
 ---
 apiVersion: deckhouse.io/v1
@@ -203,7 +208,7 @@ spec:
 	t.Run("Registry", func(t *testing.T) {
 		t.Run("InitConfiguration -> always unmanaged && legacy", func(t *testing.T) {
 			t.Run("Without CRI (module disable)", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
+				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider(), dc)
 				require.NoError(t, err)
 				require.Equal(t, true, metaConfig.Registry.LegacyMode)
 				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
@@ -215,7 +220,7 @@ spec:
 				require.Equal(t, "", registry.CA)
 			})
 			t.Run("With CRI (module enable)", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig+clusterConfig, DummyPreparatorProvider())
+				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig+clusterConfig, DummyPreparatorProvider(), dc)
 				require.NoError(t, err)
 				require.Equal(t, true, metaConfig.Registry.LegacyMode)
 				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
@@ -229,7 +234,7 @@ spec:
 		})
 		t.Run("Default -> CE edition registry", func(t *testing.T) {
 			t.Run("Without CRI (module disable) -> unmanaged && legacy", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
+				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider(), dc)
 				require.NoError(t, err)
 				require.Equal(t, true, metaConfig.Registry.LegacyMode)
 				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
@@ -241,7 +246,7 @@ spec:
 				require.Equal(t, "", registry.CA)
 			})
 			t.Run("With CRI (module enable) -> direct && not legacy", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), ""+clusterConfig, DummyPreparatorProvider())
+				metaConfig, err := ParseConfigFromData(context.TODO(), ""+clusterConfig, DummyPreparatorProvider(), dc)
 				require.NoError(t, err)
 				require.Equal(t, false, metaConfig.Registry.LegacyMode)
 				require.Equal(t, registry_const.ModeDirect, metaConfig.Registry.Settings.Mode)
@@ -266,7 +271,7 @@ spec:
     registry:
       mode: Unmanaged
       unmanaged:
-        imagesRepo: r.example.com/test/
+        imagesRepo: r.example.com/test
         username: test-user
         password: test-password
         scheme: HTTPS
@@ -274,11 +279,11 @@ spec:
   version: 1
 `
 			t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
-				_, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse, DummyPreparatorProvider())
+				_, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse, DummyPreparatorProvider(), dc)
 				require.Error(t, err)
 			})
 			t.Run("With CRI (module enable) -> from moduleConfig && not legacy", func(t *testing.T) {
-				metaConfig, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse+clusterConfig, DummyPreparatorProvider())
+				metaConfig, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse+clusterConfig, DummyPreparatorProvider(), dc)
 				require.NoError(t, err)
 				require.Equal(t, false, metaConfig.Registry.LegacyMode)
 				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
@@ -293,7 +298,7 @@ spec:
 	})
 
 	t.Run("Standard Static", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
+		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider(), dc)
 		require.NoError(t, err)
 
 		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
@@ -310,7 +315,7 @@ spec:
 	})
 
 	t.Run("Static with StaticClusterConfig", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig, DummyPreparatorProvider())
+		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig, DummyPreparatorProvider(), dc)
 		require.NoError(t, err)
 
 		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
@@ -329,7 +334,7 @@ spec:
 
 	t.Run("Module config", func(t *testing.T) {
 		t.Run("Global valid", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigGlobalValid, DummyPreparatorProvider())
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigGlobalValid, DummyPreparatorProvider(), dc)
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 1)
@@ -338,12 +343,12 @@ spec:
 		})
 
 		t.Run("Global invalid", func(t *testing.T) {
-			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigGlobalInvalid, DummyPreparatorProvider())
+			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigGlobalInvalid, DummyPreparatorProvider(), dc)
 			require.Error(t, err)
 		})
 
 		t.Run("Module valid", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonValid, DummyPreparatorProvider())
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonValid, DummyPreparatorProvider(), dc)
 
 			require.NoError(t, err)
 
@@ -353,24 +358,24 @@ spec:
 		})
 
 		t.Run("Module invalid", func(t *testing.T) {
-			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonInvalid, DummyPreparatorProvider())
+			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonInvalid, DummyPreparatorProvider(), dc)
 			require.Error(t, err)
 		})
 
 		t.Run("Module without enabled field", func(t *testing.T) {
-			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutEnabled, DummyPreparatorProvider())
+			_, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutEnabled, DummyPreparatorProvider(), dc)
 			require.Error(t, err)
 		})
 
 		t.Run("Module without settings", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutSettings, DummyPreparatorProvider())
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+moduleConfigCommonWithoutSettings, DummyPreparatorProvider(), dc)
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ResourcesYAML, 0)
 		})
 
 		t.Run("Unknown module should move into resources", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+unknownModuleConfig, DummyPreparatorProvider())
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+unknownModuleConfig, DummyPreparatorProvider(), dc)
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 0)
@@ -380,7 +385,7 @@ spec:
 
 	t.Run("Config with another k8s resources eg configMap", func(t *testing.T) {
 		t.Run("Should move another resources into resourcesYAML", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+configMapAndInstanceClass, DummyPreparatorProvider())
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+configMapAndInstanceClass, DummyPreparatorProvider(), dc)
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 0)
@@ -411,7 +416,7 @@ spec:
 		})
 
 		t.Run("Should move resourcesYAML", func(t *testing.T) {
-			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+ngWithTemplating, DummyPreparatorProvider())
+			metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig+staticConfig+ngWithTemplating, DummyPreparatorProvider(), dc)
 			require.NoError(t, err)
 
 			require.Len(t, metaConfig.ModuleConfigs, 0)
@@ -433,10 +438,13 @@ spec:
 }
 
 func TestParseConfigFromFiles(t *testing.T) {
-	imagesDigestsJSON = "./mocks/images_digests.json"
 	app.VersionFile = "./mocks/version"
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 	t.Run("parse wildcard", func(t *testing.T) {
-		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())
+		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), dc)
 		require.NoError(t, err)
 		require.Equal(t, "Static", metaConfig.ClusterType)
 
@@ -455,7 +463,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 
 func TestParseConfigFromCluster(t *testing.T) {
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
-		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider)
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, nil)
 
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
@@ -470,7 +478,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 	}
 
 	doParseFromClusterWithError := func(t *testing.T, tst *testParseConfigFromCluster) {
-		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider)
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider, nil)
 
 		require.Error(t, err)
 		require.Nil(t, metaConfig)
@@ -812,6 +820,10 @@ func createTestParseConfigFromCluster(t *testing.T, p testParseConfigFromCluster
 }
 
 func TestParseConfigFromData_MergedDocuments(t *testing.T) {
+	dc := &directoryconfig.DirectoryConfig{
+		DownloadDir:      "/tmp",
+		DownloadCacheDir: "/tmp/cache",
+	}
 	t.Run("Should detect missing separator between InitConfiguration and ModuleConfig", func(t *testing.T) {
 		// This reproduces the issue from https://github.com/deckhouse/deckhouse/issues/14009
 		// When --- separator is commented out, documents get merged
@@ -839,7 +851,7 @@ spec:
 ---
 `
 
-		_, err := ParseConfigFromData(context.TODO(), configWithCommentedSeparator, DummyPreparatorProvider())
+		_, err := ParseConfigFromData(context.TODO(), configWithCommentedSeparator, DummyPreparatorProvider(), dc)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing '---' separator")
 		require.Contains(t, err.Error(), "InitConfiguration")
@@ -859,7 +871,7 @@ clusterType: Static
 ---
 `
 
-		_, err := ParseConfigFromData(context.TODO(), configWithoutSeparator, DummyPreparatorProvider())
+		_, err := ParseConfigFromData(context.TODO(), configWithoutSeparator, DummyPreparatorProvider(), dc)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing '---' separator")
 	})
@@ -882,7 +894,7 @@ spec:
 ---
 `
 
-		metaConfig, err := ParseConfigFromData(context.TODO(), validConfig, DummyPreparatorProvider())
+		metaConfig, err := ParseConfigFromData(context.TODO(), validConfig, DummyPreparatorProvider(), dc)
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
 		require.NotEmpty(t, metaConfig.InitClusterConfig)
@@ -899,7 +911,7 @@ deckhouse:
 ---
 `
 
-		metaConfig, err := ParseConfigFromData(context.TODO(), configWithComment, DummyPreparatorProvider())
+		metaConfig, err := ParseConfigFromData(context.TODO(), configWithComment, DummyPreparatorProvider(), dc)
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
 	})

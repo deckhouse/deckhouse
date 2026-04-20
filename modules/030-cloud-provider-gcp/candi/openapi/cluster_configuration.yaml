@@ -64,6 +64,7 @@ apiVersions:
         x-unsafe: true
       sshKey:
         type: string
+        x-rules: [sshPublicKey]
         description: A public key to access nodes as `user`.
       sshAllowList:
         type: array

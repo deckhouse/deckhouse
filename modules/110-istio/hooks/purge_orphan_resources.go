@@ -170,23 +170,34 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		// remove finalizers and delete istios in ns d8-istio
 		istios, err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
-			input.Logger.Warnf("Failed to list Istio resources: %v", err)
+			input.Logger.Warn("Failed to list Istio resources", log.Err(err))
 		} else {
 			for _, istio := range istios.Items {
 				_, err = k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Patch(context.TODO(), istio.GetName(), types.MergePatchType, patch, metav1.PatchOptions{})
 				if err != nil {
-					input.Logger.Warnf("Failed to remove finalizers from Istio/%s in namespace %s: %v", istio.GetName(), istioSystemNs, err)
+					input.Logger.Warn("Failed to remove finalizers from Istio",
+						slog.String("name", istio.GetName()),
+						slog.String("namespace", istioSystemNs),
+						log.Err(err))
 					continue
 				}
-				input.Logger.Infof("Finalizers from Istio/%s in namespace %s removed", istio.GetName(), istioSystemNs)
+				input.Logger.Info("Finalizers from Istio removed",
+					slog.String("name", istio.GetName()),
+					slog.String("namespace", istioSystemNs))
+
 				_, istioDeletionTimestampExists := istio.GetAnnotations()["deletionTimestamp"]
 				if !istioDeletionTimestampExists {
 					err := k8sClient.Dynamic().Resource(istioGVR).Namespace(istioSystemNs).Delete(context.TODO(), istio.GetName(), metav1.DeleteOptions{})
 					if err != nil {
-						input.Logger.Warnf("Failed to delete Istio/%s from namespace %s: %v", istio.GetName(), istioSystemNs, err)
+						input.Logger.Warn("Failed to delete Istio",
+							slog.String("name", istio.GetName()),
+							slog.String("namespace", istioSystemNs),
+							log.Err(err))
 						continue
 					}
-					input.Logger.Infof("Istio/%s deleted from namespace %s", istio.GetName(), istioSystemNs)
+					input.Logger.Info("Istio deleted",
+						slog.String("name", istio.GetName()),
+						slog.String("namespace", istioSystemNs))
 				}
 			}
 		}
@@ -194,7 +205,7 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		// Delete the istio-ca-root-cert ConfigMap in namespaces
 		namespaces, err := k8sClient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
-			input.Logger.Warnf("Failed to list namespaces: %v", err)
+			input.Logger.Warn("Failed to list namespaces", log.Err(err))
 		} else {
 			for _, namespace := range namespaces.Items {
 				if namespace.Name == istioSystemNs {
@@ -203,10 +214,15 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 
 				err := k8sClient.CoreV1().ConfigMaps(namespace.Name).Delete(context.TODO(), istioRootCertConfigMapName, metav1.DeleteOptions{})
 				if err != nil && !k8serrors.IsNotFound(err) {
-					input.Logger.Warnf("Failed to delete ConfigMap/%s in namespace %s: %v", istioRootCertConfigMapName, namespace.Name, err)
+					input.Logger.Warn("Failed to delete ConfigMap",
+						slog.String("name", istioRootCertConfigMapName),
+						slog.String("namespace", namespace.Name),
+						log.Err(err))
 					continue
 				}
-				input.Logger.Infof("ConfigMap/%s deleted from namespace %s", istioRootCertConfigMapName, namespace.Name)
+				input.Logger.Info("ConfigMap deleted",
+					slog.String("name", istioRootCertConfigMapName),
+					slog.String("namespace", namespace.Name))
 			}
 		}
 
@@ -215,9 +231,11 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 		if !nsDeletionTimestampExists {
 			err := k8sClient.CoreV1().Namespaces().Delete(context.TODO(), ns.GetName(), metav1.DeleteOptions{})
 			if err != nil && !k8serrors.IsNotFound(err) {
-				input.Logger.Warnf("Failed to delete namespace %s: %v", ns.GetName(), err)
+				input.Logger.Warn("Failed to delete namespace",
+					slog.String("name", ns.GetName()),
+					log.Err(err))
 			} else if err == nil {
-				input.Logger.Infof("Namespace %s deleted", ns.GetName())
+				input.Logger.Info("Namespace deleted", slog.String("name", ns.GetName()))
 			}
 		}
 	}
@@ -225,60 +243,68 @@ func purgeOrphanResources(_ context.Context, input *go_hook.HookInput, dc depend
 	// delete ClusterRole
 	icrs, err := k8sClient.RbacV1().ClusterRoles().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
 	if err != nil {
-		input.Logger.Warnf("Failed to list ClusterRoles: %v", err)
+		input.Logger.Warn("Failed to list ClusterRoles", log.Err(err))
 	} else {
 		for _, icr := range icrs.Items {
 			err := k8sClient.RbacV1().ClusterRoles().Delete(context.TODO(), icr.GetName(), metav1.DeleteOptions{})
 			if err != nil {
-				input.Logger.Warnf("Failed to delete ClusterRole/%s: %v", icr.GetName(), err)
+				input.Logger.Warn("Failed to delete ClusterRole",
+					slog.String("name", icr.GetName()),
+					log.Err(err))
 				continue
 			}
-			input.Logger.Infof("ClusterRole/%s deleted", icr.GetName())
+			input.Logger.Info("ClusterRole deleted", slog.String("name", icr.GetName()))
 		}
 	}
 
 	// delete ClusterRoleBinding
 	icrbs, err := k8sClient.RbacV1().ClusterRoleBindings().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
 	if err != nil {
-		input.Logger.Warnf("Failed to list ClusterRoleBindings: %v", err)
+		input.Logger.Warn("Failed to list ClusterRoleBindings", log.Err(err))
 	} else {
 		for _, icrb := range icrbs.Items {
 			err := k8sClient.RbacV1().ClusterRoleBindings().Delete(context.TODO(), icrb.GetName(), metav1.DeleteOptions{})
 			if err != nil {
-				input.Logger.Warnf("Failed to delete ClusterRoleBinding/%s: %v", icrb.GetName(), err)
+				input.Logger.Warn("Failed to delete ClusterRoleBinding",
+					slog.String("name", icrb.GetName()),
+					log.Err(err))
 				continue
 			}
-			input.Logger.Infof("ClusterRoleBinding/%s deleted", icrb.GetName())
+			input.Logger.Info("ClusterRoleBinding deleted", slog.String("name", icrb.GetName()))
 		}
 	}
 
 	// delete MutatingWebhookConfiguration
 	imwcs, err := k8sClient.AdmissionregistrationV1().MutatingWebhookConfigurations().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
 	if err != nil {
-		input.Logger.Warnf("Failed to list MutatingWebhookConfigurations: %v", err)
+		input.Logger.Warn("Failed to list MutatingWebhookConfigurations", log.Err(err))
 	} else {
 		for _, imwc := range imwcs.Items {
 			err := k8sClient.AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.TODO(), imwc.GetName(), metav1.DeleteOptions{})
 			if err != nil {
-				input.Logger.Warnf("Failed to delete MutatingWebhookConfiguration/%s: %v", imwc.GetName(), err)
+				input.Logger.Warn("Failed to delete MutatingWebhookConfiguration",
+					slog.String("name", imwc.GetName()),
+					log.Err(err))
 				continue
 			}
-			input.Logger.Infof("MutatingWebhookConfiguration/%s deleted", imwc.GetName())
+			input.Logger.Info("MutatingWebhookConfiguration deleted", slog.String("name", imwc.GetName()))
 		}
 	}
 
 	// delete ValidatingWebhookConfiguration
 	ivwcs, err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().List(context.TODO(), metav1.ListOptions{LabelSelector: istioComponentsLabelSelector})
 	if err != nil {
-		input.Logger.Warnf("Failed to list ValidatingWebhookConfigurations: %v", err)
+		input.Logger.Warn("Failed to list ValidatingWebhookConfigurations", log.Err(err))
 	} else {
 		for _, ivwc := range ivwcs.Items {
 			err := k8sClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(context.TODO(), ivwc.GetName(), metav1.DeleteOptions{})
 			if err != nil {
-				input.Logger.Warnf("Failed to delete ValidatingWebhookConfiguration/%s: %v", ivwc.GetName(), err)
+				input.Logger.Warn("Failed to delete ValidatingWebhookConfiguration",
+					slog.String("name", ivwc.GetName()),
+					log.Err(err))
 				continue
 			}
-			input.Logger.Infof("ValidatingWebhookConfiguration/%s deleted", ivwc.GetName())
+			input.Logger.Info("ValidatingWebhookConfiguration deleted", slog.String("name", ivwc.GetName()))
 		}
 	}
 

@@ -18,6 +18,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -119,7 +121,8 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	}
 
 	if c.convergeState.Phase == phases.ScaleToMultiMasterPhase {
-		log.DebugF("scale to multi master\n")
+		log.DebugF("Scale to multi master\n")
+
 		replicas := 3
 
 		err = c.runWithReplicas(ctx, replicas)
@@ -138,7 +141,11 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	}
 
 	if c.convergeState.Phase == phases.ScaleToSingleMasterPhase {
-		log.DebugF("scale to single master\n")
+		log.DebugF("Scale to single master\n")
+
+		if err := c.switchClientToFirstMaster(ctx); err != nil {
+			return err
+		}
 
 		replicas := 1
 
@@ -162,6 +169,36 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) error {
 	}
 
 	return c.runWithReplicas(ctx, metaConfig.MasterNodeGroupSpec.Replicas)
+}
+
+func (c *MasterNodeGroupController) switchClientToNotFirstMaster(ctx *context.Context) error {
+	clientSwitcher := ctx.ClientSwitcher()
+	if govalue.IsNil(clientSwitcher) {
+		log.DebugF("Skip switch client to not first master. Got empty client switcher")
+		return nil
+	}
+
+	// commander mode and another checks checking inside
+	if err := clientSwitcher.SwitchToNotFirstMaster(ctx.Ctx()); err != nil {
+		return fmt.Errorf("Cannot switch clients to not first control-plane node: %w", err)
+	}
+
+	return nil
+}
+
+func (c *MasterNodeGroupController) switchClientToFirstMaster(ctx *context.Context) error {
+	clientSwitcher := ctx.ClientSwitcher()
+	if govalue.IsNil(clientSwitcher) {
+		log.DebugF("Skip switch client to first master. Got empty client switcher")
+		return nil
+	}
+
+	// commander mode and another checks checking inside
+	if err := clientSwitcher.SwitchToFirstMaster(ctx.Ctx()); err != nil {
+		return fmt.Errorf("Cannot switch clients to first control-plane node: %w", err)
+	}
+
+	return nil
 }
 
 func (c *MasterNodeGroupController) runWithReplicas(ctx *context.Context, replicas int) error {
@@ -198,7 +235,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 				metaConfig,
 				index,
 				c.cloudConfig,
-				true, ctx.InfrastructureContext(metaConfig),
+				ctx.InfrastructureContext(metaConfig),
 			)
 			if err != nil {
 				return err
@@ -220,13 +257,8 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 	}
 
 	if len(masterIPForSSHList) > 0 {
-		if !ctx.CommanderMode() {
-			sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
-			if sshCl == nil {
-				panic("NodeInterface is not ssh")
-			}
-
-			sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
+		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
+			return err
 		}
 
 		// we hide deckhouse logs because we always have config
@@ -234,40 +266,67 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		if err != nil {
 			return err
 		}
-
 		c.cloudConfig = nodeCloudConfig
-	}
 
-	// Update master hosts cache with all newly created masters
-	if len(masterIPForSSHList) > 0 {
-		log.DebugF("Updating master hosts cache with %d new masters\n", len(masterIPForSSHList))
-
-		// Get current master hosts from cache
-		stateCache := ctx.StateCache()
-		currentHosts, err := state.GetMasterHostsIPs(stateCache)
-		if err != nil {
-			log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
-			currentHosts = []session.Host{}
-		}
-
-		hostsMap := make(map[string]string)
-		for _, host := range currentHosts {
-			hostsMap[host.Name] = host.Host
-		}
-
-		for _, newHost := range masterIPForSSHList {
-			hostsMap[newHost.Name] = newHost.Host
-			log.DebugF("Adding new master to cache: %s -> %s\n", newHost.Name, newHost.Host)
-		}
-
-		log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
-
-		state.SaveMasterHostsToCache(stateCache, hostsMap)
-
-		log.DebugF("Successfully updated master hosts cache with %d new masters. hostsMap: %v\n", len(masterIPForSSHList), hostsMap)
+		c.addNewNodesToCache(ctx, masterIPForSSHList)
 	}
 
 	return nil
+}
+
+func (c *MasterNodeGroupController) beforeUpdateNodes(ctx *context.Context) error {
+	noScaleToMultiMaster := c.convergeState.Phase != phases.ScaleToMultiMasterPhase
+
+	log.DebugF("Master ng. beforeUpdateNodes: has phase %s; noScaleToMultiMaster %v\n", c.convergeState.Phase, noScaleToMultiMaster)
+
+	if noScaleToMultiMaster {
+		return nil
+	}
+
+	return c.switchClientToNotFirstMaster(ctx)
+}
+
+func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, masterIPForSSHList []session.Host) error {
+	if ctx.CommanderMode() {
+		return nil
+	}
+
+	sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
+	if govalue.IsNil(sshCl) {
+		return fmt.Errorf("NodeInterface is not ssh")
+	}
+
+	sshCl.Session().AddAvailableHosts(masterIPForSSHList...)
+
+	return nil
+}
+
+func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, masterIPForSSHList []session.Host) {
+	log.DebugF("Updating master hosts cache with %d new masters\n", len(masterIPForSSHList))
+
+	// Get current master hosts from cache
+	stateCache := ctx.StateCache()
+	currentHosts, err := state.GetMasterHostsIPs(stateCache)
+	if err != nil {
+		log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
+		currentHosts = []session.Host{}
+	}
+
+	hostsMap := make(map[string]string)
+	for _, host := range currentHosts {
+		hostsMap[host.Name] = host.Host
+	}
+
+	for _, newHost := range masterIPForSSHList {
+		hostsMap[newHost.Name] = newHost.Host
+		log.DebugF("Adding new master to cache: %s -> %s\n", newHost.Name, newHost.Host)
+	}
+
+	log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
+
+	state.SaveMasterHostsToCache(stateCache, hostsMap)
+
+	log.DebugF("Successfully updated master hosts cache with %d new masters. hostsMap: %v\n", len(masterIPForSSHList), hostsMap)
 }
 
 func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
@@ -405,7 +464,8 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
-		WithConfirm(confirm)
+		WithConfirm(confirm).
+		WithClientSwitcher(ctx.ClientSwitcher())
 }
 
 func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {

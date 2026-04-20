@@ -1,4 +1,4 @@
-{{ $appRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
+{{ $appRelPath := printf "/%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
 {{ $appAbsPath := printf "/deckhouse/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
@@ -10,14 +10,14 @@ git:
     stageDependencies:
       install:
         - '**/*'
-  - add: /go_lib/registry
+  - add: /{{ $.ModulePath }}/go_lib/registry
     to: /src/deckhouse/go_lib/registry
     stageDependencies:
       install:
         - '**/*'
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"

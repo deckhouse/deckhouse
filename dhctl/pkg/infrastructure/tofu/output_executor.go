@@ -21,6 +21,7 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -49,20 +50,25 @@ func NewOutputExecutor(params OutputExecutorParams, logger log.Logger) (*OutputE
 	}, nil
 }
 
-func (e *OutputExecutor) Output(ctx context.Context, statePath string, outFielda ...string) ([]byte, error) {
-	_, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
+func (e *OutputExecutor) Output(ctx context.Context, opts infrastructure.OutputOpts) ([]byte, error) {
+	_, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, opts)
 	return out, err
 }
 
-func tofuOutputRun(ctx context.Context, params RunExecutorParams, statePath string, outFielda ...string) (*exec.Cmd, []byte, error) {
+func tofuOutputRun(ctx context.Context, params RunExecutorParams, opts infrastructure.OutputOpts) (*exec.Cmd, []byte, error) {
 	args := []string{
 		"output",
 		"-no-color",
 		"-json",
-		fmt.Sprintf("-state=%s", statePath),
+		fmt.Sprintf("-state=%s", opts.StatePath),
 	}
-	if len(outFielda) > 0 {
-		args = append(args, outFielda...)
+
+	if opts.ShowSensitive {
+		args = append(args, "-show-sensitive")
+	}
+
+	if len(opts.OutFields) > 0 {
+		args = append(args, opts.OutFields...)
 	}
 
 	cmd := tofuCmd(ctx, params, "", args...)

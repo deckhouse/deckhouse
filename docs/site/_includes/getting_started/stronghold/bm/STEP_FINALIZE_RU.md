@@ -115,7 +115,7 @@ EOF
     <p>Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
 ```bash
-ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
 ```
 {% endsnippetcut %}
   </li>
@@ -301,6 +301,7 @@ istio.example.com
 istio-api-proxy.example.com
 kubeconfig.example.com
 openvpn-admin.example.com
+registry.example.com
 prometheus.example.com
 status.example.com
 upmeter.example.com</code>
@@ -329,6 +330,7 @@ $PUBLIC_IP istio.example.com
 $PUBLIC_IP istio-api-proxy.example.com
 $PUBLIC_IP kubeconfig.example.com
 $PUBLIC_IP openvpn-admin.example.com
+$PUBLIC_IP registry.example.com
 $PUBLIC_IP prometheus.example.com
 $PUBLIC_IP status.example.com
 $PUBLIC_IP upmeter.example.com

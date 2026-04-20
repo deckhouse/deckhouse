@@ -1,47 +1,34 @@
 $('#mysidebar').height($(".nav").height());
 
+function safeGetLocalStorage(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function safeSetLocalStorage(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function safeParseJSON(value, fallback) {
+  try {
+    return JSON.parse(value || fallback);
+  } catch (e) {
+    return JSON.parse(fallback);
+  }
+}
+
 $(document).ready(function () {
   $('#search-input').on("keyup", function (e) {
     if (e.target.value.length > 0) $(".search__results").addClass("active");
     else $(".search__results").removeClass("active");
-  });
-  $('a.lang-switcher').each(function () {
-    let pageDomain = window.location.hostname;
-    if (window.location.pathname.startsWith('/ru/')) {
-      $(this).attr('href', window.location.href.replace('/ru/', '/en/'))
-    } else if (window.location.pathname.startsWith('/en/')) {
-      $(this).attr('href', window.location.href.replace('/en/', '/ru/'))
-    } else {
-      let newHostname = null;
-      switch (pageDomain) {
-        case 'deckhouse.io':
-          newHostname = 'deckhouse.ru';
-          break;
-        case 'deckhouse.ru':
-          newHostname = 'deckhouse.io';
-          break;
-        case 'ru.localhost':
-          newHostname = 'localhost';
-          break;
-        case 'localhost':
-          newHostname = 'ru.localhost';
-          break;
-        default:
-          if (pageDomain.includes('deckhouse-ru')) {
-            newHostname = pageDomain.replace('deckhouse-ru', 'deckhouse');
-          } else if (pageDomain.includes('deckhouse')) {
-            newHostname = pageDomain.replace('deckhouse', 'deckhouse-ru');
-          }
-      }
-      if (newHostname) {
-        const currentUrl = window.location.href;
-        const newUrl = currentUrl.replace(
-          window.location.hostname,
-          newHostname
-        );
-        $(this).attr('href', newUrl);
-      }
-    }
   });
 });
 
@@ -64,9 +51,11 @@ $(document).ready(function () {
     // $( "#mysidebar" ).attr("class", "nav");
   }
   // activate tooltips. although this is a bootstrap js function, it must be activated this way in your theme.
-  $('[data-toggle="tooltip"]').tooltip({
-    placement: 'top'
-  });
+  if ($.fn && typeof $.fn.tooltip === 'function') {
+    $('[data-toggle="tooltip"]').tooltip({
+      placement: 'top'
+    });
+  }
 
 });
 
@@ -77,20 +66,33 @@ $(function () {
   $('a[data-toggle="pill"], a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
     var href, json, parentId, tabsState;
 
-    tabsState = localStorage.getItem("tabs-state");
-    json = JSON.parse(tabsState || "{}");
+    tabsState = safeGetLocalStorage("tabs-state");
+    json = safeParseJSON(tabsState, "{}");
     parentId = $(e.target).parents("ul.nav.nav-pills, ul.nav.nav-tabs").attr("id");
     href = $(e.target).attr('href');
     json[parentId] = href;
 
-    return localStorage.setItem("tabs-state", JSON.stringify(json));
+    safeSetLocalStorage("tabs-state", JSON.stringify(json));
+    return;
   });
 
-  tabsState = localStorage.getItem("tabs-state");
-  json = JSON.parse(tabsState || "{}");
+  tabsState = safeGetLocalStorage("tabs-state");
+  json = safeParseJSON(tabsState, "{}");
 
   $.each(json, function (containerId, href) {
-    return $("#" + containerId + " a[href=" + href + "]").tab('show');
+    const container = document.getElementById(containerId);
+
+    if (!container) {
+      return;
+    }
+
+    const tab = $(container).find('a').filter(function () {
+      return $(this).attr('href') === href;
+    }).first();
+
+    if (tab.length) {
+      tab.tab('show');
+    }
   });
 
   $("ul.nav.nav-pills, ul.nav.nav-tabs").each(function () {
@@ -105,11 +107,11 @@ $(document).ready(function () {
   var $notice = $('#notice');
   var $notice_collapse = $('#notice-collapse');
   var $notice_expand = $('#notice-expand');
-  var notice_state = localStorage.getItem('notice-state') || 'expanded';
+  var notice_state = safeGetLocalStorage('notice-state') || 'expanded';
 
   function switchNotice(state) {
     $notice.attr('data-state', state);
-    localStorage.setItem('notice-state', state);
+    safeSetLocalStorage('notice-state', state);
   }
 
   switchNotice(notice_state);
@@ -132,7 +134,9 @@ $(document).ready(function () {
     var $parent = $(this).closest('[data-features-tabs]');
     var $triggers = $parent.find('[data-features-tabs-trigger]');
     var $contents = $parent.find('[data-features-tabs-content]');
-    var $content = $parent.find('[data-features-tabs-content=' + name + ']');
+    var $content = $contents.filter(function () {
+      return $(this).attr('data-features-tabs-content') === name;
+    });
 
     $triggers.removeClass('active');
     $contents.removeClass('active');
@@ -155,6 +159,10 @@ function showActionToast(text) {
 }
 
 $(document).ready(function () {
+  if (typeof ClipboardJS === 'undefined') {
+    return;
+  }
+
   new ClipboardJS('[data-snippetcut-btn-name-ru]', {
     text: function (trigger) {
       showActionToast('Скопировано в буфер обмена')
@@ -187,8 +195,9 @@ $(document).ready(function () {
 $(document).ready(function () {
   const $gdpr = $('.gdpr');
   const $gdpr_button = $('.gdpr__button');
-  const gdpr_status = $.cookie('gdpr-status');
-  const cmplz_banner_status = $.cookie('cmplz_banner-status');
+  const hasCookiePlugin = typeof $.cookie === 'function';
+  const gdpr_status = hasCookiePlugin ? $.cookie('gdpr-status') : null;
+  const cmplz_banner_status = hasCookiePlugin ? $.cookie('cmplz_banner-status') : null;
 
   if ((!gdpr_status || gdpr_status !== 'accepted') && cmplz_banner_status !== 'dismissed') {
     $gdpr.css('display', 'flex');
@@ -196,7 +205,9 @@ $(document).ready(function () {
 
   $gdpr_button.on('click', function () {
     $gdpr.hide();
-    $.cookie('gdpr-status', 'accepted', {path: '/', expires: 3650});
+    if (hasCookiePlugin) {
+      $.cookie('gdpr-status', 'accepted', {path: '/', expires: 3650});
+    }
   })
 });
 
@@ -222,26 +233,31 @@ $(document).ready(function () {
 });
 
 $(document).ready(function () {
-  const titles = $('.resources__prop_name');
-  const links = $('.resources__prop_wrap .anchorjs-link');
-
-  links.each((i, link) => {
-    $(link).click((e) => {
+  // Use delegated handlers so toggle works for dynamically rendered docs content.
+  $(document)
+    .off('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link')
+    .on('click.resourcesToggleLink', '.resources__prop_wrap .anchorjs-link', function (e) {
       e.stopPropagation();
-    })
-  })
+    });
+    
+  const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+  const container = hash ? document.getElementById(hash) : null;
+  const toggleableClosedItem = container ? container.closest('li.top-level-toggleable.closed') : null;
 
-  titles.each((i, title) => {
-    $(title).click(() => {
-      const firstList = $(title).parent('.resources__prop_wrap').parent('li').parent('ul');
+  if (toggleableClosedItem) {
+    toggleableClosedItem.classList.remove('closed');
+  }
 
-      if (firstList.hasClass('resources')) return;
+  $(document)
+    .off('click.resourcesToggle', '.resources__prop_name')
+    .on('click.resourcesToggle', '.resources__prop_name', function () {
+      const parentElem = $(this).closest('li');
+      const firstList = parentElem.parent('ul');
 
-      const parentElem = $(title).parent('.resources__prop_wrap').parent('li');
+      if (firstList.hasClass('resources') && !parentElem.hasClass('top-level-toggleable')) return;
 
       parentElem.toggleClass('closed');
-    })
-  })
+    });
 });
 
 const openDiagram = function () {
@@ -280,12 +296,16 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastScrollTop = 0;
   let topOffsetToTransform = 25;
 
+  if (!header) {
+    return;
+  }
+
   const calcScroll = () => {
     top = window.scrollY
     lastScrollTop = top
   }
 
-  window.onscroll = calcScroll
+  window.addEventListener('scroll', calcScroll)
   window.addEventListener('scroll', () => changeOffset(top))
 
   if (!header.classList.contains('header_float')) {
@@ -323,4 +343,3 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener("load", function () {
   openDiagram()
 });
-

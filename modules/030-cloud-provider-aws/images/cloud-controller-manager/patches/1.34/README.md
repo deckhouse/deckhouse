@@ -24,3 +24,7 @@ Modify `ListRoutes` method to handle errors gracefully without blocking reconcil
 ## 006-publicNetworkAllowList-for-NLB.patch
 
 Adds support for PublicNetworkAllowList to restrict incoming traffic to NLBs
+
+## 007-fix-getInstancesByIDs-batcher.patch
+
+fix getInstancesByIDs to comply with describeInstanceBatcher single-ID contract

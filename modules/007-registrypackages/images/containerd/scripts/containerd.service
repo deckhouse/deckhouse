@@ -10,6 +10,8 @@ ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/ima
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:pause io.cri-containerd.pinned=pinned
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/kubernetes-api-proxy.tar
 ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:kubernetes-api-proxy io.cri-containerd.pinned=pinned
+ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/registry-proxy.tar
+ExecStartPost=-/opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:registry-proxy io.cri-containerd.pinned=pinned
 ExecStart=/opt/deckhouse/bin/containerd
 
 Type=notify

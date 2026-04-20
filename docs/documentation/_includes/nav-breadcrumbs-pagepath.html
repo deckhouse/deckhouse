@@ -11,11 +11,15 @@
         {%- if breadcrumb.url %}</a>{% endif %}
     </li>
   {%- endfor %}
-    <li class="breadcrumbs__item">{{ page.title }}</li>
+    <li class="breadcrumbs__item breadcrumbs__item--current">
+      <span class="breadcrumbs__current">{{ page.title }}</span>
+    </li>
 {%- else %}
   {%- for i in (2..max_ind) %}
     {%- if forloop.last %}
-      <li class="breadcrumbs__item">{{ page.title }}</li>
+      <li class="breadcrumbs__item breadcrumbs__item--current">
+        <span class="breadcrumbs__current">{{ page.title }}</span>
+      </li>
     {%- else %}
       {%- unless page_url_parts[i].title %}
         {%- continue %}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "packageRules": [
+    {
+      "description": "Skip version bumps for internal Go modules in dependency lists",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchPackageNames": [
+        "github.com/deckhouse/deckhouse/go_lib/registry"
+      ],
+      "enabled": false
+    }
+  ]
+}

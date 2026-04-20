@@ -12,8 +12,9 @@ spec:
       strategy: "Bearer"
       token: {{ .Values.loki.internal.logShipperToken | quote }}
     tls:
-      verifyHostname: false
-      verifyCertificate: false
+      caFile: {{ .Values.loki.internal.kubeRbacProxyTLS.ca | b64enc }}
+      verifyHostname: true
+      verifyCertificate: true
 {{- if .Values.loki.storeSystemLogs }}
 ---
 apiVersion: deckhouse.io/v1alpha1

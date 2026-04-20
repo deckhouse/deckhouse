@@ -60,6 +60,18 @@ data:
       {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
       - name: "RemoveDuplicates"
       {{- end }}
+      {{- if dig "strategies" "removePodsViolatingTopologySpreadConstraint" "enabled" false $d }}
+      - name: "RemovePodsViolatingTopologySpreadConstraint"
+        args:
+          {{- $s := unset ($d.strategies.removePodsViolatingTopologySpreadConstraint | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
+      {{- end }}
+      {{- if dig "strategies" "removePodsHavingTooManyRestarts" "enabled" false $d }}
+      - name: "RemovePodsHavingTooManyRestarts"
+        args:
+          {{- $s := unset ($d.strategies.removePodsHavingTooManyRestarts | deepCopy) "enabled" }}
+          {{- $s | toYaml | nindent 10 }}
+      {{- end }}
       plugins:
         # DefaultEvictor is enabled for both `filter` and `preEvictionFilter`
         filter:
@@ -68,7 +80,7 @@ data:
         preEvictionFilter:
           enabled:
           - "DefaultEvictor"
-        {{- if or (dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d) (dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d) }}
+        {{- if or (or (dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d) (dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d)) (dig "strategies" "removePodsHavingTooManyRestarts" "enabled" false $d) }}
         deschedule:
           enabled:
           {{- if dig "strategies" "removePodsViolatingNodeAffinity" "enabled" false $d }}
@@ -77,8 +89,11 @@ data:
           {{- if dig "strategies" "removePodsViolatingInterPodAntiAffinity" "enabled" false $d }}
           - "RemovePodsViolatingInterPodAntiAffinity"
           {{- end }}
+          {{- if dig "strategies" "removePodsHavingTooManyRestarts" "enabled" false $d }}
+          - "RemovePodsHavingTooManyRestarts"
+          {{- end }}
         {{- end }}
-        {{- if or (or (dig "strategies" "highNodeUtilization" "enabled" false $d) (dig "strategies" "lowNodeUtilization" "enabled" false $d)) (dig "strategies" "removeDuplicates" "enabled" false $d) }}
+        {{- if or (or (or (dig "strategies" "highNodeUtilization" "enabled" false $d) (dig "strategies" "lowNodeUtilization" "enabled" false $d)) (dig "strategies" "removeDuplicates" "enabled" false $d)) (dig "strategies" "removePodsViolatingTopologySpreadConstraint" "enabled" false $d) }}
         balance:
           enabled:
           {{- if dig "strategies" "highNodeUtilization" "enabled" false $d }}
@@ -89,6 +104,9 @@ data:
           {{- end }}
           {{- if dig "strategies" "removeDuplicates" "enabled" false $d }}
           - "RemoveDuplicates"
+          {{- end }}
+          {{- if dig "strategies" "removePodsViolatingTopologySpreadConstraint" "enabled" false $d }}
+          - "RemovePodsViolatingTopologySpreadConstraint"
           {{- end }}
         {{- end }}
     {{- end }}

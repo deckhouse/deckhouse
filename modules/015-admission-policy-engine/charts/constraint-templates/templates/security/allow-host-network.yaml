@@ -129,12 +129,12 @@ spec:
 
               build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. | %v | %v | %v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v. | %v | %v", [pod_name, actual_value, allowed_by_policy])
               }
               allowed_by_any(obj) if {
                 allowed_by_securitypolicyexeption(obj)
@@ -145,6 +145,23 @@ spec:
                 allowed_by_securitypolicy(obj)
               }
 
+              # Exception with only hostPorts (no hostNetwork.allowedValue)
+              # Only allows pods that don't use hostNetwork
+              allowed_by_securitypolicyexeption(obj) if {
+                label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := obj.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "network")
+                has_field(exception.spec.network, "hostPorts")
+                not has_field(exception.spec.network, "hostNetwork")
+
+                # Pod must not use hostNetwork
+                object.get(obj.spec, "hostNetwork", false) == false
+                # Check hostPorts
+                allowed_hostports_by_exception_only(obj, exception)
+              }
+
+              # Exception with both hostNetwork.allowedValue and hostPorts
               allowed_by_securitypolicyexeption(obj) if {
                 label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := obj.metadata.namespace
@@ -161,6 +178,15 @@ spec:
               allowed_hostnetwork_by_exception(obj, exception) if {
                 obj_hostNetwork := object.get(obj.spec, "hostNetwork", false)
                 exception.spec.network.hostNetwork.allowedValue == obj_hostNetwork
+              }
+
+              # New function for hostPorts-only exceptions
+              allowed_hostports_by_exception_only(obj, exception) if {
+                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
+                every port in object_host_ports {
+                  port in allowed_ports
+                }
               }
 
               allowed_hostports_by_exception(obj, exception) if {

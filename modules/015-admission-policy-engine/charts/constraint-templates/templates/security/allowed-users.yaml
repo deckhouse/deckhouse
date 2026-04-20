@@ -308,12 +308,12 @@ spec:
 
               build_user_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("Container %v is attempting to run as disallowed user.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v | %v", [name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_user_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("Container %v is attempting to run as disallowed user.\n%v\n%v", [name, actual_value, allowed_by_policy])
+                msg := sprintf("Container %v is attempting to run as disallowed user. | %v | %v", [name, actual_value, allowed_by_policy])
               }
 
               accept_users("RunAsAny", _) := true
@@ -471,12 +471,12 @@ spec:
 
               build_group_message(name, field, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("Container %v is attempting to run as disallowed %v.\n%v\n%v\n%v", [name, field, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v | %v", [name, field, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_group_message(name, field, actual_value, allowed_by_policy, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("Container %v is attempting to run as disallowed %v.\n%v\n%v", [name, field, actual_value, allowed_by_policy])
+                msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [name, field, actual_value, allowed_by_policy])
               }
 
               accept_value("RunAsAny", _, _) := true

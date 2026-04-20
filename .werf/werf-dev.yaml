@@ -17,7 +17,7 @@ git:
 {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-{{ include "dev_prebuild_images_imports" (dict "Env" .Env) }}
+{{ include "dev_prebuild_images_imports" (dict "Images" .Images "Env" .Env) }}
 shell:
   setup:
   - |
@@ -32,6 +32,8 @@ shell:
      {{- end }}
     EOD
 {{- end }}
+
+    {{ include "dev_prebuild_setup_ln_node_manager" (dict "TF" .TF "Editions" .Editions) | nindent 4}}
     {{ include "dev_prebuild_setup_script_general_part" (dict "Env" .Env "CI_COMMIT_TAG" .CI_COMMIT_TAG) | nindent 4}}
 
 {{ include "dev_prebuild_docker_properties" . }}

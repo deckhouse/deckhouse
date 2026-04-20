@@ -4,8 +4,7 @@
 
 
  - #16795 unknown section "metrics-storage"
- - #17702 unknown section "cloud-instance-manager"
- - #17801 unknown section "docs-builder"
+ - #17702 unknown section "registry-packages"
 
 ## Know before update
 
@@ -72,26 +71,34 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Prevent unintended Gatekeeper constraints from being rendered for SecurityPolicy when boolean fields are omitted. [#18197](https://github.com/deckhouse/deckhouse/pull/18197)
+    Workload Pods are no longer denied by unrelated SecurityPolicy checks (e.g. hostNetwork/hostPort) when corresponding policy fields are not explicitly set.
  - **[admission-policy-engine]** Refactor constraint templates [#17882](https://github.com/deckhouse/deckhouse/pull/17882)
  - **[admission-policy-engine]** Allow DELETE operations, add containerPorts check in case of hostNetwork [#17084](https://github.com/deckhouse/deckhouse/pull/17084)
+ - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#18377](https://github.com/deckhouse/deckhouse/pull/18377)
+ - **[candi]** Bashible script fix to handle multiple GPUs [#18158](https://github.com/deckhouse/deckhouse/pull/18158)
+ - **[candi]** fix if node has bashible-uninitialized taint in race condition. [#18133](https://github.com/deckhouse/deckhouse/pull/18133)
+ - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#16625](https://github.com/deckhouse/deckhouse/pull/16625)
  - **[candi]** Remove duplicate `additional_disks_hashes` definition in static-node Terraform module. [#17441](https://github.com/deckhouse/deckhouse/pull/17441)
  - **[candi]** Updated the bashible step to include Linux kernel versions that address CVE-2025-37999 [#17300](https://github.com/deckhouse/deckhouse/pull/17300)
  - **[candi]** Allow manually stopping DVP node VirtualMachines in nested clusters by using runPolicy AlwaysOnUnlessStoppedManually. [#17110](https://github.com/deckhouse/deckhouse/pull/17110)
  - **[candi]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
  - **[candi]** Add pause and kubernetes-api-proxy registry packages to bashible `bb-package-fetch` to prevent node failures during containerd major upgrades. [#17047](https://github.com/deckhouse/deckhouse/pull/17047)
- - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#16625](https://github.com/deckhouse/deckhouse/pull/16625)
  - **[candi]** Added `registry.d8-system.svc` to `no_proxy` list to bypass proxy for internal registry requests. [#16595](https://github.com/deckhouse/deckhouse/pull/16595)
  - **[candi]** Improved node-user retry logic to skip failing API servers. [#16493](https://github.com/deckhouse/deckhouse/pull/16493)
  - **[candi]** Refactored Bashible OS detection to use the new version map structure and shared package-manager helpers. [#16459](https://github.com/deckhouse/deckhouse/pull/16459)
  - **[candi]** Fixed an issue in `bb-event-error-create` that prevented some logs from sending. [#16411](https://github.com/deckhouse/deckhouse/pull/16411)
  - **[candi]** Applied a `PROMPT_COMMAND`-based PATH guard to restore expected PATH behavior when `~/.bashrc` overwrites PATH. [#16407](https://github.com/deckhouse/deckhouse/pull/16407)
  - **[candi]** Excluded I/O loopback from node IP discovery. [#16179](https://github.com/deckhouse/deckhouse/pull/16179)
+ - **[cilium-hubble]** Fixed CVE-2026-33186 in the hubble-ui image. [#18720](https://github.com/deckhouse/deckhouse/pull/18720)
  - **[cilium-hubble]** Fix affinity in HA mode [#16862](https://github.com/deckhouse/deckhouse/pull/16862)
     In HA cluster mode hubble-ui and hubble-relay will be restarted
+ - **[cloud-provider-aws]** fix getInstancesByIDs to comply with the describeInstanceBatcher. [#18312](https://github.com/deckhouse/deckhouse/pull/18312)
  - **[cloud-provider-aws]** fix cve [#17470](https://github.com/deckhouse/deckhouse/pull/17470)
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
  - **[cloud-provider-azure]** fixed patch in azure [#17696](https://github.com/deckhouse/deckhouse/pull/17696)
  - **[cloud-provider-azure]** fixed cve [#16839](https://github.com/deckhouse/deckhouse/pull/16839)
+ - **[cloud-provider-dvp]** added fixes an infinite deletion state of DeckhouseMachine. [#18163](https://github.com/deckhouse/deckhouse/pull/18163)
  - **[cloud-provider-dvp]** Fixed VM deletion timeout and improved memory validation error reporting [#17587](https://github.com/deckhouse/deckhouse/pull/17587)
  - **[cloud-provider-dvp]** Cleanup orphaned resources when VM creation fails [#17533](https://github.com/deckhouse/deckhouse/pull/17533)
  - **[cloud-provider-dvp]** this PR gives a lot more informational errors and messages to user [#17165](https://github.com/deckhouse/deckhouse/pull/17165)
@@ -102,6 +109,8 @@
  - **[cloud-provider-huaweicloud]** fix cve [#17171](https://github.com/deckhouse/deckhouse/pull/17171)
  - **[cloud-provider-huaweicloud]** Updated the `caphc-controller-manager` component for the Huawei Cloud provider. [#16679](https://github.com/deckhouse/deckhouse/pull/16679)
  - **[cloud-provider-huaweicloud]** Added `enterpriseProjectID` support for Cinder-based (<10Gi) volumes. [#16618](https://github.com/deckhouse/deckhouse/pull/16618)
+ - **[cloud-provider-openstack]** fix LB.enabled flag [#18402](https://github.com/deckhouse/deckhouse/pull/18402)
+ - **[cloud-provider-openstack]** Add loadBalancer.enabled flag to prevent CCM crashes on k8s 1.32 without Octavia service [#18228](https://github.com/deckhouse/deckhouse/pull/18228)
  - **[cloud-provider-openstack]** fix cve [#17082](https://github.com/deckhouse/deckhouse/pull/17082)
  - **[cloud-provider-openstack]** Fixed discovery data merging for hybrid cases. [#16067](https://github.com/deckhouse/deckhouse/pull/16067)
  - **[cloud-provider-vcd]** fix cve [#17136](https://github.com/deckhouse/deckhouse/pull/17136)
@@ -109,10 +118,16 @@
     To migrate, you must perform a `converge`, which causes the master server to be recreated. If you are using only one master server with the manual address assignment via the `mainNetworkIPAddresses` parameter, add two more IP addresses for the migration process.
  - **[cloud-provider-vsphere]** fix cve [#17106](https://github.com/deckhouse/deckhouse/pull/17106)
  - **[cloud-provider-yandex]** fix cve [#17469](https://github.com/deckhouse/deckhouse/pull/17469)
+ - **[cloud-provider-zvirt]** fix CSI token refresh patch apply [#18449](https://github.com/deckhouse/deckhouse/pull/18449)
  - **[cloud-provider-zvirt]** fix cve [#17093](https://github.com/deckhouse/deckhouse/pull/17093)
+ - **[cni-cilium]** Fixed CVE-2026-33186, CVE-2026-27142, and CVE-2026-27139 by updating grpc dependency and Go version, and resolved build compatibility issues. [#18646](https://github.com/deckhouse/deckhouse/pull/18646)
+ - **[cni-cilium]** Fix issue in generating CiliumEgressGatewayPolicy CR. [#17949](https://github.com/deckhouse/deckhouse/pull/17949)
+    All current connections powered by EgressGateways will be terminated.
  - **[cni-cilium]** Fix hook discovery_cni_exclusive.go [#17719](https://github.com/deckhouse/deckhouse/pull/17719)
     If the SDN module is used in the cluster, the Cilium agent pods will be restarted.
  - **[cni-cilium]** Fixed egress-gateway-agent controller logic for deleted resources and disable dev logging. [#17378](https://github.com/deckhouse/deckhouse/pull/17378)
+ - **[common]** Fixed CVE-2026-33186 in the CoreDNS image. [#18723](https://github.com/deckhouse/deckhouse/pull/18723)
+    CoreDNS pods will undergo a rolling restart.
  - **[common]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[common]** Added `registry.d8-system.svc` to `no_proxy` list in `helm_lib` `_envs_for_proxy.tpl`. [#16595](https://github.com/deckhouse/deckhouse/pull/16595)
@@ -133,6 +148,8 @@
  - **[deckhouse-controller]** Fixed module documentation collection from EROFS mounted modules. [#16495](https://github.com/deckhouse/deckhouse/pull/16495)
  - **[deckhouse-controller]** Now whenever hooks fail, Deckhouse handles and returns corresponding metrics along with an error. [#16319](https://github.com/deckhouse/deckhouse/pull/16319)
  - **[deckhouse-controller]** Fixed incorrect time value in minor release notification messages. [#16271](https://github.com/deckhouse/deckhouse/pull/16271)
+ - **[dhctl]** mitigate CVE-2026-33186 [#18620](https://github.com/deckhouse/deckhouse/pull/18620)
+ - **[dhctl]** Fix panic in dhctl config render kubeadm-config command. [#17934](https://github.com/deckhouse/deckhouse/pull/17934)
  - **[dhctl]** Improved reliability when connecting to dhctl servers by adding retry logic and better error handling during startup [#17698](https://github.com/deckhouse/deckhouse/pull/17698)
  - **[dhctl]** Eliminated double root-password prompts during Terraform validation. [#16591](https://github.com/deckhouse/deckhouse/pull/16591)
  - **[dhctl]** Now the `AllowTcpForwarding` preflight check can interrupt a bootstrap process. [#16250](https://github.com/deckhouse/deckhouse/pull/16250)
@@ -140,7 +157,13 @@
  - **[dhctl]** Now the dhctl dependency validation can run within a single SSH connection. [#16120](https://github.com/deckhouse/deckhouse/pull/16120)
  - **[dhctl]** Isolated temporary directory for singleshot RPC and dhctl to avoid cleanup race. [#15794](https://github.com/deckhouse/deckhouse/pull/15794)
  - **[dhctl]** Fixed a memory leak in Terraform exporter. [#15350](https://github.com/deckhouse/deckhouse/pull/15350)
+ - **[extended-monitoring]** Cleanup exporter metrics when the monitored resource has been deleted [#17988](https://github.com/deckhouse/deckhouse/pull/17988)
  - **[extended-monitoring]** Add namespace-scoped overrides [#17213](https://github.com/deckhouse/deckhouse/pull/17213)
+ - **[ingress-nginx]** CVE-2026-3288 fix is backported in all Ingress-Nginx controllers. [#18410](https://github.com/deckhouse/deckhouse/pull/18410)
+    All Ingress-Nginx controller pods will be restarted.
+ - **[ingress-nginx]** Nginx and module's dependencies are updated. [#18156](https://github.com/deckhouse/deckhouse/pull/18156)
+    All ingress-nginx controller pods will be restared.
+ - **[ingress-nginx]** A false-positive trigger of alert GeoIPDownloadErrorDetectedFromMaxMind is fixed. [#17741](https://github.com/deckhouse/deckhouse/pull/17741)
  - **[ingress-nginx]** The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs fixes are backported. [#17823](https://github.com/deckhouse/deckhouse/pull/17823)
     The ingress nginx controllers' pods will be restated.
  - **[ingress-nginx]** The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs are fixed. [#17795](https://github.com/deckhouse/deckhouse/pull/17795)
@@ -148,6 +171,11 @@
  - **[ingress-nginx]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[ingress-nginx]** Improved stability of geoproxy service startup. [#17140](https://github.com/deckhouse/deckhouse/pull/17140)
+ - **[istio]** fixed cve in module images [#18576](https://github.com/deckhouse/deckhouse/pull/18576)
+    pods in d8-istio namespace will be restarted
+ - **[istio]** Reduce CPU and RAM for regenerate multicluster JWT token and sort ingressGateway [#18569](https://github.com/deckhouse/deckhouse/pull/18569)
+ - **[istio]** Fixing the list of requests from istiod to gateway API [#18056](https://github.com/deckhouse/deckhouse/pull/18056)
+ - **[istio]** Correction of an useless error in the Istio CNI workflow [#17787](https://github.com/deckhouse/deckhouse/pull/17787)
  - **[istio]** Correction  in Kiali of an insignificant error [#16880](https://github.com/deckhouse/deckhouse/pull/16880)
  - **[istio]** Fixed false-positive alert `D8IstioRemoteClusterNotSynced` and improved its description. [#15826](https://github.com/deckhouse/deckhouse/pull/15826)
  - **[loki]** Fixed the `LokiDiscardedSamplesWarning` alert. [#16374](https://github.com/deckhouse/deckhouse/pull/16374)
@@ -157,6 +185,9 @@
  - **[multitenancy-manager]** Add validation to restrict Project name length to 53 characters. [#16926](https://github.com/deckhouse/deckhouse/pull/16926)
     Prevents creation of Projects with too-long names that would lead to invalid generated Kubernetes resource names.
  - **[multitenancy-manager]** Fixed indentation in the manifest of `multitenancy-manager`. [#16471](https://github.com/deckhouse/deckhouse/pull/16471)
+ - **[node-local-dns]** Return stale-dns-connections-cleaner [#18707](https://github.com/deckhouse/deckhouse/pull/18707)
+    An additional service daemonset will be added.
+ - **[node-manager]** Fix panic in cluster-autoscaler caused by nil pointer dereference during node removal simulation. [#17924](https://github.com/deckhouse/deckhouse/pull/17924)
  - **[node-manager]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
  - **[node-manager]** It fixes issues in the DaemonSet manifest for fencing module. [#17087](https://github.com/deckhouse/deckhouse/pull/17087)
  - **[node-manager]** Fixed `mig-manager` reconfigure script to correctly handle auto-approved disruptive node group changes. [#16655](https://github.com/deckhouse/deckhouse/pull/16655)
@@ -167,8 +198,11 @@
  - **[node-manager]** Moved `bb-label-node-bashible-first-run-finished` to a Bashible template. [#16307](https://github.com/deckhouse/deckhouse/pull/16307)
  - **[prometheus]** Make Grafana redirect ingress pass the annotations validation. [#17816](https://github.com/deckhouse/deckhouse/pull/17816)
  - **[prometheus]** Added `ingressClassName` to the `grafana/prometheus` redirect Ingress. [#16116](https://github.com/deckhouse/deckhouse/pull/16116)
+ - **[registry]** Updated auth image Go dependencies to fix Go CVEs. [#18232](https://github.com/deckhouse/deckhouse/pull/18232)
+    Registry pods will be restarted.
  - **[registry]** Fixed validation of input image list changes in the registry checker. [#17553](https://github.com/deckhouse/deckhouse/pull/17553)
  - **[registry]** Omitted the auth field in DockerConfig when credentials (username and password) are empty. [#17333](https://github.com/deckhouse/deckhouse/pull/17333)
+ - **[registrypackages]** Added vex with CVE-2026-33186. [#18728](https://github.com/deckhouse/deckhouse/pull/18728)
  - **[registrypackages]** Added `which` to RPP. [#16563](https://github.com/deckhouse/deckhouse/pull/16563)
  - **[terraform-manager]** yandex terraform version was updated [#16779](https://github.com/deckhouse/deckhouse/pull/16779)
  - **[user-authn]** Quote service names to prevent digit-only names from breaking yaml parser [#17020](https://github.com/deckhouse/deckhouse/pull/17020)
@@ -188,8 +222,11 @@
  - **[ingress-nginx]** removed deprecated alert GeoIPDownloadErrorDetected. [#17711](https://github.com/deckhouse/deckhouse/pull/17711)
     All instances will be restarted.
  - **[ingress-nginx]** Improved documentation for the ModSecurity (WAF). [#16268](https://github.com/deckhouse/deckhouse/pull/16268)
+ - **[istio]** Warning about the inability to use user 1337 for user applications [#18592](https://github.com/deckhouse/deckhouse/pull/18592)
+ - **[istio]** Changing the multi-network Istio documentation [#18591](https://github.com/deckhouse/deckhouse/pull/18591)
  - **[loki]** Added alerts and graphs for discarded log samples. [#16137](https://github.com/deckhouse/deckhouse/pull/16137)
  - **[node-local-dns]** Added logging of slow upstream queries and a new coredns_kubeforward_slow_requests_total metric for tracking them. [#16808](https://github.com/deckhouse/deckhouse/pull/16808)
  - **[node-local-dns]** Removed `stale-dns-connections-cleaner`, since the related issue was fixed in `cni-cilium` upstream. [#16447](https://github.com/deckhouse/deckhouse/pull/16447)
  - **[node-manager]** Node inhibitor was migrated to the kubernetes.io library. [#16237](https://github.com/deckhouse/deckhouse/pull/16237)
+ - **[registry]** Update dependencies to fix CVEs [#18622](https://github.com/deckhouse/deckhouse/pull/18622)
 

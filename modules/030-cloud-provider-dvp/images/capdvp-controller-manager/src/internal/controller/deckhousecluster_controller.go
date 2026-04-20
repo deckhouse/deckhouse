@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// nolint:gci
 package controller
 
 import (
@@ -23,10 +24,11 @@ import (
 	"strconv"
 
 	dvpapi "dvp-common/api"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,7 +54,7 @@ type DeckhouseClusterReconciler struct {
 // move the current state of the cluster closer to the desired state.
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.20.0/pkg/reconcile
-func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+func (r *DeckhouseClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.Info("Reconciling DeckhouseCluster")
 
@@ -101,7 +103,8 @@ func (r *DeckhouseClusterReconciler) reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
 	}
 
-	dvpCluster.Status.Ready = true
+	infraReady := true
+	dvpCluster.Status.Initialization.Provisioned = &infraReady
 	dvpCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
 		Host: controlPlaneEndpointURL.Hostname(),
 		Port: int32(port),

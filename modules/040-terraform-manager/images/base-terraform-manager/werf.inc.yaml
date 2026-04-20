@@ -1,9 +1,10 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 final: false
 fromImage: common/distroless
 import:
-- image: dhctl # from main werf.yaml
+- image: dhctl-base # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
@@ -17,12 +18,13 @@ git:
   includePaths:
     - "candi/openapi"
     - "candi/terraform_versions.yml"
+{{- end }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-opentofu
 final: false
 fromImage: common/distroless
 import:
-- image: dhctl # from main werf.yaml
+- image: dhctl-base # from main werf.yaml
   add: /dhctl/bin/dhctl
   to: /dhctl
   before: setup
@@ -36,6 +38,7 @@ git:
   includePaths:
     - "candi/openapi"
     - "candi/terraform_versions.yml"
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
 final: false
@@ -55,6 +58,7 @@ shell:
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
+{{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
 final: false
@@ -74,11 +78,12 @@ shell:
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
+{{- if ne $.Env "CSE" }}
 ---
 # use artifact for one place import for base and install images
 image: terraform
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-terraform-src-artifact
   add: /src
@@ -99,19 +104,19 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform/terraform .
   - chmod 755 /terraform/terraform
+{{- end }}
 ---
 # use artifact for one place import for base and install images
 image: opentofu
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-opentofu-src-artifact
   add: /src
   to: /src
   before: install
 mount:
-- fromPath: ~/go-pkg-cache
-  to: /go/pkg
+{{ include "mount points for golang builds" . }}
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}

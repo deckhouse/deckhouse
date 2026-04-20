@@ -58,7 +58,7 @@ spec:
                     lastUpdateTime:
                       description: Время последнего обновления ствтуса.
                     phase:
-                      description: Метка состояния машин в текущий момент времени.
+                      description: Лейбл состояния машин в текущий момент времени.
                 lastOperation:
                   description: Последняя выполненная операция.
                   properties:

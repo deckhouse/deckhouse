@@ -158,6 +158,14 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int,
 		args = append(args, "-destroy")
 	}
 
+	if opts.Target != "" {
+		targetArgs := []string{
+			fmt.Sprintf("-target=%s", opts.Target),
+			"-show-sensitive",
+		}
+		args = append(args, targetArgs...)
+	}
+
 	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 	if opts.NoOutput {
 		e.cmd.Stdout = io.Discard
@@ -167,8 +175,8 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int,
 	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
 
-func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) ([]byte, error) {
-	cmd, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
+func (e *Executor) Output(ctx context.Context, opts infrastructure.OutputOpts) ([]byte, error) {
+	cmd, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, opts)
 	e.cmd = cmd
 	return out, err
 }
@@ -189,12 +197,17 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 	return err
 }
 
-func (e *Executor) Show(ctx context.Context, planPath string) ([]byte, error) {
+func (e *Executor) Show(ctx context.Context, opts infrastructure.ShowOpts) ([]byte, error) {
 	args := []string{
 		"show",
 		"-json",
-		planPath,
 	}
+
+	if opts.ShowSensitive {
+		args = append(args, "-show-sensitive")
+	}
+
+	args = append(args, opts.PlanPath)
 
 	e.cmd = tofuCmd(ctx, e.params.RunExecutorParams, e.params.WorkingDir, args...)
 

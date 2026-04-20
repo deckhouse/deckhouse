@@ -210,7 +210,7 @@ data:
 - Будут созданы **только один раз** при создании проекта;
 - **Не будут обновляться** при последующих изменениях шаблона или обновлениях;
 - Не будут отслеживаться в статусе проекта;
-- Получат метки `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
+- Получат лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
 
 {% alert level="warning" %}
 После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении ProjectTemplate.
@@ -219,7 +219,7 @@ data:
 
 ## Реализация валидации изменений объектов с помощью пользовательского лейбла
 
-Модуль `multitenancy-manager` использует `ValidatingAdmissionPolicy` для защиты ресурсов с меткой `heritage: multitenancy-manager` от ручных изменений.  
+Модуль `multitenancy-manager` использует `ValidatingAdmissionPolicy` для защиты ресурсов с лейблом `heritage: multitenancy-manager` от ручных изменений.  
 Вы можете реализовать аналогичную валидацию для ресурсов с любым лейблом.
 
 ### Как работает валидация в multitenancy-manager

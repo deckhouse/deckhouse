@@ -41,7 +41,11 @@ git:
 {{- define "dhctl_artifact" }}
 {{- $context := . -}}
 {{- $rppSignCheck := ternary "true" "false" (eq $context.Env "CSE") -}}
+{{- if $context.includeImagesDigests }}
 image: dhctl
+{{- else }}
+image: dhctl-base
+{{- end }}
 final: false
 fromImage: base-for-go
 import:
@@ -49,6 +53,12 @@ import:
   add: /src
   to: /
   before: install
+{{- if $context.includeImagesDigests }}
+- image: images-digests
+  add: /images_digests.json
+  to: /images_digests.json
+  before: install
+{{- end }}
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -57,6 +67,9 @@ secrets:
 shell:
   install:
   - cd /dhctl
+{{- if $context.includeImagesDigests }}
+  - cp /images_digests.json pkg/config/digests/images_digests.json
+{{- end }}
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - RPP_SIGN_CHECK={{- $rppSignCheck }} D8_VERSION={{- $context.CI_COMMIT_TAG }} DEFAULT_KUBERNETES_VERSION={{- $context.DEFAULT_KUBERNETES_VERSION }} make build
 {{- end }}

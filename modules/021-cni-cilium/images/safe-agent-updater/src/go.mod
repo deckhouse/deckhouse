@@ -1,6 +1,6 @@
 module safe-agent-updater
 
-go 1.24.2
+go 1.25
 
 require (
 	github.com/sirupsen/logrus v1.9.3

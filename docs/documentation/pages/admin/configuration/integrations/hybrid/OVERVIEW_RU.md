@@ -4,29 +4,13 @@ permalink: ru/admin/integrations/hybrid/overview.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. В данный момент поддерживается интеграция с облаками на базе [OpenStack](../public/openstack/connection-and-authorization.html) и [vSphere](../virtualization/vsphere/authorization.html).
+Deckhouse Kubernetes Platform (DKP) имеет возможность использовать ресурсы облачных провайдеров для расширения ресурсов статических кластеров. В данный момент поддерживается интеграция с облаками на базе [OpenStack](../public/openstack/connection-and-authorization.html), [Yandex Cloud](../public/yandex/authorization.html) и [VMware vCloud Director (VCD)](../virtualization/vcd/connection-and-authorization.html).
 
 Гибридный кластер представляет собой объединенные в один кластер bare-metal-узлы и узлы провайдера. Для создания такого кластера необходимо наличие L2-сети между всеми узлами кластера.
 
 {% alert level="info" %}
 В Deckhouse Kubernetes Platform есть возможность задавать префикс для имени CloudEphemeral-узлов, добавляемых в гибридный кластер c master-узлами типа Static.
 Для этого используйте параметр [`instancePrefix`](/modules/node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
-{% endalert %}
-
-## Гибридный кластер с vSphere
-
-Выполните следующие шаги:
-
-1. Удалите `flannel` из `kube-system`:
-
-   ```shell
-   d8 k -n kube-system delete ds flannel-ds
-   ```
-
-1. Настройте интеграцию и пропишите необходимые для работы параметры.
-
-{% alert level="warning" %}
-`Cloud-controller-manager` синхронизирует состояние между vSphere и Kubernetes, удаляя из Kubernetes те узлы, которых нет в vSphere. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (DKP прописывает `static://` на узлы в `.spec.providerID`, а `cloud-controller-manager` такие узлы игнорирует).
 {% endalert %}
 
 ## Гибридный кластер с OpenStack
@@ -107,7 +91,7 @@ volumeBindingMode: WaitForFirstConsumer
      cloudID: CLOUD_ID
      folderID: FOLDER_ID
      serviceAccountJSON: '{"id":"ajevk1dp8f9...--END PRIVATE KEY-----\n"}'
-   sshPublicKey: <ssh-rsa SSHKEY>
+   sshPublicKey: <SSH_PUBLIC_KEY>
    ```
 
    Значения параметров:

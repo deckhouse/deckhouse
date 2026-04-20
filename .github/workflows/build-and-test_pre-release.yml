@@ -27,8 +27,10 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.46.0"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
+  WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -60,7 +62,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -159,12 +161,26 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -184,7 +200,6 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
 
       # </template: import_secrets>
@@ -223,6 +238,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -267,10 +291,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -284,12 +308,12 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
@@ -343,11 +367,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -360,14 +379,11 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -407,8 +423,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -428,309 +444,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
 
-    # </template: build_template>
-
-
-      # <template: send_fail_report>
-      - name: Send fail report
-        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
-        env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-          JOB_NAME: ${{ github.job }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-        run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
-
-  build_ee:
-    name: Build EE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "EE"
-    # <template: build_template>
-    runs-on: [self-hosted, stage]
-    outputs:
-      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-    steps:
-
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
-
-      # </template: import_secrets>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_stage_registry_step>
-      - name: Check stage registry credentials
-        id: check_stage_registry
-        env:
-          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to stage registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          logout: false
-      # </template: login_stage_registry_step>
-
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: add_ssh_keys>
-      - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
-      - name: Add ssh_known_hosts
-        run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
-          echo "::add-mask::$HOST"
-          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
-          for IP in $IPS; do
-            echo "::add-mask::$IP"
-          done
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
-      - name: Add svace analyze server to ssh_known_hosts
-        continue-on-error: true
-        run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
-          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
-          echo "::add-mask::$host_ip"
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-                  ssh-keygen -R $host
-                  ssh-keygen -R $host_ip
-              fi
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"
-      # </template: add_ssh_keys>
-
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-
-      - name: Build and push deckhouse images
-        id: build
-        env:
-          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
-          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
-          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-        run: |
-          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
-          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
-            REPO_SUFFIX=
-          fi
-
-          # Put tags on produced images and push to dev and release repositories.
-          #
-          # There are 2 modes: "dev" and "release".
-          # The "dev" mode builds branches only:
-          # - Build using dev-registry as primary and deckhouse registry as secondary.
-          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
-          # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
-          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
-          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
-
-          # IMAGE_NAME is a name of image from werf.yaml.
-          # IMAGE_DST is an image name for docker push.
-          function publish_image() {
-            IMAGE_NAME=$1
-            IMAGE_DST_REPO=$2
-            IMAGE_DST_TAG=$3
-            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
-            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
-            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
-            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
-            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
-            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
-              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
-              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
-            else
-              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
-            fi
-          }
-
-          # CE/EE/FE -> ce/ee/fe
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
-          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
-
-          # The Git tag may contain a '+' sign, so use slugify for this situation.
-          # Slugify doesn't change a tag with safe-only characters.
-          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-            IMAGE_EDITION=${WERF_ENV,,}
-          fi
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          export WERF_DISABLE_META_TAGS=true
-
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
-            --parallel=true --parallel-tasks-limit=10 \
-            --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
-            --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
-
-          # Publish images for Git branch.
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
-
-            # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
-            fi
-          else
-            echo "Branch unset, skipping branch publish."
-          fi
-
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
-
-          # Save 'tests' image name to pass it as output for 'tests' jobs.
-          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
-          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
-
-          # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
-
-      - name: Save build report
+      - name: Cleanup workdir
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -747,910 +465,8 @@ jobs:
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
       # </template: send_fail_report>
 
-  build_se:
-    name: Build SE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "SE"
-    # <template: build_template>
-    runs-on: [self-hosted, stage]
-    outputs:
-      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-    steps:
 
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
-
-      # </template: import_secrets>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_stage_registry_step>
-      - name: Check stage registry credentials
-        id: check_stage_registry
-        env:
-          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to stage registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          logout: false
-      # </template: login_stage_registry_step>
-
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: add_ssh_keys>
-      - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
-      - name: Add ssh_known_hosts
-        run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
-          echo "::add-mask::$HOST"
-          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
-          for IP in $IPS; do
-            echo "::add-mask::$IP"
-          done
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
-      - name: Add svace analyze server to ssh_known_hosts
-        continue-on-error: true
-        run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
-          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
-          echo "::add-mask::$host_ip"
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-                  ssh-keygen -R $host
-                  ssh-keygen -R $host_ip
-              fi
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"
-      # </template: add_ssh_keys>
-
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-
-      - name: Build and push deckhouse images
-        id: build
-        env:
-          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
-          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
-          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-        run: |
-          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
-          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
-            REPO_SUFFIX=
-          fi
-
-          # Put tags on produced images and push to dev and release repositories.
-          #
-          # There are 2 modes: "dev" and "release".
-          # The "dev" mode builds branches only:
-          # - Build using dev-registry as primary and deckhouse registry as secondary.
-          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
-          # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
-          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
-          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
-
-          # IMAGE_NAME is a name of image from werf.yaml.
-          # IMAGE_DST is an image name for docker push.
-          function publish_image() {
-            IMAGE_NAME=$1
-            IMAGE_DST_REPO=$2
-            IMAGE_DST_TAG=$3
-            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
-            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
-            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
-            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
-            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
-            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
-              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
-              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
-            else
-              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
-            fi
-          }
-
-          # CE/EE/FE -> ce/ee/fe
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
-          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
-
-          # The Git tag may contain a '+' sign, so use slugify for this situation.
-          # Slugify doesn't change a tag with safe-only characters.
-          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-            IMAGE_EDITION=${WERF_ENV,,}
-          fi
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          export WERF_DISABLE_META_TAGS=true
-
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
-            --parallel=true --parallel-tasks-limit=10 \
-            --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
-            --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
-
-          # Publish images for Git branch.
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
-
-            # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
-            fi
-          else
-            echo "Branch unset, skipping branch publish."
-          fi
-
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
-
-          # Save 'tests' image name to pass it as output for 'tests' jobs.
-          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
-          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
-
-          # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
-
-      - name: Save build report
-        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-
-    # </template: build_template>
-
-
-      # <template: send_fail_report>
-      - name: Send fail report
-        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
-        env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-          JOB_NAME: ${{ github.job }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-        run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
-
-  build_se_plus:
-    name: Build SE-plus
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "SE-plus"
-    # <template: build_template>
-    runs-on: [self-hosted, stage]
-    outputs:
-      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-    steps:
-
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
-
-      # </template: import_secrets>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_stage_registry_step>
-      - name: Check stage registry credentials
-        id: check_stage_registry
-        env:
-          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to stage registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          logout: false
-      # </template: login_stage_registry_step>
-
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: add_ssh_keys>
-      - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
-      - name: Add ssh_known_hosts
-        run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
-          echo "::add-mask::$HOST"
-          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
-          for IP in $IPS; do
-            echo "::add-mask::$IP"
-          done
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
-      - name: Add svace analyze server to ssh_known_hosts
-        continue-on-error: true
-        run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
-          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
-          echo "::add-mask::$host_ip"
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-                  ssh-keygen -R $host
-                  ssh-keygen -R $host_ip
-              fi
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"
-      # </template: add_ssh_keys>
-
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-
-      - name: Build and push deckhouse images
-        id: build
-        env:
-          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
-          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
-          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-        run: |
-          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
-          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
-            REPO_SUFFIX=
-          fi
-
-          # Put tags on produced images and push to dev and release repositories.
-          #
-          # There are 2 modes: "dev" and "release".
-          # The "dev" mode builds branches only:
-          # - Build using dev-registry as primary and deckhouse registry as secondary.
-          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
-          # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
-          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
-          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
-
-          # IMAGE_NAME is a name of image from werf.yaml.
-          # IMAGE_DST is an image name for docker push.
-          function publish_image() {
-            IMAGE_NAME=$1
-            IMAGE_DST_REPO=$2
-            IMAGE_DST_TAG=$3
-            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
-            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
-            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
-            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
-            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
-            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
-              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
-              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
-            else
-              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
-            fi
-          }
-
-          # CE/EE/FE -> ce/ee/fe
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
-          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
-
-          # The Git tag may contain a '+' sign, so use slugify for this situation.
-          # Slugify doesn't change a tag with safe-only characters.
-          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-            IMAGE_EDITION=${WERF_ENV,,}
-          fi
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          export WERF_DISABLE_META_TAGS=true
-
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
-            --parallel=true --parallel-tasks-limit=10 \
-            --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
-            --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
-
-          # Publish images for Git branch.
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
-
-            # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
-            fi
-          else
-            echo "Branch unset, skipping branch publish."
-          fi
-
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
-
-          # Save 'tests' image name to pass it as output for 'tests' jobs.
-          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
-          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
-
-          # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
-
-      - name: Save build report
-        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-
-    # </template: build_template>
-
-
-      # <template: send_fail_report>
-      - name: Send fail report
-        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
-        env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-          JOB_NAME: ${{ github.job }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-        run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
-
-  build_be:
-    name: Build BE
-    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
-    needs:
-      - git_info
-      - build_fe
-    env:
-      WERF_ENV: "BE"
-    # <template: build_template>
-    runs-on: [self-hosted, stage]
-    outputs:
-      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
-    steps:
-
-      # <template: import_secrets>
-      - name: Split repository name
-        id: split
-        env:
-          REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
-      - name: Import secrets
-        id: secrets
-        uses: hashicorp/vault-action@v2
-        with:
-          url: https://seguro.flant.com
-          path: github
-          role: "${{ steps.split.outputs.name }}"
-          method: jwt
-          jwtGithubAudience: github-access-aud
-          secrets: |
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
-
-      # </template: import_secrets>
-
-      # <template: checkout_full_step>
-      - name: Checkout sources
-        uses: actions/checkout@v3.5.2
-        with:
-          fetch-depth: 0
-      # </template: checkout_full_step>
-
-      # <template: login_stage_registry_step>
-      - name: Check stage registry credentials
-        id: check_stage_registry
-        env:
-          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-        run: |
-          if [[ -n $HOST ]]; then
-            echo "has_credentials=true" >> $GITHUB_OUTPUT
-            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
-          fi
-      - name: Login to stage registry
-        uses: docker/login-action@v2.1.0
-        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
-        with:
-          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          logout: false
-      # </template: login_stage_registry_step>
-
-
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
-
-      # <template: add_ssh_keys>
-      - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: |
-            ${{secrets.SOURCE_REPO_SSH_KEY}}
-            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
-      - name: Add ssh_known_hosts
-        run: |
-          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
-          echo "::add-mask::$HOST"
-          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
-          for IP in $IPS; do
-            echo "::add-mask::$IP"
-          done
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-            fi
-          done <<< "$HOST_KEYS"
-      - name: Add svace analyze server to ssh_known_hosts
-        continue-on-error: true
-        run: |
-          host=${{ secrets.SVACE_ANALYZE_HOST }}
-          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
-          echo "::add-mask::$host_ip"
-          mkdir -p ~/.ssh
-          touch ~/.ssh/known_hosts
-          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
-          while IFS= read -r KEY_LINE; do
-              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
-              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
-                  ssh-keygen -R $host
-                  ssh-keygen -R $host_ip
-              fi
-              echo "$KEY_LINE" >> ~/.ssh/known_hosts
-          done <<< "$HOST_KEYS"
-      # </template: add_ssh_keys>
-
-      - name: Set up Go 1.24
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          cache: false
-
-      - name: Run go generate
-        run: |
-          (make generate)
-          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
-
-      - name: Check generated code
-        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
-
-      - name: Build and push deckhouse images
-        id: build
-        env:
-          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
-          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
-          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
-          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
-          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
-          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
-          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
-          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
-          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
-          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
-          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-        run: |
-          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
-          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
-          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
-            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
-            REPO_SUFFIX=
-          fi
-
-          # Put tags on produced images and push to dev and release repositories.
-          #
-          # There are 2 modes: "dev" and "release".
-          # The "dev" mode builds branches only:
-          # - Build using dev-registry as primary and deckhouse registry as secondary.
-          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
-          # The "release" mode builds branches and tags:
-          # - Build using deckhouse registry as final and dev-registry as primary.
-          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
-          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
-
-          # IMAGE_NAME is a name of image from werf.yaml.
-          # IMAGE_DST is an image name for docker push.
-          function publish_image() {
-            IMAGE_NAME=$1
-            IMAGE_DST_REPO=$2
-            IMAGE_DST_TAG=$3
-            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
-            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
-            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
-            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
-            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
-            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
-            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
-              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
-              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
-            else
-              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
-            fi
-          }
-
-          # CE/EE/FE -> ce/ee/fe
-          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
-          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-          export WERF_REPO="${STAGE_REGISTRY_PATH}"
-
-          # The Git tag may contain a '+' sign, so use slugify for this situation.
-          # Slugify doesn't change a tag with safe-only characters.
-          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
-            IMAGE_EDITION=${WERF_ENV,,}
-          fi
-          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
-          export WERF_DISABLE_META_TAGS=true
-
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
-            --parallel=true --parallel-tasks-limit=10 \
-            --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
-            --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
-
-          # Publish images for Git branch.
-          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
-
-            # For release branches, also push release-channel to dev
-            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
-              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
-              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
-              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
-            fi
-          else
-            echo "Branch unset, skipping branch publish."
-          fi
-
-          # Publish images for Git tag.
-          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
-            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
-            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
-            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
-          else
-            echo "Not a release tag, skipping tag publish."
-          fi
-
-          # Save 'tests' image name to pass it as output for 'tests' jobs.
-          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
-          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
-          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
-
-          # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
-
-      - name: Save build report
-        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
-
-    # </template: build_template>
-
-
-      # <template: send_fail_report>
-      - name: Send fail report
-        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
-        env:
-          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
-          JOB_NAME: ${{ github.job }}
-          WORKFLOW_NAME: ${{ github.workflow }}
-          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
-        run: |
-          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
-
-  build_ce:
+  build_CE:
     name: Build CE
     if: ${{ startsWith(github.ref, 'refs/heads/release') }}
     needs:
@@ -1664,12 +480,26 @@ jobs:
       tests_image_name: ${{ steps.build.outputs.tests_image_name }}
     steps:
 
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1689,7 +519,6 @@ jobs:
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret OBSERVABILITY_SOURCE_REPO | OBSERVABILITY_SOURCE_REPO ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
 
       # </template: import_secrets>
@@ -1728,6 +557,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1772,10 +610,10 @@ jobs:
           done <<< "$HOST_KEYS"
       # </template: add_ssh_keys>
 
-      - name: Set up Go 1.24
+      - name: Set up Go 1.25
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.25'
           cache: false
 
       - name: Run go generate
@@ -1789,12 +627,12 @@ jobs:
       - name: Build and push deckhouse images
         id: build
         env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
           DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
           CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
-          OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
           DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
           COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
           COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
@@ -1848,11 +686,6 @@ jobs:
 
           # CE/EE/FE -> ce/ee/fe
           REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          # Temporary directory is moved to ensure
-          TEMP_WORKDIR="$(dirname "${{github.workspace}}")/${{github.run_id}}-$REGISTRY_SUFFIX"
-          echo "build_report_dir=$(echo ${TEMP_WORKDIR})" >> $GITHUB_OUTPUT
-          mkdir -p "$TEMP_WORKDIR"
           STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
           export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
           export WERF_REPO="${STAGE_REGISTRY_PATH}"
@@ -1865,14 +698,11 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --tmp-dir="$TEMP_WORKDIR" \
             --build-report-path images_tags_werf.json
-
-          cp images_tags_werf.json "$TEMP_WORKDIR"
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -1912,8 +742,8 @@ jobs:
           echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
 
           # Filter out data from build report
-          egrep -v '(DockerRepo|DockerImageName)' "$TEMP_WORKDIR/images_tags_werf.json" > "$TEMP_WORKDIR/images_tags_werf_filtered.json"
-          mv "$TEMP_WORKDIR/images_tags_werf_filtered.json" "$TEMP_WORKDIR/images_tags_werf.json"
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
 
       - name: Check DKP images manifests in public registry
         if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
@@ -1933,8 +763,11 @@ jobs:
         uses: actions/upload-artifact@v4.4.0
         with:
           name: build_report_${{ env.WERF_ENV }}
-          path: |
-            ${{ steps.build.outputs.build_report_dir }}/images_tags_werf.json
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
 
     # </template: build_template>
 
@@ -1949,7 +782,1598 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>
+      # </template: send_fail_report>   
+
+  build_EE:
+    name: Build EE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "EE"
+    # <template: build_template>
+    runs-on: [self-hosted, stage]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+    steps:
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+
+      # </template: import_secrets>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
+      - name: Build and push deckhouse images
+        id: build
+        env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+        run: |
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
+
+          # IMAGE_NAME is a name of image from werf.yaml.
+          # IMAGE_DST is an image name for docker push.
+          function publish_image() {
+            IMAGE_NAME=$1
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
+          }
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+
+          # The Git tag may contain a '+' sign, so use slugify for this situation.
+          # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          export WERF_DISABLE_META_TAGS=true
+
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
+            --parallel=true --parallel-tasks-limit=10 \
+            --save-build-report=true \
+            --build-report-path images_tags_werf.json
+
+          # Publish images for Git branch.
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            fi
+          else
+            echo "Branch unset, skipping branch publish."
+          fi
+
+          # Publish images for Git tag.
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+          else
+            echo "Not a release tag, skipping tag publish."
+          fi
+
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
+
+      - name: Check DKP images manifests in public registry
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        id: check_images
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
+
+    # </template: build_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>   
+
+  build_BE:
+    name: Build BE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "BE"
+    # <template: build_template>
+    runs-on: [self-hosted, stage]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+    steps:
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+
+      # </template: import_secrets>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
+      - name: Build and push deckhouse images
+        id: build
+        env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+        run: |
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
+
+          # IMAGE_NAME is a name of image from werf.yaml.
+          # IMAGE_DST is an image name for docker push.
+          function publish_image() {
+            IMAGE_NAME=$1
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
+          }
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+
+          # The Git tag may contain a '+' sign, so use slugify for this situation.
+          # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          export WERF_DISABLE_META_TAGS=true
+
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
+            --parallel=true --parallel-tasks-limit=10 \
+            --save-build-report=true \
+            --build-report-path images_tags_werf.json
+
+          # Publish images for Git branch.
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            fi
+          else
+            echo "Branch unset, skipping branch publish."
+          fi
+
+          # Publish images for Git tag.
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+          else
+            echo "Not a release tag, skipping tag publish."
+          fi
+
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
+
+      - name: Check DKP images manifests in public registry
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        id: check_images
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
+
+    # </template: build_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>   
+
+  build_SE:
+    name: Build SE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "SE"
+    # <template: build_template>
+    runs-on: [self-hosted, stage]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+    steps:
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+
+      # </template: import_secrets>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
+      - name: Build and push deckhouse images
+        id: build
+        env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+        run: |
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
+
+          # IMAGE_NAME is a name of image from werf.yaml.
+          # IMAGE_DST is an image name for docker push.
+          function publish_image() {
+            IMAGE_NAME=$1
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
+          }
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+
+          # The Git tag may contain a '+' sign, so use slugify for this situation.
+          # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          export WERF_DISABLE_META_TAGS=true
+
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
+            --parallel=true --parallel-tasks-limit=10 \
+            --save-build-report=true \
+            --build-report-path images_tags_werf.json
+
+          # Publish images for Git branch.
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            fi
+          else
+            echo "Branch unset, skipping branch publish."
+          fi
+
+          # Publish images for Git tag.
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+          else
+            echo "Not a release tag, skipping tag publish."
+          fi
+
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
+
+      - name: Check DKP images manifests in public registry
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        id: check_images
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
+
+    # </template: build_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>   
+
+  build_SE-plus:
+    name: Build SE-plus
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "SE-plus"
+    # <template: build_template>
+    runs-on: [self-hosted, stage]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+    steps:
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+
+      # </template: import_secrets>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
+      - name: Build and push deckhouse images
+        id: build
+        env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+        run: |
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
+
+          # IMAGE_NAME is a name of image from werf.yaml.
+          # IMAGE_DST is an image name for docker push.
+          function publish_image() {
+            IMAGE_NAME=$1
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
+          }
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+
+          # The Git tag may contain a '+' sign, so use slugify for this situation.
+          # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          export WERF_DISABLE_META_TAGS=true
+
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
+            --parallel=true --parallel-tasks-limit=10 \
+            --save-build-report=true \
+            --build-report-path images_tags_werf.json
+
+          # Publish images for Git branch.
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            fi
+          else
+            echo "Branch unset, skipping branch publish."
+          fi
+
+          # Publish images for Git tag.
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+          else
+            echo "Not a release tag, skipping tag publish."
+          fi
+
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
+
+      - name: Check DKP images manifests in public registry
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        id: check_images
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
+
+    # </template: build_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>   
+
+  build_CSE:
+    name: Build CSE
+    if: ${{ startsWith(github.ref, 'refs/heads/release') }}
+    needs:
+      - git_info
+      - build_fe
+    env:
+      WERF_ENV: "CSE"
+    # <template: build_template>
+    runs-on: [self-hosted, stage]
+    outputs:
+      tests_image_name: ${{ steps.build.outputs.tests_image_name }}
+    steps:
+
+      # </template: docker-config-isolation>
+      - name: Isolate docker config
+        id: docker-config-isolation
+        run: |
+          mkdir -p $RUNNER_TEMP/.docker
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/.docker" >> $GITHUB_ENV
+
+      # </template: docker_config_isolation>
+
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/cosign_key access_token | COSIGN_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret SOURCE_REPO_GIT | SOURCE_REPO_GIT ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret CLOUD_PROVIDERS_SOURCE_REPO | CLOUD_PROVIDERS_SOURCE_REPO ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret DECKHOUSE_PRIVATE_REPO | DECKHOUSE_PRIVATE_REPO ;
+
+      # </template: import_secrets>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
+
+      # <template: add_ssh_keys>
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{secrets.SOURCE_REPO_SSH_KEY}}
+            ${{ secrets.SVACE_ANALYZE_SSH_PRIVATE_KEY }}
+      - name: Add ssh_known_hosts
+        run: |
+          HOST=$(grep -oP '(?<=@)[^/:]+' <<< ${{secrets.SOURCE_REPO_GIT}})
+          echo "::add-mask::$HOST"
+          IPS=$(nslookup "$HOST" | awk '/^Address: / { print $2 }')
+          for IP in $IPS; do
+            echo "::add-mask::$IP"
+          done
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$HOST" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+            CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+            if ! grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+            fi
+          done <<< "$HOST_KEYS"
+      - name: Add svace analyze server to ssh_known_hosts
+        continue-on-error: true
+        run: |
+          host=${{ secrets.SVACE_ANALYZE_HOST }}
+          host_ip=$(nslookup "$host" | awk '/^Address: / { print $2 }')
+          echo "::add-mask::$host_ip"
+          mkdir -p ~/.ssh
+          touch ~/.ssh/known_hosts
+          HOST_KEYS=$(ssh-keyscan -H "$host" 2>/dev/null)
+          while IFS= read -r KEY_LINE; do
+              CONSTANT_PART=$(awk '{print $2, $3}' <<< "$KEY_LINE")
+              if grep -q "$CONSTANT_PART" ~/.ssh/known_hosts; then
+                  ssh-keygen -R $host
+                  ssh-keygen -R $host_ip
+              fi
+              echo "$KEY_LINE" >> ~/.ssh/known_hosts
+          done <<< "$HOST_KEYS"
+      # </template: add_ssh_keys>
+
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+
+      - name: Run go generate
+        run: |
+          (make generate)
+          (cd modules/500-upmeter/hooks/smokemini/internal/snapshot && go generate -v)
+
+      - name: Check generated code
+        run: git diff --exit-code || (echo 'Regenerated code does not match source, please run "make generate"' && exit 1)
+
+      - name: Build and push deckhouse images
+        id: build
+        env:
+          WERF_PARALLEL_TASKS_LIMIT: 3
+          DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
+          CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+          DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
+          COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
+          COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          COSIGN_VAULT_KEY: "dh-2025-aug-ec"
+          COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer"
+          COSIGN_AUTH_ROLE: "dh-signer_dh-signer"
+          REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+        run: |
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Put tags on produced images and push to dev and release repositories.
+          #
+          # There are 2 modes: "dev" and "release".
+          # The "dev" mode builds branches only:
+          # - Build using dev-registry as primary and deckhouse registry as secondary.
+          # - Push dev and dev/install images with prNUM tags and push to dev-registry.
+          # The "release" mode builds branches and tags:
+          # - Build using deckhouse registry as final and dev-registry as primary.
+          # - Push dev and dev/install images to dev-registry with tag equal to a branch name (main or release-X.Y).
+          # - Push dev, dev/install and release-channel-version images to deckhouse registry with tag equels to a Git tag.
+
+          # IMAGE_NAME is a name of image from werf.yaml.
+          # IMAGE_DST is an image name for docker push.
+          function publish_image() {
+            IMAGE_NAME=$1
+            IMAGE_DST_REPO=$2
+            IMAGE_DST_TAG=$3
+            IMAGE_SRC_REPO="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerRepo" images_tags_werf.json)"
+            IMAGE_SRC_TAG="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerTag" images_tags_werf.json)"
+            IMAGE_DIGEST="$(jq -r ".Images.\"${IMAGE_NAME}\".DockerImageDigest" images_tags_werf.json)"
+            IMAGE_DIGEST="${IMAGE_DIGEST#sha256:}"
+            echo "⚓️ 💫 [$(date -u)] Publishing '${IMAGE_NAME}' image to ${IMAGE_DST_REPO}:${IMAGE_DST_TAG}".
+            regctl image copy "${IMAGE_SRC_REPO}:${IMAGE_SRC_TAG}" "${IMAGE_DST_REPO}:${IMAGE_DST_TAG}"
+            if (regctl image manifest "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" > /dev/null 2>&1); then
+              echo "⚓️ 💫 [$(date -u)] Copying '${IMAGE_NAME}' attestation"
+              regctl image copy "${IMAGE_SRC_REPO}:sha256-${IMAGE_DIGEST}.att" "${IMAGE_DST_REPO}:sha256-${IMAGE_DIGEST}.att"
+            else
+              echo "⚓️ 💫 [$(date -u)] Attestation for '${IMAGE_NAME}' not found, skipping..."
+            fi
+          }
+
+          # CE/EE/FE -> ce/ee/fe
+          REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+          STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
+          export WERF_REPO="${STAGE_REGISTRY_PATH}"
+
+          # The Git tag may contain a '+' sign, so use slugify for this situation.
+          # Slugify doesn't change a tag with safe-only characters.
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          export WERF_DISABLE_META_TAGS=true
+
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
+            --parallel=true --parallel-tasks-limit=10 \
+            --save-build-report=true \
+            --build-report-path images_tags_werf.json
+
+          # Publish images for Git branch.
+          if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images to dev-registry for branch '${CI_COMMIT_BRANCH}' and edition '${WERF_ENV}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
+
+            # For release branches, also push release-channel to dev
+            if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
+              publish_image 'dev' "${REGISTRY_PATH}" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install' "${REGISTRY_PATH}/install" "v${BASH_REMATCH[1]}.0"
+              publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "v${BASH_REMATCH[1]}.0"
+              publish_image 'release-channel-version' "${REGISTRY_PATH}/release-channel" "v${BASH_REMATCH[1]}.0"
+            fi
+          else
+            echo "Branch unset, skipping branch publish."
+          fi
+
+          # Publish images for Git tag.
+          if [[ "${CI_COMMIT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚓️ 💫 [$(date -u)] Publish images for Git tag '${CI_COMMIT_TAG}' and registry suffix '${REGISTRY_SUFFIX}' using tag '${IMAGE_TAG}' ..."
+            publish_image 'dev' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}" "${IMAGE_TAG}"
+            publish_image 'dev/install' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install" "${IMAGE_TAG}"
+            publish_image 'dev/install-standalone' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install-standalone" "${IMAGE_TAG}"
+            publish_image 'release-channel-version' "${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/release-channel" "${IMAGE_TAG}"
+          else
+            echo "Not a release tag, skipping tag publish."
+          fi
+
+          # Save 'tests' image name to pass it as output for 'tests' jobs.
+          TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          # Encode as gzip+base64 to evade github's SecretMasker error: "Skip output since it may contain secret".
+          echo "tests_image_name=$(echo ${TESTS_IMAGE_NAME} | gzip | base64 -w0)" >> $GITHUB_OUTPUT
+
+          # Filter out data from build report
+          egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
+          mv images_tags_werf_filtered.json images_tags_werf.json
+
+      - name: Check DKP images manifests in public registry
+        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+        id: check_images
+        env:
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
+        run: |
+          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
+
+          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
+
+
+
+      - name: Save build report
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: build_report_${{ env.WERF_ENV }}
+          path: images_tags_werf.json
+
+      - name: Cleanup workdir
+        if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
+        run: rm images_tags_werf.json
+
+    # </template: build_template>
+
+
+      # <template: send_fail_report>
+      - name: Send fail report
+        if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+        env:
+          LOOP_SERVICE_NOTIFICATIONS: ${{ secrets.LOOP_SERVICE_NOTIFICATIONS }}
+          JOB_NAME: ${{ github.job }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
+        run: |
+          bash ./.github/scripts/send-report.sh --webhook "ci_fail"
+      # </template: send_fail_report>   
+
 
   doc_web_build:
     name: Doc web build
@@ -1980,7 +2404,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2041,8 +2470,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
 
@@ -2088,7 +2517,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2148,13 +2582,13 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:e694827623f7a8bf932c3b9462546095ddb404c9d094ae6a3240596d7c395e53"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:4aaf81659fa6ea3cbbb0f241d739dda485bce79ec98b0fd5014ef4f4210e1cd5"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -2252,7 +2686,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2312,8 +2751,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2365,7 +2804,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2425,8 +2869,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2479,7 +2923,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2539,8 +2988,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2592,7 +3041,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2652,8 +3106,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2697,7 +3151,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2788,7 +3247,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2848,8 +3312,8 @@ jobs:
         if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
-          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           logout: false
       # </template: login_rw_registry_step>
       - name: Run tests
@@ -2902,7 +3366,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3022,7 +3491,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3133,7 +3607,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3296,11 +3775,13 @@ jobs:
     name: Compare internal modules
     needs:
       - build_fe
-      - build_ee
-      - build_ce
-      - build_be
-      - build_se
-      - build_se_plus
+
+      - build_CE
+      - build_EE
+      - build_BE
+      - build_SE
+      - build_SE-plus
+      - build_CSE
     if: ${{ always() && needs.build_fe.result == 'success' }}
     runs-on: regular
     steps:

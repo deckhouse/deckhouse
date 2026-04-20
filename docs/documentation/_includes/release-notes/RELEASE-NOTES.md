@@ -1,3 +1,187 @@
+## Version 1.75
+
+### Important
+
+- Support for Kubernetes 1.35 has been added, while support for Kubernetes 1.30 has been discontinued.
+  In future DKP releases, support for Kubernetes 1.31 will be removed.
+  The default Kubernetes version (used when the [`kubernetesVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set to `Automatic`) has been changed to 1.33.
+
+- Update to DKP 1.75 will be blocked if the cluster uses one of the following deprecated component versions (they are no longer supported):
+  - IngressNginxController v1.9
+  - Istio v1.19
+
+- In DKP 1.75.0–1.75.3, the `PodSecurityStandardsViolation` alert may fire immediately after cluster installation.
+  This happens when the `d8-system` namespace is missing the `heritage=deckhouse` label,
+  causing Pod Security Standards policies to be mistakenly applied to DKP system pods.
+  The issue is fixed in DKP 1.75.4.
+
+  For clusters installed on DKP 1.75.0–1.75.3, add the required label manually using the following command:
+
+  ```shell
+  d8 k --as=system:sudouser label namespace d8-system heritage=deckhouse
+  ```
+
+- Istio version support changes:
+  - Support for Istio 1.19 has been discontinued.
+  - Istio 1.21 is now considered deprecated, and support for this version will be discontinued in the upcoming DKP releases.
+    To update Istio, follow the [instruction](https://deckhouse.io/modules/istio/v1.75/examples.html#upgrading-istio).
+
+- Starting with Kubernetes 1.35, cluster nodes must use cgroup v2.
+  The previous version (cgroup v1) is [considered deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
+  If cgroup v2 is not supported on a node, the [D8NodeCgroupV2NotSupported](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/reference/alerts.html#node-manager-d8nodecgroupv2notsupported) alert will be triggered.
+  See the [Kubernetes documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2) for cgroup v2 migration details.
+
+- Starting with Kubernetes 1.36, cluster nodes must use containerd v2 as the container runtime.
+  Support for containerd v1 [will be discontinued](https://kubernetes.io/blog/2025/08/27/kubernetes-v1-34-release/#kubernetes-to-end-containerd-1-x-support-in-v1-36).
+  If containerd v2 is not supported on a node, the [D8NodeContainerdV2NotSupported](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/reference/alerts.html#node-manager-d8nodecontainerdv2notsupported) alert will be triggered.
+
+- The `vertical-pod-autoscaler` module has been updated from version 1.4.1 to [1.5.1](https://github.com/kubernetes/autoscaler/releases/tag/vertical-pod-autoscaler-1.5.1).
+  Starting from version 1.5.0, the `updateMode: Auto` mode is [considered deprecated](https://github.com/kubernetes/autoscaler/pull/8426).
+  Users are advised to replace it with [`updateMode: InPlaceOrRecreate`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.75/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode).
+  See the [vertical scaling documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/architecture/vpa.html#vpa-operating-modes) for details.
+
+- When issuing new certificates using the [`cert-manager`](https://deckhouse.io/modules/cert-manager/v1.75/) module, the certificate's private key is now re-generated as well.
+  This change mitigates potential security risks.
+
+- Pods handling HTTP-01 challenges via Issuer and ClusterIssuer resources now have default resource requests defined.
+  As a result, these pods consume part of the cluster and project resource quotas upon creation.
+
+- The [operator-trivy](https://deckhouse.io/modules/operator-trivy/) module is now delivered from an external source
+  and follows an independent release cycle. No manual migration steps are required.
+
+### Deckhouse subsystem
+
+- The ModuleSource resource now includes the [`scanInterval`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/reference/api/cr.html#modulesource-v1alpha1-spec-scaninterval) parameter
+  to control how frequently the container registry is checked for new modules and versions.
+
+- A dedicated node mode with the `node.deckhouse.io/etcd-arbiter` label has been introduced.
+  In this mode, only etcd runs on the node (no control plane components).
+  This enables a highly available cluster with two master nodes plus a dedicated etcd node,
+  reducing resource requirements compared to the traditional three full master nodes configuration.
+  See the [High Availability documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/admin/configuration/high-reliability-and-availability/enable.html#configuring-ha-mode-with-two-master-nodes-and-an-arbiter-node) for details.
+
+- New [operating modes](https://deckhouse.io/modules/registry/v1.75/#description) have been introduced in the `registry` module: **Proxy** (with image caching) and **Local** (for isolated environments).
+  These modes are currently supported only for already deployed static clusters and are not yet available during DKP cluster installation.
+
+- Container registry access parameters can now be [configured](https://deckhouse.io/modules/deckhouse/v1.75/configuration.html#parameters-registry) via the deckhouse module during DKP cluster installation.
+  Support for the DKP cluster deployment via [Direct](https://deckhouse.io/modules/deckhouse/v1.75/configuration.html#parameters-registry-direct) and [Unmanaged](https://deckhouse.io/modules/deckhouse/v1.75/configuration.html#parameters-registry-unmanaged) modes has been added.
+  The Legacy Unmanaged mode (via [InitConfiguration](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo)) is preserved for compatibility.
+  If no explicit configuration is provided, the mode is selected automatically.
+
+- Added user shell validation: if a shell other than bash is used, the `dhctl` utility now displays a clear error message.
+
+- Added StaticInstance validation before DKP installation using the corresponding SSHCredentials,
+  preventing `dhctl` from reporting readiness before the cluster deployment is actually complete.
+
+- Extended preflight test coverage to improve cluster deployment predictability.
+
+- Partially reduced usage of netcat in bashible, lowering the number of security system triggers.
+
+- Fixed an issue where cluster installation could not be resumed after interruption.
+
+- Fixed Node object deletion logic during `converge`.
+  The node is now properly removed from the cluster after the corresponding VM is destroyed.
+
+- Fixed the `--skip-resources` flag behavior in `dhctl destroy` command. Specified resources are now correctly skipped.
+
+### Kubernetes & Scheduling subsystem
+
+- A new `update-observer` component in the [`control-plane-manager`](https://deckhouse.io/modules/control-plane-manager/v1.75/) module enables real-time tracking of control plane component updates (kube-apiserver, kube-scheduler, kube-controller-manager) and kubelet on nodes. This helps detect discrepancies and eliminates "blind spots" during Kubernetes updates.
+
+- For all VPA resources managed by DKP, `updateMode: Auto` has been automatically replaced with [`updateMode: InPlaceOrRecreate`](https://deckhouse.io/modules/vertical-pod-autoscaler/v1.75/cr.html#verticalpodautoscaler-v1-spec-updatepolicy-updatemode).
+  For clusters running Kubernetes 1.32 or earlier, the `InPlacePodVerticalScaling` [feature gate](https://deckhouse.io/modules/control-plane-manager/v1.75/#feature-gates) is automatically enabled in control plane components (kube-apiserver, kube-scheduler, kube-controller-manager) and kubelet.
+  This allows pod resource changes without recreation.
+
+- The [descheduler](https://deckhouse.io/modules/descheduler/v1.75/) module has been updated to version 0.34. Key changes:
+  - Priority-based pod eviction: pods with a higher restart count are evicted first, improving cluster stability during load redistribution.
+  - DRA support: proper handling of resources managed via Dynamic Resource Allocation.
+  - Default `cpu`, `memory`, and `pods` thresholds removed from [`lowNodeUtilization`](https://deckhouse.io/modules/descheduler/v1.75/cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization) and [`highNodeUtilization`](https://deckhouse.io/modules/descheduler/v1.75/cr.html#descheduler-v1alpha2-spec-strategies-highnodeutilization) strategies to align with upstream behavior.
+
+### IAM subsystem
+
+- Namespace listing behavior has been changed.
+  When requesting all cluster namespaces, users now see only the namespaces they have access to, even without permission to list all namespaces.
+  This improves working with multitenancy and UI.
+
+- The ProjectTemplate resource in the `multitenancy-manager` module now supports the unmanaged and skip-heritage options (set via annotations),
+  allowing administrators to adjust the DKP control degree over resources:
+  - [`unmanaged`](https://deckhouse.io/modules/multitenancy-manager/v1.75/usage.html#excluding-resources-from-management-by-multitenancy-manager): The module does not manage the lifecycle of objects.
+  - [`skip-heritage`](https://deckhouse.io/modules/multitenancy-manager/v1.75/usage.html#skipping-creation-of-the-heritage-multitenancy-manager-label): DKP retains management but allows modification by external controllers.
+
+- Added support for authenticating to the Kubernetes API via LDAP using Basic authentication
+  instead of OIDC tokens (via the [`ldap.enableBasicAuth`](https://deckhouse.io/modules/user-authn/v1.75/cr.html#dexprovider-v1-spec-ldap-enablebasicauth) parameter in the DexProvider resource).
+
+- The authorization webhook in the [`user-authz`](https://deckhouse.io/modules/user-authz/v1.75/) module now operates in fail-closed mode: if it's unavailable, authorization is denied.
+  For improved reliability, webhook communication with the apiserver is performed via the cluster node network.
+
+- The `user-authn` module now supports a global user session lifetime limit (via [`refreshTokenAbsoluteLifetime`](https://deckhouse.io/modules/user-authn/v1.75/configuration.html#parameters-refreshtokenabsolutelifetime)).
+  Re-authentication is required after expiration.
+
+- The `user-authn` module now supports [Kerberos (SPNEGO) authentication](https://deckhouse.io/modules/user-authn/v1.75/cr.html#dexprovider-v1-spec-ldap-kerberos) in DKP.
+
+- Updated kube-apiserver TLS cipher suites.
+  Removed the following insecure ciphers from the `--tls-cipher-suites` flag: TLS_RSA_WITH_AES_256_GCM_SHA384 and TLS_RSA_WITH_AES_128_GCM_SHA256 (considered unsafe due to RSA key exchange).
+  Added TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 and TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256.
+
+- The anonymous access restriction mechanism for the API server has been modified.
+  Instead of using the `--anonymous-auth=false` flag and a sidecar proxy,
+  the AuthenticationConfiguration resource is now used to allow anonymous access only to `/livez`, `/readyz`, and `/healthz`.
+  This improves cluster resource efficiency. Anonymous probe access remains restricted when public API access is enabled via [`publishAPI.enabled`](https://deckhouse.io/modules/user-authn/v1.75/configuration.html#parameters-publishapi-enabled).
+
+### Security subsystem
+
+- Fixed serialization of empty arrays and objects in [SecurityPolicy](https://deckhouse.io/modules/admission-policy-engine/v1.75/cr.html#securitypolicy) and [OperationPolicy](https://deckhouse.io/modules/admission-policy-engine/v1.75/cr.html#operationpolicy) resources of the `admission-policy-engine` module.
+  Previously, some settings could be applied incorrectly.
+
+- Revised ModSecurity extension implementation.
+  [OWASP Core Rule Set (CRS)](https://owasp.org/www-project-modsecurity-core-rule-set/) functionality is now available in all supported IngressNginxController versions.
+
+### Cluster & Infrastructure subsystem
+
+- [Lifecycle stages](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/architecture/module-development/versioning/#module-lifecycle) updated for cloud provider integration modules:
+  - [`cloud-provider-dvp`](https://deckhouse.io/modules/cloud-provider-dvp/) (DVP), [`cloud-provider-vcd`](https://deckhouse.io/modules/cloud-provider-vcd/) (VMware Cloud Director), [`cloud-provider-huaweicloud`](https://deckhouse.io/modules/cloud-provider-huaweicloud/) (Huawei Cloud), and [`cloud-provider-zvirt`](https://deckhouse.io/modules/cloud-provider-zvirt/) (zVirt) modules are now General Availability (previously Experimental).
+
+- Added support for swap memory usage by pods.
+  Instead of immediate OOM-kill, a pod can temporarily use swap (if configured and available on the node) and continue running after peak usage.
+  Requires cgroup v2 and sufficient node resources. For details, see the [`kubelet.memorySwap`](https://deckhouse.io/modules/node-manager/v1.75/cr.html#nodegroup-v1-spec-kubelet-memoryswap) parameter in the NodeGroup resource documentation.
+
+- In the DVP cloud provider:
+  - Added the [`networkPolicy`](https://deckhouse.io/modules/cloud-provider-dvp/v1.75/cluster_configuration.html#dvpclusterconfiguration-provider-networkpolicy) parameter to define network traffic rules for workloads within a Project resource.
+  - Added `managed-by`, `cluster-uuid`, and `vm_name` labels to all infrastructure objects.
+  - Improved CSI driver diagnostics. Diagnostic messages are now displayed directly in PersistentVolumeClaim status.
+  - Implemented automatic cleanup of VMBDA objects when a VM is deleted.
+  - Fixed an issue where DeckhouseMachine objects could remain in deleting state after VM removal.
+  - Fixed an issue where Cloud Controller Manager (CCM) could recreate external load balancers after the associated Kubernetes Service was deleted.
+
+- In Yandex Cloud, fixed a false NAT warning displayed during installation in configurations where NAT is not used.
+
+- In the [`node-manager`](https://deckhouse.io/modules/node-manager/v1.75/) module:
+  - Cluster API (CAPI) has been updated from 1.10.6 to 1.11.3, improving stability and provider compatibility.
+  - Added a dedicated controller for NodeGroup hooks (extracted from DKP), reducing load on master nodes and improving responsiveness and UI feedback.
+  - Added per-GPU MIG configuration support. You can now define a [distinct set of MIG partitions](https://deckhouse.io/modules/node-manager/v1.75/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) for each physical GPU on a node.
+    Previously, MIG configuration was applied at the node level and identical across all GPUs.
+    This enables more flexible workload resource allocation on a single node.
+
+### Network subsystem
+
+- In IngressNginxController, the `acceptClientIPHeadersFrom` parameter has been added for the following inlets: [HostPort](https://deckhouse.io/modules/ingress-nginx/v1.75/cr.html#ingressnginxcontroller-v1-spec-hostport-acceptclientipheadersfrom), [HostPortWithProxyProtocol](https://deckhouse.io/modules/ingress-nginx/v1.75/cr.html#ingressnginxcontroller-v1-spec-hostportwithproxyprotocol-acceptclientipheadersfrom), [LoadBalancer](https://deckhouse.io/modules/ingress-nginx/v1.75/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-acceptclientipheadersfrom), and [LoadBalancerWithProxyProtocol](https://deckhouse.io/modules/ingress-nginx/v1.75/cr.html#ingressnginxcontroller-v1-spec-loadbalancerwithproxyprotocol-acceptclientipheadersfrom).
+  The parameter defines trusted CIDR ranges for `X-Forwarded-*` headers that should not be overwritten during proxying.
+
+- In the `cni-cilium` module, network observability capabilities have been extended:
+  - Added extended metrics for monitoring interactions between specific objects (Pods, Services, Namespaces),
+    configurable via the [`extendedMetrics`](https://deckhouse.io/modules/cni-cilium/v1.75/cr.html#hubblemonitoringconfig-v1alpha1-spec-extendedmetrics) parameter of the HubbleMonitoringConfig resource.
+  - Implemented export of traffic flow logs for analyzing network interactions,
+    configurable via the [`flowLogs`](https://deckhouse.io/modules/cni-cilium/v1.75/cr.html#hubblemonitoringconfig-v1alpha1-spec-flowlogs) parameter of the HubbleMonitoringConfig resource.
+
+- Fixed an issue where, after VM migration in DVP, a LoadBalancer IP address could stop being announced when using MetalLB in BGP mode.
+
+- [IngressNginxController](https://deckhouse.io/modules/ingress-nginx/v1.75/) version support changes:
+  - Support for v1.9 has been discontinued.
+  - Support for v1.14 has been added.
+
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.75.md) on GitHub.
+
 ## Version 1.74
 
 ### Important
@@ -25,8 +209,9 @@
   to the HuaweiCloudInstanceClass resource of the Huawei Cloud provider,
   allowing you to specify a virtual IP address for all nodes in the instance class.
 
-- The Huawei Cloud provider configuration now allows overriding the primary network for the main network interface ([`mainNetwork`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-mainnetwork))
-  and specifying subnets for additional network interfaces ([`additionalNetworks`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-additionalnetworks)) on both CloudPermanent and CloudEphemeral nodes.
+- The Huawei Cloud provider configuration now allows overriding the primary network for the main network interface ([`mainNetwork`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-mainnetwork)) and specifying subnets for additional network interfaces ([`additionalNetworks`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-additionalnetworks)) on both CloudPermanent and CloudEphemeral nodes.
+
+  **Warning**. When upgrading to DKP 1.74 on Huawei Cloud, a bulk recreation of CloudEphemeral nodes may occur. Due to a temporary node shortage, some Pods may fail to start.
 
 - The archive with debugging data is now collected using the [`d8`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.74/cli/d8/) tool.
   If you need to collect diagnostic data, follow the [instructions](https://deckhouse.io/modules/deckhouse/v1.74/faq.html#how-to-collect-debug-info).
@@ -181,7 +366,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
 - Upgrading the cluster to Kubernetes 1.31 requires a sequential update of all nodes, with each node drained. You can control how node updates requiring workload disruptions are applied using the [`disruptions`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) parameter section.
 
-- The built-in `snapshot-controller` and `static-routing-manager` modules will now be replaced with their external counterparts of the same name, sourced via ModuleSource deckhouse.
+- The built-in `snapshot-controller` and `static-routing-manager` modules will now be replaced with their external counterparts of the same name, sourced via ModuleSource `deckhouse`.
 
 - The new version of Cilium requires nodes to run Linux kernel version 5.8 or newer. If any node in the cluster has a kernel older than 5.8, the Deckhouse Kubernetes Platform upgrade will be blocked. Cilium Pods will be restarted.
 

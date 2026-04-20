@@ -1,14 +1,5 @@
 # Changelog v1.69
 
-## [MALFORMED]
-
-
- - #12318 unknown section "static-routing-manager"
- - #12510 unknown section "static-routing-manager"
- - #12723 unknown section "ceph-csi"
- - #13174 unknown section "ceph-csi"
- - #13409 unknown section "ceph-csi"
-
 ## Know before update
 
 
@@ -57,6 +48,7 @@
  - **[docs]** Enhanced registry watcher and docs-builder integration, including improved caching, error handling, and added retries. [#12337](https://github.com/deckhouse/deckhouse/pull/12337)
  - **[documentation]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
  - **[ingress-nginx]** Added `controllerPodsAdditionalAnnotations` parameter to IngressNginxController for customizing pod annotations. [#11522](https://github.com/deckhouse/deckhouse/pull/11522)
+ - **[istio]** Validating jwt token exp time less than 30 days [#18008](https://github.com/deckhouse/deckhouse/pull/18008)
  - **[istio]** Added a validation and an alert when creating a ServiceEntry resource without service ports. [#12133](https://github.com/deckhouse/deckhouse/pull/12133)
  - **[istio]** Added the `auth.allowedUserEmails` option to restrict access to the application based on user email. [#12055](https://github.com/deckhouse/deckhouse/pull/12055)
  - **[istio]** Reworked multi-cluster and federation resource tracking to enable native watch via Kubernetes API and removed ConfigMap or Secret mounting from pods. [#11845](https://github.com/deckhouse/deckhouse/pull/11845)
@@ -69,6 +61,8 @@
  - **[monitoring-kubernetes-control-plane]** Added support for selecting multiple Kubernetes versions. [#12284](https://github.com/deckhouse/deckhouse/pull/12284)
  - **[multitenancy-manager]** Added namespace adoption mechanism; namespaces with the `projects.deckhouse.io/adopt` annotation are now automatically linked to empty projects. [#12423](https://github.com/deckhouse/deckhouse/pull/12423)
  - **[namespace-configurator]** Added exclusion of `deckhouse` and `multitenancy-manager` namespaces. [#12784](https://github.com/deckhouse/deckhouse/pull/12784)
+ - **[node-manager]** Added support for configuring private HTTP container registries in containerd. [#14155](https://github.com/deckhouse/deckhouse/pull/14155)
+    Users can now configure containerd to pull images from private registries, easing deployments in private environments.
  - **[node-manager]** enable UnmetCloudConditions check [#12845](https://github.com/deckhouse/deckhouse/pull/12845)
  - **[node-manager]** UnmetCloudConditions requirement and alert [#12530](https://github.com/deckhouse/deckhouse/pull/12530)
  - **[node-manager]** Removed bundle from bashible-api contexts; nodegroupconfiguration scripts now use an auto-generated header to detect the bundle. [#11479](https://github.com/deckhouse/deckhouse/pull/11479)
@@ -136,6 +130,8 @@
     Ingress-nginx controller pods of v1.9 will be restated.
  - **[ingress-nginx]** Fixed patch names in `ingress-nginx`. [#12633](https://github.com/deckhouse/deckhouse/pull/12633)
  - **[ingress-nginx]** Fixed security vulnerabilities. [#12449](https://github.com/deckhouse/deckhouse/pull/12449)
+ - **[istio]** Fix istiod CPU leak when the order of the ingressGateways array is changed [#17643](https://github.com/deckhouse/deckhouse/pull/17643)
+ - **[istio]** Reduce RAM for regenerate multicluster JWT token [#15511](https://github.com/deckhouse/deckhouse/pull/15511)
  - **[istio]** The `alliance.ingressGateway.advertise` option was fixed up. [#13924](https://github.com/deckhouse/deckhouse/pull/13924)
  - **[istio]** proxy-buffer-size increased in kiali Ingress. [#13721](https://github.com/deckhouse/deckhouse/pull/13721)
  - **[istio]** Added Kubernetes version check in a Helm chart. [#12503](https://github.com/deckhouse/deckhouse/pull/12503)
@@ -169,6 +165,8 @@
  - **[runtime-audit-engine]** Fixed built-in rules for `runtime-audit-engine`. [#12486](https://github.com/deckhouse/deckhouse/pull/12486)
  - **[runtime-audit-engine]** Added support for customization of a built-in rule list of the `runtime-audit-engine` module. [#12185](https://github.com/deckhouse/deckhouse/pull/12185)
  - **[service-with-healthchecks]** Removed unnecessary text data from the executable binary file. [#12492](https://github.com/deckhouse/deckhouse/pull/12492)
+ - **[static-routing-manager]** Fixed regular expression to allow empty string in `nodeSelector` field. [#12510](https://github.com/deckhouse/deckhouse/pull/12510)
+ - **[static-routing-manager]** Fixed `nodeSelector` parameter validation. [#12318](https://github.com/deckhouse/deckhouse/pull/12318)
  - **[upmeter]** upmeter sa token rotation [#13201](https://github.com/deckhouse/deckhouse/pull/13201)
  - **[user-authn]** Add separate ServiceAccount to basic-auth-proxy. [#13214](https://github.com/deckhouse/deckhouse/pull/13214)
  - **[user-authn]** Fix secret generation on empty data field in the dex client app secret. [#13092](https://github.com/deckhouse/deckhouse/pull/13092)
@@ -182,6 +180,8 @@
  - **[candi]** Fixed the priority for `kubernetes_api_proxy`. [#12678](https://github.com/deckhouse/deckhouse/pull/12678)
  - **[candi]** Bumped patch versions of Kubernetes images: `v1.29.14`, `v1.30.1`, `v1.31.6`, `v1.32.2`. [#12080](https://github.com/deckhouse/deckhouse/pull/12080)
     Kubernetes control plane components and kubelet will restart.
+ - **[ceph-csi]** Add "Deprecated" status to module [#13174](https://github.com/deckhouse/deckhouse/pull/13174)
+    low
  - **[cloud-provider-aws]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-azure]** Added support for switching between different CNIs. [#12355](https://github.com/deckhouse/deckhouse/pull/12355)
  - **[cloud-provider-dynamix]** Fixed vulnerabilities and some critical bugs for cloud-provider-zvirt and cloud-provider-dynamix [#13883](https://github.com/deckhouse/deckhouse/pull/13883)

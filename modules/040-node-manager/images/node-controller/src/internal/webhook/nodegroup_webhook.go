@@ -459,6 +459,7 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 	config := &ClusterConfig{PodSubnetNodeCIDRPrefix: 24}
 
 	secret := &corev1.Secret{}
+	webhookLog.Info("reading Secret", "namespace", "kube-system", "name", "d8-cluster-configuration")
 	err := w.Client.Get(ctx, types.NamespacedName{
 		Namespace: "kube-system",
 		Name:      "d8-cluster-configuration",
@@ -491,7 +492,9 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 	}
 
 	if match := regexp.MustCompile(`podSubnetNodeCIDRPrefix:\s*"?(\d+)"?`).FindSubmatch(configYAML); match != nil {
-		fmt.Sscanf(string(match[1]), "%d", &config.PodSubnetNodeCIDRPrefix)
+		if _, err := fmt.Sscanf(string(match[1]), "%d", &config.PodSubnetNodeCIDRPrefix); err != nil {
+			return nil, fmt.Errorf("failed to parse podSubnetNodeCIDRPrefix: %w", err)
+		}
 	}
 
 	return config, nil
@@ -504,6 +507,7 @@ func (w *NodeGroupValidator) loadProviderClusterConfig(ctx context.Context) (*Pr
 	config := &ProviderClusterConfig{}
 
 	secret := &corev1.Secret{}
+	webhookLog.Info("reading Secret", "namespace", "kube-system", "name", "d8-provider-cluster-configuration")
 	err := w.Client.Get(ctx, types.NamespacedName{
 		Namespace: "kube-system",
 		Name:      "d8-provider-cluster-configuration",
@@ -546,6 +550,7 @@ func (w *NodeGroupValidator) loadCustomTolerationKeys(ctx context.Context) ([]st
 		Kind:    "ModuleConfig",
 	})
 
+	webhookLog.Info("reading ModuleConfig", "name", "global")
 	err := w.Client.Get(ctx, types.NamespacedName{Name: "global"}, mc)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -585,6 +590,7 @@ func (w *NodeGroupValidator) loadCustomTolerationKeys(ctx context.Context) ([]st
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) getKubernetesEndpointsCount(ctx context.Context) (int, error) {
 	endpoints := &corev1.Endpoints{}
+	webhookLog.Info("reading Endpoints", "namespace", "default", "name", "kubernetes")
 	err := w.Client.Get(ctx, types.NamespacedName{
 		Namespace: "default",
 		Name:      "kubernetes",
@@ -609,6 +615,7 @@ func (w *NodeGroupValidator) getKubernetesEndpointsCount(ctx context.Context) (i
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, nodeGroupName string) ([]string, error) {
 	nodeList := &corev1.NodeList{}
+	webhookLog.Info("listing Nodes", "filter", "containerd-config=custom", "nodeGroup", nodeGroupName)
 	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
 		"node.deckhouse.io/containerd-config": "custom",
 		"node.deckhouse.io/group":             nodeGroupName,
@@ -628,6 +635,7 @@ func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, n
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) ([]string, error) {
 	nodeList := &corev1.NodeList{}
+	webhookLog.Info("listing Nodes", "filter", "containerd-v2-unsupported", "nodeGroup", nodeGroupName)
 	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
 		"node.deckhouse.io/containerd-v2-unsupported": "",
 		"node.deckhouse.io/group":                     nodeGroupName,

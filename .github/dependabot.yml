@@ -88,6 +88,33 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/be/modules/350-node-local-dns/images/stale-dns-connections-cleaner"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/cse/modules/007-registrypackages/images/d8-bcheck/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/ee/cse/modules/007-registrypackages/images/logpipe/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/modules/030-cloud-provider-openstack/images/cloud-data-discoverer/src"
   labels:
   - "type/dependencies"
@@ -241,6 +268,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/go_lib/configtools/conversion"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/go_lib/dependency/k8s/drain"
   labels:
   - "type/dependencies"
@@ -286,7 +322,34 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/000-common/images/cni-migration-controller/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/000-common/images/cni-migration-init-checker/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/000-common/images/vxlan-offloading-fixer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/002-deckhouse/images/webhook-handler/operator"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -502,6 +565,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/038-registry/images/registry-proxy/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
@@ -512,24 +584,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-control-plane-manager/images/control-plane-manager/controller"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/kube-apiserver-healthcheck"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/kubernetes-api-proxy/reloader"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -575,6 +629,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/fencing-agent/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/kubernetes-api-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -700,7 +763,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/340-monitoring-kubernetes/images/ebpf-exporter/entrypoint"
+  directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -709,7 +772,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/340-monitoring-kubernetes/images/kubelet-eviction-thresholds-exporter/src"
+  directory: "/modules/340-monitoring-kubernetes/images/oom-kills-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

@@ -49,10 +49,10 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 	}
 
 	if err := c.cleanGarbage(ctx, c.parentGetter, c.parentDeleter); err != nil {
-		return check.ErrUnknown(err.Error())
+		return check.ErrUnknown("%s", err.Error())
 	}
 	if err := c.cleanGarbage(ctx, c.childGetter, c.childDeleter); err != nil {
-		return check.ErrUnknown(err.Error())
+		return check.ErrUnknown("%s", err.Error())
 	}
 
 	// 1. create parent
@@ -125,21 +125,22 @@ type pollingDoer struct {
 	interval time.Duration
 }
 
-func (p *pollingDoer) Do(ctx context.Context) (err error) {
+func (p *pollingDoer) Do(ctx context.Context) error {
 	deadline := time.NewTimer(p.timeout)
 	ticker := time.NewTicker(p.interval)
 	defer deadline.Stop()
 	defer ticker.Stop()
 
+	var lastErr error
 	for {
 		select {
 		case <-ticker.C:
-			err = p.doer.Do(ctx)
-			if p.catch(err) {
-				return err
+			lastErr = p.doer.Do(ctx)
+			if p.catch(lastErr) {
+				return lastErr
 			}
 		case <-deadline.C:
-			return err
+			return lastErr
 		}
 	}
 }

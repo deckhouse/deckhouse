@@ -20,7 +20,7 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
   insecure: true
-sshPublicKey: ssh-rsa AAAABBBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
@@ -87,7 +87,7 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
   insecure: true
-sshPublicKey: ssh-rsa AAAABBBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
@@ -131,7 +131,7 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
   insecure: true
-sshPublicKey: ssh-rsa AAAABBBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse

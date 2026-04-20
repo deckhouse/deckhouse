@@ -10,6 +10,7 @@ rules:
   resourceNames:
   - bashible-bashbooster
   - node-users
+  - registry-packages-proxy-token
 {{- range $bundle := $.Values.nodeManager.internal.allowedBundles }}
   {{- range $.Values.nodeManager.internal.nodeGroups }}
   - bashible-{{ .name }}-{{ $bundle }}
@@ -19,6 +20,21 @@ rules:
   - secrets
   verbs:
   - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:bashible:rpp
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
 
 ---
 # todo remove after 1.47
@@ -150,6 +166,25 @@ roleRef:
 subjects:
 - kind: Group
   name: system:bootstrappers:d8-node-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:bashible:rpp
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:bashible:rpp
+subjects:
+- kind: Group
+  name: system:bootstrappers:d8-node-manager
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: system:nodes
   apiGroup: rbac.authorization.k8s.io
 
 ---

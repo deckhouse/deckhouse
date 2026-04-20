@@ -26,10 +26,12 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 )
 
 const (
@@ -42,23 +44,23 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cluster_log_destination",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1alpha2",
 			Kind:       "ClusterLogDestination",
 			FilterFunc: filterClusterLogDestination,
 		},
 		{
 			Name:       "loki_endpoint",
-			ApiVersion: "v1",
-			Kind:       "Endpoints",
+			ApiVersion: "discovery.k8s.io/v1",
+			Kind:       "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{MatchNames: []string{
 					"d8-monitoring",
 				}},
 			},
-			NameSelector: &types.NameSelector{MatchNames: []string{
-				"loki",
-			}},
-			FilterFunc: filterLokiEndpoints,
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"kubernetes.io/service-name": "loki"},
+			},
+			FilterFunc: filterLokiEndpointSlice,
 		},
 	},
 }, handleClusterLogDestinationD8Loki)
@@ -67,20 +69,21 @@ func handleClusterLogDestinationD8Loki(_ context.Context, input *go_hook.HookInp
 	destinationSnapshots := input.Snapshots.Get("cluster_log_destination")
 	lokiEndpointSnap := input.Snapshots.Get("loki_endpoint")
 
-	var lokiEndpoint endpoint
-
-	if len(lokiEndpointSnap) > 0 {
-		err := lokiEndpointSnap[0].UnmarshalTo(&lokiEndpoint)
-		if err != nil {
+	endpoints := make([]endpoint, 0, len(lokiEndpointSnap))
+	for _, snap := range lokiEndpointSnap {
+		var ep endpoint
+		if err := snap.UnmarshalTo(&ep); err != nil {
 			return fmt.Errorf("failed to unmarshal loki endpoint: %w", err)
 		}
+		endpoints = append(endpoints, ep)
 	}
+	lokiEndpoint := mergeEndpoints(endpoints)
 
 	clusterDomain := input.Values.Get("global.discovery.clusterDomain").String()
 
 	input.MetricsCollector.Expire(lokiAuthorizationRequiredGroup)
 
-	for destination, err := range sdkobjectpatch.SnapshotIter[v1alpha1.ClusterLogDestination](destinationSnapshots) {
+	for destination, err := range sdkobjectpatch.SnapshotIter[v1alpha2.ClusterLogDestination](destinationSnapshots) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'cluster_log_destination' snapshots: %w", err)
 		}

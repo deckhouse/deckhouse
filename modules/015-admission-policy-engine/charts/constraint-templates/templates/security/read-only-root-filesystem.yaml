@@ -109,12 +109,12 @@ spec:
 
               build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("only read-only root filesystem container is allowed: %v.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("only read-only root filesystem container is allowed: %v. | %v | %v | %v", [name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("only read-only root filesystem container is allowed: %v.\n%v\n%v", [name, actual_value, allowed_by_policy])
+                msg := sprintf("only read-only root filesystem container is allowed: %v. | %v | %v", [name, actual_value, allowed_by_policy])
               }
 
               allowed_by_any(c) if {

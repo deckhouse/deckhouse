@@ -1,5 +1,5 @@
 diff --git a/pkg/referrerstore/oras/oras.go b/pkg/referrerstore/oras/oras.go
-index 64679dd..d813d9c 100644
+index 48f1dc06..233bd718 100644
 --- a/pkg/referrerstore/oras/oras.go
 +++ b/pkg/referrerstore/oras/oras.go
 @@ -19,6 +19,7 @@ import (
@@ -10,7 +10,7 @@ index 64679dd..d813d9c 100644
  	"encoding/json"
  	"errors"
  	"fmt"
-@@ -81,6 +82,7 @@ type OrasStoreConf struct { //nolint:revive // ignore linter to have unique type
+@@ -82,6 +83,7 @@ type OrasStoreConf struct { //nolint:revive // ignore linter to have unique type
  	CosignEnabled  bool                            `json:"cosignEnabled,omitempty"`
  	AuthProvider   authprovider.AuthProviderConfig `json:"authProvider,omitempty"`
  	LocalCachePath string                          `json:"localCachePath,omitempty"`
@@ -18,7 +18,7 @@ index 64679dd..d813d9c 100644
  }
  
  type orasStoreFactory struct{}
-@@ -173,6 +175,23 @@ func createBaseStore(version string, storeConfig config.StorePluginConfig) (*ora
+@@ -174,6 +176,23 @@ func createBaseStore(version string, storeConfig config.StorePluginConfig) (*ora
  	secureTransport.MaxIdleConns = HTTPMaxIdleConns
  	secureTransport.MaxConnsPerHost = HTTPMaxConnsPerHost
  	secureTransport.MaxIdleConnsPerHost = HTTPMaxIdleConnsPerHost

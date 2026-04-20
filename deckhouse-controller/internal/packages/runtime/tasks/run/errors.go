@@ -24,7 +24,6 @@ import (
 const (
 	ConditionReasonBeforeHelmHooksFailed status.ConditionReason = "BeforeHelmHooksFailed"
 	ConditionReasonAfterHelmHooksFailed  status.ConditionReason = "AfterHelmHooksFailed"
-	ConditionReasonHooksFailed           status.ConditionReason = "HooksFailed"
 	ConditionReasonHelmUpgradeFailed     status.ConditionReason = "HelmUpgradeFailed"
 )
 
@@ -34,12 +33,6 @@ func newHelmUpgradeErr(err error) error {
 	return &status.Error{
 		Err: err,
 		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonHelmUpgradeFailed,
-				Message: err.Error(),
-			},
 			{
 				Type:    status.ConditionReadyInCluster,
 				Status:  metav1.ConditionFalse,
@@ -62,12 +55,6 @@ func newBeforeHelmHookErr(err error) error {
 				Reason:  ConditionReasonBeforeHelmHooksFailed,
 				Message: err.Error(),
 			},
-			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonHooksFailed,
-				Message: err.Error(),
-			},
 		},
 	}
 }
@@ -82,12 +69,6 @@ func newAfterHelmHookErr(err error) error {
 				Type:    status.ConditionHooksProcessed,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonAfterHelmHooksFailed,
-				Message: err.Error(),
-			},
-			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonHooksFailed,
 				Message: err.Error(),
 			},
 		},

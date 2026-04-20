@@ -111,7 +111,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler
 			}
 		}
 		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
-			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider)
+			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider, nil)
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 			}

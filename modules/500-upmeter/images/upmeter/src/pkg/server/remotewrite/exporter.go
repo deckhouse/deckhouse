@@ -27,7 +27,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -203,7 +202,7 @@ func (e *exporter) addBasicAuth(req *http.Request) error {
 	// Use password from password file if it exists.
 	passwordFile := e.config.BasicAuth["password_file"]
 	if passwordFile != "" {
-		file, err := ioutil.ReadFile(passwordFile)
+		file, err := os.ReadFile(passwordFile)
 		if err != nil {
 			return ErrFailedToReadFile
 		}
@@ -231,7 +230,7 @@ func (e *exporter) addBearerTokenAuth(req *http.Request) error {
 
 	// Use bearer token from bearer token file if it exists.
 	if e.config.BearerTokenFile != "" {
-		file, err := ioutil.ReadFile(e.config.BearerTokenFile)
+		file, err := os.ReadFile(e.config.BearerTokenFile)
 		if err != nil {
 			return ErrFailedToReadFile
 		}

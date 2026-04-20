@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -28,6 +29,8 @@ import (
 
 	"github.com/goccy/go-yaml"
 
+	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
@@ -35,14 +38,16 @@ import (
 
 const (
 	packageVersionSegment = "version"
+	packageReleaseSegment = "release"
 
 	packagesServiceName       = "packages"
 	packageServiceName        = "package"
 	packageVersionServiceName = "package_version"
+	packageReleaseServiceName = "package_release"
 )
 
 type ServiceManagerInterface[T any] interface {
-	Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error)
+	Service(registryURL string, config utils.RegistryConfig) (*T, error)
 }
 
 type ServiceManager[T any] struct {
@@ -56,6 +61,8 @@ type ServiceManager[T any] struct {
 type packageCredentials struct {
 	registryURL string
 	dockerCFG   string
+	login       string
+	password    string
 	ca          string
 	userAgent   string
 }
@@ -68,7 +75,7 @@ func NewPackageServiceManager(logger *log.Logger) *ServiceManager[PackagesServic
 	}
 }
 
-func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error) {
+func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryConfig) (*T, error) {
 	if m.services == nil {
 		m.services = make(map[packageCredentials]*T)
 	}
@@ -83,9 +90,11 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 
 	creds := packageCredentials{
 		registryURL: registryURL,
-		dockerCFG:   dockerCFG,
-		ca:          ca,
-		userAgent:   userAgent,
+		dockerCFG:   config.DockerConfig,
+		login:       config.Login,
+		password:    config.Password,
+		ca:          config.CA,
+		userAgent:   config.UserAgent,
 	}
 
 	// if service with these creds already exists - return it
@@ -94,7 +103,7 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 		return m.services[creds], nil
 	}
 
-	auth, err := client.AuthFromDockerConfig(registryURL, dockerCFG)
+	authOpts, err := m.createAuthOptions(registryURL, config.DockerConfig, config.Login, config.Password) // factory method
 	if err != nil {
 		return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 	}
@@ -106,23 +115,47 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 		m.cachedCredentials[registryURL] = &creds
 	}
 
-	c := client.NewClientWithOptions(registryURL, &client.Options{
-		Auth:      auth,
-		Scheme:    scheme,
-		CA:        ca,
-		UserAgent: userAgent,
-		Logger:    m.logger,
-	})
+	c := registryClient.New(registryURL,
+		append(authOpts,
+			client.WithInsecure(config.Scheme == "http"),
+			client.WithCA(config.CA),
+			client.WithUserAgent(config.UserAgent),
+			client.WithLogger(m.logger),
+		)...,
+	)
 
-	// Type switch using reflection to create the appropriate service based on the generic type T
-	switch reflect.TypeOf(*new(T)) {
-	case reflect.TypeOf(PackagesService{}):
+	var zero T
+	switch any(zero).(type) {
+	case PackagesService, *PackagesService:
 		m.services[creds] = any(NewPackagesService(c, m.logger)).(*T)
 	default:
 		return nil, fmt.Errorf("unsupported service type: %s", reflect.TypeOf(*new(T)).String())
 	}
 
 	return m.services[creds], nil
+}
+
+// getAuth determines and returns an authenticator for accessing a container registry based on the provided authorization data.
+// if both dockerCfg and credentials parameters are filled in, credentials is the priority.
+func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, password string) ([]client.Option, error) {
+	var opts []client.Option
+
+	switch {
+	case login != "":
+		opts = append(opts, client.WithLoginPassword(login, password))
+		m.logger.Debug("init auth from credentials")
+	case dockerCFG != "":
+		opt, err := client.WithDockercfg(registryURL, dockerCFG)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
+		}
+		opts = append(opts, opt)
+		m.logger.Debug("init auth from docker config")
+	default:
+		return nil, errors.New("there is no authorization data")
+	}
+
+	return opts, nil
 }
 
 type PackagesService struct {
@@ -165,6 +198,7 @@ type PackageService struct {
 
 	*BasicService
 	packageVersion *PackageVersionService
+	packageRelease *PackageReleaseService
 
 	logger *log.Logger
 }
@@ -176,13 +210,20 @@ func NewPackageService(client registry.Client, logger *log.Logger) *PackageServi
 
 		BasicService:   NewBasicService(packageServiceName, client, logger),
 		packageVersion: NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
+		packageRelease: NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
 
 		logger: logger,
 	}
 }
 
-func (s *PackageService) ReleaseChannels() *PackageVersionService {
+// Versions returns the service for accessing <package>/version path (new v1alpha2 modules).
+func (s *PackageService) Versions() *PackageVersionService {
 	return s.packageVersion
+}
+
+// Release returns the service for accessing <package>/release path (legacy v1alpha1 modules).
+func (s *PackageService) Release() *PackageReleaseService {
+	return s.packageRelease
 }
 
 // GetRoot gets path of the registry root
@@ -197,6 +238,90 @@ type PackageVersionService struct {
 func NewPackageVersionService(basicService *BasicService) *PackageVersionService {
 	return &PackageVersionService{
 		BasicService: basicService,
+	}
+}
+
+// PackageReleaseService provides access to the <package>/release path for legacy v1alpha1 modules.
+type PackageReleaseService struct {
+	*BasicService
+}
+
+func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
+	return &PackageReleaseService{
+		BasicService: basicService,
+	}
+}
+
+// PackageDefinition represents the minimal parsed content of package.yaml.
+// It's needed for fallback type detection if the package type label is not set in both version and release images for some reason.
+type PackageDefinition struct {
+	Type string `yaml:"type"`
+}
+
+// ReadPackageDefinition reads package.yaml from the version image and parses its type field.
+// It's needed if for some reason we haven't set the package type label in both version and release images.
+//
+// Returns nil if package.yaml is not found or the image does not exist.
+func (s *PackageVersionService) ReadPackageDefinition(ctx context.Context, tag string) (*PackageDefinition, error) {
+	img, err := s.GetImage(ctx, tag)
+	if err != nil {
+		if errors.Is(err, client.ErrImageNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get version image: %w", err)
+	}
+
+	rc := img.Extract()
+	defer rc.Close()
+
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("read version image tar: %w", err)
+		}
+		if hdr.Name == "package.yaml" || hdr.Name == "package.yml" {
+			var def PackageDefinition
+			if err := yaml.NewDecoder(tr).Decode(&def); err != nil {
+				s.logger.Warn("failed to parse package.yaml", slog.String("tag", tag), log.Err(err))
+				return &PackageDefinition{}, nil
+			}
+			return &def, nil
+		}
+	}
+}
+
+// HasModuleDefinition checks whether the version image contains a module.yaml (or module.yml) file.
+// This is used as a fallback to identify legacy modules when neither type labels nor package.yaml are present.
+//
+// Returns (false, nil) if the image does not exist.
+func (s *PackageVersionService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
+	img, err := s.GetImage(ctx, tag)
+	if err != nil {
+		if errors.Is(err, client.ErrImageNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("get version image: %w", err)
+	}
+
+	rc := img.Extract()
+	defer rc.Close()
+
+	tr := tar.NewReader(rc)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return false, nil
+		}
+		if err != nil {
+			return false, fmt.Errorf("read version image tar: %w", err)
+		}
+		if hdr.Name == "module.yaml" || hdr.Name == "module.yml" {
+			return true, nil
+		}
 	}
 }
 

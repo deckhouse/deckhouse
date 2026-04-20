@@ -30,6 +30,9 @@ properties:
     description: |
       Общие параметры модулей Deckhouse.
     properties:
+      gatewayAPIGateway:
+        description: |
+          Имя объекта Gateway из Gateway API, используемого для модулей экосистемы Deckhouse.
       ingressClass:
         description: |
           Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.
@@ -84,13 +87,15 @@ properties:
                   Указанный Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
       resourcesRequests:
         description: |
-          Количество ресурсов (CPU и памяти), выделяемых для работы компонентов Deckhouse, работающих на каждом узле кластера (обычно это DaemonSet'ы, например `cni-flannel`, `monitoring-ping`).
+          Количество ресурсов (CPU и памяти), выделяемых для работы некоторых компонентов.
 
           [Подробнее](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes) про единицы измерения ресурсов.
         properties:
           controlPlane:
             description: |
-              Объём ресурсов (CPU и памяти), выделяемых для компонентов control plane на каждом master-узле кластера. Настройки не применяются, если control plane кластера управляется облачным провайдером (например, Google Kubernetes Engine или Azure Kubernetes Service).
+              Объём ресурсов (CPU и памяти), выделяемых для компонентов control plane на каждом master-узле кластера.
+
+              Настройки не применяются, если control plane кластера управляется облачным провайдером (например, Google Kubernetes Engine или Azure Kubernetes Service).
             properties:
               cpu:
                 description: |

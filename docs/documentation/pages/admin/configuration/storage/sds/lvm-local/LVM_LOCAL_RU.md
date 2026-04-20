@@ -84,7 +84,7 @@ lang: ru
 d8 k -n d8-sds-local-volume get pod -owide
 ```
 
-Размещение подов `sds-local-volume-csi-node` управляется специальными метками (`nodeSelector`). Эти метки задаются в параметре [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) модуля.
+Размещение подов `sds-local-volume-csi-node` управляется специальными лейблами (`nodeSelector`). Эти лейблы задаются в параметре [`spec.settings.dataNodes.nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) модуля.
 
 ### Настройка хранилища на узлах
 

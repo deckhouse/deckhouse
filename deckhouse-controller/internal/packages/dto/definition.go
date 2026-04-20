@@ -27,25 +27,39 @@ import (
 const (
 	// DefinitionFile is the filename for package metadata
 	DefinitionFile = "package.yaml"
+
+	TypeModule      = "Module"
+	TypeApplication = "Application"
 )
 
-// Definition represents package metadata loaded from package.yaml.
-// It contains package identification, descriptions, requirements, and configuration options.
+// TypeMeta represents apiVersion/type header for determining the package type.
+type TypeMeta struct {
+	APIVersion string `yaml:"apiVersion" json:"apiVersion"`
+	Type       string `yaml:"type" json:"type"`
+}
+
+// Definition represents common package metadata loaded from package.yaml.
 type Definition struct {
 	Name    string `yaml:"name" json:"name"`
-	Type    string `yaml:"type" json:"type"`
 	Version string `yaml:"version" json:"version"`
 	Stage   string `yaml:"stage" json:"stage"`
 
 	Descriptions   Descriptions   `yaml:"descriptions,omitempty" json:"descriptions,omitempty"`
 	Requirements   Requirements   `yaml:"requirements,omitempty" json:"requirements,omitempty"`
 	DisableOptions DisableOptions `yaml:"disable,omitempty" json:"disable,omitempty"`
-
-	Module DefinitionModule `yaml:"module,omitempty" json:"module,omitempty"`
 }
 
-// DefinitionModule specifies module specific fields
-type DefinitionModule struct {
+// ApplicationDefinition extends Definition for application packages.
+type ApplicationDefinition struct {
+	TypeMeta   `yaml:",inline"`
+	Definition `yaml:",inline"`
+}
+
+// ModuleDefinition extends Definition with module-specific fields.
+type ModuleDefinition struct {
+	TypeMeta   `yaml:",inline"`
+	Definition `yaml:",inline"`
+
 	Weight   int  `yaml:"weight" json:"weight"`
 	Critical bool `yaml:"critical,omitempty" json:"critical,omitempty"`
 }
@@ -69,8 +83,8 @@ type DisableOptions struct {
 	Message      string `json:"message" yaml:"message"`           // Message to display when disabling
 }
 
-// ToApplication converts package definition to application definition
-func (d *Definition) ToApplication() (apps.Definition, error) {
+// Convert converts application definition to application domain model
+func (d *ApplicationDefinition) Convert() (apps.Definition, error) {
 	var err error
 
 	var kubernetesConstraint *semver.Constraints
@@ -117,8 +131,8 @@ func (d *Definition) ToApplication() (apps.Definition, error) {
 	}, nil
 }
 
-// ToModule converts package definition to module definition
-func (d *Definition) ToModule() (modules.Definition, error) {
+// Convert converts module definition to module domain model
+func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 	var err error
 
 	var kubernetesConstraint *semver.Constraints
@@ -152,8 +166,8 @@ func (d *Definition) ToModule() (modules.Definition, error) {
 	return modules.Definition{
 		Name:     d.Name,
 		Version:  d.Version,
-		Critical: d.Module.Critical,
-		Weight:   uint32(d.Module.Weight),
+		Critical: d.Critical,
+		Weight:   uint32(d.Weight),
 		Stage:    d.Stage,
 		DisableOptions: modules.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,

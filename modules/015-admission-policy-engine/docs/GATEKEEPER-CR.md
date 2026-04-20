@@ -1,5 +1,6 @@
 ---
 title: "The admission-policy-engine module: Custom Resources (by Gatekeeper)"
+description: "Reference for Gatekeeper mutation custom resources used with the admission-policy-engine module."
 ---
 
 ## Mutation Custom Resources

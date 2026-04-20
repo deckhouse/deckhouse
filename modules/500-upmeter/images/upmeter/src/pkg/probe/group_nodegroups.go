@@ -34,7 +34,7 @@ func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight 
 	)
 	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
-	configs := []runnerConfig{}
+	configs := make([]runnerConfig, 0, len(nodeGroupNames))
 
 	for _, ngName := range nodeGroupNames {
 		configs = append(configs,

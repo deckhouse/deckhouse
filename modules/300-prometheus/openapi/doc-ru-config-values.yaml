@@ -95,9 +95,9 @@ properties:
       Опциональный параметр, по умолчанию используется глобальное значение `modules.ingressClass`.
   externalLabels:
     description: |
-      Набор внешних меток для маркировки метрик.
+      Набор внешних лейблов для маркировки метрик.
 
-      Допускается использование значений переменных окружения контейнера `config-reloader` в качестве значений меток,
+      Допускается использование значений переменных окружения контейнера `config-reloader` в качестве значений лейблов,
       например:
       * `HOSTNAME`/`POD_NAME` — содержит наименование пода (например, `prometheus-main-0`, `prometheus-main-1` и т. д.);
       * `SHARD` — содержит номер [шарда](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/shards-and-replicas.md).

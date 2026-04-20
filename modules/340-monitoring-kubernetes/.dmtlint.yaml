@@ -1,4 +1,8 @@
 linters-settings:
+  conversions:
+    exclude-rules:
+      description:
+        - /openapi/conversions/v2.yaml
   container:
     exclude-rules:
       read-only-root-filesystem:
@@ -36,3 +40,6 @@ linters-settings:
       pdb:
         - kind: DaemonSet
           name: node-exporter
+  module:
+    conversions:
+      disable: true

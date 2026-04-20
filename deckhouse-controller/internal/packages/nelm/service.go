@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/monitor"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -48,8 +49,8 @@ var ErrPackageNotHelm = errors.New("package not helm")
 type Package interface {
 	GetName() string
 	GetPath() string
+	GetRuntimeValues() string
 	GetValues() addonutils.Values
-	GetExtraNelmValues() string
 }
 
 // Service manages Helm release lifecycle via nelm client.
@@ -60,11 +61,13 @@ type Service struct {
 	client         *nelm.Client // nelm client for Helm operations
 	monitorManager *monitor.Manager
 
+	status *status.Service
+
 	logger *log.Logger
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(cache runtimecache.Cache, absentCallback monitor.AbsentCallback, logger *log.Logger) *Service {
+func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
 	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
 		"heritage": "deckhouse",
 	}))
@@ -72,27 +75,35 @@ func NewService(cache runtimecache.Cache, absentCallback monitor.AbsentCallback,
 	return &Service{
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
-		monitorManager: monitor.New(cache, nelmClient, absentCallback, logger),
+		status:         status,
+		monitorManager: monitor.New(cache, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
 
+// HasMonitor checks if a release monitor exists for the given name.
 func (s *Service) HasMonitor(name string) bool {
 	return s.monitorManager.HasMonitor(name)
 }
 
+// RemoveMonitor stops and removes a release monitor. No-op if the monitor doesn't exist.
 func (s *Service) RemoveMonitor(name string) {
 	s.monitorManager.RemoveMonitor(name)
 }
 
+// PauseMonitor pauses resource readiness checks for a release monitor.
+// Requires an equal number of ResumeMonitor calls to unpause.
 func (s *Service) PauseMonitor(name string) {
 	s.monitorManager.PauseMonitor(name)
 }
 
+// ResumeMonitor decrements the pause counter for a release monitor.
+// The monitor resumes checking resources when the counter reaches zero.
 func (s *Service) ResumeMonitor(name string) {
 	s.monitorManager.ResumeMonitor(name)
 }
 
+// StopMonitors gracefully shuts down all release monitors.
 func (s *Service) StopMonitors() {
 	s.monitorManager.Stop()
 }
@@ -141,7 +152,7 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 	return s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		ExtraValues: pkg.GetExtraNelmValues(),
+		RootValues:  pkg.GetRuntimeValues(),
 	})
 }
 
@@ -206,11 +217,16 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
+	s.logger.Debug("render nelm chart",
+		slog.String("path", pkg.GetPath()),
+		slog.String("name", pkg.GetName()),
+		slog.String("namespace", namespace))
+
 	// Render chart to get manifests for checksum calculation
 	renderedManifests, err := s.client.Render(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		ExtraValues: pkg.GetExtraNelmValues(),
+		RootValues:  pkg.GetRuntimeValues(),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -236,12 +252,13 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
-		Path:        pkg.GetPath(),
-		ValuesPaths: []string{valuesPath},
+		OnTrackingEvent: s.status.UpdateTracking,
+		Path:            pkg.GetPath(),
+		ValuesPaths:     []string{valuesPath},
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
-		ExtraValues: pkg.GetExtraNelmValues(),
+		RootValues: pkg.GetRuntimeValues(),
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -267,7 +284,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 //   - bool: true if upgrade is needed
 //   - error: if checking conditions fails
 func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseName string, checksum string) (bool, error) {
-	revision, status, err := s.client.LastStatus(ctx, namespace, releaseName)
+	revision, releaseStatus, err := s.client.LastStatus(ctx, namespace, releaseName)
 	if err != nil {
 		return false, err
 	}
@@ -278,7 +295,7 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseNa
 	}
 
 	// Release exists but not deployed - need to upgrade to fix
-	if strings.ToLower(status) != "deployed" {
+	if strings.ToLower(releaseStatus) != "deployed" {
 		return true, nil
 	}
 

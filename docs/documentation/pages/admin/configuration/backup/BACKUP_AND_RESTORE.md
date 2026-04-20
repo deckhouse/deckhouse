@@ -137,7 +137,7 @@ To properly restore a multi-master cluster, follow these steps:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-   > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
+   > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/upstreams.json` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
 
 1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
 

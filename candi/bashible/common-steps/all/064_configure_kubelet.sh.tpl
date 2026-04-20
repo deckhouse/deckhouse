@@ -328,7 +328,22 @@ featureGates:
   InPlacePodVerticalScaling: true
 {{- end }}
 {{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
+{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */}}
   DynamicResourceAllocation: true
+{{- end }}
+{{- if semverCompare ">=1.32 <1.33" .kubernetesVersion }}
+{{- /* DRAResourceClaimDeviceStatus: Alpha in 1.32, Beta in 1.33 (for BindsToNode) */}}
+  DRAResourceClaimDeviceStatus: true
+{{- end }}
+{{- if semverCompare ">=1.33" .kubernetesVersion }}
+{{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */}}
+  DRAPartitionableDevices: true
+{{- end }}
+{{- if semverCompare ">=1.34" .kubernetesVersion }}
+{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */}}
+  DRADeviceBindingConditions: true
+  DRAConsumableCapacity: true
+  DRAExtendedResource: true
 {{- end }}
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true

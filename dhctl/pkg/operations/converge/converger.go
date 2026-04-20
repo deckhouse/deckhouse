@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -60,9 +61,10 @@ type Params struct {
 	InfrastructureContext *infrastructure.Context
 	ProviderGetter        infrastructure.CloudProviderGetter
 
-	TmpDir  string
-	Logger  log.Logger
-	IsDebug bool
+	TmpDir          string
+	Logger          log.Logger
+	IsDebug         bool
+	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	NoSwitchToNodeUser bool
 
@@ -244,6 +246,8 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		DisableSwitch: true,
 	})
 
+	convergeCtx.SetClientSwitcher(switcher)
+
 	r := newRunner(inLockRunner, switcher).
 		WithCommanderUUID(c.CommanderUUID)
 
@@ -313,9 +317,55 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 	}
 
+	stateCache := cache.Global()
+
+	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return nil, err
+	}
+	c.lastState = nil
+	defer func() {
+		_ = c.PhasedExecutionContext.Finalize(stateCache)
+	}()
+
 	hasTerraformState := false
 
+	var convergeCtx *convergectx.Context
+	if c.Params.CommanderMode {
+		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
+			KubeClient:      kubeCl,
+			Cache:           stateCache,
+			ChangeParams:    c.Params.ChangesSettings,
+			ProviderGetter:  c.ProviderGetter,
+			Logger:          c.Logger,
+			DirectoryConfig: c.DirectoryConfig,
+		}, c.Params.CommanderModeParams)
+	} else {
+		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
+			KubeClient:      kubeCl,
+			Cache:           stateCache,
+			ChangeParams:    c.Params.ChangesSettings,
+			ProviderGetter:  c.ProviderGetter,
+			Logger:          c.Logger,
+			DirectoryConfig: c.DirectoryConfig,
+		})
+	}
+
+	metaConfig, err := convergeCtx.MetaConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	c.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
 	if c.CommanderMode {
+		c.Checker.SetExternalPhasedContext(c.PhasedExecutionContext)
+
+		if shouldStop, err := c.PhasedExecutionContext.StartPhase(phases.ConvergeCheckPhase, false, stateCache); err != nil {
+			return nil, fmt.Errorf("unable to switch phase: %w", err)
+		} else if shouldStop {
+			return nil, nil
+		}
+
 		checkRes, cleaner, err := c.Checker.Check(ctx)
 		// we cannot use provider cleanup here because we do not have metaconfig here
 		cleanWithLog := func(err error) error {
@@ -365,40 +415,6 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 	}
 
-	stateCache := cache.Global()
-
-	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return nil, err
-	}
-	c.lastState = nil
-	defer func() {
-		_ = c.PhasedExecutionContext.Finalize(stateCache)
-	}()
-
-	var convergeCtx *convergectx.Context
-	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
-		}, c.Params.CommanderModeParams)
-	} else {
-		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
-		})
-	}
-
-	metaConfig, err := convergeCtx.MetaConfig()
-	if err != nil {
-		return nil, err
-	}
-
 	needAutomaticTofuMigrationForCommander := false
 
 	if c.ProviderGetter == nil {
@@ -439,6 +455,8 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		IsDebug:       c.IsDebug,
 		DisableSwitch: c.NoSwitchToNodeUser,
 	})
+
+	convergeCtx.SetClientSwitcher(kubectlSwitcher)
 
 	phasesToSkip := make([]phases.OperationPhase, 0)
 	if !c.CommanderMode {
@@ -545,11 +563,15 @@ func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Durati
 
 	app.DeckhouseTimeout = 1 * time.Hour
 
-	r := newRunner(inLockRunner, convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
+	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:  c.TmpDir,
 		Logger:  c.Logger,
 		IsDebug: c.IsDebug,
-	})).
+	})
+
+	convergeCtx.SetClientSwitcher(switcher)
+
+	r := newRunner(inLockRunner, switcher).
 		WithCommanderUUID(c.CommanderUUID).
 		WithExcludedNodes([]string{app.RunningNodeName}).
 		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})

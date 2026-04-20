@@ -113,9 +113,9 @@ spec:
             protocol: TCP
         livenessProbe:
           httpGet:
-            port: 9680
+            port: 8081
             path: /healthz
-            scheme: HTTPS
+            scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:

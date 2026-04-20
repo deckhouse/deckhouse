@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sync/atomic"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg"
-	"github.com/flant/addon-operator/pkg/hook/types"
-	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
@@ -35,6 +36,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -54,6 +56,14 @@ type Module struct {
 	name string // Package name
 	path string // path to the package dir on fs
 
+	// version is the parsed semver version of the package, derived from definition.Version.
+	// Falls back to "0.0.0" if the version string cannot be parsed.
+	version *semver.Version
+
+	// running tracks whether OnStartup hooks have completed successfully.
+	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
+	running atomic.Bool
+
 	definition Definition        // Module definition
 	digests    map[string]string // Package digests
 	repository registry.Remote   // Module repository
@@ -65,6 +75,8 @@ type Module struct {
 	patcher           *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	globalValuesGetter GlobalValuesGetter
 
 	logger *log.Logger
 }
@@ -82,14 +94,18 @@ type Config struct {
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
-	Hooks []*addonhooks.ModuleHook // Discovered hooks
+	Hooks []hooks.Hook // Discovered hooks
 
 	SettingsCheck *kind.SettingsCheck
 
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
+
+	GlobalValuesGetter GlobalValuesGetter
 }
+
+type GlobalValuesGetter func(prefix bool) addonutils.Values
 
 // NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -99,6 +115,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m := new(Module)
 
 	m.name = name
+	m.running = atomic.Bool{}
 
 	m.path = cfg.Path
 	m.definition = cfg.Definition
@@ -108,17 +125,24 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 	m.patcher = cfg.Patcher
 	m.scheduleManager = cfg.ScheduleManager
 	m.kubeEventsManager = cfg.KubeEventsManager
+	m.globalValuesGetter = cfg.GlobalValuesGetter
 	m.logger = logger
 
+	parsed, err := semver.NewVersion(m.definition.Version)
+	if err != nil {
+		parsed = semver.MustParse("0.0.0")
+	}
+
+	m.version = parsed
+
 	m.hooks = hooks.NewStorage()
-	if err := m.addHooks(cfg.Hooks...); err != nil {
+	if err = m.addHooks(cfg.Hooks...); err != nil {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
 
-	var err error
 	m.values, err = values.NewStorage(m.name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
-		return nil, fmt.Errorf("new values storage: %v", err)
+		return nil, fmt.Errorf("build values storage: %v", err)
 	}
 
 	return m, nil
@@ -126,7 +150,7 @@ func NewModuleByConfig(name string, cfg *Config, logger *log.Logger) (*Module, e
 
 // addHooks initializes and adds hooks to the module's hook storage.
 // For each hook, it initializes the configuration and sets up logging/metrics labels.
-func (m *Module) addHooks(found ...*addonhooks.ModuleHook) error {
+func (m *Module) addHooks(found ...hooks.Hook) error {
 	for _, hook := range found {
 		if err := hook.InitializeHookConfig(); err != nil {
 			return fmt.Errorf("initialize hook configuration: %w", err)
@@ -154,13 +178,13 @@ func (m *Module) addHooks(found ...*addonhooks.ModuleHook) error {
 // RuntimeValues holds runtime values that are not part of schema.
 // These values are passed to helm templates under .Runtime prefix.
 type RuntimeValues struct {
-	Package addonutils.Values
+	Package addonutils.Values `json:"Package"`
 }
 
-// GetRuntimeValues returns values that are not part of schema.
+// getRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
-func (m *Module) GetRuntimeValues() RuntimeValues {
+func (m *Module) getRuntimeValues() RuntimeValues {
 	return RuntimeValues{
 		Package: addonutils.Values{
 			"Name":     m.definition.Name,
@@ -171,12 +195,14 @@ func (m *Module) GetRuntimeValues() RuntimeValues {
 	}
 }
 
-// GetExtraNelmValues returns runtime values in string format
-func (m *Module) GetExtraNelmValues() string {
-	runtimeValues := m.GetRuntimeValues()
-	packageJSON, _ := json.Marshal(runtimeValues.Package)
+// GetRuntimeValues returns runtime values in string format
+func (m *Module) GetRuntimeValues() string {
+	runtimeValues := m.getRuntimeValues()
+	marshalled, _ := json.Marshal(runtimeValues)
 
-	return fmt.Sprintf("Package=%s", packageJSON)
+	marshalledGlobal := m.globalValuesGetter(false)
+
+	return fmt.Sprintf("Module=%s,Deckhouse=%s", marshalled, marshalledGlobal)
 }
 
 // GetName returns the full module identifier.
@@ -185,8 +211,8 @@ func (m *Module) GetName() string {
 }
 
 // GetVersion return the package version
-func (m *Module) GetVersion() string {
-	return m.definition.Version
+func (m *Module) GetVersion() *semver.Version {
+	return m.version
 }
 
 // GetPath returns path to the package dir
@@ -194,17 +220,17 @@ func (m *Module) GetPath() string {
 	return m.path
 }
 
-// GetQueues returns package queues from all hooks
-func (m *Module) GetQueues() []string {
+// GetHooksQueues returns package queues from all hooks
+func (m *Module) GetHooksQueues() []string {
 	var res []string //nolint:prealloc
-	scheduleHooks := m.GetHooksByBinding(shtypes.Schedule)
+	scheduleHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range scheduleHooks {
 		for _, hookBinding := range hook.GetHookConfig().Schedules {
 			res = append(res, hookBinding.Queue)
 		}
 	}
 
-	kubeEventsHooks := m.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	kubeEventsHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeEventsHooks {
 		for _, hookBinding := range hook.GetHookConfig().OnKubernetesEvents {
 			res = append(res, hookBinding.Queue)
@@ -213,6 +239,20 @@ func (m *Module) GetQueues() []string {
 
 	slices.Sort(res)
 	return slices.Compact(res)
+}
+
+// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
+// If include is provided, only hooks matching those names are included.
+func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
+	d := make(map[string]interface{})
+	for _, h := range m.hooks.GetHooks() {
+		if len(include) == 0 || slices.Contains(include, h.GetName()) {
+			d[h.GetName()] = h.GetHookController().SnapshotsDump()
+		}
+	}
+
+	marshalled, _ := yaml.Marshal(d)
+	return marshalled
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -250,23 +290,33 @@ func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Value
 	}, nil
 }
 
-// GetValues returns values for rendering
+// GetValues returns values with hooks patches
 func (m *Module) GetValues() addonutils.Values {
-	return m.values.GetValues()
+	return addonutils.MergeValues(
+		addonutils.Values{"global": m.globalValuesGetter(false)},
+		m.values.GetValues(),
+	)
 }
 
-// ApplySettings apply settings values
+// ApplySettings applies settings values
 func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplyConfigValues(settings)
 }
 
-// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
-func (m *Module) GetChecks() schedule.Checks {
-	return m.definition.Requirements.Checks()
+// GetConstraints returns scheduler checks, their determine if an module should be enabled/disabled
+func (m *Module) GetConstraints() schedule.Constraints {
+	return m.definition.Constraints()
+}
+
+// HooksInitialized reports whether the package requires a hook initialize phase.
+// This is true when hooks have not yet been initialized (no controllers attached),
+// meaning the pkg needs to go through the full startup sequence before it can run.
+func (m *Module) HooksInitialized() bool {
+	return m.hooks.Initialized()
 }
 
 // GetHooks returns all hooks for this module in arbitrary order.
-func (m *Module) GetHooks() []*addonhooks.ModuleHook {
+func (m *Module) GetHooks() []hooks.Hook {
 	return m.hooks.GetHooks()
 }
 
@@ -282,6 +332,32 @@ func (m *Module) InitializeHooks() {
 	}
 }
 
+// DisableHooks tears down all active hook bindings and clears the hook registry.
+// Called by the Disable task when a package is being stopped or upgraded.
+//
+// Cleanup order: schedule bindings are disabled first (stops cron triggers),
+// then Kubernetes monitors are stopped (stops informer watches), and finally
+// the hook registry is cleared so a subsequent InitializeHooks starts fresh.
+func (m *Module) DisableHooks() {
+	// Disable all schedule-based hooks
+	schHooks := m.hooks.GetHooksByBinding(shtypes.Schedule)
+	for _, hook := range schHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableScheduleBindings()
+		}
+	}
+
+	// Stop all Kubernetes event monitors
+	kubeHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
+	for _, hook := range kubeHooks {
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableKubernetesBindings()
+		}
+	}
+
+	m.running.Store(false)
+}
+
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
 func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 	h := m.hooks.GetHookByName(hook)
@@ -295,7 +371,7 @@ func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook {
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []hooks.Hook {
 	return m.hooks.GetHooksByBinding(binding)
 }
 
@@ -307,12 +383,16 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 
 	span.SetAttributes(attribute.String("binding", string(binding)))
 
+	if binding == shtypes.OnStartup && m.running.Load() {
+		return nil
+	}
+
 	for _, hook := range m.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute m hook
-		if binding == types.BeforeHelm || binding == types.AfterHelm || binding == types.AfterDeleteHelm {
+		if binding == addontypes.BeforeHelm || binding == addontypes.AfterHelm || binding == addontypes.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}
@@ -322,6 +402,10 @@ func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingT
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
+	}
+
+	if binding == shtypes.OnStartup {
+		m.running.Store(true)
 	}
 
 	return nil
@@ -356,14 +440,14 @@ func (m *Module) RunHookByName(ctx context.Context, name string, bctx []bctx.Bin
 //  4. Apply values patches to storage
 //
 // Returns error if hook execution or patch fails.
-func (m *Module) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bctx.BindingContext) error {
+func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingContext) error {
 	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "runHook")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("hook", h.GetName()))
 	span.SetAttributes(attribute.String("name", m.GetName()))
 
-	hookConfigValues := m.values.GetConfigValues()
+	hookConfigValues := m.values.GetSettings()
 	hookValues := m.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 

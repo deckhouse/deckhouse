@@ -10,8 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/patch"
 
 	infrastructurev1 "github.com/deckhouse/deckhouse/api/v1"
@@ -55,8 +54,8 @@ func NewClusterScope(
 }
 
 // Fail marks the ZvirtCluster as failed.
-func (c *ClusterScope) Fail(reason capierrors.ClusterStatusError, err error) {
-	c.ZvirtCluster.Status.FailureReason = string(reason)
+func (c *ClusterScope) Fail(reason string, err error) {
+	c.ZvirtCluster.Status.FailureReason = reason
 	c.ZvirtCluster.Status.FailureMessage = err.Error()
 }
 

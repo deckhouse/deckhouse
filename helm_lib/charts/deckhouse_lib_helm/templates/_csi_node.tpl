@@ -37,6 +37,7 @@ memory: 25Mi
   {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
   {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
   {{- $dnsPolicy := $config.dnsPolicy | default "ClusterFirstWithHostNet" }}
+  {{- $securityPolicyExceptionEnabled := $config.securityPolicyExceptionEnabled | default false }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
   {{- $driverRegistrarImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiNodeDriverRegistrar" $kubernetesSemVer) }}
   {{- if $driverRegistrarImage }}
@@ -91,6 +92,9 @@ spec:
     metadata:
       labels:
         app: {{ $fullname }}
+        {{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+        security.deckhouse.io/security-policy-exception: {{ $fullname }}
+        {{- end }}
       {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiNodePodAnnotations) }}
       annotations:
       {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
@@ -129,7 +133,7 @@ spec:
       {{- $additionalPullSecrets | toYaml | nindent 6 }}
       {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "system-node-critical") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple $context "any-node" "with-no-csi" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
       hostNetwork: {{ $csiNodeHostNetwork }}
       hostPID: {{ $csiNodeHostPID }}
@@ -180,12 +184,15 @@ spec:
   {{- end }}
       - name: node
         securityContext:
+          allowPrivilegeEscalation: true
           privileged: true
           readOnlyRootFilesystem: true
           seccompProfile:
             type: RuntimeDefault
-        {{- if $setSysAdminCapability }}
           capabilities:
+            drop:
+              - ALL
+        {{- if $setSysAdminCapability }}
             add:
             - SYS_ADMIN
         {{- end }}
@@ -267,6 +274,124 @@ spec:
         {{- $additionalNodeVolumes | toYaml | nindent 6 }}
       {{- end }}
 
-    {{- end }}
+{{- if and $securityPolicyExceptionEnabled ($context.Values.global.enabledModules | has "admission-policy-engine-crd") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: {{ $fullname }}
+  namespace: d8-{{ $context.Chart.Name }}
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow privileged mode for CSI Node Driver.
+          The CSI Node Driver requires privileged access to perform critical storage operations such as mounting/unmounting volumes, formatting block devices, and interacting directly with the host kernel for disk management.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Allow running as root for CSI Node Driver.
+          The CSI Node Driver requires root access to perform privileged storage operations on the host, including device management and filesystem mounting.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow privilege escalation for CSI Node Driver.
+          The node plugin may need to escalate privileges during mount, unmount, and device operations that rely on setuid helpers or additional capabilities beyond the container's initial security context.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          Allow running as root user (UID 0) for CSI Node Driver.
+          The CSI Node Driver and node-driver-registrar require root privileges to perform storage operations, interact with host devices, and manage volume mounts.
+  {{- if $setSysAdminCapability }}
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_ADMIN
+      metadata:
+        description: |
+          Allow SYS_ADMIN capability for CSI Node Driver.
+          The CSI Node Driver requires SYS_ADMIN capability to perform privileged filesystem operations such as mounting, unmounting, and managing block devices on the host.
   {{- end }}
+
+  {{- if or (eq $csiNodeHostNetwork "true") (ne $csiNodeHostPID "false") }}
+  network:
+  {{- if eq $csiNodeHostNetwork "true" }}
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host network access for CSI Node Driver.
+          The CSI Node Driver requires host network access to communicate with the CSI Controller, coordinate volume attachment operations, and synchronize storage metadata across the cluster.
+  {{- end }}
+  {{- if ne $csiNodeHostPID "false" }}
+    hostPID:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow host PID namespace access for CSI Node Driver.
+          The CSI Node Driver requires host PID namespace access to interact with host processes for storage operations such as detecting mount points and managing device attachments.
+  {{- end }}
+  {{- end }}
+
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          Allow hostPath volume type for CSI Node.
+          The CSI Node Driver requires hostPath volumes to access host filesystem paths for proper operation, including communication with the container runtime and access to block devices.
+    hostPath:
+      allowedValues:
+        - path: /var/lib/kubelet/plugins_registry/
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to the CSI plugin registry directory.
+              CSI Node Driver registers itself in this directory to enable dynamic discovery and communication with the kubelet.
+        - path: /var/lib/kubelet
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to the kubelet root directory.
+              Required for CSI Node Driver to manage volume mounts and access kubelet data structures.
+        - path: /var/lib/kubelet/csi-plugins/{{ $driverFQDN }}/
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to the CSI plugin directory.
+              This directory contains the CSI driver socket and persistent data required for volume attachment and mounting operations.
+        - path: /dev
+          readOnly: false
+          metadata:
+            description: |
+              Allow access to host device directory.
+              CSI Node Driver requires access to /dev to manage block devices and perform disk operations for persistent volumes.
+    {{- if $additionalNodeVolumes }}
+      {{- range $volume := $additionalNodeVolumes }}
+        {{- if $volume.hostPath }}
+          {{- $readOnly := false }}
+          {{- range $volumeMount := $additionalNodeVolumeMounts }}
+            {{- if eq $volumeMount.name $volume.name }}
+              {{- $readOnly = (default false $volumeMount.readOnly) }}
+            {{- end }}
+          {{- end }}
+        - path: {{ $volume.hostPath.path }}
+          readOnly: {{ $readOnly }}
+          metadata:
+            description: |
+              Allow access to additional hostPath volume at {{ $volume.hostPath.path }}.
+              This additional hostPath volume is required by the CSI Node Driver for extended storage operations specific to the cloud provider implementation.
+        {{- end }}
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

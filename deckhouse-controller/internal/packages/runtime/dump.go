@@ -15,6 +15,10 @@
 package runtime
 
 import (
+	"context"
+	"errors"
+	"fmt"
+
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -24,19 +28,19 @@ import (
 
 // dump is the serialization envelope for the debug endpoint.
 type dump struct {
-	Apps    map[string]appDump    `json:"apps" yaml:"apps"`
-	Modules map[string]moduleDump `json:"modules" yaml:"modules"`
+	Apps    map[string]appDump    `json:"apps"`
+	Modules map[string]moduleDump `json:"modules"`
 }
 
 // appDump combines status conditions and package info for a single app.
 type appDump struct {
-	status.Status
+	Status status.Status `json:"status"`
 	apps.Info
 }
 
 // moduleDump combines status conditions and package info for a single module.
 type moduleDump struct {
-	status.Status
+	Status status.Status `json:"status"`
 	modules.Info
 }
 
@@ -58,20 +62,95 @@ func (r *Runtime) Dump() []byte {
 		Modules: make(map[string]moduleDump),
 	}
 
-	r.apps.Range(func(app *apps.Application) {
+	for _, app := range r.apps {
 		d.Apps[app.GetName()] = appDump{
-			r.status.GetStatus(app.GetName()),
-			app.GetInfo(),
+			Status: r.status.GetStatus(app.GetName()),
+			Info:   app.GetInfo(),
 		}
-	})
+	}
 
-	r.modules.Range(func(module *modules.Module) {
+	for _, module := range r.modules {
 		d.Modules[module.GetName()] = moduleDump{
-			r.status.GetStatus(module.GetName()),
-			module.GetInfo(),
+			Status: r.status.GetStatus(module.GetName()),
+			Info:   module.GetInfo(),
 		}
-	})
+	}
 
 	marshalled, _ := yaml.Marshal(d)
 	return marshalled
+}
+
+// DumpByName returns a YAML snapshot of a single package by name.
+// Checks apps first, then modules. Returns an empty dump if not found.
+func (r *Runtime) DumpByName(name string) []byte {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var marshalled []byte
+
+	if app := r.apps[name]; app != nil {
+		marshalled, _ = yaml.Marshal(appDump{
+			r.status.GetStatus(app.GetName()),
+			app.GetInfo(),
+		})
+	}
+
+	if mod := r.modules[name]; mod != nil {
+		marshalled, _ = yaml.Marshal(moduleDump{
+			r.status.GetStatus(mod.GetName()),
+			mod.GetInfo(),
+		})
+	}
+
+	return marshalled
+}
+
+// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
+func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
+	r.mu.Lock()
+
+	if app := r.apps[name]; app != nil {
+		r.mu.Unlock()
+		return r.nelmService.Render(ctx, app.GetNamespace(), app)
+	}
+
+	if module := r.modules[name]; module != nil {
+		r.mu.Unlock()
+		return r.nelmService.Render(ctx, modulesNamespace, module)
+	}
+
+	r.mu.Unlock()
+
+	return "", errors.New("no package found")
+}
+
+// collectQueues expands a package name into all its queue names (main + hook sub-queues).
+// Returns nil if name is empty (meaning include all).
+func (r *Runtime) collectQueues(name string) []string {
+	if name == "" {
+		return nil
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var queues []string
+
+	if app := r.apps[name]; app != nil {
+		queues = append(queues, app.GetName())
+		for _, q := range app.GetHooksQueues() {
+			queues = append(queues, fmt.Sprintf("%s/%s", name, q))
+			queues = append(queues, fmt.Sprintf("%s/%s/sync", name, q))
+		}
+	}
+
+	if mod := r.modules[name]; mod != nil {
+		queues = append(queues, mod.GetName())
+		for _, q := range mod.GetHooksQueues() {
+			queues = append(queues, fmt.Sprintf("%s/%s", name, q))
+			queues = append(queues, fmt.Sprintf("%s/%s/sync", name, q))
+		}
+	}
+
+	return queues
 }

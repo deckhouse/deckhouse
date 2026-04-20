@@ -34,10 +34,10 @@ apiVersions:
               description: |
                 Набор зон, в которых могут быть созданы узлы.
 
-                Чтобы использовать эту настройку, на узлах DVP должена быть установлена метка `topology.kubernetes.io/zone`.
-                [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                Чтобы использовать эту настройку, на узлах DVP должена быть установлен лейбл `topology.kubernetes.io/zone`.
+                [Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-                > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                > Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             instanceClass:
               description: |
                 Параметры виртуальной машины и ее дисков для созданного master-узла.
@@ -104,7 +104,7 @@ apiVersions:
                         > Эти адреса должны принадлежать диапазону адресов, указанному в конфигурации модуля виртуализации в параметре `virtualMachineCIDRs`.
                     additionalLabels:
                       description: |
-                        Дополнительные метки для ресурса виртуальной машины.
+                        Дополнительные лейблы для ресурса виртуальной машины.
                     additionalAnnotations:
                       description: |
                         Дополнительные аннотации для ресурса виртуальной машины.
@@ -178,7 +178,7 @@ apiVersions:
                         Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
                 additionalLabels:
                   description: |
-                    Дополнительные метки.
+                    Дополнительные лейблы.
         nodeGroups:
           description: |
             Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
@@ -194,10 +194,10 @@ apiVersions:
                 description: |
                   Набор зон, в которых могут быть созданы узлы.
 
-                  Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
-                  [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+                  Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`.
+                  [Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-                  > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+                  > Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
               nodeTemplate:
                 description: |
                   Настройки Node-объектов в Kubernetes, которые будут добавлены после регистрации узлов.
@@ -254,18 +254,18 @@ apiVersions:
           description: |
             Название региона.
 
-            Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/region`.
-            [Подробнее о топологических метках](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+            Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/region`.
+            [Подробнее о топологических лейблах](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-            > Чтобы установить требуемую метку для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > Чтобы установить требуемый лейбл для узла DVP, следуйте [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         zones:
           description: |
             Набор зон, в которых могут быть созданы узлы.
 
-            Чтобы использовать эту настройку, на узлах DVP должна быть установлена метка `topology.kubernetes.io/zone`.
-            [Подробнее о топологических метках.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+            Чтобы использовать эту настройку, на узлах DVP должна быть установлен лейбл `topology.kubernetes.io/zone`.
+            [Подробнее о топологических лейблах.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-            > Чтобы установить требуемую метку для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            > Чтобы установить требуемый лейбл для узла DVP, обратитесь к [документации по NodeGroup](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
         provider:
           description: |
             Содержит настройки для подключения к API Deckhouse Kubernetes Platform.
@@ -281,6 +281,6 @@ apiVersions:
             networkPolicy:
               description: |
                 Правила управления сетевым трафиком к нагрузкам и от нагрузок, запущенных в рамках ресурса Project.
-                
+
                 * `Isolated` — применяется ограничивающая allowlist-политика: разрешён только сетевой трафик, необходимый для работы платформенных компонентов; весь остальной трафик запрещён.
                 * `None` — кластер не заказывает сетевые политики. Ограничения, заданные на уровне Project, продолжают действовать.

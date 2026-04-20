@@ -14,6 +14,16 @@ metadata:
       if ($http_authorization ~ "^(.*)Basic(.*)$") {
         rewrite ^(.*)$ /basic-auth$1;
       }
+      location ~ ^/(healthz|livez|readyz) {
+        deny all;
+        return 403;
+      }
+  {{- else }}
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      location ~ ^/(healthz|livez|readyz) {
+        deny all;
+        return 403;
+      }
   {{- end }}
   name: kubernetes-api
   namespace: d8-{{ .Chart.Name }}

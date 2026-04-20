@@ -1,10 +1,10 @@
 {{- define "alt archive repos" }}
-{{- $date := "2025-10-30" }}
+{{- $date := "2026-02-07" }}
 - sed -i -E "s|http://ftp.altlinux.org/pub/distributions/archive/p11/date/[0-9]{4}/[0-9]{2}/[0-9]{2}/|http://ftp.altlinux.org/pub/distributions/archive/p11/date/{{ $date | replace "-" "/" }}/|g" /etc/apt/sources.list.d/alt.list
 {{- end }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/alt
+from: {{ index $.Images "builder/alt" }}
 final: false
 shell:
   beforeInstall:
@@ -15,7 +15,7 @@ shell:
   - echo "StrictHostKeyChecking accept-new" > ~/.ssh/config
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: builder/alt
+from: {{ index $.Images "builder/alt" }}
 final: false
 shell:
   beforeInstall:

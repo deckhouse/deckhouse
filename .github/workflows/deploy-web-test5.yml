@@ -46,8 +46,10 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.46.0"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
+  WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -78,7 +80,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -155,7 +157,7 @@ jobs:
   # <template: check_label_job>
   check_label:
     name: Check label
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       should_run: ${{ steps.check_label.outputs.should_run }}
       labels: ${{ steps.check_label.outputs.labels }}
@@ -221,7 +223,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -297,6 +304,11 @@ jobs:
           WERF_SET_WEB_ENV: "web.env=web-test5"
           WERF_SET_DOMAIN_MAP: "global.domain_map=eyJlbiIgOiAiZGVja2hvdXNlLTUudGVzdC5mbGFudC5kZXYiLCAicnUiIDogImRlY2tob3VzZS1ydS01LnRlc3QuZmxhbnQuZGV2In0="
           WERF_SET_DCNAME: "web.dc_name=dev"
+          WERF_SET_DOC_S3_BUCKET: "global.doc_s3_bucket=${{ secrets.DOC_S3_BUCKET_DEV }}"
+          WERF_SET_DOC_S3_REGION: "global.doc_s3_region=${{ secrets.DOC_S3_REGION }}"
+          WERF_SET_DOC_S3_EP: "global.doc_s3_ep=${{ secrets.DOC_S3_EP }}"
+          WERF_SET_DOC_S3_ACCESS_KEY_ID: "global.doc_s3_access_key_id=${{ secrets.DOC_S3_ACCESS_KEY_ID_DEV }}"
+          WERF_SET_DOC_S3_SECRET_ACCESS_KEY: "global.doc_s3_secret_access_key=${{ secrets.DOC_S3_SECRET_ACCESS_KEY_DEV }}"
           WERF_SET_DOC_S3_BUCKET_PUBLIC_URL: "global.doc_s3_bucket_public_url=${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_DEV }}"
           DOC_API_KEY: "${{secrets.DOC_API_KEY}}"
           DOC_API_URL: "${{vars.DOC_API_URL}}"

@@ -287,6 +287,33 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		})
 	})
 
+	Context("Cluster with operator-trivy module enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "operator-trivy"]`)
+			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
+			f.HelmRender()
+		})
+
+		It("Should render without errors when operator-trivy is enabled but denyVulnerableImages is not configured", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+	})
+
+	Context("Cluster with operator-trivy module and denyVulnerableImages enabled via operatorTrivy values", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "prometheus", "operator-prometheus", "operator-trivy"]`)
+			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
+			f.ValuesSet("operatorTrivy.denyVulnerableImages.enabled", true)
+			f.HelmRender()
+		})
+
+		It("Should render without errors when operatorTrivy.denyVulnerableImages.enabled is true", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+	})
+
 	Context("Cluster with deckhouse on master node and ratify-provider", func() {
 		Context("Enables signature verification", func() {
 			BeforeEach(func() {

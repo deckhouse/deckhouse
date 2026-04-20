@@ -3,7 +3,7 @@ title: "Cloud provider — Azure: схемы размещения"
 description: "Описание схем размещения и взаимодействия ресурсов в Azure при работе облачного провайдера Deckhouse."
 ---
 
-> **Внимание!** Поддерживаются только те [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
+> **Внимание.** Поддерживаются только те [регионы](https://docs.microsoft.com/ru-ru/azure/availability-zones/az-region), в которых доступны `Availability Zones`.
 
 ## Standard
 

@@ -1,0 +1,24 @@
+docs:
+  features:
+    - summary: Add command to view all falco audit rules to docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14177
+  fixes:
+    - summary: Removed port 22322 from setup docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14099
+istio:
+  features:
+    - summary: Validating jwt token exp time less than 30 days
+      pull_request: https://github.com/deckhouse/deckhouse/pull/18008
+  fixes:
+    - summary: Fix istiod CPU leak when the order of the ingressGateways array is changed
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17643
+    - summary: Reduce RAM for regenerate multicluster JWT token
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15511
+node-manager:
+  features:
+    - summary: Added support for configuring private HTTP container registries in containerd.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/14155
+      impact: >-
+        Users can now configure containerd to pull images from private registries, easing
+        deployments in private environments.
+

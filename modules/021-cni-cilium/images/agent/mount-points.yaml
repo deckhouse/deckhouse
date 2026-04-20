@@ -10,6 +10,7 @@ dirs:
   - /host/etc/cni/net.d
   - /lib/modules
   - /var/lib/cilium/tls/hubble
+  - /var/log/cilium/hubble
   - /hostproc
   - /hostbin
   - /root/.config

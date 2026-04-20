@@ -124,6 +124,28 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	BeforeEach(func() {
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
+
+		// Ensure the root userAuthz object exists (some EE templates access .Values.userAuthz.* directly).
+		f.ValuesSet("userAuthz.enableMultiTenancy", false)
+
+		// Minimal defaults to avoid nil-pointer panics in EE templates when rendering without explicitly
+		// setting all userAuthz.internal.* values in a particular test context.
+		// - webhook/configmap.yaml iterates over .Values.userAuthz.internal.clusterAuthRuleCrds even when enableMultiTenancy=false
+		// - webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true
+		f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", `[]`)
+		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
+		f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", `{}`)
+
+		f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
+		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
+		f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
+		f.ValuesSet("userAuthz.internal.webhookCertificate.key", "test")
+		f.ValuesSet("userAuthz.internal.apiserverCertificate.ca", "test")
+		f.ValuesSet("userAuthz.internal.apiserverCertificate.crt", "test")
+		f.ValuesSet("userAuthz.internal.apiserverCertificate.key", "test")
+
+		// Some EE templates access this field unconditionally and will panic if the object is absent.
+		f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
 	})
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
@@ -377,6 +399,183 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		It("Helm should fail", func() {
 			Expect(f.RenderError).Should(HaveOccurred())
 			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."))
+		})
+	})
+
+	Context("Namespace access permissions based on edition", func() {
+		Context("EE edition (non-CE)", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.deckhouseEdition", "EE")
+				f.ValuesSet("userAuthz.enableMultiTenancy", true)
+				f.HelmRender()
+			})
+
+			It("Should render without errors", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("user-authz:user should have accessiblenamespaces instead of namespaces", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring("accessiblenamespaces"))
+				Expect(rules).To(ContainSubstring("authorization.deckhouse.io"))
+				Expect(rules).NotTo(MatchRegexp(`"resources":\s*\[\s*"namespaces"\s*\]`))
+			})
+
+			It("user-authz:editor should have accessiblenamespaces instead of namespaces", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:editor")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("user-authz:cluster-admin should still have full namespaces access", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-admin")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring(`"namespaces"`))
+				Expect(rules).To(ContainSubstring(`"create"`))
+				Expect(rules).To(ContainSubstring(`"delete"`))
+			})
+
+			It("system:authenticated should be able to discover accessiblenamespaces", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:accessible-namespaces-reader")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).To(ContainSubstring("accessiblenamespaces"))
+
+				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated")
+				Expect(crb.Exists()).To(BeTrue())
+				Expect(crb.Field("roleRef.name").String()).To(Equal("d8:user-authz:accessible-namespaces-reader"))
+				Expect(crb.Field("subjects.0.kind").String()).To(Equal("Group"))
+				Expect(crb.Field("subjects.0.name").String()).To(Equal("system:authenticated"))
+			})
+		})
+
+		Context("EE edition (non-CE) with MultiTenancy disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.deckhouseEdition", "EE")
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+			})
+
+			It("Should render without errors", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("user-authz:user should keep namespaces access (fallback)", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring(`"namespaces"`))
+				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("system:authenticated should not get accessiblenamespaces discovery", func() {
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("CE edition", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.deckhouseEdition", "CE")
+				f.HelmRender()
+			})
+
+			It("Should render without errors", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("user-authz:user should have namespaces access (not accessiblenamespaces)", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring(`"namespaces"`))
+				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("user-authz:editor should have namespaces access", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:editor")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring(`"namespaces"`))
+				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("system:authenticated should not get accessiblenamespaces discovery", func() {
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("EE edition with MultiTenancy enabled and consoleLegacyCompat enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.deckhouseEdition", "EE")
+				f.ValuesSet("userAuthz.enableMultiTenancy", true)
+				f.ValuesSet("userAuthz.internal.consoleLegacyCompat", true)
+				f.HelmRender()
+			})
+
+			It("Should render without errors", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("user-authz:user should have namespaces access (legacy compat)", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring(`"namespaces"`))
+				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("user-authz:editor should have namespaces access (legacy compat)", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:editor")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring(`"namespaces"`))
+				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("permission-browser-apiserver should still be deployed", func() {
+				Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("EE edition with MultiTenancy enabled and consoleLegacyCompat disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.deckhouseEdition", "EE")
+				f.ValuesSet("userAuthz.enableMultiTenancy", true)
+				f.ValuesSet("userAuthz.internal.consoleLegacyCompat", false)
+				f.HelmRender()
+			})
+
+			It("Should render without errors", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("user-authz:user should have accessiblenamespaces instead of namespaces", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring("accessiblenamespaces"))
+				Expect(rules).To(ContainSubstring("authorization.deckhouse.io"))
+			})
+
+			It("user-authz:editor should have accessiblenamespaces", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:editor")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring("accessiblenamespaces"))
+			})
 		})
 	})
 

@@ -23,6 +23,19 @@ resource "ovirt_vm" "node_vm" {
   vm_type = local.vm_type
 
   initialization_custom_script = local.cloud_init_script
+  initialization_dns = local.custom_network_dns
+
+  dynamic "initialization_nic" {
+    for_each = local.custom_network_config
+    content {
+      name = local.custom_network_name
+      ipv4 {
+        address = local.custom_network_address
+        netmask = local.custom_network_netmask
+        gateway = local.custom_network_gateway
+      }
+    }
+  }
 
   lifecycle {
     ignore_changes = [

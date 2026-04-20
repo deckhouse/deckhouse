@@ -10,46 +10,98 @@ This document describes the architecture of Deckhouse documentation and explains
 
 - Clone this repository.
 - Ensure that port `80` is available for binding.
-- Install [werf](https://werf.io/getting_started/).
-  When installing, set the release channel to `alpha`.
 
-### Running the documentation site (option 1)
+### Running the documentation site (option 1: watch mode)
+
+Runs documentation containers in a werf watch mode — documentation will rebuild on a new commit (on `make up`) or any changes (on `make dev`).
 
 #### Starting the documentation site
 
 To start the documentation site follow these steps:
 
-1. Run the local container registry (if you don't have it):
-
-   ```shell
-   make registry
-   ```
-   
 1. Run documentation:
 
    ```shell
    cd docs/site
    make up
    ```
-   
-   If you want to work with uncommited files, use `make dev` instead of `make up`.
 
-1. Open the documentation site in your browser at <http://localhost>.
+   By default, local Docker images store is used (no registry required).
+
+   If you want to use a local Docker registry at `localhost:4999` instead, set `USE_LOCALHOST_REPO=1`.
+   In that case, the registry is started automatically if it is not already running:
+
+   ```shell
+   cd docs/site
+   USE_LOCALHOST_REPO=1 make up
+   ```
+
+   If you want to work with uncommitted files, use `make dev` instead of `make up`.
+
+1. Open the DKP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
 
 #### Stopping the documentation site
 
-To stop the documentation site, cancel the running processes and run the following command in both terminals:
+To stop the documentation site, cancel the running process and run the following command:
 
 ```shell
 make down
 ```
-To destroy created registry run the following command:
 
-```shell
-make registry-down
+This also stops and removes the local Docker registry if it was started.
+
+### Running the documentation site with an external module
+
+Use this mode when you want to preview documentation from an external module repository together with the local portal.
+
+1. Run the following command from `docs/site`:
+
+   ```bash
+   make external-module MODULE_PATH=/path/to/module
+   ```
+
+1. Optional arguments:
+
+   - `CHANNEL` — defaults to `alpha`;
+   - `MODULE_VERSION` — defaults to `v0.1.0`.
+
+   Example:
+
+   ```bash
+   make external-module \
+     MODULE_PATH=/home/kar/fox/platform-security/operator-trivy \
+     CHANNEL=stable \
+     MODULE_VERSION=v1.2.3
+   ```
+
+1. Open the DKP documentation in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
+
+The external module pages are available under `/modules/<module-name>/<channel>/`.
+
+If you edit files in the external module repository, Hugo rebuilds the generated files automatically and the portal picks up the changes.
+
+The workflow watches:
+
+- `docs/`;
+- `module.yaml`;
+- `oss.yaml`;
+- `openapi/config-values.yaml`;
+- `openapi/doc-ru-config-values.yaml`;
+- root-level files in `crds/`.
+
+YAML files from subdirectories inside `crds/` are ignored.
+
+#### Stopping the external module workflow
+
+To stop the workflow, cancel the running process and then run:
+
+```bash
+make down
 ```
 
-### Running the documentation site (option 2)
+### Running the documentation site (option 2: just run containers)
+
+Just runs documentation containers.
 
 #### Starting the documentation site
 
@@ -61,7 +113,7 @@ To start the documentation site, open a terminal and follow these steps:
    make docs
    ```
 
-1. Open the documentation site in your browser at <http://localhost>.
+1. Open the documentation site in your browser at <http://localhost/products/kubernetes-platform/documentation/v1/>.
 
 If you cloned the Deckhouse repository and made uncommitted changes, trying to run the documentation site will result in an error from werf stating that the changes must be committed first.
 
@@ -79,7 +131,7 @@ To stop the documentation site, cancel the running process and run the following
 make docs-down
 ```
 
-## Debugging
+## Debugging (WIP)
 
 The [Delve](https://github.com/go-delve/delve) debugger is used for debugging the documentation site's backend.
 
@@ -119,7 +171,7 @@ Spellchecking commands:
 - `make docs-spellcheck-get-typos-list`: Get a sorted list of typos from the documentation.
 - `make lint-doc-spellcheck-pr`: Used in CI to check the spelling of documentation in a PR.
 
-## Architecture
+## Architecture (WIP)
 
 > ![NOTE] Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
 
@@ -157,6 +209,8 @@ The Deckhouse website consists of the following parts:
   - The documentation builder (written in Go) is located in the `docs/site/backends/docs-builder` directory.
 
 ### Structure of the Jekyll-based projects
+
+> Some information is outdated.
 
 The project uses [werf](werf.io) to build and deploy documentation.
 
@@ -205,6 +259,8 @@ Things to note:
 - [Jekyll Include Plugin](https://github.com/flant/jekyll_include_plugin)
 
 ### Jekyll data
+
+> Some information is outdated.
 
 Some data is stored in the `_data` directory of the Jekyll project,
 while other data is generated from the repo by the scripts or Jekyll hooks.
@@ -351,11 +407,7 @@ Below are some data structures used in the Jekyll projects.
       "modulesDir": "ee/be/modules",
       "excludeModules": [
         "openvpn",
-        "sds-node-configurator",
-        "sds-replicated-volume",
-        "sds-local-volume",
-        "virtualization",
-        "csi-ceph",
+        ...,
         "csi-nfs"
       ]
     },
@@ -375,14 +427,7 @@ Below are some data structures used in the Jekyll projects.
       ],
       "excludeModules": [
         "cloud-provider-dynamix",
-        "cloud-provider-openstack",
-        "cloud-provider-vcd",
-        "dashboard",
-        "keepalived",
-        "network-gateway",
-        "operator-trivy",
-        "runtime-audit-engine",
-        "static-routing-manager",
+        ...,
         "virtualization"
       ],
       "languages": [
@@ -397,9 +442,6 @@ Below are some data structures used in the Jekyll projects.
       "name": "EE",
       "modulesDir": "ee/modules",
       "terraformProviders": [
-        "openstack",
-        "vcd",
-        "decort",
         "huaweicloud"
       ]
     },
@@ -414,60 +456,7 @@ Below are some data structures used in the Jekyll projects.
       ],
       "excludeModules": [
         "basic-auth",
-        "cert-manager",
-        "cilium-hubble",
-        "cloud-provider-aws",
-        "cloud-provider-azure",
-        "cloud-provider-dynamix",
-        "cloud-provider-gcp",
-        "cloud-provider-openstack",
-        "cloud-provider-vcd",
-        "cloud-provider-vsphere",
-        "cloud-provider-yandex",
-        "cloud-provider-zvirt",
-        "cni-simple-bridge",
-        "commander",
-        "commander-agent",
-        "console",
-        "csi-ceph",
-        "csi-nfs",
-        "dashboard",
-        "deckhouse-tools",
-        "delivery",
-        "descheduler",
-        "documentation",
-        "extended-monitoring",
-        "external-module-manager",
-        "flant-integration",
-        "istio",
-        "keepalived",
-        "metallb-crd",
-        "monitoring-custom",
-        "monitoring-custom",
-        "monitoring-ping",
-        "multitenancy-manager",
-        "namespace-configurator",
-        "network-gateway",
-        "network-policy-engine",
-        "node-local-dns",
-        "okmeter",
-        "openvpn",
-        "operator-ceph",
-        "operator-postgres",
-        "pod-reloader",
-        "prometheus-pushgateway",
-        "sds-drbd",
-        "sds-elastic",
-        "sds-local-volume",
-        "sds-node-configurator",
-        "sds-replicated-volume",
-        "secret-copier",
-        "secrets-store-integration",
-        "static-routing-manager",
-        "stronghold",
-        "terraform-manager",
-        "upmeter",
-        "vertical-pod-autoscaler",
+        ...,
         "virtualization"
       ]
     },
@@ -478,52 +467,7 @@ Below are some data structures used in the Jekyll projects.
       ],
       "excludeModules": [
         "basic-auth",
-        "cert-manager",
-        "cilium-hubble",
-        "cloud-provider-aws",
-        "cloud-provider-azure",
-        "cloud-provider-dynamix",
-        "cloud-provider-gcp",
-        "cloud-provider-openstack",
-        "cloud-provider-vcd",
-        "cloud-provider-vsphere",
-        "cloud-provider-yandex",
-        "cloud-provider-zvirt",
-        "cni-simple-bridge",
-        "commander",
-        "commander-agent",
-        "console",
-        "dashboard",
-        "deckhouse-tools",
-        "delivery",
-        "descheduler",
-        "extended-monitoring",
-        "external-module-manager",
-        "flant-integration",
-        "istio",
-        "keepalived",
-        "monitoring-custom",
-        "monitoring-ping",
-        "namespace-configurator",
-        "network-gateway",
-        "network-policy-engine",
-        "okmeter",
-        "openvpn",
-        "operator-ceph",
-        "operator-postgres",
-        "pod-reloader",
-        "prometheus-pushgateway",
-        "sds-drbd",
-        "sds-elastic",
-        "sds-local-volume",
-        "sds-node-configurator",
-        "sds-replicated-volume",
-        "secret-copier",
-        "secrets-store-integration",
-        "static-routing-manager",
-        "stronghold",
-        "terraform-manager",
-        "upmeter",
+        ...,
         "virtualization"
       ]
     }

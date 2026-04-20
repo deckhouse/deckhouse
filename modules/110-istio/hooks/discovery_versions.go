@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 
@@ -54,13 +55,25 @@ func imageToIstioVersion(img string) (*IstioVersion, error) {
 	major := match[re.SubexpIndex("major")]
 	minor := match[re.SubexpIndex("minor")]
 	patch := match[re.SubexpIndex("patch")]
+
+	fullVersion := fmt.Sprintf(fullVersionTemplate, major, minor, patch)
+	versionSemver, err := semver.NewVersion(fullVersion)
+	if err != nil {
+		return nil, fmt.Errorf("parse version %s: %w", fullVersion, err)
+	}
+
+	// Ambient mode is available starting with version 1.25
+	ambientMinVersion := semver.MustParse("1.25.0")
+	supportsAmbient := versionSemver.GreaterThanEqual(ambientMinVersion)
+
 	return &IstioVersion{
 		version: fmt.Sprintf(versionTemplate, major, minor),
 		info: istio_versions.IstioVersionInfo{
-			FullVersion: fmt.Sprintf(fullVersionTemplate, major, minor, patch),
-			Revision:    fmt.Sprintf(revisionTemplate, major, minor),
-			ImageSuffix: fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
-			IsReady:     false,
+			FullVersion:     fullVersion,
+			Revision:        fmt.Sprintf(revisionTemplate, major, minor),
+			ImageSuffix:     fmt.Sprintf(imageSuffixTemplate, major, minor, patch),
+			IsReady:         false,
+			SupportsAmbient: supportsAmbient,
 		},
 	}, nil
 }

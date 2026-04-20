@@ -2,6 +2,7 @@
 title: "Пример адаптации существующего чарта"
 permalink: ru/architecture/module-development/example/
 lang: ru
+description: Пошаговый пример создания модуля Deckhouse Kubernetes Platform на основе адаптации существующего Helm-чарта и его публикации через CI/CD-пайплайн.
 ---
 
 {% raw %}
@@ -97,7 +98,7 @@ lang: ru
 
 1. Настройте CI/CD.
 
-   В шаблоне проекта в директории `.github` находятся готовые файлы workflow GitHub Actions, которые реализуют простую схему сборки и публикации модуля с использованием registry [GitHub Packages](https://github.com/features/packages) (ghcr.io). Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). Внесите изменения в файлы workflow, если вам не подходит предложенный вариант.
+   В шаблоне проекта в директории `.github` находятся готовые файлы workflow GitHub Actions, которые реализуют простую схему сборки и публикации модуля с использованием хранилища образов [GitHub Packages](https://github.com/features/packages) (ghcr.io). Артефакты модуля будут загружаться по адресу `ghcr.io/<OWNER>/modules/`, который будет являться [источником модулей](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). Внесите изменения в файлы workflow, если вам не подходит предложенный вариант.
 
    Выполните следующие настройки в свойствах вашего проекта на GitHub, чтобы workflow модуля работал корректно:
    - Откройте страницу *Settings -> Actions -> General*.
@@ -140,7 +141,7 @@ lang: ru
 Пример подключения модуля `helloworld` в кластере Deckhouse Kubernetes Platform.
 
 1. Создайте токен доступа в репозитории GitHub с правами для работы с GitHub Packages.
-1. Сгенерируйте строку аутентификации для доступа к GitHub Packages container registry в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
+1. Сгенерируйте строку аутентификации для доступа к хранилищу образов контейнеров GitHub Packages в формате [dockerconfigjson](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#registry-secret-existing-credentials), указав имя пользователя (или организации) GitHub и токен доступа:
 
    ```shell
    base64 -w0 <<EOF
@@ -154,7 +155,7 @@ lang: ru
    EOF
    ```
 
-1. Создайте в кластере ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) (укажите адрес container registry и строку аутентификации).
+1. Создайте в кластере ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) (укажите адрес хранилище образов и строку аутентификации).
 
    ```shell
    d8 k apply -f - <<EOF

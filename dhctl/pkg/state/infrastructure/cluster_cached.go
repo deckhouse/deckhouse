@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -49,7 +50,7 @@ func (s *KubeTerraStateLoader) WithForceFromCache(f bool) *KubeTerraStateLoader 
 	return s
 }
 
-func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
+func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -80,6 +81,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(s.logger),
 		),
+		dc,
 	)
 	if err != nil {
 		return nil, err

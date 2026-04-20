@@ -49,7 +49,7 @@ properties:
       > Внимание! Режим VXLAN не совместим со следующими режимами bpfLBMode: Hybrid, DSR. Если tunnelMode настроен на VXLAN, то bpfLBMode будет переопределён на SNAT автоматически.
   svcSourceRangeCheck:
     description: |
-      Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
+      Для сервисов с типом `loadBalancer` включает проверку source IP на его соответствие [loadBalancer.sourceRanges](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-loadbalancer-sourceranges).
       Проверка не производится, если доступ производится изнутри кластера или параметр `sourceRanges` пуст/не указан.
       Некоторые облачные провайдеры в своих реализациях loadBalancer поддерживают фильтрацию входящего трафика на основе параметра `sourceRanges`, в таком случае [документация по cilium](https://docs.cilium.io/en/stable/network/kubernetes/kubeproxy-free/#loadbalancer-source-ranges-checks)
       рекомендует отключать проверку `svcSourceRangeCheck`.
@@ -65,7 +65,7 @@ properties:
       Отключает влияние сетевых политик на трафик. Сетевые запросы, попавшие под запрет политик, просто логируются.
   exclusiveCNIPlugin:
     description: |
-      Предотвращает включение дополнительных CNI-плагинов на узлах кластера. Если [настройка модуля Istio `dataPlane.trafficRedirectionSetupMode`](../istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) установлена в значение `CNIPlugin`, то данная опция автоматически будет установлена в значение `false`.
+      Предотвращает включение дополнительных CNI-плагинов на узлах кластера. Если [настройка модуля Istio `dataPlane.trafficRedirectionSetupMode`](/modules/istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) установлена в значение `CNIPlugin`, то данная опция автоматически будет установлена в значение `false`.
 
       Явно отключать эту опцию рекомендуется только при использовании дополнительного CNI или специфичного CNI-плагина в кластере. Примером такого использования может быть CNI-плагин Linkerd.
   bpfLBMode:
@@ -74,6 +74,11 @@ properties:
       - `SNAT` — трафик от клиента до пода (и обратно) проходит через NAT, соответственно теряется адрес отправителя.
       - `DSR` — трафик от клиента до пода проходит с сохранением адреса отправителя, а обратно - согласно правилам роутинга (минуя балансировщик). Этот режим экономит сетевой трафик, уменьшает задержки, но работает только для TCP трафика.
       - `Hybrid` — TCP трафик обрабатывается в режиме DSR, а UDP - в режиме SNAT.
+  loadBalancerICMPReplyEnabled:
+    description: |
+      Включает генерацию ICMP Echo Reply для IP-адресов сервисов типа LoadBalancer.
+
+      При включении узлы отвечают на ICMP Echo Request (ping), адресованные внешним IP-адресам LoadBalancer.
   activeL2NeighborDiscoveryEnabled:
     description: |
       Включает механизм `L2 neighbor discovery`, который помогает гарантировать актуальность записей в таблице ARP на всех узлах кластера.
@@ -127,7 +132,7 @@ properties:
                   Если параметр указан, то VPA, при пересчете запросов CPU (CPU requests) будет пересчитывать ограничения использования CPU (CPU limits) сохраняя указанное соотношение ограничений к запросам (limits/requests).
           memory:
             description: |
-               Настройка ограничений (limits) использования CPU и памяти.
+              Настройка ограничений VPA (limits) при работе с памятью.
             properties:
               min:
                 description: |

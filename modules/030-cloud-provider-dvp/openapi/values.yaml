@@ -73,8 +73,6 @@ properties:
                     image:
                       kind: ClusterVirtualImage
                       name: ubuntu-2204
-        required:
-          [apiVersion, kind, sshPublicKey, masterNodeGroup, layout, provider]
         properties:
           apiVersion:
             type: string
@@ -305,6 +303,28 @@ properties:
                         type: string
                         description: |
                           The name of the existing StorageClass will be used to create the ETCD data disk.
+
+                  additionalDisks:
+                    type: array
+                    description: |
+                      Additional data disks settings.
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required:
+                        - size
+                      properties:
+                        size:
+                          type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          description: |
+                            Additional disk size.
+                          example: 10Gi
+                        storageClass:
+                          type: string
+                          description: |
+                            The name of the existing StorageClass will be used to create the additional data disk.
+
                   additionalLabels:
                     type: object
                     description: |
@@ -384,6 +404,27 @@ properties:
                   properties:
                     virtualMachine: *instanceClassVirtualMachine
                     rootDisk: *instanceClassRootDisk
+
+                    additionalDisks:
+                      type: array
+                      description: |
+                        Additional data disks settings.
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - size
+                        properties:
+                          size:
+                            type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            description: |
+                              Additional disk size.
+                            example: 10Gi
+                          storageClass:
+                            type: string
+                            description: |
+                              The name of the existing StorageClass will be used to create the additional data disk.
           layout:
             type: string
             description: |
@@ -439,13 +480,6 @@ properties:
             required:
               - kubeconfigDataBase64
               - namespace
-        oneOf:
-          - required: [layout]
-            properties:
-              layout:
-                enum:
-                  - Standard
-                type: string
       providerDiscoveryData:
         type: object
         additionalProperties: false
@@ -487,7 +521,7 @@ properties:
                   type: boolean
                 isEnabled:
                   type: boolean
-                IsDefault:
+                isDefault:
                   type: boolean
       storageClasses:
         type: array
@@ -504,3 +538,9 @@ properties:
               type: boolean
             dvpStorageClass:
               type: string
+            isDefault:
+              type: boolean
+      defaultStorageClass:
+        type: string
+        description: |
+          The name of the default storage class discovered from the parent DVP cluster.

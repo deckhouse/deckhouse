@@ -20,18 +20,13 @@ metadata:
     kind: ApplicationPackageVersion
     name: deckhouse-test-v1.0.2
     uid: new-apv-uid
-  resourceVersion: "3"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
 status:
-  conditions:
-  - lastTransitionTime: null
-    message: ""
-    reason: Reconciled
-    status: "True"
-    type: Processed
+  tracking: null
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
@@ -67,8 +62,9 @@ spec:
   packageVersion: v1.0.1
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
     status: "True"
     type: IsEnriched
   packageMetadata:
@@ -97,8 +93,9 @@ spec:
   packageVersion: v1.0.2
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
     status: "True"
     type: IsEnriched
   packageMetadata:

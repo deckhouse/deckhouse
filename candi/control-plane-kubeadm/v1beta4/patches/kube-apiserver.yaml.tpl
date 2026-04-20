@@ -64,7 +64,6 @@ spec:
 
 {{- if hasKey $ "images" }}
   {{- if hasKey $.images "controlPlaneManager" }}
-    {{- if hasKey $.images.controlPlaneManager "kubeApiserverHealthcheck" }}
 ---
 apiVersion: v1
 kind: Pod
@@ -90,90 +89,27 @@ spec:
         host: {{ .nodeIP | quote }}
     {{- end }}
         path: /healthz
-        port: 3990
-        scheme: HTTP
+        port: 6443
+        scheme: HTTPS
     livenessProbe:
       httpGet:
     {{- if hasKey . "nodeIP" }}
         host: {{ .nodeIP | quote }}
     {{- end }}
         path: /livez
-        port: 3990
-        scheme: HTTP
+        port: 6443
+        scheme: HTTPS
     startupProbe:
       httpGet:
     {{- if hasKey . "nodeIP" }}
         host: {{ .nodeIP | quote }}
     {{- end }}
         path: /livez
-        port: 3990
-        scheme: HTTP
+        port: 6443
+        scheme: HTTPS
     env:
     - name: GOGC
       value: "50"
-  - name: healthcheck
-    image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubeApiserverHealthcheck") }}
-    securityContext:
-      runAsNonRoot: false
-      runAsUser: 0
-      runAsGroup: 0
-      capabilities:
-        drop:
-        - ALL
-      readOnlyRootFilesystem: true
-      seccompProfile:
-        type: RuntimeDefault
-    resources:
-      requests:
-        cpu: "{{ div (mul $millicpu 2) 100 }}m"
-        memory: "{{ div (mul $memory 2) 100 }}"
-    livenessProbe:
-      httpGet:
-        path: /.kube-apiserver-healthcheck/healthz
-        port: 3990
-    {{- if hasKey . "nodeIP" }}
-        host: {{ .nodeIP | quote }}
-    {{- end }}
-      initialDelaySeconds: 5
-      timeoutSeconds: 5
-    command:
-    - /usr/local/bin/kube-apiserver-healthcheck
-    args:
-    - --ca-cert=/secrets/ca.crt
-    - --client-cert=/secrets/client.crt
-    - --client-key=/secrets/client.key
-    {{- if hasKey . "nodeIP" }}
-    - --listen-address={{ .nodeIP }}
-    {{- end }}
-    - --listen-port=3990
-    {{- if hasKey . "nodeIP" }}
-    - --api-server-address={{ .nodeIP }}
-    {{- end }}
-    - --api-server-port=6443
-    volumeMounts:
-    - name: healthcheck-secrets-ca
-      mountPath: /secrets/ca.crt
-      readOnly: true
-    - name: healthcheck-secrets-client-crt
-      mountPath: /secrets/client.crt
-      readOnly: true
-    - name: healthcheck-secrets-client-key
-      mountPath: /secrets/client.key
-      readOnly: true
-  volumes:
-  - name: healthcheck-secrets-ca
-    hostPath:
-      path: /etc/kubernetes/pki/ca.crt
-      type: File
-  - name: healthcheck-secrets-client-crt
-    hostPath:
-      path: /etc/kubernetes/pki/apiserver-kubelet-client.crt
-      type: File
-  - name: healthcheck-secrets-client-key
-    hostPath:
-      path: /etc/kubernetes/pki/apiserver-kubelet-client.key
-      type: File
-    {{- end }}
   {{- end }}
 {{- end }}
 

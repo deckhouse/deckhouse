@@ -30,7 +30,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -42,18 +42,16 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
   install:
   - cd /src/wrapper
-  # - make
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w" -o systemctl-power-commands-wrapper main.go
   - mv ./systemctl-power-commands-wrapper /
   - mv /src/scripts/* /
   - chmod +x /systemctl-power-commands-wrapper /install /uninstall
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /

@@ -24,15 +24,28 @@
   {{- if isset $requirements "modules" }}
   <p>{{- T "requirements_modules_title" }}:
     <ul>
-      {{- range $key, $value := $requirements.modules }}
-        {{- if eq $value ">= 0.0.0" }}
-          {{- $value = printf "%s." (T "requirements_modules_any_version") -}}
-        {{- else -}}
-          {{- $formattedValue := partial "format-version-requirement" $value }}
-          {{- $value = printf "%s." $formattedValue -}}
+      {{- range $key, $valueRaw := $requirements.modules }}
+        {{- /* Check is !optional presenting */}}
+        {{- $isOptional := false }}
+        {{- $version := $valueRaw }}
+        {{- if findRE `!optional` $valueRaw }}
+          {{- $isOptional = true }}
+          {{- $version = $valueRaw | replaceRE `\s*!optional\s*` "" }}
         {{- end }}
+
+        {{- /* Format version */}}
+        {{- if eq $version ">= 0.0.0" }}
+          {{- $version = printf "%s." (T "requirements_modules_any_version") -}}
+        {{- else -}}
+          {{- $formattedVersion := partial "format-version-requirement" $version }}
+          {{- $version = printf "%s." $formattedVersion -}}
+        {{- end }}
+
         <li class="module-requirements__item">
-          <code>{{ $key }}</code>: {{ $value }}
+          <code>{{ $key }}</code>: {{ $version }}
+          {{- if $isOptional }}
+            <span>{{- T "requirements_modules_optional_text_first" }} <a href="/modules/{{ $key }}/">{{ $key }}</a> (<a href="/products/kubernetes-platform/documentation/v1/architecture/module-development/dependencies/#{{- T "requirements_modules_optional_text_for_link"}}">{{- T "requirements_modules_more" }} </a> {{- T "requirements_modules_optional_text_second" }}).</span>
+          {{- end }}
         </li>
       {{- end }}
     </ul>

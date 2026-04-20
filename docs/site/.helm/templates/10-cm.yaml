@@ -16,6 +16,14 @@ metadata:
 data:
   ca.yaml: |
     {{ pluck .Values.werf.env .Values.s3.ca_bundle | first | default .Values.s3.ca_bundle._default | nindent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: embedded-modules-history-sync-script
+data:
+  sync.sh: |
+    {{ include "embedded_modules_history_sync_script" . | nindent 4 }}
 {{- if ne .Values.web.env "web-production" }}
 ---
 apiVersion: v1
@@ -24,5 +32,58 @@ metadata:
   name: doc-installer-version
 data:
   installer-versions-nginx.include: |
-    "latest" "v0.4.1";
+    "latest" "0.6.2";
 {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: doc-installer-update-script
+data:
+  update.sh: |
+    #!/bin/bash
+
+    set -uo pipefail
+
+    CONFIGMAP="doc-installer-version"
+
+    VERSION=$(curl -s \
+        --fail \
+        --retry 5 \
+        --retry-delay 10 \
+        --retry-max-time 120 \
+        --retry-connrefused \
+        --connect-timeout 10 \
+        --max-time 30 \
+        "https://deckhouse.ru/downloads/deckhouse-installer-trdl/targets/channels/0/ea")
+
+    if [ -z "$VERSION" ]; then
+      echo "Failed to retrieve version."
+      exit 1
+    fi
+
+    echo "Got version: $VERSION"
+
+    CURRENT_INCLUDE=$(kubectl get configmap "${CONFIGMAP}" \
+      -n "${NAMESPACE}" \
+      -o jsonpath='{.data.installer-versions-nginx\.include}')
+
+    CURRENT_VERSION=$(printf "%s" "$CURRENT_INCLUDE" | sed -n 's/.*"latest"[[:space:]]*"\([^"]*\)".*/\1/p')
+    echo "Current version: ${CURRENT_VERSION:-<empty>}"
+
+    if [ "$VERSION" = "$CURRENT_VERSION" ]; then
+      echo "Version unchanged (${VERSION}), skipping ConfigMap patch."
+      exit 0
+    fi
+
+    kubectl patch configmap "${CONFIGMAP}" \
+      -n "${NAMESPACE}" \
+      --type=merge \
+      -p "{\"data\": {\"installer-versions-nginx.include\": \"\\\"latest\\\" \\\"${VERSION}\\\";\\n\"}}"
+
+    if [ $? -eq 0 ]; then
+      echo "ConfigMap '${CONFIGMAP}' successfully updated: latest -> ${VERSION}"
+    else
+      echo "Error updating ConfigMap '${CONFIGMAP}'" >&2
+      exit 1
+    fi

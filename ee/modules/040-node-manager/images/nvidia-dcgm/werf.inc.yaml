@@ -1,5 +1,6 @@
 {{- $dcgm_version := "4.2.3" }}
 {{- $libs := "libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1 ld-linux-x86-64.so.2" }}
+{{- $dcgm_deb_base := "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -26,7 +27,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -63,7 +64,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 final: false
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -147,7 +148,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
   add: /tmp/x86_64-linux-gnu
   before: install
-- image: libs/glibc
+- from: {{ index $.Images "libs/glibc" }}
   add: /
   to: /tmp/glibc
   includePaths:
@@ -182,6 +183,23 @@ shell:
       do
         strip $i
     done
+    export DCGM_PROPRIETARY_DEB=datacenter-gpu-manager-4-proprietary_{{ $dcgm_version }}_amd64.deb
+    curl -fsSL -o /tmp/${DCGM_PROPRIETARY_DEB} {{ $dcgm_deb_base }}/${DCGM_PROPRIETARY_DEB}
+    mkdir -p /tmp/dcgm-proprietary
+    dpkg-deb -x /tmp/${DCGM_PROPRIETARY_DEB} /tmp/dcgm-proprietary
+    mkdir -p /out/usr/lib/x86_64-linux-gnu /out/usr/libexec/datacenter-gpu-manager-4/plugins/cudaless
+    cp -a /tmp/dcgm-proprietary/usr/lib/x86_64-linux-gnu/libdcgmmoduleprofiling.so.4* /out/usr/lib/x86_64-linux-gnu/
+    cp -a /tmp/dcgm-proprietary/usr/lib/x86_64-linux-gnu/libnvperf_dcgm_host.so* /out/usr/lib/x86_64-linux-gnu/
+    cp -a /tmp/dcgm-proprietary/usr/libexec/datacenter-gpu-manager-4/plugins/cudaless/libEud.so.4* /out/usr/libexec/datacenter-gpu-manager-4/plugins/cudaless/
+    test -f /out/usr/lib/x86_64-linux-gnu/libdcgmmoduleprofiling.so.4
+    test -f /out/usr/lib/x86_64-linux-gnu/libnvperf_dcgm_host.so
+    test -f /out/usr/libexec/datacenter-gpu-manager-4/plugins/cudaless/libEud.so.4
+    mkdir -p /out/usr/lib/x86_64-linux-gnu/
+    for i in libc.so.6 libresolv.so.2 libpthread.so.0 librt.so.1 libdl.so.2 libm.so.6 libgcc_s.so.1
+      do
+        ln -sf /usr/lib64/${i} /out/usr/lib/x86_64-linux-gnu/${i}
+    done
+    rm -rf /tmp/dcgm-proprietary /tmp/${DCGM_PROPRIETARY_DEB}
     cp -a /tmp/glibc/* /out/
     ln -s /usr/lib64 /out/lib64
     ln -s /usr/lib /out/lib

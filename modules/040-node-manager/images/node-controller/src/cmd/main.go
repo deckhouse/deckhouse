@@ -31,12 +31,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/webhook"
-	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var (
@@ -71,6 +72,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	cacheOpts, clientOpts := common.CacheOptions()
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -80,6 +83,8 @@ func main() {
 			Port: 9443,
 		}),
 		HealthProbeBindAddress: probeAddr,
+		Cache:                  cacheOpts,
+		Client:                 clientOpts,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

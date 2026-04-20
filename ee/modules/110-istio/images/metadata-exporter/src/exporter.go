@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -377,6 +378,12 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 		}
 		logger.Printf("Found ingresGateways advertisements overriding config in ConfigMap: %s, %v", cm.Name, ingressGatewaysConfigmap)
 		ingressGateways = append(ingressGateways, ingressGatewaysConfigmap...)
+		sort.Slice(ingressGateways, func(i, j int) bool {
+			if ingressGateways[i].Address != ingressGateways[j].Address {
+				return ingressGateways[i].Address < ingressGateways[j].Address
+			}
+			return ingressGateways[i].Port < ingressGateways[j].Port
+		})
 		return ingressGateways, nil
 	}
 
@@ -422,6 +429,13 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 
 	// debug
 	fmt.Printf("ingressGateways=%v\n", ingressGateways)
+
+	sort.Slice(ingressGateways, func(i, j int) bool {
+		if ingressGateways[i].Address != ingressGateways[j].Address {
+			return ingressGateways[i].Address < ingressGateways[j].Address
+		}
+		return ingressGateways[i].Port < ingressGateways[j].Port
+	})
 
 	return ingressGateways, nil
 }

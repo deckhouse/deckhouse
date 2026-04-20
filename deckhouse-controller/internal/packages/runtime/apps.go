@@ -16,8 +16,6 @@ package runtime
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"path/filepath"
 	"slices"
 
@@ -31,17 +29,17 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/download"
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
-	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
-	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/startup"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+)
+
+const (
+	defaultNamespace = "default"
 )
 
 // App represents an application instance as received from the Application controller.
@@ -53,19 +51,6 @@ type App struct {
 	Settings   addonutils.Values
 }
 
-// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
-func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
-	r.mu.Lock()
-	app := r.apps.GetPackage(name)
-	if app == nil {
-		r.mu.Unlock()
-		return "", fmt.Errorf("app %s not found", name)
-	}
-	r.mu.Unlock()
-
-	return r.nelmService.Render(ctx, app.GetNamespace(), app)
-}
-
 // ValidateSettings checks settings against the package's OpenAPI schema.
 // Returns valid if the package is not loaded yet (settings validated on load).
 func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
@@ -73,7 +58,7 @@ func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings ad
 	defer span.End()
 
 	r.mu.Lock()
-	app := r.apps.GetPackage(name)
+	app := r.apps[name]
 	if app == nil {
 		r.mu.Unlock()
 		return settingscheck.Result{Valid: true}, nil
@@ -83,67 +68,65 @@ func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings ad
 	return app.ValidateSettings(ctx, settings)
 }
 
-// UpdateApp handles application updates (version changes and settings changes).
-// Version changes and settings changes are handled independently with separate contexts.
-func (r *Runtime) UpdateApp(repo registry.Remote, inst App) {
+// UpdateApp handles application creation and version changes from the Application controller.
+//
+// Flow:
+//  1. NeedUpdate fast-path: skip if version and settings checksum are unchanged
+//  2. Store.Update: if version changed → new root context, enqueue full pipeline
+//     (Disable → Download → Install → Load); if only settings changed → nil context,
+//     trigger Reschedule so the scheduler re-runs ApplySettings → Startup → Run
+//  3. CheckConstraints: validate Kubernetes/Deckhouse version requirements before enqueuing
+//
+// Settings are applied lazily: the scheduler's schedulePackage reads pending settings
+// from the Store via GetPendingSettings when the package is scheduled for startup.
+func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if inst.Namespace == "" {
-		inst.Namespace = "default"
+	if len(app.Namespace) == 0 {
+		app.Namespace = defaultNamespace
 	}
 
-	settingsChecksum := ""
-	if len(inst.Settings) > 0 {
-		settingsChecksum = inst.Settings.Checksum()
+	if len(app.Settings) == 0 {
+		app.Settings = make(addonutils.Values)
 	}
 
-	name := apps.BuildName(inst.Namespace, inst.Name)
-	version := inst.Definition.Version
+	name := apps.BuildName(app.Namespace, app.Name)
+	version := app.Definition.Version
+	packageName := app.Definition.Name
 
-	r.apps.Update(name, version, settingsChecksum, func(ctx context.Context, event int, app *apps.Application) {
-		var tasks []queue.Task
-		if event == lifecycle.EventVersionChanged {
-			if err := r.scheduler.Check(inst.Definition.Requirements.Checks()); err != nil {
-				r.status.HandleError(name, err)
-				return
-			}
+	if !r.packages.NeedUpdate(name, version, app.Settings.Checksum()) {
+		return
+	}
 
-			r.status.ClearRuntimeConditions(name)
-			r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
+	ctx := r.packages.Update(name, version, app.Settings)
+	if ctx == nil {
+		r.scheduler.Reschedule(name)
+		return
+	}
 
-			packageName := inst.Definition.Name
-			packageVersion := inst.Definition.Version
+	r.status.ClearRuntimeConditions(name)
 
-			tasks = []queue.Task{
-				taskdownload.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
-				taskinstall.NewAppTask(name, packageName, packageVersion, repo, r.installer, r.status, r.logger),
-				taskload.NewAppTask(name, repo, inst.Settings, r.loadApp, r.status, r.logger),
-			}
+	tasks := []queue.Task{
+		taskdownload.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),
+		taskinstall.NewAppTask(name, packageName, version, repo, r.installer, r.status, r.logger),
+		taskload.NewAppTask(name, repo, r.loadApp, r.status, r.logger),
+	}
 
-			// If there's an existing app, disable it first
-			if app != nil {
-				tasks = slices.Insert(tasks, 0, taskdisable.NewTask(app, app.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
-			}
-		}
+	// If there's an existing app, disable it first
+	if pkg := r.apps[name]; pkg != nil {
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
+	}
 
-		if event == lifecycle.EventSettingsChanged && app != nil {
-			tasks = []queue.Task{
-				taskapplysettings.NewTask(app, inst.Settings, r.status, r.logger),
-				taskrun.NewTask(app, app.GetNamespace(), r.nelmService, r.status, r.logger),
-			}
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
+	for _, task := range tasks {
+		r.queueService.Enqueue(ctx, name, task)
+	}
 }
 
-// loadApp builds an Application from its package files, validates settings, and registers it
-// with the lifecycle store and scheduler. Called by the Load task after filesystem mount.
-func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, settings addonutils.Values, packagePath string) (string, error) {
-	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "LoadApp")
+// loadApp builds an Application from its package files and stores it in r.apps.
+// Called by the Load task after the package image is mounted on the filesystem.
+func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, packagePath string) (string, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadApp")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("path", packagePath))
@@ -166,24 +149,13 @@ func (r *Runtime) loadApp(ctx context.Context, repo registry.Remote, settings ad
 		return "", newLoadFailedErr(err)
 	}
 
-	res, err := app.ValidateSettings(ctx, settings)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return "", newApplyInitialSettingsErr(err)
-	}
-
-	if !res.Valid {
-		span.SetStatus(codes.Error, res.Message)
-		return "", newApplyInitialSettingsErr(errors.New(res.Message))
-	}
-
 	r.mu.Lock()
-	r.apps.SetPackage(app.GetName(), app)
-	r.mu.Unlock()
+	defer r.mu.Unlock()
 
-	r.scheduler.Register(app)
+	r.apps[app.GetName()] = app
+	r.scheduler.AddNode(app)
 
-	return app.GetVersion(), nil
+	return app.GetVersion().String(), nil
 }
 
 // RemoveApp removes an application and cancels all its running operations.
@@ -200,68 +172,29 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	defer r.mu.Unlock()
 
 	name := apps.BuildName(namespace, instance)
-	r.scheduler.Remove(name)
+	r.scheduler.RemoveNode(name)
 
-	r.apps.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, app *apps.Application) {
-		cleanup := queue.WithOnDone(func() {
-			go func() {
-				if r.apps.Delete(name) {
-					r.queueService.Remove(name)
-					r.status.Delete(name)
-				}
-			}()
-		})
+	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
+	if ctx == nil {
+		return
+	}
 
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(app, app.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
+	if pkg := r.apps[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
+	}
+
+	cleanup := queue.WithOnDone(func() {
+		go func() {
+			r.mu.Lock()
+			defer r.mu.Unlock()
+
+			if r.packages.Delete(name) {
+				r.queueService.Remove(name)
+				r.status.Delete(name)
+				delete(r.apps, name)
+			}
+		}()
 	})
-}
 
-// enableApp is called by the scheduler when a package becomes enabled.
-func (r *Runtime) enableApp(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, app *apps.Application) {
-		tasks := []queue.Task{
-			taskstartup.NewTask(app, r.nelmService, r.queueService, r.status, r.logger),
-			taskrun.NewTask(app, app.GetNamespace(), r.nelmService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
-}
-
-// disableApp is called by the scheduler when a package becomes disabled.
-func (r *Runtime) disableApp(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.apps.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, app *apps.Application) {
-		tasks := []queue.Task{
-			taskdisable.NewTask(app, app.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
-}
-
-// runApp is called by NELM monitor when a package needs to re-run.
-func (r *Runtime) runApp(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.apps.HandleEvent(lifecycle.EventRun, name, func(ctx context.Context, _ int, app *apps.Application) {
-		tasks := []queue.Task{
-			taskrun.NewTask(app, app.GetNamespace(), r.nelmService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
+	r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
 }
