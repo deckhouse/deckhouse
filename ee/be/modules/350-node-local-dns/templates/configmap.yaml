@@ -38,6 +38,14 @@ data:
 {{- if .Values.nodeLocalDns.enableLogs }}
       log
 {{- end }}
+{{- if .Values.nodeLocalDns.disableIPv6 }}
+      template IN AAAA . {
+          rcode NOERROR
+      }
+      template IN PTR ip6.arpa {
+          rcode NXDOMAIN
+      }
+{{- end }}
 
 
 {{- if not (.Values.global.enabledModules | has "cni-cilium") }}
@@ -45,6 +53,9 @@ data:
       prometheus 127.0.0.1:4224
       health 127.0.0.1:9225
 {{- else }}
+{{- if .Values.nodeLocalDns.disableIPv6 }}
+      bind 0.0.0.0
+{{- end }}
       prometheus 127.0.0.1:4224
       health 0.0.0.0:9225
 {{- end }}
