@@ -38,7 +38,7 @@ const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 const globalValues = `
   clusterIsBootstrapped: true
-  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-vsphere"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-vsphere"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -409,7 +409,19 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Vsphere", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
+			images := GetModulesImages()
+			if images["digests"] == nil {
+				images["digests"] = make(map[string]interface{})
+			}
+			digests := images["digests"].(map[string]interface{})
+			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"cloudControllerManager131": "sha256:ccm131digest",
+				"cloudDataDiscoverer": "sha256:cdddigest",
+				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
+				"terraformManager": "sha256:terraformdigest",
+			}
+			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.HelmRender()
 		})
@@ -490,7 +502,19 @@ labels:
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
+			images := GetModulesImages()
+			if images["digests"] == nil {
+				images["digests"] = make(map[string]interface{})
+			}
+			digests := images["digests"].(map[string]interface{})
+			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"cloudControllerManager131": "sha256:ccm131digest",
+				"cloudDataDiscoverer": "sha256:cdddigest",
+				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
+				"terraformManager": "sha256:terraformdigest",
+			}
+			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)
 			f.HelmRender()
@@ -516,7 +540,19 @@ storageclass.kubernetes.io/is-default-class: "true"
 	Context("Vsphere with NSX-T specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
+			images := GetModulesImages()
+			if images["digests"] == nil {
+				images["digests"] = make(map[string]interface{})
+			}
+			digests := images["digests"].(map[string]interface{})
+			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"cloudControllerManager131": "sha256:ccm131digest",
+				"cloudDataDiscoverer": "sha256:cdddigest",
+				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
+				"terraformManager": "sha256:terraformdigest",
+			}
+			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
 			f.HelmRender()
 		})
@@ -565,7 +601,19 @@ nodes:
 	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
-			f.ValuesSet("global.modulesImages", GetModulesImages())
+			images := GetModulesImages()
+			if images["digests"] == nil {
+				images["digests"] = make(map[string]interface{})
+			}
+			digests := images["digests"].(map[string]interface{})
+			digests["cloudProviderVsphere"] = map[string]interface{}{
+				"cloudControllerManager131": "sha256:ccm131digest",
+				"cloudDataDiscoverer": "sha256:cdddigest",
+				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
+				"terraformManager": "sha256:terraformdigest",
+			}
+			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
 			f.HelmRender()
 		})
