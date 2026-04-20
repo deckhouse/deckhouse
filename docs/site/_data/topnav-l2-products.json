@@ -20,7 +20,7 @@
           "id": 6090,
           "parent_id": 6079,
           "title": "Getting started",
-          "url": "/products/kubernetes-platform/gs/",
+          "url": "/products/kubernetes-platform/gs/installer",
           "target": "",
           "rel": ""
         },
@@ -412,7 +412,7 @@
           "id": 5393,
           "parent_id": 5349,
           "title": "Быстрый старт",
-          "url": "/products/kubernetes-platform/gs/",
+          "url": "/products/kubernetes-platform/gs/installer",
           "target": "",
           "rel": ""
         },

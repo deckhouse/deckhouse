@@ -11,12 +11,14 @@ Now that you have installed and properly configured Deckhouse Kubernetes Platfor
 
 By default, the [Dex](https://dexidp.io/) is used for accessing all the components.
 
+{% unless page.gs_installer %}
 Here are credentials **generated** in the previous steps:
 
 - Username — `admin@deckhouse.io`
 - Password — `<GENERATED_PASSWORD>` (you can also find it in the `User` CustomResource in the `config.yml` file)
 
 Use them to access the web interface of the Deckhouse Kubernetes Platform components.
+{% endunless %}
 </div>
 
 {% include getting_started/global/partials/FINISH_CARDS.md %}

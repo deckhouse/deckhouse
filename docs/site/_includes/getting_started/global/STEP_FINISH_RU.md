@@ -11,12 +11,14 @@
 
 По умолчанию, доступ ко всем компонентам осуществляется через [Dex](https://dexidp.io/) c использованием статического пользователя, созданного в кластере во время установки.
 
+{% unless page.gs_installer %}
 **Сгенерированные** на предыдущих шагах данные пользователя:
 
 - Логин — `admin@deckhouse.io`
 - Пароль — `<GENERATED_PASSWORD>` (вы также можете найти его в CustomResource `User` в файле `config.yml`)
 
 Используйте их для доступа к веб-интерфейсу компонентов Deckhouse Kubernetes Platform.
+{% endunless %}
 </div>
 
 {% include getting_started/global/partials/FINISH_CARDS_RU.md %}
