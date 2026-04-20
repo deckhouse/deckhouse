@@ -84,6 +84,7 @@ func (s *SSH) Cmd(ctx context.Context) *exec.Cmd {
 		"-o", "ServerAliveInterval=1",
 		"-o", "ServerAliveCountMax=3600",
 		"-o", "ConnectTimeout=15",
+		"-o", "LogLevel=ERROR",
 		"-o", "PasswordAuthentication=no",
 	}
 
