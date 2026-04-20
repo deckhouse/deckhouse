@@ -39,6 +39,7 @@ versions = {
             "RelaxedEnvironmentVariableValidation",
             "StrictCostEnforcementForVAP",
             "StrictCostEnforcementForWebhooks",
+            "CRDSensitiveData",
         ],
         "kubeControllerManager": [
             "ConcurrentWatchObjectDecode",
@@ -94,6 +95,7 @@ versions = {
             "OrderedNamespaceDeletion",
             "PodLifecycleSleepActionAllowZero",
             "RelaxedDNSSearchValidation",
+            "CRDSensitiveData",
         ],
         "kubeControllerManager": [
             "ComponentFlagz",
@@ -161,6 +163,7 @@ versions = {
             "SELinuxMount",
             "StrictIPCIDRValidation",
             "DisableAllocatorDualWrite",
+            "CRDSensitiveData",
         ],
         "kubeControllerManager": [
             "AllowParsingUserUIDFromCertAuth",
@@ -219,6 +222,7 @@ versions = {
             "ResourceHealthStatus",
             "SELinuxMount",
             "StrictIPCIDRValidation",
+            "CRDSensitiveData",
         ],
         "kubeControllerManager": [
             "ComponentFlagz",
@@ -277,6 +281,7 @@ versions = {
             "SELinuxMount",
             "StrictIPCIDRValidation",
             "TaintTolerationComparisonOperators",
+            "CRDSensitiveData",
         ],
         "kubeControllerManager": [
             "ComponentFlagz",
