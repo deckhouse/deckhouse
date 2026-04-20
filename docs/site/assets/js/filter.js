@@ -216,8 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const label = document.createElement('label');
     label.htmlFor = tag;
-    label.textContent = tag;
-    label.style.textTransform = 'capitalize';
+    label.textContent = capitalizeWords(tag);
+
 
     filterCheckboxesTags.appendChild(input);
     filterCheckboxesTags.appendChild(label);
