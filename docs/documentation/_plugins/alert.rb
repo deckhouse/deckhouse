@@ -42,7 +42,7 @@ module Jekyll
         site = context.registers[:site]
         @converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
 
-        rendered_content = @converter.convert(content).gsub(/\n/, '')
+        rendered_content = collapse_inter_block_newlines(@converter.convert(content))
 
         id = @config[:id] ? %Q( id="#{@config[:id]}") : ""
         %Q(<#{@config[:tag]} markdown="0"#{id} class="#{@config[:level]} #{@config[:class]} #{@config[:active] == true ? "" : @config[:class_hide]}"><svg class="alert__icon icon--#{@config[:level]}"><use xlink:href="/images/sprite.svg##{@config[:level]}-icon"></use></svg><div>#{rendered_content}</div></#{@config[:tag]}>)
