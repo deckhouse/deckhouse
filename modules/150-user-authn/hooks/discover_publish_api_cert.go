@@ -113,8 +113,6 @@ func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'configmap_cpm' snapshot: %w", err)
 		}
-		fmt.Println("Setting authn kubeconfigGeneratorMasterCA from cpm configmap")
-
 		input.Values.Set(secretPath, publishCert.Data)
 		return nil
 	}
