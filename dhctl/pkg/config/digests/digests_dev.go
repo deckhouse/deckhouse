@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !dev
+//go:build dev
 
 package digests
 
@@ -20,9 +20,9 @@ import (
 	"embed"
 )
 
-//go:embed images_digests.json
+//go:embed images_digests_dev.json
 var imagesDigestsEmbeddedJSON embed.FS
 
 func imagesDigestsContent() ([]byte, error) {
-	return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
+	return imagesDigestsEmbeddedJSON.ReadFile("images_digests_dev.json")
 }

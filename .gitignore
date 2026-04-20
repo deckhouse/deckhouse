@@ -75,3 +75,6 @@ testing/cloud_layouts/Static/ssh-connect_str*
 testing/cloud_layouts/Static/opentofu
 testing/cloud_layouts/script-commander_test.sh  
 
+# dev images_digests.json
+dhctl/pkg/config/digests/images_digests_dev.json
+

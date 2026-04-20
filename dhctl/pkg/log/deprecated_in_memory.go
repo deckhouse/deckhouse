@@ -17,6 +17,7 @@ package log
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"sync"
@@ -31,6 +32,11 @@ type Match struct {
 	Suffix []string
 	Regex  []*regexp.Regexp
 }
+
+var (
+	_ Logger    = &InMemoryLogger{}
+	_ io.Writer = &InMemoryLogger{}
+)
 
 func (m *Match) IsValid() error {
 	if m == nil {
@@ -210,7 +216,7 @@ func (l *InMemoryLogger) ProcessLogger() ProcessLogger {
 	return l
 }
 
-func (l *InMemoryLogger) NewSilentLogger() *SilentLogger {
+func (l *InMemoryLogger) NewSilentLogger() Logger {
 	return NewSilentLogger()
 }
 

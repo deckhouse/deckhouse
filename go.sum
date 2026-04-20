@@ -137,8 +137,8 @@ github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa h
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
-github.com/deckhouse/lib-dhctl v0.13.0 h1:Xh7G30seic4Aa8MdXOH2ecGvO0zsn6PBGBHbJ4YNnZM=
-github.com/deckhouse/lib-dhctl v0.13.0/go.mod h1:RCthjbhLf0CtgdltTmFHk+lRyjRai8BlAO7SocAYR+E=
+github.com/deckhouse/lib-dhctl v0.17.0 h1:2bDR+kohYp3JI6pBq7T4XwEhIWuagnc39Y8Cmd186ck=
+github.com/deckhouse/lib-dhctl v0.17.0/go.mod h1:RCthjbhLf0CtgdltTmFHk+lRyjRai8BlAO7SocAYR+E=
 github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 h1:fntxXW2hn5Vnqa7u802glEzEEy4ye8ztuRBKy/r02Wk=
 github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51/go.mod h1:6bT8jf2fkBPEhYBU35+vMBr5YscliTiS+Vr8v06C+70=
 github.com/deckhouse/module-sdk v0.10.4 h1:1C61nXevgQiUnmv5Is+XP9Octu05XWKgjFi6gmL7miM=
