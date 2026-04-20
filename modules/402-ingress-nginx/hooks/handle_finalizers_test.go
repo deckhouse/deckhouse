@@ -309,7 +309,7 @@ webhooks:
 `
 
 var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func() {
-	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {}}}`, "")
+	f := HookExecutionConfigInit(`{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {"legacyKruiseManagementEnabled":true}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
 	f.RegisterCRD("apps.kruise.io", "v1alpha1", "DaemonSet", true)
 
@@ -384,5 +384,4 @@ var _ = Describe("Modules :: ingress-nginx :: hooks :: handle_finalizers", func(
 			Expect(f.KubernetesResource("IngressNginxController", "", "main").Field("metadata.finalizers").AsStringSlice()).Should(ContainElement(finalizer))
 		})
 	})
-
 })

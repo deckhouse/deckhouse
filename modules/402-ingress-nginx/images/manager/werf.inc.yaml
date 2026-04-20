@@ -1,0 +1,44 @@
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}
+  to: /src
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - '**/*.sum'
+    - '**/*.mod'
+---
+image: {{ .ModuleName }}/manager-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+mount:
+{{- include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - cd /src
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+  - go build -ldflags="-s -w" -o /manager ./src/cmd
+  - chown 64535:64535 /manager
+  - chmod 755 /manager
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: common/distroless
+import:
+- image: {{ .ModuleName }}/manager-artifact
+  add: /manager
+  to: /manager
+  before: setup
+imageSpec:
+  config:
+    entrypoint: ["/manager"]

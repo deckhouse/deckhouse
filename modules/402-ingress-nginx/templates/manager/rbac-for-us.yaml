@@ -1,0 +1,81 @@
+{{- if not (.Values.ingressNginx.internal.legacyKruiseManagementEnabled | default false) }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: manager
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingress-nginx-manager")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:ingress-nginx:manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingress-nginx-manager")) | nindent 2 }}
+rules:
+- apiGroups: ["deckhouse.io"]
+  resources: ["ingressnginxcontrollers"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["ingressnginxcontrollers/status", "ingressnginxcontrollers/finalizers"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+- apiGroups: ["apps.kruise.io"]
+  resources: ["daemonsets"]
+  verbs: ["get", "list", "watch", "patch", "update"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "delete"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingwebhookconfigurations"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:ingress-nginx:manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingress-nginx-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:ingress-nginx:manager
+subjects:
+- kind: ServiceAccount
+  name: manager
+  namespace: d8-ingress-nginx
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: manager
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingress-nginx-manager")) | nindent 2 }}
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: manager
+  namespace: d8-ingress-nginx
+  {{- include "helm_lib_module_labels" (list . (dict "app" "ingress-nginx-manager")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: manager
+subjects:
+- kind: ServiceAccount
+  name: manager
+  namespace: d8-ingress-nginx
+{{- end }}

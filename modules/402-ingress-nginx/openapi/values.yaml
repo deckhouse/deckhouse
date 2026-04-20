@@ -8,6 +8,9 @@ properties:
     x-required-for-helm:
       - ingressControllers
     properties:
+      legacyKruiseManagementEnabled:
+        type: boolean
+        default: false
       admissionCertificate:
         type: object
         default: {}
