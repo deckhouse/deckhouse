@@ -31,15 +31,16 @@ status:
   packages:
     failed:
     - errors:
-      - error: 'ensure package version: create module package version: simulated create
-          error for v1.1.0'
+      - message: 'ensure package version: create module package version: simulated
+          create error for v1.1.0'
         version: v1.1.0
-      - error: 'ensure package version: create module package version: simulated create
-          error for v1.2.0'
+      - message: 'ensure package version: create module package version: simulated
+          create error for v1.2.0'
         version: v1.2.0
       name: test-package
     processed:
-    - name: test-package
+    - foundVersions: 3
+      name: test-package
       type: Module
     processedOverall: 1
     total: 1

@@ -26,6 +26,7 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
@@ -168,6 +169,7 @@ func (r *regularTmpCleaner) Cleanup() {
 	skipDirs := []string{
 		tmpDir,
 		r.params.DefaultTmpDir,
+		app.DownloadCacheDirName,
 	}
 
 	err := filepath.Walk(tmpDir, func(fullPath string, info os.FileInfo, err error) error {
@@ -206,6 +208,12 @@ func (r *regularTmpCleaner) Cleanup() {
 				keepFiles = append(keepFiles, fullPath)
 				return nil
 			}
+		}
+
+		// keep download layers cache
+		if strings.Contains(fullPath, app.DownloadCacheDirName) {
+			keepFiles = append(keepFiles, fullPath)
+			return nil
 		}
 
 		removeFiles = append(removeFiles, fullPath)

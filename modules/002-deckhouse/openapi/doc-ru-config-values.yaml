@@ -14,7 +14,7 @@ properties:
     description: |
       Желаемый канал обновлений Deckhouse ([переключение](/products/kubernetes-platform/documentation/v1/architecture/updating.html) на него произойдет при появлении такой возможности).
 
-      Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
+      Порядок возрастания стабильности канала обновлений (от **наименее** стабильного к **наиболее** стабильному): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`, `LTS`.
 
   update:
     description: Настройки режима и окон обновления Deckhouse.
@@ -198,6 +198,7 @@ properties:
           - `EE` — Enterprise Edition.
           - `SE` — Standard Edition.
           - `SE-plus` — Standard Edition+.
+          - `CSE` — Certified Security Edition.
         default: "CE"
 
   registry:

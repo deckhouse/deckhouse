@@ -20,92 +20,55 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-// ImageGetOption is some configuration that modifies options for a get request.
-type ImageGetOption interface {
-	// ApplyToImageGet applies this configuration to the given image get options.
-	ApplyToImageGet(*ImageGetOptions)
-}
-
-type ImageGetOptions struct {
-	Platform *v1.Platform
-}
-
-// ImagePushOption is some configuration that modifies options for a put request.
-type ImagePushOption interface {
-	// ApplyToImagePush applies this configuration to the given image put options.
-	ApplyToImagePush(*ImagePushOptions)
-}
-
-type ImagePushOptions struct {
-}
-
-// ListTagsOption is some configuration that modifies options for a list tags request.
-type ListTagsOption interface {
-	// ApplyToListTags applies this configuration to the given list tags options.
-	ApplyToListTags(*ListTagsOptions)
-}
-
-type ListTagsOptions struct {
-	// Last tag for pagination continuation
-	Last string
-	// Maximum number of results to return (0 means no limit)
-	N int
-}
-
-// ListRepositoriesOption is some configuration that modifies options for a list repositories request.
-type ListRepositoriesOption interface {
-	// ApplyToListRepositories applies this configuration to the given list repositories options.
-	ApplyToListRepositories(*ListRepositoriesOptions)
-}
-
-type ListRepositoriesOptions struct {
-	// Last repository name for pagination continuation
-	Last string
-	// Maximum number of results to return (0 means no limit)
-	N int
-}
-
-// Client defines the contract for interacting with container registries
+// Client defines the interface for interacting with container registries.
+// Implementations must be safe for concurrent use.
 type Client interface {
-	// WithSegment creates a new client with an additional scope path segment
-	// This method can be chained to build complex paths
+	// WithSegment creates a new client scoped to an additional path segment.
+	// This method can be chained: client.WithSegment("org").WithSegment("repo").
+	// Multiple segments can be passed at once: client.WithSegment("org", "repo").
 	WithSegment(segments ...string) Client
 
-	// GetRegistry returns the full registry path (host + scope)
+	// GetRegistry returns the full registry path (host + segments).
 	GetRegistry() string
 
-	// GetDigest retrieves the digest for a specific image tag
-	// The repository is determined by the chained WithSegment() calls
-	GetDigest(ctx context.Context, tag string) (*v1.Hash, error)
-
-	// GetManifest retrieves the manifest for a specific image tag
-	// The repository is determined by the chained WithSegment() calls
-	GetManifest(ctx context.Context, tag string) (ManifestResult, error)
-
-	// GetImageConfig retrieves the image config file containing labels and metadata
-	// The repository is determined by the chained WithSegment() calls
-	GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error)
-
-	// CheckImageExists checks if a specific image exists in the registry
-	// If image not found, return an error
-	// The repository is determined by the chained WithSegment() calls
-	CheckImageExists(ctx context.Context, tag string) error
-
-	// GetImage retrieves an remote image for a specific reference
-	// Do not return remote image to avoid drop connection with context cancelation.
-	// It will be in use while passed context will be alive.
-	// The repository is determined by the chained WithSegment() calls
+	// GetImage retrieves a remote image by tag or digest reference.
 	GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (Image, error)
 
-	// PushImage pushes an image to the registry at the specified tag
-	// The repository is determined by the chained WithSegment() calls
+	// PushImage pushes a v1.Image to the registry at the specified tag.
 	PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePushOption) error
 
-	// ListTags retrieves tags for the current scope with pagination
-	// The repository is determined by the chained WithSegment() calls
+	// PushIndex pushes a v1.ImageIndex (multi-arch manifest list) to the registry.
+	PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, opts ...ImagePushOption) error
+
+	// GetDigest returns the digest hash for the given tag or digest reference.
+	GetDigest(ctx context.Context, tag string) (*v1.Hash, error)
+
+	// GetManifest retrieves the manifest for a specific image reference.
+	GetManifest(ctx context.Context, tag string) (ManifestResult, error)
+
+	// GetImageConfig retrieves the image config file containing labels and metadata.
+	GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error)
+
+	// CheckImageExists checks whether an image exists in the registry.
+	// Returns ErrImageNotFound if the image does not exist.
+	CheckImageExists(ctx context.Context, tag string) error
+
+	// ListTags returns tags for the repository built by WithSegment calls.
 	ListTags(ctx context.Context, opts ...ListTagsOption) ([]string, error)
 
-	// ListRepositories retrieves sub-repositories under the current scope with pagination
-	// The scope is determined by the chained WithSegment() calls
+	// ListRepositories lists repositories visible from the registry.
 	ListRepositories(ctx context.Context, opts ...ListRepositoriesOption) ([]string, error)
+
+	// DeleteTag deletes a specific tag from the registry.
+	DeleteTag(ctx context.Context, tag string) error
+
+	// DeleteByDigest deletes a manifest by its digest from the registry.
+	DeleteByDigest(ctx context.Context, digest v1.Hash) error
+
+	// TagImage adds a new tag pointing to the same manifest as sourceTag.
+	TagImage(ctx context.Context, sourceTag, destTag string) error
+
+	// CopyImage copies an image from this client's repository to a destination
+	// client's repository, without pulling layers locally when possible.
+	CopyImage(ctx context.Context, srcTag string, dest Client, destTag string) error
 }

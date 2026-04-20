@@ -1,0 +1,11 @@
+{{- $_ := set . "OssYamlPath" "oss.yaml" -}}
+project: test-oss-yaml-helper
+configVersion: 1
+---
+image: test
+from: alpine:3.20
+shell:
+  install:
+  - echo ok
+
+{{- $_ := include "get_oss_version_by_id_and_condition" (list "example-service" (dict "k8s" "1.32") $) -}}

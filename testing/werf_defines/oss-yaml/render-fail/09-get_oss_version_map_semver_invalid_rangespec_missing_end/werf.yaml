@@ -1,0 +1,12 @@
+{{- $_ := set . "OssYamlPath" "oss.yaml" -}}
+project: test-oss-yaml-helper
+configVersion: 1
+---
+image: test
+from: alpine:3.20
+shell:
+  install:
+  - echo ok
+
+{{- /* missing `end` in rangeSpec -> should fail */ -}}
+{{- $_ := include "get_oss_version_map_by_id_and_condition_key_semver" (list "example-service" "k8s" (list "start" "1.32" "finish" "1.35") $) -}}

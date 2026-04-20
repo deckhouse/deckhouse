@@ -28,6 +28,7 @@
           <li><b title="E.g., <em>&quot;istio-api-proxy-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">istio-api-proxy</b></li>
           <li><b title="E.g.,  <em>&quot;kubeconfig-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">kubeconfig</b></li>
           <li><b title="E.g.,  <em>&quot;openvpn-admin-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">openvpn-admin</b></li>
+          <li><b title="E.g.,  <em>&quot;registry-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">registry</b></li>
           <li><b title="E.g.,  <em>&quot;prometheus-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">prometheus</b></li>
           <li><b title="E.g., <em>&quot;status-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">status</b></li>
           <li><b title="E.g.,  <em>&quot;upmeter-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">upmeter</b></li>
@@ -68,7 +69,7 @@ BALANCER_IP='<BALANCER_IP>'
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Add records to the <code>/etc/hosts</code> file:</p>
 {% snippetcut %}
 ```shell
-for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+for i in api argocd dashboard documentation dex grafana hubble istio istio-api-proxy kubeconfig openvpn-admin registry prometheus status upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
 {% endsnippetcut %}
 </li>

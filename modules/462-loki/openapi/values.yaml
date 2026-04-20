@@ -18,6 +18,18 @@ properties:
       logShipperToken:
         type: string
         default: ""
+      kubeRbacProxyTLS:
+        type: object
+        properties:
+          cert:
+            type: string
+            default: ""
+          key:
+            type: string
+            default: ""
+          ca: 
+            type: string
+            default: ""
       pvcSize:
         type: integer
         format: int64

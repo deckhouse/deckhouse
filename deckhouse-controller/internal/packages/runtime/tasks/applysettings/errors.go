@@ -34,12 +34,6 @@ func newApplySettingsErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonApplySettings,
-				Message: err.Error(),
-			},
-			{
 				Type:    status.ConditionSettingsValid,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonValidationFailed,

@@ -388,6 +388,7 @@ apiVersions:
           * **Caution!** If there is an Internet Gateway in the target VPC, the deployment of the basic infrastructure will fail with an error. Currently, an Internet Gateway cannot be adopted.
       sshPublicKey:
         type: string
+        x-rules: [sshPublicKey]
         description: |
           A public key for accessing nodes.
       disableDefaultSecurityGroup:
@@ -418,6 +419,8 @@ apiVersions:
         x-doc-default: ["0.0.0.0/0"]
         description: |
           A list of CIDRs allowed to access public endpoints of the cluster.
+
+          **Caution.** AWS limits the number of inbound and outbound rules per security group to 60 each. If you need to specify more CIDRs, request a quota increase via AWS Support.
       tags:
         type: object
         additionalProperties:

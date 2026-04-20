@@ -19,6 +19,7 @@
           <li><b title="Например, <em>&quot;api-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">api</b></li>
           <li><b title="Например, <em>&quot;code-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">code</b></li>
           <li><b title="Например, <em>&quot;commander-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">commander</b></li>
+          <li><b title="Например, <em>&quot;registry-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">registry</b></li>
           <li><b title="Например, <em>&quot;console-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">console</b></li>
           <li><b title="Например, <em>&quot;dex-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">dex</b></li>
           <li><b title="Например, <em>&quot;documentation-kube.company.my&quot;</em><br>для шаблона <em>&quot;%s-kube.company.my&quot;</em>">documentation</b></li>
@@ -69,7 +70,7 @@ BALANCER_IP='<BALANCER_IP>'
 <li><p>{% if page.platform_code != 'existing' %}<b>[Выполните на ПК]</b> {% endif %}Добавьте записи в файл <code>/etc/hosts</code>:</p>
 <div markdown="1">
 ```shell
-for i in api code commander console dex documentation grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status tools upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+for i in api code commander registry console dex documentation grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status tools upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
 </div>
 </li>

@@ -28,6 +28,8 @@ import (
 
 const (
 	certificateCommonName = "registry-ca"
+	roUsername            = "ro"
+	rwUsername            = "rw"
 )
 
 func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
@@ -49,22 +51,59 @@ func GetPKI(ctx context.Context, kubeClient client.KubeClient) (PKI, error) {
 }
 
 func GeneratePKI() (PKI, error) {
-	var ret PKI
-
-	certKey, err := pki.GenerateCACertificate(certificateCommonName)
+	ca, err := generatePKICA(certificateCommonName)
 	if err != nil {
-		return PKI{}, fmt.Errorf("generate CA certificate: %w", err)
+		return PKI{}, fmt.Errorf("generate CA for common name %q: %w", certificateCommonName, err)
+	}
+
+	ro, err := generatePKIUser(roUsername)
+	if err != nil {
+		return PKI{}, fmt.Errorf("generate user %q: %w", roUsername, err)
+	}
+
+	rw, err := generatePKIUser(rwUsername)
+	if err != nil {
+		return PKI{}, fmt.Errorf("generate user %q: %w", rwUsername, err)
+	}
+
+	return PKI{
+		CA:     ca,
+		ROUser: ro,
+		RWUser: rw,
+	}, nil
+}
+
+func generatePKIUser(name string) (PKIUser, error) {
+	password, err := pki.GenerateUserPassword()
+	if err != nil {
+		return PKIUser{}, fmt.Errorf("generate password: %w", err)
+	}
+
+	passwordHash, err := pki.GeneratePasswordHash(password)
+	if err != nil {
+		return PKIUser{}, fmt.Errorf("generate password hash: %w", err)
+	}
+
+	return PKIUser{
+		Name:         name,
+		Password:     password,
+		PasswordHash: passwordHash,
+	}, nil
+}
+
+func generatePKICA(commonName string) (PKICertKey, error) {
+	certKey, err := pki.GenerateCACertificate(commonName)
+	if err != nil {
+		return PKICertKey{}, fmt.Errorf("generate CA certificate: %w", err)
 	}
 
 	cert, key, err := pki.EncodeCertKey(certKey)
 	if err != nil {
-		return PKI{}, fmt.Errorf("encode CA cert/key: %w", err)
+		return PKICertKey{}, fmt.Errorf("encode CA cert/key: %w", err)
 	}
 
-	ret.CA = &PKICertKey{
+	return PKICertKey{
 		Cert: string(cert),
 		Key:  string(key),
-	}
-
-	return ret, nil
+	}, nil
 }

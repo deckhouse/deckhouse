@@ -109,6 +109,11 @@ type ApplicationStatus struct {
 	// +optional
 	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
 
+	// Nelm tracking.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	Tracking runtime.RawExtension `json:"tracking"`
+
 	// Conditions represent the latest available observations of the application's state.
 	// +optional
 	// +patchMergeKey=type

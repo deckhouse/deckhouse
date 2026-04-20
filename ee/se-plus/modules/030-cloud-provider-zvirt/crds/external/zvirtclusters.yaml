@@ -6,7 +6,7 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-zvirt
     cluster.x-k8s.io/provider: zvirt
-    cluster.x-k8s.io/v1beta1: v1
+    cluster.x-k8s.io/v1beta2: v1
   annotations:
     controller-gen.kubebuilder.io/version: v0.14.0
   name: zvirtclusters.infrastructure.cluster.x-k8s.io
@@ -46,6 +46,7 @@ spec:
               properties:
                 controlPlaneEndpoint:
                   description: APIEndpoint represents a reachable Kubernetes API endpoint.
+                  minProperties: 1
                   properties:
                     host:
                       description: The hostname on which the API server is serving.
@@ -69,6 +70,15 @@ spec:
                   type: string
                 failureReason:
                   type: string
+                initialization:
+                  description: |-
+                    initialization provides observations of the Cluster initialization process.
+                    NOTE: Fields in this struct are part of the Cluster API contract and are used to orchestrate initial Cluster provisioning.
+                  minProperties: 1
+                  properties:
+                    provisioned:
+                      type: boolean
+                  type: object
                 ready:
                   type: boolean
               type: object

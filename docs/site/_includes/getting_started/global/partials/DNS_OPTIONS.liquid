@@ -20,6 +20,7 @@
           <li><b title="E.g., <em>&quot;api-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">api</b></li>
           <li><b title="E.g., <em>&quot;code-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">code</b></li>
           <li><b title="E.g., <em>&quot;commander-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">commander</b></li>
+          <li><b title="E.g., <em>&quot;registry-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">registry</b></li>
           <li><b title="E.g., <em>&quot;console-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">console</b></li>
           <li><b title="E.g., <em>&quot;dex-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">dex</b></li>
           <li><b title="E.g., <em>&quot;documentation-kube.company.my&quot;</em><br>for the <em>&quot;%s-kube.company.my&quot; template</em>">documentation</b></li>
@@ -70,7 +71,7 @@ BALANCER_IP='<BALANCER_IP>'
 <li><p>{% if page.platform_code != 'existing' %}<b>[On the PC]</b>{% endif %} Add records to the <code>/etc/hosts</code> file:</p>
 <div markdown="1">
 ```shell
-for i in api code commander console dex documentation grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status tools upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
+for i in api code commander registry console dex documentation grafana hubble istio istio-api-proxy kubeconfig openvpn-admin prometheus status tools upmeter; do echo "${BALANCER_IP}  ${DOMAIN_TEMPLATE} "| sed "s/%s/$i/"; done  | sudo bash -c "cat >>/etc/hosts"
 ```
 </div>
 </li>

@@ -2,10 +2,12 @@
 title: Архитектура аудита событий безопасности
 permalink: ru/architecture/security/runtime-audit.html
 lang: ru
+search: аудит безопасности, правила аудита, falco
+description: Архитектура аудита событий безопасности в Deckhouse Kubernetes Platform.
 ---
 
 Аудит событий безопасности Deckhouse Kubernetes Platform (DKP) основан на системе обнаружения угроз [Falco](https://falco.org/).
-Deckhouse запускает объединённые в DaemonSet агенты Falco на каждом узле,
+DKP запускает объединённые в DaemonSet агенты Falco на каждом узле,
 после чего те приступают к сбору системных вызовов ОС и данных, полученных в ходе аудита событий Kubernetes.
 
 {% alert level="info" %}

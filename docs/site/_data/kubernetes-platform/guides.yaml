@@ -53,3 +53,15 @@
     en: A guide to installing the Deckhouse Kubernetes Platform in a closed environment.
   tags:
     - private environment
+- name:
+    ru: "Переключение CNI в кластере"
+    en: "Switching CNI in the cluster"
+  link: "cni-migration.html"
+  #minutesToRead: 10
+  description:
+    ru: Инструкция по переключению (миграции) CNI в кластере Deckhouse
+    en: Guide on switching (migrating) CNI in a Deckhouse cluster
+  tags:
+    - baremetal
+    - cloud
+    - production

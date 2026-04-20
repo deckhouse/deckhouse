@@ -74,12 +74,14 @@ const istioValues = `
           revision: "v1x25x2"
           fullVersion: "1.25.2"
           imageSuffix: "V1x25x2"
+          supportsAmbient: true
         "1.21.6":
           revision: "v1x21x6"
           fullVersion: "1.21.6"
           imageSuffix: "V1x21x6"
+          supportsAmbient: false
       kialiSigningKey: "kiali"
-      operatorVersionsToInstall:  []
+      operatorVersionsToInstall: []
       versionsToInstall: []
       federations: []
       multiclusters: []
@@ -129,6 +131,8 @@ const istioValues = `
       accessLog:
         type: "Text"
         textFormat: '[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%'
+      ztunnel:
+        resourcesManagement: {}
 `
 
 func getSubdirs(dir string) ([]string, error) {
@@ -154,26 +158,25 @@ func getSubdirs(dir string) ([]string, error) {
 }
 
 const (
-	istioEETempaltesPath = "/deckhouse/ee/modules/110-istio/templates/"
-	istioCETempaltesPath = "/deckhouse/modules/110-istio/templates/"
+	istioEETemplatesPath = "/deckhouse/ee/modules/110-istio/templates/"
+	istioCETemplatesPath = "/deckhouse/modules/110-istio/templates/"
 )
 
 var _ = Describe("Module :: istio :: helm template :: main", func() {
-
 	BeforeSuite(func() {
-		subDirs, err := getSubdirs(istioEETempaltesPath)
+		subDirs, err := getSubdirs(istioEETemplatesPath)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, subDir := range subDirs {
-			err := os.Symlink(istioEETempaltesPath+subDir, istioCETempaltesPath+subDir)
+			err := os.Symlink(istioEETemplatesPath+subDir, istioCETemplatesPath+subDir)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 	})
 
 	AfterSuite(func() {
-		subDirs, err := getSubdirs(istioEETempaltesPath)
+		subDirs, err := getSubdirs(istioEETemplatesPath)
 		Expect(err).ShouldNot(HaveOccurred())
 		for _, subDir := range subDirs {
-			err := os.Remove(istioCETempaltesPath + subDir)
+			err := os.Remove(istioCETemplatesPath + subDir)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 	})
@@ -217,6 +220,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
+
+			Expect(f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata").Exists()).To(BeFalse())
 		})
 	})
 
@@ -310,6 +315,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeFalse())
+
+			Expect(f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata").Exists()).To(BeFalse())
 		})
 	})
 
@@ -378,6 +385,12 @@ neighbour-0:
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
+
+			secretRemoteMetadata := f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata")
+			Expect(secretRemoteMetadata.Exists()).To(BeTrue())
+			Expect(secretRemoteMetadata.Field("data.remote-public-metadata\\.json").String()).To(Equal(
+				"eyJuZWlnaGJvdXItMCI6eyJjbHVzdGVyVVVJRCI6InItZS1tLW8tdC1lIiwicm9vdENBIjoiLS0tUk9PVCBDQS0tLSJ9fQ==",
+			))
 
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 			Expect(iopV21.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---"}]`))
@@ -537,6 +550,12 @@ users:
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "alliance-ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Role", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "alliance:ingressgateway").Exists()).To(BeTrue())
+
+			secretRemoteMetadata := f.KubernetesResource("Secret", "d8-istio", "d8-remote-clusters-public-metadata")
+			Expect(secretRemoteMetadata.Exists()).To(BeTrue())
+			Expect(secretRemoteMetadata.Field("data.remote-public-metadata\\.json").String()).To(Equal(
+				"eyJuZWlnaGJvdXItMCI6eyJjbHVzdGVyVVVJRCI6InItZS1tLW8tdC1lIiwicm9vdENBIjoiLS0tUk9PVCBDQS0tLSJ9fQ==",
+			))
 
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 			Expect(iopV21.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---"}]`))

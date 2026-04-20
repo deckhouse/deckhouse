@@ -91,6 +91,7 @@ module_release_channel_details_content: |
   To change the module release channel, follow the [instruction](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-change-the-release-channel-for-a-module).
 module_versions: Module versions
 module_version: Module version
+embedded_in_dkp: Embedded in DKP
 module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
 ossPageBlock1: |
   <h2>Third-party components</h2>
@@ -107,13 +108,14 @@ search_filter: Search by module name
 search_placeholder_text_filter: Search
 editions_filter: Edition
 editions_filter_all_selected: All editions
-statuses_filter: Status
-statuses_filter_all_selected: All statuses
+stage_filter: Lifecycle stage
+stage_filter_all_selected: All stages
 tags_filter: Tag
 tags_filter_all_selected: All tags
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_for_alert: The module has [requirements](/modules/%s/configuration.html#requirements) for installation
 requirements_title: Requirements
 requirements_deckhouse_title: To the Deckhouse version
 requirements_kubernetes_title: To the Kubernetes version
@@ -121,6 +123,10 @@ requirements_modules_title: To the versions of other modules
 requirements_modules_any_version: any version
 requirements_version_and_above: and above
 requirements_version_above: above
+requirements_modules_optional_text_first: Conditional dependency on the module
+requirements_modules_more: more
+requirements_modules_optional_text_second: about conditional dependencies
+requirements_modules_optional_text_for_link: conditional-module-requirements
 module_lifecycle_stage: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
 conversions_title: Conversions
 conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
@@ -133,6 +139,7 @@ currency_sign: "$"
 commercial: Available in some commercial editions.
 notAvailableInThisEdition: Available in other commercial editions.
 default_value: default
+default_empty_string_value: ‘’
 platform: platform
 pattern: pattern
 example: example

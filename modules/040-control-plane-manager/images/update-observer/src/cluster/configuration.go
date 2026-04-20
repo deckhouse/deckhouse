@@ -64,13 +64,13 @@ func GetConfiguration(secret *corev1.Secret) (*Configuration, error) {
 			return nil, fmt.Errorf("'%s' is empty", defaultKubernetesVersion)
 		}
 
-		cfg.DesiredVersion, err = version.NormalizeAndTrimPatch(desiredVersion)
+		cfg.DesiredVersion, err = version.Normalize(desiredVersion)
 		if err != nil {
 			return nil, fmt.Errorf("'%s' is not valid: %w", defaultKubernetesVersion, err)
 		}
 	} else {
 		cfg.UpdateMode = UpdateModeManual
-		cfg.DesiredVersion, err = version.NormalizeAndTrimPatch(cfg.KubernetesVersion)
+		cfg.DesiredVersion, err = version.Normalize(cfg.KubernetesVersion)
 		if err != nil {
 			return nil, fmt.Errorf("kubernetesVersion is not valid: %w", err)
 		}

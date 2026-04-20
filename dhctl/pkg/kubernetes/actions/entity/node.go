@@ -31,7 +31,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
@@ -246,11 +245,17 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 				return err
 			}
 
-			for _, c := range node.Status.Conditions {
-				if c.Type == corev1.NodeReady {
-					if c.Status == corev1.ConditionTrue {
-						return nil
-					}
+			for _, cond := range node.Status.Conditions {
+				if cond.Type != corev1.NodeReady {
+					continue
+				}
+				if cond.Message != "" {
+					log.InfoF("Node %q Ready: %s (%s)\n", nodeName, cond.Status, cond.Message)
+				} else {
+					log.InfoF("Node %q Ready: %s\n", nodeName, cond.Status)
+				}
+				if cond.Status == corev1.ConditionTrue {
+					return nil
 				}
 			}
 
@@ -451,7 +456,7 @@ var (
 )
 
 func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, loopParams retry.Params) ([]NodeIP, error) {
-	selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.Equals, []string{global.MasterNodeGroupName})
+	selector, err := kubernetes.GetMasterNodeGroupLabelSelector()
 	if err != nil {
 		return nil, err
 	}

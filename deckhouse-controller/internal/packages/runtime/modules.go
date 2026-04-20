@@ -32,7 +32,6 @@ import (
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -76,13 +75,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 		return
 	}
 
-	if err := r.scheduler.CheckConstraints(module.Definition.Constraints()); err != nil {
-		r.status.HandleError(name, err)
-		return
-	}
-
 	r.status.ClearRuntimeConditions(name)
-	r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
 	tasks := []queue.Task{
 		taskdownload.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),

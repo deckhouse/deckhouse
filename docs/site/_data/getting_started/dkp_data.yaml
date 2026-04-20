@@ -630,7 +630,9 @@ installTypes:
         template: getting_started/<INSTALL_CODE>/STEP_FINISH.md
   bm-private:
     iconPath: images/icons/platforms/lock.png
-    ce_only: true
+    ee_only: true
+    se_support: true
+    be_support: false
     pages_title:
       en: "Deckhouse Kubernetes Platform in a private environment"
       ru: "Deckhouse Kubernetes Platform в закрытом окружении"

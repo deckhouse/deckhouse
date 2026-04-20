@@ -22,10 +22,12 @@ import (
 
 type CloudDeps struct {
 	InstallConfig *config.DeckhouseInstaller
+	MetaConfig    *config.MetaConfig
 }
 
 func NewCloudSuite(deps CloudDeps) preflight.Suite {
 	return preflight.NewSuite(
 		checks.CloudSystemRequirements(deps.InstallConfig),
+		checks.InstanceClassProvider(deps.MetaConfig),
 	)
 }

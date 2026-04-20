@@ -108,14 +108,6 @@ func (a *memStore) removeResolvedAlerts() {
 	}
 }
 
-// Get alert from internal store
-func (a *memStore) getAlert(fingerprint string) (*types.Alert, bool) {
-	a.Lock()
-	defer a.Unlock()
-	alert, ok := a.alerts[fingerprint]
-	return alert, ok
-}
-
 // deep copy alerts
 func (a *memStore) deepCopy() map[string]*types.Alert {
 	a.Lock()

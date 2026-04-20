@@ -47,6 +47,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			Logger:            logger,
 			IsDebug:           app.IsDebug,
 			ResetInitialState: false,
+			DirectoryConfig:   app.GetDirConfig(),
 		})
 		err := bootstraper.Bootstrap(context.Background())
 		if err != nil {

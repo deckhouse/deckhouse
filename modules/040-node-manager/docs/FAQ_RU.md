@@ -452,7 +452,7 @@ spec:
     bb-dnf-install "kernel-${desired_version}"
 ```
 
-## Какие параметры NodeGroup к чему приводят?
+## На что влияют параметры NodeGroup?
 
 | Параметр NG                           | Disruption update          | Перезаказ узлов   | Рестарт kubelet |
 |---------------------------------------|----------------------------|-------------------|-----------------|
@@ -667,9 +667,9 @@ spec:
   - '*'
   content: |
     {{- if eq .cri "ContainerdV2" }}
-  # <Скрипт для изменения конфигурации для ContainerdV2>
+  # <Скрипт для изменения конфигурации для ContainerdV2>.
     {{- else }}
-  # <Скрипт для изменения конфигурации для ContainerdV1>
+  # <Скрипт для изменения конфигурации для ContainerdV1>.
     {{- end }}
   nodeGroups:
   - '*'
@@ -881,7 +881,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-auth.sh
 spec:
-  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  # Для добавления файла перед шагом '032_configure_containerd.sh'.
   weight: 31
   bundles:
     - '*'
@@ -931,7 +931,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-tls.sh
 spec:
-  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  # Для добавления файла перед шагом '032_configure_containerd.sh'.
   weight: 31
   bundles:
     - '*'
@@ -989,7 +989,7 @@ kind: NodeGroupConfiguration
 metadata:
   name: containerd-additional-config-skip-tls.sh
 spec:
-  # Для добавления файла перед шагом '032_configure_containerd.sh'
+  # Для добавления файла перед шагом '032_configure_containerd.sh'.
   weight: 31
   bundles:
     - '*'
@@ -1026,7 +1026,7 @@ spec:
 После применения конфигурационного файла проверьте доступ к registry с узлов, используя команду:
 
 ```bash
-# Через cri-интерфейс
+# Через cri-интерфейс.
 crictl pull private.registry.example/image/repo:tag
 ```
 
@@ -1490,30 +1490,39 @@ metadata:
 ## Как работать с GPU-узлами?
 
 {% alert level="info" %}
-Управление GPU-узлами доступно только в Enterprise Edition.
+Управление GPU-узлами доступно только в DKP Enterprise Edition.
 {% endalert %}
 
 ### Порядок действий по добавлению GPU-узла в кластер
 
-Начиная с Deckhouse 1.71, если в `NodeGroup` есть секция `spec.gpu`, модуль `node-manager` **автоматически**:
+Начиная с Deckhouse 1.71, если в ресурсе NodeGroup есть секция [`spec.gpu`](cr.html#nodegroup-v1-spec-gpu), модуль `node-manager` **автоматически**:
 
 - настраивает containerd с `default_runtime = "nvidia"`;
 - применяет необходимые системные параметры (включая фиксы для NVIDIA Container Toolkit);
-- разворачивает системные компоненты: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости, **MIG Manager**.
+- разворачивает следующие системные компоненты:
+  - NFD;
+  - GFD;
+  - NVIDIA Device Plugin;
+  - DCGM Exporter;
+  - MIG Manager (при необходимости).
 
-Список поддерживаемых платформ NVIDIA Container Toolkit см. в [официальной документации](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+Список поддерживаемых платформ NVIDIA Container Toolkit доступен в [официальной документации](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
 
 {% alert level="info" %}
-Для корректной работы необходимо явно указать режим в `spec.gpu.sharing` (`Exclusive`, `TimeSlicing` или `MIG`).
+Для корректной работы явно укажите стратегию разделения GPU в параметре [`spec.gpu.sharing`](cr.html#nodegroup-v1-spec-gpu-sharing) (`Exclusive`, `TimeSlicing` или `MIG`).
 
-containerd на GPU-узлах настраивается автоматически. Не изменяйте его конфигурацию вручную (например, через `NodeGroupConfiguration` или конфигурацию на узле).
+Containerd на GPU-узлах настраивается автоматически. Не изменяйте его конфигурацию вручную (например, через ресурс NodeGroupConfiguration или конфигурацию на узле).
+{% endalert %}
+
+{% alert level="info" %}
+Если GPU используется в кластере из одного узла и выбрана стратегия `MIG`, после перезагрузки узла требуется дополнительная ручная процедура для повторного применения MIG-конфигурации. Подробнее в разделе [«Особенности использования MIG в кластере из одного узла»](/products/kubernetes-platform/documentation/admin/configuration/platform-scaling/node/node-customization.html#особенности-использования-mig-в-кластере-из-одного-узла).
 {% endalert %}
 
 Чтобы добавить GPU-узел в кластер, выполните следующие действия:
 
-1. Создайте NodeGroup для GPU-узлов.
+1. Создайте ресурс [NodeGroup](cr.html#nodegroup) для GPU-узлов.
 
-   Пример с включённым **TimeSlicing** (`partitionCount: 4`) и типичным taint/label:
+   Пример с включённым **TimeSlicing** (`partitionCount: 4`) и типичными `taints` и `labels`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -1521,7 +1530,7 @@ containerd на GPU-узлах настраивается автоматичес
    metadata:
      name: gpu
    spec:
-     nodeType: CloudStatic   # или Static/CloudEphemeral — по вашей инфраструктуре.
+     nodeType: CloudStatic   # Также может быть Static или CloudEphemeral — в зависимости от вашей инфраструктуры.
      gpu:
        sharing: TimeSlicing
        timeSlicing:
@@ -1537,14 +1546,21 @@ containerd на GPU-узлах настраивается автоматичес
 
    > Если вы используете собственные ключи taint, убедитесь, что они разрешены в ModuleConfig `global` в массиве [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
 
-   Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](cr.html#nodegroup-v1-spec-gpu).
+   Полная схема полей находится в [описании кастомного ресурса NodeGroup](cr.html#nodegroup-v1-spec-gpu).
 
-1. Установите драйвер NVIDIA и nvidia-container-toolkit.
+1. Установите драйвер NVIDIA и NVIDIA Container Toolkit.
 
-   Установку **драйвера NVIDIA** и **NVIDIA Container Toolkit** выполняйте на самих узлах — вручную или с помощью `NodeGroupConfiguration`.
-   Ниже приведены примеры `NodeGroupConfiguration` для группы узлов `gpu`.
+   Выполняйте установку на самих узлах — вручную или с помощью ресурса [NodeGroupConfiguration](cr.html#nodegroupconfiguration).
+   Ниже приведены примеры NodeGroupConfiguration для группы узлов `gpu` для разных операционных систем:
+
+   - [Ubuntu](#ubuntu);
+   - [Debian](#debian);
+   - [CentOS](#centos);
+   - [РЕД ОС](#ред-ос);
+   - [Astra Linux](#astra-linux).
 
    **Ubuntu**
+   {: #ubuntu .anchored}
 
    > Протестировано для Ubuntu 22.04.
 
@@ -1560,7 +1576,7 @@ containerd на GPU-узлах настраивается автоматичес
        #!/bin/bash
        set -e
  
-       # Checking if curl is installed
+       # Проверка наличия утилит curl и wget.
        if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
        then
          echo "curl or wget is not installed. Installing..."
@@ -1568,20 +1584,20 @@ containerd на GPU-узлах настраивается автоматичес
          sudo apt install -y curl wget
        fi
  
-       # Define file paths
+       # Определение путей к файлам.
        CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
        NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
  
-       # Update repos
+       # Обновление списка репозиториев.
        sudo apt update
  
-       # Install CUDA keyring
+       # Установка пакета с ключом репозитория CUDA.
        if [ ! -f "$CUDA_KEYRING_DEB" ]; then
          wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/$CUDA_KEYRING_DEB
          sudo dpkg -i $CUDA_KEYRING_DEB
        fi
  
-       # Add NVIDIA container toolkit repos
+       # Добавление репозиториев NVIDIA Container Toolkit.
        if [ ! -f "$NVIDIA_GPG_KEY" ]; then
        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
          sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -1590,19 +1606,19 @@ containerd на GPU-узлах настраивается автоматичес
          sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
        fi
  
-       # Check and install Linux headers
+       # Проверка и установка заголовков ядра Linux.
        if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
          echo "Installing linux headers..."
          sudo apt install -y "linux-headers-$(uname -r)"
        fi
  
-       # Installation of NVIDIA drivers
+       # Установка драйверов NVIDIA.
        if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
          echo "Installing CUDA drivers..."
          sudo apt install -y cuda-drivers-575
        fi
  
-       # Installation of NVIDIA Container Toolkit
+       # Установка NVIDIA Container Toolkit.
        if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
          echo "Installing NVIDIA container toolkit..."
          sudo apt install -y nvidia-container-toolkit
@@ -1614,6 +1630,7 @@ containerd на GPU-узлах настраивается автоматичес
    ```
 
    **Debian**
+   {: #debian .anchored}
 
    > Протестировано для Debian 12.
 
@@ -1629,7 +1646,7 @@ containerd на GPU-узлах настраивается автоматичес
        #!/bin/bash
        set -e
  
-       # Checking if curl is installed
+       # Проверка наличия утилит curl и wget.
        if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
        then
          echo "curl or wget is not installed. Installing..."
@@ -1637,20 +1654,20 @@ containerd на GPU-узлах настраивается автоматичес
          sudo apt install -y curl wget
        fi
  
-       # Define file paths
+       # Определение путей к файлам.
        CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
        NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
  
-       # Update repos
+       # Обновление списка репозиториев.
        sudo apt update
  
-       # Install CUDA keyring
+       # Установка пакета с ключом репозитория CUDA.
        if [ ! -f "$CUDA_KEYRING_DEB" ]; then
          wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/$CUDA_KEYRING_DEB
          sudo dpkg -i $CUDA_KEYRING_DEB
        fi
  
-       # Add NVIDIA container toolkit repos
+       # Добавление репозиториев NVIDIA Container Toolkit.
        if [ ! -f "$NVIDIA_GPG_KEY" ]; then
        curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
          sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -1659,19 +1676,19 @@ containerd на GPU-узлах настраивается автоматичес
          sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
        fi
  
-       # Check and install Linux headers
+       # Проверка и установка заголовков ядра Linux.
        if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
          echo "Installing linux headers..."
          sudo apt install -y "linux-headers-$(uname -r)"
        fi
  
-       # Installation of NVIDIA drivers
+       # Установка драйверов NVIDIA.
        if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
          echo "Installing CUDA drivers..."
          sudo apt install -y cuda-drivers-575
        fi
  
-       # Installation of NVIDIA Container Toolkit
+       # Установка NVIDIA Container Toolkit.
        if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
          echo "Installing NVIDIA container toolkit..."
          sudo apt install -y nvidia-container-toolkit
@@ -1683,6 +1700,7 @@ containerd на GPU-узлах настраивается автоматичес
    ```
 
    **CentOS**
+   {: #centos .anchored}
 
    > Протестировано для CentOS 9.
 
@@ -1699,21 +1717,21 @@ containerd на GPU-узлах настраивается автоматичес
        set -e
        INSTALL_NEEDED=false
   
-       # Checking if curl is installed
+       # Проверка наличия утилиты curl.
        if ! command -v curl &> /dev/null; then
          echo "curl is not installed. Installing..."
          sudo dnf install -y curl
          INSTALL_NEEDED=true
        fi
   
-       # Checking another necessary packages and dependencies are installed
+       # Проверка наличия других необходимых пакетов и зависимостей.
        if ! rpm -q epel-release &> /dev/null; then
          echo "EPEL release is not installed. Installing..."
          sudo dnf install -y epel-release
          INSTALL_NEEDED=true
        fi
         
-       # Checking if dev tools are installed
+       # Проверка наличия инструментов разработки.
        if ! rpm -q gcc kernel-devel-$(uname -r) &> /dev/null; then
          echo "Development tools are not completely installed. Installing..."
          sudo dnf update -y
@@ -1721,7 +1739,7 @@ containerd на GPU-узлах настраивается автоматичес
          INSTALL_NEEDED=true
        fi
         
-       # Installation of NVIDIA drivers
+       # Установка драйверов NVIDIA.
        if ! rpm -q nvidia-driver-cuda nvidia-driver-cuda-libs &> /dev/null; then
          echo "NVIDIA CUDA drivers and libs are not installed. Installing..."
          sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
@@ -1731,7 +1749,7 @@ containerd на GPU-узлах настраивается автоматичес
          INSTALL_NEEDED=true
        fi
   
-       # Installation of NVIDIA Container Toolkit
+       # Установка NVIDIA Container Toolkit.
        if ! rpm -q nvidia-container-toolkit &> /dev/null; then
          echo "NVIDIA container toolkit is not installed. Installing..."
          curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
@@ -1739,7 +1757,7 @@ containerd на GPU-узлах настраивается автоматичес
          INSTALL_NEEDED=true
        fi
   
-       # Bashible service creating if drivers were installed
+       # Создание сервиса bashible, если были установлены драйверы.
        if [ "$INSTALL_NEEDED" = true ]; then
          base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
          echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
@@ -1756,6 +1774,7 @@ containerd на GPU-узлах настраивается автоматичес
    ```
 
    **РЕД ОС**
+   {: #ред-ос .anchored}
 
    > Протестировано для РЕД ОС 8.
 
@@ -1772,7 +1791,7 @@ containerd на GPU-узлах настраивается автоматичес
        set -e
        INSTALL_NEEDED=false
  
-       # Installation of NVIDIA drivers
+       # Установка драйверов NVIDIA.
        if ! rpm -q nvidia-drivers &> /dev/null || ! rpm -q cuda &> /dev/null || ! rpm -q nvidia-persistenced &> /dev/null; then
          echo "Update system"
          sudo dnf update -y
@@ -1780,7 +1799,7 @@ containerd на GPU-узлах настраивается автоматичес
          INSTALL_NEEDED=true
        fi
  
-       # Installation of NVIDIA Container Toolkit
+       # Установка NVIDIA Container Toolkit.
        if ! rpm -q nvidia-container-toolkit &> /dev/null; then
          echo "NVIDIA container toolkit is not installed. Installing..."
          curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
@@ -1788,7 +1807,7 @@ containerd на GPU-узлах настраивается автоматичес
          INSTALL_NEEDED=true
        fi
  
-       # GRUB configuration and nouveau disabling
+       # Настройка GRUB и отключение драйвера nouveau.
        if ! grep -q "nouveau.modeset=0" /etc/default/grub; then
          echo "GRUB configuration and nouveau disabling"
          sudo -E grubby --update-kernel ALL --args="nouveau.modeset=0"
@@ -1796,7 +1815,7 @@ containerd на GPU-узлах настраивается автоматичес
          INSTALL_NEEDED=true
        fi
  
-       # Bashible service creating if drivers were installed
+       # Создание сервиса bashible, если были установлены драйверы.
        if [ "$INSTALL_NEEDED" = true ]; then
          base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
          echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
@@ -1812,7 +1831,77 @@ containerd на GPU-узлах настраивается автоматичес
      weight: 5
    ```
 
-   После того как конфигурации будут применены, необходимо провести бутстрап и перезагрузить узлы, чтобы применить настройки и установить драйвера.
+   **Astra Linux**
+   {: #astra-linux .anchored}
+
+   > Протестировано для Astra Linux 1.8.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - astra
+     content: |
+       #!/bin/bash
+       set -e
+ 
+       # Проверка наличия утилит curl и wget.
+       if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
+       then
+         echo "curl or wget is not installed. Installing..."
+         sudo apt update
+         sudo apt install -y curl wget
+       fi
+ 
+       # Определение путей к файлам.
+       CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
+       NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+ 
+       # Обновление списка репозиториев.
+       sudo apt update
+ 
+       # Установка пакета с ключом репозитория CUDA.
+       if [ ! -f "$CUDA_KEYRING_DEB" ]; then
+         wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/$CUDA_KEYRING_DEB
+         sudo dpkg -i $CUDA_KEYRING_DEB
+       fi
+ 
+       # Добавление репозиториев NVIDIA Container Toolkit.
+       if [ ! -f "$NVIDIA_GPG_KEY" ]; then
+       curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+         sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+       curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+         sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+         sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+       fi
+ 
+       # Проверка и установка заголовков ядра Linux.
+       if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing linux headers..."
+         sudo apt install -y "linux-headers-$(uname -r)"
+       fi
+ 
+       # Установка драйверов NVIDIA.
+       if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing CUDA drivers..."
+         sudo apt install -y cuda-drivers-575
+       fi
+ 
+       # Установка NVIDIA Container Toolkit.
+       if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing NVIDIA container toolkit..."
+         sudo apt install -y nvidia-container-toolkit
+       fi
+ 
+     nodeGroups:
+     - gpu
+     weight: 5  
+   ```
+
+1. После применения конфигурации выполните бутстрап и перезагрузите узлы, чтобы применить настройки и установить драйвера.
 
 1. Проверьте установку на узле, используя команду:
 
@@ -1820,7 +1909,7 @@ containerd на GPU-узлах настраивается автоматичес
    nvidia-smi
    ```
 
-   **Ожидаемый корректный вывод (пример):**
+   Ожидаемый корректный вывод (пример):
 
    ```console
    root@k8s-dvp-w1-gpu:~# nvidia-smi
@@ -1845,13 +1934,13 @@ containerd на GPU-узлах настраивается автоматичес
 
 1. Проверьте инфраструктурные компоненты в кластере.
 
-   Поды NVIDIA в `d8-nvidia-gpu`:
+   Поды NVIDIA в неймспейсе `d8-nvidia-gpu`:
 
    ```bash
    d8 k -n d8-nvidia-gpu get pod
    ```
 
-   **Ожидаемый корректный вывод (пример):**
+   Ожидаемый корректный вывод (пример):
 
    ```console
    NAME                                  READY   STATUS    RESTARTS   AGE
@@ -1861,13 +1950,13 @@ containerd на GPU-узлах настраивается автоматичес
    nvidia-device-plugin-80ceb7d-8xt8g    2/2     Running   0          2m53s
    ```
 
-   Поды NFD в `d8-cloud-instance-manager`:
+   Поды NFD в неймспейсе `d8-cloud-instance-manager`:
 
    ```bash
    d8 k -n d8-cloud-instance-manager get pods | egrep '^(NAME|node-feature-discovery)'
    ```
 
-   **Ожидаемый корректный вывод (пример):**
+   Ожидаемый корректный вывод (пример):
 
    ```console
    NAME                                             READY   STATUS      RESTARTS       AGE
@@ -1882,7 +1971,7 @@ containerd на GPU-узлах настраивается автоматичес
    d8 k describe node <имя-узла>
    ```
 
-   **Фрагмент вывода (пример):**
+   Фрагмент вывода (пример):
 
    ```bash
    Capacity:
@@ -1899,112 +1988,112 @@ containerd на GPU-узлах настраивается автоматичес
 
    **Вариант A. Вызов `nvidia-smi` из контейнера.**
 
-   Создайте в кластере задачу (Job):
+   1. Создайте в кластере задачу (Job):
 
-   ```yaml
-   apiVersion: batch/v1
-   kind: Job
-   metadata:
-     name: nvidia-cuda-test
-     namespace: default
-   spec:
-     completions: 1
-     template:
-       spec:
-         restartPolicy: Never
-         nodeSelector:
-           node.deckhouse.io/group: gpu
-           node-role/gpu: ""
-         tolerations:
-           - key: "node-role"
-             operator: "Equal"
-             value: "gpu"
-             effect: "NoSchedule"
-         containers:
-           - name: nvidia-cuda-test
-             image: nvidia/cuda:11.6.2-base-ubuntu20.04
-             imagePullPolicy: "IfNotPresent"
-             command:
-               - nvidia-smi
-   ```
+      ```yaml
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: nvidia-cuda-test
+        namespace: default
+      spec:
+        completions: 1
+        template:
+          spec:
+            restartPolicy: Never
+            nodeSelector:
+              node.deckhouse.io/group: gpu
+              node-role/gpu: ""
+            tolerations:
+              - key: "node-role"
+                operator: "Equal"
+                value: "gpu"
+                effect: "NoSchedule"
+            containers:
+              - name: nvidia-cuda-test
+                image: nvidia/cuda:11.6.2-base-ubuntu20.04
+                imagePullPolicy: "IfNotPresent"
+                command:
+                  - nvidia-smi
+      ```
 
-   Проверьте логи командой:
+   1. Проверьте логи командой:
 
-   ```bash
-   d8 k logs job/nvidia-cuda-test
-   ```
+      ```bash
+      d8 k logs job/nvidia-cuda-test
+      ```
 
-   Пример вывода:
+      Пример вывода:
 
-   ```console
-   Tue Aug  5 07:48:02 2025
-   +---------------------------------------------------------------------------------------+
-   | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
-   |-----------------------------------------+----------------------+----------------------+
-   | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
-   | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
-   |                                         |                      |               MIG M. |
-   |=========================================+======================+======================|
-   |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
-   | N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
-   |                                         |                      |                  N/A |
-   +-----------------------------------------+----------------------+----------------------+
-   
-   +---------------------------------------------------------------------------------------+
-   | Processes:                                                                            |
-   |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
-   |        ID   ID                                                             Usage      |
-   |=======================================================================================|
-   |  No running processes found                                                           |
-   +---------------------------------------------------------------------------------------+
-   ```
+      ```console
+      Tue Aug  5 07:48:02 2025
+      +---------------------------------------------------------------------------------------+
+      | NVIDIA-SMI 535.247.01             Driver Version: 535.247.01   CUDA Version: 12.2     |
+      |-----------------------------------------+----------------------+----------------------+
+      | GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+      | Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+      |                                         |                      |               MIG M. |
+      |=========================================+======================+======================|
+      |   0  Tesla V100-PCIE-32GB           Off | 00000000:65:00.0 Off |                    0 |
+      | N/A   31C    P0              23W / 250W |      0MiB / 32768MiB |      0%      Default |
+      |                                         |                      |                  N/A |
+      +-----------------------------------------+----------------------+----------------------+
+      
+      +---------------------------------------------------------------------------------------+
+      | Processes:                                                                            |
+      |  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+      |        ID   ID                                                             Usage      |
+      |=======================================================================================|
+      |  No running processes found                                                           |
+      +---------------------------------------------------------------------------------------+
+      ```
 
-   **Вариант B. CUDA sample (vectoradd).**
+   **Вариант Б. Пример CUDA (vectoradd).**
 
-   Создайте в кластере Job:
+   1. Создайте в кластере задачу (Job):
 
-   ```yaml
-   apiVersion: batch/v1
-   kind: Job
-   metadata:
-     name: gpu-operator-test
-     namespace: default
-   spec:
-     completions: 1
-     template:
-       spec:
-         restartPolicy: Never
-         nodeSelector:
-           node.deckhouse.io/group: gpu
-         tolerations:
-           - key: "node-role"
-             operator: "Equal"
-             value: "gpu"
-             effect: "NoSchedule"
-         containers:
-           - name: gpu-operator-test
-             image: nvidia/samples:vectoradd-cuda10.2
-             imagePullPolicy: "IfNotPresent"
-   ```
+      ```yaml
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: gpu-operator-test
+        namespace: default
+      spec:
+        completions: 1
+        template:
+          spec:
+            restartPolicy: Never
+            nodeSelector:
+              node.deckhouse.io/group: gpu
+            tolerations:
+              - key: "node-role"
+                operator: "Equal"
+                value: "gpu"
+                effect: "NoSchedule"
+            containers:
+              - name: gpu-operator-test
+                image: nvidia/samples:vectoradd-cuda10.2
+                imagePullPolicy: "IfNotPresent"
+      ```
 
-   Проверьте логи командой:
+   1. Проверьте логи командой:
 
-   ```shell
-   d8 k logs job/gpu-operator-test
-   ```
+      ```shell
+      d8 k logs job/gpu-operator-test
+      ```
 
-   Пример вывода:
+      Пример вывода:
 
-   ```console
-   [Vector addition of 50000 elements]
-   Copy input data from the host memory to the CUDA device
-   CUDA kernel launch with 196 blocks of 256 threads
-   Copy output data from the CUDA device to the host memory
-   Test PASSED
-   Done
-   ```
+      ```console
+      [Vector addition of 50000 elements]
+      Copy input data from the host memory to the CUDA device
+      CUDA kernel launch with 196 blocks of 256 threads
+      Copy output data from the CUDA device to the host memory
+      Test PASSED
+      Done
+      ```
 
-## Как мониторить GPU?
+## Как выполнять мониторинг GPU?
 
 Deckhouse Kubernetes Platform автоматически устанавливает **DCGM Exporter**; метрики GPU попадают в Prometheus и доступны в Grafana.
 

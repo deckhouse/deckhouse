@@ -25,6 +25,7 @@ import (
 )
 
 type registrySettingsOption func(*RegistrySettings)
+type proxySettingsOption func(*ProxySettings)
 
 func registrySettingsBuilder(opts ...registrySettingsOption) *RegistrySettings {
 	settings := RegistrySettings{
@@ -42,13 +43,43 @@ func registrySettingsBuilder(opts ...registrySettingsOption) *RegistrySettings {
 
 	return &settings
 }
+func proxySettingsBuilder(opts ...proxySettingsOption) *ProxySettings {
+	settings := ProxySettings{
+		RegistrySettings: RegistrySettings{
+			ImagesRepo: "test:80/a/b/c/d",
+			Scheme:     constant.SchemeHTTPS,
+			CA:         "-----BEGIN CERTIFICATE-----",
+			Username:   "test-user",
+			Password:   "test-password",
+			CheckMode:  constant.CheckModeDefault,
+		},
+		TTL: "5m",
+	}
 
-func TestDeckhouseSettings_ApplySettings(t *testing.T) {
+	for _, opt := range opts {
+		opt(&settings)
+	}
+
+	return &settings
+}
+
+func TestDeckhouseSettings_Merge(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    DeckhouseSettings
 		expected DeckhouseSettings
 	}{
+		{
+			name: "empty mode",
+			input: DeckhouseSettings{},
+			expected: DeckhouseSettings{
+				Mode: constant.ModeDirect,
+				Direct: &RegistrySettings{
+					ImagesRepo: constant.DefaultImagesRepo,
+					Scheme:     constant.DefaultScheme,
+				},
+			},
+		},
 		{
 			name: "mode direct",
 			input: DeckhouseSettings{
@@ -60,6 +91,17 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 					ImagesRepo: constant.DefaultImagesRepo,
 					Scheme:     constant.DefaultScheme,
 				},
+			},
+		},
+		{
+			name: "mode direct no overrides",
+			input: DeckhouseSettings{
+				Mode:   constant.ModeDirect,
+				Direct: registrySettingsBuilder(),
+			},
+			expected: DeckhouseSettings{
+				Mode:   constant.ModeDirect,
+				Direct: registrySettingsBuilder(),
 			},
 		},
 		{
@@ -76,6 +118,52 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 			},
 		},
 		{
+			name: "mode unmanaged no overrides",
+			input: DeckhouseSettings{
+				Mode:      constant.ModeUnmanaged,
+				Unmanaged: registrySettingsBuilder(),
+			},
+			expected: DeckhouseSettings{
+				Mode:      constant.ModeUnmanaged,
+				Unmanaged: registrySettingsBuilder(),
+			},
+		},
+		{
+			name: "mode proxy",
+			input: DeckhouseSettings{
+				Mode: constant.ModeProxy,
+			},
+			expected: DeckhouseSettings{
+				Mode: constant.ModeProxy,
+				Proxy: &ProxySettings{
+					RegistrySettings: RegistrySettings{
+						ImagesRepo: constant.DefaultImagesRepo,
+						Scheme:     constant.DefaultScheme,
+					},
+				},
+			},
+		},
+		{
+			name: "mode proxy no overrides",
+			input: DeckhouseSettings{
+				Mode:  constant.ModeProxy,
+				Proxy: proxySettingsBuilder(),
+			},
+			expected: DeckhouseSettings{
+				Mode:  constant.ModeProxy,
+				Proxy: proxySettingsBuilder(),
+			},
+		},
+		{
+			name: "mode local",
+			input: DeckhouseSettings{
+				Mode: constant.ModeLocal,
+			},
+			expected: DeckhouseSettings{
+				Mode: constant.ModeLocal,
+			},
+		},
+		{
 			name: "mode unknown",
 			input: DeckhouseSettings{
 				Mode: "Unknown",
@@ -88,14 +176,21 @@ func TestDeckhouseSettings_ApplySettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			deckhouseSettings := DeckhouseSettings{}
-			deckhouseSettings.ApplySettings(tt.input)
-			require.EqualValues(t, tt.expected, deckhouseSettings)
+			settings := New(tt.input.Mode).
+				Merge(&tt.input)
+
+			require.EqualValues(t, tt.expected, settings)
 		})
 	}
+
+	t.Run("merge with nil other returns copy of base", func(t *testing.T) {
+		base := New(constant.ModeDirect)
+		merged := base.Merge(nil)
+		require.EqualValues(t, base, merged)
+	})
 }
 
-func TestRegistrySettings_ApplySettings(t *testing.T) {
+func TestRegistrySettings_Merge(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    *RegistrySettings
@@ -132,17 +227,6 @@ func TestRegistrySettings_ApplySettings(t *testing.T) {
 			},
 		},
 		{
-			name: "trim ImagesRepo",
-			input: &RegistrySettings{
-				ImagesRepo: "registry.example.com/",
-				Scheme:     "HTTPS",
-			},
-			expected: RegistrySettings{
-				ImagesRepo: "registry.example.com",
-				Scheme:     "HTTPS",
-			},
-		},
-		{
 			name:     "full",
 			input:    registrySettingsBuilder(),
 			expected: *registrySettingsBuilder(),
@@ -151,25 +235,96 @@ func TestRegistrySettings_ApplySettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var registrySettings RegistrySettings
-			registrySettings.ApplySettings(tt.input)
+			settings := NewRegistrySettings().
+				Merge(tt.input)
 
-			require.Equal(t, tt.expected, registrySettings)
+			require.Equal(t, tt.expected, settings)
 		})
 	}
+
+	t.Run("merge with nil other returns copy of base", func(t *testing.T) {
+		base := NewRegistrySettings()
+		merged := base.Merge(nil)
+		require.Equal(t, base, merged)
+	})
+}
+
+func TestProxySettings_Merge(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *ProxySettings
+		expected ProxySettings
+	}{
+		{
+			name: "default ImagesRepo",
+			input: &ProxySettings{
+				RegistrySettings: RegistrySettings{
+					ImagesRepo: "",
+					Scheme:     "HTTPS",
+				},
+			},
+			expected: ProxySettings{
+				RegistrySettings: RegistrySettings{
+					ImagesRepo: constant.DefaultImagesRepo,
+					Scheme:     "HTTPS",
+				},
+			},
+		},
+		{
+			name: "default Scheme",
+			input: &ProxySettings{
+				RegistrySettings: RegistrySettings{
+					ImagesRepo: "registry.example.com",
+					Scheme:     "",
+				},
+			},
+			expected: ProxySettings{
+				RegistrySettings: RegistrySettings{
+					ImagesRepo: "registry.example.com",
+					Scheme:     constant.DefaultScheme,
+				},
+			},
+		},
+		{
+			name:  "default ImagesRepo and Scheme",
+			input: nil,
+			expected: ProxySettings{
+				RegistrySettings: RegistrySettings{
+					ImagesRepo: constant.DefaultImagesRepo,
+					Scheme:     constant.DefaultScheme,
+				},
+			},
+		},
+		{
+			name:     "full",
+			input:    proxySettingsBuilder(),
+			expected: *proxySettingsBuilder(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settings := ProxySettings{
+				RegistrySettings: NewRegistrySettings(),
+			}
+			settings = settings.Merge(tt.input)
+
+			require.Equal(t, tt.expected, settings)
+		})
+	}
+
+	t.Run("merge with nil other returns copy of base", func(t *testing.T) {
+		base := ProxySettings{
+			RegistrySettings: NewRegistrySettings(),
+			TTL:              "5m",
+		}
+
+		merged := base.Merge(nil)
+		require.Equal(t, base, merged)
+	})
 }
 
 func TestDeckhouseSettings_ToMap(t *testing.T) {
-	registrySettings := registrySettingsBuilder()
-	registrySettingsMap := map[string]any{
-		"imagesRepo": "test:80/a/b/c/d",
-		"scheme":     "HTTPS",
-		"username":   "test-user",
-		"password":   "test-password",
-		"ca":         "-----BEGIN CERTIFICATE-----",
-		"checkMode":  "Default",
-	}
-
 	tests := []struct {
 		name   string
 		input  DeckhouseSettings
@@ -179,22 +334,64 @@ func TestDeckhouseSettings_ToMap(t *testing.T) {
 			name: "mode direct",
 			input: DeckhouseSettings{
 				Mode:   constant.ModeDirect,
-				Direct: registrySettings,
+				Direct: registrySettingsBuilder(),
 			},
 			output: map[string]any{
-				"mode":   "Direct",
-				"direct": registrySettingsMap,
+				"mode": "Direct",
+				"direct": map[string]any{
+					"imagesRepo": "test:80/a/b/c/d",
+					"scheme":     "HTTPS",
+					"username":   "test-user",
+					"password":   "test-password",
+					"ca":         "-----BEGIN CERTIFICATE-----",
+					"checkMode":  "Default",
+				},
 			},
 		},
 		{
 			name: "mode unmanaged",
 			input: DeckhouseSettings{
 				Mode:      constant.ModeUnmanaged,
-				Unmanaged: registrySettings,
+				Unmanaged: registrySettingsBuilder(),
 			},
 			output: map[string]any{
-				"mode":      "Unmanaged",
-				"unmanaged": registrySettingsMap,
+				"mode": "Unmanaged",
+				"unmanaged": map[string]any{
+					"imagesRepo": "test:80/a/b/c/d",
+					"scheme":     "HTTPS",
+					"username":   "test-user",
+					"password":   "test-password",
+					"ca":         "-----BEGIN CERTIFICATE-----",
+					"checkMode":  "Default",
+				},
+			},
+		},
+		{
+			name: "mode proxy",
+			input: DeckhouseSettings{
+				Mode:  constant.ModeProxy,
+				Proxy: proxySettingsBuilder(),
+			},
+			output: map[string]any{
+				"mode": "Proxy",
+				"proxy": map[string]any{
+					"imagesRepo": "test:80/a/b/c/d",
+					"scheme":     "HTTPS",
+					"username":   "test-user",
+					"password":   "test-password",
+					"ca":         "-----BEGIN CERTIFICATE-----",
+					"checkMode":  "Default",
+					"ttl":        "5m",
+				},
+			},
+		},
+		{
+			name: "mode local",
+			input: DeckhouseSettings{
+				Mode: constant.ModeLocal,
+			},
+			output: map[string]any{
+				"mode": "Local",
 			},
 		},
 	}
@@ -248,6 +445,50 @@ func TestRegistrySettings_ToMap(t *testing.T) {
 	}
 }
 
+func TestProxySettings_ToMap(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  ProxySettings
+		output map[string]any
+	}{
+		{
+			name:  "all fields",
+			input: *proxySettingsBuilder(),
+			output: map[string]any{
+				"imagesRepo": "test:80/a/b/c/d",
+				"scheme":     "HTTPS",
+				"username":   "test-user",
+				"password":   "test-password",
+				"ca":         "-----BEGIN CERTIFICATE-----",
+				"checkMode":  "Default",
+				"ttl":        "5m",
+			},
+		},
+		{
+			name: "optional fields",
+			input: *proxySettingsBuilder(
+				func(rs *ProxySettings) {
+					rs.Username = ""
+					rs.Password = ""
+					rs.CA = ""
+					rs.CheckMode = ""
+					rs.TTL = ""
+				},
+			),
+			output: map[string]any{
+				"imagesRepo": "test:80/a/b/c/d",
+				"scheme":     "HTTPS",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.EqualValues(t, tt.output, tt.input.ToMap())
+		})
+	}
+}
+
 func TestDeckhouseSettings_Validate(t *testing.T) {
 	type output struct {
 		err    bool
@@ -263,9 +504,8 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "valid direct mode",
 			input: DeckhouseSettings{
-				Mode:      constant.ModeDirect,
-				Direct:    registrySettingsBuilder(),
-				Unmanaged: nil,
+				Mode:   constant.ModeDirect,
+				Direct: registrySettingsBuilder(),
 			},
 			output: output{
 				err: false,
@@ -275,8 +515,26 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			name: "valid unmanaged mode",
 			input: DeckhouseSettings{
 				Mode:      constant.ModeUnmanaged,
-				Direct:    nil,
 				Unmanaged: registrySettingsBuilder(),
+			},
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid proxy mode",
+			input: DeckhouseSettings{
+				Mode:  constant.ModeProxy,
+				Proxy: proxySettingsBuilder(),
+			},
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid local mode",
+			input: DeckhouseSettings{
+				Mode: constant.ModeLocal,
 			},
 			output: output{
 				err: false,
@@ -286,9 +544,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "invalid mode",
 			input: DeckhouseSettings{
-				Mode:      "invalid-mode",
-				Direct:    nil,
-				Unmanaged: nil,
+				Mode: "invalid-mode",
 			},
 			output: output{
 				err:    true,
@@ -298,9 +554,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "empty mode",
 			input: DeckhouseSettings{
-				Mode:      "",
-				Direct:    nil,
-				Unmanaged: nil,
+				Mode: "",
 			},
 			output: output{
 				err:    true,
@@ -311,9 +565,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "direct mode without direct settings",
 			input: DeckhouseSettings{
-				Mode:      constant.ModeDirect,
-				Direct:    nil,
-				Unmanaged: nil,
+				Mode: constant.ModeDirect,
 			},
 			output: output{
 				err:    true,
@@ -336,9 +588,7 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 		{
 			name: "unmanaged mode without unmanaged settings",
 			input: DeckhouseSettings{
-				Mode:      constant.ModeUnmanaged,
-				Direct:    nil,
-				Unmanaged: nil,
+				Mode: constant.ModeUnmanaged,
 			},
 			output: output{
 				err:    true,
@@ -355,6 +605,29 @@ func TestDeckhouseSettings_Validate(t *testing.T) {
 			output: output{
 				err:    true,
 				errMsg: "Section 'unmanaged' must be empty",
+			},
+		},
+		// Invalid cases - Proxy mode validation
+		{
+			name: "proxy mode without proxy settings",
+			input: DeckhouseSettings{
+				Mode: constant.ModeProxy,
+			},
+			output: output{
+				err:    true,
+				errMsg: "proxy: is required",
+			},
+		},
+		{
+			name: "non-proxy mode with proxy settings",
+			input: DeckhouseSettings{
+				Mode:   constant.ModeDirect,
+				Direct: registrySettingsBuilder(),
+				Proxy:  proxySettingsBuilder(),
+			},
+			output: output{
+				err:    true,
+				errMsg: "Section 'proxy' must be empty",
 			},
 		},
 	}
@@ -390,6 +663,15 @@ func TestRegistrySettings_Validate(t *testing.T) {
 		{
 			name:  "valid settings with all fields",
 			input: registrySettingsBuilder(),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings with full images repo (host:port/path)",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "registry-test.io:8080/a/b/c/d" },
+			),
 			output: output{
 				err: false,
 			},
@@ -453,6 +735,36 @@ func TestRegistrySettings_Validate(t *testing.T) {
 			output: output{
 				err:    true,
 				errMsg: "Field 'imagesRepo' is required",
+			},
+		},
+		{
+			name: "images repo with trailing slash after path",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "test:80/a/b/c/d/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with only host, port and trailing slash",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "test:80/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with multiple consecutive slashes",
+			input: registrySettingsBuilder(
+				func(s *RegistrySettings) { s.ImagesRepo = "test:80////a" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
 			},
 		},
 
@@ -577,28 +889,294 @@ func TestRegistrySettings_Validate(t *testing.T) {
 	}
 }
 
+func TestProxySettings_Validate(t *testing.T) {
+	type output struct {
+		err    bool
+		errMsg string
+	}
+
+	tests := []struct {
+		name   string
+		input  *ProxySettings
+		output output
+	}{
+		// Valid cases
+		{
+			name:  "valid settings with all fields",
+			input: proxySettingsBuilder(),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings with full images repo (host:port/path)",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "registry-test.io:8080/a/b/c/d" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings without credentials",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Username = "" },
+				func(s *ProxySettings) { s.Password = "" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings with HTTP scheme and no CA",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Scheme = constant.SchemeHTTP },
+				func(s *ProxySettings) { s.CA = "" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings with license only",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Username = "" },
+				func(s *ProxySettings) { s.Password = "" },
+				func(s *ProxySettings) { s.License = "test-license" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings with relaxed check mode",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.CheckMode = constant.CheckModeRelax },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "empty check mode is valid",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.CheckMode = "" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings with ttl 5m",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.TTL = "5m" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+		{
+			name: "valid settings with empty ttl",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.TTL = "" },
+			),
+			output: output{
+				err: false,
+			},
+		},
+
+		// Invalid cases - ImagesRepo
+		{
+			name: "empty images repo",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "Field 'imagesRepo' is required",
+			},
+		},
+		{
+			name: "images repo with trailing slash after path",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "test:80/a/b/c/d/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with only host, port and trailing slash",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "test:80/" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+		{
+			name: "images repo with multiple consecutive slashes",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.ImagesRepo = "test:80////a" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match the regexp pattern",
+			},
+		},
+
+		// Invalid cases - Scheme
+		{
+			name: "invalid scheme",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Scheme = "ftp" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "Invalid scheme",
+			},
+		},
+		{
+			name: "empty scheme",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Scheme = "" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "Invalid scheme",
+			},
+		},
+
+		// Invalid cases - Credentials
+		{
+			name: "password without username",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Username = "" },
+				func(s *ProxySettings) { s.Password = "test-password" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "Username is required when password is provided",
+			},
+		},
+		{
+			name: "username without password",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Username = "test-user" },
+				func(s *ProxySettings) { s.Password = "" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "Password is required when username is provided",
+			},
+		},
+
+		// Invalid cases - License
+		{
+			name: "license with credentials",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.License = "test-license" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "License field must be empty when using credentials (username/password)",
+			},
+		},
+		{
+			name: "license with username only",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Password = "" },
+				func(s *ProxySettings) { s.License = "test-license" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "License field must be empty when using credentials (username/password)",
+			},
+		},
+		{
+			name: "license with password only",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Username = "" },
+				func(s *ProxySettings) { s.License = "test-license" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "License field must be empty when using credentials (username/password)",
+			},
+		},
+
+		// Invalid cases - CA
+		{
+			name: "CA with HTTP scheme",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.Scheme = constant.SchemeHTTP },
+			),
+			output: output{
+				err:    true,
+				errMsg: "CA is not allowed when scheme is 'HTTP'",
+			},
+		},
+
+		// Invalid cases - CheckMode
+		{
+			name: "invalid check mode",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.CheckMode = "invalid-mode" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "unknown registry check mode",
+			},
+		},
+
+		// Invalid cases - TTL
+		{
+			name: "invalid TTL regexp",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.TTL = "invalid-TTL" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "does not match required pattern",
+			},
+		},
+		{
+			name: "invalid TTL duration",
+			input: proxySettingsBuilder(
+				func(s *ProxySettings) { s.TTL = "4m59s" },
+			),
+			output: output{
+				err:    true,
+				errMsg: "must be at least",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.input.Validate()
+
+			if tt.output.err {
+				require.Error(t, err)
+				if tt.output.errMsg != "" {
+					require.Contains(t, err.Error(), tt.output.errMsg)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestDeckhouseSettings_DeepCopy(t *testing.T) {
 	t.Run("should create a deep copy of DeckhouseSettings", func(t *testing.T) {
 		original := &DeckhouseSettings{
-			Mode: constant.ModeDirect,
-			Direct: &RegistrySettings{
-				ImagesRepo: "test-repo",
-				Scheme:     constant.SchemeHTTPS,
-				CA:         "test-ca",
-				Username:   "test-user",
-				Password:   "test-pass",
-				License:    "test-license",
-				CheckMode:  constant.CheckModeDefault,
-			},
-			Unmanaged: &RegistrySettings{
-				ImagesRepo: "test-repo",
-				Scheme:     constant.SchemeHTTPS,
-				CA:         "test-ca",
-				Username:   "test-user",
-				Password:   "test-pass",
-				License:    "test-license",
-				CheckMode:  constant.CheckModeDefault,
-			},
+			Mode:      constant.ModeDirect,
+			Direct:    registrySettingsBuilder(),
+			Unmanaged: registrySettingsBuilder(),
+			Proxy:     proxySettingsBuilder(),
 		}
 
 		copied := original.DeepCopy()
@@ -616,15 +1194,7 @@ func TestDeckhouseSettings_DeepCopy(t *testing.T) {
 
 func TestRegistrySettings_DeepCopy(t *testing.T) {
 	t.Run("should create a deep copy of RegistrySettings", func(t *testing.T) {
-		original := &RegistrySettings{
-			ImagesRepo: "test-repo",
-			Scheme:     constant.SchemeHTTPS,
-			CA:         "test-ca",
-			Username:   "test-user",
-			Password:   "test-pass",
-			License:    "test-license",
-			CheckMode:  constant.CheckModeDefault,
-		}
+		var original *RegistrySettings = registrySettingsBuilder()
 
 		copied := original.DeepCopy()
 		require.NotNil(t, copied)
@@ -634,6 +1204,23 @@ func TestRegistrySettings_DeepCopy(t *testing.T) {
 
 	t.Run("should handle nil receiver", func(t *testing.T) {
 		var nilSettings *RegistrySettings
+		copied := nilSettings.DeepCopy()
+		require.Nil(t, copied)
+	})
+}
+
+func TestProxySettings_DeepCopy(t *testing.T) {
+	t.Run("should create a deep copy of ProxySettings", func(t *testing.T) {
+		var original *ProxySettings = proxySettingsBuilder()
+
+		copied := original.DeepCopy()
+		require.NotNil(t, copied)
+		require.NotSame(t, original, copied)
+		require.EqualValues(t, original, copied)
+	})
+
+	t.Run("should handle nil receiver", func(t *testing.T) {
+		var nilSettings *ProxySettings
 		copied := nilSettings.DeepCopy()
 		require.Nil(t, copied)
 	})

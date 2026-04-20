@@ -43,8 +43,8 @@ type packageI interface {
 	// GetValuesChecksum returns hash of current values to detect changes by hooks.
 	GetValuesChecksum() string
 	GetPath() string
+	GetRuntimeValues() string
 	GetValues() addonutils.Values
-	GetExtraNelmValues() string
 	// RunHooksByBinding executes hooks for BeforeHelm/AfterHelm bindings.
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 }
@@ -105,7 +105,6 @@ func (t *task) Execute(ctx context.Context) error {
 
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHelmApplied)
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHooksProcessed)
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInRuntime)
 	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInCluster)
 
 	return nil

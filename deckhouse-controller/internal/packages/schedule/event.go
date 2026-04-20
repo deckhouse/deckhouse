@@ -30,8 +30,10 @@ const (
 // Event represents a single lifecycle transition in the scheduling graph.
 // Name identifies the affected node; Enabled is populated only for [EventGlobalDone].
 type Event struct {
-	Name    string
 	Kind    EventKind
+	Name    string
+	Reason  string
+	Message string
 	Enabled []string
 }
 

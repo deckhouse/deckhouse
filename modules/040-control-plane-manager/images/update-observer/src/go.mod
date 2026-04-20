@@ -3,9 +3,9 @@ module update-observer
 go 1.25.5
 
 require (
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v2 v2.4.2
-	golang.org/x/mod v0.29.0
 	golang.org/x/time v0.12.0
 	helm.sh/helm/v3 v3.19.4
 	k8s.io/api v0.34.2
@@ -18,7 +18,6 @@ require (
 )
 
 require (
-	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect

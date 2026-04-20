@@ -116,6 +116,13 @@ tests:
     object: test_samples/security_policy_exceptions/pods/030-allowed-by-exception-multiple-ports-udp.yaml
     assertions:
     - violations: no
+  - name: 024-051-allowed-by-exception-hostport-only-without-hostnetwork
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/024-allow-hostport-only.yaml
+    object: test_samples/security_policy_exceptions/pods/051-allowed-by-exception-hostnetwork-true-with-hostport-no-hostnetwork.yaml
+    assertions:
+    - violations: no
   - name: 016-033-allowed-by-exception-port-in-constraint-range
     inventory:
     - ../common/test_samples/ns.yaml
@@ -178,6 +185,13 @@ tests:
     object: test_samples/security_policy_exceptions/pods/040-disallowed-exception-allows-false-but-pod-has-true.yaml
     assertions:
     - violations: yes
+  - name: 013-050-allowed-by-exception-hostnetwork-false-with-hostport
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/013-allow-hostnetwork-false-with-hostport.yaml
+    object: test_samples/security_policy_exceptions/pods/050-allowed-by-exception-hostnetwork-false-with-hostport.yaml
+    assertions:
+    - violations: no
   - name: 012-042-disallowed-exception-allows-false-constraint-allows-true
     inventory:
     - ../common/test_samples/ns.yaml
@@ -257,6 +271,20 @@ tests:
     object: test_samples/security_policy_exceptions/pods/028-allowed-by-exception-hostport-despite-empty-ranges.yaml
     assertions:
     - violations: no
+  - name: 024-049-allowed-hostnetwork-with-hostport-only-exception
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/024-allow-hostport-only.yaml
+    object: test_samples/security_policy_exceptions/pods/049-allowed-hostnetwork-with-hostport-only-exception.yaml
+    assertions:
+    - violations: no
+  - name: 024-052-disallowed-hostnetwork-with-hostport-only-exception-restrictive
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/024-allow-hostport-only.yaml
+    object: test_samples/security_policy_exceptions/pods/052-disallowed-hostnetwork-with-hostport-only-exception-restrictive.yaml
+    assertions:
+    - violations: yes
   - name: 043-disallowed-no-exception-hostnetwork-true
     inventory:
     - ../common/test_samples/ns.yaml

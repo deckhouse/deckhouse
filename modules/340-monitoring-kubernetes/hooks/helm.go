@@ -162,7 +162,7 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 
 	var metaConfig *config.MetaConfig
 	// only cluster configuration, provider preparation and validation do not need here
-	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider())
+	metaConfig, err = config.ParseConfigFromData(context.TODO(), string(ccYaml), config.DummyPreparatorProvider(), nil)
 	if err != nil {
 		return nil, err
 	}

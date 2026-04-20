@@ -1,5 +1,6 @@
 ---
 title: "Модуль admission-policy-engine: Custom Resources (от Gatekeeper)"
+description: "Справочник кастомных ресурсов Gatekeeper для модуля admission-policy-engine."
 ---
 
 ## Mutation Custom Resources
@@ -10,14 +11,14 @@ title: "Модуль admission-policy-engine: Custom Resources (от Gatekeeper)
 
 [Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#mutation-crds)
 
-Представляют собой набор настраиваемых политик модификации ресурсов Kubernets в момент их создания.
+Представляют собой набор настраиваемых политик модификации ресурсов Kubernetes в момент их создания.
 
 ### AssignMetadata
 
 [Reference](https://open-policy-agent.github.io/gatekeeper/website/docs/mutation/#assignmetadata)
 
 Позволяет изменять секцию `Metadata` ресурса.  
-На данный момент сервисом Gatekeeper разрешено только **добавление** объектов `lables` и `annotations`. Изменение существующих объектов не предусмотрено.
+На данный момент сервисом Gatekeeper разрешено только **добавление** объектов `labels` и `annotations`. Изменение существующих объектов не предусмотрено.
 
 {% alert level="info" %}
 В `spec.match.kinds` запрещено использовать `*`. При указании `*` мутация не применяется. Вместо этого необходимо явно перечислять целевые ресурсы (`kinds`) и их `apiGroups`.

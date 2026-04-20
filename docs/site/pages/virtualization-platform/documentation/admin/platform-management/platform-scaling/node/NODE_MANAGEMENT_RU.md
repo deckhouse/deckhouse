@@ -21,38 +21,9 @@ Deckhouse Virtualization Platform (DVP) поддерживает полный ц
 
 В каждой группе можно централизованно задавать настройки узлов, включая версию Kubernetes, ресурсы, taint'ы, лейблы, параметры kubelet и прочее.
 
-## Включение механизма управления узлами
-
-Управление узлами реализовано с помощью модуля [`node-manager`](/modules/node-manager/), который можно включить или выключить несколькими способами:
-
-1. Через ресурс ModuleConfig/node-manager:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: node-manager
-   spec:
-     version: 2
-     enabled: true
-     settings:
-       earlyOomEnabled: true
-       instancePrefix: kube
-       mcmEmergencyBrake: false
-   ```
-
-1. Командой:
-
-   ```shell
-   d8 system module enable node-manager
-   # Или disable.
-   ```
-
-1. Через [веб-интерфейс Deckhouse](/modules/console/):
-
-   - Перейдите в раздел «Deckhouse - «Модули»;
-   - Найдите модуль `node-manager` и нажмите на него;
-   - Включите тумблер «Модуль включен».
+{% alert level="info" %}
+Управление узлами доступно только для кластеров, полностью управляемых DKP. Для Managed Kubernetes-кластеров такая возможность не поддерживается.
+{% endalert %}
 
 ## Автоматическое развёртывание и обновление
 

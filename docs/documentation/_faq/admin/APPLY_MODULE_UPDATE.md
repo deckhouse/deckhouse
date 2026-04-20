@@ -13,6 +13,12 @@ Example of setting the annotation for the `console` module:
 d8 k annotate mr console-v1.43.3 modules.deckhouse.io/apply-now="true"
 ```
 
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module apply-now console v1.43.3
+```
+
 Example resource with the annotation set:
 
 ```yaml

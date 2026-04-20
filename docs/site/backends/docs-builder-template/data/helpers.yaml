@@ -45,17 +45,17 @@ editions:
     weight: 7
   - id: "cse-lite"
     name: "CSE Lite"
-    name_version: "CSE Lite (1.67)"
-    title: "Certified Security Edition Lite (1.67)"
+    name_version: "CSE Lite (1.73)"
+    title: "Certified Security Edition Lite (1.73)"
     title_version: "Certified Security Edition Lite"
     weight: 14
     languages:
       - "ru"
   - id: "cse-pro"
     name: "CSE Pro"
-    name_version: "CSE Pro (1.67)"
+    name_version: "CSE Pro (1.73)"
     title: "Certified Security Edition Pro"
-    title_version: "Certified Security Edition Pro (1.67)"
+    title_version: "Certified Security Edition Pro (1.73)"
     weight: 15
     languages:
       - "ru"

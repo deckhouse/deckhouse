@@ -3,13 +3,104 @@ title: "Release notes"
 permalink: en/virtualization-platform/documentation/release-notes.html
 ---
 
+## v1.7.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: March 31, 2026.
+</span>
+
+### New features
+
+- [vm] The order of additional network interfaces is now deterministic and does not change after virtual machine restarts.
+- [vm] Added a mechanism to prevent TCP connection drops during live migration of a virtual machine.
+- [vm] Reduced USB device downtime during virtual machine migration.
+- [vm] Added a garbage collector for completed and failed virtual machine pods:
+  - Pods older than 24 hours are deleted.
+  - No more than 2 completed pods are retained.
+- [usb] When scheduling virtual machines on nodes, the system now takes into account whether a USB device uses USB 2.0 (High-Speed) or USB 3.0 (SuperSpeed).
+
+### Fixes
+
+- [vm] Fixed double storage quota consumption during migration of a virtual machine with local storage.
+- [vm] When using [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) with the `Clone` or `Restore` type, disks now also restore their association with the virtual machine (owner reference).
+- [vm] Fixed virtual machine eviction during node drain: pods responsible for block device attachments are no longer removed from a cordoned node before virtual machine migration is complete.
+- [vm] Block devices can now be attached and detached even if the virtual machine is running on a cordoned node.
+- [vm] Fixed validation for the `AlwaysForced` virtual machine migration policy: [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resources with the `Evict` or `Migrate` type without explicit `force=true` are now rejected for this policy.
+- [vm] Fixed an issue where a virtual machine could get stuck in the `Maintenance` state during restore from a snapshot.
+- [vm] Added storage-side error messages (from the CSI driver) to the virtual machine status for block device attachment failures.
+- [vd,vi,cvi] Fixed the creation of block devices from VMDK files (especially for VMDKs in the `streamOptimized` format used in exports from VMware).
+- [usb] Stabilized USB device support for virtualization on Deckhouse Kubernetes Platform version `>=1.76` and Kubernetes version `>=1.33`.
+- [usb] Fixed USB device detection on the host: duplicate USB devices could previously appear.
+
+## v1.6.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: March 10, 2026.
+</span>
+
+### Fixes
+
+- [observability] Restored the previous placement of virtual machine dashboards due to a validation issue that could block the Deckhouse queue.
+- [vm] Fixed USB device discovery on nodes: corresponding [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resources might not have been created.
+- [vm] Fixed cloning of a virtual machine with connected USB devices when using [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) with the `Clone` type in `BestEffort` mode.
+
+### Security
+
+- [module] Fixed vulnerabilities CVE-2026-24051 and CVE-2025-15558.
+
+## v1.6.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: March 2, 2026.
+</span>
+
+### New features
+
+- [vm] Added support for attaching USB devices to virtual machines via `.spec.usbDevices`.
+- [usb] Added [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) and [USBDevice](/modules/virtualization/cr.html#usbdevice) resources to manage USB devices in the cluster:
+  - [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) (cluster-scoped): Represents a USB device discovered on a specific node. Allows assigning a USB device for use in a specific namespace.
+  - [USBDevice](/modules/virtualization/cr.html#usbdevice) (namespace-scoped): Represents a USB device available for attachment to virtual machines in a given namespace.
+- [observability] Added the `Virtualization / Overview` dashboard with an overview of the virtualization platform status.
+- [observability] Added information about virtual machine pods to the virtual machine dashboard.
+- [dvcr] Enabled DVCR cleanup in clusters by default: daily at 02:00. You can override the schedule via `dvcr.gc.schedule` in the `virtualization` module ModuleConfig.
+
+### Fixes
+
+- [vd] Fixed virtual disks hanging during creation in `WaitForFirstConsumer` mode on nodes with taints.
+- [vm] If only the `Main` network is specified in `.spec.networks`, the `sdn` module is no longer required.
+- [vm] Fixed virtual machine migration with disks attached via [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug): the target pod could exceed memory limits (`OOMKilled`).
+- [vmbda] Fixed an incorrect `Pending` phase for the [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) resource during virtual machine migration.
+- [vmbda] To remove disks and images attached to a virtual machine via [VirtualMachineBlockDeviceAttachment](/modules/virtualization/cr.html#virtualmachineblockdeviceattachment) (hotplug), you must first detach them from the virtual machine by deleting the corresponding `vmbda`. This information has been added to the `vmbda` status.
+
+### Other
+
+- [vm] Added the `--from-file` flag to the `vlctl` utility for viewing domain information from a local libvirt XML file.
+
+## v1.5.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: March 5, 2026.
+</span>
+
+### Fixes
+
+- [vd] Fixed a potential `OOMKill` during the virtual disk creation on NFS.
+
 ## v1.5.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: February 16, 2026.
+</span>
 
 ### Fixes
 
 - [vd] Fixed an issue with creating a virtual disk from a virtual image stored on a `PersistentVolumeClaim` (with `.spec.storage` set to `PersistentVolumeClaim`).
 
 ## v1.5.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: February 9, 2026.
+</span>
 
 ### New features
 
@@ -33,11 +124,19 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 
 ## v1.4.1
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: February 16, 2026.
+</span>
+
 ### Security
 
 - [module] Fixed vulnerabilities CVE-2025-61726, CVE-2025-61728, CVE-2025-61730, and CVE-2025-68121.
 
 ## v1.4.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: January 23, 2026.
+</span>
 
 ### New features
 
@@ -54,6 +153,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 
 ## v1.3.0
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: December 16, 2025.
+</span>
+
 ### New features
 
 - [vmclass] Added the `.spec.sizingPolicies.defaultCoreFraction` field to the [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) resource, allowing you to set the default `coreFraction` for virtual machines that use this class.
@@ -67,17 +170,29 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 
 ## v1.2.2
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: December 5, 2025.
+</span>
+
 ### Fixes
 
 - [module] Fixed RBAC access permissions for the `d8:use:role:user` role that prevented it from managing the [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource.
 
 ## v1.2.1
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: December 4, 2025.
+</span>
+
 ### Fixes
 
 - [module] The deprecated part of the configuration has been removed, which could have prevented the virtualization module from upgrading in clusters running Kubernetes version 1.34 and above.
 
 ## v1.2.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: November 28, 2025.
+</span>
 
 ### New features
 
@@ -114,6 +229,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 
 ## v1.1.3
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: November 21, 2025.
+</span>
+
 ### Security
 
 - [module] Fixed CVE-2025-64324, CVE-2025-64435, CVE-2025-64436, CVE-2025-58183, CVE-2025-58186, CVE-2025-58187, CVE-2025-58188, CVE-2025-52565, CVE-2025-52881, CVE-2025-31133.
@@ -124,6 +243,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 
 ## v1.1.2
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: November 5, 2025.
+</span>
+
 ### Fixes
 
 - [vd] Fixed live disk migration between StorageClasses that use different drivers. Restrictions:
@@ -131,6 +254,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 - [vm] In the `Migrating` state, detailed error information is now displayed when a live migration of a virtual machine fails.
 
 ## v1.1.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: October 16, 2025.
+</span>
 
 ### Fixes
 
@@ -151,6 +278,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 - [module] Fixed vulnerabilities CVE-2025-58058 and CVE-2025-54410.
 
 ## v1.1.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: October 6, 2025.
+</span>
 
 ### New features
 
@@ -179,6 +310,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 
 ## v1.0.0
 
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: September 11, 2025.
+</span>
+
 ### New features
 
 - [vm] Added protection to prevent a cloud image ([VirtualImage](/modules/virtualization/cr.html#virtualimage) \ [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage)) from being connected as the first disk. Previously, this caused the VM to fail to start with the "No bootable device" error.
@@ -197,6 +332,10 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 - Fixed CVE-2025-47907.
 
 ## v0.25.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: August 29, 2025.
+</span>
 
 ### Important notes before update
 

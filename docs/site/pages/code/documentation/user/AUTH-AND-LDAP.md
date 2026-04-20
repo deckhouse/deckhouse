@@ -145,6 +145,10 @@ Assigns roles to users based on group names (`cn`):
 
 ### Group membership resolution
 
+{% alert level="warning" %}
+LDAP Sync does not support transitivity for nested groups. See [Nested groups and transitivity](#nested-groups-and-transitivity) section for details and workarounds.
+{% endalert %}
+
 Deckhouse Code supports the following attributes to determine group membership (all values must be arrays of user DNs):
 
 - `member`
@@ -202,3 +206,42 @@ To view the full synchronization logs:
    `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
 
 > Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
+
+### LDAP Sync behavior
+
+#### Synchronization algorithm
+
+LDAP Sync uses a flat, non-recursive synchronization algorithm:
+
+1. Group retrieval. An LDAP query retrieves all groups based on the configured `base`, `filter`, and `scope` parameters.
+1. Member extraction. For each discovered group, LDAP Sync reads the membership attributes: `member`, `uniquemember`, `memberof`, `memberuid`, `submember`.
+1. User matching. Each DN from the membership attributes is matched against `Identity.extern_uid` in the database.
+1. Ignoring unknown DNs. If a DN does not match a known user, it is skipped. For example, this may be the DN of a nested group.
+
+#### Cyclic group dependencies
+
+Cyclic dependencies in the LDAP group hierarchy do not cause synchronization errors. LDAP Sync processes groups in a flat way, according to the configured filter, and does not attempt to reconstruct the LDAP tree structure.
+
+Because recursive traversal of nested groups is not performed, cycles do not affect the synchronization result.
+
+#### Nested groups and transitivity
+
+{% alert level="warning" %}
+LDAP Sync does not support transitivity for nested groups.
+{% endalert %}
+
+During synchronization, LDAP Sync processes only the direct values of a group's membership attributes and does not recursively traverse nested groups.
+
+If one LDAP group contains another group as a member, users from the nested group are not automatically added to the parent group.
+
+For synchronization to work correctly, all required user DNs must be present directly in the group's membership attributes.
+
+If nested groups must be taken into account, this must be implemented on the LDAP server side. For example, the `submember` attribute can be populated with the full list of transitive members.
+
+This approach simplifies synchronization and avoids issues related to recursive group processing.
+
+#### Creating a local account when LDAP synchronization is enabled
+
+Local accounts can still be created and used even when LDAP synchronization is enabled.
+
+To allow such users to sign in through the web interface, the ["Enable password and passkey authentication for the web interface"](https://docs.gitlab.com/administration/settings/sign_in_restrictions/#password-and-passkey-authentication) setting must be enabled.

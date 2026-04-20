@@ -19,7 +19,7 @@ git:
 {{- include "image mount points" . }}  
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-fromImage: base/python
+from: {{ index $.Images "base/python" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt

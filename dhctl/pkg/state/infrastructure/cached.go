@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -36,12 +37,12 @@ func NewFileTerraStateLoader(stateCache state.Cache, metaConfig *config.MetaConf
 	}
 }
 
-func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context) (*config.MetaConfig, error) {
+func (s *FileTerraStateLoader) PopulateMetaConfig(_ context.Context, _ *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
 	return s.metaConfig, nil
 }
 
 func (s *FileTerraStateLoader) PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupInfrastructureState, error) {
-	metaConfig, err := s.PopulateMetaConfig(ctx)
+	metaConfig, err := s.PopulateMetaConfig(ctx, nil)
 	if err != nil {
 		return nil, nil, err
 	}

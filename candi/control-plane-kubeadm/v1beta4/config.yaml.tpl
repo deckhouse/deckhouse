@@ -3,19 +3,23 @@ RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
 {{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
-{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion -}}
-  {{- /*
-  Enable DRA multi-allocations by activating required feature gates:
-  DRADeviceBindingConditions and DRAResourceClaimDeviceStatus (for BindsToNode)
-  DRAConsumableCapacity (for AllowMultipleAllocations)
-  */ -}}
+  {{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */ -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
-  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
+{{- end }}
+{{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
+  {{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */ -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
+{{- end }}
+{{- if semverCompare ">=1.32 <1.33" .clusterConfiguration.kubernetesVersion }}
+  {{- /* DRAResourceClaimDeviceStatus: Alpha in 1.32, Beta in 1.33 (for BindsToNode) */ -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
 {{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
@@ -131,6 +135,10 @@ apiServer:
     {{- if ne .runType "ClusterBootstrap" }}
     - name: enable-admission-plugins
       value: "{{ $admissionPlugins | sortAlpha | join "," }}"
+    {{- if .apiserver.disableAdmissionPlugins }}
+    - name: disable-admission-plugins
+      value: {{ .apiserver.disableAdmissionPlugins | quote }}
+    {{- end }}
     - name: admission-control-config-file
       value: /etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml
     - name: kubelet-certificate-authority

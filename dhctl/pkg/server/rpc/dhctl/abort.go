@@ -28,7 +28,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -45,7 +44,21 @@ type abortParams struct {
 	request      *pb.AbortStart
 	switchPhase  phases.DefaultOnPhaseFunc
 	sendProgress phases.OnProgressFunc
-	logOptions   logger.Options
+	sendCh       chan *pb.AbortResponse
+}
+
+func (p *abortParams) loggerWidth() int {
+	return int(p.request.Options.LogWidth)
+}
+
+func (p *abortParams) loggerOptions(ctx context.Context) logger.Options {
+	return initLoggerOptions(ctx, &initLoggerOptionsParams[*pb.AbortResponse]{
+		sendCh: p.sendCh,
+		consumer: func(lines []string) *pb.AbortResponse {
+			return &pb.AbortResponse{Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
+		},
+		attributesProvider: p,
+	})
 }
 
 func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
@@ -68,21 +81,6 @@ func (s *Service) Abort(server pb.DHCTL_AbortServer) error {
 		dataFunc: func(progress phases.Progress) *pb.AbortResponse {
 			return &pb.AbortResponse{Message: &pb.AbortResponse_Progress{Progress: convertProgress(progress)}}
 		},
-	}
-
-	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
-
-	logWriter := logger.NewLogWriter(loggerDefault, sendCh,
-		func(lines []string) *pb.AbortResponse {
-			return &pb.AbortResponse{Message: &pb.AbortResponse_Logs{Logs: &pb.Logs{Logs: lines}}}
-		},
-	)
-
-	debugWriter := logger.NewDebugLogWriter(loggerDefault)
-
-	logOptions := logger.Options{
-		DebugWriter:   debugWriter,
-		DefaultWriter: logWriter,
 	}
 
 	startReceiver[*pb.AbortRequest, *pb.AbortResponse](server, receiveCh, doneCh, internalErrCh)
@@ -113,11 +111,11 @@ connectionProcessor:
 					continue connectionProcessor
 				}
 				go func() {
-					result := s.abortSafe(ctx, abortParams{
+					result := s.abortSafe(ctx, &abortParams{
 						request:      message.Start,
 						switchPhase:  phaseSwitcher.switchPhase(ctx),
 						sendProgress: pt.sendProgress(),
-						logOptions:   logOptions,
+						sendCh:       sendCh,
 					})
 					sendCh <- &pb.AbortResponse{Message: &pb.AbortResponse_Result{Result: result}}
 				}()
@@ -155,7 +153,7 @@ connectionProcessor:
 // keep named return to keep same defered recover behavior
 //
 //nolint:nonamedreturns
-func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
+func (s *Service) abortSafe(ctx context.Context, p *abortParams) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -166,19 +164,13 @@ func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.Abor
 	return s.abort(ctx, p)
 }
 
-func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
+func (s *Service) abort(ctx context.Context, p *abortParams) *pb.AbortResult {
 	var err error
 
 	cleanuper := callback.NewCallback()
 	defer func() { _ = cleanuper.Call() }()
 
-	log.InitLoggerWithOptions("pretty", log.LoggerOptions{
-		OutStream:   p.logOptions.DefaultWriter,
-		Width:       int(p.request.Options.LogWidth),
-		DebugStream: p.logOptions.DebugWriter,
-	})
-
-	loggerFor := log.GetDefaultLogger()
+	loggerFor := initDhctlLogger(ctx, p)
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
@@ -285,6 +277,7 @@ func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {
 		Logger:            loggerFor,
 		IsDebug:           s.params.IsDebug,
 		TmpDir:            s.params.TmpDir,
+		DirectoryConfig:   s.params.DownloadDirConfig,
 	})
 
 	abortErr := bootstrapper.Abort(ctx, false)

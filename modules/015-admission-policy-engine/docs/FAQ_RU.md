@@ -1,5 +1,6 @@
 ---
 title: "Модуль admission-policy-engine: FAQ"
+description: "Ответы на часто задаваемые вопросы о модуле admission-policy-engine."
 ---
 
 ## Как настроить альтернативные решения по управлению политиками безопасности?
@@ -90,15 +91,9 @@ spec:
 
 Чтобы применить только нужные политики безопасности, не отключая весь предустановленный набор:
 
-<<<<<<< changing-metka-to-label
 1. Добавьте в нужное пространство имён лейбл: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
 1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
 1. Добавьте в пространство имён дополнительный лейбл, который будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
-=======
-1. Добавьте в нужное пространство имён метку: `security.deckhouse.io/pod-policy: privileged`, чтобы отключить встроенный набор политик.
-1. Создайте SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
-1. Добавьте в пространство имён дополнительную метку, которая будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`
->>>>>>> main
 
 SecurityPolicy, соответствующая baseline:
 
@@ -290,7 +285,7 @@ spec:
 ## Проверка подписи образов
 
 {% alert level="warning" %}
-Доступно в следующих редакциях DKP: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Доступно в следующих редакциях DKP: SE+, EE, CSE Lite, CSE Pro.
 
 Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
 {% endalert %}
@@ -299,7 +294,9 @@ spec:
 
 ## Как запретить удаление узла без лейбла
 
-> Примечание. Операции DELETE обрабатываются Gatekeeper по умолчанию.
+{% alert level="info" %}
+Операции DELETE обрабатываются Gatekeeper по умолчанию.
+{% endalert %}
 
 Можно создать собственную политику Gatekeeper, запрещающую удаление узла без специального лейбла. Пример ниже использует `oldObject` для проверки лейблов удаляемого узла:
 

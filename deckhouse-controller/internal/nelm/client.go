@@ -27,6 +27,7 @@ import (
 
 	"github.com/werf/nelm/pkg/action"
 	"github.com/werf/nelm/pkg/common"
+	"github.com/werf/nelm/pkg/legacy/progrep"
 	nelmlog "github.com/werf/nelm/pkg/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -186,9 +187,13 @@ func (c *Client) GetChecksum(ctx context.Context, namespace, releaseName string)
 type InstallOptions struct {
 	Path        string   // Path to the chart directory
 	ValuesPaths []string // Paths to values files
-	ExtraValues string   // Extra values in json format
+	RootValues  string   // Values in JSON format
 
 	ReleaseLabels map[string]string // Labels to apply to the release
+
+	// OnTrackingEvent is an optional callback invoked with progress updates
+	// as Kubernetes resources are being tracked for readiness during install.
+	OnTrackingEvent func(name string, report progrep.ProgressReport)
 }
 
 // Install installs a Helm chart as a release
@@ -202,11 +207,27 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	var valuesSet []string
-	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, opts.ExtraValues)
+	if len(opts.RootValues) > 0 {
+		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
+	// reportCh receives progress reports from nelm during resource tracking.
+	// A background goroutine converts each report into a tracking event and
+	// forwards it to the caller's callback. The channel is closed when the
+	// install operation completes.
+	reportCh := make(chan progrep.ProgressReport, 1)
+	defer close(reportCh)
+
+	go func() {
+		for report := range reportCh {
+			if opts.OnTrackingEvent != nil {
+				opts.OnTrackingEvent(releaseName, report)
+			}
+		}
+	}()
+
 	if err := action.ReleaseInstall(ctx, releaseName, namespace, action.ReleaseInstallOptions{
+		LegacyProgressReportCh: reportCh,
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
 		},
@@ -251,8 +272,8 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	span.SetAttributes(attribute.String("values", strings.Join(opts.ValuesPaths, ",")))
 
 	var valuesSet []string
-	if len(opts.ExtraValues) > 0 {
-		valuesSet = append(valuesSet, opts.ExtraValues)
+	if len(opts.RootValues) > 0 {
+		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{

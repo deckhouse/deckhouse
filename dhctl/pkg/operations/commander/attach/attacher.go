@@ -207,6 +207,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
 			),
+			nil,
 		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)

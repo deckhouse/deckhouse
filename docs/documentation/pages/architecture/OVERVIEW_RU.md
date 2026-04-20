@@ -2,33 +2,66 @@
 title: Архитектура
 permalink: ru/architecture/
 lang: ru
-search: architecture overview, архитектура Deckhouse
+search: архитектура Deckhouse, архитектура DKP
+description: Обзор архитектуры Deckhouse Kubernetes Platform.
 ---
 
-Deckhouse отвечает за то, чтобы кластер **одинаково** работал на **любой поддерживаемой инфраструктуре**:
+В данном разделе документации описана архитектура Deckhouse Kubernetes Platform (DKP).
 
-- в облаках (смотри информацию по соответствующему cloud provider'у);
-- на виртуальных машинах или железе (включая on-premises);
-- в гибридной инфраструктуре.
+Раздел состоит из следующих подразделов:
 
-Для этого Deckhouse Kubernetes Platform автоматически настраивает и управляет как [узлами кластера](/modules/node-manager/), так и его компонентами [control plane](/modules/control-plane-manager/), постоянно поддерживая их актуальную конфигурацию (используя инструменты Terraform).
+* [Модель C4](c4-model.html) — обзор модели С4, используемой для визуализации архитектуры платформы, а также описание архитектуры DKP на уровнях 1 и 2 модели C4.
+* [Модули](module-development/) — описание архитектуры модулей DKP.
+* [Катастрофоустойчивость](disaster-resilience/) — описание реализованных в DKP подходов к обеспечению катастрофоустойчивости.
+* [Обновление](updating.html) — описание механизмов обновления DKP.
+* Описание архитектуры компонентов платформы, сгруппированных по следующим подсистемам:
+  * [Подсистема Deckhouse](deckhouse/)
+  * [Подсистема Kubernetes & Scheduling](kubernetes-and-scheduling/)
+  * [Подсистема Cluster & Infrastructure](cluster-and-infrastructure/)
+  * [Подсистема IAM](iam/)
+  * [Подсистема Security](security/)
+  * [Подсистема Network](network/)
+  * [Подсистема Storage](storage/)  
+  * [Подсистема Observability](observability/)
+  
+{% alert level="info" %}
+В разделе представлена информация не по всем подсистемам и модулям DKP.
+Материалы по остальным компонентам будут добавляться по мере готовности.
+{% endalert %}
 
-Deckhouse позволяет легко выполнять такие нетривиальные операции с компонентами control plane и узлами кластера, как:
+## Архитектура DKP
 
-- миграция между single-master- и multi-master-схемами;
-- масштабирование master-узлов;
-- обновление версий компонентов.
+DKP — это платформа для управления кластерами Kubernetes в любых инфраструктурах — от изолированных серверных сред до публичных облаков. Платформа включает в себя:
 
-Операции выполняются по умным и безопасным алгоритмам с возможностью пользовательского контроля и управления происходящими процессами.
+* кластер Kubernetes;
+* контроллер Deckhouse и управляемые им модули;
+* [Bashible](cluster-and-infrastructure/node-management/bashible.html) — агент, работающий на узлах кластера в виде службы, который запускает bash-скрипты для управления узлами.
 
-Также Deckhouse настраивает конфигурацию kubelet на узлах и берет на себя заботу о состоянии используемых при работе с control plane сертификатов, выполняя их выпуск и продление.
+Модули объединены в подсистемы в соответствии с их функциональным назначением. Контроллер Deckhouse тоже реализован в виде модуля и является единственным модулем, без которого не может функционировать платформа.
 
-Deckhouse заменяет собственными версиями ресурсы, относящиеся к `kube-proxy` от `kubeadm` (соответствующие DaemonSet, ConfigMap, RBAC).
+Архитектура DKP в масштабе подсистем и модулей описана в подразделе [Модель C4](c4-model.html).
 
-Интеграция между модулями Deckhouse позволяет сразу получить эффективный мониторинг и обеспечить приемлемый уровень безопасности. Например, можно легко организовать надежный доступ к API-серверу кластера через публичный IP-адрес, в том числе с возможностью работы через внешний провайдер аутентификации.
+## Модули
 
-Образы всех компонентов Deckhouse, включая `control plane`, хранятся в высокодоступном и геораспределенном container registry. Для удобства организации доступа из изолированных контуров container registry доступен с фиксированного набора IP-адресов.
+Модуль — это набор ресурсов и приложений, предназначенных для расширения функциональности DKP.
 
-С точки зрения архитектуры, Deckhouse состоит из оператора Deckhouse и модулей. Модуль — это набор из Helm-чарта, хуков [Addon-operator'а](https://github.com/flant/addon-operator/), правил сборки компонентов модуля (компонентов Deckhouse) и других файлов.
+Ключевые модули:
 
-При работе с модулями Deckhouse использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, если хотите понять, как Deckhouse работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md). Будем признательны, если поставите проекту *звезду*.
+* [`deckhouse`](/modules/deckhouse/) — контроллер Deckhouse;
+* [`control-plane-manager`](kubernetes-and-scheduling/control-plane-management.html) — управляет компонентами control plane кластера;
+* [`node-manager`](cluster-and-infrastructure/node-management/node-manager.html) — управляет узлами кластера.
+
+{% alert level="info" %}
+При установке DKP в существующий Managed Kubernetes-кластер модули [`control-plane-manager`](/modules/control-plane-manager/) и [`node-manager`](/modules/node-manager/) не устанавливаются.
+{% endalert %}
+
+Содержимое модулей:
+
+* Helm-чарты;
+* хуки [addon-operator](https://github.com/flant/addon-operator/);
+* правила сборки компонентов модуля (компонентов Deckhouse);
+* другие файлы.
+
+При работе с модулями, DKP использует проект [addon-operator](https://github.com/flant/addon-operator/). Ознакомьтесь с его документацией, чтобы узнать, как DKP работает с [модулями](https://github.com/flant/addon-operator/blob/main/docs/src/MODULES.md), [хуками модулей](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md) и [параметрами модулей](https://github.com/flant/addon-operator/blob/main/docs/src/VALUES.md).
+
+Об архитектуре модуля и разработке собственных модулей читайте в разделе [Модули](module-development/).

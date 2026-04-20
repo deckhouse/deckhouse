@@ -1,0 +1,7 @@
+{{- if and .Type (transform.CanHighlight .Type) -}}
+  {{- $result := transform.HighlightCodeBlock . -}}
+  {{- $result.Wrapped -}}
+{{- else -}}
+  {{- /* Fallback for unknown or empty lexer to avoid plain <pre><code> output shape. */ -}}
+  {{- highlight .Inner "plaintext" .Options -}}
+{{- end -}}

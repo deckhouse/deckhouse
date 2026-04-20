@@ -48,6 +48,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
+			app.GetDirConfig(),
 		)
 		if err != nil {
 			return err
@@ -66,6 +67,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			templateData,
 			metaConfig.ProviderName,
 			"",
+			app.GetDirConfig(),
 		)
 	}
 
@@ -88,14 +90,16 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
-			))
+			),
+			app.GetDirConfig(),
+		)
 		if err != nil {
 			return err
 		}
 
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig)
+		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig, app.GetDirConfig())
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -120,7 +124,7 @@ func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareKubeadmConfig(templateController, templateData)
+		return template.PrepareKubeadmConfig(templateController, templateData, app.GetDirConfig())
 	}
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
@@ -156,18 +160,14 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 				context.TODO(),
 				string(data),
 				preparatorProvider,
+				app.GetDirConfig(),
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(
-				context.TODO(),
-				[]string{app.ParseInputFile},
-				preparatorProvider,
-				config.ValidateOptionStrictUnmarshal(true),
-			)
+			metaConfig, err = config.ParseConfig(context.TODO(), []string{app.ParseInputFile}, preparatorProvider, app.GetDirConfig())
 			if err != nil {
 				return err
 			}
@@ -208,7 +208,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdCl
 			}
 		}
 
-		schemaStore := config.NewSchemaStore()
+		schemaStore := config.NewSchemaStore(app.GetDirConfig())
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)

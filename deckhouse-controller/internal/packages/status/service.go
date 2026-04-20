@@ -19,6 +19,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,6 +42,9 @@ const (
 	ConditionSettingsValid ConditionType = "SettingsValid"
 	// ConditionWaitConverge indicates that the package wait converge
 	ConditionWaitConverge ConditionType = "WaitConverge"
+
+	// ConditionReasonManifestsApply indicates that nelm is applying manifests to the cluster
+	ConditionReasonManifestsApply ConditionReason = "ManifestsApply"
 )
 
 // Error wraps an error with associated status conditions
@@ -69,15 +73,22 @@ type Service struct {
 // Status represents the current state of a package
 type Status struct {
 	Version    string      `json:"version"`
-	Conditions []Condition `json:"conditions" yaml:"conditions"`
+	Conditions []Condition `json:"conditions"`
+	Tracking   Tracking    `json:"tracking"`
+}
+
+type Tracking struct {
+	Completed int                 `json:"completed"`
+	Remaining int                 `json:"remaining"`
+	Report    progrep.StageReport `json:"report"`
 }
 
 // Condition represents a single status condition for a package
 type Condition struct {
-	Type    ConditionType          `json:"type" yaml:"type"`
-	Status  metav1.ConditionStatus `json:"status" yaml:"status"` // true = condition met, false = condition failed
-	Reason  ConditionReason        `json:"reason,omitempty" yaml:"reason,omitempty"`
-	Message string                 `json:"message,omitempty" yaml:"message,omitempty"`
+	Type    ConditionType          `json:"type"`
+	Status  metav1.ConditionStatus `json:"status"` // true = condition met, false = condition failed
+	Reason  ConditionReason        `json:"reason,omitempty"`
+	Message string                 `json:"message,omitempty"`
 }
 
 func NewService() *Service {
@@ -126,6 +137,7 @@ func (s *Service) GetStatus(name string) Status {
 	return Status{
 		Version:    status.Version,
 		Conditions: condsCopy,
+		Tracking:   status.Tracking,
 	}
 }
 
@@ -166,6 +178,58 @@ func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	}
 }
 
+// SetConditionFalse marks a condition as successful and notifies listeners if changed
+func (s *Service) SetConditionFalse(name string, condition ConditionType, reason, message string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, ok := s.statuses[name]; !ok {
+		s.statuses[name] = newStatus()
+	}
+
+	// Notify only if the condition actually changed
+	if s.statuses[name].setCondition(Condition{Type: condition, Status: metav1.ConditionFalse, Reason: ConditionReason(reason), Message: message}) {
+		s.ch <- name
+	}
+}
+
+// UpdateTracking updates the nelm progress report for a package and notifies listeners.
+// If the package is not tracked by the service, the update is silently ignored.
+func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
+	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
+
+	for i := len(report.StageReports) - 1; i >= 0; i-- {
+		r := report.StageReports[i]
+		if len(r.Operations) == 0 {
+			continue
+		}
+
+		completed := 0
+		remaining := 0
+		for _, op := range r.Operations {
+			if op.Status == progrep.OperationStatusCompleted {
+				completed++
+			} else {
+				remaining++
+			}
+		}
+
+		status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: r}
+		break
+	}
+
+	s.ch <- name
+}
+
 // ClearRuntimeConditions sets runtime conditions to unknown
 func (s *Service) ClearRuntimeConditions(name string) {
 	s.mu.Lock()
@@ -181,6 +245,7 @@ func (s *Service) ClearRuntimeConditions(name string) {
 		ConditionHooksProcessed,
 		ConditionReadyInCluster,
 		ConditionReadyInRuntime,
+		ConditionWaitConverge,
 	}
 
 	for idx, condition := range s.statuses[name].Conditions {

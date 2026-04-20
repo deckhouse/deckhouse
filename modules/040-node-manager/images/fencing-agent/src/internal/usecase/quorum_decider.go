@@ -17,9 +17,10 @@ limitations under the License.
 package usecase
 
 import (
-	"fencing-agent/internal/domain"
 	"sync"
 	"time"
+
+	"fencing-agent/internal/domain"
 )
 
 type QuorumDecider struct {

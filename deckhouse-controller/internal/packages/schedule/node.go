@@ -137,18 +137,18 @@ func (s *Scheduler) addNode(pkg Package) {
 	}
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		n.checkers = append(n.checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, string(ConditionReasonRequirementsKubernetes)))
+		n.checkers = append(n.checkers, version.NewChecker(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		n.checkers = append(n.checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
+		n.checkers = append(n.checkers, version.NewChecker(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
+		n.checkers = append(n.checkers, condition.NewChecker(s.bootstrapCondition, reasonRequirementsBootstrap))
 	}
 
-	if len(constraints.Dependencies) > 0 {
+	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {
 		deps := make(map[string]dependency.Dependency)
 		for name, dep := range constraints.Dependencies {
 			deps[name] = dependency.Dependency{
@@ -157,7 +157,7 @@ func (s *Scheduler) addNode(pkg Package) {
 			}
 		}
 
-		n.checkers = append(n.checkers, dependency.NewChecker(s.getVersion, deps))
+		n.checkers = append(n.checkers, dependency.NewChecker(s.dependencyGetter, deps))
 	}
 
 	s.nodes[pkg.GetName()] = n

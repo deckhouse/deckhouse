@@ -14,11 +14,11 @@ import (
 	ovirt "github.com/ovirt/go-ovirt-client/v3"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -61,6 +61,7 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
+		//goland:noinspection GoErrorStringFormat
 		return ctrl.Result{}, fmt.Errorf("Error getting ZvirtMachine: %w", err)
 	}
 
@@ -83,7 +84,7 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	zvCluster := &infrastructurev1.ZvirtCluster{}
 	err = r.Client.Get(ctx, types.NamespacedName{
-		Namespace: cluster.Spec.InfrastructureRef.Namespace,
+		Namespace: cluster.Namespace,
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}, zvCluster)
 	if err != nil {
@@ -104,6 +105,15 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	// Migrate old CR's to v1beta2 conditions
+	defer func() {
+		normalizeLegacyConditions(zvMachine)
+		if err := patchZvirtMachine(ctx, patchHelper, zvMachine); err != nil {
+			result = ctrl.Result{}
+			reterr = err
+		}
+	}()
+
 	// Always patch the zvMachine when exiting this function, so we can persist any ZvirtMachine changes.
 	defer func() {
 		if err := patchZvirtMachine(ctx, patchHelper, zvMachine); err != nil {
@@ -121,21 +131,35 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return r.reconcileNormal(ctx, logger, cluster, machine, zvMachine, zvCluster)
 }
 
+func normalizeLegacyConditions(zvMachine *infrastructurev1.ZvirtMachine) {
+	for i := range zvMachine.Status.Conditions {
+		c := &zvMachine.Status.Conditions[i]
+
+		if c.Reason == "" {
+			c.Reason = "MigratedFromBeta1"
+		}
+		if c.Message == "" {
+			c.Message = "Condition restored during migration to v1beta2"
+		}
+		if c.LastTransitionTime.IsZero() {
+			c.LastTransitionTime = metav1.Now()
+		}
+	}
+}
+
 func patchZvirtMachine(
 	ctx context.Context,
 	patchHelper *patch.Helper,
 	zvirtMachine *infrastructurev1.ZvirtMachine,
 	options ...patch.Option,
 ) error {
-	conditions.SetSummary(zvirtMachine,
-		conditions.WithConditions(infrastructurev1.VMReadyCondition),
-	)
+	// No SetSummary in CAPI v1beta2; individual conditions should be updated with conditions.Set() elsewhere.
 
 	// Patch the object, ignoring conflicts on the conditions owned by this controller.
 	options = append(options,
-		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+		patch.WithOwnedConditions{Conditions: []string{
 			clusterv1.ReadyCondition,
-			infrastructurev1.VMReadyCondition,
+			string(infrastructurev1.VMReadyCondition),
 		}},
 	)
 	return patchHelper.Patch(ctx, zvirtMachine, options...)
@@ -165,27 +189,29 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		return ctrl.Result{}, nil
 	}
 
-	if !cluster.Status.InfrastructureReady {
+	if !conditions.IsTrue(cluster, clusterv1.InfrastructureReadyCondition) {
 		logger.Info("Waiting for Cluster infrastructure to become Ready")
-		conditions.MarkFalse(
-			zvMachine,
-			infrastructurev1.VMReadyCondition,
-			infrastructurev1.WaitingForClusterInfrastructureReason,
-			clusterv1.ConditionSeverityInfo,
-			"",
-		)
+		conditions.Set(zvMachine, metav1.Condition{
+			Type:               string(infrastructurev1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1.WaitingForClusterInfrastructureReason,
+			Message:            "Cluster infrastructure is not ready yet",
+			LastTransitionTime: metav1.Now(),
+		})
+
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		logger.Info("Bootstrap cloud-init secret reference is missing from Machine")
-		conditions.MarkFalse(
-			zvMachine,
-			infrastructurev1.VMReadyCondition,
-			infrastructurev1.WaitingForBootstrapScriptReason,
-			clusterv1.ConditionSeverityInfo,
-			"",
-		)
+		conditions.Set(zvMachine, metav1.Condition{
+			Type:               string(infrastructurev1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1.WaitingForBootstrapScriptReason,
+			Message:            "Bootstrap cloud-init secret reference is missing from Machine",
+			LastTransitionTime: metav1.Now(),
+		})
+
 		return ctrl.Result{}, nil
 	}
 
@@ -194,14 +220,14 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	vm, err := r.getOrCreateVM(ctx, machine, zvMachine, zvCluster)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see ZvirtMachine status for details")
-		conditions.MarkFalse(
-			zvMachine,
-			infrastructurev1.VMReadyCondition,
-			infrastructurev1.VMErrorReason,
-			clusterv1.ConditionSeverityError,
-			"No VM can be found or created for Machine: %v",
-			err,
-		)
+		conditions.Set(zvMachine, metav1.Condition{
+			Type:               string(infrastructurev1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1.VMErrorReason,
+			Message:            fmt.Sprintf("No VM can be found or created for Machine: %v", err),
+			LastTransitionTime: metav1.Now(),
+		})
+
 		return ctrl.Result{}, fmt.Errorf("Find or create new VM for ZvirtMachine: %w", err)
 	}
 
@@ -235,8 +261,14 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 	switch vmStatus {
 	case ovirt.VMStatusUp:
 		logger.Info("VM state is UP", "id", vmid)
-		conditions.MarkTrue(zvMachine, infrastructurev1.VMReadyCondition)
-		zvMachine.Status.Ready = true
+		conditions.Set(zvMachine, metav1.Condition{
+			Type:               string(infrastructurev1.VMReadyCondition),
+			Status:             metav1.ConditionTrue,
+			Reason:             "VMRunning",
+			Message:            "VM is running and ready",
+			LastTransitionTime: metav1.Now(),
+		})
+		zvMachine.Status.Initialization.Provisioned = ptr.To(true)
 
 		addrs, err := zVirtClient.WaitForNonLocalVMIPAddress(vmid)
 		if err != nil {
@@ -267,10 +299,13 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 			)
 		}
 
-		zvMachine.Status.Addresses = append(zvMachine.Status.Addresses, []infrastructurev1.VMAddress{
-			{Type: clusterv1.MachineInternalIP, Address: machineAddress},
-			{Type: clusterv1.MachineExternalIP, Address: machineAddress},
-		}...)
+		zvMachine.Status.Addresses = append(
+			zvMachine.Status.Addresses,
+			[]infrastructurev1.VMAddress{
+				{Type: clusterv1.MachineInternalIP, Address: machineAddress},
+				{Type: clusterv1.MachineExternalIP, Address: machineAddress},
+			}...,
+		)
 	case ovirt.VMStatusNotResponding,
 		ovirt.VMStatusPaused,
 		ovirt.VMStatusSuspended,
@@ -280,18 +315,18 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		// so the error could be something temporary.
 		// If not, it is more likely a configuration error, so we record failure and never retry.
 		logger.Info("VM failed", "id", vmid, "state", vmStatus)
-		if machine.Status.NodeRef == nil {
+		if machine.Status.NodeRef.Name != "" {
 			err = fmt.Errorf("VM state %q is unexpected", vmStatus)
-			zvMachine.Status.FailureReason = ptr.To(string(capierrors.UpdateMachineError))
+			zvMachine.Status.FailureReason = ptr.To("UpdateError")
 			zvMachine.Status.FailureMessage = ptr.To(err.Error())
 		}
-		conditions.MarkFalse(
-			zvMachine,
-			infrastructurev1.VMReadyCondition,
-			infrastructurev1.VMInFailedStateReason,
-			clusterv1.ConditionSeverityError,
-			"",
-		)
+		conditions.Set(zvMachine, metav1.Condition{
+			Type:               string(infrastructurev1.VMReadyCondition),
+			Status:             metav1.ConditionFalse,
+			Reason:             infrastructurev1.VMInFailedStateReason,
+			Message:            fmt.Sprintf("VM state %q is unexpected", vmStatus),
+			LastTransitionTime: metav1.Now(),
+		})
 		return ctrl.Result{}, nil
 	case ovirt.VMStatusDown:
 		logger.Info("VM is DOWN, starting it", "id", vmid)
@@ -300,26 +335,28 @@ func (r *ZvirtMachineReconciler) reconcileNormal(
 		}
 		_, err = zVirtClient.WaitForVMStatus(vmid, ovirt.VMStatusUp)
 		if err != nil {
-			conditions.MarkFalse(
-				zvMachine,
-				infrastructurev1.VMReadyCondition,
-				infrastructurev1.VMErrorReason,
-				clusterv1.ConditionSeverityError,
-				"%v", err,
-			)
+			conditions.Set(zvMachine, metav1.Condition{
+				Type:               string(infrastructurev1.VMReadyCondition),
+				Status:             metav1.ConditionFalse,
+				Reason:             infrastructurev1.VMErrorReason,
+				Message:            fmt.Sprintf("%v", err),
+				LastTransitionTime: metav1.Now(),
+			})
 			return ctrl.Result{}, err
 		}
 	default:
 		// The other states are normal (for example, migration or shutoff) but we don't want to proceed until it's up
 		// due to potential conflict or unexpected actions
 		logger.Info("Waiting for VM to become UP", "id", vmid, "status", vmStatus)
-		conditions.MarkUnknown(
-			zvMachine,
-			infrastructurev1.VMReadyCondition,
-			infrastructurev1.VMNotReadyReason,
-			"VM is not ready, state is %s",
-			vmStatus,
-		)
+		conditions.Set(zvMachine, metav1.Condition{
+			Type:               string(infrastructurev1.VMReadyCondition),
+			Status:             metav1.ConditionUnknown,
+			Reason:             infrastructurev1.VMNotReadyReason,
+			Message:            fmt.Sprintf("VM is not ready, state is %s", vmStatus),
+			LastTransitionTime: metav1.Now(),
+		})
+		zvMachine.Status.Initialization.Provisioned = ptr.To(false)
+
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 

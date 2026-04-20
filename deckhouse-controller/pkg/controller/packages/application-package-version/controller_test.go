@@ -29,6 +29,7 @@ import (
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -40,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -108,6 +110,7 @@ type reconcilerOption func(*reconciler)
 func withDependencyContainer(dc dependency.Container) reconcilerOption {
 	return func(r *reconciler) {
 		r.dc = dc
+		r.registry = registry.NewService(dc, log.NewNop())
 	}
 }
 
@@ -169,10 +172,13 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.ApplicationPackageVersion{}).
 		Build()
 
+	dc := dependency.NewDependencyContainer()
+
 	ctr := &reconciler{
-		client: kubeClient,
-		logger: log.NewNop(),
-		dc:     dependency.NewDependencyContainer(),
+		client:   kubeClient,
+		logger:   log.NewNop(),
+		dc:       dc,
+		registry: registry.NewService(dc, log.NewNop()),
 	}
 
 	// Load test data from file
@@ -243,7 +249,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			LayersStub: func() ([]crv1.Layer, error) {
 				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
 					"package.yaml": `name: test-package
-description:
+descriptions:
   en: Test package
   ru: Ru Test package
 category: Test
@@ -251,10 +257,12 @@ stage: Preview
 type: Application
 version: "1.0.0"
 `,
-					"version.json": `{"version": "1.0.0"}`,
+					"version.json":   `{"version": "1.0.0"}`,
+					"changelog.yaml": "features:\n- Added new feature\nfixes:\n- Fixed a bug\n",
 				}}}, nil
 			},
 		}, nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
 		suite.setupController("successful-reconcile.yaml", withDependencyContainer(dc))
 
@@ -276,7 +284,7 @@ version: "1.0.0"
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
-		require.NoError(suite.T(), err)
+		require.Error(suite.T(), err)
 	})
 
 	suite.Run("metadata parsing error reconcile with golden file", func() {
@@ -302,7 +310,7 @@ version: "1.0.0"
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
-		require.NoError(suite.T(), err)
+		require.Error(suite.T(), err)
 	})
 
 	suite.Run("non-draft resource skip", func() {
@@ -325,7 +333,7 @@ version: "1.0.0"
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
-		require.NoError(suite.T(), err)
+		require.Error(suite.T(), err)
 	})
 
 	suite.Run("err-to-success reconcile with golden file", func() {
@@ -339,7 +347,7 @@ version: "1.0.0"
 			LayersStub: func() ([]crv1.Layer, error) {
 				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
 					"package.yaml": `name: test-package
-description:
+descriptions:
   en: Test package
   ru: Ru Test package
 category: Test
@@ -351,6 +359,7 @@ version: "1.0.0"
 				}}}, nil
 			},
 		}, nil)
+		dc.CRClient.DigestMock.Return("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", nil)
 
 		suite.setupController("error-to-success.yaml", withDependencyContainer(dc))
 
@@ -360,6 +369,43 @@ version: "1.0.0"
 		})
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("no bundle image in registry", func() {
+		dc := dependency.NewMockedContainer()
+		dc.CRClient.ImageMock.Return(&crfake.FakeImage{
+			ManifestStub: func() (*crv1.Manifest, error) {
+				return &crv1.Manifest{
+					Layers: []crv1.Descriptor{},
+				}, nil
+			},
+			LayersStub: func() ([]crv1.Layer, error) {
+				return []crv1.Layer{&utils.FakeLayer{FilesContent: map[string]string{
+					"package.yaml": `name: test-package
+descriptions:
+  en: Test package
+  ru: Ru Test package
+category: Test
+stage: Preview
+type: Application
+version: "1.0.0"
+`,
+					"version.json": `{"version": "1.0.0"}`,
+				}}}, nil
+			},
+		}, nil)
+		dc.CRClient.DigestMock.When(ctx, "v1.0.0").Then("", &transport.Error{StatusCode: http.StatusNotFound})
+
+		suite.setupController("no-bundle-image-in-registry.yaml", withDependencyContainer(dc))
+
+		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: apv.Name},
+		})
+		require.NoError(suite.T(), err)
+
+		apv = suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
+		require.Equal(suite.T(), "false", apv.Labels[v1alpha1.ApplicationPackageVersionLabelExistInRegistry])
+	})
 }
 
 // nolint:unparam
@@ -368,43 +414,4 @@ func (suite *ControllerTestSuite) getApplicationPackageVersion(name string) *v1a
 	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name}, &apv)
 	require.NoError(suite.T(), err)
 	return &apv
-}
-
-func TestConvertLicensingEditions(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    map[string]PackageEdition
-		expected map[string]v1alpha1.PackageEdition
-	}{
-		{
-			name: "multiple editions",
-			input: map[string]PackageEdition{
-				"ee": {Available: true},
-				"ce": {Available: false},
-				"fe": {Available: true},
-			},
-			expected: map[string]v1alpha1.PackageEdition{
-				"ee": {Available: true},
-				"ce": {Available: false},
-				"fe": {Available: true},
-			},
-		},
-		{
-			name:     "nil input",
-			input:    nil,
-			expected: nil,
-		},
-		{
-			name:     "empty map",
-			input:    map[string]PackageEdition{},
-			expected: map[string]v1alpha1.PackageEdition{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := convertLicensingEditions(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }

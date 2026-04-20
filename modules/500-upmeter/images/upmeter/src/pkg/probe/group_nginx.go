@@ -32,7 +32,7 @@ func initNginx(access kubernetes.Access, preflight checker.Doer, names []string)
 
 	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
-	configs := []runnerConfig{}
+	configs := make([]runnerConfig, 0, len(names))
 
 	for _, controllerName := range names {
 		configs = append(configs,

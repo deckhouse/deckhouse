@@ -1360,7 +1360,12 @@ How to work with bootable block devices in the web interface:
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, resize, and reorder bootable block devices in the "Boot Disks" section.
+- In the "Boot Disks" section you can:
+  - `Add`: Attach a new disk or image to the VM.
+  - `Extract`: Detach the device from the VM (the image or disk remains in the project and can be attached again to this or another VM).
+  - `Delete`: Remove the image or disk resource from the cluster (after deletion it cannot be reused).
+  - `Resize`: Change the size of the disk.
+  - `Reorder`: Change the boot order of devices.
 
 #### Additional Block Devices
 
@@ -1451,7 +1456,11 @@ How to work with additional block devices in the web interface:
 - Go to the "Virtualization" → "Virtual Machines" section.
 - Select the required VM from the list and click on its name.
 - On the "Configuration" tab, scroll down to the "Disks and Images" section.
-- You can add, extract, delete, and resize additional block devices in the "Additional Disks" section.
+- In the "Additional Disks" section you can:
+  - `Add`: Attach a new disk or image to the VM.
+  - `Extract`: Detach the device from the VM (the image or disk remains in the project and can be attached again to this or another VM).
+  - `Delete`: Remove the image or disk resource from the cluster (after deletion it cannot be reused).
+  - `Resize`: Change the size of the disk.
 
 #### Disk naming in guest OS
 
@@ -1488,6 +1497,50 @@ Use stable identifiers instead of `/dev/sdX`:
 - **`/dev/disk/by-id/`** — by SCSI device ID
 
 In configuration files and scripts, use partition UUIDs or symlinks from `/dev/disk/by-*` instead of `/dev/sdX` names.
+
+#### Network interface naming in guest OS
+
+In systems without predictable network interface naming support, network interface names (`eth0`, `eth1`, `eth2`, etc.) are assigned by the Linux kernel in the order devices are discovered during boot. When adding new network interfaces or changing the order of networks in `.spec.networks`, the interface order may change, which can cause IP addresses to be assigned to the wrong interfaces.
+
+Using `ethX` in configuration files (for example, `/etc/network/interfaces`, `netplan`, `systemd-networkd`) or scripts may lead to unexpected network behavior or connection to the wrong network when adding new interfaces or changing the network order.
+
+Modern distributions with systemd (Ubuntu 16.04+, Debian 9+, CentOS 7+, RHEL 7+) use predictable interface names (`enpXsY`, `ensX`, `enoX`) by default, which are based on the physical characteristics of the device (PCI coordinates) and remain stable between reboots and when adding new interfaces.
+
+However, even when using predictable names, it is recommended to bind network configuration to interface MAC addresses for guaranteed stability, especially when changing the order of networks in `.spec.networks` or adding new interfaces.
+
+**Example for systems without predictable naming:**
+
+Initially, the VM has two interfaces:
+
+```console
+$ ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500
+```
+
+After adding a new interface at the beginning of the `.spec.networks` list and rebooting the VM:
+
+```console
+$ ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # New interface
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Old eth0
+4: eth2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500  # Old eth1
+```
+
+MAC addresses remain unchanged, but interface names (`eth0`, `eth1`) shift, which can lead to IP addresses being assigned to the wrong interfaces.
+
+Use stable identifiers instead of `ethX`:
+
+- **`enpXsY`** — predictable names based on physical location (systemd networkd naming scheme, enabled by default in modern systems)
+- **MAC address binding** — in `netplan`, `systemd-networkd`, or `/etc/network/interfaces` configuration (preferred for guaranteed stability)
+
+In configuration files and scripts, use stable interface names (`enpXsY`) or MAC address binding instead of `ethX` names.
+
+{% alert level="info" %}
+Predictable interface order works only on guest OS with systemd (e.g. Ubuntu, Debian). On Alpine and other distros without systemd the order may not match.
+{% endalert %}
 
 ### Organizing interaction with virtual machines
 
@@ -2020,7 +2073,13 @@ NAME             VIRTUALMACHINEIPADDRESS                              STATUS   A
 ip-10-66-10-14   {"name":"linux-vm-7prpx","namespace":"default"}     Bound    12h
 ```
 
-`VirtualMachineIPAddress` (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
+[VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) (`vmip`) resource: A project/namespace resource that is responsible for reserving leased IP addresses and binding them to virtual machines. IP addresses can be allocated automatically or by explicit request.
+
+After creation, the [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) resource can have the following `Phase` values:
+
+- `Pending`: Resource is being created.
+- `Bound`: [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) is bound to the [VirtualMachineIPAddressLease](/modules/virtualization/cr.html#virtualmachineipaddresslease) resource.
+- `Attached`: [VirtualMachineIPAddress](/modules/virtualization/cr.html#virtualmachineipaddress) is attached to the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource.
 
 By default, an ip address is automatically assigned to a virtual machine from the subnets defined in the module and is assigned to it until it is deleted. You can check the assigned ip address using the command:
 
@@ -2142,6 +2201,10 @@ Important considerations when working with additional network interfaces:
 - To preserve the order of network interfaces inside the guest operating system, it is recommended to add new networks to the end of the `.spec.networks` list (do not change the order of existing ones).
 - Network security policies (NetworkPolicy) do not apply to additional network interfaces.
 - Network parameters (IP addresses, gateways, DNS, etc.) for additional networks are configured manually from within the guest OS (for example, using Cloud-Init).
+
+{% alert level="info" %}
+When configuring network interfaces in the guest OS, use stable identifiers (predictable names `enpXsY` or MAC address binding) instead of `ethX` names. For more details, see the [Network interface naming in guest OS](#network-interface-naming-in-guest-os) section.
+{% endalert %}
 
 Example of connecting a VM to the main cluster network and the project network `user-net`:
 

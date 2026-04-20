@@ -1,7 +1,7 @@
 - name: d8.cluster-autoscaler.availability
   rules:
   - alert: D8ClusterAutoscalerManagerPodIsNotReady
-    expr: min by (pod) (kube_pod_status_ready{condition="false", namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}) > 0
+    expr: min by (pod, namespace) (kube_pod_status_ready{condition="false", namespace="d8-cloud-instance-manager", pod=~"cluster-autoscaler-.*"}) > 0
     for: 10m
     labels:
       severity_level: "8"
@@ -16,12 +16,10 @@
       plk_labels_as_annotations: "pod"
       summary: The {{`{{$labels.pod}}`}} Pod is NOT Ready.
       description: |-
-        The {{`{{$labels.pod}}`}} Pod is {{`{{$labels.phase}}`}}.
-
         To check the Pod's status, run the following command:
 
         ```shell
-        d8 k -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
+        d8 k -n {{`{{$labels.namespace}}`}} logs {{`{{$labels.pod}}`}}
         ```
 
   - alert: D8ClusterAutoscalerPodIsNotRunning

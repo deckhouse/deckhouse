@@ -5,6 +5,7 @@ metadata:
   name: registry-modules-watcher
   annotations:
     "werf.io/replicas-on-creation": "1"
+    "pod-reloader.deckhouse.io/auto": "true"
   labels:
     app: registry-modules-watcher
 spec:
@@ -32,7 +33,7 @@ spec:
             - --watch-registries={{ (pluck .Values.werf.env .Values.moduleWatcher.registries | first | default .Values.moduleWatcher.registries._default) | join "," }}
             - --scan-interval={{ pluck .Values.werf.env .Values.moduleWatcher.scanInterval | first | default .Values.moduleWatcher.scanInterval._default }}
           image: {{ index .Values.werf.image "registry-modules-watcher" }}
-          {{- include "resources" . | nindent 10 }}
+          {{- include "resources-registry-modules-watcher" . | nindent 10 }}
           ports:
             - containerPort: 8080
               name: http

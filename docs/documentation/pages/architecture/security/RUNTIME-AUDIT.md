@@ -1,10 +1,12 @@
 ---
 title: Architecture of security event audit
 permalink: en/architecture/security/runtime-audit.html
+search: security audit, audit rules, falco
+description: Architecture of security event audit in Deckhouse Kubernetes Platform.
 ---
 
 The Deckhouse Kubernetes Platform (DKP) security event audit is based on the [Falco](https://falco.org/) threat detection system.
-Deckhouse deploys Falco agents on each node as part of a DaemonSet.
+DKP deploys Falco agents on each node as part of a DaemonSet.
 Once started, the agents begin collecting OS system calls and Kubernetes audit data.
 
 {% alert level="info" %}
@@ -15,7 +17,6 @@ Combined with the DaemonSet deployment, these mechanisms ensure a high level of 
 {% endalert %}
 
 ![Falco agents on DKP cluster nodes](../../images/runtime-audit-engine/falco_daemonset.svg)
-<!--- Source: https://docs.google.com/drawings/d/1NZ91z8NXNiuS50ybcMoMsZI3SbQASZXJGLANdaNNm_U --->
 
 Each cluster node runs a Falco Pod with the following components:
 
@@ -51,4 +52,3 @@ and stores them in the `/etc/falco/rules.d/` directory inside the Pod.
 When a new rule is added, Falco automatically reloads the configuration.
 
 ![Shell-operator handling Falco rules](../../images/runtime-audit-engine/falco_shop.svg)
-<!--- Source: https://docs.google.com/drawings/d/13MFYtiwH4Y66SfEPZIcS7S2wAY6vnKcoaztxsmX1hug --->

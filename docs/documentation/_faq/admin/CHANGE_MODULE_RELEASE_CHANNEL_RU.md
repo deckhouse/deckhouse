@@ -64,7 +64,7 @@ lang: ru
      name: my-module
    spec:
      enabled: true
-     # Имя ModuleUpdatePolicy
+     # Имя ModuleUpdatePolicy.
      updatePolicy: my-module-policy
    ```
 

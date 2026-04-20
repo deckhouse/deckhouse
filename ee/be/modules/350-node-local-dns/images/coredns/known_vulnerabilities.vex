@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-b7f1dd6c80424d99d565815dc1b763c0cea2d579a014fe4a378580b87ffb0071",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Данная уязвимость специфична только для систем семейства BSD и Solaris, где используется команда kenv для получения идентификатора хоста. Образы Deckhouse работают на базе Linux, в которых данный код не компилируется и не исполняется, что делает эксплуатацию вектора атаки через PATH hijacking невозможной.",
+      "timestamp": "2026-04-14T14:37:21.591261Z"
+    }
+  ],
+  "timestamp": "2026-04-14T14:37:21Z"
+}

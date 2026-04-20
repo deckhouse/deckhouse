@@ -31,6 +31,12 @@ func TestManifestsNoError(t *testing.T) {
 			),
 		},
 		{
+			name: "mode proxy",
+			input: ConfigBuilder(
+				WithModeProxy(),
+			),
+		},
+		{
 			name: "mode unmanaged",
 			input: ConfigBuilder(
 				WithModeUnmanaged(),
@@ -58,7 +64,7 @@ func TestManifestsNoError(t *testing.T) {
 			t.Run("RegistryBashibleConfigSecretData", func(t *testing.T) {
 				_, _, err := tt.input.
 					Manifest().
-					RegistryBashibleConfigSecretData()
+					RegistryBashibleConfigSecretData(GeneratePKI)
 
 				require.NoError(t, err)
 			})
@@ -90,6 +96,13 @@ func TestManifestsLegacyMode(t *testing.T) {
 			name: "mode direct",
 			input: ConfigBuilder(
 				WithModeDirect(),
+			),
+			legacyMode: false,
+		},
+		{
+			name: "mode proxy",
+			input: ConfigBuilder(
+				WithModeProxy(),
 			),
 			legacyMode: false,
 		},
@@ -126,7 +139,7 @@ func TestManifestsLegacyMode(t *testing.T) {
 			t.Run("RegistryBashibleConfigSecretData -> exists when not in legacy mode", func(t *testing.T) {
 				exists, _, err := tt.input.
 					Manifest().
-					RegistryBashibleConfigSecretData()
+					RegistryBashibleConfigSecretData(GeneratePKI)
 
 				require.NoError(t, err)
 

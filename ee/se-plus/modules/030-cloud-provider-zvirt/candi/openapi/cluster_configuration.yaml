@@ -55,6 +55,7 @@ apiVersions:
         enum: [ZvirtClusterConfiguration]
       sshPublicKey:
         type: string
+        x-rules: [sshPublicKey]
         description: a public key for accessing nodes.
       clusterID:
         type: string

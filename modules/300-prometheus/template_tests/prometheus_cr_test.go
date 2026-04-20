@@ -126,9 +126,21 @@ scrapeInterval: 30s
 - tlsConfig:
     insecureSkipVerify: true
   url: https://test-remote-write-custom-auth.domain.com/api/v1/write
+  writeRelabelConfigs:
+    - regex: ^$
+      replacement: deckhouse
+      sourceLabels:
+        - prometheus
+      targetLabel: prometheus
   headers:
     X-Auth-Token: Test
 - url: https://test-remote-write-basic-auth.domain.com/api/v1/write
+  writeRelabelConfigs:
+    - regex: ^$
+      replacement: deckhouse
+      sourceLabels:
+        - prometheus
+      targetLabel: prometheus
   basicAuth:
     username:
       name: d8-prometheus-remote-write-test-remote-write-basic-auth
@@ -137,13 +149,25 @@ scrapeInterval: 30s
       name: d8-prometheus-remote-write-test-remote-write-basic-auth
       key: password
 - url: https://test-remote-write-bearer-token.domain.com/api/v1/write
+  writeRelabelConfigs:
+    - regex: ^$
+      replacement: deckhouse
+      sourceLabels:
+        - prometheus
+      targetLabel: prometheus
   bearerToken: xxx
-- url: https://test-remote-write-custom-ca.domain.com/api/v1/write
-  tlsConfig:
+- tlsConfig:
     ca:
       configMap:
         key: ca.crt
         name: d8-prometheus-remote-write-ca-test-remote-write-custom-ca
+  url: https://test-remote-write-custom-ca.domain.com/api/v1/write
+  writeRelabelConfigs:
+    - regex: ^$
+      replacement: deckhouse
+      sourceLabels:
+        - prometheus
+      targetLabel: prometheus
 `))
 			rwSecret := f.KubernetesResource("Secret", "d8-monitoring", "d8-prometheus-remote-write-test-remote-write-basic-auth")
 			Expect(rwSecret.Exists()).To(BeTrue())

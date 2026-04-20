@@ -53,9 +53,9 @@ build:
 {{- $_ := set . "prefix" "" }}
 {{- $_ := set . "gitPrefix" "" }}
 ---
-# Base Images
-{{- include "parse_base_images_map" . }}
----
+# Base Images not cached
+{{- $_ := include "parse_base_images_map" . }}
+
 # version map
 {{- include "parse_version_map" . }}
 {{- include "base_k8s_versions" . }}
@@ -69,9 +69,6 @@ build:
 # source repo with protected cloud providers
 # use example.com as default because we can fail build without env
 {{- $_ := set . "CLOUD_PROVIDERS_SOURCE_REPO" (env "CLOUD_PROVIDERS_SOURCE_REPO" "https://example.com") }}
-
-# Source repo with observability private code
-{{- $_ := set . "OBSERVABILITY_SOURCE_REPO" (env "OBSERVABILITY_SOURCE_REPO" | default "https://example.com") }}
 
 # Stronghold repo access for building d8 cli
 {{- $_ := set . "DECKHOUSE_PRIVATE_REPO" (env "DECKHOUSE_PRIVATE_REPO" "example.com") }}
@@ -92,7 +89,7 @@ build:
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}
 ---
-{{ include "common_base_image" (dict "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
+{{ include "common_base_image" (dict "Images" .Images "Files" .Files "k8sVersions" .k8sVersions "CandiVersionMap" $.CandiVersionMap "prefix" .prefix) }}
 ---
 {{ include "dhctl_src_artifact" (dict "gitPrefix" .gitPrefix) }}
 ---

@@ -16,11 +16,13 @@ package status
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmapper"
@@ -130,6 +132,9 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionReadyInCluster) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
 	}
+
+	raw, _ := json.Marshal(packageStatus.Tracking)
+	app.Status.Tracking = runtime.RawExtension{Raw: raw}
 }
 
 // buildMapperStatus creates mapper input from Application and internal conditions.

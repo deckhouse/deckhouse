@@ -28,7 +28,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/operator
@@ -59,19 +59,21 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
-secrets:
-- id: DECKHOUSE_PRIVATE_REPO
-  value: {{ .DECKHOUSE_PRIVATE_REPO }}
 git:
-  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-    to: /patches
-    stageDependencies:
-      install:
-        - '**/*'
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+- url: git@{{ .DECKHOUSE_PRIVATE_REPO }}:deckhouse/network/sail-operator.git
+  tag: tag-{{ $istioVersion }}
+  add: /
+  to: /src/operator
+  stageDependencies:
+    install:
+    - '**/*'
 shell:
   install:
-  - git clone --depth 1 --branch {{ $istioVersion }} git@$(cat /run/secrets/DECKHOUSE_PRIVATE_REPO):deckhouse/network/sail-operator.git /src/operator
-  - cd /src/operator
-  - git apply --verbose /patches/001-istio-go-mod.patch /patches/002-istio-operato-cni_status_restrict.patch
-  - rm -rf /src/operator/.git
+  - cd /src/operator && git apply --verbose /patches/001-istio-go-mod.patch
+  - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
 ---

@@ -17,29 +17,65 @@ limitations under the License.
 package version
 
 import (
-	"golang.org/x/mod/semver"
+	"fmt"
+
+	semver "github.com/Masterminds/semver/v3"
 )
 
-func GetMax(v, w string) string {
-	switch semver.Compare(v, w) {
-	case -1:
-		return w
-	case 0:
-		return w
-	case 1:
-		return v
+// Compare compares two versions semantically.
+// Returns -1, 0, or 1 analogous to semver.Compare - 0 if v == w, -1 if v < w, or +1 if v > w.
+// If parsing of either version fails, returns 0 (fallback).
+func Compare(v, w string) int {
+	verV, errLeft := semver.NewVersion(v)
+	verW, errRight := semver.NewVersion(w)
+	if errLeft != nil || errRight != nil {
+		return 0
 	}
-	return v
+
+	return verV.Compare(verW)
+}
+
+func GetMax(v, w string) string {
+	verV, errV := semver.NewVersion(v)
+	verW, errW := semver.NewVersion(w)
+
+	if errV != nil && errW != nil {
+		return ""
+	}
+
+	if errV != nil {
+		return majorMinor(verW)
+	}
+	if errW != nil {
+		return majorMinor(verV)
+	}
+
+	if verV.LessThan(verW) {
+		return majorMinor(verW)
+	}
+	return majorMinor(verV)
 }
 
 func GetMin(v, w string) string {
-	switch semver.Compare(v, w) {
-	case -1:
-		return v
-	case 0:
-		return w
-	case 1:
-		return w
+	verV, errV := semver.NewVersion(v)
+	verW, errW := semver.NewVersion(w)
+
+	if errV != nil && errW != nil {
+		return ""
 	}
-	return v
+	if errV != nil {
+		return majorMinor(verW)
+	}
+	if errW != nil {
+		return majorMinor(verV)
+	}
+
+	if verV.LessThan(verW) {
+		return majorMinor(verV)
+	}
+	return majorMinor(verW)
+}
+
+func majorMinor(v *semver.Version) string {
+	return fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 }

@@ -1,19 +1,51 @@
-{% assign not_supported = '<img src="/images/icons/not_supported_v2.svg">' %}
-{% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
+{% assign not_supported_img_url = '/images/icons/not_supported_v2.svg' %}
+{% assign supported_img_url = '/images/icons/supported_v2.svg' %}
+{% assign planned_img_url = '/images/icons/clock.svg' %}
+{% assign partly_supported_img_url = '/images/icons/partly_supported.svg' %}
+{% capture not_supported %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ not_supported_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
+{% capture supported %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ supported_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
+{% capture planned %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ planned_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
+{% capture partly_supported %}
+<svg class="zoom-image-disable" viewBox="0 0 32 32" width="32" height="32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><image href="{{ partly_supported_img_url }}" width="32" height="32" /></svg>
+{% endcapture %}
+{% assign comparison_colspan = 7 %}
+{% if page.lang == 'en' %}
+  {% assign comparison_colspan = 5 %}
+{% endif %}
 
 <div markdown="0">
-<table class="supported_versions table__small" style="table-layout: fixed; min-width: 600px; width: 100%;">
+<table class="supported_versions table__small" style="width: 100%; max-width: 100%; table-layout: auto;">
   <colgroup>
-    <col style="width: auto; min-width: 250px; max-width: 400px;">
-    <col style="width: 100px; min-width: 100px;">
-    <col style="width: 100px; min-width: 100px;">
-    <col style="width: 100px; min-width: 100px;">
-    <col style="width: 100px; min-width: 100px;">
+    <col style="width: {% if page.lang == 'en' %}36%{% else %}38%{% endif %};">
+    {% if page.lang == 'en' %}
+    <col style="width: 16%;">
+    <col style="width: 16%;">
+    <col style="width: 16%;">
+    <col style="width: 16%;">
+    {% else %}
+    <col style="width: 10.33%;">
+    <col style="width: 10.33%;">
+    <col style="width: 10.33%;">
+    <col style="width: 10.33%;">
+    <col style="width: 10.34%;">
+    <col style="width: 10.34%;">
+    {% endif %}
   </colgroup>
 <thead class="versioning-table">
   <tr>
     <th style="text-align: left; white-space: nowrap;">{{site.data.i18n.common['features'][page.lang] }}</th>
     {%- for edition in site.data.virtualization-platform.comparison.editions %}
+    {%- if page.lang == 'en' %}
+    {%- if edition == 'dvp-cse' or edition == 'dkp-cse-pro' %}
+    {%- continue %}
+    {%- endif %}
+    {%- endif %}
     <th style="text-align: center; white-space: nowrap;">{{site.data.i18n[edition]}}</th>
     {%- endfor %}
   </tr>
@@ -22,7 +54,7 @@
 {%- for featureSection in site.data.virtualization-platform.comparison.featureSections %}
   {% if featureSection['title'][page.lang] %}
   <tr>
-    <td style="text-align: left; white-space: nowrap;" colspan="5">
+    <td style="text-align: left; white-space: nowrap;" colspan="{{ comparison_colspan }}">
       <strong>{{ featureSection['title'][page.lang] }}</strong>
     </td>
   </tr>
@@ -34,15 +66,24 @@
         {{ feature['title'][page.lang] }}
       </td>
       {%- for edition in site.data.virtualization-platform.comparison.editions %}
+      {%- if page.lang == 'en' %}
+      {%- if edition == 'dvp-cse' or edition == 'dkp-cse-pro' %}
+      {%- continue %}
+      {%- endif %}
+      {%- endif %}
       <td style="text-align: center;">
         <div class="icon" style="padding: 0 0;">
           {% case feature.editions[edition] %}
             {% when "supported" %}
-              {{ supported }}
+              <span>{{ supported }}</span>
             {% when "not_supported" %}
-              {{ not_supported }}
+              <span>{{ not_supported }}</span>
+            {% when "planned" %}
+              <span data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">{{ planned }}</span>
+            {% when "partly" %}
+              <span data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">{{ partly_supported }}</span>
             {% else %}
-              <img src="/images/icons/intermediate_v2.svg" data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">
+              <span data-tippy-content="{{ feature.restriction_message[edition][page.lang] | replace: '"', "'" }}" aria-expanded="false">{{ partly_supported }}</span>
           {% endcase %}
         </div>
       </td>

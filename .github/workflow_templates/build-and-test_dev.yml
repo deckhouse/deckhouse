@@ -52,60 +52,18 @@ jobs:
       SVACE_ENABLED: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') && true || false }}
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 
-  build_ee:
-    name: Build EE
-    if: ${{ needs.pull_request_info.outputs.build_ee == 'true' }}
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+  build_{!{$werfEnv}!}:
+    name: Build {!{$werfEnv}!}
+    if: ${{ needs.pull_request_info.outputs.build_{!{$werfEnv}!} == 'true' }}
     needs:
       - git_info
       - pull_request_info
       - build_fe
     env:
-      WERF_ENV: "EE"
+      WERF_ENV: "{!{$werfEnv}!}"
 {!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
-
-  build_se:
-    name: Build SE
-    if: ${{ needs.pull_request_info.outputs.build_se == 'true' }}
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-    env:
-      WERF_ENV: "SE"
-{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
-
-  build_se_plus:
-    name: Build SE-plus
-    if: ${{ needs.pull_request_info.outputs.build_se-plus == 'true' }}
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-    env:
-      WERF_ENV: "SE-plus"
-{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
-
-  build_be:
-    name: Build BE
-    if: ${{ needs.pull_request_info.outputs.build_be == 'true' }}
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-    env:
-      WERF_ENV: "BE"
-{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
-
-  build_ce:
-    name: Build CE
-    if: ${{ needs.pull_request_info.outputs.build_ce == 'true' }}
-    needs:
-      - git_info
-      - pull_request_info
-      - build_fe
-    env:
-      WERF_ENV: "CE"
-{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
+{!{ end }!}
 
   analyze_deckhouse:
     if: ${{ contains(github.event.pull_request.labels.*.name, 'analyze/svace') }}
@@ -239,17 +197,14 @@ jobs:
       - git_info
       - pull_request_info
       - build_fe
-      - build_ee
-      - build_se
-      - build_se_plus
-      - build_be
-      - build_ce
+{!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
+      - build_{!{$werfEnv}!}{!{ end }!}
       - validators
       - openapi_test_cases
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run

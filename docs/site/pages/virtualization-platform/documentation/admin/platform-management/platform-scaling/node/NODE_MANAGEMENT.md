@@ -24,38 +24,9 @@ Node groups allow logical segmentation of the cluster infrastructure. In DVP, th
 
 Each group can have centralized configuration settings, including the Kubernetes version, resources, taints, labels, kubelet parameters, and more.
 
-## Enabling the node management mechanism
-
-Node management is implemented via the [`node-manager`](/modules/node-manager/) module, which can be enabled or disabled in several ways:
-
-1. Using the ModuleConfig/node-manager resource:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: node-manager
-   spec:
-     version: 2
-     enabled: true
-     settings:
-       earlyOomEnabled: true
-       instancePrefix: kube
-       mcmEmergencyBrake: false
-   ```
-
-1. Using the command:
-
-   ```shell
-   d8 system module enable node-manager
-   # Or disable.
-   ```
-
-1. Using the [Deckhouse web interface](/modules/console/):
-
-   - Go to the "Deckhouse → Modules" section.
-   - Find the `node-manager` module and click on it.
-   - Toggle the "Module enabled" switch.
+{% alert level="info" %}
+Node management is only available for clusters fully managed by DKP. This feature is not supported for Managed Kubernetes clusters.
+{% endalert %}
 
 ## Automatic deployment and updates
 

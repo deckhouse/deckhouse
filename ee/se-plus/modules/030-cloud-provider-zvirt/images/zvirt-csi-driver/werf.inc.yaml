@@ -23,7 +23,7 @@ import:
   add: /lib/udev/scsi_id
   to: /lib/udev/scsi_id
   before: setup
-- image: tools/util-linux
+- from: {{ index $.Images "tools/util-linux" }}
   add: /bin/lsblk
   to: /bin/lsblk
   before: setup
@@ -51,14 +51,16 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/openshift/ovirt-csi-driver.git /src
   - git clone --depth 1 --branch v0.0.1-flant $(cat /run/secrets/CLOUD_PROVIDERS_SOURCE_REPO)/ovirt/go-ovirt /src/go-ovirt
+  - git clone --depth 1 --branch v3.2.0-flant-1 $(cat /run/secrets/SOURCE_REPO)/flant/go-ovirt-client.git /src/go-ovirt-client
   - cd /src
   - git apply /patches/*.patch --verbose
   - echo "replace github.com/ovirt/go-ovirt => /src/go-ovirt" >> go.mod
+  - echo "replace github.com/ovirt/go-ovirt-client/v3 => /src/go-ovirt-client" >> go.mod
   - rm -rf vendor .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src

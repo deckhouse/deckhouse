@@ -1,9 +1,9 @@
 ---
 image: base-for-go
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
-{{ include "base components imports" (dict "k8sVersions" .k8sVersions "CandiVersionMap" .CandiVersionMap) }}
+{{ include "base components imports" (dict "Images" .Images "k8sVersions" .k8sVersions "CandiVersionMap" .CandiVersionMap) }}
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}

@@ -1,6 +1,7 @@
 ---
 title: "An example of creating a module with adaptation of an existing chart"
 permalink: en/architecture/module-development/example/
+description: Step-by-step example of creating a Deckhouse Kubernetes Platform module by adapting an existing Helm chart and publishing it through a CI/CD pipeline.
 ---
 
 {% raw %}

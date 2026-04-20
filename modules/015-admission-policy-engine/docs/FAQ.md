@@ -1,5 +1,6 @@
 ---
 title: "The admission-policy-engine module: FAQ"
+description: "Answers to frequently asked questions about the admission-policy-engine module."
 ---
 
 ## How do I configure alternative security policy management solutions?
@@ -280,7 +281,7 @@ Then, in order to fulfill the requirements of the above security policies, the f
 ## Verification of image signatures
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Available in the following DKP editions: SE+, EE.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
@@ -289,7 +290,9 @@ The module implements a function for verifying signatures of container images si
 
 ## How to block deleting a node without a label
 
-> Note. DELETE operations are handled by Gatekeeper by default.
+{% alert level="info" %}
+DELETE operations are handled by Gatekeeper by default.
+{% endalert %}
 
 You can create your own Gatekeeper policy to block Node deletion unless a special label is present. The example below uses `oldObject` to check labels on the Node being deleted:
 

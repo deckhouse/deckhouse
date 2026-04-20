@@ -1,6 +1,6 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /
@@ -20,7 +20,7 @@ imageSpec:
     removeEnv: ["/.*/"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/alpine
+from: {{ index $.Images "builder/alpine" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
@@ -29,7 +29,7 @@ git:
     install:
     - '**/*'
 import:
-- image: tools/cryptsetup
+- from: {{ index $.Images "tools/cryptsetup" }}
   add: /
   to: /src
   includePaths:

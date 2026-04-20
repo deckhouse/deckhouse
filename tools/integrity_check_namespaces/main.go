@@ -32,10 +32,10 @@ import (
 
 var (
 	configPath string
-	outputPath string
 	rootDir    string
 
 	enabledModulesConfigPath string
+	editionName              string
 )
 
 type Config struct {
@@ -81,44 +81,29 @@ func main() {
 	initFlags()
 
 	workDir := cwd()
-
-	out, err := os.Create(outputPath)
+	configDir, err := filepath.Abs(configPath)
 	if err != nil {
-		panic(fmt.Errorf("cannot create output: %v", err))
+		panic(err)
 	}
-	defer out.Close()
+	validateConfigDir(configDir)
 
-	config := parseConfig(configPath)
-
-	var namespacesMap = make(namespacesForIntegrity)
-
-	if len(config.ExcludeNamespaces) > 0 && config.ExcludeNamespaces[0] == "all" {
-		logToStdErr("WARNING: All namespaces are excluded from integrity check.")
-		writeNamespaces(out, namespacesMap)
-		return
+	isEditionsYaml := enabledModulesConfigPath != "" && strings.HasSuffix(filepath.Clean(enabledModulesConfigPath), "editions.yaml")
+	if !isEditionsYaml {
+		panic("-edition all requires -enabled-modules-config pointing to editions.yaml")
 	}
+	editions := parseEditionsFile(enabledModulesConfigPath)
 
-	modulesForFilter := parseEnabledModulesConfig(enabledModulesConfigPath)
-
-	res := findModules(workDir)
-
-	for moduleYamlPath := range res {
-		err = processModule(moduleYamlPath, namespacesMap, modulesForFilter)
-		if err != nil {
-			logToStdErr("error process moduleYamlPath: %s", moduleYamlPath)
-			panic(err)
+	if editionName == "all" {
+		for _, ed := range editions.Editions {
+			cfgFile := resolveConfigFile(configDir, ed.Name)
+			config := parseConfig(cfgFile)
+			render(editions, workDir, config, ed.Name)
 		}
+	} else {
+		cfgFile := resolveConfigFile(configDir, editionName)
+		config := parseConfig(cfgFile)
+		render(editions, workDir, config, editionName)
 	}
-
-	for _, exclude := range config.ExcludeNamespaces {
-		delete(namespacesMap, exclude)
-	}
-
-	for _, ns := range config.AdditionalNamespaces {
-		namespacesMap[ns] = struct{}{}
-	}
-
-	writeNamespaces(out, namespacesMap)
 }
 
 func logToStdErr(f string, args ...any) {
@@ -136,46 +121,71 @@ func writeNamespaces(writer io.Writer, nss namespacesForIntegrity) {
 }
 
 func initFlags() {
-	flag.StringVar(&configPath, "config", "", "Path to config for generator. Required")
-	flag.StringVar(&outputPath, "output", "", "Path write result. Required")
+	flag.StringVar(&configPath, "config", "", "Directory with default.yaml and optional <edition>.yaml configs. Required")
 	flag.StringVar(&rootDir, "root-dir", "", "Root directory for finding modules. If do not pass calculate from run")
 	flag.StringVar(&enabledModulesConfigPath, "enabled-modules-config", "", "Path to yaml config map[string]bool for filter modules")
+	flag.StringVar(&editionName, "edition", "", "Edition name (from editions.yaml) or 'all' to generate a file per edition")
 
 	flag.Parse()
 
 	if configPath == "" {
 		panic("-config flag is required")
 	}
+}
 
-	if outputPath == "" {
-		panic("-output flag is required")
+func validateConfigDir(dir string) {
+	fi, err := os.Stat(dir)
+	if err != nil {
+		panic(fmt.Errorf("-config must be an existing directory: %w", err))
+	}
+	if !fi.IsDir() {
+		panic(fmt.Errorf("-config must be a directory: %s", dir))
+	}
+	defaultFile := filepath.Join(dir, "default.yaml")
+	if _, err := os.Stat(defaultFile); err != nil {
+		panic(fmt.Errorf("config directory must contain default.yaml: %v", err))
 	}
 }
 
-func parseEnabledModulesConfig(p string) enabledModules {
+// resolveConfigFile returns <edition>.yaml in configDir if present, otherwise default.yaml.
+func resolveConfigFile(configDir, edition string) string {
+	editionFile := filepath.Join(configDir, edition+".yaml")
+	if _, err := os.Stat(editionFile); err == nil {
+		return editionFile
+	}
+	return filepath.Join(configDir, "default.yaml")
+}
+
+func parseEnabledModulesConfig(editions editionsFile, edition string) enabledModules {
 	res := make(enabledModules)
-	if p == "" {
-		return res
-	}
-
-	content, err := os.ReadFile(p)
-	if err != nil {
-		panic(fmt.Errorf("cannot read config: %v", err))
-	}
-
-	config := make(map[string]bool)
-
-	if err := yaml.Unmarshal(content, &config); err != nil {
-		panic(fmt.Errorf("cannot parse config: %v", err))
-	}
-
-	for module, enabled := range config {
-		if enabled {
-			res[module] = struct{}{}
+	for _, ed := range editions.Editions {
+		if ed.Name == edition {
+			for _, module := range ed.AvailableModules {
+				res[module] = struct{}{}
+			}
 		}
 	}
-
 	return res
+}
+
+// editionsFile is used to read AvailableModules from editions.yaml (key matches the file).
+type editionsFile struct {
+	Editions []struct {
+		Name             string   `yaml:"name,omitempty"`
+		AvailableModules []string `yaml:"AvailableModules,omitempty"`
+	} `yaml:"editions,omitempty"`
+}
+
+func parseEditionsFile(p string) editionsFile {
+	content, err := os.ReadFile(p)
+	if err != nil {
+		panic(fmt.Errorf("cannot read editions file: %v", err))
+	}
+	var editions editionsFile
+	if err := yaml.Unmarshal(content, &editions); err != nil {
+		panic(fmt.Errorf("cannot parse editions file: %v", err))
+	}
+	return editions
 }
 
 func parseConfig(p string) Config {
@@ -325,4 +335,46 @@ func processModule(moduleYamlPath string, namespacesMap namespacesForIntegrity, 
 	}
 
 	return nil
+}
+
+func buildIncludesOutputPath(workDir, edition string) string {
+	dir := filepath.Join(workDir, "tools", "build_includes")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		panic(fmt.Errorf("cannot create build_includes dir: %v", err))
+	}
+	return filepath.Join(dir, fmt.Sprintf("integrity-check-namespaces-%s.yaml", edition))
+}
+
+func collectNamespaces(workDir string, config Config, modulesForFilter enabledModules) namespacesForIntegrity {
+	namespacesMap := make(namespacesForIntegrity)
+	if len(config.ExcludeNamespaces) > 0 && config.ExcludeNamespaces[0] == "all" {
+		return namespacesMap
+	}
+	res := findModules(workDir)
+	for moduleYamlPath := range res {
+		err := processModule(moduleYamlPath, namespacesMap, modulesForFilter)
+		if err != nil {
+			logToStdErr("error process moduleYamlPath: %s", moduleYamlPath)
+			panic(err)
+		}
+	}
+	for _, exclude := range config.ExcludeNamespaces {
+		delete(namespacesMap, exclude)
+	}
+	for _, ns := range config.AdditionalNamespaces {
+		namespacesMap[ns] = struct{}{}
+	}
+	return namespacesMap
+}
+
+func render(editions editionsFile, workDir string, config Config, edition string) {
+	modulesForFilter := parseEnabledModulesConfig(editions, edition)
+	namespacesMap := collectNamespaces(workDir, config, modulesForFilter)
+	outPath := buildIncludesOutputPath(workDir, edition)
+	out, err := os.Create(outPath)
+	if err != nil {
+		panic(fmt.Errorf("cannot create output: %v", err))
+	}
+	defer out.Close()
+	writeNamespaces(out, namespacesMap)
 }

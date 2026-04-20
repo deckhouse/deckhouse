@@ -206,6 +206,12 @@ spec:
           ports:
             - protocol: UDP
               port: 53
+            - protocol: TCP
+              port: 53
+            - protocol: UDP
+              port: 5353
+            - protocol: TCP
+              port: 5353
     {{- end }}
 
     {{- with .parameters.clusterLogDestinationName }}

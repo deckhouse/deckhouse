@@ -74,6 +74,9 @@ type ControllerTestSuite struct {
 
 func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 	synctest.Test(suite.T(), func(*testing.T) {
+		suite.T().Setenv("ALLOWED_KUBERNETES_VERSIONS", "1.31,1.32,1.33,1.34,1.35")
+		suite.T().Setenv("AUTOMATIC_KUBERNETES_VERSION", "1.33")
+
 		suite.Run("When cluster is up to date", func() {
 			suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
 
@@ -86,6 +89,17 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 		})
 		suite.Run("When control plane component was failed", func() {
 			suite.setupController(suite.fetchTestFileData("pods-failed.yaml"))
+
+			_, err := suite.controller.Reconcile(
+				suite.ctx,
+				reconcile.Request{},
+			)
+
+			require.NoError(suite.T(), err)
+		})
+		suite.Run("When supported and automatic versions are set via env", func() {
+
+			suite.setupController(suite.fetchTestFileData("versions-with-env.yaml"))
 
 			_, err := suite.controller.Reconcile(
 				suite.ctx,

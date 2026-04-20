@@ -564,7 +564,7 @@ spec:
 
 ## Устройство федерации из двух кластеров с помощью кастомного ресурса IstioFederation
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
 Cluster A:
 
@@ -640,6 +640,8 @@ annotations:
 
 {% alert level="warning" %}Каждый из обходных вариантов выводит трафик из-под контроля Istio, что в свою очередь убирает шифрование трафика между прикладными сервисами.{% endalert %}
 
+{% alert level="warning" %}UID `1337` зарезервирован Istio для sidecar-контейнера `istio-proxy`. Не запускайте прикладные контейнеры от данного пользователя — их трафик будет полностью обходить Istio (правила маршрутизации, mTLS и телеметрия применяться не будут). Используйте UID `1337` только в init-контейнерах, когда необходимо выполнить сетевые запросы до момента готовности sidecar.{% endalert %}
+
 ## Обновление Istio
 
 ## Обновление control plane Istio
@@ -671,7 +673,7 @@ d8 k get pods -A -o json | jq --arg revision "v1x21" \
 
 ### Автоматическое обновление data plane Istio
 
-{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).{% endalert %}
+{% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
 Для автоматизации обновления istio-sidecar'ов установите лейбл `istio.deckhouse.io/auto-upgrade="true"` на `Namespace` либо на отдельный ресурс — `Deployment`, `DaemonSet` или `StatefulSet`.
 

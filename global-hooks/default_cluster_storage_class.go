@@ -36,7 +36,8 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeAll: &go_hook.OrderedConfig{Order: 15},
+	// Order 30: run after cloud provider discovery hooks (Order 25)
+	OnBeforeAll: &go_hook.OrderedConfig{Order: 30},
 
 	// watch for cluster's StorageClass changes
 	// in case, when there is NO StorageClass exists yet (which name in `global.defaultClusterStorageClass`)
@@ -58,9 +59,16 @@ func setupDefaultStorageClass(_ context.Context, input *go_hook.HookInput, dc de
 	const paramPath = "global.defaultClusterStorageClass"
 	defaultClusterStorageClass := input.Values.Get(paramPath).String()
 
+	// If not explicitly set by user, try to use value discovered from cloud provider
 	if defaultClusterStorageClass == "" {
-		input.Logger.Info("Parameter is not set. Skipping", slog.String("param_path", paramPath))
-		return nil
+		cloudProviderDefaultSC := input.Values.Get("global.discovery.cloudProviderDefaultStorageClass").String()
+		if cloudProviderDefaultSC != "" {
+			defaultClusterStorageClass = cloudProviderDefaultSC
+			input.Logger.Info("Using default storage class from cloud provider discovery", slog.String("storage_class", defaultClusterStorageClass))
+		} else {
+			input.Logger.Info("Parameter is not set and no cloud provider default found. Skipping", slog.String("param_path", paramPath))
+			return nil
+		}
 	}
 
 	client, err := dc.GetK8sClient()

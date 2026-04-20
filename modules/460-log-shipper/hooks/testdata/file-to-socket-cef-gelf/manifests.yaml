@@ -12,7 +12,7 @@ spec:
     - test-socket1-dest
     - test-socket2-dest
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-socket1-dest
@@ -30,7 +30,7 @@ spec:
   extraLabels:
     cef.severity: '1'
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: ClusterLogDestination
 metadata:
   name: test-socket2-dest

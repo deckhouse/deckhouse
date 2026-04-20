@@ -18,11 +18,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -231,6 +229,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			patch := client.MergeFrom(oldAPV.DeepCopy())
 			oldAPV = oldAPV.RemoveInstalledApp(app.Namespace, app.Name)
 			if err := r.client.Status().Patch(ctx, oldAPV, patch); err != nil {
+				logger.Error("failed to patch application package", log.Err(err))
 				return fmt.Errorf("patch old application package version status '%s': %w", oldAPVName, err)
 			}
 		}
@@ -243,6 +242,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		apv = apv.AddInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
+			logger.Error("failed to patch apv", log.Err(err))
 			return fmt.Errorf("patch application package version status '%s': %w", apv.Name, err)
 		}
 	}
@@ -266,6 +266,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 			patch := client.MergeFrom(oldAP.DeepCopy())
 			oldAP = oldAP.RemoveInstalledApp(app.Namespace, app.Name)
 			if err := r.client.Status().Patch(ctx, oldAP, patch); err != nil {
+				logger.Error("failed to patch application package", log.Err(err))
 				return fmt.Errorf("patch old application package status '%s': %w", oldAPName, err)
 			}
 		}
@@ -278,6 +279,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		ap = ap.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
 		}
 	} else if ap.GetAppVersion(app.Namespace, app.Name) != app.Spec.PackageVersion {
@@ -287,14 +289,27 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		ap.UpdateAppVersion(app.Namespace, app.Name, app.Spec.PackageVersion)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
 		}
 	}
 
 	logger.Debug("registry application to operator")
-	if err := r.updateOperatorPackage(ctx, app, apv); err != nil {
-		return err
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
+		logger.Error("get package repository", log.Err(err))
+		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
+
+	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
+		Name:      app.Name,
+		Namespace: app.Namespace,
+		Definition: apps.Definition{
+			Name:    app.Spec.PackageName,
+			Version: app.Spec.PackageVersion,
+		},
+		Settings: app.Spec.Settings.GetMap(),
+	})
 
 	// TODO: Completed = "true"
 
@@ -310,67 +325,9 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 	app = r.addOwnerReferences(app, apv, ap)
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
+		logger.Error("failed to patch application", log.Err(err))
 		return fmt.Errorf("patch application '%s': %w", app.Name, err)
 	}
-
-	return nil
-}
-
-func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion) error {
-	repo := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
-		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
-	}
-
-	var requirements apps.Requirements
-	if apv.Status.PackageMetadata != nil && apv.Status.PackageMetadata.Requirements != nil {
-		var err error
-
-		var kubernetesConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Kubernetes) > 0 {
-			if kubernetesConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Kubernetes); err != nil {
-				return fmt.Errorf("parse kubernetes requirement: %w", err)
-			}
-		}
-
-		var deckhouseConstraint *semver.Constraints
-		if len(apv.Status.PackageMetadata.Requirements.Deckhouse) > 0 {
-			if deckhouseConstraint, err = semver.NewConstraint(apv.Status.PackageMetadata.Requirements.Deckhouse); err != nil {
-				return fmt.Errorf("parse deckhouse requirement: %w", err)
-			}
-		}
-
-		modules := make(map[string]apps.Dependency)
-		for module, rawConstraint := range apv.Status.PackageMetadata.Requirements.Modules {
-			raw, optional := strings.CutSuffix(rawConstraint, "!optional")
-			constraint, err := semver.NewConstraint(raw)
-			if err != nil {
-				return fmt.Errorf("parse module requirement '%s': %w", module, err)
-			}
-
-			modules[module] = apps.Dependency{
-				Constraints: constraint,
-				Optional:    optional,
-			}
-		}
-
-		requirements = apps.Requirements{
-			Kubernetes: kubernetesConstraint,
-			Deckhouse:  deckhouseConstraint,
-			Modules:    modules,
-		}
-	}
-
-	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
-		Name:      app.Name,
-		Namespace: app.Namespace,
-		Definition: apps.Definition{
-			Name:         app.Spec.PackageName,
-			Version:      app.Spec.PackageVersion,
-			Requirements: requirements,
-		},
-		Settings: app.Spec.Settings.GetMap(),
-	})
 
 	return nil
 }
@@ -396,6 +353,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 		ap = ap.RemoveInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			logger.Error("failed to patch application package", log.Err(err))
 			return fmt.Errorf("patch ApplicationPackage status for %s: %w", app.Spec.PackageName, err)
 		}
 	}
@@ -416,6 +374,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 
 		apv = apv.RemoveInstalledApp(app.Namespace, app.Name)
 		if err := r.client.Status().Patch(ctx, apv, patch); err != nil {
+			logger.Error("failed to patch apv", log.Err(err))
 			return fmt.Errorf("patch application package version status '%s': %w", app.Spec.PackageName, err)
 		}
 	}
@@ -434,6 +393,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	}
 
 	if err := r.client.Patch(ctx, app, patch); err != nil {
+		logger.Error("failed to patch application", log.Err(err))
 		return fmt.Errorf("patch application %s: %w", app.Name, err)
 	}
 

@@ -22,6 +22,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -34,12 +36,15 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-func IsSequentialNodesBootstrap() bool {
-	return os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP") == "false"
+func IsSequentialNodesBootstrap(cfg *config.MetaConfig) bool {
+	seqEnv := os.Getenv("DHCTL_PARALLEL_CLOUD_PERMANENT_NODES_BOOTSTRAP")
+	// vcd doesn't support parallel creating nodes in same vapp
+	// https://github.com/vmware/terraform-provider-vcd/issues/530
+	return seqEnv == "false" || cfg.ProviderName == "vcd"
 }
 
 func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
-	return fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, index)
+	return fmt.Sprintf("%s-%s-%d", cfg.ClusterPrefix, nodeGroupName, index)
 }
 
 func BootstrapAdditionalNode(
@@ -49,18 +54,22 @@ func BootstrapAdditionalNode(
 	index int,
 	step infrastructure.Step,
 	nodeGroupName, cloudConfig string,
-	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
 
-	if isConverge {
-		nodeExists, err := entity.IsNodeExistsInCluster(ctx, kubeCl, nodeName, log.GetDefaultLogger())
-		if err != nil {
-			return err
-		} else if nodeExists {
-			return fmt.Errorf("node with name %s exists in cluster", nodeName)
-		}
+	err := checkNodeResourceExistsInClusterDuringBootstrap(ctx, checkNodeParams{
+		node: infrastructurestate.HasNodeStateInClusterParams{
+			NodeGroup: nodeGroupName,
+			Name:      nodeName,
+		},
+
+		kubeCl: kubeCl,
+		logger: log.GetDefaultLogger(),
+	})
+
+	if err != nil {
+		return err
 	}
 
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
@@ -112,7 +121,7 @@ func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.Kubernete
 			}
 
 			for i := 0; i < ng.Replicas; i++ {
-				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, infrastructure.StaticNodeStep, ng.Name, cloudConfig, false, infrastructureContext)
+				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, infrastructure.StaticNodeStep, ng.Name, cloudConfig, infrastructureContext)
 				if err != nil {
 					return err
 				}
@@ -133,7 +142,6 @@ func BootstrapAdditionalNodeForParallelRun(
 	index int,
 	step infrastructure.Step,
 	nodeGroupName, cloudConfig string,
-	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 	runnerLogger log.Logger,
 ) error {
@@ -150,7 +158,10 @@ func BootstrapAdditionalNodeForParallelRun(
 			infrastructurestate.NewNodeStateSaver(kubernetes.NewSimpleKubeClientGetter(kubeCl), nodeName, nodeGroupName, nodeGroupSettings),
 		},
 		RunnerLogger: runnerLogger,
+		// allow use state cache because in parallel run we cannot get correct output from user
+		AllowUseStateCache: true,
 	})
+
 	if err != nil {
 		return err
 	}
@@ -179,7 +190,6 @@ func ParallelBootstrapAdditionalNodes(
 	nodesIndexToCreate []int,
 	step infrastructure.Step,
 	nodeGroupName, cloudConfig string,
-	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 	ngLogger log.Logger,
 	saveLogToBuffer bool,
@@ -196,14 +206,28 @@ func ParallelBootstrapAdditionalNodes(
 		err         error
 	}
 
+	var nodesCheckErrors *multierror.Error
+
 	for _, indexCandidate := range nodesIndexToCreate {
-		candidateName := fmt.Sprintf("%s-%s-%v", cfg.ClusterPrefix, nodeGroupName, indexCandidate)
-		nodeExists, err := entity.IsNodeExistsInCluster(ctx, kubeCl, candidateName, ngLogger)
+		candidateName := NodeName(cfg, nodeGroupName, indexCandidate)
+
+		err := checkNodeResourceExistsInClusterDuringBootstrap(ctx, checkNodeParams{
+			node: infrastructurestate.HasNodeStateInClusterParams{
+				NodeGroup: nodeGroupName,
+				Name:      candidateName,
+			},
+
+			kubeCl: kubeCl,
+			logger: ngLogger,
+		})
+
 		if err != nil {
-			return nil, err
-		} else if nodeExists {
-			return nil, fmt.Errorf("node with name %s exists in cluster", candidateName)
+			nodesCheckErrors = multierror.Append(nodesCheckErrors, err)
 		}
+	}
+
+	if err := nodesCheckErrors.ErrorOrNil(); err != nil {
+		return nil, fmt.Errorf("Check existing nodes in cluster error: %w", err)
 	}
 
 	if len(nodesIndexToCreate) > 1 && !saveLogToBuffer {
@@ -231,7 +255,6 @@ func ParallelBootstrapAdditionalNodes(
 				step,
 				nodeGroupName,
 				cloudConfig,
-				true,
 				infrastructureContext,
 				nodeLogger,
 			)
@@ -250,19 +273,33 @@ func ParallelBootstrapAdditionalNodes(
 	wg.Wait()
 	close(resultsChan)
 
+	var bootstrapErrors *multierror.Error
+
 	for candidate := range resultsChan {
 		if candidate.err != nil {
-			return nodesToWait, candidate.err
+			bootstrapErrors = multierror.Append(
+				bootstrapErrors,
+				fmt.Errorf("Node %s error: %w", candidate.name, candidate.err),
+			)
+			// always output from logger
 		}
+
 		if candidate.buffNodeLog.Len() == 0 {
 			continue
 		}
+
+		ngLogger.LogInfoF("Output for node %s:\n", candidate.name)
 
 		scanner := bufio.NewScanner(candidate.buffNodeLog)
 		for scanner.Scan() {
 			ngLogger.LogInfoLn((scanner.Text()))
 		}
 	}
+
+	if err := bootstrapErrors.ErrorOrNil(); err != nil {
+		return nodesToWait, err
+	}
+
 	return nodesToWait, nil
 }
 
@@ -336,7 +373,7 @@ func ParallelCreateNodeGroup(
 					nodesIndexToCreate = append(nodesIndexToCreate, i)
 				}
 
-				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, infrastructure.StaticNodeStep, group.Name, nodeCloudConfig, true, infrastructureContext, ngLogger, saveLogToBuffer)
+				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, infrastructure.StaticNodeStep, group.Name, nodeCloudConfig, infrastructureContext, ngLogger, saveLogToBuffer)
 
 				resultsChan <- checkResult{
 					name:    group.Name,
@@ -352,10 +389,17 @@ func ParallelCreateNodeGroup(
 		wg.Wait()
 		close(resultsChan)
 
+		var bootstrapErrors *multierror.Error
+
 		for ng := range resultsChan {
 			if ng.err != nil {
-				return ng.err
+				bootstrapErrors = multierror.Append(
+					bootstrapErrors,
+					fmt.Errorf("Node group %s errors:\n%w", ng.name, ng.err),
+				)
+				// always output from logger
 			}
+
 			if ng.buffLog.Len() == 0 {
 				continue
 			}
@@ -368,6 +412,10 @@ func ParallelCreateNodeGroup(
 			currentPLogger.LogProcessEnd()
 		}
 
+		if err := bootstrapErrors.ErrorOrNil(); err != nil {
+			return err
+		}
+
 		return entity.WaitForNodesBecomeReady(ctx, kubeCl, ngWaitMap)
 	})
 }
@@ -378,18 +426,23 @@ func BootstrapAdditionalMasterNode(
 	cfg *config.MetaConfig,
 	index int,
 	cloudConfig string,
-	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 ) (*infrastructure.PipelineOutputs, error) {
-	nodeName := NodeName(cfg, global.MasterNodeGroupName, index)
+	nodeGroupName := global.MasterNodeGroupName
+	nodeName := NodeName(cfg, nodeGroupName, index)
 
-	if isConverge {
-		nodeExists, existsErr := entity.IsNodeExistsInCluster(ctx, kubeCl, nodeName, log.GetDefaultLogger())
-		if existsErr != nil {
-			return nil, existsErr
-		} else if nodeExists {
-			return nil, fmt.Errorf("node with name %s exists in cluster", nodeName)
-		}
+	err := checkNodeResourceExistsInClusterDuringBootstrap(ctx, checkNodeParams{
+		node: infrastructurestate.HasNodeStateInClusterParams{
+			NodeGroup: nodeGroupName,
+			Name:      nodeName,
+		},
+
+		kubeCl: kubeCl,
+		logger: log.GetDefaultLogger(),
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO pass cache as argument or better refact func
@@ -423,4 +476,48 @@ func BootstrapAdditionalMasterNode(
 	}
 
 	return outputs, err
+}
+
+type checkNodeParams struct {
+	kubeCl *client.KubernetesClient
+	node   infrastructurestate.HasNodeStateInClusterParams
+	logger log.Logger
+}
+
+func checkNodeResourceExistsInClusterDuringBootstrap(ctx context.Context, params checkNodeParams) error {
+	kubeCl := params.kubeCl
+	nodeName := params.node.Name
+	logger := params.logger
+
+	hasState, err := infrastructurestate.HasNodeStateInCluster(ctx, kubeCl, params.node)
+	if err != nil {
+		return fmt.Errorf("Cannot check that state in cluster for %s: %w", nodeName, err)
+	}
+
+	if hasState {
+		// we skip in because we need check node only when state not in cluster
+		// during bootstrap we always call bootstrap additional nodes
+		// and if client restart bootstrap we can get situation:
+		// - infra utility creates partially vm
+		// - but vm was registered in cluster
+		// this case could happen in dvp:
+		// - infra utility creates vm
+		// - infra utility fail with wait timeout
+		// - client fix cloud issue (like extend quota)
+		// - vm started and registered
+		// - client restart bootstrap
+		logger.LogDebugF("Has node state in cluster for '%s'. Skip checking node resource in cluster\n", nodeName)
+		return nil
+	}
+
+	nodeExists, err := entity.IsNodeExistsInCluster(ctx, kubeCl, nodeName, logger)
+	if err != nil {
+		return fmt.Errorf("Cannot check that node resource exists for %s: %w", nodeName, err)
+	}
+
+	if nodeExists {
+		return fmt.Errorf("Node with name %s exists in cluster", nodeName)
+	}
+
+	return nil
 }

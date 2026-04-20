@@ -1,6 +1,7 @@
 ---
 title: "Build and publish"
 permalink: en/architecture/module-development/build/
+description: Types of module artifacts (container images, module image, release) and how they are built and published to a container registry.
 ---
 
 Deckhouse Kubernetes Platform (DKP) uses container registry to pull a module and update it. The container registry stores module artifacts. Module artifacts are created when a module is built and can then be uploaded (published) to the registry.

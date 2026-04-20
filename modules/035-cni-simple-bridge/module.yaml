@@ -8,3 +8,4 @@ namespace: d8-cni-simple-bridge
 descriptions:
   en: Provides networking with limited functionality in Kubernetes clusters.
   ru: Обеспечивает работу сети с ограниченной функциональностью в кластерах Kubernetes.
+exclusiveGroup: cni

@@ -8,3 +8,4 @@ namespace: d8-cni-flannel
 descriptions:
   en: Provides a network between multiple nodes in a cluster using the flannel module.
   ru: Обеспечивает работу сети в кластере с помощью модуля flannel.
+exclusiveGroup: cni

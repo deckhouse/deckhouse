@@ -45,7 +45,7 @@ func (DeckhouseUserCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c DeckhouseUserCheck) Run(ctx context.Context) error {
-	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript()
+	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript(nil)
 	if err != nil {
 		return err
 	}

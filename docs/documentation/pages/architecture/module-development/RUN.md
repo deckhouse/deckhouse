@@ -1,6 +1,7 @@
 ---
 title: "How to run and verify a module in the DKP cluster"
 permalink: en/architecture/module-development/run/
+description: How to run a module in a Deckhouse Kubernetes Platform cluster using ModuleSource, ModuleUpdatePolicy, and ModuleConfig, and how to verify module operation.
 ---
 
 This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.
@@ -296,6 +297,12 @@ If a module release is `Pending`, it means that manual confirmation is required 
 d8 k annotate mr <module_release_name> modules.deckhouse.io/approved="true"
 ```
 
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module approve <module-name> <version>
+```
+
 {% endalert %}
 
 ### Switching the module to a different module source
@@ -442,6 +449,12 @@ The example output above illustrates ModuleRelease message when the update mode 
 
 ```shell
 d8 k annotate mr module-1-v1.23.2 modules.deckhouse.io/approved="true"
+```
+
+This can also be done using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) CLI for convenience (module names and versions are autocompleted):
+
+```shell
+d8 system module approve module-1 v1.23.2
 ```
 
 ## Integrating Deckhouse Module Tools for Module Validation

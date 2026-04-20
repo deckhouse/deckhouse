@@ -18,9 +18,10 @@ package usecase
 
 import (
 	"context"
-	"fencing-agent/internal/lib/logger/sl"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/lib/logger/sl"
 )
 
 type KubeClient interface {

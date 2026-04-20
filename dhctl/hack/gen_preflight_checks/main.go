@@ -48,8 +48,7 @@ func main() {
 func inputFiles() []string {
 	var files []string
 	for _, pattern := range []string{
-		filepath.Join("..", "..", "pkg/preflight_new/checks/*.go"),
-		filepath.Join("..", "..", "pkg/infrastructureprovider/cloud/*/preflight/*.go"),
+		filepath.Join("..", "..", "pkg/preflight/checks/*.go"),
 	} {
 		matches, _ := filepath.Glob(pattern) // ignore glob errors
 		files = append(files, matches...)
