@@ -662,14 +662,14 @@ Unlike the `InitContainer` mode, the redirection setting is done at the moment o
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Upgrade algorithm (i.e. from `1.21` to `1.25`):
-* Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
+  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
 * Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
 * For every application namespase with istio enabled:
   * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
   * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
 * Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
-  * Make sure, the old `istiod` pod has gone.
-  * Change application namespace labels to `istio-injection: enabled`.
+* Make sure, the old `istiod` pod has gone.
+* Change application namespace labels to `istio-injection: enabled`.
 
 To find all Pods with old Istio revision (in the example — version 21), execute the command:
 
