@@ -27,7 +27,6 @@ import (
 )
 
 type ControlPlaneState struct {
-	DesiredCount          int
 	DesiredComponentCount int
 	StepsCompleted        int
 	Phase                 ControlPlanePhase
@@ -51,9 +50,8 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion, sour
 	}
 
 	res := &ControlPlaneState{
-		DesiredCount: len(masterNodes),
-		MasterNodes:  masterNodes,
-		versions:     version.NewUniqueAggregator(),
+		MasterNodes: masterNodes,
+		versions:    version.NewUniqueAggregator(),
 	}
 
 	res.aggregateNodesState(sourceVersion, desiredVersion)
@@ -62,7 +60,7 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion, sour
 }
 
 func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion string) {
-	var desiredCount, upToDateCount, desiredComponentsCount, stepsCompleted int
+	var upToDateCount, desiredCount, desiredComponentsCount, stepsCompleted int
 	var phase ControlPlanePhase
 
 	for _, masterNode := range s.MasterNodes {
@@ -108,7 +106,6 @@ func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion st
 		phase = ControlPlaneUpToDate
 	}
 
-	s.DesiredCount = desiredCount
 	s.DesiredComponentCount = desiredComponentsCount
 	s.StepsCompleted = stepsCompleted
 	s.Phase = phase
