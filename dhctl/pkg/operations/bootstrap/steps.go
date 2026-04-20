@@ -171,12 +171,12 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 		return err
 	}
 
-	nodeName, err := readRemoteFile(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
+	nodeName, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-name")
 	if err != nil {
 		return fmt.Errorf("read discovered node name: %w", err)
 	}
 
-	discoveredNodeIP, err := readRemoteFile(ctx, nodeInterface, "/var/lib/bashible/discovered-node-ip")
+	discoveredNodeIP, err := readRemoteFileWithRetry(ctx, nodeInterface, "/var/lib/bashible/discovered-node-ip")
 	if err != nil {
 		return fmt.Errorf("read discovered node IP: %w", err)
 	}
@@ -278,6 +278,8 @@ func PrepareControlPlaneArtifacts(
 	})
 }
 
+var errEmptyRemoteFile = errors.New("empty content")
+
 func readRemoteFile(ctx context.Context, nodeInterface node.Interface, path string) (string, error) {
 	cmd := nodeInterface.Command("cat", path)
 	cmd.Sudo(ctx)
@@ -289,15 +291,51 @@ func readRemoteFile(ctx context.Context, nodeInterface node.Interface, path stri
 	}
 
 	output := string(stdout)
+	// Sudo-wrapped commands prefix their stdout with the SUDO-SUCCESS marker;
+	// strip everything up to and including the last occurrence so we keep only
+	// the actual file payload. For non-sudo paths the marker is absent and
+	// output stays untouched.
 	if idx := strings.LastIndex(output, "SUDO-SUCCESS"); idx >= 0 {
 		output = output[idx+len("SUDO-SUCCESS"):]
 	}
 
 	value := strings.TrimSpace(output)
 	if value == "" {
-		return "", fmt.Errorf("read remote file %s: empty content", path)
+		return "", fmt.Errorf("read remote file %s: %w", path, errEmptyRemoteFile)
 	}
 
+	return value, nil
+}
+
+// readRemoteFileWithRetry wraps readRemoteFile with a short retry loop so that
+// transient SSH errors (connection drops, sudo banner glitches, etc.) right
+// after a bootstrap script run do not abort the whole pipeline. It deliberately
+// stops retrying on errEmptyRemoteFile, which signals a real bug in the script
+// that produced the file, not a network flake.
+func readRemoteFileWithRetry(ctx context.Context, nodeInterface node.Interface, path string) (string, error) {
+	const (
+		attempts = 5
+		wait     = 3 * time.Second
+	)
+
+	var value string
+	err := retry.NewLoop(fmt.Sprintf("Read remote file %s", path), attempts, wait).
+		BreakIf(func(err error) bool {
+			// Stop retrying if the file is reachable but its content is empty:
+			// no amount of retries will populate it.
+			return errors.Is(err, errEmptyRemoteFile)
+		}).
+		RunContext(ctx, func() error {
+			v, err := readRemoteFile(ctx, nodeInterface, path)
+			if err != nil {
+				return err
+			}
+			value = v
+			return nil
+		})
+	if err != nil {
+		return "", err
+	}
 	return value, nil
 }
 
