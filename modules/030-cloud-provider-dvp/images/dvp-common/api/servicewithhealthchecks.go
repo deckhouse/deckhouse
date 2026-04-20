@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file implements create, update, get, delete, and readiness polling
+// logic for the ServiceWithHealthchecks custom resource.
+// It is used when the cluster supports ServiceWithHealthchecks and allows
+// the DVP cloud provider to provision load balancers with custom health checks.
 package api
 
 import (

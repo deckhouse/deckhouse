@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file contains helper logic for ServiceWithHealthchecks support.
+// It detects whether the ServiceWithHealthchecks API is available in the cluster,
+// caches the detection result, builds unstructured ServiceWithHealthchecks objects,
+// and converts Kubernetes Service fields into the corresponding unstructured spec.
 package api
 
 import (

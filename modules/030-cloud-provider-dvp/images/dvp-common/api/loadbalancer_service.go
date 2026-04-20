@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file contains the core operations for working with Kubernetes
+// LoadBalancer Services in the DVP cloud provider.
+// It defines the LoadBalancerService and LoadBalancer types and implements
+// creation, update, port conversion, and readiness polling for the child
+// Service resource.
 package api
 
 import (

@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// This file contains the main reconciliation logic for DVP load balancers.
+// It decides whether a regular Kubernetes Service of type LoadBalancer
+// or a ServiceWithHealthchecks resource should be created/updated,
+// filters healthy backend nodes, and manages VM labels used to select
+// load balancer targets.
 package api
 
 import (
