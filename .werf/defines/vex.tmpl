@@ -76,6 +76,7 @@ shell:
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/TRANSIT_SECRET_ENGINE_PATH)"
 {{- if ne (env "VAULT_ADDR" "") "" }}
   - export VAULT_KEY="$(cat /run/secrets/WERF_SIGN_KEY)"
+  - export VAULT_JWT="$(cat /run/secrets/VAULT_JWT)"
   - export VAULT_AUTH_PATH="fox"
 {{- else }}
   - export VAULT_KEY="hashivault://$(cat /run/secrets/COSIGN_VAULT_KEY)"
