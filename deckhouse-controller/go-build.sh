@@ -22,10 +22,22 @@ defaultReleaseChannel=${DEFAULT_RELEASE_CHANNEL}
 shellOpVer=$(go list -m all | grep shell-operator | cut -d' ' -f 2-)
 addonOpVer=$(go list -m all | grep addon-operator | cut -d' ' -f 2-)
 nelmVer=$(go list -m all | grep nelm | cut -d' ' -f 2-)
+eeEditions="$EE_EDITIONS"
+allEditionsInOrder="$ALL_EDITIONS_IN_ORDER"
 
 # Validate required variables
 if [ -z "${defaultKubernetesVer}" ]; then
   echo "DEFAULT_KUBERNETES_VERSION is not set"
+  exit 1
+fi
+
+if [ -z "${eeEditions}" ]; then
+  echo "EE_EDITIONS is not set"
+  exit 1
+fi
+
+if [ -z "${allEditionsInOrder}" ]; then
+  echo "ALL_EDITIONS_IN_ORDER is not set"
   exit 1
 fi
 
@@ -37,6 +49,8 @@ LDFLAGS="${LDFLAGS} -X 'main.ShellOperatorVersion=${shellOpVer}'"
 LDFLAGS="${LDFLAGS} -X 'main.NelmVersion=${nelmVer}'"
 LDFLAGS="${LDFLAGS} -X 'main.DefaultReleaseChannel=${defaultReleaseChannel}'"
 LDFLAGS="${LDFLAGS} -X 'github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks.DefaultKubernetesVersion=${defaultKubernetesVer}'"
+LDFLAGS="${LDFLAGS} -X 'ggithub.com/deckhouse/deckhouse/global-hooks.CommaSeparatedEEEditions=${eeEditions}'"
+LDFLAGS="${LDFLAGS} -X 'ggithub.com/deckhouse/deckhouse/global-hooks.CommaSeparatedEditionsInOrder=${allEditionsInOrder}'"
 
 # Build the binary
 CGO_ENABLED=0 \

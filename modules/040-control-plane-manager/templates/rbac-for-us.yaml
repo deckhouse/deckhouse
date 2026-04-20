@@ -29,6 +29,10 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create"]
+- apiGroups: [""]
+  resourceNames: ["d8-pki"]
+  resources: ["secrets"]
+  verbs: ["get", "update"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

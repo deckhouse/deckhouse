@@ -259,7 +259,7 @@ properties:
             type: object
             default: {}
             description: 'Settings type LoadBalancer'
-            properties: 
+            properties:
               enabled:
                 type: boolean
                 default: false
@@ -322,6 +322,30 @@ properties:
             # Avoid trailing slash
             pattern: ^[a-zA-Z0-9_/.-]+[a-zA-Z0-9_.-]$
             default: /var/log/kube-audit
+      signature:
+        x-doc-d8Editions:
+          - ee
+          - cse-lite
+          - cse-pro
+        type: string
+        default: Migrate
+        description: |
+          Enables signature verification by the api-server for all records.
+          Transforms all records in etcd to new format with signature.
+
+          Possible values:
+          - Migrate
+            Allow read records without signature or with invalid signature.
+          - Enforce
+            Reject records without signature, with invalid signature or in wrong format.
+          - Rollback
+            Transform records to standard format (default format for etcd) when modify records.
+            Allows use records without signature or with invalid signature.
+        x-examples: ["Migrate"]
+        enum:
+          - Migrate
+          - Enforce
+          - Rollback
       encryptionEnabled:
         type: boolean
         default: false

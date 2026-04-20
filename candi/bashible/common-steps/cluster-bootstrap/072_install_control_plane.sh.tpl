@@ -81,23 +81,57 @@ export BB_KUBE_APISERVER_URL=""
 bb-curl-helper-extract-admin-certs
 
 # Upload pki for deckhouse
+# Upload pki for deckhouse
+declare -A pki_secret_files=(
+  ["ca.crt"]="/etc/kubernetes/pki/ca.crt"
+  ["ca.key"]="/etc/kubernetes/pki/ca.key"
+  ["sa.pub"]="/etc/kubernetes/pki/sa.pub"
+  ["sa.key"]="/etc/kubernetes/pki/sa.key"
+  ["front-proxy-ca.crt"]="/etc/kubernetes/pki/front-proxy-ca.crt"
+  ["front-proxy-ca.key"]="/etc/kubernetes/pki/front-proxy-ca.key"
+  ["etcd-ca.crt"]="/etc/kubernetes/pki/etcd/ca.crt"
+  ["etcd-ca.key"]="/etc/kubernetes/pki/etcd/ca.key"
+)
+
+declare -A const_signatures_files=(
+  ["signature-private"]="/etc/kubernetes/pki/signature-private.jwk"
+  ["signature-public"]="/etc/kubernetes/pki/signature-public.jwks"
+)
+
+declare -A have_signatures_files
+
+for sig_key in "${!const_signatures_files[@]}"; do
+  sig_key_path="${const_signatures_files[$sig_key]}"
+  if [ -f "$sig_key_path" ]; then
+    have_signatures_files["${sig_key}"]="$sig_key_path"
+  fi
+done
+
+if [[ "${#have_signatures_files[@]}" != "0" ]]; then
+  if [[ "${#have_signatures_files[@]}" != "${#const_signatures_files[@]}" ]]; then
+    bb-log-error "Internal error: not enough signatures files! Have keys ${have_signatures_files[*]}"
+    exit 1
+  fi
+
+  bb-log-info "Have signatures files. Add to create pki secret create args"
+
+  for have_sig_key in "${!have_signatures_files[@]}"; do
+    pki_secret_files["${have_sig_key}"]="${have_signatures_files[$have_sig_key]}"
+  done
+fi
+
 bb-curl-kube "/api/v1/namespaces/kube-system/secrets/d8-pki" -X DELETE || true
 
 # Build secret JSON with base64-encoded PKI files
 pki_data="{}"
-for kv in \
-  "ca.crt=/etc/kubernetes/pki/ca.crt" \
-  "ca.key=/etc/kubernetes/pki/ca.key" \
-  "sa.pub=/etc/kubernetes/pki/sa.pub" \
-  "sa.key=/etc/kubernetes/pki/sa.key" \
-  "front-proxy-ca.crt=/etc/kubernetes/pki/front-proxy-ca.crt" \
-  "front-proxy-ca.key=/etc/kubernetes/pki/front-proxy-ca.key" \
-  "etcd-ca.crt=/etc/kubernetes/pki/etcd/ca.crt" \
-  "etcd-ca.key=/etc/kubernetes/pki/etcd/ca.key"; do
-  key="${kv%%=*}"
-  filepath="${kv#*=}"
-  encoded=$(base64 -w0 < "$filepath")
-  pki_data=$(jq --arg k "$key" --arg v "$encoded" '.[$k] = $v' <<< "$pki_data")
+for pki_key in "${!pki_secret_files[@]}"; do
+  pki_key_path="${pki_secret_files[$pki_key]}"
+  if [ ! -f "$pki_key_path" ]; then
+    bb-log-error "Internal error: pki file $pki_key_path not file or not found"
+    exit 1
+  fi
+  encoded=$(base64 -w0 < "$pki_key_path" )
+  pki_data=$(jq --arg k "$pki_key" --arg v "$encoded" '.[$k] = $v' <<< "$pki_data")
 done
 
 bb-curl-kube "/api/v1/namespaces/kube-system/secrets" \

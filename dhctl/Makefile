@@ -52,6 +52,14 @@ ifndef RPP_SIGN_CHECK
 	RPP_SIGN_CHECK = false
 endif
 
+ifndef EDITION
+	EDITION = FE
+endif
+
+ifndef EE_EDITIONS
+	EE_EDITIONS = EE,FE,CSE
+endif
+
 # Set platform for deps
 ifndef PROTOC_PLATFORM
 	ifeq ($(OS), linux)
@@ -141,8 +149,16 @@ prepare-minget:
 		chmod +x $(MINGET_EMBED_PATH); \
 	fi
 
+define BUILD_VARIABLES
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.Edition=$(EDITION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.CommaSeparatedEEEditions=$(EE_EDITIONS) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) \
+-X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)
+endef
+
 build: check-vars prepare-minget
-	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app/options.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
+	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' $(BUILD_VARIABLES)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build/test/check-digests:
 	@if [ ! -f "$(DEV_IMAGES_DIGESTS)" ]; then \
