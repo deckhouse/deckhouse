@@ -1,6 +1,6 @@
 ---
 title: Модуль csi-hpe
-permalink: ru/architecture/storage/csi-hpe.html
+permalink: ru/architecture/storage/external/csi-hpe.html
 lang: ru
 search: csi-hpe, hpe
 description: Архитектура модуля csi-hpe в Deckhouse Kubernetes Platform.

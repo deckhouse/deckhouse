@@ -1,6 +1,6 @@
 ---
 title: Модуль csi-scsi-generic
-permalink: ru/architecture/storage/csi-scsi-generic.html
+permalink: ru/architecture/storage/external/csi-scsi-generic.html
 lang: ru
 search: csi-scsi-generic, iscsi
 description: Архитектура модуля csi-scsi-generic в Deckhouse Kubernetes Platform.

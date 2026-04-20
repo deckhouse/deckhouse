@@ -17,14 +17,14 @@ CSI-драйвер `csi-huawei` — реализация [Container Storage Inte
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера (csi-huawei) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура CSI-драйвера `csi-huawei` на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура CSI-драйвера (csi-huawei)](../../../images/architecture/storage/c4-l2-csi-driver-huawei.ru.png)
+![Архитектура CSI-драйвера `csi-huawei`](../../../images/architecture/storage/c4-l2-csi-driver-huawei.ru.png)
 
 ## Компоненты драйвера
 
-Драйвер состоит из следующих компонентов:
+CSI-драйвер `csi-huawei` состоит из следующих компонентов:
 
 1. **Csi-controller** (Deployment) — Controller Plugin, отвечающий за глобальные операции с томами: создание и удаление, подключение и отключение от узлов.
 

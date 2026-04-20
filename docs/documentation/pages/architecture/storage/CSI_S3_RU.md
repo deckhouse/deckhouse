@@ -1,6 +1,6 @@
 ---
 title: Модуль csi-s3
-permalink: ru/architecture/storage/csi-s3.html
+permalink: ru/architecture/storage/external/csi-s3.html
 lang: ru
 search: csi-s3, s3
 description: Архитектура модуля csi-s3 в Deckhouse Kubernetes Platform.

@@ -1,6 +1,6 @@
 ---
 title: Модуль csi-huawei
-permalink: ru/architecture/storage/csi-huawei.html
+permalink: ru/architecture/storage/external/csi-huawei.html
 lang: ru
 search: csi-huawei, huawei
 description: Архитектура модуля csi-huawei в Deckhouse Kubernetes Platform.

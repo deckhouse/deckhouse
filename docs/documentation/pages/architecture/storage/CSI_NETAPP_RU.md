@@ -1,6 +1,6 @@
 ---
 title: Модуль csi-netapp
-permalink: ru/architecture/storage/csi-netapp.html
+permalink: ru/architecture/storage/external/csi-netapp.html
 lang: ru
 search: csi-netapp, netapp
 description: Архитектура модуля csi-netapp в Deckhouse Kubernetes Platform.
@@ -31,11 +31,11 @@ description: Архитектура модуля csi-netapp в Deckhouse Kuberne
 1. **Controller** — контроллер, обслуживающий следующие [кастомные ресурсы](/modules/csi-netapp/stable/cr.html):
 
 * NetappStorageConnection — параметры подключения к СХД NetApp;
-* NetappStorageClass — определяет конфигурацию для Kubernetes StorageClass.
+* NetappStorageClass — определяет конфигурацию для создания Kubernetes StorageClass, который использует provisioner `csi.trident.netapp.io`.
 
-  В NetappStorageClass задается протокол подключения, название пула ресурсов, тип файловой системы и reclaim policy.
+  Также controller синхронизирует метку `storage.deckhouse.io/csi-netapp-node` для узлов кластера в соответствии со значением селектора узлов [`spec.settings.nodeSelector`](/modules/csi-netapp/configuration.html) кастомного ресурса ModuleConfig.
 
-   Состоит из одного основногого контейнера **controller**.
+   Состоит из одного основного контейнера **controller**.
 
 1. **CSI-драйвер (netapp)** — реализация CSI-драйвера для `csi.trident.netapp.io` provisioner. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в разделе документации архитектуры CSI-драйвера](../cluster-and-infrastructure/infrastructure/csi-driver.html).
 
@@ -43,8 +43,10 @@ description: Архитектура модуля csi-netapp в Deckhouse Kuberne
 
 Модуль взаимодействует со следующими компонентами:
 
-* **Kube-apiserver**:
+1. **Kube-apiserver**:
 
-  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment, StorageClass;
-  * работа с кастомными ресурсами NetappStorageConnection, NetappStorageClass;
-  * создание ресурса StorageClass.
+  * мониторинг ресурсов PersistentVolume, PersistentVolumeClaim, VolumeAttachment и StorageClass;
+  * работа с кастомными ресурсами TridentBackendConfig, NetappStorageConnection и NetappStorageClass;
+  * создание ресурса VolumeSnapshotClass, Secret и StorageClass.
+
+1. **СХД NetApp** — создание, удаление и управление томами, а также подключение и отключение томов от узлов.
