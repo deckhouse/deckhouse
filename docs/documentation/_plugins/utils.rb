@@ -1,3 +1,14 @@
+module JekyllLiquidBlockUtils
+  def dedent(text)
+    lines = text.split("\n")
+    non_empty = lines.select { |l| l =~ /\S/ }
+    return text if non_empty.empty?
+    min_indent = non_empty.map { |l| l.match(/^(\s*)/)[1].length }.min
+    return text if min_indent == 0
+    lines.map { |l| l.length >= min_indent ? l[min_indent..] : l }.join("\n")
+  end
+end
+
 def getTrueRelativeUrl(path)
     if !path.instance_of? String
         return "unexpected argument #{path}"
