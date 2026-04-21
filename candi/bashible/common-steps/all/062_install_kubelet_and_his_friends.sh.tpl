@@ -60,7 +60,7 @@ fi
 # This need for correct Tab-completion in kubectl alias
 # Bash does not expand aliases during completion, so we
 # rewrite "kubectl" to "d8 k" and call d8 __complete directly
-cat <<'EOF' > /etc/bash_completion.d/d8_kubectl_completion
+cat <<'EOF' > /etc/bash_completion.d/kubectl_d8_completion
 __start_kubectl() {
     local cur prev words cword
     _init_completion -n =: || return

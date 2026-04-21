@@ -24,7 +24,7 @@ jobs:
 {!{ tmpl.Exec "pull_request_info_job" . | strings.Indent 2 }!}
   rerun_workflow_for_pull_request:
     name: Rerun workflow for pull request
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     needs:
       - pull_request_info
     steps:

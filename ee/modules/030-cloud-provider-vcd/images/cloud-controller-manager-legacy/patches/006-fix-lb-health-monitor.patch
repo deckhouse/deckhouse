@@ -1,0 +1,19 @@
+Subject: [PATCH] use protocol instead of app protocol for health monitor type (#376)
+---
+Index: pkg/ccm/loadbalancer.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/pkg/ccm/loadbalancer.go b/pkg/ccm/loadbalancer.go
+--- a/pkg/ccm/loadbalancer.go	(revision 2d6e9efaf23df037d4cb1d58484bf04b3f2b8935)
++++ b/pkg/ccm/loadbalancer.go	(revision 8a396644e992ee76f534eb9f25e9eed7fbf9e352)
+@@ -165,6 +166,8 @@
+ 		typeToExternalPort[strings.ToLower(port.Name)] = port.Port
+ 		if port.AppProtocol != nil {
+ 			nameToProtocol[strings.ToLower(port.Name)] = strings.ToUpper(*port.AppProtocol)
++		} else {
++			nameToProtocol[strings.ToLower(port.Name)] = strings.ToUpper(string(port.Protocol))
+ 		}
+ 	}
+ 	return typeToInternalPort, typeToExternalPort, nameToProtocol

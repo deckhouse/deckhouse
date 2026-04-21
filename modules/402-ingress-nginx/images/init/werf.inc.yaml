@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-- image: tools/coreutils
+- from: {{ index $.Images "tools/coreutils" }}
   add: /
   to: /
   before: setup
@@ -10,7 +10,7 @@ import:
   - usr/bin/mkdir
   - usr/bin/touch
   - usr/bin/ln
-- image: tools/bash
+- from: {{ index $.Images "tools/bash" }}
   add: /usr/bin/bash
   to: /bin/bash
   before: setup

@@ -424,6 +424,7 @@ function prepare_environment() {
 
   "Static")
     cwd=$(pwd)/testing/cloud_layouts/Static
+    export TF_CLI_CONFIG_FILE="$cwd/.tofurc"
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -437,7 +438,8 @@ function prepare_environment() {
     ;;
 
   "Static-cse")
-    cwd=$(pwd)/../testing/cloud_layouts/Static
+    cwd=$(pwd)/../testing/cloud_layouts/Static-cse
+    export TF_CLI_CONFIG_FILE="$cwd/.tofurc"
     export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
@@ -455,7 +457,7 @@ function prepare_environment() {
 
 function get_opentofu() {
   rm -rf $cwd/plugins
-  CONTAINER_ID=$(docker create "${INSTALL_IMAGE_NAME}")
+  CONTAINER_ID=$(docker create --pull always "${INSTALL_IMAGE_NAME}")
   docker cp "${CONTAINER_ID}:/bin/opentofu" $cwd/opentofu
   docker cp "${CONTAINER_ID}:/plugins" $cwd/
   docker rm "$CONTAINER_ID"
@@ -479,12 +481,7 @@ function bootstrap_static() {
 
   get_opentofu
 
-  if [[ ${PROVIDER} == "Static" ]]; then
-    $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  elif [[ ${PROVIDER} == "Static-cse" ]]; then
-    $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-  fi
-
+  $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
 
   if [[ ${PROVIDER} == "Static" ]]; then
@@ -986,6 +983,7 @@ function wait_alerts_resolve() {
   "SecurityEventsDetected" # This is normal for e2e tests
   "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
   "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
+  "CertmanagerCertificateChallengePending" # This is normal for e2e tests
   )
 
   # Alerts
@@ -1517,7 +1515,7 @@ function run-test() {
   if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
     testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   else
-    testScript="${cwd}/../../../deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+    testScript="${cwd}/../../testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
   fi
 
   testRunAttempts=5
@@ -1642,9 +1640,9 @@ function cleanup() {
 
     get_opentofu
 
-    if [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "VCD" ]]; then
+    if [[ ${PROVIDER} == "VCD" ]]; then
       $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-    elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    elif [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "Static-cse" ]]; then
       $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
     fi
 

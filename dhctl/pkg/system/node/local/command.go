@@ -179,10 +179,12 @@ func (c *Command) prepareCmd(ctx context.Context) (*exec.Cmd, context.CancelFunc
 		args = []string{"-c", strings.Join(append([]string{c.program}, c.args...), " ")}
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	var cancel context.CancelFunc
+
 	if c.timeout > 0 {
-		cancel()
 		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
 	}
 
 	cmd := exec.CommandContext(ctx, program, args...)

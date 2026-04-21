@@ -241,6 +241,15 @@ steps:
 {!{- else if eq $env "test7" }!}
   {!{- $url = "deckhouse-7.test.flant.dev" -}!}
   {!{- $urlRu = "deckhouse-ru-7.test.flant.dev" -}!}
+{!{- else if eq $env "test8" }!}
+  {!{- $url = "deckhouse-8.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse-ru-8.test.flant.dev" -}!}
+{!{- else if eq $env "test9" }!}
+  {!{- $url = "deckhouse-9.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse-ru-9.test.flant.dev" -}!}
+{!{- else if eq $env "test10" }!}
+  {!{- $url = "deckhouse-10.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse-ru-10.test.flant.dev" -}!}
 {!{- end -}!}
 
 # <template: deploy_doc_template>
@@ -312,6 +321,15 @@ steps:
 {!{- else if eq $env "test7" }!}
   {!{- $url = "deckhouse-7.test.flant.dev" -}!}
   {!{- $urlRu = "deckhouse-ru-7.test.flant.dev" -}!}
+{!{- else if eq $env "test8" }!}
+  {!{- $url = "deckhouse-8.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse-ru-8.test.flant.dev" -}!}
+{!{- else if eq $env "test9" }!}
+  {!{- $url = "deckhouse-9.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse-ru-9.test.flant.dev" -}!}
+{!{- else if eq $env "test10" }!}
+  {!{- $url = "deckhouse-10.test.flant.dev" -}!}
+  {!{- $urlRu = "deckhouse-ru-10.test.flant.dev" -}!}
 {!{- end -}!}
 
 {!{- $siteDomainMap := printf "{\"en\" : \"%s\", \"ru\" : \"%s\"}" $url $urlRu -}!}

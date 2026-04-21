@@ -1,8 +1,10 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: base/scratch
+from: {{ index $.Images "base/scratch" }}
 import:
 - image: terraform
   add: /terraform/terraform
   to: /terraform
   before: setup
+{{- end }}

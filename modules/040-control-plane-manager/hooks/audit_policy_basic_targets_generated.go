@@ -126,7 +126,6 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-monitoring:alertmanager-internal",
 	"system:serviceaccount:d8-monitoring:alerts-receiver",
 	"system:serviceaccount:d8-monitoring:control-plane-proxy",
-	"system:serviceaccount:d8-monitoring:ebpf-exporter",
 	"system:serviceaccount:d8-monitoring:events-exporter",
 	"system:serviceaccount:d8-monitoring:extended-monitoring-exporter",
 	"system:serviceaccount:d8-monitoring:grafana",
@@ -135,6 +134,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-monitoring:loki",
 	"system:serviceaccount:d8-monitoring:monitoring-ping",
 	"system:serviceaccount:d8-monitoring:node-exporter",
+	"system:serviceaccount:d8-monitoring:oom-kills-exporter",
 	"system:serviceaccount:d8-monitoring:prometheus",
 	"system:serviceaccount:d8-monitoring:trickster",
 	"system:serviceaccount:d8-monitoring:x509-certificate-exporter",
@@ -165,4 +165,5 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-recommender",
 	"system:serviceaccount:kube-system:d8-vertical-pod-autoscaler-updater",
 	"system:serviceaccount:kube-system:node-local-dns-safe-updater",
+	"system:serviceaccount:kube-system:stale-dns-connections-cleaner",
 }

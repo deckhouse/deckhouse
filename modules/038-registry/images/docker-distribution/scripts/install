@@ -16,4 +16,4 @@
 
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
-cp -f registry /opt/deckhouse/bin
+cp -f registry /opt/deckhouse/bin/ign-registry

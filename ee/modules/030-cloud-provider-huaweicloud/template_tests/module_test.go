@@ -7,18 +7,25 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 	"testing"
 
+	. "github.com/deckhouse/deckhouse/testing/helm"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/tidwall/gjson"
 )
 
 func Test(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "")
 }
+
+const providerID = "huaweicloud"
+const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
+const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
+const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
+const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 
 // fake *-crd modules are required for backward compatibility with lib_helm library
 // TODO: remove fake crd modules
@@ -177,24 +184,126 @@ var _ = Describe("Module :: cloud-provider-huaweicloud :: helm template ::", fun
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			regSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-			Expect(regSecret.Exists()).To(BeTrue())
-			Expect(regSecret.Field("data.capiClusterName").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("huaweicloud"))))
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerRegistrationSecretData := providerRegistrationSecret.Field("data").Map()
+			Expect(providerRegistrationSecretData).To(Not(BeEmpty()))
+			Expect(providerRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
+			Expect(providerRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCu..."))))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificRegistrationSecretData := providerSpecificRegistrationSecret.Field("data").Map()
+			Expect(providerSpecificRegistrationSecretData).To(Not(BeEmpty()))
+			Expect(providerSpecificRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
+			Expect(providerSpecificRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCu..."))))
+
+			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+			Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("capi"))
+			Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+			providerSpecificCAPISecretData := providerSpecificCAPISecret.Field("data").Map()
+			Expect(providerSpecificCAPISecretData).To(Not(BeEmpty()))
+			Expect(len(providerSpecificCAPISecretData) >= 1).To(BeTrue())
+			Expect(len(providerSpecificCAPISecretData["cluster.yaml"].String()) > 0).To(BeTrue())
+
+			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
+			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeFalse())
+
+			providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
+			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeFalse())
 
 			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "cloud-controller-manager")
 			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-controller-manager"))
+			Expect(ccmDeployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("cloud-controller-manager"))
+			Expect(ccmDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
+- --bind-address=127.0.0.1
+- --secure-port=10471
 - --cluster-name=sandbox
 - --cluster-cidr=10.0.1.0/16
 - --allocate-node-cidrs=true
 - --configure-cloud-routes=true
 - --cloud-config=/etc/cloud/cloud-config
 - --cloud-provider=huaweicloud
-- --bind-address=127.0.0.1
-- --secure-port=10471
 - --tls-cipher-suites=TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
 - --v=4`))
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(`
+- name: HOST_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.hostIP
+- name: HUAWEICLOUD_SDK_CREDENTIALS_FILE
+  value: /etc/cloud/cloud-config`))
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.volumeMounts").String()).To(MatchYAML(`
+- name: ccm-controller-config-volume
+  mountPath: /etc/cloud
+  readOnly: true`))
+			Expect(ccmDeployment.Field("spec.template.spec.volumes").String()).To(MatchYAML(`
+- name: ccm-controller-config-volume
+  secret:
+    secretName: cloud-controller-manager`))
+			Expect(ccmDeployment.Field("spec.template.metadata.annotations.checksum/config").String()).NotTo(BeEmpty())
+			Expect(ccmDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+
+			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-huaweicloud", "cloud-controller-manager")
+			Expect(ccmVPA.Exists()).To(BeTrue())
+			Expect(ccmVPA.Field("spec.updatePolicy.updateMode").String()).To(Equal("InPlaceOrRecreate"))
+
+			ccmPDB := f.KubernetesResource("PodDisruptionBudget", "d8-cloud-provider-huaweicloud", "cloud-controller-manager")
+			Expect(ccmPDB.Exists()).To(BeTrue())
+			Expect(ccmPDB.Field("spec.maxUnavailable").String()).To(Equal("1"))
+			Expect(ccmPDB.Field("metadata.annotations.checksum/config").String()).NotTo(BeEmpty())
+
+			caphcDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "caphc-controller-manager")
+			Expect(caphcDeployment.Exists()).To(BeTrue())
+			Expect(caphcDeployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("caphc-controller-manager"))
+			Expect(caphcDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --leader-elect`))
+			Expect(caphcDeployment.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(`
+- name: HUAWEICLOUD_CLOUD
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: cloud
+- name: HUAWEICLOUD_REGION
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: region
+- name: HUAWEICLOUD_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: access-key
+- name: HUAWEICLOUD_SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: secret-key
+- name: HUAWEICLOUD_PROJECT_ID
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: project-id`))
+			Expect(caphcDeployment.Field("spec.template.spec.containers.0.livenessProbe.httpGet.path").String()).To(Equal("/healthz"))
+			Expect(caphcDeployment.Field("spec.template.spec.containers.0.livenessProbe.httpGet.port").String()).To(Equal("8081"))
+			Expect(caphcDeployment.Field("spec.template.spec.containers.0.readinessProbe.httpGet.path").String()).To(Equal("/readyz"))
+			Expect(caphcDeployment.Field("spec.template.spec.containers.0.readinessProbe.httpGet.port").String()).To(Equal("8081"))
+			Expect(caphcDeployment.Field("spec.template.spec.dnsPolicy").Exists()).To(BeFalse())
+
+			caphcVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-huaweicloud", "caphc-controller-manager")
+			Expect(caphcVPA.Exists()).To(BeTrue())
+
+			caphcPDB := f.KubernetesResource("PodDisruptionBudget", "d8-cloud-provider-huaweicloud", "caphc-controller-manager")
+			Expect(caphcPDB.Exists()).To(BeTrue())
 
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "csi-controller")
 			Expect(csiControllerDeployment.Exists()).To(BeTrue())
@@ -208,6 +317,231 @@ var _ = Describe("Module :: cloud-provider-huaweicloud :: helm template ::", fun
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+			Expect(cddDeployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("cloud-data-discoverer"))
+			Expect(cddDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
+- --discovery-period=1h
+- --listen-address=127.0.0.1:8081`))
+			Expect(cddDeployment.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(`
+- name: HUAWEICLOUD_CLOUD
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: cloud
+- name: HUAWEICLOUD_REGION
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: region
+- name: HUAWEICLOUD_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: access-key
+- name: HUAWEICLOUD_SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: secret-key
+- name: HUAWEICLOUD_PROJECT_ID
+  valueFrom:
+    secretKeyRef:
+      name: huaweicloud-credentials
+      key: project-id`))
+			Expect(cddDeployment.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			Expect(cddDeployment.Field("spec.template.metadata.annotations.kubectl\\.kubernetes\\.io/default-exec-container").String()).To(Equal("cloud-data-discoverer"))
+			Expect(cddDeployment.Field("spec.template.metadata.annotations.kubectl\\.kubernetes\\.io/default-logs-container").String()).To(Equal("cloud-data-discoverer"))
+			Expect(cddDeployment.Field("spec.template.metadata.annotations.checksum/config").String()).NotTo(BeEmpty())
+
+			cddVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-huaweicloud", "cloud-data-discoverer")
+			Expect(cddVPA.Exists()).To(BeTrue())
+			Expect(cddVPA.Field("spec.updatePolicy.updateMode").String()).To(Equal("Initial"))
+
+			cddPDB := f.KubernetesResource("PodDisruptionBudget", "d8-cloud-provider-huaweicloud", "cloud-data-discoverer")
+			Expect(cddPDB.Exists()).To(BeTrue())
+
+			cddPodMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "cloud-data-discoverer-metrics")
+			Expect(cddPodMonitor.Exists()).To(BeFalse())
+		})
+	})
+
+	Context("HuaweiCloud :: VPA gate compatibility", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderHuaweicloud", moduleValuesA)
+			f.ValuesSet("global.enabledModules", []string{
+				"vertical-pod-autoscaler",
+				"vertical-pod-autoscaler-crd",
+				"cloud-provider-huaweicloud",
+			})
+			f.HelmRender()
+		})
+
+		It("must still render VPA objects when vertical-pod-autoscaler is enabled", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-huaweicloud", "cloud-controller-manager").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-huaweicloud", "caphc-controller-manager").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-huaweicloud", "cloud-data-discoverer").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("HuaweiCloud :: PodMonitor gate compatibility", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderHuaweicloud", moduleValuesA)
+			f.ValuesSet("global.enabledModules", []string{
+				"vertical-pod-autoscaler",
+				"vertical-pod-autoscaler-crd",
+				"operator-prometheus",
+				"operator-prometheus-crd",
+				"cloud-provider-huaweicloud",
+			})
+			f.ValuesSet("global.discovery.prometheusScrapeInterval", 30)
+			f.HelmRender()
+		})
+
+		It("must render PodMonitor when operator-prometheus is enabled", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			pm := f.KubernetesResource("PodMonitor", "d8-monitoring", "cloud-data-discoverer-metrics")
+			Expect(pm.Exists()).To(BeTrue())
+			Expect(pm.Field("spec.namespaceSelector.matchNames").String()).To(MatchYAML(`
+- d8-cloud-provider-huaweicloud`))
+			Expect(pm.Field("spec.selector.matchLabels.app").String()).To(Equal("cloud-data-discoverer"))
+			Expect(pm.Field("spec.podMetricsEndpoints.0.port").String()).To(Equal("https-metrics"))
+			Expect(pm.Field("spec.podMetricsEndpoints.0.path").String()).To(Equal("/metrics"))
+		})
+	})
+
+	Context("HuaweiCloud :: admission-policy-engine compatibility", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderHuaweicloud", moduleValuesA)
+			f.ValuesSet("global.enabledModules", []string{
+				"vertical-pod-autoscaler",
+				"vertical-pod-autoscaler-crd",
+				"admission-policy-engine",
+				"admission-policy-engine-crd",
+				"cloud-provider-huaweicloud",
+			})
+			f.HelmRender()
+		})
+
+		It("must render Namespace labels", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-huaweicloud")
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/enable-security-policy-check").String()).To(Equal("true"))
+		})
+
+		It("must render SecurityPolicyException for cloud-controller-manager", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("cloud-controller-manager"))
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", "d8-cloud-provider-huaweicloud", "cloud-controller-manager")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+		})
+
+		It("must render SecurityPolicyException for csi-controller", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "csi-controller")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("csi-controller"))
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", "d8-cloud-provider-huaweicloud", "csi-controller")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+		})
+
+		It("must render SecurityPolicyException for csi-node", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("DaemonSet", "d8-cloud-provider-huaweicloud", "csi-node")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("csi-node"))
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", "d8-cloud-provider-huaweicloud", "csi-node")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.securityContext.privileged.allowedValue").Bool()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.securityContext.runAsNonRoot.allowedValue").Bool()).To(BeFalse())
+			Expect(securityPolicyException.Field("spec.securityContext.runAsUser.allowedValues").Array()).To(HaveLen(1))
+			Expect(securityPolicyException.Field("spec.securityContext.runAsUser.allowedValues").Array()[0].Int()).To(BeEquivalentTo(0))
+			Expect(securityPolicyException.Field("spec.volumes.types.allowedValues").Array()).To(HaveLen(1))
+			Expect(securityPolicyException.Field("spec.volumes.types.allowedValues").Array()[0].String()).To(BeEquivalentTo("hostPath"))
+			Expect(securityPolicyException.Field("spec.volumes.hostPath.allowedValues").Array()).To(
+				ConsistOf(
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/var/lib/kubelet/plugins_registry/")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/var/lib/kubelet")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/var/lib/kubelet/csi-plugins/evs.csi.huaweicloud.com/")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/dev")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+				),
+			)
+		})
+	})
+
+	Context("HuaweiCloud :: bootstrap compatibility", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderHuaweicloud", moduleValuesA)
+			f.ValuesSet("global.clusterIsBootstrapped", false)
+			f.HelmRender()
+		})
+
+		It("must keep bootstrap-specific DNS and env behavior", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(`
+- name: KUBERNETES_SERVICE_HOST
+  valueFrom:
+    fieldRef:
+      apiVersion: v1
+      fieldPath: status.hostIP
+- name: KUBERNETES_SERVICE_PORT
+  value: "6443"
+- name: HOST_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.hostIP
+- name: HUAWEICLOUD_SDK_CREDENTIALS_FILE
+  value: /etc/cloud/cloud-config`))
+
+			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "cloud-data-discoverer")
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+
+			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-huaweicloud", "csi-controller")
+			Expect(csiControllerDeployment.Exists()).To(BeTrue())
+			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+
+			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-huaweicloud", "csi-node")
+			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
 		})
 	})
 })

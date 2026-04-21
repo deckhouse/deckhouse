@@ -5,6 +5,10 @@ search: control plane, data plane, istio architecture
 description: Istio architecture at the Deckhouse Kubernetes Platform cluster level.
 ---
 
+{% alert level="info" %}
+Compatibility between Istio versions and Kubernetes versions is defined by the compatibility table [in the `istio` module documentation](/modules/istio/#compatibility-table-for-supported-versions). Before using Istio, refer to the current versions and their status in that section.
+{% endalert %}
+
 The Istio components are divided into two categories:
 
 * **Control plane**: Managing and maintaining services. The control plane usually refers to istiod Pods.

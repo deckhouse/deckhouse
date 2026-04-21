@@ -340,9 +340,10 @@ featureGates:
   DRAPartitionableDevices: true
 {{- end }}
 {{- if semverCompare ">=1.34" .kubernetesVersion }}
-{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations) */}}
+{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */}}
   DRADeviceBindingConditions: true
   DRAConsumableCapacity: true
+  DRAExtendedResource: true
 {{- end }}
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true

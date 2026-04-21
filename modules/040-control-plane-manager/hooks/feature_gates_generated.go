@@ -121,6 +121,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"RelaxedEnvironmentVariableValidation",
 			"StrictCostEnforcementForVAP",
 			"StrictCostEnforcementForWebhooks",
+			"CRDSensitiveData",
 		},
 		KubeControllerManager: []string{
 			"ConcurrentWatchObjectDecode",
@@ -176,6 +177,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"OrderedNamespaceDeletion",
 			"PodLifecycleSleepActionAllowZero",
 			"RelaxedDNSSearchValidation",
+			"CRDSensitiveData",
 		},
 		KubeControllerManager: []string{
 			"ComponentFlagz",
@@ -243,6 +245,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"SELinuxMount",
 			"StrictIPCIDRValidation",
 			"DisableAllocatorDualWrite",
+			"CRDSensitiveData",
 		},
 		KubeControllerManager: []string{
 			"AllowParsingUserUIDFromCertAuth",
@@ -301,6 +304,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"ResourceHealthStatus",
 			"SELinuxMount",
 			"StrictIPCIDRValidation",
+			"CRDSensitiveData",
 		},
 		KubeControllerManager: []string{
 			"ComponentFlagz",
@@ -359,6 +363,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"SELinuxMount",
 			"StrictIPCIDRValidation",
 			"TaintTolerationComparisonOperators",
+			"CRDSensitiveData",
 		},
 		KubeControllerManager: []string{
 			"ComponentFlagz",

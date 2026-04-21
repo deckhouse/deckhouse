@@ -248,7 +248,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 	log.DebugF("NodeGroups for creating %v\n", nodeGroupsWithoutStateInCluster)
 
 	bootstrapNewNodeGroups := operations.ParallelCreateNodeGroup
-	if operations.IsSequentialNodesBootstrap(metaConfig){
+	if operations.IsSequentialNodesBootstrap(metaConfig) {
 		bootstrapNewNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 

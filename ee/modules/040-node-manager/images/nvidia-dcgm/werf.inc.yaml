@@ -27,7 +27,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-crosstool-ng-artifact
 final: false
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -64,7 +64,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-chs-artifact
 final: false
-fromImage: builder/golang-bookworm
+from: {{ index $.Images "builder/golang-bookworm" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -148,7 +148,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build-image-deps-artifact
   add: /tmp/x86_64-linux-gnu
   before: install
-- image: libs/glibc
+- from: {{ index $.Images "libs/glibc" }}
   add: /
   to: /tmp/glibc
   includePaths:

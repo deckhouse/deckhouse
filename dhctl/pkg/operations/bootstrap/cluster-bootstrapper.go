@@ -23,8 +23,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 
+	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -107,6 +110,8 @@ type Params struct {
 	Logger  log.Logger
 	IsDebug bool
 
+	DirectoryConfig *directoryconfig.DirectoryConfig
+
 	*client.KubernetesInitParams
 }
 
@@ -114,8 +119,9 @@ type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
-	lastState phases.DhctlState
-	logger    log.Logger
+	lastState      phases.DhctlState
+	logger         log.Logger
+	loggerProvider dhctllog.LoggerProvider
 }
 
 func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
@@ -133,8 +139,9 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationBootstrap, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		lastState: params.InitialState,
-		logger:    logger,
+		lastState:      params.InitialState,
+		logger:         logger,
+		loggerProvider: log.ExternalLoggerProvider(logger),
 	}
 }
 
@@ -232,6 +239,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		b.DirectoryConfig,
 		config.ValidateOptionValidateExtensions(true),
 	)
 	if err != nil {
@@ -547,7 +555,17 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, nodeIP, devicePath, b.CommanderMode); err != nil {
+	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
+		Node:           b.NodeInterface,
+		NodeIP:         nodeIP,
+		DevicePath:     devicePath,
+		MetaConfig:     metaConfig,
+		CommanderMode:  b.CommanderMode,
+		DirsConfig:     b.DirectoryConfig,
+		LoggerProvider: b.loggerProvider,
+	})
+
+	if err != nil {
 		return err
 	}
 

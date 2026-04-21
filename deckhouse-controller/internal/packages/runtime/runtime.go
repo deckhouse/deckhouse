@@ -47,8 +47,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
+	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
-	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/startup"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -522,13 +522,13 @@ func (r *Runtime) schedulePackage(name string) {
 
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}
 }

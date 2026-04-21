@@ -140,7 +140,7 @@ func (s *Session) CurrentHost() Host {
 			return h
 		}
 	}
-	
+
 	return Host{}
 }
 

@@ -1,7 +1,6 @@
 # render git imports include paths
 {{- define "dev_prebuild_git_imports_include_paths" }}
 - candi
-- modules
 - global-hooks
 - shell_lib.sh
 - shell_lib
@@ -34,19 +33,19 @@
   includePaths:
   - deckhouse-controller
   - caps-deckhouse-controller
-- image: libs/ncurses
+- from: {{ index $.Images "libs/ncurses" }}
   add: /usr/share/terminfo
   to: /usr/share/terminfo
   before: install
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   after: setup
-- image: tools/erofs-utils
+- from: {{ index $.Images "tools/erofs-utils" }}
   add: /usr/bin/mkfs.erofs
   to: /usr/bin/mkfs.erofs
   after: setup
-- image: tools/cryptsetup
+- from: {{ index $.Images "tools/cryptsetup" }}
   add: /usr/sbin/veritysetup
   to: /usr/sbin/veritysetup
   after: setup
@@ -127,4 +126,32 @@ git:
   stageDependencies:
     install:
     - "**/*"
+{{- end }}
+
+#  render create ln part of setup script
+# . is dict with keys:
+#   TF - $.TF
+#   Editions - $.Editions
+{{- define "dev_prebuild_setup_ln_node_manager" }}
+{{- $context := . -}}
+# Add capi and cloud-providers
+{{- $providers := list }}
+{{- range $_, $edition := $context.Editions }}
+  {{- if $edition.terraformProviders }}
+    {{- range $_, $tfProvider := $edition.terraformProviders }}
+      {{- $tf := index $context.TF $tfProvider }}
+        {{- $cloudName := lower $tf.cloudName }}
+        {{- $providers = append $providers $cloudName }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+rm /deckhouse/modules/040-node-manager/capi/* /deckhouse/modules/040-node-manager/cloud-providers/*
+for item in {{ join " " $providers }}; do
+  if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
+    ln -s /deckhouse/modules/030-cloud-provider-${item}/capi /deckhouse/modules/040-node-manager/capi/${item}
+  fi
+  if [ -d /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager ]; then
+    ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/${item}
+  fi
+done
 {{- end }}

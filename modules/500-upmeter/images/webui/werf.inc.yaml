@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -42,3 +43,4 @@ git:
 imageSpec:
   config:
     entrypoint: ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"]
+{{- end }}

@@ -55,8 +55,45 @@ vpa:
 resources:
   requests:
     memory:
-      _default: 32M
-      web-production: 150M
+      # Global defaults for all components by environment.
+      _default:
+        _default: 32Mi
+        web-production: 128Mi
+      # Explicit requests for registry-modules-watcher by environment.
+      registryModulesWatcher:
+        _default:
+          _default: 128Mi
+          web-production: 256Mi
+          web-stage: 256Mi
+          web-test: 256Mi
+          web-test2: 256Mi
+      moduleslibrary:
+        # Explicit per-container requests for the web container.
+        web:
+          _default: 32Mi
+          web-production: 128Mi
+        # Explicit per-container requests for the builder container.
+        builder:
+          _default: 128Mi
+          web-production: 512Mi
+          web-stage: 512Mi
+          web-test: 512Mi
+          web-test2: 512Mi
+  limits:
+    memory:
+      moduleslibrary:
+        # Explicit per-container limits for the web container.
+        web:
+          _default: 128Mi
+          web-production: 512Mi
+
+        # Explicit per-container limits for the builder container.
+        builder:
+          _default: 2Gi
+          web-production: 4Gi
+          web-stage: 4Gi
+          web-test: 4Gi
+          web-test2: 4Gi
 
 vrouter:
   defaultGroup: "v1"

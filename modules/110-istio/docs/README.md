@@ -12,8 +12,6 @@ webIfaces:
 |     1.25      |                                                1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                                          | Supported |
 |     1.21      |                                                1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                        | Deprecated and will be deleted |
 
-<sup>*</sup> — the Kubernetes version **is NOT supported** in the current Deckhouse Kubernetes Platform release.
-
 ## What issues does Istio help to resolve?
 
 [Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.

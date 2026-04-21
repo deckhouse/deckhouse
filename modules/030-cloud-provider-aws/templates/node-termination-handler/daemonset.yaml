@@ -68,7 +68,10 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "nodeTerminationHandler") }}
         args:
         - --enable-rebalance-monitoring=true
-        - --enable-rebalance-draining=true
+        - --enable-rebalance-draining=false
+        - --enable-spot-interruption-draining=false
+        - --enable-scheduled-event-draining=false
+        - --taint-node=true
         env:
         - name: NODE_NAME
           valueFrom:

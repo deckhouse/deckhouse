@@ -43,7 +43,7 @@ imageSpec:
     entrypoint: ["/usr/bin/etcd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -69,3 +69,4 @@ shell:
     - cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

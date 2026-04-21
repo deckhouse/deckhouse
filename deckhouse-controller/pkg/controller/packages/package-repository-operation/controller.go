@@ -29,7 +29,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
@@ -102,17 +101,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, err
 	}
 
-	// handle delete event
+	// handle delete event - no cleanup needed, child resources are owned by PackageRepository
 	if !operation.DeletionTimestamp.IsZero() {
 		logger.Debug("deleting package repository operation")
-
-		err := r.delete(ctx, operation)
-		if err != nil {
-			logger.Warn("failed to delete package repository operation", log.Err(err))
-
-			return res, err
-		}
-
 		return res, nil
 	}
 
@@ -168,6 +159,27 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 		op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository] = op.Spec.PackageRepositoryName
 	}
 
+	// Ensure ownerReference to PackageRepository is set (for cascade deletion via GC).
+	// Auto-created operations get this at creation time, manually created ones need enrichment.
+	if !hasPackageRepositoryOwnerRef(op) {
+		repo := new(v1alpha1.PackageRepository)
+		if err := r.client.Get(ctx, client.ObjectKey{Name: op.Spec.PackageRepositoryName}, repo); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("get package repository for owner ref: %w", err)
+			}
+			// Repository not found - skip ownerRef, operation will be processed without it
+		} else {
+			update = true
+			op.OwnerReferences = append(op.OwnerReferences, metav1.OwnerReference{
+				APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+				Kind:       v1alpha1.PackageRepositoryGVK.Kind,
+				Name:       repo.Name,
+				UID:        repo.UID,
+				Controller: &[]bool{true}[0],
+			})
+		}
+	}
+
 	if update {
 		if err := r.client.Patch(ctx, op, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("patch operation labels: %w", err)
@@ -177,6 +189,16 @@ func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.Pac
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// hasPackageRepositoryOwnerRef checks if the operation already has an ownerReference to a PackageRepository.
+func hasPackageRepositoryOwnerRef(op *v1alpha1.PackageRepositoryOperation) bool {
+	for _, ref := range op.OwnerReferences {
+		if ref.Kind == v1alpha1.PackageRepositoryGVK.Kind {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
@@ -513,7 +535,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, operation *v1a
 	operation.Status.Packages.Failed = append(operation.Status.Packages.Failed, v1alpha1.PackageRepositoryOperationStatusFailedPackage{
 		Name: packageName,
 		Errors: []v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
-			{Error: processErr.Error()},
+			{Message: processErr.Error()},
 		},
 	})
 
@@ -534,15 +556,16 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, operation *v1
 	}
 
 	operation.Status.Packages.Processed = append(operation.Status.Packages.Processed, v1alpha1.PackageRepositoryOperationStatusPackage{
-		Name: packageName,
-		Type: string(result.PackageType),
+		Name:          packageName,
+		Type:          string(result.PackageType),
+		FoundVersions: result.FoundVersions,
 	})
 
 	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(result.Failed))
 	for _, fv := range result.Failed {
 		failedList = append(failedList, v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
 			Version: fv.Name,
-			Error:   fv.Error,
+			Message: fv.Error,
 		})
 	}
 	if len(failedList) > 0 {
@@ -590,23 +613,6 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 		logger.Debug("deleting old operation", slog.String("name", op.Name))
 		if err := r.client.Delete(ctx, &op); err != nil {
 			return fmt.Errorf("delete old operation: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (r *reconciler) delete(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) error {
-	r.logger.Info("deleting PackageRepositoryOperation", slog.String("name", operation.Name))
-
-	// Remove finalizer if present
-	if controllerutil.ContainsFinalizer(operation, "packages.deckhouse.io/finalizer") {
-		original := operation.DeepCopy()
-
-		controllerutil.RemoveFinalizer(operation, "packages.deckhouse.io/finalizer")
-
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return err
 		}
 	}
 

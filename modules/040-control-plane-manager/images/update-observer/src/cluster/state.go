@@ -26,21 +26,26 @@ type State struct {
 	Status
 }
 
-func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, downgradeInProgress bool) *State {
+func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, versionSettings VersionSettings, maxUsedVersion, sourceVersion string, downgradeInProgress bool) *State {
+	currentVersion := determineCurrentVersion(nodes.versions, controlPlane.versions, downgradeInProgress)
+
 	state := &State{
 		Spec: Spec{
 			DesiredVersion: cfg.DesiredVersion,
 			UpdateMode:     cfg.UpdateMode,
 		},
 		Status: Status{
-			CurrentVersion:    determineCurrentVersion(nodes.versions, controlPlane.versions, downgradeInProgress),
+			CurrentVersion:    currentVersion,
+			SupportedVersions: versionSettings.Supported,
+			AvailableVersions: versionSettings.Available(version.GetMax(maxUsedVersion, currentVersion)), // prevent stale list when maxUsedVersion updates post-calculation
+			AutomaticVersion:  versionSettings.Automatic,
 			ControlPlaneState: *controlPlane,
 			NodesState:        *nodes,
 		},
 	}
 
 	state.determineStatePhase()
-	state.calculateProgress()
+	state.calculateProgress(sourceVersion)
 
 	return state
 }
@@ -55,7 +60,7 @@ func (s *State) determineStatePhase() {
 	case ControlPlaneInconsistent:
 		phase = ClusterControlPlaneInconsistent
 	case ControlPlaneUpToDate:
-		if s.Spec.UpdateMode == UpdateModeAutomatic && s.CurrentVersion > s.Spec.DesiredVersion {
+		if s.Spec.UpdateMode == UpdateModeAutomatic && version.Compare(s.CurrentVersion, s.Spec.DesiredVersion) > 0 {
 			phase = ClusterVersionDrift
 			break
 		}
@@ -76,10 +81,23 @@ func (s *State) determineStatePhase() {
 	s.Phase = phase
 }
 
-func (s *State) calculateProgress() {
-	s.Progress = common.CalculateProgress(
-		s.ControlPlaneState.UpToDateComponentCount+s.NodesState.UpToDateCount,
-		s.ControlPlaneState.DesiredComponentCount+s.NodesState.DesiredCount)
+func (s *State) calculateProgress(sourceVersion string) {
+	totalComponents := s.ControlPlaneState.DesiredComponentCount + s.NodesState.DesiredCount
+
+	src := sourceVersion
+	if src == "" {
+		src = s.CurrentVersion
+	}
+
+	hops := version.Hops(src, s.Spec.DesiredVersion)
+	if hops == 0 {
+		s.Progress = common.CalculateProgress(s.ControlPlaneState.UpToDateComponentCount+s.NodesState.UpToDateCount, totalComponents)
+		return
+	}
+
+	totalSteps := hops * totalComponents
+	completedSteps := s.ControlPlaneState.StepsCompleted + s.NodesState.StepsCompleted
+	s.Progress = common.CalculateProgress(completedSteps, totalSteps)
 }
 
 func determineCurrentVersion(nodes *version.UniqueAggregator, controlPlane *version.UniqueAggregator, downgradeInProgress bool) string {
@@ -96,6 +114,9 @@ type Spec struct {
 
 type Status struct {
 	CurrentVersion    string
+	SupportedVersions []string
+	AvailableVersions []string
+	AutomaticVersion  string
 	ControlPlaneState ControlPlaneState
 	NodesState        NodesState
 	Phase             Phase

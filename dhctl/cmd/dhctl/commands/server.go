@@ -30,9 +30,10 @@ func DefineServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		return server.Serve(settings.ServerParams{
 			ServerGeneralParams: settings.ServerGeneralParams{
-				Network: app.ServerNetwork,
-				Address: app.ServerAddress,
-				TmpDir:  app.TmpDirName,
+				Network:           app.ServerNetwork,
+				Address:           app.ServerAddress,
+				TmpDir:            app.TmpDirName,
+				DownloadDirConfig: app.GetDirConfig(),
 			},
 			ParallelTasksLimit:         app.ServerParallelTasksLimit,
 			RequestsCounterMaxDuration: app.ServerRequestsCounterMaxDuration,
@@ -48,9 +49,10 @@ func DefineSingleThreadedServerCommand(cmd *kingpin.CmdClause) *kingpin.CmdClaus
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		return singlethreaded.Serve(settings.ServerSingleshotParams{
 			ServerGeneralParams: settings.ServerGeneralParams{
-				Network: app.ServerNetwork,
-				Address: app.ServerAddress,
-				TmpDir:  app.TmpDirName,
+				Network:           app.ServerNetwork,
+				Address:           app.ServerAddress,
+				TmpDir:            app.TmpDirName,
+				DownloadDirConfig: app.GetDirConfig(),
 			},
 		})
 	})

@@ -1513,6 +1513,10 @@ To ensure correct operation, clearly specify the GPU sharing strategy in the [`s
 Containerd on GPU nodes is configured automatically. Do not change its configuration manually (for example, via the NodeGroupConfiguration resource or a configuration on the node).
 {% endalert %}
 
+{% alert level="info" %}
+If a GPU is used in a single-node cluster and the `MIG` strategy is selected, an additional manual procedure is required after each node reboot to reapply the MIG configuration. For details, see [MIG in a single-node cluster](/products/kubernetes-platform/documentation/admin/configuration/platform-scaling/node/node-customization.html#mig-in-a-single-node-cluster) section.
+{% endalert %}
+
 To add a GPU node to the cluster, perform the following steps:
 
 1. Create a [NodeGroup](cr.html#nodegroup) resource for GPU nodes.

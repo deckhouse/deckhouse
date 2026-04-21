@@ -54,7 +54,6 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 			return err
 		}
 
-		
 		if err := createNodeUser(ctx, kubeCl, nodeUserResource); err != nil {
 			if k8errors.IsAlreadyExists(err) {
 				return updateNodeUser(ctx, kubeCl, nodeUserResource)
@@ -125,12 +124,12 @@ func (w *NodeUserPresentsWaiter) WaitPresentOnNodes(ctx context.Context, nodeUse
 	if len(nodeUser.NodeGroups) > 0 {
 		selector, err := kubernetes.GetLabelSelector([]kubernetes.LabelSelector{
 			{
-				Label: global.NodeGroupLabel,
+				Label:    global.NodeGroupLabel,
 				Operator: selection.In,
-				Vals: nodeUser.NodeGroups,
+				Vals:     nodeUser.NodeGroups,
 			},
 		})
-		
+
 		if err != nil {
 			return err
 		}
@@ -183,7 +182,7 @@ func (w *NodeUserPresentsWaiter) loopParams(userName string) retry.Params {
 }
 
 func defaultTimeoutCtx(parent context.Context) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(parent, 10 * time.Second)
+	return context.WithTimeout(parent, 10*time.Second)
 }
 
 func createNodeUser(ctx context.Context, kubeCl client.KubeClient, nodeUserResource *unstructured.Unstructured) error {
@@ -191,10 +190,9 @@ func createNodeUser(ctx context.Context, kubeCl client.KubeClient, nodeUserResou
 	defer cancel()
 
 	_, err := kubeCl.Dynamic().Resource(v1.NodeUserGVR).Create(timeoutCtx, nodeUserResource, metav1.CreateOptions{})
-	
+
 	return err
 }
-
 
 func updateNodeUser(ctx context.Context, kubeCl client.KubeClient, nodeUserResource *unstructured.Unstructured) error {
 	timeoutCtx, cancel := defaultTimeoutCtx(ctx)

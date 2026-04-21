@@ -2,7 +2,7 @@
 {{- $image_version := $lsblk_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
-fromImage: builder/scratch
+from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /
@@ -39,7 +39,7 @@ shell:
   - rm -rf /src/util-linux/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}

@@ -44,11 +44,14 @@ type Spec struct {
 }
 
 type Status struct {
-	CurrentVersion string             `yaml:"currentVersion"`
-	Phase          string             `yaml:"phase"`
-	Progress       string             `yaml:"progress,omitempty"`
-	ControlPlane   []ControlPlaneNode `yaml:"controlPlane"`
-	Nodes          Nodes              `yaml:"nodes"`
+	CurrentVersion    string             `yaml:"currentVersion"`
+	SupportedVersions []string           `yaml:"supportedVersions"`
+	AvailableVersions []string           `yaml:"availableVersions"`
+	AutomaticVersion  string             `yaml:"automaticVersion"`
+	Phase             string             `yaml:"phase"`
+	Progress          string             `yaml:"progress,omitempty"`
+	ControlPlane      []ControlPlaneNode `yaml:"controlPlane"`
+	Nodes             Nodes              `yaml:"nodes"`
 }
 
 type ControlPlaneNode struct {
@@ -112,7 +115,7 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 
 	annotations := configMap.GetAnnotations()
 	labels := configMap.GetLabels()
-	now := time.Now().Format(time.RFC3339)
+	now := time.Now().UTC().Format(time.RFC3339)
 
 	annotations[common.LastReconciliationTime] = now
 	annotations[common.CauseLabelKey] = string(reconcileTrigger)
@@ -176,10 +179,13 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 			UpdateMode:     string(clusterState.Spec.UpdateMode),
 		},
 		Status: &Status{
-			CurrentVersion: clusterState.CurrentVersion,
-			Phase:          string(clusterState.Status.Phase),
-			Progress:       renderProgress(clusterState.Progress),
-			ControlPlane:   renderControlPlanes(clusterState.ControlPlaneState.MasterNodes),
+			CurrentVersion:    clusterState.CurrentVersion,
+			SupportedVersions: clusterState.SupportedVersions,
+			AvailableVersions: clusterState.AvailableVersions,
+			AutomaticVersion:  clusterState.AutomaticVersion,
+			Phase:             string(clusterState.Status.Phase),
+			Progress:          renderProgress(clusterState.Progress),
+			ControlPlane:      renderControlPlanes(clusterState.ControlPlaneState.MasterNodes),
 			Nodes: Nodes{
 				DesiredCount:  clusterState.NodesState.DesiredCount,
 				UpToDateCount: clusterState.NodesState.UpToDateCount,

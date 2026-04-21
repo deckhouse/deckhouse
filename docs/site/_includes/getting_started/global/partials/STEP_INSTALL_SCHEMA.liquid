@@ -99,6 +99,8 @@ Scheme of Deckhouse installation in a private environment:<br />
      {%- else %} management utility via CLI
      {%- endif %}
      {%- endunless %}.
+   - SSH key access to the node that will be the **first master node** of the future cluster.
+     > The key is specified in the next step and will be automatically added to the node created in the cloud during the preparation of the cloud infrastructure by the installer.
 {%- endif %}
 {%- if page.platform_type == "existing" %}
    - the `kubectl` command-line tool must be configured to communicate with your cluster.

@@ -19,9 +19,10 @@ import (
 	"regexp"
 	"strings"
 
-	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
+
+	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"

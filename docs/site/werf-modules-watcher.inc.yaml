@@ -1,6 +1,6 @@
 # Build scanner, which fetch modules documentation from list of specified registries
 image: registry-modules-watcher-artifact
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 shell:
   install:
   - cd /go/src/app
@@ -16,7 +16,7 @@ git:
       setup: '**/*'
 ---
 image: registry-modules-watcher
-fromImage: builder/alpine-3.22
+from: {{ index $.Images "builder/alpine-3.22" }}
 imageSpec:
   config:
     workingDir: "/app"

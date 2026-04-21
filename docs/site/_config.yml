@@ -17,6 +17,9 @@ site_description:
   ru: "Deckhouse. Позволяет создавать идентичные Kubernetes-кластеры в любой инфраструктуре и полностью, «автомагически» управляет ими."
 github_repo_path: /deckhouse/deckhouse
 d8Revision: EE
+LTSChannel:
+  version: v1.73-cse
+  versionName: v1.73 (CSE)
 
 metrics:
   google: G-4X28CEP7W2

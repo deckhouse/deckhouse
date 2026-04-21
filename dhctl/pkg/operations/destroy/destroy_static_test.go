@@ -1673,7 +1673,7 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 
 	testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
 
-	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider())
+	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil)
 	require.NoError(t, err)
 
 	const commanderMode = false

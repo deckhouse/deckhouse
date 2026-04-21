@@ -239,18 +239,62 @@ Where:
 Not available in Community Edition.
 {% endalert %}
 
-{% alert level="warning" %}
-To set up auditing, the following modules must be enabled:
-- `log-shipper`
-- `runtime-audit-engine`
-{% endalert %}
+To enable security event auditing:
 
-To enable security event auditing, set the module’s `.spec.settings.audit.enabled` parameter to `true`:
+1. Enable [`log-shipper`](/modules/log-shipper/) and [`runtime-audit-engine`](/modules/runtime-audit-engine/) modules.
+1. Enable Kubernetes API audit by setting [`.spec.settings.apiserver.auditPolicyEnabled: true`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) in the `control-plane-manager` module.
+1. Set [`.spec.settings.audit.enabled: true`](/modules/virtualization/stable/configuration.html#parameters-audit-enabled) in the `virtualization` module:
+
+   ```yaml
+   spec:
+     settings:
+       audit:
+         enabled: true
+   ```
+
+For a complete list of configuration options, see [Configuration](/modules/virtualization/configuration.html).
+
+Events are collected by the `virtualization-audit-*` pod in the `d8-virtualization` namespace. To forward events to the cluster logging system (e.g., Loki), create a [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig):
 
 ```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ClusterLoggingConfig
+metadata:
+  name: virtualization-audit-logs
 spec:
-  enabled: true
-  settings:
-    audit:
-      enabled: true
+  destinationRefs:
+    - d8-loki
+  kubernetesPods:
+    namespaceSelector:
+      matchNames:
+        - d8-virtualization
+    labelSelector:
+      matchLabels:
+        app: virtualization-audit
+  type: KubernetesPods
 ```
+
+To view events in Grafana, use a Loki query:
+
+```logql
+{namespace="d8-virtualization", pod=~"virtualization-audit-.*"}
+```
+
+Available fields in the logs:
+- `type`: Event type (Access to VM, VM Management, etc.).
+- `name`: Human-readable description.
+- `request_subject`: Username or ServiceAccount.
+- `datetime`: Event timestamp.
+- `virtualmachine_name`: Affected VM.
+- `source_ip`: Request source IP (for forbidden operations).
+
+### Security events
+
+The audit system logs the following events:
+
+- Access to VM: Connection via console, VNC, or port forward. Includes VM name, OS, versions, storage, and node address.
+- VM Management: Create, update, patch, or delete operations on [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resources.
+- VM Control Operations: Start, stop, restart, migrate, or evict via [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resource.
+- Integrity Check: SHA256 verification of VM configuration. Logs when checksum changes.
+- Module Control: Create, update, or delete operations on ModuleConfig.
+- Forbidden Operations: Operations blocked by the platform. Includes user, operation, resource, source IP, and denial reason.

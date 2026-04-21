@@ -176,7 +176,6 @@ func HasNodeStateInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 		return false, fmt.Errorf("HasNodeStateInCluster: internal error. node group not passed for %s", nodeName)
 	}
 
-
 	selectors := []kubernetes.LabelSelector{
 		getInfraStateSecretsSelectorForNodeGroup(nodeGroup),
 		{

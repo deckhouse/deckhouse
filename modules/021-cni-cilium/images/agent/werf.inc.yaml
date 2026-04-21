@@ -182,7 +182,7 @@ import:
   add: /etc/group
   to: /from_common_distroless/group
   before: install
-- image: tools/coreutils-v9.7
+- from: {{ index $.Images "tools/coreutils-v9.7" }}
   before: setup
   add: /usr/bin
   to: /usr/bin
@@ -207,7 +207,7 @@ import:
   - tail
   - timeout
   - wc
-- image: tools/coreutils-v9.7
+- from: {{ index $.Images "tools/coreutils-v9.7" }}
   before: setup
   add: /usr/bin/true
   to: /usr/bin/true
@@ -215,44 +215,44 @@ import:
   before: setup
   add: /d8-curl
   to: /usr/bin/curl
-- image: tools/bash-v5.2.37
+- from: {{ index $.Images "tools/bash-v5.2.37" }}
   before: setup
   add: /usr/bin
   to: /usr/bin
   includePaths:
   - bash
   - sh
-- image: tools/findutils-v4.10.0
+- from: {{ index $.Images "tools/findutils-v4.10.0" }}
   before: setup
   add: /usr/bin/find
-- image: tools/gawk-v5.3.2
+- from: {{ index $.Images "tools/gawk-v5.3.2" }}
   before: setup
   add: /usr/bin
   to: /usr/bin
   includePaths:
   - awk
   - gawk
-- image: tools/grep-grep-3.11
+- from: {{ index $.Images "tools/grep-grep-3.11" }}
   before: setup
   add: /usr/bin/grep
-- image: tools/sed-v4.9
+- from: {{ index $.Images "tools/sed-v4.9" }}
   before: setup
   add: /usr/bin/sed
-- image: tools/tar-v1.35
+- from: {{ index $.Images "tools/tar-v1.35" }}
   before: setup
   add: /usr/bin/tar
-- image: tools/util-linux-v2.41
+- from: {{ index $.Images "tools/util-linux-v2.41" }}
   before: setup
   add: /usr/bin/nsenter
-- image: tools/util-linux-v2.41
+- from: {{ index $.Images "tools/util-linux-v2.41" }}
   before: setup
   add: /bin/mount
   to: /usr/bin/mount
-- image: tools/ipset-v7.22
+- from: {{ index $.Images "tools/ipset-v7.22" }}
   before: setup
   add: /usr/sbin/ipset
   to: /usr/sbin/ipset
-- image: tools/kmod-v33
+- from: {{ index $.Images "tools/kmod-v33" }}
   before: setup
   add: /bin
   to: /usr/sbin
@@ -265,7 +265,7 @@ import:
   - modinfo
   - modprobe
   - rmmod
-- image: tools/iproute2-v6.12.0
+- from: {{ index $.Images "tools/iproute2-v6.12.0" }}
   before: setup
   add: /sbin
   to: /usr/sbin
@@ -286,31 +286,31 @@ import:
   - tipc
   - ctstat
   - rtstat
-- image: tools/bash-completion-2.16.0
+- from: {{ index $.Images "tools/bash-completion-2.16.0" }}
   before: setup
   add: /usr/share/bash-completion
   to: /usr/share/bash-completion
-- image: tools/bash-completion-2.16.0
+- from: {{ index $.Images "tools/bash-completion-2.16.0" }}
   before: setup
   add: /etc/profile.d/bash_completion.sh
   to: /etc/bashrc.d/bash_completion.sh
-- image: libs/glibc-v2.41
+- from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/libm.so.6
   to: /usr/lib64/libm.so.6
   before: setup
-- image: libs/glibc-v2.41
+- from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/libc.so.6
   to: /usr/lib64/libc.so.6
   before: setup
-- image: libs/glibc-v2.41
+- from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
   before: setup
-- image: libs/glibc-v2.41
+- from: {{ index $.Images "libs/glibc-v2.41" }}
   add: /lib64/libc.musl-x86_64.so.1
   to: /usr/lib64/libc.musl-x86_64.so.1
   before: setup
-- image: tools/elfutils-elfutils-0.193
+- from: {{ index $.Images "tools/elfutils-elfutils-0.193" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -323,11 +323,11 @@ import:
   add: /pause
   to: /pause
   before: setup
-- image: tools/jq
+- from: {{ index $.Images "tools/jq" }}
   add: /usr/bin/jq
   to: /usr/bin/jq
   before: setup
-- image: libs/zlib-v1.3.1
+- from: {{ index $.Images "libs/zlib-v1.3.1" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -336,7 +336,7 @@ import:
   - libz.so
   - libz.so.1
   - libz.so.1.3.1
-- image: libs/libcap-v1.2.69
+- from: {{ index $.Images "libs/libcap-v1.2.69" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -345,7 +345,7 @@ import:
   - libcap.so
   - libcap.so.2
   - libcap.so.2.69
-- image: libs/zstd-v1.5.7
+- from: {{ index $.Images "libs/zstd-v1.5.7" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -354,7 +354,7 @@ import:
   - libzstd.so
   - libzstd.so.1
   - libzstd.so.1.5.7
-- image: libs/libxml2-v2.13.8
+- from: {{ index $.Images "libs/libxml2-v2.13.8" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -364,7 +364,7 @@ import:
   - libxml2.so
   - libxml2.so.2
   - libxml2.so.2.13.*
-- image: libs/libffi-v3.4.8
+- from: {{ index $.Images "libs/libffi-v3.4.8" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -374,7 +374,7 @@ import:
   - libffi.so
   - libffi.so.8
   - libffi.so.8.1.4
-- image: libs/xz-v5.8.1
+- from: {{ index $.Images "libs/xz-v5.8.1" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -385,7 +385,7 @@ import:
   - liblzma.so
   - liblzma.so.5
   - liblzma.so.5.8.1
-- image: libs/libedit-v20250104.3.1
+- from: {{ index $.Images "libs/libedit-v20250104.3.1" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -396,7 +396,7 @@ import:
   - libedit.so.0
   - libedit.so.0.0.75
   - libedit.so.3
-- image: libs/ncurses-v6_5_20250920
+- from: {{ index $.Images "libs/ncurses-v6_5_20250920" }}
   add: /usr/lib
   to: /usr/lib64
   before: setup
@@ -443,7 +443,7 @@ import:
   - libtinfo.a
   - libtinfo.so
   - libtinfo.so.6
-- image: tools/gcc-12.1.0
+- from: {{ index $.Images "tools/gcc-12.1.0" }}
   add: /usr/lib64
   to: /usr/lib64
   before: setup
@@ -451,7 +451,7 @@ import:
   - libstdc++.so.6
   - libstdc++.so.6.0.30
   - libgcc_s.so.1
-- image: libs/xz-v5.8.1
+- from: {{ index $.Images "libs/xz-v5.8.1" }}
   add: /usr/lib/libc.so
   to: /lib/x86_64-linux-gnu/libc.so
   before: setup

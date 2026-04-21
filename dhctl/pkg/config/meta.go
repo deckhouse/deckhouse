@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,7 @@ import (
 	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -50,6 +52,8 @@ type MetaConfig struct {
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
+	ClusterDomain string `json:"-"`
+
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
@@ -60,6 +64,9 @@ type MetaConfig struct {
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
 	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
+
+	DownloadRootDir  string `json:"-"`
+	DownloadCacheDir string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -90,6 +97,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
 		}
 		m.ClusterDNSAddress = getDNSAddress(serviceSubnet)
+
+		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
+			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
+		}
 	}
 
 	if len(m.InitClusterConfig) > 0 {
@@ -175,17 +186,31 @@ func (m *MetaConfig) prepareRegistry() error {
 			)
 		}
 
-		// Check bootstrap mode
+		// Check Local and Proxy modes
 		switch deckhouseSettings.Mode {
-		case registry_const.ModeLocal, registry_const.ModeProxy:
+		case registry_const.ModeLocal:
 			return fmt.Errorf(
 				"bootstrap is not supported with registry mode '%s'. "+
-					"Please use one of the supported bootstrap modes: %v. ",
+					"Please use one of the supported bootstrap modes: %v",
 				deckhouseSettings.Mode,
 				[]registry_const.ModeType{
-					registry_const.ModeUnmanaged, registry_const.ModeDirect,
+					registry_const.ModeUnmanaged,
+					registry_const.ModeDirect,
+					registry_const.ModeProxy,
 				},
 			)
+		case registry_const.ModeProxy:
+			if !m.IsStatic() {
+				return fmt.Errorf(
+					"bootstrap with registry mode '%s' is supported only in static cluster. "+
+						"Please use one of the supported bootstrap modes for non-static cluster: %v",
+					deckhouseSettings.Mode,
+					[]registry_const.ModeType{
+						registry_const.ModeUnmanaged,
+						registry_const.ModeDirect,
+					},
+				)
+			}
 		}
 
 		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
@@ -248,6 +273,10 @@ func (m *MetaConfig) GetFullUUID() (string, error) {
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
 	return m.TerraNodeGroupSpecs
+}
+
+func (m *MetaConfig) GetClusterDomain() string {
+	return m.ClusterDomain
 }
 
 func (m *MetaConfig) FindTerraNodeGroup(nodeGroupName string) []byte {
@@ -562,6 +591,10 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.ResourceManagementTimeout = m.ResourceManagementTimeout
 	}
 
+	if m.ClusterDomain != "" {
+		out.ClusterDomain = m.ClusterDomain
+	}
+
 	return out
 }
 
@@ -633,12 +666,11 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	return ret, nil
 }
 
-func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
-	var imagesDigests imagesDigests
+func (m *MetaConfig) LoadImagesDigests() error {
+	imagesDigests, err := digests.GetAllDigests()
 
-	err := yaml.Unmarshal(imagesDigestsJSONFile, &imagesDigests)
 	if err != nil {
-		return fmt.Errorf("unmarshal: %v", err)
+		return fmt.Errorf("Cannot get images digests: %w", err)
 	}
 
 	m.Images = imagesDigests
@@ -649,7 +681,13 @@ func (m *MetaConfig) LoadImagesDigests(imagesDigestsJSONFile []byte) error {
 func (m *MetaConfig) LoadInstallerVersion() error {
 	rawFile, err := os.ReadFile(app.VersionFile)
 	if err != nil {
-		return err
+		// TODO param instead of hardcode path
+		versionFilePath := filepath.Join(app.DownloadDirName, "deckhouse", "version")
+		rawFile, err = os.ReadFile(versionFilePath)
+		if err != nil {
+			return fmt.Errorf("could not read both %s and %s: %w", app.VersionFile, versionFilePath, err)
+		}
+
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

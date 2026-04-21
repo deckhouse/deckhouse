@@ -108,8 +108,20 @@ certManager:
 {{- end -}}
 
 {{- /* Usage: {{ if (include "helm_lib_module_https_ingress_tls_enabled" .) }} */ -}}
-{{- /* returns not empty string if tls should enable for ingress  */ -}}
+{{- /* returns not empty string if tls should be enabled for the ingress  */ -}}
 {{- define "helm_lib_module_https_ingress_tls_enabled" -}}
+  {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+
+  {{- $mode := include "helm_lib_module_https_mode" $context -}}
+
+  {{- if or (eq "CertManager" $mode) (eq "CustomCertificate" $mode) -}}
+    not empty string
+  {{- end -}}
+{{- end -}}
+
+{{- /* Usage: {{ if (include "helm_lib_module_https_route_tls_enabled" .) }} */ -}}
+{{- /* returns not empty string if tls should be enabled for the route  */ -}}
+{{- define "helm_lib_module_https_route_tls_enabled" -}}
   {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
 
   {{- $mode := include "helm_lib_module_https_mode" $context -}}

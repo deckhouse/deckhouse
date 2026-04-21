@@ -165,6 +165,8 @@ func parseVersion(version string) (*semver.Version, error) {
 // Rules:
 //   - Upgrade is always allowed (no restrictions)
 //   - Downgrade is allowed only if it's within 1 minor version
+//   - Multiple downgrades are dissalowed. If maxUsedControlPlaneKubernetesVersion > oldVersion
+//     use maxUsedControlPlaneKubernetesVersion instead of oldVersion
 //   - When oldVersion is "Automatic", uses maxUsedControlPlaneKubernetesVersion from secret
 //     (maximum version that was ever used in the cluster)
 //   - When newVersion is "Automatic", uses deckhouseDefaultKubernetesVersion from secret
@@ -180,6 +182,7 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 	type versionChecker func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error)
 	var selectedChecker versionChecker
 
+	var nameForOldVersion = "oldKubernetesVersion"
 	// minorSubCheck validates that downgrade does not exceed 1 minor version.
 	// It allows upgrade without restrictions and only checks downgrade scenarios.
 	var minorSubCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
@@ -191,13 +194,13 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 		// Check if downgrading more than 1 minor version
 		if oldVersionSemver.Major() > newVersionSemver.Major() {
 			return rejectResult(
-				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. oldKubernetesVersion=%s newKubernetesVersion=%s", oldVersionSemver, newVersionSemver),
+				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
 			)
 		}
 
 		if oldVersionSemver.Minor() > newVersionSemver.Minor()+1 {
 			return rejectResult(
-				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. oldKubernetesVersion=%s newKubernetesVersion=%s", oldVersionSemver, newVersionSemver),
+				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
 			)
 		}
 
@@ -224,27 +227,43 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 
 	selectedChecker = minorSubCheck
 
-	// Resolve oldVersion: if it's "Automatic", get actual version from secret
+	var maxUsedVersionSemver *semver.Version
+	maxUsedVersionB64, exists := secret.Data["maxUsedControlPlaneKubernetesVersion"]
+	if exists {
+		var err error
+		maxUsedVersionSemver, err = parseVersion(string(maxUsedVersionB64))
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse max used version: %w", err)
+		}
+	}
+
+	// Resolve oldVersion: if it's "Automatic", get an actual version from secret
 	var oldVersionSemver *semver.Version
 	if oldVersion == "Automatic" {
-		maxUsedVersionB64, exists := secret.Data["maxUsedControlPlaneKubernetesVersion"]
 		// Corner case: If maxUsedControlPlaneKubernetesVersion is not set in secret,
 		// we cannot determine the actual version that was used, so we allow the change.
-		// This can happen during initial cluster setup or if secret is incomplete.
-		if !exists {
+		// This can happen during initial cluster setup or if a secret is incomplete.
+		if maxUsedVersionSemver == nil {
 			return allowResult(nil)
 		}
 
-		var err error
-		oldVersionSemver, err = parseVersion(string(maxUsedVersionB64))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse maxUsedControlPlaneKubernetesVersion: %w", err)
-		}
+		oldVersionSemver = maxUsedVersionSemver
 	} else {
 		var err error
 		oldVersionSemver, err = parseVersion(oldVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse old version: %w", err)
+		}
+
+		if maxUsedVersionSemver != nil {
+			// extra validation: if the cluster was on a higher version already,
+			// we cannot downgrade more, than 1 minor from a higher version,
+			// so set oldVersion to maxUsedVersion
+			if maxUsedVersionSemver.GreaterThan(oldVersionSemver) {
+				nameForOldVersion = "maxUsedControlPlaneKubernetesVersion"
+				oldVersionSemver = maxUsedVersionSemver
+			}
 		}
 	}
 
@@ -335,6 +354,7 @@ func validateClusterConfiguration(ctx context.Context, clusterConfiguration []by
 		ctx,
 		string(clusterConfiguration),
 		config.DummyPreparatorProvider(),
+		nil,
 		config.ValidateOptionOmitDocInError(true),
 		config.ValidateOptionStrictUnmarshal(true),
 	)

@@ -260,6 +260,7 @@ CNIPlugin
 CoC
 codec
 CODEOWNERS
+Colocating
 Colour
 comparations
 compatibilityFlag
@@ -606,6 +607,7 @@ HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
 hostname
+hostnames
 hostNetwork
 hostpath
 hostPath
@@ -1242,6 +1244,7 @@ resourcesTemplate
 resourcе
 RESTful
 Restic
+RHEL
 RockSolid
 roleRef
 RollingUpdate
@@ -1474,6 +1477,7 @@ UEFI
 UI
 uid
 UID
+UIs
 un
 uncordoned
 uninstall
@@ -1489,6 +1493,7 @@ uptick
 UPTODATE
 URIs
 urls
+URLs
 UsePAM
 username
 UserOperation
@@ -1866,6 +1871,7 @@ ZvirtInstanceClass
 запустившемся
 запушить
 иcпользовать
+ИБ
 иммутабельный
 имплементацию
 Имплементация
@@ -2182,6 +2188,7 @@ ZvirtInstanceClass
 перенаправлениям
 перенастраиваются
 переоткрытии
+переподключиться
 переразвернуть
 Переразвертывание
 переразвёртывание
@@ -2210,6 +2217,8 @@ ZvirtInstanceClass
 пиринговой
 пиринговую
 ПК
+плейсхолдер
+плейсхолдеров
 поддомен
 поддоменам
 поддоменами
@@ -2232,6 +2241,7 @@ ZvirtInstanceClass
 помотрим
 превью
 предзагрузки
+преднастроенного
 преднастроенные
 преднастроенный
 преднастроенными
@@ -2260,6 +2270,7 @@ ZvirtInstanceClass
 проксирования
 проксированы
 проксировать
+проксироваться
 проксируем
 проксирует
 проксируются
@@ -2350,6 +2361,7 @@ ZvirtInstanceClass
 сайдкаров
 сайдкаром
 сайдкары
+самоподписанном
 самоподписанные
 самоподписанный
 самоподписанных
@@ -2359,6 +2371,7 @@ ZvirtInstanceClass
 сгенерировали
 сгенерирован
 сгенерированного
+сгенерированному
 сгенерированную
 сгенерированные
 сгенерированный
@@ -2379,6 +2392,7 @@ ZvirtInstanceClass
 синтаксисы
 скачался
 скачаться
+скачиваются
 скейлить
 склонирован
 склонированные

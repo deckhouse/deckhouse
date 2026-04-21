@@ -388,13 +388,36 @@ func (r *NamespaceResolver) filterByMultitenancy(userInfo user.Info, candidates 
 		return result
 	}
 
-	result := make([]string, 0, len(candidates))
-	for ns := range candidates {
-		if r.isNamespaceAllowedByMultitenancy(userInfo, ns) {
+	// Get access type and filter in one call to avoid redundant affectedDirs lookups
+	accessType, filter := r.mtEngine.GetNamespaceAccessType(userInfo)
+
+	switch accessType {
+	case multitenancy.AllNamespacesAllowed:
+		// No MT restrictions, return all candidates
+		result := make([]string, 0, len(candidates))
+		for ns := range candidates {
 			result = append(result, ns)
 		}
+		return result
+
+	case multitenancy.NoNamespacesAllowed:
+		// Deny-by-default: user has no CAR and is not privileged
+		return []string{}
+
+	case multitenancy.FilteredAccess:
+		// User has restrictions - filter each namespace using pre-computed filter
+		result := make([]string, 0, len(candidates))
+		for ns := range candidates {
+			if r.mtEngine.IsNamespaceAllowedWithFilter(ns, filter) {
+				result = append(result, ns)
+			}
+		}
+		return result
+
+	default:
+		// Should never happen, but return empty for safety
+		return []string{}
 	}
-	return result
 }
 
 // isNamespaceAllowedByMultitenancy checks if multi-tenancy allows access to the namespace.

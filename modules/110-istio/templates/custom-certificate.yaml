@@ -1,2 +1,7 @@
 {{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "istio-ingress-tls") }}
+{{ $moduleGateway := dict }}
+{{ include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{ if $moduleGateway }}
+{{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "istio-httproute-tls") }}
+{{ end }}
 {{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "api-proxy-ingress-tls") }}

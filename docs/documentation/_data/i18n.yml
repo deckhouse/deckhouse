@@ -458,6 +458,9 @@ features:
   module_lifecycle_stage:
     en: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
     ru: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
+  requirements_for_alert:
+    en: "The module has [requirements](/modules/%s/configuration.html#requirements) for installation"
+    ru: "У модуля есть [требования](/modules/%s/configuration.html#требования) для установки"
   currency_sign:
     en: "&#36;"
     ru: "&#8381;"

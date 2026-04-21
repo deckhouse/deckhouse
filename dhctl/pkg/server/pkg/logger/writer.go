@@ -19,6 +19,8 @@ import (
 	"sync"
 )
 
+type LogConsumer[T any] func(lines []string) T
+
 type LogWriter[T any] struct {
 	l      *slog.Logger
 	sendCh chan T
@@ -28,7 +30,7 @@ type LogWriter[T any] struct {
 	prev []byte
 }
 
-func NewLogWriter[T any](l *slog.Logger, sendCh chan T, f func(lines []string) T) *LogWriter[T] {
+func NewLogWriter[T any](l *slog.Logger, sendCh chan T, f LogConsumer[T]) *LogWriter[T] {
 	return &LogWriter[T]{
 		l:      l,
 		sendCh: sendCh,

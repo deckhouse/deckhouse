@@ -20,7 +20,9 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
@@ -46,9 +48,24 @@ type ManifestBuilder struct {
 //   - secretData: byte map containing secret data
 //   - err: error from the operation
 func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (SecretData, error) {
-	inClusterData, err := b.modeModel.InClusterData(pkiProvider)
-	if err != nil {
-		return nil, fmt.Errorf("get incluster data: %w", err)
+	var inClusterData Data
+
+	if !b.legacyMode {
+		pki, err := pkiProvider()
+		if err != nil {
+			return nil, fmt.Errorf("get PKI: %w", err)
+		}
+
+		inClusterData, err = b.modeModel.InClusterData(pki)
+		if err != nil {
+			return nil, fmt.Errorf("get incluster data: %w", err)
+		}
+
+	} else {
+		// For managed clusters in unmanaged mode, pkiProvider cannot get PKI
+		// because the PKI secret doesn't exist in the cluster.
+		// In this case, we use remote data directly.
+		inClusterData = b.modeModel.RemoteData
 	}
 
 	address, path := inClusterData.AddressAndPath()
@@ -73,12 +90,17 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 //   - secretExists: boolean indicating secret presence
 //   - secretData: byte map containing secret data
 //   - err: error from the operation
-func (b *ManifestBuilder) RegistryBashibleConfigSecretData() (bool, SecretData, error) {
+func (b *ManifestBuilder) RegistryBashibleConfigSecretData(pkiProvider PKIProvider) (bool, SecretData, error) {
 	if b.legacyMode {
 		return false, nil, nil
 	}
 
-	cfg, err := b.modeModel.BashibleConfig()
+	pki, err := pkiProvider()
+	if err != nil {
+		return true, nil, fmt.Errorf("get PKI: %w", err)
+	}
+
+	cfg, err := b.modeModel.BashibleConfig(pki)
 	if err != nil {
 		return true, nil, fmt.Errorf("get bashible config: %w", err)
 	}
@@ -109,7 +131,12 @@ func (b *ManifestBuilder) KubeadmContext() KubeadmContext {
 //   - BashibleContext: context structure
 //   - err: error from the operation
 func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleContext, error) {
-	cfg, err := b.modeModel.BashibleConfig()
+	pki, err := pkiProvider()
+	if err != nil {
+		return BashibleContext{}, fmt.Errorf("get PKI: %w", err)
+	}
+
+	cfg, err := b.modeModel.BashibleConfig(pki)
 	if err != nil {
 		return BashibleContext{}, fmt.Errorf("get bashible config: %w", err)
 	}
@@ -121,11 +148,22 @@ func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleCont
 		ctx.RegistryModuleEnable = false
 	}
 
-	init, err := pkiProvider()
-	if err != nil {
-		return BashibleContext{}, fmt.Errorf("get PKI: %w", err)
+	ctx.Bootstrap = &bashible.ContextBootstrap{
+		Init: pki,
 	}
-	ctx.Init = init
+
+	if b.modeModel.Mode == constant.ModeProxy {
+		host, path := b.modeModel.RemoteData.AddressAndPath()
+		ctx.Bootstrap.Proxy = &bashible.ContextBootstrapProxy{
+			Host:     host,
+			Path:     path,
+			Scheme:   strings.ToLower(string(b.modeModel.RemoteData.Scheme)),
+			CA:       b.modeModel.RemoteData.CA,
+			Username: b.modeModel.RemoteData.Username,
+			Password: b.modeModel.RemoteData.Password,
+			TTL:      b.modeModel.TTL,
+		}
+	}
 
 	return ctx, nil
 }

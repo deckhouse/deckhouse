@@ -21,7 +21,7 @@ shell:
     - rm -rf /src/distribution/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-fromImage: builder/golang-alpine
+from: {{ index $.Images "builder/golang-alpine" }}
 final: false
 import:
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"

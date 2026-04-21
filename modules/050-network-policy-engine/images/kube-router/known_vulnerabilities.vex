@@ -1,0 +1,37 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "merged-vex-657cc8e24f379f9db5883959c6236cf22cb5d871f1bc036fbe9c8a7511586308",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "kube-router не устанавливает, не управляет и не взаимодействует с Docker-плагинами. CVE-2026-33997 затрагивает логику валидации привилегий при установке плагинов в Docker daemon (GHSA-pxq6-2prw-chj9). В advisory указано: If you don't use plugins, you are not affected. Единственное использование Docker SDK в kube-router — это client.NewClientWithOpts() и ContainerInspect() в pkg/controllers/proxy/linux_networking.go для подготовки DSR-эндпоинтов. Уязвимый код находится на стороне сервера и недостижим из данного проекта.",
+      "timestamp": "2026-04-07T13:59:11.907515Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "kube-router использует только клиентский SDK Docker (client.NewClientWithOpts и ContainerInspect) в pkg/controllers/proxy/linux_networking.go для подготовки DSR-эндпоинтов. CVE-2026-34040 затрагивает серверную часть Docker daemon — пересылку запросов к AuthZ-плагинам (GHSA-x744-4wpc-v9h2). В advisory указано: If you don't use AuthZ plugins, you are not affected. kube-router не запускает Docker daemon, уязвимый серверный код недостижим.",
+      "timestamp": "2026-04-07T13:59:56.480049Z"
+    }
+  ],
+  "timestamp": "2026-04-07T14:00:18Z"
+}

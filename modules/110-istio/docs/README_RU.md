@@ -12,10 +12,6 @@ webIfaces:
 |     1.25      |                                          1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                                    | Поддерживается |
 |     1.21     |                                           1.26, 1.27, 1.28, 1.29, 1.30, 1.31, 1.32, 1.33, 1.34, 1.35                  |  Устарела и будет удалена  |
 
-<sup>*</sup> — версия Kubernetes **НЕ поддерживается** в текущем релизе Deckhouse Kubernetes Platform.
-
-{::options parse_block_html="false" /}
-
 ## Задачи, которые решает Istio
 
 [Istio](https://istio.io/) — фреймворк централизованного управления сетевым трафиком, реализующий подход Service Mesh.
@@ -213,7 +209,7 @@ Istio-proxy, который работает в качестве сайдкар-
 ## Федерация и мультикластер
 
 {% alert level="warning" %}
-Доступно в редакциях Enterprise Edition и Certified Security Edition Pro (1.67).
+Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.
 {% endalert %}
 
 Поддерживаются две схемы межкластерного взаимодействия:

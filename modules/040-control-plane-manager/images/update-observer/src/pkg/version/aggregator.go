@@ -16,41 +16,56 @@ limitations under the License.
 
 package version
 
+import (
+	"sort"
+
+	semver "github.com/Masterminds/semver/v3"
+)
+
 type UniqueAggregator struct {
 	set         map[string]struct{}
-	uniqueItems []string
-	sortFunc    func([]string)
+	uniqueItems []*semver.Version
 }
 
-func NewUniqueAggregator(sortFunc func([]string)) *UniqueAggregator {
+func NewUniqueAggregator() *UniqueAggregator {
 	return &UniqueAggregator{
 		set:         make(map[string]struct{}),
-		uniqueItems: make([]string, 0),
-		sortFunc:    sortFunc,
+		uniqueItems: make([]*semver.Version, 0),
 	}
 }
 
+// Set adds a version string to the aggregator.
+// The item must be a valid semver string, pre-validated and normalized by version.Normalize
+// (which guarantees the format "MAJOR.MINOR" and valid semver syntax).
+// Calling Set with an invalid string is a programming error and will be silently ignored.
 func (a *UniqueAggregator) Set(item string) {
 	if _, exists := a.set[item]; exists {
 		return
 	}
 
+	v, err := semver.NewVersion(item)
+	if err != nil {
+		// Should never happen if callers use version.Normalize before Set.
+		return
+	}
+
 	a.set[item] = struct{}{}
-	a.uniqueItems = append(a.uniqueItems, item)
+	a.uniqueItems = append(a.uniqueItems, v)
+	sort.Sort(semver.Collection(a.uniqueItems))
 }
 
 func (a *UniqueAggregator) GetMin() string {
 	if len(a.uniqueItems) == 0 {
 		return ""
 	}
-	a.sortFunc(a.uniqueItems)
-	return a.uniqueItems[0]
+
+	return a.uniqueItems[0].Original()
 }
 
 func (a *UniqueAggregator) GetMax() string {
 	if len(a.uniqueItems) == 0 {
 		return ""
 	}
-	a.sortFunc(a.uniqueItems)
-	return a.uniqueItems[len(a.uniqueItems)-1]
+
+	return a.uniqueItems[len(a.uniqueItems)-1].Original()
 }

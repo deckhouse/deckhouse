@@ -1,6 +1,6 @@
 ---
 image: dev/install
-fromImage: base/distroless
+from: {{ index $.Images "base/distroless" }}
 git:
 - add: /
   to: /deckhouse
@@ -9,7 +9,7 @@ git:
 {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
-{{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env) }}
+{{ include "installer_and_installer_standalone_generic_imports" (dict "Images" $.Images "Env" $.Env) }}
 {{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
 {{ include "installer_and_installer_standalone_opentofu_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}
 {{ include "installer_and_installer_standalone_libraries_and_binaries_imports" . }}

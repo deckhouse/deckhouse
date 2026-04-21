@@ -17,7 +17,13 @@ locals {
 }
 
 output "master_ip_address_for_ssh" {
-  value = lookup(yandex_compute_instance.master.network_interface.0, "nat_ip_address", "") != "" ? yandex_compute_instance.master.network_interface.0.nat_ip_address : yandex_compute_instance.master.network_interface.0.ip_address
+  value = ( 
+    lookup(yandex_compute_instance.master.network_interface.0, "nat_ip_address", "") != "" ? 
+      (yandex_compute_instance.master.network_interface.0.nat == true ? 
+         yandex_compute_instance.master.network_interface.0.nat_ip_address : 
+         yandex_compute_instance.master.network_interface.0.ip_address) : 
+      yandex_compute_instance.master.network_interface.0.ip_address
+  )
 }
 
 output "node_internal_ip_address" {

@@ -1,14 +1,7 @@
 # src of image BASE_ALT_DEV_CILIUM in candi/image_versions.yml
 {{- $protocVersion := "30.2" }}
 {{- $bazelVersions := "6.5.0" }}
-{{- $bazeliskVersions := "v1.20.0" }}
 #
-{{- $source := "https://github.com" }}
-{{- $sourceraw := "https://raw.githubusercontent.com" }}
-{{- if $.DistroPackagesProxy }}
-  {{- $source = printf "http://%s/repository/github-com" $.DistroPackagesProxy }}
-  {{- $sourceraw = printf "http://%s/repository/githubusercontent" $.DistroPackagesProxy }}
-{{- end }}
 ---
 # #####################################################################
 # BASE_DEV image for build binaries of all cilium components (based on Ubuntu)
@@ -31,11 +24,11 @@
 # #####################################################################
 ---
 image: {{ .ModuleName }}/golang-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
+from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
 final: false
 ---
 image: {{ .ModuleName }}/base-cilium-dev
-fromImage: builder/alt
+from: {{ index $.Images "builder/alt" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -102,8 +95,10 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - go version
+  # Get deps
+  - git clone --depth 1 --branch main $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoyproxy_deps.git /tmp/envoyproxy_deps
   # Install protoc
-  - curl --fail --show-error --silent --location "{{ $source }}/protocolbuffers/protobuf/releases/download/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip" --output /tmp/protoc.zip
+  - mv /tmp/envoyproxy_deps/protoc/v{{ $protocVersion }}/protoc-{{ $protocVersion }}-linux-x86_64.zip /tmp/protoc.zip
   - unzip /tmp/protoc.zip -x readme.txt -d /usr/local && rm /tmp/protoc.zip
   - chmod o+rx /usr/local/bin/protoc && chmod o+rX -R /usr/local/include/google/
   # Install protoc plugins
@@ -117,11 +112,12 @@ shell:
   - cd /src/protoc-gen-doc/cmd/protoc-gen-doc && go install
   - cd ~
   - rm -rf /src
-  # Install Bazelisk (for build envoy)
-  - curl --fail --show-error --silent --location "{{ $source }}/bazelbuild/bazelisk/releases/download/{{ $bazeliskVersions }}/bazelisk-linux-amd64" -o /usr/local/bin/bazel
+  # Install Bazel (for build envoy)
+  - mv /tmp/envoyproxy_deps/bazel/{{ $bazelVersions }}/bazel-{{ $bazelVersions }}-linux-x86_64 /usr/local/bin/bazel
   - chmod +x /usr/local/bin/bazel
-  - export BAZELISK_BASE_URL="{{ $source }}/bazelbuild/bazel/releases/download"
   - USE_BAZEL_VERSION={{ $bazelVersions }} bazel version # to extract all binaries properly
+  # Clean up deps
+  - rm -rf /tmp/envoyproxy_deps
 imageSpec:
   config:
     env:

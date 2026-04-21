@@ -22,11 +22,12 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func Edit(data []byte) ([]byte, error) {
-	schemaStore := config.NewSchemaStore()
+func Edit(data []byte, dc *directoryconfig.DirectoryConfig) ([]byte, error) {
+	schemaStore := config.NewSchemaStore(dc)
 
 	editor := app.Editor
 	if editor == "" {
