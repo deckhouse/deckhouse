@@ -1,6 +1,6 @@
 ---
 title: Сканирование контейнерных образов на уязвимости
-permalink: security/scanning.html
+permalink: ru/security/scanning.html
 description: "Настройка сканирования контейнерных образов на уязвимости в Deckhouse Platform Certified Security Edition с использованием Trivy. Автоматическое сканирование безопасности, обнаружение уязвимостей и применение политик безопасности."
 lang: ru
 ---

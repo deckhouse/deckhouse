@@ -1,4 +1,10 @@
 common:
+  additional_property_name:
+    en: item (key) name
+    ru: имя параметра (ключ объекта)
+  pattern_property_name:
+    en: regular expression for parameter name
+    ru: регулярное выражение для имени параметра
   of:
     en: of
     ru: ""
@@ -181,9 +187,12 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
+  search_placeholder_text_filter:
+    en: Enter a&nbsp;name
+    ru: Введите название
   search_context_dkpdocs_and_modules:
-    en: The search is performed throughout documentation and modules.
-    ru: Поиск выполняется по всей документации и модулям.
+    en: The search is performed throughout DKP documentation and modules.
+    ru: Поиск выполняется по всей документации DKP и модулям.
   search_context_modules:
     en: The search is performed throughout modules, excluding the DKP documentation.
     ru: Поиск выполняется по всем модулям, не включая документацию DKP.
@@ -265,6 +274,9 @@ common:
   related_reference_and_documentation_links:
     en: Links to related documentation and API
     ru: Ссылки на связанную документацию и API
+  related_additional_resources:
+    en: Additional resources
+    ru: Дополнительные ресурсы
   related_links:
     en: Related links
     ru: Связанные ссылки
@@ -275,17 +287,17 @@ common:
     en: Global custom resources
     ru: Глобальные кастомные ресурсы
   module_x_parameters:
-    en: Module `XXXX` parameters
-    ru: Параметры модуля `XXXX`
+    en: Module <code>XXXX</code> parameters
+    ru: Параметры модуля <code>XXXX</code>
   module_x_crds:
-    en: Module `XXXX` custom resources
-    ru: Кастомные ресурсы модуля `XXXX`
+    en: Module <code>XXXX</code> custom resources
+    ru: Кастомные ресурсы модуля <code>XXXX</code>
   module_x_documentation:
-    en: Module `XXXX` documentation
-    ru: Документация модуля `XXXX`
+    en: Module <code>XXXX</code> documentation
+    ru: Документация модуля <code>XXXX</code>
   module_x_cluster_configuration:
-    en: Module `XXXX` provider configuration
-    ru: Настройки провайдера модуля `XXXX`
+    en: Module <code>XXXX</code> provider configuration
+    ru: Настройки провайдера модуля <code>XXXX</code>
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
@@ -313,6 +325,9 @@ common:
   alert_edition:
     en: The minimum DKP edition in which the alert is available
     ru: Минимальная редакция DKP, в которой доступен алерт
+  module_crd_warning_1:
+    en: DKP CSE installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
+    ru: DKP CSE устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты
@@ -370,7 +385,58 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  feature_gates_available_by_version:
+    en: List of available feature gates...
+    ru: Список доступных feature gates...
+  requirements_title:
+    en: Requirements
+    ru: Требования
+  requirements_kubernetes_title:
+    en: To the Kubernetes version
+    ru: К версии Kubernetes
+  requirements_deckhouse_title:
+    en: To the Deckhouse version
+    ru: К версии Deckhouse
+  requirements_modules_title:
+    en: To the versions of other modules
+    ru: К версиям других модулей
+  requirements_modules_any_version:
+    en: any version
+    ru: любая версия
+  requirements_version_and_above:
+    en: and above
+    ru: и выше
+  requirements_version_above:
+    en: above
+    ru: выше
+  requirements_modules_optional_text_first:
+    en: Conditional dependency on the module
+    ru: Условная зависимость от модуля
+  requirements_modules_more:
+    en: more
+    ru: подробнее
+  requirements_modules_optional_text_second:
+    en: about conditional dependencies
+    ru: про условные зависимости
+  requirements_modules_optional_text_for_link:
+    en: conditional-module-requirements
+    ru: условные-зависимости
+  ossListPageBlock1:
+    en: |
+      List of third-party software used in the Deckhouse Kubernetes Platform. Includes **only built-in modules** (doesn't include modules from sources).<br/><br/>
+      The list of third-party software used in a specific module can be found on the overview page in the module documentation.
+    ru: |
+      Список стороннего программного обеспечения, используемого в Deckhouse Kubernetes Platform (информация представлена на английском языке). Включает **только встроенные модули** (не включает модули, подключаемые из источников).<br/><br/>
+      Список стороннего программного обеспечения используемого в конкретном модуле можно найти на странице описания в документации модуля.
+  ossPageBlock1:
+    en: |
+      ## Third-party components
 
+      List of third-party software used in the <MODULE> module:
+    ru: |
+      ## Внешние компоненты
+
+      Список стороннего программного обеспечения, используемого в модуле <MODULE> (информация представлена на английском языке):
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"
@@ -383,6 +449,12 @@ comparison:
     ru: "с ограничениями"
 
 features:
+  module_lifecycle_stage:
+    en: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
+    ru: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
+  requirements_for_alert:
+    en: "The module has [requirements](/modules/%s/configuration.html#requirements) for installation"
+    ru: "У модуля есть [требования](/modules/%s/configuration.html#требования) для установки"
   currency_sign:
     en: "&#36;"
     ru: "&#8381;"
@@ -430,7 +502,7 @@ features:
     ru: Доступно в других коммерческих редакциях.
   requiresSeparateLicense:
     en: Licensed separately, not included in the DKP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. <a href="https://deckhouse.ru/products/kubernetes-platform/pricing/">Условия и цены</a>.
   requiresSeparateLicenseObservability:
     en: Licensed separately, not included in the DKP license cost.
-    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP.
+    ru: Лицензируется на отдельных условиях, не включен в стоимость лицензии DKP. Подробнее см. на<a href=https://deckhouse.ru/products/observability-platform/">Главной странице платформы</a>.

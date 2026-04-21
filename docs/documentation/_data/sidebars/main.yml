@@ -17,6 +17,15 @@ entries:
         #    ru: Custom Resources
         #  url: /cr.html
         - title:
+            ru: Руководство по обновлению
+          url: /update.html
+        - title:
+            ru: Руководство администратора
+          url: /admin-guide.html
+        - title:
+            ru: Руководство пользователя
+          url: /user-guide.html
+        - title:
             en: Security
             ru: Безопасность
           folders:

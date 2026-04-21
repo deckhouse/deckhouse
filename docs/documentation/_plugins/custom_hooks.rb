@@ -1,5 +1,7 @@
 require 'json'
 
+$modules_data = nil
+
 def doc_links_for_module(moduleName)
     data = {
       'overview' => {
@@ -18,6 +20,12 @@ end
 
 # Inserts the module-editions.liquid block into the module pages content.
 # The block is inserted at the beginning of the page's content if the page content is not empty.
+def insert_crd_warning_block(page)
+    additional_content = "\n{% include module-crd-warning.liquid %}\n\n"
+
+    page.content.prepend(additional_content) if page.content
+end
+
 def insert_module_edition_block(page)
     additional_content = "\n{% include module-editions.liquid %}\n\n"
 
@@ -49,14 +57,16 @@ def find_in_entries(entries, item_name, item_value)
   nil
 end
 
-# Inserts a block with the warnings about module stage.
-def insert_module_stage_block(sidebar, page)
-    return if !sidebar
-    moduleData = find_in_entries(sidebar, 'moduleName', page.data['module-kebab-name'])
-    if moduleData and moduleData['featureStatus']
-        additional_content = "\n{% include warning-version.liquid stage=\"#{moduleData['featureStatus']}\" %}\n\n"
-        page.content.prepend(additional_content)
-    end
+# Inserts information about the module stage.
+def insert_module_stage_block(page)
+    return if page.data['module-kebab-name'] == nil or page.data['module-kebab-name'] == 'global'
+    moduleMetaData = $modules_data.dig('metadata', 'modules', page.data['module-kebab-name'])
+    moduleStage = moduleMetaData.dig('stage') if moduleMetaData
+    return if not moduleStage.is_a?(String) or moduleStage.empty?
+    return if not moduleStage in modulesAllowedStages
+
+    additional_content = "\n{% include module-stage-badge.liquid stage=\"#{moduleStage}\" %}\n\n"
+    page.content.prepend(additional_content)
 end
 
 ##
@@ -64,6 +74,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   bundlesByModule = Hash.new()
   bundlesModules = Hash.new()
   bundleNames = []
+  $modules_data = site.data['modules']
 
   puts "Custom hook: pre_render"
 
@@ -107,12 +118,16 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   _editionsToFillWith = _editionsFullList.reject { |key| key.start_with?("cse")  }
   site.data['modules']['all'].each do |moduleName, moduleData|
     editions = []
-    if moduleData.has_key?("editionMinimumAvailable") then
+    if moduleData.has_key?("editions") then
+      editions = editions | moduleData['editions'] if moduleData.has_key?("editions")
+    elsif moduleData.has_key?("editionMinimumAvailable") then
       _index = _editionsToFillWith.find_index(moduleData['editionMinimumAvailable'])
       editions = _editionsToFillWith.slice(_index, _editionsToFillWith.length())
     else
-      editions = editions | moduleData['editions'] if moduleData.has_key?("editions")
+
     end
+
+    # This data is a merged data from the repo/editions.yaml, docs/documentation/_data/modules/editions-addition.json.
     site.data['editions'].each do |edition, editionData|
       editions = editions | [edition] if editionData.has_key?("includeModules") && editionData['includeModules'].include?(moduleName)
       editions.delete(edition) if editionData.has_key?("excludeModules") && editionData['excludeModules'].include?(moduleName)
@@ -137,6 +152,13 @@ Jekyll::Hooks.register :site, :pre_render do |site|
     'FAQ_RU.md', 'FAQ.md'
   ]
 
+  moduleAllowedStages = [
+    'Experimental',
+    'Preview',
+    'General Availability',
+    'Deprecated'
+  ]
+
   # Set the following data for each module page:
   # - module-kebab-name: module name in kebab case
   # - module-snake-name: module name in snake case
@@ -149,7 +171,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       page.data['module-kebab-name'] = moduleKebabCase
       page.data['module-snake-name'] = moduleSnakeCase
       page.data['sidebar'] = 'embedded-modules'
-      if  page.name.match?(/CONFIGURATION(\.ru|_RU)?\.md$/) then
+      if page.name && page.name.match?(/CONFIGURATION(\.ru|_RU)?\.md$/) then
         page.data['legacy-enabled-commands'] = %Q(#{moduleSnakeCase}Enabled)
       else
         page.data['module-index-page'] = true
@@ -160,13 +182,17 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       insert_module_webiface_block(page)
     end
 
-    if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
-      # insert_module_stage_block(site.data['sidebars'][page.data['sidebar']]['entries'], page)
+    if page.data['module-kebab-name'] and page.name
+      # insert_module_stage_block(page)
 
       #if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
       #   page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
       #  insert_module_edition_block(page)
       #end
+
+      if page.name.match?(/CR(\.ru|_RU)?\.md$/)
+        insert_crd_warning_block(page)
+      end
     end
 
     next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )

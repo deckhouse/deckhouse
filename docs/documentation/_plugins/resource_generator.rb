@@ -102,7 +102,7 @@ class ResourcePage < Jekyll::Page
       'sidebar' => @sidebar,
       'product_code' => @productCode,
       'sidebar_group_page' => @sidebar_group_page,
-      'search_bage_enabled' => true,
+      'searchBageEnabled' => true,
       'sitemap_include' => false
     }
 
@@ -154,7 +154,7 @@ class MCPage < Jekyll::Page
       'sidebar' => @sidebar,
       'product_code' => @productCode,
       'sidebar_group_page' => @sidebar_group_page,
-      'search_bage_enabled' => true,
+      'searchBageEnabled' => true,
       'sitemap_include' => false
     }
 

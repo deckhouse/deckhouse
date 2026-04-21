@@ -24,21 +24,21 @@
         class="textfield textfield-request"
         type="tel" name="phone"
         placeholder="Телефон *" aria-label="Телефон *"
-        autocomplete="off" />
+        autocomplete="off" required="required" />
     </div>
     <div class="form__row form__row-request">
       <input
         class="textfield textfield-request"
         type="text" name="company"
         placeholder="Компания" aria-label="Компания"
-        autocomplete="off" required="required" />
+        autocomplete="off" />
     </div>
     <div class="form__row form__row-request">
       <input
         class="textfield textfield-request"
         type="text" name="position"
         placeholder="Должность" aria-label="Должность"
-        autocomplete="off" required="required" />
+        autocomplete="off" />
     </div>
     <p  class="сommunication-method">{{ site.data.modal['request-callback']['communication-method'][page.lang]['title'] }}</p>
     <div class="preferred-contact">
@@ -55,8 +55,22 @@
         <input class="textfield textfield-request" type="text" name="telegram_id" placeholder="Telegram ID">
       </div>
     </div>
+    <div class="form-consents">
+      <div class="form-consent">
+        <input type="checkbox" id="pcConsent_personal" value="1" name="consent_personal" required="required">
+        <label for="pcConsent_personal">
+          <div>Я&nbsp;даю АО&nbsp;&laquo;Флант&raquo; <a href="/user-data-processing/" target="_blank">согласие на&nbsp;обработку моих персональных данных </a>для цели ответа на&nbsp;мою заявку.</div>
+        </label>
+      </div>
+      <div class="form-consent">
+        <input type="checkbox" id="pcConsent_marketing" value="1" name="consent_marketing">
+        <label for="pcConsent_marketing">
+          <div>Я&nbsp;даю АО&nbsp;&laquo;Флант&raquo; согласие на&nbsp;получение маркетинговых сообщений (о&nbsp;продуктах, сервисах, акциях, мероприятиях и&nbsp;т.п.) и&nbsp;обработку моих персональных данных для указанной цели.</div>
+        </label>
+      </div>
+    </div>
     <div class="form__row-request">
-      <button class="button button_alt button-request" type="submit">
+      <button class="button button_alt button-request" type="submit" disabled>
         Отправить
       </button>
     </div>
@@ -81,21 +95,21 @@
         class="textfield textfield-request"
         type="tel" name="phone"
         placeholder="Phone *" aria-label="Phone *"
-        autocomplete="off" />
+        autocomplete="off" required="required" />
     </div>
     <div class="form__row form__row-request">
       <input
         class="textfield textfield-request"
         type="text" name="company"
         placeholder="Company" aria-label="Company"
-        autocomplete="off" required="required" />
+        autocomplete="off" />
     </div>
     <div class="form__row form__row-forequestrm">
       <input
         class="textfield textfield-request"
         type="text" name="position"
         placeholder="Position" aria-label="Position"
-        autocomplete="off" required="required" />
+        autocomplete="off" />
     </div>
     <p class="сommunication-method">{{ site.data.modal['request-callback']['communication-method'][page.lang]['title'] }}</p>
     <div class="preferred-contact">
@@ -112,20 +126,21 @@
         <input class="textfield textfield-request" type="text" name="telegram_id" placeholder="Telegram ID">
       </div>
     </div>
+    <div class="form-consents">
+      <div class="form-consent">
+        <input type="checkbox" id="pcConsent_personal" value="1" name="consent_personal" required="required">
+        <label for="pcConsent_personal">
+          <div>By&nbsp;submitting form, you agree to&nbsp;the <a href="/privacy-policy/" target="_blank">Privacy Policy</a></div>
+        </label>
+      </div>
+    </div>
     <div class="form__row-request">
-      <button class="button button_alt button-request" type="submit">
+      <button class="button button_alt button-request" type="submit" disabled>
         Send
       </button>
     </div>
     {%- endif %}
   </form>
-  <div class="policy-text">
-    {%- if page.lang == "ru" %}
-    <p class="form__approval">Отправляя форму вы&nbsp;соглашаетесь&nbsp;с <a class="form__approval-link" href="/security-policy/" target="_blank">политикой обработки персональных данных</a> и&nbsp;даёте <a class="form__approval-link" href="/user-data-processing/?fqp=WyJuYW1lIiwiZW1haWwiLCJwaG9uZSIsImNvbXBhbnkiLCJwb3NpdGlvbiJd" target="_blank">согласие на&nbsp;обработку персональных данных</a></p>
-    {%- else %}
-    <p class="form__approval">By&nbsp;submitting form, you agree to&nbsp;the <a class="form__approval-link" href="/privacy-policy/" target="_blank">Privacy Policy</a></p>
-    {%- endif %}
-  </div>
 </div>
 <div id="request_callback_success" data-success-message style="display: none;">
   <h3 class="text text_h3 text_alt">{{ site.data.modal['request-callback']['success-message'][page.lang]['title']}}</h3>

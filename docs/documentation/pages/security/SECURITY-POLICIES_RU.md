@@ -1,6 +1,6 @@
 ---
 title: Политики безопасности
-permalink: security/policies.html
+permalink: ru/security/policies.html
 description: "Настройка политик безопасности в Deckhouse Platform Certified Security Edition с использованием Gatekeeper и Pod Security Standards. Применение политик, соответствие требованиям и управление безопасностью кластера."
 lang: ru
 search: security policies, pod security standards, gatekeeper, security enforcement, policy management, политики безопасности

@@ -1,6 +1,6 @@
 ---
 title: Аудит событий безопасности
-permalink: security/events/runtime-audit.html
+permalink: ru/security/events/runtime-audit.html
 description: "Настройка аудита событий безопасности в Deckhouse Platform Certified Security Edition. Мониторинг runtime безопасности, обнаружение угроз и аудит логирование для анализа безопасности кластера."
 lang: ru
 ---

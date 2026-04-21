@@ -37,7 +37,7 @@ module ReferenceGenerator
         'lang' => @lang,
         'name' => @fileName,
         'sidebar' => @sidebar,
-        'search_bage_enabled' => true,
+        'searchBageEnabled' => true,
         'sitemap_include' => true
       }
 
@@ -145,6 +145,10 @@ module ReferenceGenerator
       if data['description']
         description = escape_liquid_tags(data['description'])
         result += "<p>#{description}</p>\n"
+      end
+      if data['version'].to_s.strip != ''
+        version = escape_liquid_tags(data['version'].to_s)
+        result += "<p><strong>Version:</strong> #{version}</p>\n"
       end
 
       # Render flags

@@ -1,6 +1,6 @@
 ---
 title: Аудит событий API Kubernetes
-permalink: security/events/kubernetes-api-audit.html
+permalink: ru/security/events/kubernetes-api-audit.html
 lang: ru
 ---
 

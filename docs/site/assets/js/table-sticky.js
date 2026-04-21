@@ -21,24 +21,62 @@ class ScrollPosition {
   constructor(tableContainer, tableWrapper) {
     this.tableContainer = tableContainer;
     this.tableWrapper = tableWrapper;
+    this.scrollHandler = null;
 
     this.init();
+    this.setupResizeHandler();
   }
 
   init() {
-    if (this.tableContainer.offsetWidth < this.tableContainer.scrollWidth) {
-      this.tableWrapper.classList.add('more');
-      this.tableWrapper.classList.add('more--on-right');
-      this.tableContainer.addEventListener('scroll', () => this.handleScroll());
-      this.tableHead = this.tableContainer.querySelector('thead') ?? 0;
-      this.tableBody = this.tableContainer.querySelector('tbody') ?? 0;
-      this.setShadowsheight();
-      window.addEventListener('resize', () => this.setShadowsheight());
+    this.updateScrollState();
+  }
+
+  setupResizeHandler() {
+    window.addEventListener('resize', () => {
+      this.updateScrollState();
+      if (this.tableHead && this.tableBody) {
+        this.setShadowsheight();
+      }
+    });
+  }
+
+  updateScrollState() {
+    const needsScroll = this.tableContainer.offsetWidth < this.tableContainer.scrollWidth;
+    
+    if (needsScroll) {
+      if (!this.tableWrapper.classList.contains('more')) {
+        this.tableWrapper.classList.add('more');
+        this.tableWrapper.classList.add('more--on-right');
+        
+        if (!this.scrollHandler) {
+          this.scrollHandler = () => this.handleScroll();
+          this.tableContainer.addEventListener('scroll', this.scrollHandler);
+        }
+        
+        this.tableHead = this.tableContainer.querySelector('thead') ?? 0;
+        this.tableBody = this.tableContainer.querySelector('tbody') ?? 0;
+        if (this.tableHead && this.tableBody) {
+          this.setShadowsheight();
+        }
+        
+        this.handleScroll();
+      }
+    } else {
+      this.tableWrapper.classList.remove('more');
+      this.tableWrapper.classList.remove('more--on-right');
+      this.tableWrapper.classList.remove('more--on-left');
+      
+      if (this.scrollHandler) {
+        this.tableContainer.removeEventListener('scroll', this.scrollHandler);
+        this.scrollHandler = null;
+      }
     }
   }
 
   setShadowsheight(){
-    this.tableWrapper.style.setProperty('--table-height', this.tableHead.offsetHeight + this.tableBody.offsetHeight + 'px');
+    if (this.tableHead && this.tableBody) {
+      this.tableWrapper.style.setProperty('--table-height', this.tableHead.offsetHeight + this.tableBody.offsetHeight + 'px');
+    }
   }
 
   handleScroll() {
