@@ -261,9 +261,11 @@ spec:
 The example refers to the [current role-based model](readme.html#current-role-based-model).
 {% endalert %}
 
-In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`userAuthz.enableMultiTenancy`), namespace-based restrictions are configured using the [`ClusterAuthorizationRule`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) resource fields.
+In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`userAuthz.enableMultiTenancy`), namespace-based restrictions are configured using the [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector) resource fields.
 
-- **All namespaces, including system namespaces** (`kube-*`, `d8-*`, `loghouse`, `default`, etc.): set `spec.namespaceSelector.matchAny: true`. In that case, `limitNamespaces` and `allowAccessToSystemNamespaces` are **ignored** if `namespaceSelector` is set.
+Configuration options:
+
+- **Allow access to all namespaces, including system namespaces** (`kube-*`, `d8-*`, `loghouse`, `default`, etc.). To allow access to all namespaces, including system namespaces,  set `spec.namespaceSelector.matchAny: true`. If the `namespaceSelector` parameter is specified, the `limitNamespaces` and `allowAccessToSystemNamespaces` values are **ignored**.
 
   Example:
 
@@ -281,9 +283,9 @@ In [multi-tenancy](configuration.html#parameters-enablemultitenancy) mode (`user
       matchAny: true
   ```
 
-- **All namespaces except system namespaces** (if none of `namespaceSelector`, `limitNamespaces`, or `allowAccessToSystemNamespaces` are set): the user gets access to every non-system namespace; the list of system namespaces is given in the [CR field descriptions](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+- **Allow access to all namespaces except system namespaces**. To grant a user access to all namespaces except system namespaces, do not specify `namespaceSelector`, `limitNamespaces`, or `allowAccessToSystemNamespaces` when creating a ClusterAuthorizationRule. For a list of system namespaces, see the [CR field description](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-The `SuperAdmin` access level **does not** lift namespace restrictions (`namespaceSelector`, `limitNamespaces`): grant the intended scope explicitly, including via `namespaceSelector.matchAny`, if access to all namespaces is required.
+> The `SuperAdmin` access level **does not lift** the namespace restrictions specified in the `namespaceSelector` and `limitNamespaces` parameters. If you need to grant access to all namespaces, specify the scope explicitly, including via [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
 If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **unioned**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
 
