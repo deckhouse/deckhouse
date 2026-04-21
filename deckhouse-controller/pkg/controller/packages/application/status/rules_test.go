@@ -328,16 +328,6 @@ func TestReadyPendingIsUnmanaged(t *testing.T) {
 func TestPartiallyDegradedRule(t *testing.T) {
 	cases := []testCase{
 		{
-			name: "true when ReadyInRuntime is false",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeDegraded"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "RuntimeDegraded"},
-			},
-		},
-		{
 			name: "true when ReadyInCluster is false",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
@@ -348,31 +338,57 @@ func TestPartiallyDegradedRule(t *testing.T) {
 			},
 		},
 		{
-			name: "true when HooksProcessed is false",
+			// ReadyInRuntime is DH-internal state (e.g. Pending during DH restart).
+			// Not user-visible degradation.
+			name: "false when only ReadyInRuntime is false",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "HooksFailed"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeDegraded"),
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "HooksFailed"},
+				ConditionPartiallyDegraded: {status: metav1.ConditionFalse, reason: "ClusterReady"},
 			},
 		},
 		{
-			name: "false when all managed conditions true",
+			// HooksReady is DH-internal processing state, surfaced via ConfigurationApplied.
+			name: "false when only HooksReady is false",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "HooksFailed"),
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionPartiallyDegraded: {status: metav1.ConditionFalse, reason: "ClusterReady"},
+			},
+		},
+		{
+			name: "false when ReadyInCluster is true",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionPartiallyDegraded: {status: metav1.ConditionFalse, reason: "ClusterReady"},
+			},
+		},
+		{
+			// DH restart: runtime is rebuilding but the cluster workload is still healthy.
+			name: "false when ReadyInRuntime is Pending and cluster is true",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, string(intstatus.ConditionReasonPending)),
 				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
 				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionTrue, "HooksOK"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionFalse, reason: "RuntimeReady"},
+				ConditionPartiallyDegraded: {status: metav1.ConditionFalse, reason: "ClusterReady"},
 			},
 		},
 		{
 			name: "absent when not installed",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeDegraded"),
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ClusterDegraded"),
 			},
 			expected: map[string]*expectedCondition{
 				ConditionPartiallyDegraded: nil,

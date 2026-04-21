@@ -20,17 +20,18 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
-	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hooksync"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/hooksync"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

@@ -135,12 +135,15 @@ func readyRule() condmapper.Rule {
 	}
 }
 
-// partiallyDegradedRule: True when functionality degraded (inverted semantics).
+// partiallyDegradedRule: True only when the cluster workload itself is degraded.
+// ReadyInRuntime/HooksReady describe DH-internal state (runtime reload, hook
+// processing) and are not user-visible degradation — they are reflected via
+// Managed/ConfigurationApplied instead.
 func partiallyDegradedRule() condmapper.Rule {
 	return condmapper.Rule{
 		Type:    ConditionPartiallyDegraded,
-		TrueIf:  condmapper.AnyFalse(managedConds...),
-		FalseIf: condmapper.AllTrue(managedConds...),
+		TrueIf:  condmapper.AnyFalse(string(status.ConditionReadyInCluster)),
+		FalseIf: condmapper.IsTrue(string(status.ConditionReadyInCluster)),
 		OnlyIf:  condmapper.ExtTrue(ConditionInstalled),
 	}
 }

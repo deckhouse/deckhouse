@@ -23,11 +23,11 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
