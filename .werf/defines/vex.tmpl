@@ -28,7 +28,7 @@ secrets:
   env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
   env: REGISTRY_PASSWORD
-{{- if ne (env "VAULT_ADDR" "") "" }}
+{{- if eq (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "" }}
 - id: VAULT_ADDR
   env: VAULT_ADDR
 - id: WERF_SIGN_KEY
@@ -74,7 +74,7 @@ shell:
   - export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
   - export VAULT_ROLE="$(cat /run/secrets/VAULT_ROLE)"
   - export TRANSIT_SECRET_ENGINE_PATH="$(cat /run/secrets/TRANSIT_SECRET_ENGINE_PATH)"
-{{- if ne (env "VAULT_ADDR" "") "" }}
+{{- if eq (env "ACTIONS_ID_TOKEN_REQUEST_TOKEN" "") "" }}
   - export VAULT_KEY="$(cat /run/secrets/WERF_SIGN_KEY)"
   - export VAULT_JWT="$(cat /run/secrets/VAULT_JWT)"
   - export VAULT_AUTH_PATH="fox"

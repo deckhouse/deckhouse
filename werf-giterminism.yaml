@@ -14,7 +14,7 @@ config:
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
-      - VAULT_ADDR
+      - ACTIONS_ID_TOKEN_REQUEST_TOKEN
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowEnvVariables:
