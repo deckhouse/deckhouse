@@ -18,39 +18,15 @@ webIfaces:
 
 [Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
 
-Istio solves the tasks for applications
+Istio solves the tasks for applications:
 
-- [Compatibility table for supported versions](#compatibility-table-for-supported-versions)
-- [What issues does Istio help to resolve?](#what-issues-does-istio-help-to-resolve)
-- [Mutual TLS](#mutual-tls)
-- [Authorization](#authorization)
-- [Request routing](#request-routing)
-- [Managing request balancing between service Endpoints](#managing-request-balancing-between-service-endpoints)
-- [Observability](#observability)
-  - [Tracing](#tracing)
-  - [Grafana](#grafana)
-  - [Kiali](#kiali)
-- [Architecture of the cluster with Istio enabled](#architecture-of-the-cluster-with-istio-enabled)
-- [Application service architecture with Istio enabled](#application-service-architecture-with-istio-enabled)
-  - [Details](#details)
-  - [User request lifecycle](#user-request-lifecycle)
-    - [Application with Istio turned off](#application-with-istio-turned-off)
-    - [Application with Istio turned on](#application-with-istio-turned-on)
-- [Activating Istio to work with the application](#activating-istio-to-work-with-the-application)
-- [Federation and multicluster](#federation-and-multicluster)
-  - [Federation](#federation)
-    - [Requirements for clusters](#requirements-for-clusters)
-    - [General principles of federation](#general-principles-of-federation)
-    - [Enabling the federation](#enabling-the-federation)
-    - [Managing the federation](#managing-the-federation)
-  - [Multicluster](#multicluster)
-    - [Requirements for clusters](#requirements-for-clusters-1)
-    - [General principles](#general-principles)
-    - [Enabling the multicluster](#enabling-the-multicluster)
-    - [Managing the multicluster](#managing-the-multicluster)
-- [Estimating overhead](#estimating-overhead)
-  - [control-plane](#control-plane)
-  - [data-plane](#data-plane)
+- [Using Mutual TLS](#mutual-tls).
+- [Access authorization between services](#authorization).
+- [Request routing](#request-routing).
+- [Managing request balancing between service Endpoints](#managing-request-balancing-between-service-endpoints).
+- [Improving Observability](#observability).
+- [Organizing a multi-datacenter cluster by joining clusters into a single Service Mesh (multicluster)](#multicluster).
+- [Grouping isolated clusters into a federation with the ability to provide native (in the Service Mesh sense) access to selected services](#federation).
 
 ## Mutual TLS
 
