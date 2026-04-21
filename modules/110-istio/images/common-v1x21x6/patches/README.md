@@ -15,6 +15,10 @@ Fix use expfmt library in pilot-agent. This library used for format metrics.
 > [!WARNING]
 > **After update istio to version 1.22.X and above need delete this patch!**
 
+## 004-istio-multicluster_regenerate_token_timeout.patch
+
+Adding logic to create an additional JWT token at the time of the main one's regeneration to avoid downtime of services.
+
 ## 001-kiali-go-mod.patch
 
 Fix CVE
