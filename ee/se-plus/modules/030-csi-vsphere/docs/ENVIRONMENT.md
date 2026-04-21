@@ -30,7 +30,7 @@ export GOVC_INSECURE=1
 
 ## Create tags and tag categories
 
-`csi-vsphere` maps Kubernetes topology to vSphere objects: a **region** is a vSphere `Datacenter`, and a **zone** is a vSphere `Cluster`. The relationship between these objects is defined using tags.
+`csi-vsphere` maps Kubernetes topology to vSphere objects: a **region** is a vSphere Datacenter, and a **zone** is a vSphere Cluster. The relationship between these objects is defined using tags.
 
 To link Cluster and Datacenter objects, follow these steps:
 
