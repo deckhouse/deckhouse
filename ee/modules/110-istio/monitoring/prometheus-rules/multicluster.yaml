@@ -23,7 +23,7 @@
           ```
 
     - alert: D8IstioMulticlusterMetadataEndpointDoesntWork
-      expr: max by (multicluster_name, endpoint) (d8_istio_multicluster_metadata_endpoints_fetch_error_count == 1)
+      expr: max by (alliance_kind, name, endpoint, scope) (d8_istio_multicluster_metadata_endpoints_fetch_error_count == 1)
       for: 5m
       labels:
         severity_level: "6"
@@ -35,7 +35,7 @@
         plk_grouped_by__d8_istio_multicluster_metadata_endpoint_failed: D8IstioMulticlusterMetadataEndpointFailed,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
         summary: Multicluster metadata endpoint failed.
         description: |
-          The metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch via the Deckhouse hook.
+          The metadata {{$labels.scope}} endpoint `{{$labels.endpoint}}` for {{$labels.alliance_kind}} `{{$labels.name}}` has failed to fetch via the Deckhouse hook.
 
           To reproduce the request to the public endpoint, run the following command:
 
@@ -48,7 +48,7 @@
           ```bash
           KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
           LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
-          REMOTE_CLUSTER_UUID="$(d8 k get istiomulticluster {{$labels.multicluster_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
+          REMOTE_CLUSTER_UUID="$(d8 k get istiomulticluster {{$labels.name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
           TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-multicluster --ttl 1h)"
           curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
           ```

@@ -772,6 +772,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+  to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   to: /deckhouse/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
   stageDependencies:

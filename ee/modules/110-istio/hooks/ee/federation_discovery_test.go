@@ -20,6 +20,7 @@ import (
 	"github.com/square/go-jose/v3"
 	"k8s.io/utils/ptr"
 
+	metadataExporter "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/metadata-exporter"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -372,67 +373,79 @@ status:
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(7))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Group:  federationMetricsGroup,
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "proper-federation-0",
-					"endpoint":        "https://proper-hostname-0/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "proper-federation-0",
+					"endpoint":      "https://proper-hostname-0/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "proper-federation-0",
-					"endpoint":        "https://proper-hostname-0/metadata/private/federation.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "proper-federation-0",
+					"endpoint":      "https://proper-hostname-0/metadata/private/federation.json",
+					"scope":         "private",
 				},
 			}))
 			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "proper-federation-1",
-					"endpoint":        "https://proper-hostname-1/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "proper-federation-1",
+					"endpoint":      "https://proper-hostname-1/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "proper-federation-1",
-					"endpoint":        "https://proper-hostname-1/metadata/private/federation.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "proper-federation-1",
+					"endpoint":      "https://proper-hostname-1/metadata/private/federation.json",
+					"scope":         "private",
 				},
 			}))
 			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "proper-federation-2",
-					"endpoint":        "https://proper-hostname-2/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "proper-federation-2",
+					"endpoint":      "https://proper-hostname-2/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "proper-federation-2",
-					"endpoint":        "https://proper-hostname-2/metadata/private/federation.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "proper-federation-2",
+					"endpoint":      "https://proper-hostname-2/metadata/private/federation.json",
+					"scope":         "private",
 				},
 			}))
 		})
@@ -590,12 +603,12 @@ status: {}
 
 			Expect(string(f.LoggerOutput.Contents())).To(Not(ContainSubstring("local-federation")))
 
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-internal-error/metadata/private/federation.json\",\"http_code\":500"))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-bad-json/metadata/private/federation.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"private-bad-json\""))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad public metadata format in endpoint for IstioFederation\",\"endpoint\":\"https://public-wrong-format/metadata/public/public.json\",\"name\":\"public-wrong-format\""))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-internal-error/metadata/private/federation.json\",\"http_code\":500,\"name\":\"private-internal-error\""))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal private metadata endpoint for IstioFederation\",\"endpoint\":\"https://private-bad-json/metadata/private/federation.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"private-bad-json\""))
-			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad private metadata format in endpoint for IstioFederation\",\"endpoint\":\"https://private-wrong-format/metadata/private/federation.json\",\"name\":\"private-wrong-format\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch metadata endpoint\",\"alliance_kind\":\"IstioFederation\",\"endpoint\":\"https://private-internal-error/metadata/private/federation.json\",\"http_code\":500,\"name\":\"private-internal-error\",\"output\":\"gohook\",\"scope\":\"private\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal metadata from endpoint\",\"alliance_kind\":\"IstioFederation\",\"endpoint\":\"https://private-bad-json/metadata/private/federation.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"private-bad-json\",\"output\":\"gohook\",\"scope\":\"private\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad metadata format in endpoint\",\"alliance_kind\":\"IstioFederation\",\"endpoint\":\"https://public-wrong-format/metadata/public/public.json\",\"name\":\"public-wrong-format\",\"output\":\"gohook\",\"scope\":\"public\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot fetch metadata endpoint\",\"alliance_kind\":\"IstioFederation\",\"endpoint\":\"https://private-internal-error/metadata/private/federation.json\",\"http_code\":500,\"name\":\"private-internal-error\",\"output\":\"gohook\",\"scope\":\"private\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"cannot unmarshal metadata from endpoint\",\"alliance_kind\":\"IstioFederation\",\"endpoint\":\"https://private-bad-json/metadata/private/federation.json\",\"error\":\"unexpected end of JSON input\",\"name\":\"private-bad-json\",\"output\":\"gohook\",\"scope\":\"private\""))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("\"msg\":\"bad metadata format in endpoint\",\"alliance_kind\":\"IstioFederation\",\"endpoint\":\"https://private-wrong-format/metadata/private/federation.json\",\"name\":\"private-wrong-format\",\"output\":\"gohook\",\"scope\":\"private\""))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "local-federation").Field("status").String()).To(MatchJSON("{}"))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "public-internal-error").Field("status").String()).To(MatchJSON("{}"))
@@ -625,97 +638,115 @@ status: {}
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(10))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
-				Group:  federationMetricsGroup,
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionExpireMetrics,
 			}))
 			Expect(m[1]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "private-bad-json",
-					"endpoint":        "https://private-bad-json/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "private-bad-json",
+					"endpoint":      "https://private-bad-json/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[2]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
-					"federation_name": "private-bad-json",
-					"endpoint":        "https://private-bad-json/metadata/private/federation.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "private-bad-json",
+					"endpoint":      "https://private-bad-json/metadata/private/federation.json",
+					"scope":         "private",
 				},
 			}))
 			Expect(m[3]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "private-internal-error",
-					"endpoint":        "https://private-internal-error/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "private-internal-error",
+					"endpoint":      "https://private-internal-error/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[4]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
-					"federation_name": "private-internal-error",
-					"endpoint":        "https://private-internal-error/metadata/private/federation.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "private-internal-error",
+					"endpoint":      "https://private-internal-error/metadata/private/federation.json",
+					"scope":         "private",
 				},
 			}))
 			Expect(m[5]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(0.0),
 				Labels: map[string]string{
-					"federation_name": "private-wrong-format",
-					"endpoint":        "https://private-wrong-format/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "private-wrong-format",
+					"endpoint":      "https://private-wrong-format/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[6]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
-					"federation_name": "private-wrong-format",
-					"endpoint":        "https://private-wrong-format/metadata/private/federation.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "private-wrong-format",
+					"endpoint":      "https://private-wrong-format/metadata/private/federation.json",
+					"scope":         "private",
 				},
 			}))
 			Expect(m[7]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
-					"federation_name": "public-bad-json",
-					"endpoint":        "https://public-bad-json/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "public-bad-json",
+					"endpoint":      "https://public-bad-json/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[8]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
-					"federation_name": "public-internal-error",
-					"endpoint":        "https://public-internal-error/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "public-internal-error",
+					"endpoint":      "https://public-internal-error/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 			Expect(m[9]).To(BeEquivalentTo(operation.MetricOperation{
-				Name:   federationMetricName,
-				Group:  federationMetricsGroup,
+				Name:   string(metadataExporter.FederationMetricName),
+				Group:  string(metadataExporter.FederationMetricsGroup),
 				Action: operation.ActionGaugeSet,
 				Value:  ptr.To(1.0),
 				Labels: map[string]string{
-					"federation_name": "public-wrong-format",
-					"endpoint":        "https://public-wrong-format/metadata/public/public.json",
+					"alliance_kind": "IstioFederation",
+					"name":          "public-wrong-format",
+					"endpoint":      "https://public-wrong-format/metadata/public/public.json",
+					"scope":         "public",
 				},
 			}))
 		})

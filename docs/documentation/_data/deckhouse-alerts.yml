@@ -1663,6 +1663,40 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointAccessedViaDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Requests to `/metadata/private/<federation|multicluster>.json` used HTTP `Host` equal to this cluster's deprecated public hostname `istio.<publicDomainTemplate>`.
+
+        Remote clusters should switch `metadataEndpoint` to `istio-metadata.<publicDomainTemplate>/metadata/`.
+      summary: |
+        Peers still call &lt;federation|multicluster&gt;.json on this cluster using the deprecated istio public subdomain.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointUsesDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The `metadataEndpoint` of `{{$labels.alliance_kind}}` `{{$labels.name}}` uses a hostname whose leftmost label is `istio` (for example `istio.example.com` or `istio.peer.example.net`).
+
+        Now it uses hostname: `{{$labels.hostname}}`
+
+        Prefer the same path on a host whose first label is `istio-metadata` (for example `istio-metadata.example.com`), regardless of the parent domain.
+
+        Migration steps (details may be extended in documentation):
+
+        1. Ensure DNS to resolve the target `istio-metadata.*` hostname (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).
+        2. Update `spec.metadataEndpoint` on this object to use that host; keep the path `/metadata/`.
+        3. Verify remote metadata fetch and multicluster/federation health after the change.
+      summary: |
+        Alliance metadataEndpoint uses a host whose first DNS label is istio (deprecated metadata hostname).
+      severity: "5"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio
@@ -1747,7 +1781,7 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The metadata endpoint `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` has failed to fetch via the Deckhouse hook.
+        The metadata {{$labels.scope}} endpoint `{{$labels.endpoint}}` for {{$labels.alliance_kind}} `{{$labels.name}}` has failed to fetch via the Deckhouse hook.
 
         To reproduce the request to the public endpoint, run the following command:
 
@@ -1760,7 +1794,7 @@ alerts:
         ```bash
         KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
         LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
-        REMOTE_CLUSTER_UUID="$(d8 k get istiofederation {{$labels.federation_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
+        REMOTE_CLUSTER_UUID="$(d8 k get istiofederation {{$labels.name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
         TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-federation --ttl 1h)"
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```
@@ -1793,7 +1827,7 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The metadata endpoint `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` has failed to fetch via the Deckhouse hook.
+        The metadata {{$labels.scope}} endpoint `{{$labels.endpoint}}` for {{$labels.alliance_kind}} `{{$labels.name}}` has failed to fetch via the Deckhouse hook.
 
         To reproduce the request to the public endpoint, run the following command:
 
@@ -1806,7 +1840,7 @@ alerts:
         ```bash
         KEY="$(deckhouse-controller module values istio -o json | jq -r .internal.remoteAuthnKeypair.priv)"
         LOCAL_CLUSTER_UUID="$(deckhouse-controller module values -g istio -o json | jq -r .global.discovery.clusterUUID)"
-        REMOTE_CLUSTER_UUID="$(d8 k get istiomulticluster {{$labels.multicluster_name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
+        REMOTE_CLUSTER_UUID="$(d8 k get istiomulticluster {{$labels.name}} -o json | jq -r .status.metadataCache.public.clusterUUID)"
         TOKEN="$(deckhouse-controller helper gen-jwt --private-key-path <(echo "$KEY") --claim iss=d8-istio --claim sub=$LOCAL_CLUSTER_UUID --claim aud=$REMOTE_CLUSTER_UUID --claim scope=private-multicluster --ttl 1h)"
         curl -H "Authorization: Bearer $TOKEN" {{$labels.endpoint}}
         ```

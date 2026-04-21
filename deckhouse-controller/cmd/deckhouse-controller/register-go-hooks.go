@@ -14,6 +14,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
+	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/metadata-exporter"
 	_ "github.com/deckhouse/deckhouse/ee/modules/150-user-authn/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/300-prometheus/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/450-network-gateway/hooks"
