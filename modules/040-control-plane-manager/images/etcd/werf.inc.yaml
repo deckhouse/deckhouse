@@ -37,11 +37,8 @@ import:
   - etcdutl
   before: setup
 git:
-- add: /modules/040-control-plane-manager/images/etcd/etcd-witness-slim
+- add: /modules/040-control-plane-manager/images/etcd/.bin/etcd-witness-slim
   to: /usr/bin/etcd
-  stageDependencies:
-    install:
-    - etcd-witness-slim
 {{- include "image mount points" . }}
 imageSpec:
   config:
