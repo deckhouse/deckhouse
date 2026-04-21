@@ -22,8 +22,8 @@ const (
 	ConditionReasonLoadFailed status.ConditionReason = "LoadFailed"
 )
 
-// newLoadFailedErr wraps an error with ReadyInRuntime=False.
-// Used when the package fails to load from its filesystem path.
+// newLoadFailedErr wraps an error when the package fails to load from its filesystem path.
+// Carries only a reason; the load task attributes it to ReadyInRuntime via HandleError.
 func newLoadFailedErr(err error) error {
 	return &status.Error{
 		Err:    err,

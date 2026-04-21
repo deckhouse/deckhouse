@@ -24,7 +24,7 @@ const (
 )
 
 // newEventHookErr wraps an error when a sync hook execution fails.
-// Sets HooksProcessed and ReadyInRuntime to False.
+// Carries only a reason; the calling task picks the condition via HandleError (HooksReady).
 func newEventHookErr(err error) error {
 	return &status.Error{
 		Err:    err,

@@ -44,7 +44,7 @@ type packageI interface {
 }
 
 // task validates and applies new settings to a package.
-// On success, sets ConditionSettingsValid to True.
+// On success, sets ConditionConfigured to True.
 // On failure, wraps errors with appropriate status conditions.
 type task struct {
 	pkg      packageI
@@ -70,14 +70,14 @@ func (t *task) String() string {
 }
 
 // Execute validates settings and applies them to the package.
-// Sets ConditionSettingsValid on success or delegates error handling to status service.
+// Sets ConditionConfigured on success or delegates error handling to status service.
 func (t *task) Execute(ctx context.Context) error {
 	if err := t.applySettings(ctx); err != nil {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionConfigured, err)
 		return fmt.Errorf("apply settings: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionConfigured)
+	t.status.SetConditionsTrue(t.pkg.GetName(), status.ConditionConfigured)
 
 	return nil
 }

@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -58,14 +57,13 @@ type queueService interface {
 // NewTask creates a disable task.
 // If keep is true, the Helm release is preserved (used during updates).
 // If keep is false, the release is deleted (used during removal).
-func NewTask(pkg packageI, ns string, keep bool, nelm nelmI, queue queueService, status *status.Registry, logger *log.Logger) queue.Task {
+func NewTask(pkg packageI, ns string, keep bool, nelm nelmI, queue queueService, logger *log.Logger) queue.Task {
 	return &task{
 		pkg:          pkg,
 		namespace:    ns,
 		keep:         keep,
 		nelm:         nelm,
 		queueService: queue,
-		status:       status,
 		logger:       logger.Named(taskTracer).With("name", pkg.GetName()),
 	}
 }
@@ -79,7 +77,6 @@ type task struct {
 
 	nelm         nelmI
 	queueService queueService
-	status       *status.Registry
 
 	logger *log.Logger
 }

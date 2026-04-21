@@ -24,17 +24,27 @@ import (
 type ConditionType string
 
 const (
-	// ConditionReadyOnFilesystem indicates package was successfully mounted and accessible
+	// ConditionReadyOnFilesystem indicates the package image is mounted and its files are accessible.
+	// Set True by the install task; set False by download/install failure.
 	ConditionReadyOnFilesystem ConditionType = "ReadyOnFilesystem"
-	// ConditionReadyInRuntime indicates package is fully loaded and operational in runtime
+	// ConditionReadyInRuntime indicates the scheduler has accepted the package for execution
+	// (version/dependency constraints satisfied, bootstrap done). It does NOT imply hooks are
+	// initialized or that startup has run — those are reflected via ConditionHooksReady.
+	// Set True by schedulePackage (runtime.go); set False by disablePackage with the scheduler's
+	// reason, or by SetVersion with reason=Pending during runtime reload.
 	ConditionReadyInRuntime ConditionType = "ReadyInRuntime"
-	// ConditionReadyInCluster checks the resources are ready
+	// ConditionReadyInCluster indicates the Helm release's resources are ready in the cluster.
+	// Set True at the end of a successful run task; set False by nelm apply/tracking events.
 	ConditionReadyInCluster ConditionType = "ReadyInCluster"
-	// ConditionHelmApplied indicates Helm release was successfully applied
+	// ConditionHelmApplied indicates the Helm release was successfully installed or upgraded.
+	// Set True at the end of a successful run task; set False by nelm failures.
 	ConditionHelmApplied ConditionType = "HelmApplied"
-	// ConditionHooksReady indicates all package hooks executed successfully
+	// ConditionHooksReady indicates hooks have been initialized and executed successfully through
+	// the current run cycle (OnStartup + BeforeHelm/AfterHelm). Set True at the end of a successful
+	// run task; set False by failures in enable/hookrun/hooksync tasks.
 	ConditionHooksReady ConditionType = "HooksReady"
-	// ConditionConfigured checks the settings passed openAPI validation and applied to the package
+	// ConditionConfigured indicates settings passed OpenAPI validation and were applied to the package.
+	// Set True by the configure task.
 	ConditionConfigured ConditionType = "Configured"
 )
 
@@ -135,8 +145,12 @@ func (r *Registry) GetStatus(name string) Status {
 	}
 }
 
-// SetVersion sets the current version of package
-func (r *Registry) SetVersion(name string, version string) {
+// MarkVersionLoaded records that the given version has been successfully loaded into
+// runtime memory. It updates Status.Version and marks ConditionReadyInRuntime as
+// False/Pending — the runtime must go through its enable/run cycle before it is
+// operational for the new version. Notifies if either the version or the condition
+// changed.
+func (r *Registry) MarkVersionLoaded(name string, version string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -158,8 +172,8 @@ func (r *Registry) SetVersion(name string, version string) {
 	}
 }
 
-// SetConditionTrue marks a condition as successful and notifies listeners if changed
-func (r *Registry) SetConditionTrue(name string, condition ConditionType) {
+// SetConditionsTrue marks conditions as successful and notifies listeners if changed
+func (r *Registry) SetConditionsTrue(name string, conditions ...ConditionType) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -167,8 +181,13 @@ func (r *Registry) SetConditionTrue(name string, condition ConditionType) {
 		return
 	}
 
-	// Notify only if the condition actually changed
-	notify := r.statuses[name].setCondition(Condition{Type: condition, Status: ConditionTrue})
+	var notify bool
+	for _, condition := range conditions {
+		if r.statuses[name].setCondition(Condition{Type: condition, Status: ConditionTrue}) {
+			notify = true
+		}
+	}
+
 	if notify {
 		r.ch <- name
 	}
@@ -291,7 +310,8 @@ func (r *Registry) HandleError(name string, cond ConditionType, err error) {
 	}
 }
 
-// extractCondition recursively extracts all conditions from wrapped status errors
+// extractReason returns the reason from the first wrapped *status.Error in the chain,
+// or "" if none is present.
 func extractReason(err error) ConditionReason {
 	statusErr := new(Error)
 	if !errors.As(err, &statusErr) {

@@ -25,7 +25,7 @@ const (
 )
 
 // newBeforeHelmHookErr wraps an error when BeforeHelm hooks fail.
-// Sets HooksProcessed and ReadyInRuntime to False.
+// Carries only a reason; the calling task picks the condition via HandleError (HooksReady).
 func newBeforeHelmHookErr(err error) error {
 	return &status.Error{
 		Err:    err,
@@ -34,7 +34,7 @@ func newBeforeHelmHookErr(err error) error {
 }
 
 // newAfterHelmHookErr wraps an error when AfterHelm hooks fail.
-// Sets HooksProcessed and ReadyInRuntime to False.
+// Carries only a reason; the calling task picks the condition via HandleError (HooksReady).
 func newAfterHelmHookErr(err error) error {
 	return &status.Error{
 		Err:    err,

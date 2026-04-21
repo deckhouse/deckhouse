@@ -25,7 +25,7 @@ const (
 )
 
 // newStartupHookErr wraps an error when OnStartup hooks fail.
-// Sets HooksProcessed and ReadyInRuntime to False.
+// Carries only a reason; the calling task picks the condition via HandleError (HooksReady).
 func newStartupHookErr(err error) error {
 	return &status.Error{
 		Err:    err,
@@ -34,7 +34,7 @@ func newStartupHookErr(err error) error {
 }
 
 // newInitHooksErr wraps an error when hook initialization fails.
-// Sets ReadyInRuntime to False - package cannot proceed without hooks.
+// Carries only a reason; the calling task picks the condition via HandleError (HooksReady).
 func newInitHooksErr(err error) error {
 	return &status.Error{
 		Err:    err,

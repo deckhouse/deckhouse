@@ -106,7 +106,7 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("install package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.name, status.ConditionReadyOnFilesystem)
+	t.status.SetConditionsTrue(t.name, status.ConditionReadyOnFilesystem)
 
 	return nil
 }

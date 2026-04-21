@@ -23,9 +23,8 @@ const (
 	ConditionReasonValidationFailed status.ConditionReason = "ValidationFailed"
 )
 
-// newApplySettingsErr wraps an error with conditions that mark both
-// ReadyInRuntime and SettingsValid as False. This ensures the status
-// service properly reflects validation or apply failures.
+// newApplySettingsErr wraps a settings validation or apply failure.
+// Carries only a reason; the configure task attributes it to ConditionConfigured via HandleError.
 func newApplySettingsErr(err error) error {
 	return &status.Error{
 		Err:    err,

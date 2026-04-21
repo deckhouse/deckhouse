@@ -61,7 +61,7 @@ type nelmI interface {
 }
 
 // task executes the main package lifecycle: hooks and Helm release management.
-// On success, sets HelmApplied, HooksProcessed, ReadyInRuntime, and ReadyInCluster.
+// On success, sets HelmApplied, HooksReady, and ReadyInCluster.
 type task struct {
 	pkg       packageI
 	namespace string
@@ -96,9 +96,10 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("run package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHelmApplied)
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionHooksReady)
-	t.status.SetConditionTrue(t.pkg.GetName(), status.ConditionReadyInCluster)
+	t.status.SetConditionsTrue(t.pkg.GetName(),
+		status.ConditionHelmApplied,
+		status.ConditionHooksReady,
+		status.ConditionReadyInCluster)
 
 	return nil
 }

@@ -516,7 +516,7 @@ func (r *Runtime) schedulePackage(name string) {
 		return
 	}
 
-	r.status.SetConditionTrue(name, status.ConditionReadyInRuntime)
+	r.status.SetConditionsTrue(name, status.ConditionReadyInRuntime)
 
 	settings := r.packages.GetPendingSettings(name)
 
@@ -550,11 +550,11 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 	r.status.SetConditionFalse(name, status.ConditionReadyInRuntime, reason, msg)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, "", true, r.nelmService, r.queueService, r.logger))
 	}
 }
 

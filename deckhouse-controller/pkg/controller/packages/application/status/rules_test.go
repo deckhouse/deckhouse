@@ -437,7 +437,7 @@ func TestManagedRule(t *testing.T) {
 			},
 		},
 		{
-			name: "false when HooksProcessed is false",
+			name: "false when HooksReady is false",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
@@ -467,7 +467,7 @@ func TestConfigurationAppliedRule(t *testing.T) {
 			},
 		},
 		{
-			name: "false when SettingsValid is false",
+			name: "false when Configured is false",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionFalse, "InvalidSettings"),
 				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionTrue, "HooksOK"),
@@ -478,7 +478,7 @@ func TestConfigurationAppliedRule(t *testing.T) {
 			},
 		},
 		{
-			name: "false when HooksProcessed is false",
+			name: "false when HooksReady is false",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
 				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "HooksFailed"),

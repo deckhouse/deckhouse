@@ -102,7 +102,7 @@ func (t *task) Execute(ctx context.Context) error {
 		return fmt.Errorf("load package: %w", err)
 	}
 
-	t.status.SetVersion(t.name, version)
+	t.status.MarkVersionLoaded(t.name, version)
 
 	return nil
 }

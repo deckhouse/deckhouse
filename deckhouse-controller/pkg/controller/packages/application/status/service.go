@@ -122,13 +122,11 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 		})
 	}
 
-	// We can lose versionChanged=true during different events processing.
-	//
-	// So we need to commit version when ReadyInCluster (internal condition) is True.
-	// ReadyInCluster is the last condition in the chain, so when it's True,
-	// all other conditions (Downloaded, ReadyOnFilesystem, ReadyInRuntime) are also True.
-	//
-	// And this means we can commit the resulted version.
+	// versionChanged=true can be lost across event processing if the Application is
+	// reconciled before all per-condition notifications arrive. ReadyInCluster is the
+	// terminal condition in the install chain (set by the run task only after
+	// ReadyOnFilesystem and HelmApplied are True), so treating it as True is a safe
+	// signal that the new version is fully live and the Application CR can commit to it.
 	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionReadyInCluster) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
 	}

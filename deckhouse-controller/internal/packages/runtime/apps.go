@@ -115,7 +115,7 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 
 	// If there's an existing app, disable it first
 	if pkg := r.apps[name]; pkg != nil {
-		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.status, r.logger))
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, pkg.GetNamespace(), true, r.nelmService, r.queueService, r.logger))
 	}
 
 	for _, task := range tasks {
@@ -180,7 +180,7 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	}
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(func() {
