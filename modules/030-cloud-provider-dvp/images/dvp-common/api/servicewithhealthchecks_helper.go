@@ -21,7 +21,6 @@ limitations under the License.
 package api
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -42,7 +41,7 @@ type swhcCache struct {
 	cachedOK    bool
 }
 
-func (lb *LoadBalancerService) shouldUseSWHC(ctx context.Context) bool {
+func (lb *LoadBalancerService) shouldUseSWHC() bool {
 	now := time.Now()
 
 	lb.swhcCache.mu.Lock()
