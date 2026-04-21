@@ -36,6 +36,12 @@ var approvePipeline = []pipelineStage{
 	},
 	{
 		components: []controlplanev1alpha1.OperationComponent{
+			controlplanev1alpha1.OperationComponentHotReload,
+		},
+		concurrencyLimitFn: getConcurrencyLimit,
+	},
+	{
+		components: []controlplanev1alpha1.OperationComponent{
 			controlplanev1alpha1.OperationComponentKubeAPIServer,
 		},
 		concurrencyLimitFn: getConcurrencyLimit,
