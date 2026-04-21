@@ -25,7 +25,7 @@ rules:
   verbs: ["get", "list", "watch", "patch", "update"]
 - apiGroups: ["apps.kruise.io"]
   resources: ["daemonsets"]
-  verbs: ["get", "list", "watch", "patch", "update"]
+  verbs: ["get", "list", "watch", "patch", "update", "delete"]
 - apiGroups: [""]
   resources: ["pods"]
   verbs: ["get", "list", "watch", "delete"]
