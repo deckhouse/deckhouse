@@ -47,17 +47,17 @@ description: Архитектура компонента virtualization сontrol
 Архитектура компонента virtualization сontroller модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура компонента virtualization сontroller модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-controller.ru.png)
+![Архитектура компонента virtualization сontroller/API модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-controller.ru.png)
 
 ## Компоненты virtualization сontroller/API
 
-Virtualization сontroller состоит из следующих компонентов:
+Virtualization сontroller/API состоит из следующих компонентов:
 
 1. **Virtualization-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.virtualization.deckhouse.io` API Group. В качестве бэкенда virtualization-api использует сабресурсы из `subresources.kubevirt.io` API Group. Virtualization-api обращается напрямую на эндпойнт компонента virt-api, который является [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к аналогичным сабресурсам из `subresources.kubevirt.io` API Group.
 
-    Состоит из одного контейнера:
+   Состоит из одного контейнера:
 
-   * **virtualization-api**.
+   - **virtualization-api**.
 
 2. **Virtualization-controller** — контроллер, управляющий кастомными ресурсами основной `Virtualization.deckhouse.io` API Group. Virtualization-controller ограничен в изменении большей части лейблов, аннотаций и атрибутов спецификации ресурсов. Virtualization-controller разрешено вносить следующие изменения в кастомные ресурсы:
 
@@ -94,11 +94,11 @@ Virtualization-controller взаимодействует со следующим
    - отправляет измененные [кастомные ресурсы модуля virtualization](/modules/virtualization/cr.html) через сайдкар-контейнер proxy, который переименовывает метаданные из API Group `internal.virtualization.deckhouse.io` в API Group `kubervirt.io`;
    - выполнятет авторизацию запросов на получение метрик.
 
-С модулем взаимодействуют следующие внешние компоненты:
+С virtualization controller/API взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver**:
 
    - пересылает запросы к сабресурсам из `subresources.virtualization.deckhouse.io` API Group;
    - отправляет запросы на валидацию ресурсов из `virtualization.deckhouse.io` API Group.
 
-1. **Prometheus-main** — собирает метрики virtualization-controller.
+1. **Prometheus-main** — собирает метрики компонентов.
