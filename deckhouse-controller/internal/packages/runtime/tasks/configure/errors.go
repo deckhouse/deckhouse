@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package applysettings
+package configure
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,13 +23,13 @@ import (
 // Condition reasons for settings-related failures.
 const (
 	ConditionReasonValidationFailed status.ConditionReason = "ValidationFailed"
-	ConditionReasonApplySettings    status.ConditionReason = "ApplySettings"
+	ConditionReasonConfigure        status.ConditionReason = "Configure"
 )
 
-// newApplySettingsErr wraps an error with conditions that mark both
+// newConfigureErr wraps an error with conditions that mark both
 // ReadyInRuntime and SettingsValid as False. This ensures the status
 // service properly reflects validation or apply failures.
-func newApplySettingsErr(err error) error {
+func newConfigureErr(err error) error {
 	return &status.Error{
 		Err: err,
 		Conditions: []status.Condition{

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package applysettings
+package configure
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	taskTracer = "apply-settings"
+	taskTracer = "configure"
 )
 
 // packageI abstracts the package operations needed for settings management.
@@ -76,15 +76,15 @@ func NewTask(pkg packageI, settings addonutils.Values, status statusService, log
 }
 
 func (t *task) String() string {
-	return "ApplySettings"
+	return "Configure"
 }
 
 // Execute validates settings and applies them to the package.
 // Sets ConditionSettingsValid on success or delegates error handling to status service.
 func (t *task) Execute(ctx context.Context) error {
-	if err := t.applySettings(ctx); err != nil {
+	if err := t.configure(ctx); err != nil {
 		t.status.HandleError(t.pkg.GetName(), err)
-		return fmt.Errorf("apply settings: %w", err)
+		return fmt.Errorf("configure: %w", err)
 	}
 
 	// Propagate the effective settings (user config + config-schema defaults)
@@ -98,24 +98,24 @@ func (t *task) Execute(ctx context.Context) error {
 	return nil
 }
 
-// applySettings validates and applies settings to application
-func (t *task) applySettings(ctx context.Context) error {
-	ctx, span := otel.Tracer(taskTracer).Start(ctx, "ApplySettings")
+// configure validates and applies settings to the package.
+func (t *task) configure(ctx context.Context) error {
+	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Configure")
 	defer span.End()
 
-	t.logger.Debug("apply settings")
+	t.logger.Debug("configure")
 
 	res, err := t.pkg.ValidateSettings(ctx, t.settings)
 	if err != nil {
-		return newApplySettingsErr(err)
+		return newConfigureErr(err)
 	}
 
 	if !res.Valid {
-		return newApplySettingsErr(errors.New(res.Message))
+		return newConfigureErr(errors.New(res.Message))
 	}
 
 	if err = t.pkg.ApplySettings(t.settings); err != nil {
-		return newApplySettingsErr(err)
+		return newConfigureErr(err)
 	}
 
 	return nil
