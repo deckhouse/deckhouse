@@ -18,7 +18,7 @@ webIfaces:
 
 [Istio](https://istio.io/) is a framework for managing network traffic on a centralized basis that implements the Service Mesh approach.
 
-Istio provides solutions for the following application tasks:
+Istio solves the tasks for applications
 
 - [Compatibility table for supported versions](#compatibility-table-for-supported-versions)
 - [What issues does Istio help to resolve?](#what-issues-does-istio-help-to-resolve)
