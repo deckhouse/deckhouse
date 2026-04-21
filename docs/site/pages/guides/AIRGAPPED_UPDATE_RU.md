@@ -219,7 +219,7 @@ crane export registry.deckhouse.ru/deckhouse/ee/modules/console/release:alpha | 
 ## Механика обновления баз данных сканера уязвимостей
 
 {% alert level="warning" %}
-Доступно в DKP EE, DKP CSE Lite (1.67) и DKP CSE Pro (1.67).
+Доступно в DKP EE, DKP CSE Lite и DKP CSE Pro.
 {% endalert %}
 
 Базы уязвимостей обновляются раз в 6 часов. Модуль `operator-trivy` в кластере самостоятельно скачивает их из registry один раз за этот промежуток.

@@ -81,8 +81,8 @@
   },
   "cse-lite": {
     "name": "CSE Lite",
-    "name_version": "CSE Lite (1.67)",
-    "title": "Certified Security Edition Lite (1.67)",
+    "name_version": "CSE Lite (1.73)",
+    "title": "Certified Security Edition Lite (1.73)",
     "title_version": "Certified Security Edition Lite",
     "languages": [
       "ru"
@@ -133,9 +133,9 @@
   },
   "cse-pro": {
     "name": "CSE Pro",
-    "name_version": "CSE Pro (1.67)",
+    "name_version": "CSE Pro (1.73)",
     "title": "Certified Security Edition Pro",
-    "title_version": "Certified Security Edition Pro (1.67)",
+    "title_version": "Certified Security Edition Pro (1.73)",
     "languages": [
       "ru"
     ],

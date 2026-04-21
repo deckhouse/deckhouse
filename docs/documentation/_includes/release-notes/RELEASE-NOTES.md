@@ -10,6 +10,22 @@
   - IngressNginxController v1.9
   - Istio v1.19
 
+- In DKP 1.75.0–1.75.3, the `PodSecurityStandardsViolation` alert may fire immediately after cluster installation.
+  This happens when the `d8-system` namespace is missing the `heritage=deckhouse` label,
+  causing Pod Security Standards policies to be mistakenly applied to DKP system pods.
+  The issue is fixed in DKP 1.75.4.
+
+  For clusters installed on DKP 1.75.0–1.75.3, add the required label manually using the following command:
+
+  ```shell
+  d8 k --as=system:sudouser label namespace d8-system heritage=deckhouse
+  ```
+
+- Istio version support changes:
+  - Support for Istio 1.19 has been discontinued.
+  - Istio 1.21 is now considered deprecated, and support for this version will be discontinued in the upcoming DKP releases.
+    To update Istio, follow the [instruction](https://deckhouse.io/modules/istio/v1.75/examples.html#upgrading-istio).
+
 - Starting with Kubernetes 1.35, cluster nodes must use cgroup v2.
   The previous version (cgroup v1) is [considered deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
   If cgroup v2 is not supported on a node, the [D8NodeCgroupV2NotSupported](https://deckhouse.io/products/kubernetes-platform/documentation/v1.75/reference/alerts.html#node-manager-d8nodecgroupv2notsupported) alert will be triggered.
@@ -162,8 +178,6 @@
 - [IngressNginxController](https://deckhouse.io/modules/ingress-nginx/v1.75/) version support changes:
   - Support for v1.9 has been discontinued.
   - Support for v1.14 has been added.
-
-- Support for Istio 1.19 has been discontinued.
 
 The complete list of changes, including the updated components,
 is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.75.md) on GitHub.

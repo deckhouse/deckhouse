@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 14,
+  "version": 15,
   "statements": [
     {
       "vulnerability": {
@@ -241,8 +241,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-03-04T09:39:02.45541Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39883"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.40.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-39883 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды kenv, которая является специфичной для операционных систем на базе BSD и Solaris и отсутвует в Linux",
+      "timestamp": "2026-04-10T08:22:34.246444Z"
     }
   ],
   "timestamp": "2026-01-16T12:00:00Z",
-  "last_updated": "2026-03-04T09:39:02Z"
+  "last_updated": "2026-04-10T08:22:34Z"
 }

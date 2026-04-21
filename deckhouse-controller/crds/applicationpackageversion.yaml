@@ -249,6 +249,29 @@ spec:
                         type: object
                     type: object
                 type: object
+              packageSchemas:
+                description: Schemas for validating settings and values passed to
+                  the package.
+                properties:
+                  settingsSchema:
+                    description: |-
+                      SettingsSchema is the OpenAPI v3 schema used to validate the user-supplied
+                      settings of the package. Stored as an opaque object because its contents
+                      form a recursive JSON schema that cannot be expressed structurally in a
+                      CRD; the controller validates this subtree in Go when loading package
+                      metadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  valuesSchema:
+                    description: |-
+                      ValuesSchema is the OpenAPI v3 schema used to validate the effective
+                      values (defaults merged with settings) passed to the package's hooks and
+                      charts. Stored as an opaque object because its contents form a recursive
+                      JSON schema that cannot be expressed structurally in a CRD; the
+                      controller validates this subtree in Go when loading package metadata.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                type: object
               usedBy:
                 description: Information about applications that are using this package
                   version.

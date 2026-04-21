@@ -18,7 +18,7 @@ shell:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
     - cd /src
-    - git apply /patches/*.patch --verbose
+    - git apply /patches/001-go-mod.patch --verbose
     - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
@@ -27,6 +27,10 @@ final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+    add: /patches
+    to: /patches
     before: install
 mount:
 {{ include "mount points for golang builds" . }}
@@ -38,6 +42,13 @@ shell:
   - cd /src
   - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod vendor
+  - GOPROXY=$(cat /run/secrets/GOPROXY) go install golang.org/x/tools/cmd/goyacc@latest
+  - cp /patches/op_func.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_func.go
+  - cp /patches/op_top.go.tpl /src/vendor/github.com/prometheus/prometheus/promql/op_top.go
+  - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/002-op-functions.patch
+  - patch -d /src/vendor/github.com/prometheus/prometheus -p1 < /patches/003-printer-op-top-aggregate-string.patch
+  - cd /src/vendor/github.com/prometheus/prometheus/promql/parser && goyacc -l -o generated_parser.y.go generated_parser.y
+  - cd /src
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
@@ -45,6 +56,7 @@ shell:
     {{- include "image-build.build" $buildContext | indent 4 }}
   - chown -R 64535:64535 /src/promxy
   - chmod 0700 /src/promxy
+  - rm -rf /src/vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

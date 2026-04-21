@@ -344,58 +344,29 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		return err
 	}
 
-	tmpDir, err := s.tmpDirForConverger()
-	if err != nil {
-		return err
-	}
-
 	settings := sshCl.Session()
 
 	availableHosts := make([]session.Host, 0, len(params.state))
 
-	suff := rand.NewSource(time.Now().UnixNano()).Int63()
+	ipExtractor, err := newSSHIPExtractor(s)
+	if err != nil {
+		return err
+	}
 
 	for nodeName, stateBytes := range params.state {
-		metaConfig, err := s.ctx.MetaConfig()
-		if err != nil {
-			return fmt.Errorf("failed to get meta config for node %s: %w", nodeName, err)
-		}
-
-		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s-%d.tfstate", nodeName, suff))
-
-		s.debug("for extracting statePath: %s", statePath)
-
-		err = os.WriteFile(statePath, stateBytes, 0o644)
-		if err != nil {
-			return fmt.Errorf("failed to write infrastructure state: %w", err)
-		}
-
-		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           tmpDir,
-			AdditionalParams: cloud.ProviderAdditionalParams{},
-			Logger:           s.logger,
-			IsDebug:          s.params.IsDebug,
+		ip, err := ipExtractor.getIPForSSH(s.ctx.Ctx(), &sshIPExtractorParams{
+			nodeName: nodeName,
+			state:    stateBytes,
+			settings: settings,
 		})
 
-		// yes working dir for output is not required
-		provider, err := providerGetter(s.ctx.Ctx(), metaConfig)
 		if err != nil {
-			return fmt.Errorf("Failed to create executor for node %s: %w", nodeName, err)
+			return err
 		}
 
-		executor, _ := provider.OutputExecutor(s.ctx.Ctx(), s.logger)
-
-		// do not cleanup provider after getting output executor!
-
-		ipAddress, err := infrastructure.GetMasterIPAddressForSSH(s.ctx.Ctx(), statePath, executor)
-		if err != nil {
-			s.warn("Failed to get master IP address: %v", err)
-			continue
+		if ip != "" {
+			availableHosts = append(availableHosts, session.Host{Host: ip, Name: nodeName})
 		}
-
-		availableHosts = append(availableHosts, session.Host{Host: ipAddress, Name: nodeName})
-
-		s.debug("Extracted ip address %s and node name: %s", ipAddress, nodeName)
 	}
 
 	if len(availableHosts) == 0 {
@@ -675,4 +646,128 @@ func (s *KubeClientSwitcher) warn(f string, args ...any) {
 
 func (s *KubeClientSwitcher) debugStartOperation(action string) {
 	s.debug("Starting %s", strings.ToLower(action))
+}
+
+type sshIPExtractorParams struct {
+	nodeName string
+	state    []byte
+	settings *session.Session
+}
+
+type sshIPExtractor struct {
+	switcher *KubeClientSwitcher
+	tmpDir   string
+	suffix   string
+}
+
+func newSSHIPExtractor(s *KubeClientSwitcher) (*sshIPExtractor, error) {
+	tmpDir, err := s.tmpDirForConverger()
+	if err != nil {
+		return nil, err
+	}
+
+	suff := rand.NewSource(time.Now().UnixNano()).Int63()
+
+	return &sshIPExtractor{
+		switcher: s,
+		tmpDir:   tmpDir,
+		suffix:   fmt.Sprintf("%d", suff),
+	}, nil
+}
+
+func (e *sshIPExtractor) getIPForSSH(ctx context.Context, params *sshIPExtractorParams) (string, error) {
+	executor, err := e.getExecutor(ctx, params)
+	if err != nil {
+		return "", err
+	}
+
+	// do not cleanup provider after getting output executor!
+
+	statePath, err := e.prepareState(params)
+	if err != nil {
+		return "", err
+	}
+
+	nodeName := params.nodeName
+
+	addresses, err := infrastructure.GetMasterIPAddressForSSH(ctx, statePath, executor)
+	if err != nil {
+		e.switcher.warn(
+			"Cannot extract ips for node '%s':\n%v\nSkip adding node to ssh client",
+			nodeName,
+			err,
+		)
+		return "", nil
+	}
+
+	sshIP := addresses.SSH
+	internal := addresses.Internal
+
+	if sshIP == "" && internal == "" {
+		e.switcher.warn("IPs for node '%s' not found. Skip adding node to ssh client", nodeName)
+		return "", nil
+	}
+
+	bastion := params.settings.BastionHost
+
+	if bastion != "" {
+		e.switcher.debug(
+			"Use node internal ip '%s' for node %s because bastion host '%s' was passed",
+			internal,
+			nodeName,
+			bastion,
+		)
+
+		return internal, nil
+	}
+
+	e.switcher.debug("Use direct ssh ip '%s' for node %s", sshIP, nodeName)
+
+	return sshIP, nil
+}
+
+func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractorParams) (infrastructure.OutputExecutor, error) {
+	nodeName := params.nodeName
+
+	metaConfig, err := e.switcher.ctx.MetaConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get meta config for node %s: %w", nodeName, err)
+	}
+
+	logger := e.switcher.logger
+
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           e.tmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           logger,
+		IsDebug:          e.switcher.params.IsDebug,
+	})
+
+	// yes working dir for output is not required
+	provider, err := providerGetter(ctx, metaConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create executor for node %s: %w", nodeName, err)
+	}
+
+	executor, err := provider.OutputExecutor(ctx, logger)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get output executor for node %s: %w", nodeName, err)
+	}
+
+	return executor, nil
+}
+
+func (e *sshIPExtractor) prepareState(params *sshIPExtractorParams) (string, error) {
+	nodeName := params.nodeName
+
+	statePath := filepath.Join(e.tmpDir, fmt.Sprintf("%s-%s.tfstate", nodeName, e.suffix))
+
+	e.switcher.debug("State path for extracting ip for node %s: %s", nodeName, statePath)
+
+	err := os.WriteFile(statePath, params.state, 0o644)
+	if err != nil {
+		return "", fmt.Errorf("Failed to write infrastructure state for %s in %s: %w", nodeName, statePath, err)
+	}
+
+	return statePath, nil
 }

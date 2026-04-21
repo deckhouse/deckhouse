@@ -1264,6 +1264,27 @@ a.comparison-table__module-proprietaryOkmeter::after {
     }
 }
 
+/* Top-level CRD status block: use default expand/collapse visuals. */
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name {
+    cursor: pointer;
+}
+
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .plus-icon {
+    display: none;
+}
+
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+    display: inline-block;
+}
+
+.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .plus-icon {
+    display: inline-block;
+}
+
+.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+    display: none;
+}
+
 .docs ul.resources ul > li:not(.resources__prop_description li) {
     padding-top: variables.$text-spacing-l;
     padding-bottom: 16px;
@@ -1628,11 +1649,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     .code__transfer {
       scrollbar-color: #CFD2D8 #f1f1f1;
       padding-right: 70px;
-      margin-left: 48px;
+      margin-left: 37px;
 
       @include breakpoints.max-w(xl) {
         padding-right: 50px;
-        margin-left: 40px;
       }
     }
 }
@@ -2694,6 +2714,10 @@ select#contact-select {
       user-select: none;
       list-style-type: none;
       color: #9e9e9e;
+
+      @include breakpoints.max-w(s) {
+        line-height: 16px;
+      }
 
       li {
         padding: 0;

@@ -30,7 +30,7 @@ set_security_scan_requirement_status:
 # <template: remove_labels_job>
 remove_labels:
   name: Remove labels
-  runs-on: "regular"
+  runs-on: "ubuntu-latest"
   if: ${{ always() && github.event_name == 'workflow_dispatch' && !!github.event.inputs.issue_number }}
   steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 4 }!}

@@ -27,8 +27,10 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.57.1"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
+  WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -60,7 +62,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -173,7 +175,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -232,6 +239,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -365,8 +381,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -480,7 +496,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -539,6 +560,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -672,8 +702,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -786,7 +816,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -845,6 +880,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -978,8 +1022,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1092,7 +1136,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1151,6 +1200,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1284,8 +1342,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1398,7 +1456,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1457,6 +1520,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1590,8 +1662,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1704,7 +1776,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1763,6 +1840,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1896,8 +1982,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2010,7 +2096,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2069,6 +2160,15 @@ jobs:
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -2202,8 +2302,8 @@ jobs:
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
           export WERF_DISABLE_META_TAGS=true
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2318,7 +2418,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2426,7 +2531,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2590,7 +2700,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2703,7 +2818,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2817,7 +2937,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2930,7 +3055,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3035,7 +3165,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3126,7 +3261,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3207,7 +3347,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
 
 
@@ -3240,7 +3380,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3360,7 +3505,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3471,7 +3621,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2

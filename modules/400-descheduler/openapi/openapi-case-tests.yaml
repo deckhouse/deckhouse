@@ -1,5 +1,14 @@
 positive:
   values:
+    - deschedulingInterval: "Frequent"
+      internal:
+        deschedulers: []
+    - deschedulingInterval: "Moderate"
+      internal:
+        deschedulers: []
+    - deschedulingInterval: "Rare"
+      internal:
+        deschedulers: []
     - internal:
         deschedulers: []
     - internal:
@@ -54,3 +63,14 @@ positive:
                   memory: 50
                   pods: 50
                   gpu: "gpuNode"
+negative:
+  values:
+    - deschedulingInterval: "invalid"
+      internal:
+        deschedulers: []
+    - deschedulingInterval: "frequent"
+      internal:
+        deschedulers: []
+    - deschedulingInterval: 15
+      internal:
+        deschedulers: []

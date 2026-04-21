@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -38,6 +39,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/composer"
 )
 
@@ -62,11 +64,12 @@ func filterClusterLoggingConfig(obj *unstructured.Unstructured) (go_hook.FilterR
 }
 
 func filterClusterLogDestination(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var dst v1alpha1.ClusterLogDestination
+	var dst v1alpha2.ClusterLogDestination
 
 	err := sdk.FromUnstructured(obj, &dst)
 	if err != nil {
-		return nil, err
+		log.Printf("log-shipper: skip ClusterLogDestination %q: unmarshal to v1alpha2: %v", obj.GetName(), err)
+		return nil, nil
 	}
 	return dst, nil
 }
@@ -162,7 +165,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "cluster_log_destination",
-			ApiVersion: "deckhouse.io/v1alpha1",
+			ApiVersion: "deckhouse.io/v1alpha2",
 			Kind:       "ClusterLogDestination",
 			FilterFunc: filterClusterLogDestination,
 		},
@@ -220,15 +223,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, generateConfig)
 
-func extractTLSSpecFromSecrets(name string, input *go_hook.HookInput) (v1alpha1.CommonTLSSpec, error) {
+func extractTLSSpecFromSecrets(name string, input *go_hook.HookInput) (v1alpha2.CommonTLSSpec, error) {
 	for secret, err := range sdkobjectpatch.SnapshotIter[corev1.Secret](input.Snapshots.Get("tls-secrets")) {
 		if err != nil {
 			continue
 		}
 		if secret.Name == name {
-			return v1alpha1.CommonTLSSpec{
+			return v1alpha2.CommonTLSSpec{
 				CAFile: string(secret.Data["ca.pem"]),
-				CommonTLSClientCert: v1alpha1.CommonTLSClientCert{
+				CommonTLSClientCert: v1alpha2.CommonTLSClientCert{
 					CertFile: string(secret.Data["crt.pem"]),
 					KeyFile:  string(secret.Data["key.pem"]),
 					KeyPass:  string(secret.Data["keyPass"]),
@@ -236,11 +239,11 @@ func extractTLSSpecFromSecrets(name string, input *go_hook.HookInput) (v1alpha1.
 			}, nil
 		}
 	}
-	return v1alpha1.CommonTLSSpec{}, fmt.Errorf("secret %s not found", name)
+	return v1alpha2.CommonTLSSpec{}, fmt.Errorf("secret %s not found", name)
 }
 
-func getTLSSpec(dest *v1alpha1.ClusterLogDestination) (*v1alpha1.CommonTLSSpec, error) {
-	typeSpecMap := map[string]*v1alpha1.CommonTLSSpec{
+func getTLSSpec(dest *v1alpha2.ClusterLogDestination) (*v1alpha2.CommonTLSSpec, error) {
+	typeSpecMap := map[string]*v1alpha2.CommonTLSSpec{
 		"Elasticsearch": &dest.Spec.Elasticsearch.TLS,
 		"Vector":        &dest.Spec.Vector.TLS,
 		"Loki":          &dest.Spec.Loki.TLS,
@@ -257,7 +260,7 @@ func getTLSSpec(dest *v1alpha1.ClusterLogDestination) (*v1alpha1.CommonTLSSpec, 
 	return nil, fmt.Errorf("unsupported destination type: %s", dest.Spec.Type)
 }
 
-func overrideTLSSpec(source v1alpha1.CommonTLSSpec, dst *v1alpha1.CommonTLSSpec) {
+func overrideTLSSpec(source v1alpha2.CommonTLSSpec, dst *v1alpha2.CommonTLSSpec) {
 	encodeBase64 := func(str string) string {
 		return base64.StdEncoding.EncodeToString([]byte(str))
 	}
@@ -286,7 +289,7 @@ func generateConfig(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	destinations, err := sdkobjectpatch.UnmarshalToStruct[v1alpha1.ClusterLogDestination](input.Snapshots, "cluster_log_destination")
+	destinations, err := sdkobjectpatch.UnmarshalToStruct[v1alpha2.ClusterLogDestination](input.Snapshots, "cluster_log_destination")
 	if err != nil {
 		return fmt.Errorf("unmarshal destinations: %w", err)
 	}
@@ -404,7 +407,7 @@ func generateConfig(_ context.Context, input *go_hook.HookInput) error {
 // migrateClusterLogDestinationLoki migrates ClusterLogDestination pointing to d8-loki.
 // There may be ClusterLogDestination resources in the cluster pointing to d8-loki besides the one we create in the Deckhouse loki module.
 // We also have handleClusterLogDestinationD8Loki function which is notifying users that they should migrate ClusterLogDestination resources manually.
-func migrateClusterLogDestinationLoki(destination v1alpha1.ClusterLogDestination, clusterDomain string, endpoint endpoint, token string) (*v1alpha1.ClusterLogDestination, error) {
+func migrateClusterLogDestinationLoki(destination v1alpha2.ClusterLogDestination, clusterDomain string, endpoint endpoint, token string) (*v1alpha2.ClusterLogDestination, error) {
 	endpointURL, err := url.Parse(destination.Spec.Loki.Endpoint)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse loki endpoint '%s'", destination.Spec.Loki.Endpoint)
