@@ -152,7 +152,13 @@ The `CRDSensitiveData` feature gate enables field-level protection for Custom Re
 marked with `x-kubernetes-sensitive-data: true`. It is delivered as a patch to `kube-apiserver`
 (apiextensions-apiserver) and supports Kubernetes versions 1.31 and newer.
 
-The marker is allowed only on leaf fields (strings, numbers, booleans) and on objects or arrays (in which case the entire subtree is treated as sensitive). Placing the marker at the schema root is forbidden and will be rejected by the API server when the CRD is applied.
+The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when the CRD is applied:
+
+- The marker requires the `CRDSensitiveData` feature gate to be enabled.
+- It must not be placed at the root of the schema (the `openAPIV3Schema` node itself). To protect all fields of a Custom Resource, attach the marker to the `spec` property (or to a subtree below it), not to the schema root — the root also contains system fields like `apiVersion`, `kind`, and `metadata` that cannot be encrypted.
+- The field type must be one of the OpenAPI v3 types: `string`, `integer`, `number`, `boolean`, `object`, or `array`. Marking an `object` or `array` makes the whole subtree sensitive.
+- Fields declared with `x-kubernetes-int-or-string: true` are also supported.
+- The marker must not appear inside `anyOf`, `oneOf`, `allOf`, or `not` branches (this is enforced by the structural schema validator).
 
 When at least one field in a CRD schema is marked with `x-kubernetes-sensitive-data: true`,
 the following protections are applied to all Custom Resources of that type:
