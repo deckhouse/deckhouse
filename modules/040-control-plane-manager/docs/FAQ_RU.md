@@ -1319,7 +1319,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
 
 ### Требования
 
-1. Включите шифрование etcd в ModuleConfig `control-plane-manager` (это действие необратимо):
+1. Включите шифрование etcd в ModuleConfig `control-plane-manager` (это действие необратимо и приводит к перезапуску `kube-apiserver`). Feature gate `CRDSensitiveData` включается автоматически одновременно с шифрованием — его не нужно (и нельзя) указывать в `enabledFeatureGates`:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -1332,23 +1332,6 @@ Kubelet использует клиентский TLS-сертификат (`/va
      settings:
        apiserver:
          encryptionEnabled: true
-   ```
-
-1. Включите feature gate `CRDSensitiveData` (приводит к перезапуску `kube-apiserver`):
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: control-plane-manager
-   spec:
-     version: 2
-     enabled: true
-     settings:
-       apiserver:
-         encryptionEnabled: true
-       enabledFeatureGates:
-         - CRDSensitiveData
    ```
 
 1. Отметьте чувствительные поля в схеме CRD маркером `x-kubernetes-sensitive-data: true`.

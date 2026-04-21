@@ -29,7 +29,9 @@ webhooks:
 This example demonstrates how to protect sensitive fields in a Custom Resource using the `CRDSensitiveData`
 feature gate together with the `x-kubernetes-sensitive-data` schema marker.
 
-### 1. Enable encryption and the feature gate
+### 1. Enable encryption
+
+Turning on `apiserver.encryptionEnabled` automatically enables the `CRDSensitiveData` feature gate for `kube-apiserver` — there is no separate switch:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -42,8 +44,6 @@ spec:
   settings:
     apiserver:
       encryptionEnabled: true
-    enabledFeatureGates:
-      - CRDSensitiveData
 ```
 
 ### 2. Define a CRD with sensitive fields

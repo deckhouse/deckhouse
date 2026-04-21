@@ -1308,7 +1308,7 @@ together with the `x-kubernetes-sensitive-data` schema marker.
 
 ### Requirements
 
-1. Enable etcd encryption in the `control-plane-manager` ModuleConfig (this action cannot be undone):
+1. Enable etcd encryption in the `control-plane-manager` ModuleConfig (this action cannot be undone and causes a restart of `kube-apiserver`). The `CRDSensitiveData` feature gate is turned on automatically together with encryption — you do not need to list it in `enabledFeatureGates` (and it is not accepted there):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -1321,23 +1321,6 @@ together with the `x-kubernetes-sensitive-data` schema marker.
      settings:
        apiserver:
          encryptionEnabled: true
-   ```
-
-1. Enable the `CRDSensitiveData` feature gate (causes a restart of `kube-apiserver`):
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: control-plane-manager
-   spec:
-     version: 2
-     enabled: true
-     settings:
-       apiserver:
-         encryptionEnabled: true
-       enabledFeatureGates:
-         - CRDSensitiveData
    ```
 
 1. Mark sensitive fields in the CRD schema with `x-kubernetes-sensitive-data: true`.

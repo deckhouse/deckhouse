@@ -29,7 +29,9 @@ webhooks:
 В примере показано, как защитить чувствительные поля Custom Resource с помощью feature gate
 `CRDSensitiveData` и маркера схемы `x-kubernetes-sensitive-data`.
 
-### 1. Включите шифрование и feature gate
+### 1. Включите шифрование
+
+Включение `apiserver.encryptionEnabled` автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver` — отдельного переключателя нет:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -42,8 +44,6 @@ spec:
   settings:
     apiserver:
       encryptionEnabled: true
-    enabledFeatureGates:
-      - CRDSensitiveData
 ```
 
 ### 2. Определите CRD с чувствительными полями

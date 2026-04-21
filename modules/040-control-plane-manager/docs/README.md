@@ -154,7 +154,7 @@ marked with `x-kubernetes-sensitive-data: true`. It is delivered as a patch to `
 
 The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when the CRD is applied:
 
-- The marker requires the `CRDSensitiveData` feature gate to be enabled.
+- The marker requires the `CRDSensitiveData` feature gate to be enabled (enabled automatically when `apiserver.encryptionEnabled` is `true`).
 - It must not be placed at the root of the schema (the `openAPIV3Schema` node itself). To protect all fields of a Custom Resource, attach the marker to the `spec` property (or to a subtree below it), not to the schema root — the root also contains system fields like `apiVersion`, `kind`, and `metadata` that cannot be encrypted.
 - The field type must be one of the OpenAPI v3 types: `string`, `integer`, `number`, `boolean`, `object`, or `array`. Marking an `object` or `array` makes the whole subtree sensitive.
 - Fields declared with `x-kubernetes-int-or-string: true` are also supported.
@@ -170,8 +170,9 @@ the following protections are applied to all Custom Resources of that type:
 - **Audit log masking** — sensitive field values are always replaced with `"******"` in audit logs,
   regardless of the caller's RBAC permissions or audit level.
 
-To enable the feature, set `apiserver.encryptionEnabled` to `true` and add `CRDSensitiveData` to
-[`enabledFeatureGates`](configuration.html#parameters-enabledFeatureGates):
+To enable the feature, set `apiserver.encryptionEnabled` to `true`. The `CRDSensitiveData` feature gate is enabled
+automatically whenever secret encryption is active, so you do not need to add it to
+[`enabledFeatureGates`](configuration.html#parameters-enabledFeatureGates) manually (and it is not accepted there):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -184,13 +185,14 @@ spec:
   settings:
     apiserver:
       encryptionEnabled: true
-    enabledFeatureGates:
-      - CRDSensitiveData
 ```
 
 {% alert level="warning" %}
 Enabling `encryptionEnabled` cannot be undone.
-Enabling the `CRDSensitiveData` feature gate causes a restart of `kube-apiserver`.
+Enabling `encryptionEnabled` causes a restart of `kube-apiserver` (the encryption provider config and the
+`CRDSensitiveData` feature gate are applied together). Subsequent rotations of `EncryptionConfiguration` do not
+require a restart — `kube-apiserver` is started with `--encryption-provider-config-automatic-reload=true` and
+picks up changes on the fly.
 {% endalert %}
 
 See the [FAQ section](faq.html#how-do-i-protect-sensitive-fields-in-custom-resources) and

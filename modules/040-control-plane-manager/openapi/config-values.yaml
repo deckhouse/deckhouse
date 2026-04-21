@@ -258,8 +258,9 @@ properties:
 
           Generates `kube-system/d8-secret-encryption-key` Secret with encryption key.
 
-          Required to enable encryption in etcd for Custom Resources that have fields marked with
-          `x-kubernetes-sensitive-data: true` (see the `CRDSensitiveData` feature gate).
+          Enabling this parameter also automatically turns on the `CRDSensitiveData` feature gate for
+          `kube-apiserver`, which protects Custom Resource fields marked with `x-kubernetes-sensitive-data: true`
+          (etcd encryption, RBAC-based field filtering via the `<resource>/sensitive` subresource, and audit log masking).
           > **Note!** This mode cannot be disabled!
   etcd:
     type: object
