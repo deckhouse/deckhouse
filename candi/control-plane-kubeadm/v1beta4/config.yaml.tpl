@@ -203,6 +203,8 @@ apiServer:
     {{- if .apiserver.secretEncryptionKey }}
     - name: encryption-provider-config
       value: /etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
+    - name: encryption-provider-config-automatic-reload
+      value: "true"
     {{- end }}
     - name: profiling
       value: "false"
