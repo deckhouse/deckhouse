@@ -81,6 +81,11 @@ groups:
     description:
       en: "Deckhouse controller metrics"
       ru: "Метрики контроллера Deckhouse"
+  - ports: "4233"
+    protocol: TCP
+    description:
+      en: "`control-plane-manager` metrics"
+      ru: "Метрики компонента `control-plane-manager`"
 
 - group: NodesToNodes
   description:
