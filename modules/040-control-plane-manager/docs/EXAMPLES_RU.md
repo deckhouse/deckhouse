@@ -83,7 +83,29 @@ spec:
                   x-kubernetes-sensitive-data: true
 ```
 
-### 3. Настройте RBAC
+### 3. Создайте Custom Resource
+
+Создайте экземпляр CRD, указав значение в чувствительном поле. Для клиента создание объекта выглядит как обычно — защита применяется `kube-apiserver` прозрачно:
+
+```yaml
+apiVersion: example.com/v1
+kind: DbConfig
+metadata:
+  name: primary
+  namespace: default
+spec:
+  host: db.example.com
+  username: admin
+  password: s3cr3t
+```
+
+```shell
+kubectl apply -f dbconfig.yaml
+```
+
+После сохранения объект целиком шифруется в etcd, значение `password` маскируется в журнале аудита и удаляется из ответов API, если у вызывающей стороны нет доступа к сабресурсу `dbconfigs/sensitive` (см. следующий шаг).
+
+### 4. Настройте RBAC
 
 Предоставьте доступ к чувствительным полям через сабресурс `<resource>/sensitive`:
 
@@ -112,9 +134,9 @@ rules:
   verbs: ["get", "list", "watch"]
 ```
 
-### 4. Результат
+### 5. Результат
 
-Пользователь с ролью `dbconfig-reader` увидит ресурс с удалёнными чувствительными полями:
+Пользователь с ролью `dbconfig-reader`, выполнивший `kubectl get dbconfig primary -o json`, увидит ресурс с удалёнными чувствительными полями:
 
 ```json
 {

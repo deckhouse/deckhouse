@@ -83,7 +83,29 @@ spec:
                   x-kubernetes-sensitive-data: true
 ```
 
-### 3. Configure RBAC
+### 3. Create a Custom Resource
+
+Create an instance of the CRD with a value in the sensitive field. From the caller's perspective the object is created as usual — the protection is applied transparently by `kube-apiserver`:
+
+```yaml
+apiVersion: example.com/v1
+kind: DbConfig
+metadata:
+  name: primary
+  namespace: default
+spec:
+  host: db.example.com
+  username: admin
+  password: s3cr3t
+```
+
+```shell
+kubectl apply -f dbconfig.yaml
+```
+
+Once stored, the object is encrypted in etcd as a whole, and the `password` value is masked in audit logs and filtered from API responses unless the caller has access to the `dbconfigs/sensitive` subresource (see the next step).
+
+### 4. Configure RBAC
 
 Grant access to sensitive fields via the `<resource>/sensitive` subresource:
 
@@ -112,9 +134,9 @@ rules:
   verbs: ["get", "list", "watch"]
 ```
 
-### 4. Observe the result
+### 5. Observe the result
 
-A caller bound to `dbconfig-reader` will see the resource with sensitive fields stripped:
+A caller bound to `dbconfig-reader` running `kubectl get dbconfig primary -o json` will see the resource with sensitive fields stripped:
 
 ```json
 {
