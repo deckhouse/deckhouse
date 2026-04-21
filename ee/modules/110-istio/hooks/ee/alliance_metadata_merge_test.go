@@ -564,22 +564,56 @@ status:
 			// Both federations should still be listed individually in internal.federations
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[
 				{
-					"name": "cluster-a",
-					"trustDomain": "cluster.local",
-					"spiffeEndpoint": "https://cluster-a.example.com/metadata/public/spiffe-bundle-endpoint",
-					"ingressGateways": [{"address": "1.1.1.1", "port": 15443}],
-					"ca": "",
+					"clusterUUID": "uuid-a",
 					"insecureSkipVerify": false,
-					"publicServices": [{"hostname": "my-svc.my-ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}]
+					"ingressGateways": [
+						{
+							"address": "1.1.1.1",
+							"port": 15443
+						}
+					],
+					"name": "cluster-a",
+					"publicServices": [
+						{
+							"hostname": "my-svc.my-ns.svc.cluster.local",
+							"ports": [
+								{
+									"name": "http",
+									"port": 8080,
+									"protocol": "HTTP"
+								}
+							]
+						}
+					],
+					"rootCA": "root-ca-a",
+					"spiffeEndpoint": "https://cluster-a.example.com/metadata/public/spiffe-bundle-endpoint",
+					"trustDomain": "cluster.local"
 				},
 				{
-					"name": "cluster-b",
-					"trustDomain": "cluster.local",
-					"spiffeEndpoint": "https://cluster-b.example.com/metadata/public/spiffe-bundle-endpoint",
-					"ingressGateways": [{"address": "2.2.2.2", "port": 15443}],
-					"ca": "",
+					"clusterUUID": "uuid-b",
 					"insecureSkipVerify": false,
-					"publicServices": [{"hostname": "my-svc.my-ns.svc.cluster.local", "ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}]}]
+					"ingressGateways": [
+						{
+							"address": "2.2.2.2",
+							"port": 15443
+						}
+					],
+					"name": "cluster-b",
+					"publicServices": [
+						{
+							"hostname": "my-svc.my-ns.svc.cluster.local",
+							"ports": [
+								{
+									"name": "http",
+									"port": 8080,
+									"protocol": "HTTP"
+								}
+							]
+						}
+					],
+					"rootCA": "root-ca-b",
+					"spiffeEndpoint": "https://cluster-b.example.com/metadata/public/spiffe-bundle-endpoint",
+					"trustDomain": "cluster.local"
 				}
 			]`))
 
@@ -588,7 +622,13 @@ status:
 				{
 					"name": "my-svc-my-ns-svc-cluster-local-9c8cbb5bc",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
-					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
+					"ports": [
+						{
+							"name": "http",
+							"port": 8080,
+							"protocol": "HTTP"
+						}
+					],
 					"endpoints": [
 						{"address": "1.1.1.1", "port": 15443},
 						{"address": "2.2.2.2", "port": 15443}
@@ -816,9 +856,9 @@ status:
           port: 8080
           protocol: HTTP
     public:
-      clusterUUID: uuid-b
-      rootCA: root-ca-b
-      authnKeyPub: pub-key-b
+      clusterUUID: uuid-c
+      rootCA: root-ca-c
+      authnKeyPub: pub-key-c
 `))
 			f.RunHook()
 		})
@@ -827,15 +867,13 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.federations").String()).To(MatchJSON(`[
 				{
-					"name": "cluster-a",
-					"trustDomain": "cluster.local",
-					"spiffeEndpoint": "https://cluster-a.example.com/metadata/public/spiffe-bundle-endpoint",
+					"clusterUUID": "uuid-a",
+					"insecureSkipVerify": false,
 					"ingressGateways": [
 						{"address": "1.1.1.1", "port": 15443},
 						{"address": "1.1.1.2", "port": 15443}
 					],
-					"ca": "",
-					"insecureSkipVerify": false,
+					"name": "cluster-a",
 					"publicServices": [
 						{
 							"hostname": "my-svc.my-ns.svc.cluster.local",
@@ -843,17 +881,18 @@ status:
 								{"name": "web", "port": 8080, "protocol": "HTTP"}
 							]
 						}
-					]
+					],
+					"rootCA": "root-ca-a",
+					"spiffeEndpoint": "https://cluster-a.example.com/metadata/public/spiffe-bundle-endpoint",
+					"trustDomain": "cluster.local"
 				},
 				{
-					"name": "cluster-b",
-					"trustDomain": "cluster.local",
-					"spiffeEndpoint": "https://cluster-b.example.com/metadata/public/spiffe-bundle-endpoint",
+					"clusterUUID": "uuid-b",
 					"ingressGateways": [
 						{"address": "2.2.2.2", "port": 15443},
 						{"address": "2.2.2.3", "port": 15443}
 					],
-					"ca": "",
+					"name": "cluster-b",
 					"insecureSkipVerify": false,
 					"publicServices": [
 						{
@@ -863,17 +902,18 @@ status:
 								{"name": "www", "port": 8080, "protocol": "HTTP"}
 							]
 						}
-					]
+					],
+					"rootCA": "root-ca-b",
+					"spiffeEndpoint": "https://cluster-b.example.com/metadata/public/spiffe-bundle-endpoint",
+					"trustDomain": "cluster.local"
 				},
 				{
-					"name": "cluster-c",
-					"trustDomain": "cluster.local",
-					"spiffeEndpoint": "https://cluster-c.example.com/metadata/public/spiffe-bundle-endpoint",
+					"clusterUUID": "uuid-c",
 					"ingressGateways": [
 						{"address": "3.3.3.3", "port": 15443},
 						{"address": "3.3.3.4", "port": 15443}
 					],
-					"ca": "",
+					"name": "cluster-c",
 					"insecureSkipVerify": false,
 					"publicServices": [
 						{
@@ -883,7 +923,10 @@ status:
 								{"name": "http", "port": 8080, "protocol": "HTTP"}
 							]
 						}
-					]
+					],
+					"rootCA": "root-ca-c",
+					"spiffeEndpoint": "https://cluster-c.example.com/metadata/public/spiffe-bundle-endpoint",
+					"trustDomain": "cluster.local"
 				}
 			]`))
 
