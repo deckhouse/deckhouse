@@ -31,7 +31,7 @@ import (
 )
 
 var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
-	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {"providers": [{
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {"publishAPIEnabled": true, "providers": [{
   "type": "Crowd",
   "displayName": "Crowd",
   "crowd": {
@@ -44,7 +44,7 @@ var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
       "users"
     ]
   }
-}]}, "publishAPI": {"enabled": true}}}`, "")
+}]}}}`, "")
 
 	Context("Fresh cluster", func() {
 		BeforeEach(func() {
@@ -70,13 +70,13 @@ var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
 	})
 
 	Context("Fresh cluster with LDAP provider", func() {
-		g := HookExecutionConfigInit(`{"userAuthn":{"internal": {"providers": [{
+		g := HookExecutionConfigInit(`{"userAuthn":{"internal": {"publishAPIEnabled": true, "providers": [{
 	"type": "LDAP",
 	"displayName": "LDAP",
 	"ldap": {
 		"enableBasicAuth": true
 	}
-	}]}, "publishAPI": {"enabled": true}}}`, "")
+	}]}}}`, "")
 
 		BeforeEach(func() {
 			g.ValuesSet("global.modulesImages", GetModulesImages())
@@ -92,10 +92,10 @@ var _ = Describe("User Authn hooks :: generate basic auth proxy ::", func() {
 	})
 
 	Context("Multiple providers with enableBasicAuth=true", func() {
-		h := HookExecutionConfigInit(`{"userAuthn":{"internal":{"providers":[
+		h := HookExecutionConfigInit(`{"userAuthn":{"internal": {"publishAPIEnabled": true, "providers":[
 		{"type":"LDAP","displayName":"LDAP","ldap":{"enableBasicAuth":true}},
 		{"type":"Crowd","displayName":"Crowd","crowd":{"enableBasicAuth":true}}
-	]},"publishAPI":{"enabled":true}}}`, "")
+	]}}}`, "")
 
 		BeforeEach(func() {
 			h.ValuesSet("global.modulesImages", GetModulesImages())

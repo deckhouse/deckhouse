@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,16 +23,11 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 func applyIngressFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	ingress := &networkingv1.Ingress{}
-
-	return ingress, nil
+	return obj.GetName(), nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -59,19 +54,13 @@ func discoverIngress(_ context.Context, input *go_hook.HookInput) error {
 	const (
 		publishAPIEnabled = "userAuthn.internal.publishAPIEnabled"
 	)
-
-	ingressSnapshots, err := sdkobjectpatch.UnmarshalToStruct[networkingv1.Ingress](input.Snapshots, "ingress")
-	if err != nil {
-		return fmt.Errorf("cannot get publish API ingress from snaphots: failed to iterate over 'ingress' snapshot: %w", err)
-	}
-
-	if len(ingressSnapshots) > 0 {
-		fmt.Println("Set publish api internal value to true")
-		input.Values.Set(publishAPIEnabled, true)
-	} else {
+	fmt.Println(input.Snapshots.Get("ingress"))
+	if len(input.Snapshots.Get("ingress")) == 0 {
 		fmt.Println("Set publish api internal value to false")
 		input.Values.Set(publishAPIEnabled, false)
+	} else {
+		fmt.Println("Set publish api internal value to true")
+		input.Values.Set(publishAPIEnabled, true)
 	}
-
 	return nil
 }
