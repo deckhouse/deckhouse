@@ -170,7 +170,7 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, insufficient validation of Git URL fragment subdir components may allow access to files outside the checked-out Git repository root. Possible access is limited to files on the same mounted filesystem. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
       "timestamp": "2026-04-17T12:23:32Z"
-    },
+    }
   ],
   "timestamp": "2026-04-17T12:23:32Z"
 }
