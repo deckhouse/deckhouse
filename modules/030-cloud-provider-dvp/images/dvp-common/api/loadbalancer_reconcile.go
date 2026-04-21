@@ -61,7 +61,7 @@ func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 		return lb.updateLoadBalancerService(ctx, svc, loadBalancer)
 	}
 
-	if lb.shouldUseSWHC(ctx) {
+	if lb.shouldUseSWHC() {
 		svc, err := lb.CreateOrUpdateServiceWithHealthchecks(ctx, loadBalancer)
 		if err == nil {
 			return svc, nil
