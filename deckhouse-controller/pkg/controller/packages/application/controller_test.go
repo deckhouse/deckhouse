@@ -28,7 +28,6 @@ import (
 	"sync"
 	"testing"
 
-	addonutils "github.com/flant/addon-operator/pkg/utils"
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
 	crfake "github.com/google/go-containerregistry/pkg/v1/fake"
 	"github.com/stretchr/testify/assert"
@@ -448,8 +447,4 @@ func (o *operatorStub) RemoveApp(_, _ string) {
 
 func (o *operatorStub) Status() *packagestatus.Service {
 	return packagestatus.NewService()
-}
-
-func (o *operatorStub) GetAppSettings(_ string) addonutils.Values {
-	return nil
 }

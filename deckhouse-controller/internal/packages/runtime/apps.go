@@ -51,19 +51,6 @@ type App struct {
 	Settings   addonutils.Values
 }
 
-// GetAppSettings returns the effective settings of the loaded application
-// (user config merged with config-schema defaults), or nil if the app is
-// not tracked by the runtime.
-func (r *Runtime) GetAppSettings(name string) addonutils.Values {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	if app, ok := r.apps[name]; ok {
-		return app.GetSettings()
-	}
-	return nil
-}
-
 // ValidateSettings checks settings against the package's OpenAPI schema.
 // Returns valid if the package is not loaded yet (settings validated on load).
 func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {

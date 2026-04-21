@@ -19,6 +19,7 @@ import (
 	"slices"
 	"sync"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -72,9 +73,10 @@ type Service struct {
 
 // Status represents the current state of a package
 type Status struct {
-	Version    string      `json:"version"`
-	Conditions []Condition `json:"conditions"`
-	Tracking   Tracking    `json:"tracking"`
+	Version    string            `json:"version"`
+	Conditions []Condition       `json:"conditions"`
+	Tracking   Tracking          `json:"tracking"`
+	Settings   addonutils.Values `json:"settings,omitempty"`
 }
 
 type Tracking struct {
@@ -138,6 +140,7 @@ func (s *Service) GetStatus(name string) Status {
 		Version:    status.Version,
 		Conditions: condsCopy,
 		Tracking:   status.Tracking,
+		Settings:   status.Settings,
 	}
 }
 
@@ -227,6 +230,23 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		break
 	}
 
+	s.ch <- name
+}
+
+// UpdateSettings stores the effective settings of a package and notifies listeners.
+// Called after ApplySettings succeeds so that the last applied configuration is
+// propagated to the CR status alongside the package version.
+// If the package is not tracked by the service, the update is silently ignored.
+func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	st, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	st.Settings = settings
 	s.ch <- name
 }
 
