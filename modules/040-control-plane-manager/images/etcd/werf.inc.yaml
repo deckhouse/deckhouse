@@ -37,6 +37,11 @@ import:
   - etcdutl
   before: setup
 git:
+- add: /witness/etcd-witness-slim
+  to: /usr/bin/etcd
+  stageDependencies:
+    install:
+    - /witness/etcd-witness-slim
 {{- include "image mount points" . }}
 imageSpec:
   config:
