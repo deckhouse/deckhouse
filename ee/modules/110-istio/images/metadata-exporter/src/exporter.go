@@ -441,14 +441,14 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 }
 
 // GetPublicServices main function for federation to get public services
-func (exp *Exporter) GetPublicServices() []PublicServices {
+func (exp *Exporter) GetPublicServices() []PublicService {
 	services := exp.publicServiceInformer.GetStore().List()
 	clusterDomain := exp.clusterDomain
-	result := make([]PublicServices, 0, len(services))
+	result := make([]PublicService, 0, len(services))
 
 	for _, svc := range services {
 		svc := svc.(*v1.Service)
-		serviceInfo := PublicServices{
+		serviceInfo := PublicService{
 			Hostname: fmt.Sprintf("%s.%s.svc.%s", svc.Name, svc.Namespace, clusterDomain),
 			Ports:    []Port{},
 		}
