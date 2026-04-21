@@ -588,6 +588,17 @@ func (s *ControllerTestSuite) TestConditionsAfterRequeue() {
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationInProgress, readyCond.Reason)
+		readyCondFirstTransition := readyCond.LastTransitionTime
+
+		// Requeue again: Completed condition should stay OperationInProgress with unchanged transition time.
+		_, _ = r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
+		got = s.getOp(r, "test-op")
+		readyCond = meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), readyCond)
+		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationInProgress, readyCond.Reason)
+		require.True(s.T(), readyCond.LastTransitionTime.Equal(&readyCondFirstTransition),
+			"Completed transition time must not change on requeue when status/reason are unchanged")
 	})
 }
 

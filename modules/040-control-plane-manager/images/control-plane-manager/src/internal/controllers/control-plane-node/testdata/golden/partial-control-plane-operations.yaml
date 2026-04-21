@@ -33,6 +33,7 @@ spec:
   component: KubeAPIServer
   commands:
     - Backup
+    - SyncHotReload
     - SyncManifests
     - WaitPodReady
     - CertObserve

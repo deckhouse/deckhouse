@@ -32,6 +32,8 @@ const (
 	EtcdArbiterNodeLabelKey             = "node.deckhouse.io/etcd-arbiter"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
+	HeritageLabelKey                    = "heritage"
+	HeritageLabelValue                  = "deckhouse"
 	MaintenanceModeLabelKey             = "control-plane-manager.deckhouse.io/maintenance"
 	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"
 	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
@@ -80,7 +82,7 @@ const (
 	LocalControlPlaneEndpoint = "127.0.0.1:6445"
 
 	// Backup config
-	BackupBasePath         = DeckhousePath + "/backups"
+	BackupBasePath         = DeckhousePath + "/backup"
 	MaxBackupsPerComponent = 7
 
 	// Diff config

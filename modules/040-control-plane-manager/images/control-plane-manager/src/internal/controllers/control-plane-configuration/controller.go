@@ -379,6 +379,7 @@ func buildDesiredControlPlaneNode(nodeName string, cpmSecret *corev1.Secret, pki
 			Name: nodeName,
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey: nodeName,
+				constants.HeritageLabelKey:             constants.HeritageLabelValue,
 			},
 		},
 		Spec: spec,

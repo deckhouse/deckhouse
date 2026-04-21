@@ -122,6 +122,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		return reconcile.Result{}, client.IgnoreNotFound(err)
 	}
 
+	defer func() {
+		syncOperationExecutionMetrics(op)
+	}()
+
 	if !op.Spec.Approved || op.IsTerminal() {
 		return reconcile.Result{}, nil
 	}

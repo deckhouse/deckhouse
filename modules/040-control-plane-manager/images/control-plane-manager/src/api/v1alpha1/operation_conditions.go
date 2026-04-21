@@ -28,6 +28,7 @@ const (
 
 const (
 	CPOReasonCommandInProgress = "InProgress"
+	CPOReasonCommandCanceled   = "Canceled"
 	CPOReasonCommandCompleted  = "Completed"
 	CPOReasonCommandFailed     = "Failed"
 

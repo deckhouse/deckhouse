@@ -147,6 +147,7 @@ func (s *OperationState) MarkOperationInProgress(message string) {
 }
 
 func (s *OperationState) MarkOperationCancelled(message string) {
+	s.markCurrentInProgressCommandCanceled()
 	s.setOperationCompletedFalse(CPOReasonOperationCancelled, message)
 }
 
@@ -165,4 +166,20 @@ func (s *OperationState) MarkOperationCompleted() {
 
 func (s *OperationState) SetObservedState(state *ObservedComponentState) {
 	s.op.Status.ObservedState = state
+}
+
+func (s *OperationState) markCurrentInProgressCommandCanceled() {
+	for _, name := range s.op.Spec.Commands {
+		cond := s.op.GetCondition(string(name))
+		if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != CPOReasonCommandInProgress {
+			continue
+		}
+		s.SetCondition(metav1.Condition{
+			Type:    cond.Type,
+			Status:  metav1.ConditionFalse,
+			Reason:  CPOReasonCommandCanceled,
+			Message: cond.Message,
+		})
+		return
+	}
 }

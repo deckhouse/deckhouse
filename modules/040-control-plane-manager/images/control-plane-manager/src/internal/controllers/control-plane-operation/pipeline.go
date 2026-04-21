@@ -64,6 +64,7 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 		}
 
 		state.MarkOperationInProgress(fmt.Sprintf("executing command %s", name))
+		syncOperationExecutionMetrics(state.Raw())
 		cmd := r.commands[name]
 		result, err := r.executeCommand(ctx, state, name, cmd, env, logger)
 		if err != nil {

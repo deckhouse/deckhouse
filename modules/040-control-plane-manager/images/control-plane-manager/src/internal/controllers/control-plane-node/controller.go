@@ -136,11 +136,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: nodeName}, cpn); err != nil {
 		if apierrors.IsNotFound(err) {
+			deleteMaintenanceModeMetrics(nodeName)
 			logger.Info("ControlPlaneNode not found, skipping")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
+	defer syncMaintenanceModeMetrics(cpn)
 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
 	if err := r.client.List(ctx, ops, client.MatchingLabels{
@@ -161,6 +163,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	if isMaintenanceMode(cpn) {
+		logger.Info("Maintenance mode is enabled for ControlPlaneNode, skipping operation planning")
 		return reconcile.Result{}, nil
 	}
 
@@ -526,6 +529,7 @@ func operationBase(
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  cpn.Name,
 				constants.ControlPlaneComponentLabelKey: string(component),
+				constants.HeritageLabelKey:              constants.HeritageLabelValue,
 			},
 			OwnerReferences: []metav1.OwnerReference{
 				{

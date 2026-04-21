@@ -276,6 +276,8 @@ func (suite *ControllerTestSuite) compareOperations(
 	for i := range sortedActual {
 		require.Equal(suite.T(), sortedExpected[i].Spec, sortedActual[i].Spec,
 			"spec of operation for component %s must match golden file", sortedActual[i].Spec.Component)
+		require.Equal(suite.T(), constants.HeritageLabelValue, sortedActual[i].Labels[constants.HeritageLabelKey],
+			"operation for component %s must have heritage label", sortedActual[i].Spec.Component)
 	}
 }
 
