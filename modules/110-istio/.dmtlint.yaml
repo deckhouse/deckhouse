@@ -5,9 +5,6 @@ linters-settings:
         - kind: Deployment
           name: kiali
       read-only-root-filesystem:
-        - kind: DaemonSet
-          name: istio-cni-node
-          container: install-cni
         - kind: Deployment
           name: kiali
         - kind: DaemonSet
