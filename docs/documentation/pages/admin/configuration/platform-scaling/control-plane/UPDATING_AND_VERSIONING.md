@@ -291,10 +291,22 @@ data:
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
-    - name: cluster-master-0
+    - name: mazin-master-0
       phase: Updating
       components:
         kube-apiserver: "1.35"
+        kube-controller-manager: "1.34"
+        kube-scheduler: "1.34"
+    - name: mazin-master-1
+      phase: Updating
+      components:
+        kube-apiserver: "1.34"
+        kube-controller-manager: "1.34"
+        kube-scheduler: "1.34"
+    - name: mazin-master-2
+      phase: Updating
+      components:
+        kube-apiserver: "1.34"
         kube-controller-manager: "1.34"
         kube-scheduler: "1.34"
     nodes:
@@ -304,12 +316,17 @@ kind: ConfigMap
 metadata:
   annotations:
     cause: upgradeK8s
+    lastReconciliationTime: "2026-04-17T09:43:08Z"
+    lastUpToDateTime: "2026-04-15T13:43:59Z"
+  creationTimestamp: "2026-01-16T16:48:45Z"
   labels:
     heritage: deckhouse
     k8s-version: "1.33"
     max-k8s-version: "1.33"
   name: d8-cluster-kubernetes
   namespace: kube-system
+  resourceVersion: "1753458"
+  uid: ba981996-f737-469c-9ce1-53aa46135994
 ```
 
 #### Cluster up to date (2 master nodes, 1 arbitr node and 3 worker nodes)
