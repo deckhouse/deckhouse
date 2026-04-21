@@ -98,21 +98,20 @@ func (r *IngressNginxController) checkMigration(ctx context.Context, ic *v1.Ingr
 func (r *IngressNginxController) runMigration(
 	ctx context.Context,
 	ic *v1.IngressNginxController,
-	migrate func(context.Context, *v1.IngressNginxController, bool) (ctrl.Result, error),
+	migrate func(context.Context, *v1.IngressNginxController) (ctrl.Result, error),
 ) (ctrl.Result, error) {
 	state := helper.GetMigrationState(ic)
 	if state == helper.MigrationStateMigrated {
 		return ctrl.Result{}, nil
 	}
 
-	bootstrap := state == ""
-	result, err := migrate(ctx, ic, bootstrap)
+	result, err := migrate(ctx, ic)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if result.Requeue || result.RequeueAfter > 0 {
-		if bootstrap {
+		if state == "" {
 			if err := helper.PatchMigrationState(ctx, r.Client, ic, helper.MigrationStateRunning); err != nil {
 				return ctrl.Result{}, err
 			}

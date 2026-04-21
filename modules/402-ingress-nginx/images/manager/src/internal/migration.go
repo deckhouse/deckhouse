@@ -39,7 +39,6 @@ type trackStatus struct {
 func (r *IngressNginxController) MigrateHostInlet(
 	ctx context.Context,
 	ic *v1.IngressNginxController,
-	_ bool,
 ) (ctrl.Result, error) {
 	// 1. Resolve the main controller workload pair: native DS and legacy ADS.
 	status, err := r.migrateWorkloadTrack(
@@ -61,7 +60,6 @@ func (r *IngressNginxController) MigrateHostInlet(
 func (r *IngressNginxController) MigrateHostWithFailover(
 	ctx context.Context,
 	ic *v1.IngressNginxController,
-	_ bool,
 ) (ctrl.Result, error) {
 	failoverTrackName := ic.Name + "-failover"
 
@@ -108,7 +106,6 @@ func (r *IngressNginxController) MigrateHostWithFailover(
 func (r *IngressNginxController) MigrateLoadBalancer(
 	ctx context.Context,
 	ic *v1.IngressNginxController,
-	_ bool,
 ) (ctrl.Result, error) {
 	// 1. Load both workload implementations.
 	labels := helper.WorkloadLabels("controller", ic.Name)
@@ -216,10 +213,18 @@ func (r *IngressNginxController) migrateWorkloadTrack(
 		}, nil
 	}
 
-	if len(nativePods) == 0 {
-		// 6. Bootstrap step for the current track: start migration by deleting the
-		// first legacy pod as soon as the native workload has been observed by its
-		// controller.
+	scheduledNativePods := 0
+	for i := range nativePods {
+		if nativePods[i].Spec.NodeName != "" {
+			scheduledNativePods++
+		}
+	}
+
+	if scheduledNativePods == 0 {
+		// 6. Bootstrap step for the current track: delete the first legacy pod as
+		// soon as the native workload has been observed by its controller.
+		// HostPort-like tracks may already have pending native pods at this point,
+		// because they cannot start until one legacy pod frees the node ports.
 		if nativeWorkload.GetObservedGeneration() != nativeWorkload.GetGeneration() {
 			return &trackStatus{
 				result: ctrl.Result{RequeueAfter: RequeueAfter},
