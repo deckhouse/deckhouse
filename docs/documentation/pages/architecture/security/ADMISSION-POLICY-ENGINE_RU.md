@@ -81,4 +81,4 @@ description: Архитектура модуля admission-policy-engine в Deck
 
    Обработкой этих кастомных ресурсов происходит с использованием механизма [hooks](../module-development/structure/#hooks). Подробнее об этом механизме можно ознакомиться в документации [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html).
 
-   На основе OperationPolicy, SecurityPolicy и SecurityPolicyException создаются кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
+   На основе OperationPolicy и SecurityPolicy создаются кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
