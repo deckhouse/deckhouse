@@ -36,7 +36,104 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Prior to version 29.3.1, a security vulnerability has been detected that allows plugins privilege validation to be bypassed during docker plugin install. Due to an error in the daemon's privilege comparison logic, the daemon may incorrectly accept a privilege set that differs from the one approved by the user. Plugins that request exactly one privilege are also affected, because no comparison is performed at all. This issue has been patched in version 29.3.1. Deckhouse Kubernetes Platform is not affeceted by this since it does not ship or use Docker daemon or it's plugins in any way.",
       "timestamp": "2025-10-14T11:19:11.56805Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33747",
+        "description": "Malicious frontend can cause file escape outside of storage root",
+        "name": "CVE-2026-33747",
+        "aliases": [ "GHSA-4c29-8rgm-jvjj" ]
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"},
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, when using a custom BuildKit frontend, the frontend can craft an API message that causes files to be written outside of the BuildKit state directory for the execution context. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
+      "timestamp": "2026-04-17T12:23:32Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33748",
+        "description": "Git URL subdir component can cause access to restricted files",
+        "name": "CVE-2026-33748",
+        "aliases": [ "GHSA-4vrq-3vrq-g6gg" ]
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"},
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, insufficient validation of Git URL fragment subdir components may allow access to files outside the checked-out Git repository root. Possible access is limited to files on the same mounted filesystem. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
+      "timestamp": "2026-04-17T12:23:32Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-34040",
+        "description": "AuthZ plugin bypass with oversized request body",
+        "name": "CVE-2026-34040",
+        "aliases": [ "GHSA-x744-4wpc-v9h2" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Moby is an open source container framework. Prior to version 29.3.1, a security vulnerability has been detected that allows attackers to bypass authorization plugins (AuthZ). Deckhouse Kubernetes Platform is not affected as it does not rely on these plugins in any way and does not ship them.",
+      "timestamp": "2026-04-17T12:23:32Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2025-15558",
+        "description": "Privilege escalation in Docker CLI and Desktop",
+        "name": "CVE-2025-15558",
+        "aliases": [
+          "ZDI-CAN-28304"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.2.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI for Windows searches for plugin binaries in C:\\ProgramData\\Docker\\cli-plugins, a directory that does not exist by default. A low-privileged attacker can create this directory and place malicious CLI plugin binaries (docker-compose.exe, docker-buildx.exe, etc.) that are executed when a victim user opens Docker Desktop or invokes Docker CLI plugin features, and allow privilege-escalation if the docker CLI is executed as a privileged user. This issue does affect Deckhouse Kubernetes Platform because it does not use or ship Docker.",
+      "timestamp": "2026-04-17T12:23:32Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2025-66564",
+        "description": "Excessive memory allocation during request parsing",
+        "name": "CVE-2025-66564",
+        "aliases": [ "GHSA-4qg8-fj49-pxjh" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/timestamp-authority@v1.2.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prior to 2.0.3, Function api.ParseJSONRequest currently splits (via a call to strings.Split) an optionally-provided OID (which is untrusted data) on periods. Similarly, function api.getContentType splits the Content-Type header (which is also untrusted data) on an application string. As a result, in the face of a malicious request with either an excessively long OID in the payload containing many period characters or a malformed Content-Type header, a call to api.ParseJSONRequest or api.getContentType incurs allocations of O(n) bytes (where n stands for the length of the function's argument). Deckhouse Kubernetes Platform is not affected by this since it does not implement or rely on timestamp verification using this package.",
+      "timestamp": "2026-04-01t14:34:03z"
     }
+
   ],
   "timestamp": "2025-10-14T11:19:11Z"
 }

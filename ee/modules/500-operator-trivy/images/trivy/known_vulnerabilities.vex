@@ -1,7 +1,7 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-fc1d5deddaa81550dea7f4a50b3975a7c18832da2d65abd5642934472389651d",
-  "author": "Deckhouse <contact@deckhouse.io>",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
     {
@@ -13,13 +13,57 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Moby is an open source container framework developed by Docker inc. that is distributed as docker engine, mirantis container runtime, and various other downstream projects/products. A firewalld firewall controller daemon vulnerability affects moby releases before 28.0.0. when firewalld reloads, docker fails to re-create iptables rules that isolate bridge networks, allowing any container to access all ports on any other container across different bridge networks on the same host. Deckhouse Kubernetes Platform is not vulnerable as it does not use this functionality for container isolation.",
-      "timestamp": "2025-10-14t11:19:11.56805z"
+      "impact_statement": "Moby is an open source container framework developed by Docker Inc. that is distributed as Docker Engine, Mirantis Container Runtime, and various other downstream projects/products. A firewalld firewall controller daemon vulnerability affects Moby releases before 28.0.0. When firewalld reloads, Docker fails to re-create iptables rules that isolate bridge networks, allowing any container to access all ports on any other container across different bridge networks on the same host. Deckhouse Kubernetes Platform is not vulnerable as it does not use this functionality for container isolation.",
+      "timestamp": "2025-10-14T11:19:11.56805Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-34040",
+        "description": "AuthZ plugin bypass with oversized request body",
+        "name": "CVE-2026-34040",
+        "aliases": [ "GHSA-x744-4wpc-v9h2" ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Moby is an open source container framework. Prior to version 29.3.1, a security vulnerability has been detected that allows attackers to bypass authorization plugins (AuthZ). Deckhouse Kubernetes Platform is not affected as it does not rely on these plugins in any way and does not ship them.",
+      "timestamp": "2026-04-17T12:23:32Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2025-15558",
+        "description": "Privilege escalation in Docker CLI and Desktop",
+        "name": "CVE-2025-15558",
+        "aliases": [
+          "ZDI-CAN-28304"
+        ]
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v27.2.1+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI for Windows searches for plugin binaries in C:\\ProgramData\\Docker\\cli-plugins, a directory that does not exist by default. A low-privileged attacker can create this directory and place malicious CLI plugin binaries (docker-compose.exe, docker-buildx.exe, etc.) that are executed when a victim user opens Docker Desktop or invokes Docker CLI plugin features, and allow privilege-escalation if the docker CLI is executed as a privileged user. This issue does affect Deckhouse Kubernetes Platform because it does not use or ship Docker.",
+      "timestamp": "2026-04-17T12:23:32Z"
     },
 
     {
@@ -92,7 +136,42 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Prior to 2.0.3, Function api.ParseJSONRequest currently splits (via a call to strings.Split) an optionally-provided OID (which is untrusted data) on periods. Similarly, function api.getContentType splits the Content-Type header (which is also untrusted data) on an application string. As a result, in the face of a malicious request with either an excessively long OID in the payload containing many period characters or a malformed Content-Type header, a call to api.ParseJSONRequest or api.getContentType incurs allocations of O(n) bytes (where n stands for the length of the function's argument). Deckhouse Kubernetes Platform is not affected by this since it does not implement or rely on timestamp verification using this package.",
       "timestamp": "2026-04-01t14:34:03z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33747",
+        "description": "Malicious frontend can cause file escape outside of storage root",
+        "name": "CVE-2026-33747",
+        "aliases": [ "GHSA-4c29-8rgm-jvjj" ]
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"},
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, when using a custom BuildKit frontend, the frontend can craft an API message that causes files to be written outside of the BuildKit state directory for the execution context. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
+      "timestamp": "2026-04-17T12:23:32Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33748",
+        "description": "Git URL subdir component can cause access to restricted files",
+        "name": "CVE-2026-33748",
+        "aliases": [ "GHSA-4vrq-3vrq-g6gg" ]
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"},
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, insufficient validation of Git URL fragment subdir components may allow access to files outside the checked-out Git repository root. Possible access is limited to files on the same mounted filesystem. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
+      "timestamp": "2026-04-17T12:23:32Z"
     }
   ],
-  "timestamp": "2026-04-01T14:34:03Z"
+  "timestamp": "2026-04-17T12:23:32Z"
 }
+
