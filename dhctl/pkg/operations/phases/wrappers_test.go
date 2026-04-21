@@ -109,7 +109,7 @@ func TestPipelineWrapper(t *testing.T) {
 			actionProvider: func(t *testing.T, testName string, state dstate.Cache, pipeline pipelineType) actionType {
 				return func(switcher switcherType) error {
 					logger.LogInfoF("action run: %s\n", testName)
-					return pipeline.Run(actionWithTestState(testName, state, "pipeline already started"))
+					return pipeline.Run(t.Context(), actionWithTestState(testName, state, "pipeline already started"))
 				}
 			},
 			actionErr: ErrPipelineAlreadyStarted,
@@ -123,7 +123,7 @@ func TestPipelineWrapper(t *testing.T) {
 			afterRun: func(testName string, state dstate.Cache, pipeline pipelineType) beforeAfterTestType {
 				return func() error {
 					logger.LogInfoF("after run: %s\n", testName)
-					return pipeline.Run(actionWithTestState(testName, state, "double start"))
+					return pipeline.Run(t.Context(), actionWithTestState(testName, state, "double start"))
 				}
 			},
 			afterRunError: ErrPipelineAlreadyFinished,
