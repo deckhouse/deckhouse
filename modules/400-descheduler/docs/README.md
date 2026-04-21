@@ -27,9 +27,9 @@ Descheduler uses parameters with the `labelSelector` syntax from Kubernetes to f
 
 ## Metrics provider
 
-If the cluster has a registered `metrics.k8s.io` API group (e.g. [metrics-server](https://github.com/kubernetes-sigs/metrics-server) is installed), the module automatically detects it and enables the **KubernetesMetrics** metrics provider in the descheduler policy. This allows utilization-based strategies (`HighNodeUtilization`, `LowNodeUtilization`) to use **actual** resource consumption data from the Metrics API instead of relying solely on pod requests and limits.
+If the cluster has a registered `metrics.k8s.io` API group (for example, when [metrics-server](https://github.com/kubernetes-sigs/metrics-server) is installed), the module automatically detects it and enables the **KubernetesMetrics** metrics provider in the `descheduler` policy. This allows to use the **actual** resource consumption data from the Metrics API instead of relying solely on pod requests and limits when the `LowNodeUtilization` [strategy](#strategies) is set.
 
-No user action is required: the module discovers the `metrics.k8s.io` API group by watching `APIService` resources and configures the policy accordingly. If metrics-server is installed **after** the descheduler is already running, the descheduler pod will be automatically restarted with the updated policy.
+No user action is required: the module discovers the `metrics.k8s.io` API group by watching APIService resources and configures the policy accordingly. If metrics-server is installed **after** the module is already running, the `descheduler` Pod will be automatically restarted with the updated policy.
 
 {% alert level="info" %}
 When `metrics.k8s.io` is not available, the module falls back to the default behavior: resource usage is estimated from pod requests and limits.
