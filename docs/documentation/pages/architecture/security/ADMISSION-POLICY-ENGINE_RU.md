@@ -75,9 +75,9 @@ description: Архитектура модуля admission-policy-engine в Deck
 
 Модуль `admission-policy-engine` добавляет в платформу DKP кастомные ресурсы, упрощающие настройку наиболее часто встречающихся политик безопасности. Используются следующие [кастомные ресурсы](admission-policy-engine/cr.html):
 
-   * OperationPolicy — описывает операционную политику кластера;
-   * SecurityPolicy — описывает политику безопасности кластера;
-   * SecurityPolicyException — описывает исключения из политики безопасности кластера.
+* OperationPolicy — описывает операционную политику кластера;
+* SecurityPolicy — описывает политику безопасности кластера;
+* SecurityPolicyException — описывает исключения из политики безопасности кластера.
 
    Обработкой этих кастомных ресурсов происходит с использованием механизма [hooks](../module-development/structure/#hooks). Подробнее об этом механизме можно ознакомиться в документации [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html).
 
