@@ -465,6 +465,7 @@ func determineCommands(state componentState, pkiChanged, caChanged bool) []contr
 			)
 		}
 		commands = append(commands,
+			controlplanev1alpha1.CommandSyncHotReload,
 			controlplanev1alpha1.CommandSyncManifests,
 			controlplanev1alpha1.CommandWaitPodReady,
 			controlplanev1alpha1.CommandCertObserve,
