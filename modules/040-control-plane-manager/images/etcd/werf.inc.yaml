@@ -32,15 +32,14 @@ import:
   add: /
   to: /usr/bin
   includePaths:
-  - etcd
   - etcdctl
   - etcdutl
   before: setup
 git:
 - add: /modules/040-control-plane-manager/images/etcd/.bin
-  to: /usr/bin/etcd
+  to: /usr/bin
   includePaths:
-    - etcd-witness-slim
+    - etcd
 {{- include "image mount points" . }}
 imageSpec:
   config:
