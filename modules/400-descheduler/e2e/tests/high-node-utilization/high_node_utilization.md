@@ -75,7 +75,7 @@ chainsaw test --test-dir ./tests/high-node-utilization/
 
 ## Troubleshooting
 
-**Plugin executes but 0 evictions**
+### Plugin executes but 0 evictions
 
 No node is classified as underutilized. Check node classification:
 
@@ -85,6 +85,6 @@ kubectl logs -n d8-descheduler -l app=descheduler -c descheduler | grep -i "node
 
 If all nodes show `usagePercentage` above thresholds for any metric, raise the thresholds in `files/descheduler-cr.yaml`. A node is only underutilized when ALL metrics are below thresholds.
 
-**Pods stuck in Pending**
+### Pods stuck in Pending
 
 The topology spread constraint `whenUnsatisfiable: DoNotSchedule` prevents scheduling if it would violate `maxSkew: 1`. This happens when there are fewer schedulable nodes than replicas. Ensure at least 2 worker nodes are available.

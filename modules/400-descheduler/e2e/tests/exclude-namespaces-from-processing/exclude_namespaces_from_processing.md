@@ -74,7 +74,7 @@ chainsaw test --test-dir ./tests/exclude-namespaces-from-processing/
 
 ## Troubleshooting
 
-**Protected pods evicted (test fails at step 11)**
+### Protected pods evicted (test fails at step 11)
 
 The Deckhouse namespace exclusion patch may not be applied. Check if the descheduler image includes the patch:
 
@@ -82,6 +82,6 @@ The Deckhouse namespace exclusion patch may not be applied. Check if the desched
 kubectl logs -n d8-descheduler -l app=descheduler -c descheduler | grep "pod in the deckhouse namespace"
 ```
 
-**Plugin executes but no filtering logs (step 13 warning)**
+### Plugin executes but no filtering logs (step 13 warning)
 
 The log format may differ between descheduler versions. This step only warns, it does not fail the test. The actual protection is verified in steps 11-12.

@@ -87,7 +87,7 @@ chainsaw test --test-dir ./tests/low-node-utilization/ \
 
 ## Test Structure
 
-```
+```text
 e2e/
   Taskfile.yml                  — Task runner for convenient test execution
   e2e.yaml                      — Chainsaw configuration

@@ -91,7 +91,7 @@ chainsaw test --test-dir ./tests/low-node-utilization/
 
 ## Troubleshooting
 
-**Pods stay on 1 node (0 evictions)**
+### Pods stay on 1 node (0 evictions)
 
 The most common cause is that no node qualifies as underutilized. Check current node utilization:
 
@@ -101,7 +101,7 @@ kubectl logs -n d8-descheduler -l app=descheduler -c descheduler | grep -i "node
 
 If all nodes show `usagePercentage` above the thresholds for any metric, raise the thresholds in `files/descheduler-cr.yaml`. Remember: a node is only underutilized when ALL metrics are below thresholds.
 
-**Nodes remain cordoned after test failure**
+### Nodes remain cordoned after test failure
 
 If the test process was killed before cleanup ran:
 
@@ -110,7 +110,7 @@ kubectl get nodes -o custom-columns='NAME:.metadata.name,SCHEDULABLE:.spec.unsch
 kubectl uncordon <node-name>
 ```
 
-**Descheduler cycle never detected**
+### Descheduler cycle never detected
 
 The test polls logs for up to 7 minutes. If the descheduler pod restarted during the test, logs from the previous instance are lost. Check pod restarts:
 
