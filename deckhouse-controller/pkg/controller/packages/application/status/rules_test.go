@@ -167,6 +167,66 @@ func TestInstalledRule(t *testing.T) {
 				ConditionInstalled: nil,
 			},
 		},
+		{
+			// Regression: startup hook fails before Helm touches the cluster.
+			// Previously Installed was absent (AnyFalse cannot latch onto Unknown
+			// ReadyInCluster). HooksReady in FalseIf surfaces the real reason.
+			name: "false with hook reason when startup hook fails pre-Helm",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "StartupHookFailed"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "StartupHookFailed"},
+			},
+		},
+		{
+			// Regression: BeforeHelm hook fails before Helm touches the cluster.
+			name: "false with hook reason when BeforeHelm hook fails pre-Helm",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "BeforeHelmHooksFailed"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "BeforeHelmHooksFailed"},
+			},
+		},
+		{
+			// Regression: AfterHelm hook fails while UpdateTracking has transient
+			// ApplyingManifests state on ReadyInCluster/HelmApplied. Previously Installed
+			// surfaced the noisy ApplyingManifests reason; HooksReady first in AnyFalse
+			// picks the actionable AfterHelmHooksFailed reason.
+			name: "false with hook reason when AfterHelm fails and UpdateTracking left ApplyingManifests",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "AfterHelmHooksFailed"),
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ApplyingManifests"),
+				withInternalCondition(string(intstatus.ConditionHelmApplied), metav1.ConditionFalse, "ApplyingManifests"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: {status: metav1.ConditionFalse, reason: "AfterHelmHooksFailed"},
+			},
+		},
+		{
+			// Pending carve-out: MarkVersionLoaded sets runtime=False/Pending as a transient
+			// state. Installed must not flip False on this alone (mirrors readyRule).
+			name: "not false when only ReadyInRuntime is Pending",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, string(intstatus.ConditionReasonPending)),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionTrue, "HooksOK"),
+				withInternalCondition(string(intstatus.ConditionConfigured), metav1.ConditionTrue, "SettingsOK"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionInstalled: nil, // no FalseIf match, no TrueIf match (cluster not True), absent
+			},
+		},
 	}
 
 	runTestCases(t, cases)
@@ -297,6 +357,46 @@ func TestReadyRule(t *testing.T) {
 			},
 			expected: map[string]*expectedCondition{
 				ConditionReady: {status: metav1.ConditionFalse, reason: "MountFailed"},
+			},
+		},
+		{
+			// Regression: startup hook fails before Helm touches the cluster.
+			// Previously Ready was absent; HooksReady first in FalseIf surfaces the reason.
+			name: "false with hook reason when startup hook fails pre-Helm",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "StartupHookFailed"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: {status: metav1.ConditionFalse, reason: "StartupHookFailed"},
+			},
+		},
+		{
+			// Regression: BeforeHelm hook fails pre-Helm.
+			name: "false with hook reason when BeforeHelm fails pre-Helm",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "BeforeHelmHooksFailed"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: {status: metav1.ConditionFalse, reason: "BeforeHelmHooksFailed"},
+			},
+		},
+		{
+			// Regression: AfterHelm fails while UpdateTracking left ApplyingManifests.
+			// HooksReady must win over the ambient noise so the actionable reason surfaces.
+			name: "false with hook reason when AfterHelm fails over ApplyingManifests leftover",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionTrue, "Mounted"),
+				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
+				withInternalCondition(string(intstatus.ConditionHooksReady), metav1.ConditionFalse, "AfterHelmHooksFailed"),
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ApplyingManifests"),
+				withInternalCondition(string(intstatus.ConditionHelmApplied), metav1.ConditionFalse, "ApplyingManifests"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionReady: {status: metav1.ConditionFalse, reason: "AfterHelmHooksFailed"},
 			},
 		},
 	}

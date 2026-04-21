@@ -88,7 +88,7 @@ func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("run hook")
 	if err := t.runPackageHook(ctx); err != nil {
 		t.status.HandleError(t.pkg.GetName(), status.ConditionHooksReady, err)
-		return fmt.Errorf("run hook '%s': %w", t.hook, err)
+		return err
 	}
 
 	return nil

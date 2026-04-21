@@ -74,6 +74,10 @@ func buildMapper() condmapper.Mapper {
 }
 
 // installedRule: True when first install completes, stays True forever.
+// HooksReady is checked first in FalseIf so hook failures (Startup/BeforeHelm/AfterHelm)
+// surface as the external reason instead of the ambient ApplyingManifests from UpdateTracking.
+// ReadyInRuntime=False with reason=Pending is a transient DH-restart state and must not
+// flip Installed False; mirrors the carve-out in readyRule.
 func installedRule() condmapper.Rule {
 	return condmapper.Rule{
 		Type: ConditionInstalled,
@@ -81,8 +85,21 @@ func installedRule() condmapper.Rule {
 			condmapper.IsTrue(string(status.ConditionReadyInCluster)),
 			condmapper.Not(condmapper.VersionChanged()),
 		),
-		FalseIf: condmapper.AnyFalse(coreConds...),
-		Sticky:  true,
+		FalseIf: condmapper.Or(
+			condmapper.AnyFalse(
+				string(status.ConditionHooksReady),
+				string(status.ConditionReadyOnFilesystem),
+				string(status.ConditionReadyInCluster),
+			),
+			condmapper.And(
+				condmapper.AnyFalse(string(status.ConditionReadyInRuntime)),
+				condmapper.Not(condmapper.HasReason(
+					string(status.ConditionReadyInRuntime),
+					string(status.ConditionReasonPending),
+				)),
+			),
+		),
+		Sticky: true,
 	}
 }
 
@@ -111,6 +128,8 @@ func updateInstalledRule() condmapper.Rule {
 }
 
 // readyRule: True when package is operational.
+// HooksReady is checked first in FalseIf so hook failures (Startup/BeforeHelm/AfterHelm)
+// surface as the external reason instead of the ambient ApplyingManifests from UpdateTracking.
 // ReadyInRuntime=False with reason=Pending is a transient state triggered by a Deckhouse
 // restart (runtime rebuild) — the workload in the cluster is still running, so Ready
 // should not flip to False. Managed still flips to False via managedRule since DH can't
@@ -121,6 +140,7 @@ func readyRule() condmapper.Rule {
 		TrueIf: condmapper.IsTrue(string(status.ConditionReadyInCluster)),
 		FalseIf: condmapper.Or(
 			condmapper.AnyFalse(
+				string(status.ConditionHooksReady),
 				string(status.ConditionReadyOnFilesystem),
 				string(status.ConditionReadyInCluster),
 			),
