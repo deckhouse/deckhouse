@@ -162,7 +162,7 @@ spec:
                 type: object
               lastAppliedConfiguration:
                 description: LastAppliedConfiguration is the effective settings (user
-                  config merged with config-schema defaults) that drove the most recent
+                  configuration merged with config-schema defaults) that drove the most recent
                   successful apply.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
