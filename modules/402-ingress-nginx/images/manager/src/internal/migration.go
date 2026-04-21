@@ -39,13 +39,12 @@ type trackStatus struct {
 func (r *IngressNginxController) MigrateHostInlet(
 	ctx context.Context,
 	ic *v1.IngressNginxController,
-	bootstrap bool,
+	_ bool,
 ) (ctrl.Result, error) {
 	// 1. Resolve the main controller workload pair: native DS and legacy ADS.
 	status, err := r.migrateWorkloadTrack(
 		ctx,
 		helper.WorkloadLabels("controller", ic.Name),
-		bootstrap,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -62,7 +61,7 @@ func (r *IngressNginxController) MigrateHostInlet(
 func (r *IngressNginxController) MigrateHostWithFailover(
 	ctx context.Context,
 	ic *v1.IngressNginxController,
-	bootstrap bool,
+	_ bool,
 ) (ctrl.Result, error) {
 	failoverTrackName := ic.Name + "-failover"
 
@@ -70,7 +69,6 @@ func (r *IngressNginxController) MigrateHostWithFailover(
 	failoverStatus, err := r.migrateWorkloadTrack(
 		ctx,
 		helper.WorkloadLabels("controller", failoverTrackName),
-		bootstrap,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -83,7 +81,6 @@ func (r *IngressNginxController) MigrateHostWithFailover(
 	proxyStatus, err := r.migrateWorkloadTrack(
 		ctx,
 		helper.WorkloadLabels("proxy-failover", ic.Name),
-		bootstrap,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -96,7 +93,6 @@ func (r *IngressNginxController) MigrateHostWithFailover(
 	primaryStatus, err := r.migrateWorkloadTrack(
 		ctx,
 		helper.WorkloadLabels("controller", ic.Name),
-		bootstrap,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -167,7 +163,6 @@ func (r *IngressNginxController) MigrateLoadBalancer(
 func (r *IngressNginxController) migrateWorkloadTrack(
 	ctx context.Context,
 	labels map[string]string,
-	bootstrap bool,
 ) (*trackStatus, error) {
 	// 1. Load both workload implementations for the same track.
 	workloadList, err := r.Workloads.ListByLabels(ctx, controllerNamespace, labels)
@@ -187,6 +182,14 @@ func (r *IngressNginxController) migrateWorkloadTrack(
 	podList, err := r.Pods.ListByLabels(ctx, controllerNamespace, labels)
 	if err != nil {
 		return nil, err
+	}
+
+	for i := range podList {
+		if podList[i].DeletionTimestamp != nil {
+			return &trackStatus{
+				result: ctrl.Result{RequeueAfter: RequeueAfter},
+			}, nil
+		}
 	}
 
 	legacyPods, nativePods := helper.SplitPods(podList)
@@ -213,9 +216,10 @@ func (r *IngressNginxController) migrateWorkloadTrack(
 		}, nil
 	}
 
-	if bootstrap {
-		// 6. Bootstrap step: start migration by deleting the first legacy pod as soon
-		// as the native workload has been observed by its controller.
+	if len(nativePods) == 0 {
+		// 6. Bootstrap step for the current track: start migration by deleting the
+		// first legacy pod as soon as the native workload has been observed by its
+		// controller.
 		if nativeWorkload.GetObservedGeneration() != nativeWorkload.GetGeneration() {
 			return &trackStatus{
 				result: ctrl.Result{RequeueAfter: RequeueAfter},
@@ -231,26 +235,19 @@ func (r *IngressNginxController) migrateWorkloadTrack(
 		}, nil
 	}
 
-	if len(nativePods) == 0 {
-		// 7. Wait until the bootstrap deletion produces the first native pod.
+	// 7. Once native pods have started appearing, require at least one ready native
+	// pod before deleting the next legacy pod.
+	check, err := r.Workloads.CheckProgressReady(ctx, nativeWorkload, 1)
+	if err != nil {
+		return nil, err
+	}
+	if !check.IsConverged() {
 		return &trackStatus{
 			result: ctrl.Result{RequeueAfter: RequeueAfter},
 		}, nil
-	} else {
-		// 8. Once native pods have started appearing, require at least one ready native pod
-		// before deleting the next legacy pod.
-		check, err := r.Workloads.CheckProgressReady(ctx, nativeWorkload, 1)
-		if err != nil {
-			return nil, err
-		}
-		if !check.IsConverged() {
-			return &trackStatus{
-				result: ctrl.Result{RequeueAfter: RequeueAfter},
-			}, nil
-		}
 	}
 
-	// 9. Delete exactly one legacy pod and wait for the next reconcile cycle to stabilize the system.
+	// 8. Delete exactly one legacy pod and wait for the next reconcile cycle to stabilize the system.
 	if err := r.Delete(ctx, &legacyPods[0]); err != nil {
 		return nil, err
 	}
