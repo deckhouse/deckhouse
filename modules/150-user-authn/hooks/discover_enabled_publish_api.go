@@ -105,10 +105,15 @@ func discoverPublishAPI(_ context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'secret_cpm' snapshot: %w", err)
 		}
-		addKCGEBool, err := strconv.ParseBool(string(configs.AddKubeconfigGeneratorEntry))
-		if err != nil {
-			return fmt.Errorf("failed to convert AddKubeconfigGeneratorEntry to bool: %w", err)
+
+		var addKCGEBool bool
+		if configs.AddKubeconfigGeneratorEntry != nil {
+			addKCGEBool, err = strconv.ParseBool(string(configs.AddKubeconfigGeneratorEntry))
+			if err != nil {
+				return fmt.Errorf("failed to convert AddKubeconfigGeneratorEntry to bool: %w", err)
+			}
 		}
+
 		whitelistsSlice := strings.Fields(strings.Trim(string(configs.WhitelistSourceRanges), "[] "))
 
 		input.Values.Set("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", addKCGEBool)
