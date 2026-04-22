@@ -34,7 +34,6 @@
     - RelaxedEnvironmentVariableValidation
     - StrictCostEnforcementForVAP
     - StrictCostEnforcementForWebhooks
-    - CRDSensitiveData
   kubeControllerManager:
     - ConcurrentWatchObjectDecode
     - CrossNamespaceVolumeDataSource
@@ -85,7 +84,6 @@
     - OrderedNamespaceDeletion
     - PodLifecycleSleepActionAllowZero
     - RelaxedDNSSearchValidation
-    - CRDSensitiveData
   kubeControllerManager:
     - ComponentFlagz
     - ComponentStatusz
@@ -148,7 +146,6 @@
     - SELinuxMount
     - StrictIPCIDRValidation
     - DisableAllocatorDualWrite
-    - CRDSensitiveData
   kubeControllerManager:
     - AllowParsingUserUIDFromCertAuth
     - ComponentFlagz
@@ -204,7 +201,6 @@
     - ResourceHealthStatus
     - SELinuxMount
     - StrictIPCIDRValidation
-    - CRDSensitiveData
   kubeControllerManager:
     - ComponentFlagz
     - ComponentStatusz
@@ -258,7 +254,6 @@
     - SELinuxMount
     - StrictIPCIDRValidation
     - TaintTolerationComparisonOperators
-    - CRDSensitiveData
   kubeControllerManager:
     - ComponentFlagz
     - ComponentStatusz
