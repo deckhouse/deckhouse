@@ -64,7 +64,7 @@ type StaticInstanceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx).WithValues("staticInstance", req.NamespacedName.String())
+	logger := ctrl.LoggerFrom(ctx)
 	ctx = ctrl.LoggerInto(ctx, logger)
 
 	logger.Info("Reconciling StaticInstance")
