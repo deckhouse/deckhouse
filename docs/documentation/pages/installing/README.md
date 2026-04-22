@@ -20,6 +20,8 @@ relatedLinks:
 
 {% alert %}
 Step-by-step installation instructions are available in the {% if site.mode == 'module' %}[Getting started]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Getting started](/products/kubernetes-platform/gs/){% endif %} section.
+
+You can also try the [Deckhouse Kubernetes Platform graphical installer]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
 {% endalert %}
 
 This page provides an overview of installing Deckhouse Kubernetes Platform (DKP).
