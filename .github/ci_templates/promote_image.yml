@@ -34,7 +34,7 @@
 
     if ! regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
       echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest attestations copy"
-      exit 0
+      exit 1
     fi
 
     STAGE_OSS="${STAGE_REGISTRY_HOST}/sys/deckhouse-oss"
@@ -111,7 +111,8 @@
       done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
       rm -rf ${DIGESTS_JSON}
     else
-      echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest-based promotion"
+      echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}'"
+      exit 1
     fi
 
 - name: Check DKP images manifests in public registry ({!{$edition}!})
