@@ -40,13 +40,14 @@ type Client struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(recorder *event.Recorder) *Client {
+func NewClient(recorder *event.Recorder, client k8sClient.Client) *Client {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Client{
 		taskManagerCtx:      ctx,
 		taskManagerCancel:   cancel,
 		taskManager:         task.NewTaskManager(),
 		tcpCheckRateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[string](250*time.Millisecond, time.Minute),
+		client:              client,
 		recorder:            recorder,
 	}
 }
