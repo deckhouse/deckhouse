@@ -6,7 +6,7 @@ search: admission-policy-engine, pod security, gatekeeper
 description: Архитектура модуля admission-policy-engine в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `admission-policy-engine` предназначен для обработки политик безопасности в кластере согласно [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
+Модуль `admission-policy-engine` обеспечивает применение политик безопасности и операционных ограничений в кластере Kubernetes, включая проверки по [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и правилам из кастомных ресурсов `SecurityPolicy` и `OperationPolicy`.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/admission-policy-engine/).
 
