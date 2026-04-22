@@ -72,7 +72,7 @@ shell:
       --replace \
       --registry-username="${REGISTRY_USER}" \
       --registry-password="${REGISTRY_PASSWORD}" \
-      --predicate known_vulnerabilities.vex \
+      --predicate /known_vulnerabilities.vex \
       --type openvex \
       --key hashivault://${COSIGN_VAULT_KEY} \
       --tlog-upload=false \
