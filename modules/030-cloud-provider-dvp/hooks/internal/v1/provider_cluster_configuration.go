@@ -17,10 +17,11 @@ limitations under the License.
 package v1
 
 type DvpProviderClusterConfiguration struct {
-	APIVersion *string      `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	Kind       *string      `json:"kind,omitempty" yaml:"kind,omitempty"`
-	Provider   *DvpProvider `json:"provider,omitempty" yaml:"provider,omitempty"`
-	Zones      *[]string    `json:"zones,omitempty" yaml:"zones,omitempty"`
+	APIVersion   *string      `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
+	Kind         *string      `json:"kind,omitempty" yaml:"kind,omitempty"`
+	Provider     *DvpProvider `json:"provider,omitempty" yaml:"provider,omitempty"`
+	SSHPublicKey *string      `json:"sshPublicKey,omitempty" yaml:"sshPublicKey,omitempty"`
+	Zones        *[]string    `json:"zones,omitempty" yaml:"zones,omitempty"`
 }
 
 type DvpProvider struct {
