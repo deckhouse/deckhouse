@@ -2,7 +2,7 @@
 - --cloud-provider=dvp
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
-- --controllers={{ .controllers }}
+- --controllers={{ . }}
 - --v=4
 {{- end -}}
 
@@ -45,7 +45,7 @@ checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registra
 {{- $_ := set $ccmConfig "fullname" "cloud-controller-manager" -}}
 {{- $_ := set $ccmConfig "image" (include "helm_lib_module_image" (list . "cloudControllerManager")) -}}
 {{- $_ := set $ccmConfig "containerName" "dvp-cloud-controller-manager" -}}
-{{- $_ := set $ccmConfig "additionalArgs" (include "dvp_ccm_args" (dict "controllers" $ccmEnabledControllers) | fromYamlArray) -}}
+{{- $_ := set $ccmConfig "additionalArgs" (include "dvp_ccm_args" $ccmEnabledControllers | fromYamlArray) -}}
 {{- $_ := set $ccmConfig "additionalEnvs" (include "dvp_ccm_envs" . | fromYamlArray) -}}
 {{- $_ := set $ccmConfig "additionalPodAnnotations" (include "dvp_ccm_pod_annotations" . | fromYaml) -}}
 {{- $_ := set $ccmConfig "additionalPDBAnnotations" (include "dvp_ccm_pdb_annotations" . | fromYaml) -}}
