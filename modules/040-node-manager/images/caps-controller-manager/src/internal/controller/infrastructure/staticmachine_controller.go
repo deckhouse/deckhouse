@@ -92,7 +92,7 @@ type StaticMachineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, resErr error) {
-	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachine", req.NamespacedName.String())
+	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Reconciling StaticMachine")
 
 	staticMachine := &infrav1.StaticMachine{}
@@ -100,7 +100,6 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-
 		return ctrl.Result{}, fmt.Errorf("failed to get StaticMachine: %w", err)
 	}
 
@@ -304,6 +303,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		}
 	}()
 
+	logger.Info("picked StaticInstance")
 	r.Recorder.SendNormalEvent(newStaticInstance, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", staticMachine.Name))
 	r.Recorder.SendNormalEvent(staticMachine, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", newStaticInstance.Name))
 

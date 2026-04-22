@@ -57,7 +57,7 @@ type StaticClusterReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx).WithValues("staticCluster", req.NamespacedName.String())
+	logger := ctrl.LoggerFrom(ctx)
 	ctx = ctrl.LoggerInto(ctx, logger)
 
 	logger.V(1).Info("Reconciling StaticCluster")
