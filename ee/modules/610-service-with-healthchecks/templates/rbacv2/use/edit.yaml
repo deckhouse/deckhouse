@@ -1,11 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  labels:
-    heritage: deckhouse
-    module: service-with-healthchecks
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    rbac.deckhouse.io/kind: use
+  {{- include "helm_lib_module_labels" (list . (dict "rbac.deckhouse.io/aggregate-to-kubernetes-as" "manager" "rbac.deckhouse.io/aggregate-to-networking-as" "manager" "rbac.deckhouse.io/kind" "use")) | nindent 2 }}
   name: d8:use:capability:module:service-with-healthchecks:edit
 rules:
 - apiGroups:
