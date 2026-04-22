@@ -73,7 +73,7 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 			return manifests.PatchWithInfrastructureState(outputs.InfrastructureState)
 		},
 		PatchFunc: func(ctx context.Context, patch []byte) error {
-			ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			// MergePatch is used because we need to replace one field in "data".
 			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(

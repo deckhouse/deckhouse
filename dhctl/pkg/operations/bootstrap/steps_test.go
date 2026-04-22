@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -30,6 +29,7 @@ import (
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
