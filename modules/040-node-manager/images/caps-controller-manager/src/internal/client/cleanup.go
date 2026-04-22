@@ -70,7 +70,7 @@ func (c *Client) Cleanup(ctx context.Context,
 		}
 		// During machine deletion, StaticInstance can still be Pending.
 		// In this case cleanup is a no-op and deletion should proceed.
-		logger.V(1).Info("Skipping cleanup for StaticInstance in pending phase during deletion", "phase", phase)
+		logger.Info("Skipping cleanup for StaticInstance in pending phase during deletion", "phase", phase)
 	default:
 		return errors.New("StaticInstance is not running or cleaning")
 	}
@@ -115,10 +115,10 @@ func (c *Client) cleanup(ctx context.Context,
 		var sshCl ssh.SSH
 		var err error
 		if dataStr.sshLegacyMode {
-			tLogger.V(1).Info("using clissh")
+			tLogger.Info("using clissh")
 			sshCl = clissh.CreateSSHClient(dataStr.address, dataStr.credentials)
 		} else {
-			tLogger.V(1).Info("using gossh")
+			tLogger.Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(dataStr.address, dataStr.credentials)
 		}
 		if err != nil {
@@ -149,12 +149,12 @@ func (c *Client) cleanup(ctx context.Context,
 
 	logger := ctrl.LoggerFrom(ctx)
 	if finished {
-		logger.V(1).Info("Cleanup script executed successfully")
+		logger.Info("Cleanup script executed successfully")
 		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
 		staticInstance.ToPending()
 		return nil
 	}
 
-	logger.V(1).Info("Cleaning is not finished yet, waiting...")
+	logger.Info("Cleaning is not finished yet, waiting...")
 	return nil
 }
