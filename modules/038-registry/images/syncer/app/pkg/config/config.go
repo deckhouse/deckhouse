@@ -40,7 +40,7 @@ func (c *Config) Validate() error {
 type Registry struct {
 	Address string `json:"address"`
 	User    *User  `json:"user,omitempty"`
-	CAFile  string `json:"ca,omitempty"`
+	CA      string `json:"ca,omitempty"`
 }
 
 func (r *Registry) Validate() error {

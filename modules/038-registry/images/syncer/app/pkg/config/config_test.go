@@ -25,13 +25,15 @@ func TestFromBytes(t *testing.T) {
 		`
 source:
   address: localhost:5001
-  ca: /test/ca.crt
+  ca: |
+    <CA>
   user:
     name: ro
     password: ro-password
 destination:
   address: localhost:5001
-  ca: /test/ca.crt
+  ca: |
+    <CA>
   user:
     name: ro
     password: ro-password

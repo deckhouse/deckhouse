@@ -183,12 +183,12 @@ func (rs *Syncer) syncTag(ctx context.Context, src name.Tag) error {
 }
 
 func registryOptions(reg config.Registry) (name.Registry, []remote.Option, error) {
-	var caFiles []string
-	if reg.CAFile != "" {
-		caFiles = append(caFiles, reg.CAFile)
+	var caCers []string
+	if reg.CA != "" {
+		caCers = append(caCers, reg.CA)
 	}
 
-	rt, err := newHTTPRoundTripper(false, caFiles...)
+	rt, err := newHTTPRoundTripper(false, caCers...)
 	if err != nil {
 		return name.Registry{}, nil, fmt.Errorf("cannot create http transport: %w", err)
 	}

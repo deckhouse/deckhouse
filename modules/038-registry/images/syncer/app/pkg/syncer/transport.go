@@ -20,12 +20,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 )
 
-func newHTTPRoundTripper(systemCertPool bool, caPath ...string) (http.RoundTripper, error) {
+func newHTTPRoundTripper(systemCertPool bool, caCerts ...string) (http.RoundTripper, error) {
 	ret := remote.DefaultTransport.(*http.Transport).Clone()
 
 	var (
@@ -42,14 +41,9 @@ func newHTTPRoundTripper(systemCertPool bool, caPath ...string) (http.RoundTripp
 		certPool = x509.NewCertPool()
 	}
 
-	for _, file := range caPath {
-		pem, err := os.ReadFile(file)
-		if err != nil {
-			return nil, fmt.Errorf("load CA file %v error: %w", file, err)
-		}
-
-		if !certPool.AppendCertsFromPEM(pem) {
-			return nil, fmt.Errorf("load CA file %v: no valid certificates found", file)
+	for _, caCert := range caCerts {
+		if !certPool.AppendCertsFromPEM([]byte(caCert)) {
+			return nil, fmt.Errorf("load CA file %v: no valid certificates found", caCert)
 		}
 	}
 

@@ -12,8 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if has (.registry).mode (list "Proxy" "Local") }}
+{{- if has (.registry).mode (list "Local") }}
 
-syncer | bb-log-stream-dhctl
+SYNCER_CONFIG_PATH="$(bb-tmp-file)"
+
+bb-sync-file $SYNCER_CONFIG_PATH - << "EOF"
+source:
+  address: localhost:5511
+destination:
+  address: localhost:5001
+  ca: |
+    {{ .registry.bootstrap.init.ca.cert | nindent 4 }}
+  user:
+    name: {{ .registry.bootstrap.init.rw_user.name | quote }}
+    password: {{ .registry.bootstrap.init.rw_user.password | quote }}
+EOF
+
+syncer $SYNCER_CONFIG_PATH | bb-log-stream-dhctl
 
 {{- end }}
