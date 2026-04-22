@@ -4,7 +4,7 @@
 **/000-common/images/cni-**                                      @apolovov
 **/000-common/images/coredns                                     @apolovov
 **/000-common/images/crane                                       @sprait
-**/000-common/images/csi-**                                      @AleksZimin
+**/000-common/images/csi-**                                      @AleksZimin @duckhawk @szhem
 **/000-common/images/debug-container                             @apolovov
 **/000-common/images/iptables-wrapper                            @apolovov
 **/000-common/images/kube-rbac-proxy                             @AlwxSin
@@ -41,7 +41,7 @@
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/                                            @aleksey-su @pabateman
-031-local-path-provisioner/                                      @AleksZimin @duckhawk
+031-local-path-provisioner/                                      @AleksZimin @duckhawk @szhem
 035-cni-flannel/                                                 @AndreyPavlovFlant @apolovov
 035-cni-simple-bridge/                                           @AndreyPavlovFlant @apolovov
 036-kube-proxy/                                                  @AndreyPavlovFlant @apolovov
@@ -111,7 +111,7 @@ candi/version_map.yml                    @sprait
 candi/cloud-providers/                   @aleksey-su @pabateman
 candi/terraform_versions.yml             @aleksey-su @pabateman
 cloud-controller-manager/                @aleksey-su @pabateman
-csi/                                     @AleksZimin @duckhawk
+csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @name212 @090809
 docs/                                    @z9r5
