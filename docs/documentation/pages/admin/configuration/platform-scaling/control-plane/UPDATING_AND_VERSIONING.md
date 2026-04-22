@@ -64,7 +64,7 @@ The `d8-cluster-kubernetes` ConfigMap displays:
 
 During `ControlPlaneUpdating`, `status.progress` reflects overall upgrade progress across intermediate minor versions. For a multi-hop upgrade (for example, 1.33 → 1.35), the percentage increases as each hop completes, not only when every control plane component reaches the final target.
 
-Minor versions in the ConfigMap (`spec`, `status`, and metadata labels such as `k8s-version` and `max-k8s-version`) use the same string format as in ClusterConfiguration—without a `v` prefix (e.g. `"1.33"`).
+Minor versions in the ConfigMap (`spec`, `status`, and metadata labels such as `k8s-version` and `max-k8s-version`) use the same string format as in ClusterConfiguration, meaning without a `v` prefix (for example, `"1.33"`).
 
 You can see in real time which components are being updated, at what stage the process is, and whether the update has "stuck" on any node or component.
 
