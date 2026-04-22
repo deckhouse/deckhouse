@@ -41,7 +41,7 @@ metadata:
 var _ = Describe("Log shipper :: generate config from crd ::", func() {
 	f := HookExecutionConfigInit(`{"logShipper": {"internal": {"activated": false}}}`, ``)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterLoggingConfig", false)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "ClusterLogDestination", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "ClusterLogDestination", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "PodLoggingConfig", true)
 
 	Context("With no namespace", func() {
@@ -139,10 +139,12 @@ spec:
 		Entry("File to Kafka with client certificate authentication", "file-to-kafka-tls"),
 		Entry("File to Loki", "file-to-loki"),
 		Entry("File to Socket", "file-to-socket"),
-		Entry("File to Socket", "file-to-socket-cef-gelf"),
+		Entry("File to Socket CEF GELF", "file-to-socket-cef-gelf"),
+		Entry("File to Socket Syslog", "file-to-socket-syslog"),
 		Entry("File to Splunk", "file-to-splunk"),
 		Entry("Two sources to single destination", "many-to-one"),
 		Entry("Throttle Transform with filter", "throttle-with-filter"),
 		Entry("Transform mods to kafka", "transform-mods"),
+		Entry("Extended transformations", "extended-transformations"),
 	)
 })

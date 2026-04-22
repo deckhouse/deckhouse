@@ -255,6 +255,48 @@ spec:
         team: frontend
 ```
 
+## Пример выдачи прав на все неймспейсы
+
+{% alert level="info" %}
+Пример относится к [текущей ролевой модели](readme.html#текущая-ролевая-модель).
+{% endalert %}
+
+В режиме [multi-tenancy](configuration.html#parameters-enablemultitenancy) (`userAuthz.enableMultiTenancy`) ограничение доступа по неймспейсам задаётся полями ресурса [ClusterAuthorizationRule](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+
+Варианты настройки:
+
+- **Разрешить доступ во все неймспейсы, включая системные** (`kube-*`, `d8-*`, `loghouse`, `default` и т. п.). Чтобы разрешить доступ во все неймспейсы, включая системные,  укажите `spec.namespaceSelector.matchAny: true`. Если параметр `namespaceSelector` задан, значения `limitNamespaces` и `allowAccessToSystemNamespaces` **игнорируются**.
+
+  Пример:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1
+  kind: ClusterAuthorizationRule
+  metadata:
+    name: all-namespaces-including-system
+  spec:
+    subjects:
+    - kind: User
+      name: user@example.com
+    accessLevel: Editor
+    namespaceSelector:
+      matchAny: true
+  ```
+
+- **Разрешить доступ во все неймспейсы, кроме системных**. Чтобы разрешить пользователю доступ во все неймспейсы, кроме системных, при создании ClusterAuthorizationRule не указывайте ни `namespaceSelector`, ни `limitNamespaces`, ни `allowAccessToSystemNamespaces`. Перечень системных неймспейсов — в [описании полей CR](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+
+> Уровень доступа `SuperAdmin` **не снимает** ограничения по нейспейсам, заданные в параметрах `namespaceSelector` и `limitNamespaces`. При необходимости предоставления доступа ко всем неймспейсам задайте область явно, в том числе через [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
+
+Если одному субъекту соответствует несколько ресурсов `ClusterAuthorizationRule`, набор разрешённых нейспейсов **объединяется**; эффективный `accessLevel` — **самый сильный** среди всех подходящих правил. Подробнее — в [FAQ](faq.html#что-если-два-clusterauthorizationrules-подходят-для-одного-пользователя).
+
+{% alert level="warning" %}
+Ограничения по неймспейсам из `ClusterAuthorizationRule` реализованы в цепочке авторизации с вебхуком. Если вебхук недоступен, эти ограничения **не применяются**, пока вебхук снова не станет доступен. Подробнее — в [описании модуля](readme.html#текущая-ролевая-модель).
+{% endalert %}
+
+{% offtopic title="Экспериментальная ролевая модель" %}
+Роли `d8:use:role:*` назначаются только через `RoleBinding` в **конкретном** неймспейсе — отдельное `RoleBinding` нужно на каждый неймспейс (или автоматизируйте выдачу). Роли `d8:manage:*` не распространяются на неймспейсы пользовательских приложений — только на системные (`d8-*`, `kube-*`) в рамках подсистемы.
+{% endofftopic %}
+
 ## Создание пользователя
 
 В Kubernetes есть две категории пользователей:

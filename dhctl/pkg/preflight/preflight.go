@@ -81,7 +81,7 @@ func (p *Preflight) Run(ctx context.Context, phase Phase) error {
 	runFunc := func() error {
 		return p.runChecks(ctx, checks)
 	}
-	return log.Process("preflight", phaseLabel, runFunc)
+	return log.Process(log.ProcessPreflight, phaseLabel, runFunc)
 }
 
 func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {

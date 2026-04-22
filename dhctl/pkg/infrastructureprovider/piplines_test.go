@@ -36,18 +36,6 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 		t.Skipf("Skipping %s test", testName)
 	}
 
-	getMetaConfig := func(t *testing.T, providerName, layout string) *config.MetaConfig {
-		cfg := &config.MetaConfig{}
-		cfg.ProviderName = providerName
-		cfg.ClusterPrefix = "test"
-		cfg.Layout = layout
-		if providerName != "" {
-			cfg.UUID = "fb6dfa1c-93fd-11f0-9697-efd55958d098"
-		}
-
-		return cfg
-	}
-
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
 		testCleanup(t, testName, &params)
@@ -216,7 +204,7 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 	}
 
 	t.Run("Tofu", func(t *testing.T) {
-		providerYandexMetaConfig := getMetaConfig(t, yandex.ProviderName, yandexTestLayout)
+		providerYandexMetaConfig := metaConfigForPipelineTest(yandex.ProviderName, yandexTestLayout)
 		providerYandex, err := getter(ctx, providerYandexMetaConfig)
 		require.NoError(t, err, "should provide meta config")
 
@@ -231,7 +219,7 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 	})
 
 	t.Run("Terraform", func(t *testing.T) {
-		cfgProviderGCP := getMetaConfig(t, gcp.ProviderName, gcpTestLayout)
+		cfgProviderGCP := metaConfigForPipelineTest(gcp.ProviderName, gcpTestLayout)
 		providerGCP, err := getter(ctx, cfgProviderGCP)
 		require.NoError(t, err, "should provide meta config")
 
@@ -244,4 +232,169 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestPipelineGetMasterIPs(t *testing.T) {
+	testName := "TestPipelineGetMasterIPs"
+
+	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
+		t.Skipf("Skipping %s test", testName)
+	}
+
+	params := getTestCloudProviderGetterParams(t, testName)
+	defer func() {
+		testCleanup(t, testName, &params)
+	}()
+
+	getter := CloudProviderGetter(params)
+
+	ctx := context.TODO()
+
+	type testCase struct {
+		name      string
+		hasError  bool
+		statePath string
+		expected  *infrastructure.OutputMasterIPs
+	}
+
+	assertOutputs := func(c testCase, e infrastructure.OutputExecutor) {
+		fullPath, err := filepath.Abs(c.statePath)
+		require.NoError(t, err, "abs path")
+
+		outputs, err := infrastructure.GetMasterIPAddressForSSH(ctx, fullPath, e)
+		if c.hasError {
+			require.Error(t, err, "should error")
+			return
+		}
+
+		require.NoError(t, err, "should not error")
+		require.Equal(t, c.expected, outputs, "should return correct outputs")
+	}
+
+	fullExpected := &infrastructure.OutputMasterIPs{
+		SSH:      "1.1.1.1",
+		Internal: "10.12.0.112",
+	}
+
+	emptyExpected := &infrastructure.OutputMasterIPs{
+		SSH:      "",
+		Internal: "",
+	}
+
+	cases := []testCase{
+		{
+			name:      "all present",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/all_present.json",
+			expected:  fullExpected,
+		},
+		{
+			name:      "ssh not present",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/ssh_not_present.json",
+			expected: &infrastructure.OutputMasterIPs{
+				SSH:      "",
+				Internal: fullExpected.Internal,
+			},
+		},
+		{
+			name:      "node internal not present",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/node_internal_not_present.json",
+			expected: &infrastructure.OutputMasterIPs{
+				SSH:      fullExpected.SSH,
+				Internal: "",
+			},
+		},
+		{
+			name:      "node internal only present",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/node_internal_only_present.json",
+			expected: &infrastructure.OutputMasterIPs{
+				SSH:      "",
+				Internal: fullExpected.Internal,
+			},
+		},
+		{
+			name:      "ssh ip only present",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/ssh_only_present.json",
+			expected: &infrastructure.OutputMasterIPs{
+				SSH:      fullExpected.SSH,
+				Internal: "",
+			},
+		},
+		{
+			name:      "no outputs",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/no_outputs.json",
+			expected:  emptyExpected,
+		},
+		{
+			name:      "no outputs key",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/no_outputs_key.json",
+			expected:  emptyExpected,
+		},
+		{
+			name:      "empty state",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/empty.json",
+			expected:  emptyExpected,
+		},
+
+		{
+			name:      "not exists file",
+			hasError:  false,
+			statePath: "./mocks/pipeline/nostrict/not_exists_yg65.json",
+			expected:  emptyExpected,
+		},
+		{
+			name:      "incorrect state",
+			hasError:  true,
+			statePath: "./mocks/pipeline/nostrict/incorrect_state.json",
+		},
+	}
+
+	t.Run("Tofu", func(t *testing.T) {
+		providerYandexMetaConfig := metaConfigForPipelineTest(yandex.ProviderName, yandexTestLayout)
+		providerYandex, err := getter(ctx, providerYandexMetaConfig)
+		require.NoError(t, err, "should provide meta config")
+
+		executor, err := providerYandex.Executor(ctx, infrastructure.MasterNodeStep, params.Logger)
+		require.NoError(t, err, "should create executor")
+
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				assertOutputs(c, executor)
+			})
+		}
+	})
+
+	t.Run("Terraform", func(t *testing.T) {
+		cfgProviderGCP := metaConfigForPipelineTest(gcp.ProviderName, gcpTestLayout)
+		providerGCP, err := getter(ctx, cfgProviderGCP)
+		require.NoError(t, err, "should provide meta config")
+
+		executor, err := providerGCP.Executor(ctx, infrastructure.MasterNodeStep, params.Logger)
+		require.NoError(t, err, "should create executor")
+
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				assertOutputs(c, executor)
+			})
+		}
+	})
+}
+
+func metaConfigForPipelineTest(providerName, layout string) *config.MetaConfig {
+	cfg := &config.MetaConfig{}
+	cfg.ProviderName = providerName
+	cfg.ClusterPrefix = "test"
+	cfg.Layout = layout
+	if providerName != "" {
+		cfg.UUID = "fb6dfa1c-93fd-11f0-9697-efd55958d098"
+	}
+
+	return cfg
 }

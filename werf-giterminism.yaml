@@ -8,13 +8,13 @@ config:
       - GOPROXY
       - WERF_DISABLE_META_TAGS
       - CLOUD_PROVIDERS_SOURCE_REPO
-      - OBSERVABILITY_SOURCE_REPO
       - DISTRO_PACKAGES_PROXY
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
       - SVACE_ENABLED
       - SVACE_ANALYZE_HOST
       - SVACE_ANALYZE_SSH_USER
+      - ACTIONS_ID_TOKEN_REQUEST_TOKEN
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
     allowEnvVariables:
@@ -26,6 +26,11 @@ config:
       - COSIGN_TRANSIT_SECRET_ENGINE_PATH
       - ACTIONS_ID_TOKEN_REQUEST_TOKEN
       - ACTIONS_ID_TOKEN_REQUEST_URL
+      - VAULT_ADDR
+      - WERF_VAULT_AUTH_ROLE
+      - WERF_VAULT_AUTH_JWT
+      - WERF_SIGN_KEY
+      - TRANSIT_SECRET_ENGINE_PATH
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY

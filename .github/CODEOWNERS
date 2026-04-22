@@ -1,21 +1,39 @@
 .github/                                                         @Nikolay1224 @himax1991
-000-common/                                                      @sprait
-**/000-common/images/alt-p11/                                    @name212 @090809
+000-common/                                                      @RomanenkoDenys
+**/000-common/images/alt-p11                                     @name212 @090809
+**/000-common/images/cni-**                                      @apolovov
+**/000-common/images/coredns                                     @apolovov
+**/000-common/images/crane                                       @sprait
+**/000-common/images/csi-**                                      @AleksZimin
+**/000-common/images/debug-container                             @apolovov
+**/000-common/images/iptables-wrapper                            @apolovov
+**/000-common/images/kube-rbac-proxy                             @AlwxSin
+**/000-common/images/kubernetes                                  @sprait
+**/000-common/images/pause                                       @sprait
+**/000-common/images/shell-operator                              @ldmonster
+**/000-common/images/vxlan-offloading-fixer                      @apolovov
 002-deckhouse/                                                   @ldmonster
-007-registrypackages/                                            @RomanenkoDenys @sprait
+007-registrypackages/                                            @RomanenkoDenys
+**/007-registrypackages/images/containerd                        @sprait
+**/007-registrypackages/images/crictl                            @sprait
+**/007-registrypackages/images/cryptsetup                        @sprait
 **/007-registrypackages/images/d8-ca-updater                     @name212 @090809
 **/007-registrypackages/images/d8-curl                           @name212 @090809
 **/007-registrypackages/images/e2fsprogs                         @name212 @090809
-**/007-registrypackages/images/erofs                             @name212 @090809
+**/007-registrypackages/images/erofs                             @name212 @090809 @sprait
 **/007-registrypackages/images/growpart                          @name212 @090809
 **/007-registrypackages/images/jq                                @name212 @090809
+**/007-registrypackages/images/kubeadm                           @sprait
+**/007-registrypackages/images/kubectl                           @sprait
+**/007-registrypackages/images/kubelet                           @sprait
 **/007-registrypackages/images/lsblk                             @name212 @090809
 **/007-registrypackages/images/netcat                            @name212 @090809
 **/007-registrypackages/images/nfs-mount                         @name212 @090809
 **/007-registrypackages/images/nvme-cli                          @name212 @090809
+**/007-registrypackages/images/pause                             @sprait
 **/007-registrypackages/images/socat                             @name212 @090809
 **/007-registrypackages/images/systemctl-power-commands-wrapper  @name212 @090809
-**/007-registrypackages/images/toml-merge                        @name212 @090809
+**/007-registrypackages/images/toml-merge                        @name212 @090809 @sprait
 **/007-registrypackages/images/virt-what                         @name212 @090809
 **/007-registrypackages/images/which                             @name212 @090809
 **/007-registrypackages/images/yq                                @name212 @090809
@@ -98,7 +116,7 @@ deckhouse-controller/                    @ldmonster
 dhctl/                                   @name212 @090809
 docs/                                    @z9r5
 docs/documentation/pages/architecture/   @voitenkov
-helm_lib/                                @sprait
+helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
 /pkg/                                    @ldmonster

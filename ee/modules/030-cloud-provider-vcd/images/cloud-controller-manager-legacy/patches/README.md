@@ -67,3 +67,13 @@ Files:
 Changes:
 
 - Add support for searching vAppTemplates in a given org
+
+### 006-fix-lb-health-monitor.patch
+
+Files:
+
+- pkg/ccm/loadbalancer.go
+
+Changes:
+
+- Fixes TCP health monitors removal during an update of the pool

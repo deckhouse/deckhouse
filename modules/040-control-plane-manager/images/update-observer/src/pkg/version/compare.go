@@ -79,3 +79,51 @@ func GetMin(v, w string) string {
 func majorMinor(v *semver.Version) string {
 	return fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 }
+
+func MinorInt(v string) (int, bool) {
+	sv, err := semver.NewVersion(v)
+	if err != nil {
+		return 0, false
+	}
+	return int(sv.Minor()), true
+}
+
+func calculateHops(src, dst int) int {
+	h := dst - src
+	if h < 0 {
+		h = -h
+	}
+	return h
+}
+
+// Hops returns the absolute number of minor version steps between sourceVersion
+// and desiredVersion. Returns 0 if either version is unparseable or they are equal.
+func Hops(sourceVersion, desiredVersion string) int {
+	srcMinor, hasSrc := MinorInt(sourceVersion)
+	dstMinor, hasDst := MinorInt(desiredVersion)
+	if !hasSrc || !hasDst {
+		return 0
+	}
+	return calculateHops(srcMinor, dstMinor)
+}
+
+// ComponentSteps returns how many minor-version upgrade steps the given component
+// has already completed relative to the sourceVersion->desiredVersion migration.
+// The result is always within [0, Hops(sourceVersion, desiredVersion)].
+// Returns 0 if any version is unparseable or if there is no migration in progress
+// (hops == 0); the idle "healthy cluster = 100%" interpretation belongs to the
+// caller that computes the overall progress ratio.
+func ComponentSteps(componentVersion, sourceVersion, desiredVersion string) int {
+	src, okSrc := MinorInt(sourceVersion)
+	dst, okDst := MinorInt(desiredVersion)
+	comp, okComp := MinorInt(componentVersion)
+	if !okSrc || !okDst || !okComp {
+		return 0
+	}
+
+	hops := calculateHops(src, dst)
+	if hops == 0 {
+		return 0
+	}
+	return min(calculateHops(src, comp), hops)
+}

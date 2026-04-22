@@ -23,7 +23,7 @@ type IstioFederation struct {
 type IstioFederationSpec struct {
 	MetadataEndpoint string `json:"metadataEndpoint"`
 	Metadata         struct {
-		ClusterCA                string `json:"ca"`
+		CA                       string `json:"ca"`
 		EnableInsecureConnection bool   `json:"insecureSkipVerify"`
 	} `json:"metadata,omitempty"`
 	TrustDomain string `json:"trustDomain,omitempty"`
@@ -40,20 +40,22 @@ type IstioFederationStatus struct {
 
 // Warning! This struct is duplicated in images/metadata-exporter
 type FederationPrivateMetadata struct {
-	IngressGateways *[]FederationIngressGateways `json:"ingressGateways"`
-	PublicServices  *[]FederationPublicServices  `json:"publicServices"`
+	IngressGateways *[]FederationIngressGateway `json:"ingressGateways"`
+	PublicServices  *[]FederationPublicService  `json:"publicServices"`
 }
 
-type FederationIngressGateways struct {
+type FederationIngressGateway struct {
 	Address string `json:"address"`
 	Port    uint   `json:"port"`
 }
 
-type FederationPublicServices struct {
-	Hostname string `json:"hostname"`
-	Ports    []struct {
-		Name     string `json:"name"`
-		Port     uint   `json:"port"`
-		Protocol string `json:"protocol"`
-	} `json:"ports"`
+type FederationPublicServicePort struct {
+	Name     string `json:"name"`
+	Port     uint   `json:"port"`
+	Protocol string `json:"protocol"`
+}
+
+type FederationPublicService struct {
+	Hostname string                        `json:"hostname"`
+	Ports    []FederationPublicServicePort `json:"ports"`
 }
