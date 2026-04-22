@@ -254,14 +254,13 @@ properties:
         type: boolean
         default: false
         description: |
-          Enables [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Enables data encryption in etcd (see [Encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
 
-          Generates `kube-system/d8-secret-encryption-key` Secret with encryption key.
+          When enabled, a Secret `kube-system/d8-secret-encryption-key` is created to store the encryption key.
 
-          Enabling this parameter also automatically turns on the `CRDSensitiveData` feature gate for
-          `kube-apiserver`, which protects Custom Resource fields marked with `x-kubernetes-sensitive-data: true`
-          (etcd encryption, RBAC-based field filtering via the `<resource>/sensitive` subresource, and audit log masking).
-          > **Note!** This mode cannot be disabled!
+          Enabling this parameter automatically enables the `CRDSensitiveData` feature gate for `kube-apiserver`, which protects custom resource fields marked with `x-kubernetes-sensitive-data: true` via encryption in etcd, RBAC-based field filtering with the `<resource>/sensitive` subresource and hiding values from the audit log.
+
+          > **Warning.** Once enabled, this parameter can't be disabled.
   etcd:
     type: object
     description: |

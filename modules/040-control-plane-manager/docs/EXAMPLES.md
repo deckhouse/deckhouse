@@ -24,149 +24,139 @@ webhooks:
   timeoutSeconds: 5
 ```
 
-## CRD with sensitive fields
+## Protecting resources with sensitive fields
 
-This example demonstrates how to protect sensitive fields in a Custom Resource using the `CRDSensitiveData`
-feature gate together with the `x-kubernetes-sensitive-data` schema marker.
+The following example demonstrates how to protect sensitive fields in resources using the `CRDSensitiveData` feature gate and the `x-kubernetes-sensitive-data` schema marker.
 
-### 1. Enable encryption
+For instructions on enabling this feature, see [FAQ](faq.html#how-do-i-protect-sensitive-fields-in-custom-resources).
 
-Turning on `apiserver.encryptionEnabled` automatically enables the `CRDSensitiveData` feature gate for `kube-apiserver` — there is no separate switch:
+1. Enabling etcd encryption with the `encryptionEnabled` parameter. This automatically enables the `CRDSensitiveData` feature gate for `kube-apiserver`.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: control-plane-manager
-spec:
-  version: 2
-  enabled: true
-  settings:
-    apiserver:
-      encryptionEnabled: true
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
 
-### 2. Define a CRD with sensitive fields
+1. Defining sensitive fields in the resource schema.
 
-Fields marked with `x-kubernetes-sensitive-data: true` will be encrypted in etcd and filtered
-from API responses for callers without access to the `<resource>/sensitive` subresource.
+   Fields marked with `x-kubernetes-sensitive-data: true` are encrypted in etcd and removed from API responses for callers that do not have access to the `<resource>/sensitive` subresource.
 
-```yaml
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: dbconfigs.example.com
-spec:
-  group: example.com
-  scope: Namespaced
-  names:
-    plural: dbconfigs
-    singular: dbconfig
-    kind: DbConfig
-  versions:
-    - name: v1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          properties:
-            spec:
-              type: object
-              properties:
-                host:
-                  type: string
-                username:
-                  type: string
-                password:
-                  type: string
-                  x-kubernetes-sensitive-data: true
-```
+   ```yaml
+   apiVersion: apiextensions.k8s.io/v1
+   kind: CustomResourceDefinition
+   metadata:
+     name: dbconfigs.example.com
+   spec:
+     group: example.com
+     scope: Namespaced
+     names:
+       plural: dbconfigs
+       singular: dbconfig
+       kind: DbConfig
+     versions:
+       - name: v1
+         served: true
+         storage: true
+         schema:
+           openAPIV3Schema:
+             type: object
+             properties:
+               spec:
+                 type: object
+                 properties:
+                   host:
+                     type: string
+                   username:
+                     type: string
+                   password:
+                     type: string
+                     x-kubernetes-sensitive-data: true
+   ```
 
-### 3. Create a Custom Resource
+1. Creating a custom resource with values filled in sensitive fields.
 
-Create an instance of the CRD with a value in the sensitive field. From the caller's perspective the object is created as usual — the protection is applied transparently by `kube-apiserver`:
+   ```yaml
+   apiVersion: example.com/v1
+   kind: DbConfig
+   metadata:
+     name: primary
+     namespace: default
+   spec:
+     host: db.example.com
+     username: admin
+     password: s3cr3t
+   ```
 
-```yaml
-apiVersion: example.com/v1
-kind: DbConfig
-metadata:
-  name: primary
-  namespace: default
-spec:
-  host: db.example.com
-  username: admin
-  password: s3cr3t
-```
+   Once saved, the entire object is encrypted in etcd and the `password` value is hidden in the audit log and removed from the API responses of the caller has no permissions to the `dbconfigs/sensitive` subresource.
 
-```shell
-kubectl apply -f dbconfig.yaml
-```
+1. Configuring access to sensitive fields using RBAC and the `<resource>/sensitive` subresource.
 
-Once stored, the object is encrypted in etcd as a whole, and the `password` value is masked in audit logs and filtered from API responses unless the caller has access to the `dbconfigs/sensitive` subresource (see the next step).
+   ```yaml
+   # Regular role: can read the resource, but sensitive fields are removed from responses.
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: dbconfig-reader
+   rules:
+   - apiGroups: ["example.com"]
+     resources: ["dbconfigs"]
+     verbs: ["get", "list", "watch"]
+   ---
+   # Privileged role: can read full data, including sensitive fields.
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: dbconfig-sensitive-reader
+   rules:
+   - apiGroups: ["example.com"]
+     resources: ["dbconfigs"]
+     verbs: ["get", "list", "watch"]
+   - apiGroups: ["example.com"]
+     resources: ["dbconfigs/sensitive"]
+     verbs: ["get", "list", "watch"]
+   ```
 
-### 4. Configure RBAC
+1. A result of sensitive field protection.
 
-Grant access to sensitive fields via the `<resource>/sensitive` subresource:
+   - A user with the `dbconfig-reader` role who runs `d8 k get dbconfig primary -o json` can see the resource with sensitive fields removed:
 
-```yaml
-# Regular role: can read the resource, but sensitive fields are stripped.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: dbconfig-reader
-rules:
-- apiGroups: ["example.com"]
-  resources: ["dbconfigs"]
-  verbs: ["get", "list", "watch"]
----
-# Privileged role: can read full data including sensitive fields.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: dbconfig-sensitive-reader
-rules:
-- apiGroups: ["example.com"]
-  resources: ["dbconfigs"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["example.com"]
-  resources: ["dbconfigs/sensitive"]
-  verbs: ["get", "list", "watch"]
-```
+     ```json
+     {
+       "spec": {
+         "host": "db.example.com",
+         "username": "admin"
+       }
+     }
+     ```
 
-### 5. Observe the result
+   - A user with the `dbconfig-sensitive-reader` role can see the full data:
 
-A caller bound to `dbconfig-reader` running `kubectl get dbconfig primary -o json` will see the resource with sensitive fields stripped:
+     ```json
+     {
+       "spec": {
+         "host": "db.example.com",
+         "username": "admin",
+         "password": "s3cr3t"
+       }
+     }
+     ```
 
-```json
-{
-  "spec": {
-    "host": "db.example.com",
-    "username": "admin"
-  }
-}
-```
+   - In audit logs, values of sensitive fields are always masked, regardless of caller permissions:
 
-A caller bound to `dbconfig-sensitive-reader` will see the full data:
-
-```json
-{
-  "spec": {
-    "host": "db.example.com",
-    "username": "admin",
-    "password": "s3cr3t"
-  }
-}
-```
-
-In audit logs, sensitive values are always masked, regardless of the caller's permissions:
-
-```json
-{
-  "spec": {
-    "host": "db.example.com",
-    "username": "admin",
-    "password": "******"
-  }
-}
-```
+     ```json
+     {
+       "spec": {
+         "host": "db.example.com",
+         "username": "admin",
+         "password": "******"
+       }
+     }
+     ```

@@ -1300,15 +1300,17 @@ To update the certificates, do the following on each master node:
    kubeadm certs renew all
    ```
 
-## How do I protect sensitive fields in Custom Resources?
+## How do I protect sensitive fields in custom resources?
 
-To protect sensitive fields in CRD schemas (passwords, tokens, keys) from unauthorized API access,
-unencrypted etcd storage, and exposure in audit logs, use the `CRDSensitiveData` feature gate
-together with the `x-kubernetes-sensitive-data` schema marker.
+To protect sensitive fields (such as passwords, tokens, or keys) in resource schemas from unauthorized access via the API, unencrypted storage in etcd, or exposure in audit logs, use the `CRDSensitiveData` feature gate together with the `x-kubernetes-sensitive-data` schema marker.
 
-### Requirements
+To enable field protection, do the following:
 
-1. Enable etcd encryption in the `control-plane-manager` ModuleConfig (this action cannot be undone and causes a restart of `kube-apiserver`). The `CRDSensitiveData` feature gate is turned on automatically together with encryption — you do not need to list it in `enabledFeatureGates` (and it is not accepted there):
+1. Enable etcd encryption using the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter in the module settings. The `CRDSensitiveData` feature gate is enabled automatically along with the encryption and shouldn't be specified manually.
+
+   {% alert level="warning" %}
+   Enabling `apiserver.encryptionEnabled` is irreversible and triggers a `kube-apiserver` restart.
+   {% endalert %}
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -1323,19 +1325,20 @@ together with the `x-kubernetes-sensitive-data` schema marker.
          encryptionEnabled: true
    ```
 
-1. Mark sensitive fields in the CRD schema with `x-kubernetes-sensitive-data: true`.
-   The marker must be attached to a field of type `string`, `integer`, `number`, `boolean`, `object`, or `array` (marking an `object` or `array` makes the whole subtree sensitive); fields declared as `x-kubernetes-int-or-string: true` are also supported.
-   The marker cannot be placed at the root of the schema (the `openAPIV3Schema` node) or inside `anyOf`, `oneOf`, `allOf`, or `not` branches.
+1. Mark sensitive fields in the resource schema with `x-kubernetes-sensitive-data: true`.
 
-1. Grant access to sensitive fields via the `<resource>/sensitive` subresource in RBAC rules
-   for users and service accounts that require full data access.
+   The marker can be applied to the fields of the following types: `string`, `integer`, `number`, `boolean`, `object` and `array` (applying the marker to an `object` or `array` makes the entire subtree sensitive). Fields marked with `x-kubernetes-int-or-string: true` are supported as well.
 
-### Protections applied
+   The marker can't be set on the schema root (the `openAPIV3Schema` node) and inside `anyOf`, `oneOf`, `allOf`, or `not` branches.
+
+1. For users and ServiceAccounts that require access to full data, grant RBAC permissions for the `<resource>/sensitive` subresource.
+
+### Protection mechanisms
 
 | Protection | Description |
-|---|---|
-| etcd encryption | The entire Custom Resource is encrypted at rest using the AES-CBC transformer (same as Kubernetes Secrets). |
-| API field filtering | Sensitive fields are stripped from `get`/`list`/`watch` responses unless the caller has access to the `<resource>/sensitive` subresource. |
-| Audit log masking | Sensitive field values are replaced with `"******"` in all audit events, regardless of the caller's RBAC permissions or audit level. |
+| ---------- | ----------- |
+| Encryption in etcd | The entire resource is encrypted using the same AES-CBC transformer as Kubernetes Secrets. |
+| API field filtering | Sensitive fields are removed from responses to `get`, `list`, and `watch` requests if the caller does not have permissions on the `<resource>/sensitive` subresource. |
+| Audit log masking | Values of sensitive fields are replaced with `"******"` in all audit events, regardless of RBAC permissions and audit level. |
 
-See the [examples section](examples.html#crd-with-sensitive-fields) for a complete walkthrough.
+A complete configuration example and results are available in the [Examples](examples.html#protecting-resources-with-sensitive-fields) section.

@@ -24,149 +24,139 @@ webhooks:
   timeoutSeconds: 5
 ```
 
-## CRD с чувствительными полями
+## Защита ресурсов с чувствительными полями
 
-В примере показано, как защитить чувствительные поля Custom Resource с помощью feature gate
-`CRDSensitiveData` и маркера схемы `x-kubernetes-sensitive-data`.
+Далее показан пример конфигурации с защитой чувствительных полей ресурсов с помощью feature gate `CRDSensitiveData` и маркера схемы `x-kubernetes-sensitive-data`.
 
-### 1. Включите шифрование
+Инструкция по включению защиты доступна [в разделе «FAQ»](faq.html#как-защитить-чувствительные-поля-кастомных-ресурсов).
 
-Включение `apiserver.encryptionEnabled` автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver` — отдельного переключателя нет:
+1. Включение шифрования etcd с помощью параметра `apiserver.encryptionEnabled`. Это автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver`.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: control-plane-manager
-spec:
-  version: 2
-  enabled: true
-  settings:
-    apiserver:
-      encryptionEnabled: true
-```
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
 
-### 2. Определите CRD с чувствительными полями
+1. Определение чувствительных полей в конфигурации.
 
-Поля, помеченные `x-kubernetes-sensitive-data: true`, будут шифроваться в etcd и удаляться
-из ответов API для вызывающих сторон без доступа к сабресурсу `<resource>/sensitive`.
+   Поля, помеченные маркером `x-kubernetes-sensitive-data: true`, будут шифроваться в etcd и удаляться из ответов API для вызывающих сторон без доступа к субресурсу `<resource>/sensitive`.
 
-```yaml
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: dbconfigs.example.com
-spec:
-  group: example.com
-  scope: Namespaced
-  names:
-    plural: dbconfigs
-    singular: dbconfig
-    kind: DbConfig
-  versions:
-    - name: v1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          properties:
-            spec:
-              type: object
-              properties:
-                host:
-                  type: string
-                username:
-                  type: string
-                password:
-                  type: string
-                  x-kubernetes-sensitive-data: true
-```
+   ```yaml
+   apiVersion: apiextensions.k8s.io/v1
+   kind: CustomResourceDefinition
+   metadata:
+     name: dbconfigs.example.com
+   spec:
+     group: example.com
+     scope: Namespaced
+     names:
+       plural: dbconfigs
+       singular: dbconfig
+       kind: DbConfig
+     versions:
+       - name: v1
+         served: true
+         storage: true
+         schema:
+           openAPIV3Schema:
+             type: object
+             properties:
+               spec:
+                 type: object
+                 properties:
+                   host:
+                     type: string
+                   username:
+                     type: string
+                   password:
+                     type: string
+                     x-kubernetes-sensitive-data: true
+   ```
 
-### 3. Создайте Custom Resource
+1. Создание кастомного ресурса с заполненными значениями в чувствительных полях.
 
-Создайте экземпляр CRD, указав значение в чувствительном поле. Для клиента создание объекта выглядит как обычно — защита применяется `kube-apiserver` прозрачно:
+   ```yaml
+   apiVersion: example.com/v1
+   kind: DbConfig
+   metadata:
+     name: primary
+     namespace: default
+   spec:
+     host: db.example.com
+     username: admin
+     password: s3cr3t
+   ```
 
-```yaml
-apiVersion: example.com/v1
-kind: DbConfig
-metadata:
-  name: primary
-  namespace: default
-spec:
-  host: db.example.com
-  username: admin
-  password: s3cr3t
-```
+   После сохранения объект целиком шифруется в etcd, значение `password` маскируется в журнале аудита и удаляется из ответов API, если у вызывающей стороны нет доступа к субресурсу `dbconfigs/sensitive`.
 
-```shell
-kubectl apply -f dbconfig.yaml
-```
+1. Настройка доступа к чувствительным полям с помощью RBAC через субресурс `<resource>/sensitive`.
 
-После сохранения объект целиком шифруется в etcd, значение `password` маскируется в журнале аудита и удаляется из ответов API, если у вызывающей стороны нет доступа к сабресурсу `dbconfigs/sensitive` (см. следующий шаг).
+   ```yaml
+   # Обычная роль: может читать ресурс, но чувствительные поля будут удалены из ответа.
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: dbconfig-reader
+   rules:
+   - apiGroups: ["example.com"]
+     resources: ["dbconfigs"]
+     verbs: ["get", "list", "watch"]
+   ---
+   # Привилегированная роль: может читать полные данные, включая чувствительные поля.
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: ClusterRole
+   metadata:
+     name: dbconfig-sensitive-reader
+   rules:
+   - apiGroups: ["example.com"]
+     resources: ["dbconfigs"]
+     verbs: ["get", "list", "watch"]
+   - apiGroups: ["example.com"]
+     resources: ["dbconfigs/sensitive"]
+     verbs: ["get", "list", "watch"]
+   ```
 
-### 4. Настройте RBAC
+1. Результат защиты чувствительных полей.
 
-Предоставьте доступ к чувствительным полям через сабресурс `<resource>/sensitive`:
+   - Пользователь с ролью `dbconfig-reader`, выполнивший команду `d8 k get dbconfig primary -o json`, увидит ресурс с удалёнными чувствительными полями:
 
-```yaml
-# Обычная роль: может читать ресурс, но чувствительные поля будут удалены из ответа.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: dbconfig-reader
-rules:
-- apiGroups: ["example.com"]
-  resources: ["dbconfigs"]
-  verbs: ["get", "list", "watch"]
----
-# Привилегированная роль: может читать полные данные, включая чувствительные поля.
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: dbconfig-sensitive-reader
-rules:
-- apiGroups: ["example.com"]
-  resources: ["dbconfigs"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["example.com"]
-  resources: ["dbconfigs/sensitive"]
-  verbs: ["get", "list", "watch"]
-```
+     ```json
+     {
+       "spec": {
+         "host": "db.example.com",
+         "username": "admin"
+       }
+     }
+     ```
 
-### 5. Результат
+   - Пользователь с ролью `dbconfig-sensitive-reader` увидит полные данные:
 
-Пользователь с ролью `dbconfig-reader`, выполнивший `kubectl get dbconfig primary -o json`, увидит ресурс с удалёнными чувствительными полями:
+     ```json
+     {
+       "spec": {
+         "host": "db.example.com",
+         "username": "admin",
+         "password": "s3cr3t"
+       }
+     }
+     ```
 
-```json
-{
-  "spec": {
-    "host": "db.example.com",
-    "username": "admin"
-  }
-}
-```
+   - В журнале аудита значения чувствительных полей всегда маскируются, независимо от прав вызывающей стороны:
 
-Пользователь с ролью `dbconfig-sensitive-reader` увидит полные данные:
-
-```json
-{
-  "spec": {
-    "host": "db.example.com",
-    "username": "admin",
-    "password": "s3cr3t"
-  }
-}
-```
-
-В журнале аудита значения чувствительных полей всегда маскируются, независимо от прав вызывающей стороны:
-
-```json
-{
-  "spec": {
-    "host": "db.example.com",
-    "username": "admin",
-    "password": "******"
-  }
-}
-```
+     ```json
+     {
+       "spec": {
+         "host": "db.example.com",
+         "username": "admin",
+         "password": "******"
+       }
+     }
+     ```
