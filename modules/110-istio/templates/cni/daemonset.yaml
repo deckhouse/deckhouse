@@ -74,9 +74,13 @@ spec:
           command:
             - install-cni
           {{- if not $.Values.istio.internal.enableAmbientMode }}
-          {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 10 }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
           {{- else }}
-          {{- include "helm_lib_module_container_security_context_privileged" . | nindent 10 }}
+          {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 10 }}
           {{- end }}
           env:
             {{- if ($.Values.istio.internal.enableAmbientMode) }}
@@ -151,6 +155,8 @@ spec:
               name: cni-net-dir
             - mountPath: /var/run/istio-cni
               name: cni-log-dir
+            - mountPath: /tmp
+              name: install-cni-tmp
             {{- if ($.Values.istio.internal.enableAmbientMode) }}
             - mountPath: /host/proc
               name: cni-host-procfs
@@ -247,6 +253,8 @@ spec:
             path: /var/run/istio-cni
             type: ""
           name: cni-log-dir
+        - name: install-cni-tmp
+          emptyDir: {}
         {{- if ($.Values.istio.internal.enableAmbientMode) }}
         - name: cni-host-procfs
           hostPath:
