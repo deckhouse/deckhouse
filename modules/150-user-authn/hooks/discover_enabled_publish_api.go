@@ -19,13 +19,16 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
 func applyIngressFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -36,7 +39,7 @@ type PublishAPIConfig struct {
 	Name                        string `json:"name"`
 	AddKubeconfigGeneratorEntry []byte `json:"addKubeconfigGeneratorEntry"`
 	WhitelistSourceRanges       []byte `json:"whitelistSourceRanges"`
-	HttpsMode                   []byte `json:"httpsMode"`
+	HTTPSMode                   []byte `json:"httpsMode"`
 }
 
 func applyPublishAPIConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -50,7 +53,7 @@ func applyPublishAPIConfigFilter(obj *unstructured.Unstructured) (go_hook.Filter
 			Name:                        obj.GetName(),
 			AddKubeconfigGeneratorEntry: s.Data["addKubeconfigGeneratorEntry"],
 			WhitelistSourceRanges:       s.Data["whitelistSourceRanges"],
-			HttpsMode:                   s.Data["httpsMode"]},
+			HTTPSMode:                   s.Data["httpsMode"]},
 		nil
 }
 
@@ -102,10 +105,15 @@ func discoverPublishAPI(_ context.Context, input *go_hook.HookInput) error {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'secret_cpm' snapshot: %w", err)
 		}
+		addKCGEBool, err := strconv.ParseBool(string(configs.AddKubeconfigGeneratorEntry))
+		if err != nil {
+			return fmt.Errorf("failed to convert AddKubeconfigGeneratorEntry to bool: %w", err)
+		}
+		whitelistsSlice := strings.Fields(strings.Trim(string(configs.WhitelistSourceRanges), "[] "))
 
-		input.Values.Set("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", string(configs.AddKubeconfigGeneratorEntry))
-		input.Values.Set("userAuthn.internal.publishAPI.whitelistSourceRanges", string(configs.WhitelistSourceRanges))
-		input.Values.Set("userAuthn.internal.publishAPI.httpsMode", string(configs.HttpsMode))
+		input.Values.Set("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", addKCGEBool)
+		input.Values.Set("userAuthn.internal.publishAPI.whitelistSourceRanges", whitelistsSlice)
+		input.Values.Set("userAuthn.internal.publishAPI.https.mode", string(configs.HTTPSMode))
 	}
 	return nil
 }

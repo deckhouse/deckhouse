@@ -21,7 +21,7 @@ import (
 )
 
 var _ = Describe("User Authn hooks :: discover enabled publish API ::", func() {
-	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{"publishAPI":{}}}}`, "")
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{"publishAPI":{"https": {}}}}}`, "")
 
 	Context("Detect enabled publish API via ingress existence", func() {
 		BeforeEach(func() {
