@@ -39,6 +39,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineDontUsePublicImagesFlags(cmd)
 	app.DefinePostBootstrapScriptFlags(cmd)
 	app.DefinePreflight(cmd)
+	app.DefineImgBundleFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()

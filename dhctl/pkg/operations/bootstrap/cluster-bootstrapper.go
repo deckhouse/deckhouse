@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -249,6 +250,21 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	log.DebugLn("MetaConfig was loaded")
 
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
+	// Bundle registry
+	if metaConfig.Registry.Settings.IsLocal() {
+		if app.ImgBundlePath == "" {
+			return fmt.Errorf("Cluster bootstrap requires --img-bundle-path option when registry mode is Local. Please use --img-bundle-path option to bootstrap the cluster")
+		}
+
+		stop, err := bundle.StartRegistry(ctx, bundle.RegistryParams{
+			BundlePath: app.ImgBundlePath,
+		})
+		if err != nil {
+			return fmt.Errorf("Start bundle registry: %w", err)
+		}
+		defer stop()
+	}
 
 	// Check if static cluster without ssh-host
 	if metaConfig.IsStatic() && len(app.SSHHosts) == 0 {

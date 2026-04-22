@@ -63,9 +63,24 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 			RemoteData: remote,
 		}, nil
 
+	case settings.Mode == constant.ModeLocal:
+		remote := Data{
+			ImagesRepo: constant.BundleImagesRepo,
+			Scheme:     constant.BundleSchema,
+		}
+
+		return ModeSettings{
+			Mode:       constant.ModeLocal,
+			RemoteData: remote,
+		}, nil
+
 	default:
 		return ModeSettings{}, ErrUnknownMode
 	}
+}
+
+func (s ModeSettings) IsLocal() bool {
+	return s.Mode == constant.ModeLocal
 }
 
 func (s ModeSettings) ToModel() ModeModel {
@@ -75,6 +90,9 @@ func (s ModeSettings) ToModel() ModeModel {
 
 	case constant.ModeProxy:
 		return s.toProxyModel()
+
+	case constant.ModeLocal:
+		return s.toLocalModel()
 
 	case constant.ModeUnmanaged:
 		return s.toUnmanagedModel()
@@ -100,6 +118,15 @@ func (s ModeSettings) toProxyModel() ModeModel {
 		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
 		RemoteData:          s.RemoteData,
 		TTL:                 s.TTL,
+	}
+}
+
+func (s ModeSettings) toLocalModel() ModeModel {
+	return ModeModel{
+		Mode:                constant.ModeLocal,
+		InClusterImagesRepo: constant.HostWithPath,
+		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
+		RemoteData:          s.RemoteData,
 	}
 }
 
@@ -139,8 +166,8 @@ func (m ModeModel) InClusterData(pki PKI) (Data, error) {
 	case constant.ModeDirect:
 		return m.toDirectInClusterData(pki), nil
 
-	case constant.ModeProxy:
-		return m.toProxyInClusterData(pki), nil
+	case constant.ModeProxy, constant.ModeLocal:
+		return m.toProxyLocalInClusterData(pki), nil
 
 	case constant.ModeUnmanaged:
 		return m.RemoteData, nil
@@ -163,7 +190,7 @@ func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
 	case constant.ModeUnmanaged:
 		mirrors = m.toUnmanagedBashibleHosts()
 
-	case constant.ModeProxy:
+	case constant.ModeProxy, constant.ModeLocal:
 		mirrors = m.toProxyLocalBashibleHosts(pki)
 		endpoints = m.toProxyLocalEndpoints()
 
@@ -197,7 +224,7 @@ func (m ModeModel) toDirectInClusterData(pki PKI) Data {
 	}
 }
 
-func (m ModeModel) toProxyInClusterData(pki PKI) Data {
+func (m ModeModel) toProxyLocalInClusterData(pki PKI) Data {
 	return Data{
 		ImagesRepo: constant.HostWithPath,
 		Scheme:     constant.SchemeHTTPS,

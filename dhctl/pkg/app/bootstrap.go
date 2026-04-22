@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	ImgBundlePath  = ""
 	InternalNodeIP = ""
 	DevicePath     = ""
 
@@ -119,4 +120,10 @@ func DefineConfigsForResourcesPhaseFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.`).
 		Envar(configEnvName("CONFIG")).
 		StringsVar(&ConfigPaths)
+}
+
+func DefineImgBundleFlags(cmd *kingpin.CmdClause) {
+	cmd.Flag("img-bundle-path", `Path to the directory with tar or chunk.tar image bundles created by 'd8 mirror' command for Local registry mode.`).
+		Envar(configEnvName("IMG_BUNDLE_PATH")).
+		StringVar(&ImgBundlePath)
 }

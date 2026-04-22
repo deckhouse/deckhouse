@@ -7,7 +7,8 @@
         "gomod"
       ],
       "matchPackageNames": [
-        "github.com/deckhouse/deckhouse/go_lib/registry"
+        "github.com/deckhouse/deckhouse/go_lib/registry",
+        "github.com/deckhouse/deckhouse/go_lib/registry-bundle"
       ],
       "enabled": false
     }

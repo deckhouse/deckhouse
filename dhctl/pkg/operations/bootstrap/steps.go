@@ -46,11 +46,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -142,6 +144,23 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	if ready {
 		log.Success("Bashible already run! Skip bashible install\n")
 		return nil
+	}
+
+	// Bundle registry tunnel
+	if cfg.Registry.Settings.IsLocal() {
+		if wrapper, ok := params.Node.(*ssh.NodeInterfaceWrapper); ok {
+			stopTunnel, err := bundle.StartTunnel(ctx, bundle.TunnelParams{
+				SSHClient:       wrapper.Client(),
+				LoggerProvider:  params.LoggerProvider,
+				DirectoryConfig: dc,
+			})
+
+			if err != nil {
+				return fmt.Errorf("Start bundle registry tunnel: %w", err)
+			}
+
+			defer stopTunnel()
+		}
 	}
 
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
