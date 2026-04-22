@@ -14,13 +14,14 @@
 
 {{- if has (.registry).mode (list "Local") }}
 
-SYNCER_CONFIG_PATH="$(bb-tmp-file)"
+discovered_node_ip="$(bb-d8-node-ip)"
+syncer_config_path="$(bb-tmp-file)"
 
-bb-sync-file $SYNCER_CONFIG_PATH - << "EOF"
+bb-sync-file $syncer_config_path - << EOF
 source:
-  address: localhost:5511
+  address: 127.0.0.1:5511
 destination:
-  address: localhost:5001
+  address: "${discovered_node_ip}:5001"
   ca: |
     {{ .registry.bootstrap.init.ca.cert | nindent 4 }}
   user:
@@ -28,6 +29,6 @@ destination:
     password: {{ .registry.bootstrap.init.rw_user.password | quote }}
 EOF
 
-syncer $SYNCER_CONFIG_PATH | bb-log-stream-dhctl
+syncer $syncer_config_path | bb-log-stream-dhctl
 
 {{- end }}
