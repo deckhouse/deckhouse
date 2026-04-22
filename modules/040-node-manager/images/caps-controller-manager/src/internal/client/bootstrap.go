@@ -83,6 +83,12 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		return c.setStaticInstancePhaseToBootstrapping(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode)
 	}
 
+	bootstrapScript, err := c.getBootstrapScript(ctx, staticMachine, machine)
+	if err != nil {
+		c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "BootstrapScriptFetchingFailed", "Bootstrap script unreachable")
+		return ctrl.Result{}, fmt.Errorf("failed to get bootstrap script: %w", err)
+	}
+
 	type taskDataStr struct {
 		address       string
 		credentials   deckhousev1.SSHCredentialsSpec
@@ -93,6 +99,15 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		bootstrapScript []byte
 	}
 
+	taskData := taskDataStr{
+		address:         staticInstance.Spec.Address,
+		credentials:     credentials.Spec,
+		sshLegacyMode:   sshLegacyMode,
+		providerID:      string(staticMachine.Spec.ProviderID),
+		machineName:     machine.Name,
+		bootstrapScript: bootstrapScript,
+	}
+
 	taskFunc := func(tCtx context.Context, tAny any) error {
 		tLogger := ctrl.LoggerFrom(tCtx)
 		t, ok := tAny.(taskDataStr)
@@ -101,26 +116,26 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		}
 
 		var sshCl ssh.SSH
-		var err error
+		var tErr error
 		if t.sshLegacyMode {
 			tLogger.V(1).Info("using clissh")
 			sshCl = clissh.CreateSSHClient(t.address, t.credentials)
 		} else {
 			tLogger.V(1).Info("using gossh")
-			sshCl, err = gossh.CreateSSHClient(t.address, t.credentials)
+			sshCl, tErr = gossh.CreateSSHClient(t.address, t.credentials)
 		}
-		if err != nil {
+		if tErr != nil {
 			tLogger.Error(err, "failed to create ssh client")
-			return fmt.Errorf("failed to create ssh client: %w", err)
+			return fmt.Errorf("failed to create ssh client: %w", tErr)
 		}
-		data, err := sshCl.ExecSSHCommandToString(
+		tRes, tErr := sshCl.ExecSSHCommandToString(
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
 				t.providerID, t.machineName, base64.StdEncoding.EncodeToString(t.bootstrapScript)))
-		if err != nil {
-			if strings.Contains(err.Error(), "Process exited with status 2") {
+		if tErr != nil {
+			if strings.Contains(tErr.Error(), "Process exited with status 2") {
 				return nil
 			}
-			scanner := bufio.NewScanner(strings.NewReader(data))
+			scanner := bufio.NewScanner(strings.NewReader(tRes))
 			for scanner.Scan() {
 				str := scanner.Text()
 				if strings.Contains(str, "debug1: Exit status 2") {
@@ -128,25 +143,10 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 				}
 			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
-			tLogger.Error(err, "failed to exec ssh command")
-			return fmt.Errorf("failed to exec ssh command: %w", err)
+			tLogger.Error(tErr, "failed to exec ssh command")
+			return fmt.Errorf("failed to exec ssh command: %w", tErr)
 		}
 		return nil
-	}
-
-	bootstrapScript, err := c.getBootstrapScript(ctx, staticMachine, machine)
-	if err != nil {
-		c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "BootstrapScriptFetchingFailed", "Bootstrap script unreachable")
-		return ctrl.Result{}, fmt.Errorf("failed to get bootstrap script: %w", err)
-	}
-
-	taskData := taskDataStr{
-		address:         staticInstance.Spec.Address,
-		credentials:     credentials.Spec,
-		sshLegacyMode:   sshLegacyMode,
-		providerID:      string(staticMachine.Spec.ProviderID),
-		machineName:     machine.Name,
-		bootstrapScript: bootstrapScript,
 	}
 
 	taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
@@ -174,38 +174,18 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine,
 	credentials deckhousev1.SSHCredentialsSpec,
-	sshLegacyMode bool) (ctrl.Result, error) {
-	logger := ctrl.LoggerFrom(ctx)
+	sshLegacyMode bool) (res ctrl.Result, resErr error) {
+	logger := ctrl.LoggerFrom(ctx).WithValues("machineUID", staticMachine.UID, "address", staticInstance.Spec.Address)
+	logger.Info("Starting reservation process")
 
-	logger.Info("Starting reservation process",
-		"instance", staticInstance.Name,
-		"machine", staticMachine.Name,
-		"machineUID", staticMachine.UID,
-		"address", staticInstance.Spec.Address,
-	)
-
-	var err error
-	if err = c.reserveStaticInstance(ctx, staticInstance, staticMachine); err != nil {
-		logger.Error(err, "Failed to reserve StaticInstance",
-			"instance", staticInstance.Name,
-			"machine", staticMachine.Name,
-		)
-		return ctrl.Result{}, err
+	if err := c.reserveStaticInstance(ctx, staticInstance, staticMachine); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to reserve StaticInstance: %w", err)
 	}
-
-	logger.Info("StaticInstance successfully reserved",
-		"instance", staticInstance.Name,
-		"machine", staticMachine.Name,
-		"machineUID", staticMachine.UID,
-	)
+	logger.Info("StaticInstance successfully reserved")
 
 	defer func() {
-		if err != nil {
-			logger.Info("Releasing StaticInstance reservation due to error",
-				"instance", staticInstance.Name,
-				"machine", staticMachine.Name,
-				"error", err.Error(),
-			)
+		if resErr != nil {
+			logger.Info("Releasing StaticInstance reservation due to error", "error", resErr.Error())
 			c.releaseStaticInstance(staticInstance, staticMachine)
 		}
 	}()
@@ -216,17 +196,14 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 
 	tcpCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckTCPConnection)
 	if tcpCondition == nil || tcpCondition.Status != metav1.ConditionTrue {
-		tcpTaskID := address
-		logger.V(1).Info("Scheduling TCP check",
-			"address", address,
-			"timeout", delay,
-			"taskID", tcpTaskID,
-			"machine", staticMachine.Name,
-		)
-
 		type taskDataStr struct {
 			address string
 			delay   time.Duration
+		}
+
+		taskData := taskDataStr{
+			address: address,
+			delay:   delay,
 		}
 
 		taskFunc := func(tCtx context.Context, data any) error {
@@ -241,33 +218,24 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			tLogger.V(1).Info("Waiting for TCP connection for boostrap with timeout", "address", t.address, "timeout", t.delay.String())
 			conn, tErr := net.DialTimeout("tcp", t.address, t.delay)
 			if tErr != nil {
-				logger.Error(tErr, "Failed to connect to instance by TCP", "address", t.address)
+				tLogger.Error(tErr, "Failed to connect to instance by TCP", "address", t.address)
 				return fmt.Errorf("Failed to check the StaticInstance address by establishing a tcp connection: %w", tErr)
 			}
 
 			defer conn.Close()
 
-			tLogger.Info("TCP connection check completed successfully",
-				"address", address,
-				"machine", staticMachine.Name,
-				"elapsed", time.Since(start),
-			)
+			tLogger.Info("TCP connection check completed successfully", "address", t.address, "elapsed", time.Since(start))
 			return nil
 		}
 
-		taskData := taskDataStr{
-			address: address,
-			delay:   delay,
-		}
-
-		var finished bool
+		tcpTaskID := address
 		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
-		err, finished = c.taskManager.Spawn(taskCtx, tcpTaskID, "tcp-check", taskData, taskFunc)
+		logger.V(1).Info("Scheduling TCP check", "timeout", delay, "taskID", tcpTaskID)
+		err, finished := c.taskManager.Spawn(taskCtx, tcpTaskID, "tcp-check", taskData, taskFunc)
 		if err != nil {
 			if status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckTCPConnection); status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
 				c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
-
-				logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
+				logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection")
 
 				conditions.Set(staticInstance, metav1.Condition{
 					Type:               infrav1.StaticInstanceCheckTCPConnection,
@@ -281,12 +249,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		}
 
 		if !finished {
-			logger.V(1).Info("TCP check still running, requeueing",
-				"address", address,
-				"machine", staticMachine.Name,
-				"requeueAfter", delay,
-				"taskID", tcpTaskID,
-			)
+			logger.V(1).Info("TCP check still running, requeueing", "requeueAfter", delay)
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
@@ -311,6 +274,12 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			sshLegacyMode bool
 		}
 
+		taskData := taskDataStr{
+			address:       address,
+			credentials:   credentials,
+			sshLegacyMode: sshLegacyMode,
+		}
+
 		taskFunc := func(tCtx context.Context, data any) error {
 			start := time.Now()
 			tLogger := ctrl.LoggerFrom(tCtx)
@@ -321,51 +290,40 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			}
 
 			var sshCl ssh.SSH
-			var err error
+			var tErr error
 			if t.sshLegacyMode {
 				tLogger.V(1).Info("using clissh")
 				sshCl = clissh.CreateSSHClient(t.address, t.credentials)
 			} else {
 				tLogger.V(1).Info("using gossh")
-				sshCl, err = gossh.CreateSSHClient(t.address, t.credentials)
+				sshCl, tErr = gossh.CreateSSHClient(t.address, t.credentials)
 			}
-			if err != nil {
-				logger.Error(err, "Failed to connect via ssh")
-				return fmt.Errorf("failed to connect via ssh with address %s: %w", t.address, err)
+			if tErr != nil {
+				tLogger.Error(tErr, "Failed to connect via ssh")
+				return fmt.Errorf("failed to connect via ssh with address %s: %w", t.address, tErr)
 			}
-			res, err := sshCl.ExecSSHCommandToString("echo check_ssh")
-			if err != nil {
-				scanner := bufio.NewScanner(strings.NewReader(res))
+			tRes, tErr := sshCl.ExecSSHCommandToString("echo check_ssh")
+			if tErr != nil {
+				scanner := bufio.NewScanner(strings.NewReader(tRes))
 				for scanner.Scan() {
 					str := scanner.Text()
 					if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
-						err := errors.New(str)
-						return err
-
+						return errors.New(str)
 					}
 				}
-				return err
+				return tErr
 			}
 
-			tLogger.Info("SSH connectivity check completed", "address", address, "elapsed", time.Since(start))
+			tLogger.Info("SSH connectivity check completed", "address", t.address, "elapsed", time.Since(start))
 			return nil
 		}
 
-		taskData := taskDataStr{
-			address:       address,
-			credentials:   credentials,
-			sshLegacyMode: sshLegacyMode,
-		}
-
-		status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition)
-
-		var finished bool
 		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
-		err, finished = c.taskManager.Spawn(taskCtx, sshTaskID, "ssh-check", taskData, taskFunc)
+		err, finished := c.taskManager.Spawn(taskCtx, sshTaskID, "ssh-check", taskData, taskFunc)
 		if err != nil {
-			logger.Error(err, "Failed to connect via ssh to StaticInstance address", "address", address)
+			logger.Error(err, "Failed to connect via ssh to StaticInstance address")
 
-			if status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
+			if status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition); status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
 				c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceSshFailed", err.Error())
 				conditions.Set(staticInstance, metav1.Condition{
 					Type:               infrav1.StaticInstanceCheckSSHCondition,
@@ -380,11 +338,11 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		}
 
 		if !finished {
-			logger.V(1).Info("SSH check still running, requeueing", "address", address, "requeueAfter", delay)
+			logger.V(1).Info("SSH check still running, requeueing", "requeueAfter", delay)
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
-		if status == nil || status.Status != metav1.ConditionTrue {
+		if status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition); status == nil || status.Status != metav1.ConditionTrue {
 			conditions.Set(staticInstance, metav1.Condition{
 				Type:               infrav1.StaticInstanceCheckSSHCondition,
 				Status:             metav1.ConditionTrue,
