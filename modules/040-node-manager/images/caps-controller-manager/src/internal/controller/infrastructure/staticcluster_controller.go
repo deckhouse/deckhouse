@@ -58,9 +58,7 @@ type StaticClusterReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
-	ctx = ctrl.LoggerInto(ctx, logger)
-
-	logger.V(1).Info("Reconciling StaticCluster")
+	logger.Info("Reconciling StaticCluster")
 
 	staticCluster := &infrav1.StaticCluster{}
 	err := r.Get(ctx, req.NamespacedName, staticCluster)
@@ -77,7 +75,7 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to get owner Cluster: %w", err)
 	}
 	if cluster == nil {
-		logger.V(1).Info("Cluster Controller has not yet set OwnerRef. Won't reconcile")
+		logger.Info("Cluster Controller has not yet set OwnerRef. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
