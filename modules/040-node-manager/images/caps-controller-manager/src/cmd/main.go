@@ -151,7 +151,7 @@ func main() {
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		Config:     mgr.GetConfig(),
-		HostClient: client.NewClient(recorder),
+		HostClient: client.NewClient(recorder, mgr.GetClient()),
 		Recorder:   recorder,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "StaticMachine")
