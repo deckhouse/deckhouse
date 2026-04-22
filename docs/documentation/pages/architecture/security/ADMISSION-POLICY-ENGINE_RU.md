@@ -52,7 +52,7 @@ description: Архитектура модуля admission-policy-engine в Deck
    * **constraint-exporter** — сайдкар-контейнер, предоставляющий дополнительные метрики по кастомным ресурсам `constraints.gatekeeper.sh/*` и `mutations.gatekeeper.sh/*`;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам `manager` и `constraint-exporter`.
 
-1. **ratify** — состоит из одного контейнера [**ratify**](https://ratify.dev/docs/what-is-ratify) и представляет собой реализацию [Gatekeeper провайдера](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) для проверки метаданных используемых артефактов. В DKP этот провайдер применяется для проверки подписи образов контейнеров.
+1. **ratify** — опциональный компонент, состоит из одного контейнера [**ratify**](https://ratify.dev/docs/what-is-ratify) и представляет собой реализацию [Gatekeeper провайдера](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) для проверки метаданных используемых артефактов. В DKP этот провайдер применяется для проверки подписи образов контейнеров.
 
    Компонент ratify доступен в следующих редакциях DKP: SE+, EE, CSE Lite, CSE Pro.
 
