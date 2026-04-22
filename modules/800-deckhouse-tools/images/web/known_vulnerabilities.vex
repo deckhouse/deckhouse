@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 14,
+  "version": 16,
   "statements": [
     {
       "vulnerability": {
@@ -355,8 +355,116 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость github.com/docker/docker зафиксирована на версии v25.0.6 через replace-директиву в deckhouse-cli для обеспечения совместимости с цепочкой werf. d8 delivery-kit использует docker исключительно как клиентскую библиотеку Docker API, уязвимый функционал Docker Engine не входит в исполняемый путь.",
       "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {"@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp@v0.44.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Зависимость go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp приходит транзитивно через werf и github.com/docker/buildx/util/metricutil и используется исключительно для экспорта метрик BuildKit-бекенда. d8 delivery-kit по умолчанию использует стандартный Docker backend, путь с BuildKit-метриками не активируется, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32280"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.8"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8 в составе образа deckhouse-tools web: обработка внешних входных данных ограничена администраторскими сценариями, неограниченное потребление ресурсов не достигается. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32281"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.8"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-295 (Improper Certificate Validation) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8 в составе образа deckhouse-tools web: TLS-соединения устанавливаются только к эндпоинтам, доверие к которым (через CA-сертификаты, kubeconfig) устанавливается администратором, что исключает возможность эксплуатации уязвимости валидации сертификатов. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32282"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.8"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-59 (Improper Link Resolution Before File Access, symlink following) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8 в составе образа deckhouse-tools web: d8 не обрабатывает произвольные пути файловой системы от недоверенных пользователей - работает только с путями, указанными администратором. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32283"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.8"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8 в составе образа deckhouse-tools web: входные данные, приводящие к неограниченному потреблению ресурсов, не могут быть предоставлены недоверенной стороной - d8 запускается локально администратором. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32288"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.8"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-770 (Allocation of Resources Without Limits) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8 в составе образа deckhouse-tools web: поверхность атаки ограничена локальным запуском администратором, вектор подачи недоверенных данных в уязвимый путь отсутствует. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32289"
+      },
+      "products": [
+        {"@id": "pkg:golang/stdlib@v1.25.8"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CWE-79 (Cross-site Scripting) в Go stdlib v1.25.8 не эксплуатируема в бинарнике d8 в составе образа deckhouse-tools web: d8 - это CLI-инструмент, не рендерит HTML и не работает как веб-сервер, выводящий контент в браузер. XSS-уязвимости в стандартной библиотеке не достигаются в рамках исполнения d8. Бамп Go toolchain в d8-cli будет выполнен в рамках планового апгрейда.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-3xc5-wrhm-f963"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/go-git/go-git/v5@v5.16.2"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Уязвимость связана с обработкой вредоносных данных Git-репозитория (pack/index файлов), приводящей к некорректному поведению парсера. В типовой модели эксплуатации deckhouse-tools web источники Git-репозиториев определяются и контролируются администратором, что не предоставляет нарушителю возможности подменить входные данные и исключает достижимость уязвимого кода.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35469"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/spdystream@v0.5.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость в github.com/moby/spdystream v0.5.0 достигается исключительно через подкоманду d8 backup etcd, где spdystream приходит транзитивно из k8s.io/client-go/transport/spdy. Уязвимый код обрабатывает SPDY-фреймы от kube-apiserver, который в типовой модели эксплуатации является доверенным компонентом под управлением администратора кластера. Возможность подачи вредоносных SPDY-фреймов нарушителем исключена архитектурой взаимодействия d8 с Kubernetes API.",
+      "timestamp": "2026-04-22T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-04-17T12:00:00Z"
+  "last_updated": "2026-04-22T12:00:00Z"
 }
