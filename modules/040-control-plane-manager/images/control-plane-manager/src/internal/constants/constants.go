@@ -49,21 +49,6 @@ const (
 	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
 	PkiPath                             = "/pki"    // Mounted secret for d8-pki
 
-	// ControlPlaneNode Conditions
-	ConditionEtcdReady              = "EtcdReady"
-	ConditionAPIServerReady         = "APIServerReady"
-	ConditionControllerManagerReady = "ControllerManagerReady"
-	ConditionSchedulerReady         = "SchedulerReady"
-	ConditionCASynced               = "CASynced"
-
-	ReasonSynced               = "Synced"
-	ReasonOutOfSync            = "OutOfSync"
-	ReasonUpdating             = "Updating"
-	ReasonPendingUpdate        = "PendingUpdate"
-	ReasonUpdateFailed         = "UpdateFailed"
-	ReasonWaitingForComponents = "WaitingForComponents"
-	ReasonUnknown              = "Unknown"
-
 	// Built-in k8s label on static pods with the component name
 	StaticPodComponentLabelKey = "component"
 
@@ -95,14 +80,6 @@ const (
 	CertRenewalIDAnnotationKey       = "control-plane.deckhouse.io/cert-renewal-id"
 	KubeconfigRenewalIDAnnotationKey = "control-plane.deckhouse.io/kubeconfig-renewal-id"
 	CertRenewalThreshold             = 30 * 24 * time.Hour
-
-	// CertsRenewal - ControlPlaneNode condition
-	ConditionCertsRenewal = "CertsRenewal"
-	ReasonHealthy         = "Healthy"
-	ReasonCertExpiring    = "CertExpiring"
-	ReasonRenewing        = "Renewing"
-	ReasonRenewed         = "Renewed"
-	ReasonRenewalFailed   = "RenewalFailed"
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync

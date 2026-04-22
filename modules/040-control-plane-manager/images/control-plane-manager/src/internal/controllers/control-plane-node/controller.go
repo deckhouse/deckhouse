@@ -225,7 +225,7 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 	all := []componentState{
 		{
 			component:     controlplanev1alpha1.OperationComponentEtcd,
-			conditionType: constants.ConditionEtcdReady,
+			conditionType: controlplanev1alpha1.CPNConditionEtcdReady,
 			spec:          cpn.Spec.Components.Etcd.Checksums,
 			status:        cpn.Status.Components.Etcd.Checksums,
 			specCA:        cpn.Spec.CAChecksum,
@@ -233,7 +233,7 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 		},
 		{
 			component:     controlplanev1alpha1.OperationComponentKubeAPIServer,
-			conditionType: constants.ConditionAPIServerReady,
+			conditionType: controlplanev1alpha1.CPNConditionAPIServerReady,
 			spec:          cpn.Spec.Components.KubeAPIServer.Checksums,
 			status:        cpn.Status.Components.KubeAPIServer.Checksums,
 			specCA:        cpn.Spec.CAChecksum,
@@ -241,14 +241,14 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 		},
 		{
 			component:     controlplanev1alpha1.OperationComponentKubeControllerManager,
-			conditionType: constants.ConditionControllerManagerReady,
+			conditionType: controlplanev1alpha1.CPNConditionControllerManagerReady,
 			spec:          cpn.Spec.Components.KubeControllerManager.Checksums,
 			status:        cpn.Status.Components.KubeControllerManager.Checksums,
 			specCA:        cpn.Spec.CAChecksum,
 		},
 		{
 			component:     controlplanev1alpha1.OperationComponentKubeScheduler,
-			conditionType: constants.ConditionSchedulerReady,
+			conditionType: controlplanev1alpha1.CPNConditionSchedulerReady,
 			spec:          cpn.Spec.Components.KubeScheduler.Checksums,
 			status:        cpn.Status.Components.KubeScheduler.Checksums,
 			specCA:        cpn.Spec.CAChecksum,
@@ -268,18 +268,6 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 		result = append(result, s)
 	}
 	return result
-}
-
-// componentStatesByComponent builds an index for quick lookup of a component state by OperationComponent.
-// It is used in renewalCondition to match operations against current component spec/status checksums.
-func componentStatesByComponent(cpn *controlplanev1alpha1.ControlPlaneNode) map[controlplanev1alpha1.OperationComponent]componentState {
-	states := buildComponentStates(cpn)
-	index := make(map[controlplanev1alpha1.OperationComponent]componentState, len(states))
-	for i := range states {
-		state := states[i]
-		index[state.component] = state
-	}
-	return index
 }
 
 // componentStateInSync reports whether a component state is in sync with the desired spec/status checksums.
@@ -583,12 +571,6 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 	for i := range snapshots {
 		applyCertDatesAndTimestamp(cpn, snapshots[i].component, snapshots[i].state, snapshots[i].observedAt)
 	}
-	if len(snapshots) > 0 {
-		latestObservedAt := snapshots[len(snapshots)-1].observedAt
-		if cpn.Status.LastObservedAt == nil || cpn.Status.LastObservedAt.Time.Before(latestObservedAt.Time) {
-			cpn.Status.LastObservedAt = &latestObservedAt
-		}
-	}
 
 	// Derive global status.CAChecksum - set when ALL static pod components have per component CAChecksum matching spec.
 	if cpn.Spec.CAChecksum != "" && cpn.Status.CAChecksum != cpn.Spec.CAChecksum {
@@ -614,8 +596,8 @@ func (r *Reconciler) updateStatusFromOperations(ctx context.Context, cpn *contro
 	// CASynced condition - true when all static pods restarted with new CA.
 	meta.SetStatusCondition(&cpn.Status.Conditions, caSyncedCondition(cpn))
 
-	// CertsRenewal condition
-	meta.SetStatusCondition(&cpn.Status.Conditions, renewalCondition(cpn, ops))
+	// CertsHealthy condition
+	meta.SetStatusCondition(&cpn.Status.Conditions, certsHealthyCondition(cpn))
 
 	updatedStates := buildComponentStates(cpn)
 	if reflect.DeepEqual(original.Status, cpn.Status) {
@@ -714,14 +696,14 @@ func (r *Reconciler) conditionForState(
 			return metav1.Condition{
 				Type:               state.conditionType,
 				Status:             metav1.ConditionTrue,
-				Reason:             constants.ReasonSynced,
+				Reason:             controlplanev1alpha1.CPNReasonSynced,
 				ObservedGeneration: gen,
 			}
 		}
 		return metav1.Condition{
 			Type:               state.conditionType,
 			Status:             metav1.ConditionUnknown,
-			Reason:             constants.ReasonUnknown,
+			Reason:             controlplanev1alpha1.CPNReasonUnknown,
 			ObservedGeneration: gen,
 		}
 	}
@@ -730,7 +712,7 @@ func (r *Reconciler) conditionForState(
 		return metav1.Condition{
 			Type:               state.conditionType,
 			Status:             metav1.ConditionTrue,
-			Reason:             constants.ReasonSynced,
+			Reason:             controlplanev1alpha1.CPNReasonSynced,
 			ObservedGeneration: gen,
 		}
 	}
@@ -740,7 +722,7 @@ func (r *Reconciler) conditionForState(
 		return metav1.Condition{
 			Type:               state.conditionType,
 			Status:             metav1.ConditionFalse,
-			Reason:             constants.ReasonUpdateFailed,
+			Reason:             controlplanev1alpha1.CPNReasonUpdateFailed,
 			Message:            msg,
 			ObservedGeneration: gen,
 		}
@@ -750,7 +732,7 @@ func (r *Reconciler) conditionForState(
 		return metav1.Condition{
 			Type:               state.conditionType,
 			Status:             metav1.ConditionFalse,
-			Reason:             constants.ReasonUpdating,
+			Reason:             controlplanev1alpha1.CPNReasonUpdating,
 			Message:            fmt.Sprintf("operation %s in progress", op.Name),
 			ObservedGeneration: gen,
 		}
@@ -759,7 +741,7 @@ func (r *Reconciler) conditionForState(
 	return metav1.Condition{
 		Type:               state.conditionType,
 		Status:             metav1.ConditionFalse,
-		Reason:             constants.ReasonPendingUpdate,
+		Reason:             controlplanev1alpha1.CPNReasonPendingUpdate,
 		ObservedGeneration: gen,
 	}
 }
@@ -952,122 +934,79 @@ func caSyncedCondition(cpn *controlplanev1alpha1.ControlPlaneNode) metav1.Condit
 	gen := cpn.Generation
 	if cpn.Spec.CAChecksum == "" || cpn.Spec.CAChecksum == cpn.Status.CAChecksum {
 		return metav1.Condition{
-			Type:               constants.ConditionCASynced,
+			Type:               controlplanev1alpha1.CPNConditionCASynced,
 			Status:             metav1.ConditionTrue,
-			Reason:             constants.ReasonSynced,
+			Reason:             controlplanev1alpha1.CPNReasonSynced,
 			ObservedGeneration: gen,
 		}
 	}
 	return metav1.Condition{
-		Type:               constants.ConditionCASynced,
+		Type:               controlplanev1alpha1.CPNConditionCASynced,
 		Status:             metav1.ConditionFalse,
-		Reason:             constants.ReasonWaitingForComponents,
+		Reason:             controlplanev1alpha1.CPNReasonWaitingForComponents,
 		Message:            "waiting for all components to restart with new CA",
 		ObservedGeneration: gen,
 	}
 }
 
-// renewalCondition computes the CertsRenewal condition for CPN status.
-func renewalCondition(cpn *controlplanev1alpha1.ControlPlaneNode, ops []controlplanev1alpha1.ControlPlaneOperation) metav1.Condition {
+// certsHealthyCondition computes the CertsHealthy condition from per-component cert expiration data.
+func certsHealthyCondition(cpn *controlplanev1alpha1.ControlPlaneNode) metav1.Condition {
 	gen := cpn.Generation
-	statesByComponent := componentStatesByComponent(cpn)
-
-	var latest *controlplanev1alpha1.ControlPlaneOperation
-	for i := range ops {
-		op := &ops[i]
-		if !op.HasCommand(controlplanev1alpha1.CommandRenewPKICerts) {
-			continue
-		}
-		state, ok := statesByComponent[op.Spec.Component]
-		if !ok {
-			continue
-		}
-		if !matchesDesiredChecksums(op, state) {
-			continue
-		}
-		if !componentStateInSync(state) {
-			continue
-		}
-		if latest == nil || op.CreationTimestamp.After(latest.CreationTimestamp.Time) {
-			latest = op
+	states := buildComponentStates(cpn)
+	if len(states) == 0 {
+		return metav1.Condition{
+			Type:               controlplanev1alpha1.CPNConditionCertsHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             controlplanev1alpha1.CPNReasonUnknown,
+			Message:            "no components to evaluate",
+			ObservedGeneration: gen,
 		}
 	}
 
-	if latest == nil {
-		if msg := findExpiringCertsMessage(cpn); msg != "" {
+	expiringComponents := make([]string, 0, len(states))
+	for _, state := range states {
+		dates := certDatesForComponent(cpn, state.component)
+		if len(dates) == 0 {
 			return metav1.Condition{
-				Type:               constants.ConditionCertsRenewal,
-				Status:             metav1.ConditionFalse,
-				Reason:             constants.ReasonCertExpiring,
-				Message:            msg,
+				Type:               controlplanev1alpha1.CPNConditionCertsHealthy,
+				Status:             metav1.ConditionUnknown,
+				Reason:             controlplanev1alpha1.CPNReasonUnknown,
+				Message:            string(state.component),
 				ObservedGeneration: gen,
 			}
 		}
-		return metav1.Condition{
-			Type:               constants.ConditionCertsRenewal,
-			Status:             metav1.ConditionTrue,
-			Reason:             constants.ReasonHealthy,
-			ObservedGeneration: gen,
-		}
-	}
-
-	switch {
-	case latest.IsCompleted():
-		return metav1.Condition{
-			Type:               constants.ConditionCertsRenewal,
-			Status:             metav1.ConditionTrue,
-			Reason:             constants.ReasonRenewed,
-			Message:            "renewed by " + latest.Name,
-			ObservedGeneration: gen,
-		}
-	case latest.IsFailed():
-		return metav1.Condition{
-			Type:               constants.ConditionCertsRenewal,
-			Status:             metav1.ConditionFalse,
-			Reason:             constants.ReasonRenewalFailed,
-			Message:            latest.FailureMessage(),
-			ObservedGeneration: gen,
-		}
-	case latest.IsCancelled():
-		return metav1.Condition{
-			Type:               constants.ConditionCertsRenewal,
-			Status:             metav1.ConditionFalse,
-			Reason:             constants.ReasonCertExpiring,
-			Message:            latest.Name + " cancelled, waiting for next renewal",
-			ObservedGeneration: gen,
-		}
-	case latest.Spec.Approved:
-		return metav1.Condition{
-			Type:               constants.ConditionCertsRenewal,
-			Status:             metav1.ConditionFalse,
-			Reason:             constants.ReasonRenewing,
-			Message:            latest.Name + " in progress",
-			ObservedGeneration: gen,
-		}
-	default:
-		return metav1.Condition{
-			Type:               constants.ConditionCertsRenewal,
-			Status:             metav1.ConditionFalse,
-			Reason:             constants.ReasonCertExpiring,
-			Message:            latest.Name + " pending approval",
-			ObservedGeneration: gen,
-		}
-	}
-}
-
-// findExpiringCertsMessage checks all components for certs expiring within threshold.
-func findExpiringCertsMessage(cpn *controlplanev1alpha1.ControlPlaneNode) string {
-	for component := range controlplanev1alpha1.ComponentRegistry() {
-		dates := certDatesForComponent(cpn, component)
-		if len(dates) == 0 {
-			continue
-		}
 		minExpiry := minExpirationDate(dates)
-		if !minExpiry.IsZero() && time.Until(minExpiry) < constants.CertRenewalThreshold {
-			return fmt.Sprintf("%s cert expires at %s", component, minExpiry.Format(time.RFC3339))
+		if minExpiry.IsZero() {
+			return metav1.Condition{
+				Type:               controlplanev1alpha1.CPNConditionCertsHealthy,
+				Status:             metav1.ConditionUnknown,
+				Reason:             controlplanev1alpha1.CPNReasonUnknown,
+				Message:            string(state.component),
+				ObservedGeneration: gen,
+			}
+		}
+		if time.Until(minExpiry) < constants.CertRenewalThreshold {
+			expiringComponents = append(expiringComponents, string(state.component))
 		}
 	}
-	return ""
+
+	if len(expiringComponents) > 0 {
+		sort.Strings(expiringComponents)
+		return metav1.Condition{
+			Type:               controlplanev1alpha1.CPNConditionCertsHealthy,
+			Status:             metav1.ConditionFalse,
+			Reason:             controlplanev1alpha1.CPNReasonExpiredSoon,
+			Message:            strings.Join(expiringComponents, ", "),
+			ObservedGeneration: gen,
+		}
+	}
+
+	return metav1.Condition{
+		Type:               controlplanev1alpha1.CPNConditionCertsHealthy,
+		Status:             metav1.ConditionTrue,
+		Reason:             controlplanev1alpha1.CPNReasonHealthy,
+		ObservedGeneration: gen,
+	}
 }
 
 func isMaintenanceMode(cpn *controlplanev1alpha1.ControlPlaneNode) bool {

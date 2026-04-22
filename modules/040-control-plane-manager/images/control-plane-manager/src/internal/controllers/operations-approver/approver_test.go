@@ -90,6 +90,13 @@ func TestApprover_TryApprove_StageOrdering(t *testing.T) {
 		require.False(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 	})
 
+	t.Run("blocks apiserver on another node while etcd stage has reservation", func(t *testing.T) {
+		t.Parallel()
+		a := newApprover(nodeCounts{masters: 3}, nil)
+		require.True(t, a.tryApprove(newOperation("e1", "n1", controlplanev1alpha1.OperationComponentEtcd, false)))
+		require.False(t, a.tryApprove(newOperation("a1", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+	})
+
 	t.Run("allows apiserver when etcd stage is empty", func(t *testing.T) {
 		t.Parallel()
 		a := newApprover(nodeCounts{masters: 3}, nil)
@@ -101,6 +108,13 @@ func TestApprover_TryApprove_StageOrdering(t *testing.T) {
 		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 		require.False(t, a.tryApprove(newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
+	})
+
+	t.Run("allows kcm on another node while apiserver stage has reservation", func(t *testing.T) {
+		t.Parallel()
+		a := newApprover(nodeCounts{masters: 3}, nil)
+		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		require.True(t, a.tryApprove(newOperation("k1", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
 	})
 
 	t.Run("allows kcm and scheduler concurrently on same pipeline stage", func(t *testing.T) {

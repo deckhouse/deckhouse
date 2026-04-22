@@ -137,10 +137,6 @@ type ControlPlaneNodeStatus struct {
 	// +optional
 	Components ComponentsStatus `json:"components,omitempty"`
 
-	// LastObservedAt is the timestamp of the last completed Observe operation.
-	// +optional
-	LastObservedAt *metav1.Time `json:"lastObservedAt,omitempty"`
-
 	// +optional
 	// +listMapKey=type
 	// +listType=map

@@ -39,8 +39,8 @@ This mode is useful for manual node maintenance or administrative operations wit
 - `Completed`, or
 - has commit-point command completed (`SyncManifests` / `JoinEtcdCluster`)
 - apply cert dates from completed operations that include `CertObserve` command, in monotonic `observedAt` order
-- update per-component `status.components.<component>.lastObservedAt` (and keep root `status.lastObservedAt` as latest observed timestamp)
-- update component conditions, `CASynced`, `CertsRenewal`
+- update per-component `status.components.<component>.lastObservedAt`
+- update component conditions, `CASynced`, `CertsHealthy`
 4. Check for maintenance mode (label `maintenance`); if present, exit reconciliation (operations remain unchanged).
 5. Create missing drift CPOs for components where `spec != status`.
 6. Ensure cert-renewal CPO exists for components expiring within threshold (30 days):

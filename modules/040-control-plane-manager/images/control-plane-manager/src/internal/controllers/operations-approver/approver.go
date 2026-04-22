@@ -32,6 +32,7 @@ var approvePipeline = []pipelineStage{
 		components: []controlplanev1alpha1.OperationComponent{
 			controlplanev1alpha1.OperationComponentEtcd,
 		},
+		globalGate:         true,
 		concurrencyLimitFn: getConcurrencyLimit,
 	},
 	{
@@ -53,6 +54,7 @@ var approvePipeline = []pipelineStage{
 // This slice is the single source of truth for stage order, membership, and per-stage concurrency policy.
 type pipelineStage struct {
 	components         []controlplanev1alpha1.OperationComponent
+	globalGate         bool
 	concurrencyLimitFn func(nodes nodeCounts, c controlplanev1alpha1.OperationComponent) int
 }
 
@@ -74,6 +76,7 @@ type approver struct {
 
 type approveLink struct {
 	components map[controlplanev1alpha1.OperationComponent]*component
+	globalGate bool
 	nextLink   *approveLink
 }
 
@@ -145,7 +148,10 @@ func buildApproveChain(nodes nodeCounts) *approveLink {
 			}
 		}
 
-		links[i] = &approveLink{components: components}
+		links[i] = &approveLink{
+			components: components,
+			globalGate: stage.globalGate,
+		}
 		if i > 0 {
 			links[i-1].nextLink = links[i]
 		}
@@ -186,7 +192,11 @@ func (link *approveLink) tryReserveApproval(unapprovedOperation controlplanev1al
 	}
 
 	if !link.containsComponent(unapprovedOperation.Spec.Component) {
-		if link.hasAnyApprovedOperation() {
+		if link.globalGate {
+			if link.hasAnyApprovedOperation() {
+				return false
+			}
+		} else if link.hasAnyApprovedOperationOnNode(unapprovedOperation.Spec.NodeName) {
 			return false
 		}
 
@@ -220,6 +230,16 @@ func (link *approveLink) containsComponent(component controlplanev1alpha1.Operat
 func (link *approveLink) hasAnyApprovedOperation() bool {
 	for _, component := range link.components {
 		if component.approvedOperationsTotal > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (link *approveLink) hasAnyApprovedOperationOnNode(nodeName string) bool {
+	for _, component := range link.components {
+		if component.approvedOperationsPerNode[nodeName] > 0 {
 			return true
 		}
 	}

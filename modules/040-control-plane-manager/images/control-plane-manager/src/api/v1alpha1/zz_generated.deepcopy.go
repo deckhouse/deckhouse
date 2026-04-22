@@ -197,10 +197,6 @@ func (in *ControlPlaneNodeSpec) DeepCopy() *ControlPlaneNodeSpec {
 func (in *ControlPlaneNodeStatus) DeepCopyInto(out *ControlPlaneNodeStatus) {
 	*out = *in
 	in.Components.DeepCopyInto(&out.Components)
-	if in.LastObservedAt != nil {
-		in, out := &in.LastObservedAt, &out.LastObservedAt
-		*out = (*in).DeepCopy()
-	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
