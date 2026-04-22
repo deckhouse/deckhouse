@@ -165,3 +165,15 @@ Changes:
 - Implement metadata application logic in vcdmachine_controller after VM creation
 - Add convertMetadataType helper function to convert metadata types to VCD SDK types
 - Add DeepCopy methods for VCDMachineMetadata in generated code
+
+### 010-handle-dhcp-empty-ip.patch
+
+Files:
+
+- controllers/vcdmachine_controller.go
+
+Changes:
+
+- Handle `primaryNetwork.IPAddress == ""` in DHCP mode as a transient condition.
+- Requeue with delay and informational log while waiting for DHCP lease.
+- Keep existing strict behavior for non-DHCP allocation modes.
