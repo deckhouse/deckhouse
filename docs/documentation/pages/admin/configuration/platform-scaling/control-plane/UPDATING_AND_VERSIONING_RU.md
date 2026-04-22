@@ -100,19 +100,19 @@ data:
     automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
-    - name: mazin-master-1
+    - name: master-1
       phase: UpToDate
       components:
         kube-apiserver: "1.32"
         kube-controller-manager: "1.32"
         kube-scheduler: "1.32"
-    - name: mazin-master-2
+    - name: master-2
       phase: UpToDate
       components:
         kube-apiserver: "1.32"
         kube-controller-manager: "1.32"
         kube-scheduler: "1.32"
-    - name: mazin-master-0
+    - name: master-0
       phase: UpToDate
       components:
         kube-apiserver: "1.32"
@@ -164,19 +164,19 @@ data:
     phase: ControlPlaneUpdating
     progress: 0%
     controlPlane:
-    - name: mazin-master-0
+    - name: master-0
       phase: Updating
       components:
         kube-apiserver: "1.33"
         kube-controller-manager: "1.33"
         kube-scheduler: "1.33"
-    - name: mazin-master-1
+    - name: master-1
       phase: Updating
       components:
         kube-apiserver: "1.33"
         kube-controller-manager: "1.33"
         kube-scheduler: "1.33"
-    - name: mazin-master-2
+    - name: master-2
       phase: Updating
       components:
         kube-apiserver: "1.33"
@@ -228,19 +228,19 @@ data:
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
-    - name: mazin-master-0
+    - name: master-0
       phase: Updating
       components:
         kube-apiserver: "1.33"
         kube-controller-manager: "1.33"
         kube-scheduler: "1.33"
-    - name: mazin-master-1
+    - name: master-1
       phase: Updating
       components:
         kube-apiserver: "1.33"
         kube-controller-manager: "1.33"
         kube-scheduler: "1.33"
-    - name: mazin-master-2
+    - name: master-2
       phase: UpToDate
       components:
         kube-apiserver: "1.32"
@@ -292,19 +292,19 @@ data:
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
-    - name: mazin-master-0
+    - name: master-0
       phase: Updating
       components:
         kube-apiserver: "1.35"
         kube-controller-manager: "1.34"
         kube-scheduler: "1.34"
-    - name: mazin-master-1
+    - name: master-1
       phase: Updating
       components:
         kube-apiserver: "1.34"
         kube-controller-manager: "1.34"
         kube-scheduler: "1.34"
-    - name: mazin-master-2
+    - name: master-2
       phase: Updating
       components:
         kube-apiserver: "1.34"
@@ -353,13 +353,13 @@ data:
     automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
-    - name: mazin-master-0
+    - name: master-0
       phase: UpToDate
       components:
         kube-apiserver: "1.33"
         kube-controller-manager: "1.33"
         kube-scheduler: "1.33"
-    - name: mazin-master-1
+    - name: master-1
       phase: UpToDate
       components:
         kube-apiserver: "1.33"
@@ -412,19 +412,19 @@ data:
     phase: ControlPlaneUpdating
     progress: 73%
     controlPlane:
-    - name: mazin-master-1
+    - name: master-1
       phase: UpToDate
       components:
         kube-apiserver: "1.32"
         kube-controller-manager: "1.32"
         kube-scheduler: "1.32"
-    - name: mazin-master-2
+    - name: master-2
       phase: Updating
       components:
         kube-apiserver: "1.33"
         kube-controller-manager: "1.33"
         kube-scheduler: "1.33"
-    - name: mazin-master-0
+    - name: master-0
       phase: Failed
       components:
         kube-apiserver: "1.32"
