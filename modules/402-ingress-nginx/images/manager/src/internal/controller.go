@@ -18,14 +18,15 @@ package internal
 
 import (
 	"context"
+	"manager/src/internal/helper"
 	"os"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	v1 "manager/src/api/v1"
-	"manager/src/internal/helper"
 )
 
 type IngressNginxController struct {
@@ -68,6 +69,7 @@ func SetupController(manager ctrl.Manager, logger logr.Logger) {
 	err := ctrl.
 		NewControllerManagedBy(manager).
 		For(&v1.IngressNginxController{}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: 3}).
 		Complete(&IngressNginxController{
 			Client:    manager.GetClient(),
 			Pods:      helper.NewPodService(manager.GetClient()),
