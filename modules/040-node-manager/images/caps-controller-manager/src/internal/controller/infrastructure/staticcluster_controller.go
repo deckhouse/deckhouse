@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -87,7 +88,18 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcile(ctx, staticCluster)
 }
 
-func (r *StaticClusterReconciler) reconcile(ctx context.Context, staticCluster *infrav1.StaticCluster) (ctrl.Result, error) {
+func (r *StaticClusterReconciler) reconcile(ctx context.Context, staticCluster *infrav1.StaticCluster) (res ctrl.Result, resErr error) {
+	patchHelper, err := patch.NewHelper(staticCluster, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to init patch helper: %w", err)
+	}
+
+	defer func() {
+		if err := patchHelper.Patch(ctx, staticCluster); err != nil {
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticCluster: %w", err))
+		}
+	}()
+
 	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to parse api server host: %w", err)
@@ -103,16 +115,6 @@ func (r *StaticClusterReconciler) reconcile(ctx context.Context, staticCluster *
 		Port: int32(port),
 	}
 	staticCluster.Status.Initialization.Provisioned = ptr.To(true)
-
-	patchHelper, err := patch.NewHelper(staticCluster, r.Client)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to init patch helper: %w", err)
-	}
-
-	err = patchHelper.Patch(ctx, staticCluster)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to patch StaticCluster: %w", err)
-	}
 
 	return ctrl.Result{}, nil
 }
