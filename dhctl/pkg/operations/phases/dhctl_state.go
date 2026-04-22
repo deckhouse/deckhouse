@@ -15,7 +15,7 @@
 package phases
 
 import (
-	"strings"
+	// "strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
