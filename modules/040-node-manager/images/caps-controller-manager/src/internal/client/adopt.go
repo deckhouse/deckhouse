@@ -105,10 +105,10 @@ func (c *Client) adoptStaticInstance(ctx context.Context,
 		var sshCl ssh.SSH
 		var err error
 		if t.sshLegacyMode {
-			tLogger.V(1).Info("using clissh")
+			tLogger.Info("using clissh")
 			sshCl = clissh.CreateSSHClient(t.address, t.credentials)
 		} else {
-			tLogger.V(1).Info("using gossh")
+			tLogger.Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(t.address, t.credentials)
 		}
 
@@ -151,11 +151,11 @@ func (c *Client) adoptStaticInstance(ctx context.Context,
 
 	logger := ctrl.LoggerFrom(ctx)
 	if finished {
-		logger.V(1).Info("Adoption script executed successfully")
+		logger.Info("Adoption script executed successfully")
 		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "AdoptionScriptSucceeded", "Adoption script executed successfully")
 		return nil
 	}
 
-	logger.V(1).Info("Adopting is not finished yet, waiting...")
+	logger.Info("Adopting is not finished yet, waiting...")
 	return nil
 }

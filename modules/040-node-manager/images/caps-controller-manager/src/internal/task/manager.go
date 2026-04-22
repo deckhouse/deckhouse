@@ -59,11 +59,11 @@ func (m *Manager) Spawn(ctx context.Context, id, taskType string, data any, task
 
 		go func() {
 			log := ctrl.LoggerFrom(ctx)
-			log.V(1).Info("task started")
+			log.Info("task started")
 
 			res := task(ctx, data)
 
-			log.V(1).Info("task finished", "result", res)
+			log.Info("task finished", "result", res)
 
 			m.mu.Lock()
 			t.res = res
