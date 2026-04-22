@@ -24,9 +24,9 @@ type DhctlState map[string][]byte
 
 func ExtractDhctlState(stateCache state.Cache) (res DhctlState, err error) {
 	err = stateCache.Iterate(func(k string, v []byte) error {
-		if strings.HasPrefix(k, "preflight-") {
-			return nil
-		}
+		// if strings.HasPrefix(k, "preflight-") {
+		// 	return nil
+		// }
 		if res == nil {
 			res = make(map[string][]byte)
 		}
