@@ -55,7 +55,7 @@ The module consists of the following components:
 
    The ratify component is available in the following DKP editions: SE+, EE, CSE Lite, CSE Pro.
 
-   Gatekeeper uses `Provider` custom resource to extend resource verification and validation capabilities in Kubernetes. The `Provider` resource describes the service endpoint to which Gatekeeper sends requests during `ValidationWebhook` execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create `Provider` custom resources and thereby extend the verification capabilities.
+   Gatekeeper uses Provider custom resource to extend resource verification and validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.
 
 ## Module interactions
 
