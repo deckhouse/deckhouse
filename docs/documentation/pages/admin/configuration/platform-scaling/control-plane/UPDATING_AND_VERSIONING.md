@@ -57,7 +57,10 @@ The `d8-cluster-kubernetes` ConfigMap displays:
 - **Node progress**: How many nodes have been updated and the total count.
 - **Target and current version**: The desired version from configuration and the actual state during the update.
 - **Version mismatch**: If any components are running a version different from the target (including newer than desired).
-- **Version lists**: `supportedVersions` lists Kubernetes minor versions supported in the current Deckhouse release; `availableVersions` lists versions that can be selected for upgrade or downgrade in *this* cluster (the set is limited by the highest minor version ever installed on the cluster and by the rule that downgrade proceeds one minor at a time); `automaticVersion` is the minor version that will be used when the update mode is Automatic.
+- **Version lists**:
+  - `supportedVersions`: Lists minor Kubernetes versions supported in the current DKP release.
+  - `availableVersions`: Lists versions that can be selected for upgrade or downgrade in the *current* cluster. The set is limited by the highest minor version ever installed on the cluster and by the rule that downgrade proceeds one minor at a time.
+  - `automaticVersion`: Minor version that will be used when the update mode is `Automatic`.
 
 During `ControlPlaneUpdating`, `status.progress` reflects overall upgrade progress across intermediate minor versions. For a multi-hop upgrade (for example, 1.33 → 1.35), the percentage increases as each hop completes, not only when every control plane component reaches the final target.
 
