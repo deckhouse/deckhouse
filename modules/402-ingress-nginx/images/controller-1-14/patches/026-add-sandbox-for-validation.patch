@@ -1,32 +1,31 @@
 diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
-index d05307838..b45c0a589 100644
+index d05307838..feb30fc5e 100644
 --- a/internal/ingress/controller/nginx.go
 +++ b/internal/ingress/controller/nginx.go
-@@ -70,8 +70,11 @@ import (
+@@ -70,8 +70,10 @@ import (
  )
  
  const (
 -	tempNginxPattern = "nginx-cfg"
 -	emptyUID         = "-1"
 +	tempNginxPattern      = "nginx-cfg"
-+	validationTmpDir      = "/chroot/validation-chroot/tmp/nginx"
 +	nginxValidationTmpDir = "/validation-chroot/tmp/nginx"
 +	validationModeEnv     = "VALIDATION_SANDBOX_MODE"
 +	emptyUID              = "-1"
  )
  
  // NewNGINXController creates a new NGINX Ingress controller.
-@@ -650,7 +653,8 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+@@ -650,7 +652,8 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
  	if len(cfg) == 0 {
  		return fmt.Errorf("invalid NGINX configuration (empty)")
  	}
 -	tmpfile, err := os.CreateTemp(filepath.Join(os.TempDir(), "nginx"), tempNginxPattern)
-+	tmpDir := validationTmpDir
++	tmpDir := nginxValidationTmpDir
 +	tmpfile, err := os.CreateTemp(tmpDir, tempNginxPattern)
  	if err != nil {
  		return err
  	}
-@@ -659,7 +663,12 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
+@@ -659,7 +662,12 @@ func (n *NGINXController) testTemplate(cfg []byte) error {
  	if err != nil {
  		return err
  	}
@@ -40,12 +39,12 @@ index d05307838..b45c0a589 100644
  	if err != nil {
  		// this error is different from the rest because it must be clear why nginx is not working
  		oe := fmt.Sprintf(`
-@@ -1133,11 +1142,12 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
+@@ -1133,11 +1141,12 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
  func cleanTempNginxCfg() error {
  	var files []string
  
 -	err := filepath.Walk(filepath.Join(os.TempDir(), "nginx"), func(path string, info os.FileInfo, err error) error {
-+	tempDir := validationTmpDir
++	tempDir := nginxValidationTmpDir
 +	err := filepath.Walk(tempDir, func(path string, info os.FileInfo, err error) error {
  		if err != nil {
  			return err
@@ -56,7 +55,7 @@ index d05307838..b45c0a589 100644
  		}
  
 diff --git a/internal/ingress/controller/util.go b/internal/ingress/controller/util.go
-index 776440658..e9f2d0924 100644
+index 776440658..fd74a8133 100644
 --- a/internal/ingress/controller/util.go
 +++ b/internal/ingress/controller/util.go
 @@ -98,9 +98,10 @@ func rlimitMaxNumFiles() int {
@@ -103,7 +102,7 @@ index 776440658..e9f2d0924 100644
 +		//nolint:gosec // Ignore G204 error
 +		return exec.Command(nc.SandboxBinary, sandboxArgs...).CombinedOutput()
 +	case "Standard":
-+		standardArgs := append([]string{"-S", "64535", "-R", "/chroot/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
++		standardArgs := append([]string{"-S", "64535", "-R", "/validation-chroot", "/usr/local/nginx/sbin/nginx"}, cmdArgs...)
 +		//nolint:gosec // Ignore G204 error
 +		return exec.Command("/usr/bin/unshare", standardArgs...).CombinedOutput()
 +	}

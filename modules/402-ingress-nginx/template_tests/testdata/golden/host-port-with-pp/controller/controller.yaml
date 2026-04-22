@@ -152,8 +152,15 @@ spec:
         volumeMounts:
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
+          readOnly: true
         - mountPath: /chroot/etc/ingress-controller
           name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
         - mountPath: /chroot/tmp
           name: tmp
         - mountPath: /chroot/var/lib/nginx
@@ -249,8 +256,8 @@ spec:
         - -ec
         - |
           mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
-            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
-            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi \
+            /chroot/etc/ingress-controller/ssl /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
             /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
             /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
             /chroot/tmp/nginx

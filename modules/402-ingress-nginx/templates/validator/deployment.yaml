@@ -77,12 +77,16 @@ spec:
         name: init
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         volumeMounts:
+        {{- if $validationSandboxEnabled }}
+        - mountPath: /etc/ingress-controller
+        {{- else }}
         - mountPath: /chroot/etc/ingress-controller
+        {{- end }}
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp
         {{- if $validationSandboxEnabled }}
-        - mountPath: /chroot/validation-chroot/tmp
+        - mountPath: /validation-chroot/tmp
           name: validation-tmp
         {{- end }}
         - mountPath: /chroot/var/lib/nginx
@@ -94,15 +98,24 @@ spec:
         - -ec
         - |
           mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
-            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
-            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx /chroot/etc/ingress-controller/resolv \
-            /chroot/etc/ingress-controller/geoip /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi \
         {{- if $validationSandboxEnabled }}
-            /chroot/validation-chroot/tmp/nginx \
+            /etc/ingress-controller/ssl /etc/ingress-controller/lua /etc/ingress-controller/nginx \
+            /etc/ingress-controller/resolv /etc/ingress-controller/geoip \
+            /etc/ingress-controller/auth /etc/ingress-controller/telemetry \
+            /validation-chroot/tmp/nginx \
+        {{- else }}
+            /chroot/etc/ingress-controller/ssl /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
+            /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
+            /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
         {{- end }}
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
+        {{- if $validationSandboxEnabled }}
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /etc/ingress-controller/nginx/nginx.conf
+        {{- else }}
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -216,30 +229,35 @@ spec:
             protocol: TCP
         volumeMounts:
         {{- if $validationSandboxEnabled }}
-          - mountPath: /chroot/validation-chroot/etc/nginx/ssl/
-            name: secret-nginx-auth-tls
-          - mountPath: /chroot/validation-chroot/tmp
-            name: validation-tmp
-          - mountPath: /chroot/validation-chroot/etc/ingress-controller
-            name: etc-ingress-controller
-          - name: webhook-cert
-            mountPath: /chroot/validation-chroot/etc/nginx/webhook-ssl/
-            readOnly: true
-          {{- else }}
-          - mountPath: /chroot/etc/nginx/ssl/
-            name: secret-nginx-auth-tls
-          - mountPath: /chroot/etc/ingress-controller
-            name: etc-ingress-controller
-          - name: webhook-cert
-            mountPath: /chroot/etc/nginx/webhook-ssl/
-            readOnly: true
-          {{- end }}
-          - mountPath: /chroot/tmp
-            name: tmp
-          - mountPath: /chroot/var/lib/nginx
-            name: var-lib-nginx
-          - mountPath: /chroot/var/log/nginx
-            name: var-log-nginx
+        - mountPath: /validation-chroot/tmp
+          name: validation-tmp
+        - mountPath: /validation-chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /validation-chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        {{- end }}
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - name: webhook-cert
+          mountPath: /chroot/etc/nginx/webhook-ssl/
+          readOnly: true
+        - mountPath: /chroot/tmp
+          name: tmp
+        - mountPath: /chroot/var/lib/nginx
+          name: var-lib-nginx
+        - mountPath: /chroot/var/log/nginx
+          name: var-log-nginx
       volumes:
         - name: tmp
           emptyDir: {}
