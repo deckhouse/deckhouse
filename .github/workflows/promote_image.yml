@@ -253,7 +253,7 @@ jobs:
                 SRC_ATT="${STAGE_OSS}:sha256-${D_HEX}.att"
                 DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
                 if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' => '${DST_ATT}'"
                   regctl image copy "${SRC_ATT}" "${DST_ATT}"
                 fi
               done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
@@ -290,14 +290,6 @@ jobs:
                 DST="${REPO_DST}:${IMAGE_TAG}"
                 echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
                 regctl image copy "${SRC}" "${DST}"
-                local DIGEST
-                DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
-                if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-                  regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
-                else
-                  echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
-                fi
               }
 
               promote_with_att ""
@@ -484,7 +476,7 @@ jobs:
                 SRC_ATT="${STAGE_OSS}:sha256-${D_HEX}.att"
                 DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
                 if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' => '${DST_ATT}'"
                   regctl image copy "${SRC_ATT}" "${DST_ATT}"
                 fi
               done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
@@ -521,14 +513,6 @@ jobs:
                 DST="${REPO_DST}:${IMAGE_TAG}"
                 echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
                 regctl image copy "${SRC}" "${DST}"
-                local DIGEST
-                DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
-                if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-                  regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
-                else
-                  echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
-                fi
               }
 
               promote_with_att ""
@@ -715,7 +699,7 @@ jobs:
                 SRC_ATT="${STAGE_OSS}:sha256-${D_HEX}.att"
                 DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
                 if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' => '${DST_ATT}'"
                   regctl image copy "${SRC_ATT}" "${DST_ATT}"
                 fi
               done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
@@ -752,14 +736,6 @@ jobs:
                 DST="${REPO_DST}:${IMAGE_TAG}"
                 echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
                 regctl image copy "${SRC}" "${DST}"
-                local DIGEST
-                DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
-                if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-                  regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
-                else
-                  echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
-                fi
               }
 
               promote_with_att ""
@@ -946,7 +922,7 @@ jobs:
                 SRC_ATT="${STAGE_OSS}:sha256-${D_HEX}.att"
                 DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
                 if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' => '${DST_ATT}'"
                   regctl image copy "${SRC_ATT}" "${DST_ATT}"
                 fi
               done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
@@ -983,14 +959,6 @@ jobs:
                 DST="${REPO_DST}:${IMAGE_TAG}"
                 echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
                 regctl image copy "${SRC}" "${DST}"
-                local DIGEST
-                DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
-                if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-                  regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
-                else
-                  echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
-                fi
               }
 
               promote_with_att ""
@@ -1177,7 +1145,7 @@ jobs:
                 SRC_ATT="${STAGE_OSS}:sha256-${D_HEX}.att"
                 DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
                 if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' => '${DST_ATT}'"
                   regctl image copy "${SRC_ATT}" "${DST_ATT}"
                 fi
               done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
@@ -1214,14 +1182,6 @@ jobs:
                 DST="${REPO_DST}:${IMAGE_TAG}"
                 echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
                 regctl image copy "${SRC}" "${DST}"
-                local DIGEST
-                DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
-                if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-                  regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
-                else
-                  echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
-                fi
               }
 
               promote_with_att ""
@@ -1408,7 +1368,7 @@ jobs:
                 SRC_ATT="${STAGE_OSS}:sha256-${D_HEX}.att"
                 DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
                 if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+                  echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' => '${DST_ATT}'"
                   regctl image copy "${SRC_ATT}" "${DST_ATT}"
                 fi
               done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
@@ -1445,14 +1405,6 @@ jobs:
                 DST="${REPO_DST}:${IMAGE_TAG}"
                 echo "⚓️ 💫 [$(date -u)] Promoting '${SRC}' => '${DST}'"
                 regctl image copy "${SRC}" "${DST}"
-                local DIGEST
-                DIGEST=$(regctl image digest "${SRC}" | sed 's/^sha256://')
-                if regctl image manifest "${REPO_SRC}:sha256-${DIGEST}.att" >/dev/null 2>&1; then
-                  echo "⚓️ 💫 [$(date -u)] Copying attestation for '${REPO_SRC}'"
-                  regctl image copy "${REPO_SRC}:sha256-${DIGEST}.att" "${REPO_DST}:sha256-${DIGEST}.att"
-                else
-                  echo "⚓️ 💫 [$(date -u)] Attestation for '${REPO_SRC}' not found, skipping..."
-                fi
               }
 
               promote_with_att ""
