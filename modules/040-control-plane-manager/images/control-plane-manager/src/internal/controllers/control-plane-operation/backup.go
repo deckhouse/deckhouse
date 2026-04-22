@@ -81,7 +81,7 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 }
 
 // backupFilesForComponent returns the list of absolute file paths that should be backup.
-// Static pod manifest, leaf certs, CA, kubeconfigs, extra files, hot-reload files.
+// Static pod manifest, leaf certs, CA, kubeconfigs, extra files.
 func backupFilesForComponent(component controlplanev1alpha1.OperationComponent, kubeconfigDir string) []string {
 	deps := componentDeps(component)
 	var files []string

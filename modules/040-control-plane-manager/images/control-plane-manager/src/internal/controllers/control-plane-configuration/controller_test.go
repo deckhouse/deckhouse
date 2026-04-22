@@ -126,7 +126,6 @@ func (suite *ControllerTestSuite) TestReconcileCreatesControlPlaneNode() {
 		cpn := suite.getControlPlaneNode()
 
 		require.NotEmpty(suite.T(), cpn.Spec.CAChecksum, "CAChecksum should not be empty")
-		require.NotEmpty(suite.T(), cpn.Spec.HotReloadChecksum, "HotReloadChecksum should not be empty")
 		require.Equal(suite.T(), constants.HeritageLabelValue, cpn.Labels[constants.HeritageLabelKey], "ControlPlaneNode should have heritage label")
 
 		require.NotNil(suite.T(), cpn.Spec.Components.Etcd, "Etcd should not be nil")

@@ -127,22 +127,6 @@ func (suite *ControllerTestSuite) TestPartialControlPlaneNode() {
 	})
 }
 
-// TestHotReloadOutdatedControlPlaneNode verifies that when only HotReload checksum is outdated,
-// ControlPlaneOperation is created for HotReload with desiredChecksum set to the hot-reload checksum.
-func (suite *ControllerTestSuite) TestHotReloadOutdatedControlPlaneNode() {
-	suite.Run("when only HotReload checksum is outdated, create operation with desiredChecksum", func() {
-		suite.setupController(suite.fetchTestFileData("hotreload-outdated-control-plane-node.yaml"))
-		suite.reconcile()
-
-		operations := suite.getControlPlaneOperations()
-		expected := suite.loadGoldenOperations("hotreload-outdated-control-plane-operations.yaml")
-
-		require.Len(suite.T(), operations, len(expected),
-			"number of created operations should match golden file")
-		suite.compareOperations(operations, expected)
-	})
-}
-
 // TestPKIOnlyOutdatedControlPlaneNode verifies that when only etcd pkiChecksum is outdated
 // (configChecksum already matches), a single UpdatePKI operation is created for etcd.
 func (suite *ControllerTestSuite) TestPKIOnlyOutdatedControlPlaneNode() {

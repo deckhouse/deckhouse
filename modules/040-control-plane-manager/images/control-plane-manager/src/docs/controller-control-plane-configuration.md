@@ -27,7 +27,6 @@ Build and keep `ControlPlaneNode.spec` in sync with:
 4. Build desired `ControlPlaneNode.spec`:
 - `spec.caChecksum` from `d8-pki`
 - per-component `config` and `pki` checksums from config secret
-- `hotReloadChecksum` for non-arbiter nodes
 5. Create `ControlPlaneNode` if absent.
 6. Patch `ControlPlaneNode.spec` only when it differs.
 
@@ -39,7 +38,7 @@ All checksums are `SHA256` hex over concatenated secret values in deterministic 
 - source: `d8-control-plane-manager-config`
 - key set per component (missing keys are skipped):
 - `etcd`: `etcd.yaml.tpl`
-- `kube-apiserver`: `kube-apiserver.yaml.tpl`, `extra-file-admission-control-config.yaml`, `extra-file-audit-policy.yaml`, `extra-file-authn-webhook-config.yaml`, `extra-file-event-rate-limit-config.yaml`, `extra-file-oidc-ca.crt`, `extra-file-secret-encryption-config.yaml`, `extra-file-webhook-config.yaml`
+- `kube-apiserver`: `kube-apiserver.yaml.tpl`, `extra-file-admission-control-config.yaml`, `extra-file-audit-policy.yaml`, `extra-file-authentication-config.yaml`, `extra-file-authn-webhook-config.yaml`, `extra-file-authorization-config.yaml`, `extra-file-event-rate-limit-config.yaml`, `extra-file-oidc-ca.crt`, `extra-file-secret-encryption-config.yaml`, `extra-file-webhook-config.yaml`
 - `kube-controller-manager`: `kube-controller-manager.yaml.tpl`
 - `kube-scheduler`: `kube-scheduler.yaml.tpl`, `extra-file-scheduler-config.yaml`
 
@@ -53,10 +52,6 @@ All checksums are `SHA256` hex over concatenated secret values in deterministic 
 - source: `d8-pki`
 - key set: all keys from secret
 - hash input uses key values only (keys are used only for deterministic ordering)
-
-- `spec.hotReloadChecksum` (non-arbiter only):
-- source: `d8-control-plane-manager-config`
-- keys: `extra-file-authentication-config.yaml`, `extra-file-authorization-config.yaml`
 
 ## Logic Basis
 

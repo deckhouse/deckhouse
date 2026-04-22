@@ -138,8 +138,7 @@ func (r *Reconciler) executeCommand(ctx context.Context, state *controlplanev1al
 func isCommitPointCommand(name controlplanev1alpha1.CommandName) bool {
 	switch name {
 	case controlplanev1alpha1.CommandSyncManifests,
-		controlplanev1alpha1.CommandJoinEtcdCluster,
-		controlplanev1alpha1.CommandSyncHotReload:
+		controlplanev1alpha1.CommandJoinEtcdCluster:
 		return true
 	default:
 		return false

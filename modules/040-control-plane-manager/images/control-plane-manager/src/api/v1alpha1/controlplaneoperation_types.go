@@ -21,7 +21,7 @@ import (
 )
 
 // CommandName defines a single unit of work in the operation pipeline.
-// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;SyncHotReload;CertObserve
+// +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;CertObserve
 type CommandName string
 
 const (
@@ -32,12 +32,11 @@ const (
 	CommandSyncManifests    CommandName = "SyncManifests"
 	CommandJoinEtcdCluster  CommandName = "JoinEtcdCluster"
 	CommandWaitPodReady     CommandName = "WaitPodReady"
-	CommandSyncHotReload    CommandName = "SyncHotReload"
 	CommandCertObserve      CommandName = "CertObserve"
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
-// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;HotReload;CertObserver
+// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;CertObserver
 type OperationComponent string
 
 const (
@@ -45,7 +44,6 @@ const (
 	OperationComponentKubeAPIServer         OperationComponent = "KubeAPIServer"
 	OperationComponentKubeControllerManager OperationComponent = "KubeControllerManager"
 	OperationComponentKubeScheduler         OperationComponent = "KubeScheduler"
-	OperationComponentHotReload             OperationComponent = "HotReload"
 	OperationComponentCertObserver          OperationComponent = "CertObserver"
 )
 
@@ -67,7 +65,7 @@ func init() {
 }
 
 // PodComponentName returns the static pod component name used as pod label "component" in kube-system ns.
-// Returns "" for non-static-pod components - HotReload, CertObserver
+// Returns "" for non-static-pod components (for example CertObserver).
 func (c OperationComponent) PodComponentName() string {
 	return componentRegistry[c]
 }

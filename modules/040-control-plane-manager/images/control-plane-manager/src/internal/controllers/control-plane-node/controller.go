@@ -253,12 +253,6 @@ func buildComponentStates(cpn *controlplanev1alpha1.ControlPlaneNode) []componen
 			status:        cpn.Status.Components.KubeScheduler.Checksums,
 			specCA:        cpn.Spec.CAChecksum,
 		},
-		{
-			component:     controlplanev1alpha1.OperationComponentHotReload,
-			conditionType: constants.ConditionHotReloadSynced,
-			spec:          controlplanev1alpha1.Checksums{Config: cpn.Spec.HotReloadChecksum},
-			status:        controlplanev1alpha1.Checksums{Config: cpn.Status.HotReloadChecksum},
-		},
 	}
 
 	// Filter components with empty spec checksums (etcd-arbiter nodes only have Etcd + CA)
@@ -435,11 +429,6 @@ func findLatestAppliedOperationForComponent(ops []controlplanev1alpha1.ControlPl
 // determineCommands returns the list of commands to execute based on what changed and the component type.
 func determineCommands(state componentState, pkiChanged, caChanged bool) []controlplanev1alpha1.CommandName {
 	switch state.component {
-	case controlplanev1alpha1.OperationComponentHotReload:
-		return []controlplanev1alpha1.CommandName{
-			controlplanev1alpha1.CommandBackup,
-			controlplanev1alpha1.CommandSyncHotReload,
-		}
 	case controlplanev1alpha1.OperationComponentEtcd:
 		// Etcd has no kubeconfigs (admin.conf is handled by ensureAdminKubeconfig inside JoinEtcdCluster).
 		commands := []controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandBackup}
@@ -472,7 +461,6 @@ func determineCommands(state componentState, pkiChanged, caChanged bool) []contr
 			)
 		}
 		commands = append(commands,
-			controlplanev1alpha1.CommandSyncHotReload,
 			controlplanev1alpha1.CommandSyncManifests,
 			controlplanev1alpha1.CommandWaitPodReady,
 			controlplanev1alpha1.CommandCertObserve,
@@ -701,7 +689,6 @@ func findActiveOperation(ops []controlplanev1alpha1.ControlPlaneOperation, match
 // hasCommitPoint returns true if the operation has completed a command that writes to disk
 func hasCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) bool {
 	return op.IsCommandCompleted(controlplanev1alpha1.CommandSyncManifests) ||
-		op.IsCommandCompleted(controlplanev1alpha1.CommandSyncHotReload) ||
 		op.IsCommandCompleted(controlplanev1alpha1.CommandJoinEtcdCluster)
 }
 
@@ -780,12 +767,6 @@ func (r *Reconciler) conditionForState(
 // applyOperationResult updates CPN status checksums based on a completed operation.
 // All non-empty desired checksums are applied - no need to switch on command type.
 func applyOperationResult(cpn *controlplanev1alpha1.ControlPlaneNode, op *controlplanev1alpha1.ControlPlaneOperation) {
-	if op.Spec.Component == controlplanev1alpha1.OperationComponentHotReload {
-		if op.Spec.DesiredConfigChecksum != "" {
-			cpn.Status.HotReloadChecksum = op.Spec.DesiredConfigChecksum
-		}
-		return
-	}
 	compStatus := cpn.Status.Components.Component(op.Spec.Component)
 	if compStatus == nil {
 		return

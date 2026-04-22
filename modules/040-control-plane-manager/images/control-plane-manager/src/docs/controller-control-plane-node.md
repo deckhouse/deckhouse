@@ -37,7 +37,7 @@ This mode is useful for manual node maintenance or administrative operations wit
 - active (non-terminal) -> completed -> other terminal
 - apply checksums from latest terminal operation that is either:
 - `Completed`, or
-- has commit-point command completed (`SyncManifests` / `JoinEtcdCluster` / `SyncHotReload`)
+- has commit-point command completed (`SyncManifests` / `JoinEtcdCluster`)
 - apply cert dates from completed operations that include `CertObserve` command, in monotonic `observedAt` order
 - update per-component `status.components.<component>.lastObservedAt` (and keep root `status.lastObservedAt` as latest observed timestamp)
 - update component conditions, `CASynced`, `CertsRenewal`

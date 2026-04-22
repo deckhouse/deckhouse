@@ -139,9 +139,6 @@ func desiredChecksumsForComponent(component controlplanev1alpha1.OperationCompon
 	pkiSecretData := testPKISecret().Data
 
 	switch component {
-	case controlplanev1alpha1.OperationComponentHotReload:
-		configChecksum := checksum.HotReloadChecksum(cpmSecretData)
-		return configChecksum, "", ""
 	case controlplanev1alpha1.OperationComponentCertObserver:
 		return "", "", ""
 	default:
@@ -474,8 +471,8 @@ func (s *ControllerTestSuite) TestPipelineRequeueStopsPipeline() {
 func (s *ControllerTestSuite) TestPipelineSingleCommand() {
 	s.Run("single command pipeline completes successfully", func() {
 		var calls []execCall
-		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentHotReload,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncHotReload),
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
+			newMockOK(&calls, controlplanev1alpha1.CommandWaitPodReady),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -484,8 +481,8 @@ func (s *ControllerTestSuite) TestPipelineSingleCommand() {
 		require.Equal(s.T(), reconcile.Result{}, result)
 
 		require.Len(s.T(), calls, 1)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncHotReload, calls[0].name)
-		require.Equal(s.T(), controlplanev1alpha1.OperationComponentHotReload, calls[0].component)
+		require.Equal(s.T(), controlplanev1alpha1.CommandWaitPodReady, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.OperationComponentKubeScheduler, calls[0].component)
 
 		got := s.getOp(r, "test-op")
 		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)

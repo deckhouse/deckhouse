@@ -21,7 +21,6 @@ spec:
       checksums:
         config: 32be066aa1c8ed3c381fc63fa39caa5a0111d5b30b73b2fbe5259759422db198
   configVersion: "999.999"
-  hotReloadChecksum: c52c86b6d6f63444de3b3cf5051a3ccf29f0574aade9c41f0ad168d10d82cddb
   caChecksum: b69a6eefae92af11da29871fc3c214e1482f5dce2851a98b4cb79a50d7b54558
 status:
   components:
@@ -47,6 +46,5 @@ status:
         config: 32be066aa1c8ed3c381fc63fa39caa5a0111d5b30b73b2fbe5259759422db198
         ca: b69a6eefae92af11da29871fc3c214e1482f5dce2851a98b4cb79a50d7b54558
       lastObservedAt: "2099-01-01T00:00:00Z"
-  hotReloadChecksum: c52c86b6d6f63444de3b3cf5051a3ccf29f0574aade9c41f0ad168d10d82cddb
   caChecksum: b69a6eefae92af11da29871fc3c214e1482f5dce2851a98b4cb79a50d7b54558
   lastObservedAt: "2099-01-01T00:00:00Z"

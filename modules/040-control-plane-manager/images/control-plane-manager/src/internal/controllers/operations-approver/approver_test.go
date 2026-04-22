@@ -131,16 +131,6 @@ func TestApprover_TryApprove_WorkloadConcurrencyAndPerNode(t *testing.T) {
 	})
 }
 
-func TestApprover_TryApprove_OutOfChainComponents(t *testing.T) {
-	t.Parallel()
-
-	t.Run("HotReload is not approvable via default chain", func(t *testing.T) {
-		t.Parallel()
-		a := newApprover(nodeCounts{masters: 3}, nil)
-		require.False(t, a.tryApprove(newOperation("hr1", "n1", controlplanev1alpha1.OperationComponentHotReload, false)))
-	})
-}
-
 func TestNewApprover_PartitionAndOrder(t *testing.T) {
 	t.Parallel()
 

@@ -149,9 +149,6 @@ spec:
                         type: object
                     type: object
                 type: object
-              hotReloadChecksum:
-                description: For reload mechanisms (e.g. in-place reload)
-                type: string
             type: object
           status:
             properties:
@@ -365,8 +362,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              hotReloadChecksum:
-                type: string
               lastObservedAt:
                 description: LastObservedAt is the timestamp of the last completed
                   Observe operation.

@@ -32,6 +32,8 @@ var componentChecksumDeps = map[string]componentFieldMap{
 			"extra-file-admission-control-config.yaml",
 			"extra-file-audit-policy.yaml",
 			"extra-file-authn-webhook-config.yaml",
+			"extra-file-authorization-config.yaml",
+			"extra-file-authentication-config.yaml",
 			"extra-file-event-rate-limit-config.yaml",
 			"extra-file-oidc-ca.crt",
 			"extra-file-secret-encryption-config.yaml",
@@ -63,11 +65,6 @@ var componentChecksumDeps = map[string]componentFieldMap{
 		},
 		pkiChecksumDependsOn: nil,
 	},
-}
-
-var HotReloadChecksumDependsOn = []string{
-	"extra-file-authentication-config.yaml",
-	"extra-file-authorization-config.yaml",
 }
 
 type componentFieldMap struct {
@@ -149,10 +146,6 @@ func collectDependencyData(secretData map[string][]byte, component string) ([]st
 // Keys names are ignored for the checksum calculation.
 func PKIChecksum(pkiSecretData map[string][]byte) (string, error) {
 	return hashKeys(pkiSecretData, sortedKeysFromMap(pkiSecretData)), nil
-}
-
-func HotReloadChecksum(secretData map[string][]byte) string {
-	return hashKeys(secretData, sortedKeysFromSlice(HotReloadChecksumDependsOn, secretData))
 }
 
 // ComponentPKIChecksum calculates the pkiChecksum for a component based on certSANs and encryption-algorithm keys.

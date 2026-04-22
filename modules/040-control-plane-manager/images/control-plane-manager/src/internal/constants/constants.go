@@ -55,7 +55,6 @@ const (
 	ConditionControllerManagerReady = "ControllerManagerReady"
 	ConditionSchedulerReady         = "SchedulerReady"
 	ConditionCASynced               = "CASynced"
-	ConditionHotReloadSynced        = "HotReloadSynced"
 
 	ReasonSynced               = "Synced"
 	ReasonOutOfSync            = "OutOfSync"

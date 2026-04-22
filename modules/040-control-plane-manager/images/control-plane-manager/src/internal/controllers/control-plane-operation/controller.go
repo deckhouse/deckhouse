@@ -18,12 +18,8 @@ package controlplaneoperation
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -187,15 +183,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets ClusterSecrets) (bool, string) {
 	component := op.Spec.Component
 
-	if component == controlplanev1alpha1.OperationComponentHotReload {
-		freshConfig := checksum.HotReloadChecksum(secrets.CPMData)
-		if op.Spec.DesiredConfigChecksum != freshConfig {
-			return true, fmt.Sprintf("hot-reload config checksum changed: desired %s, current %s",
-				op.Spec.DesiredConfigChecksum, freshConfig)
-		}
-		return false, ""
-	}
-
 	podName := component.PodComponentName()
 
 	freshConfig, err := checksum.ComponentChecksum(secrets.CPMData, podName)
@@ -261,8 +248,6 @@ func inProgressCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) (cont
 		return controlplanev1alpha1.CommandSyncManifests, true
 	case op.IsCommandInProgress(controlplanev1alpha1.CommandJoinEtcdCluster):
 		return controlplanev1alpha1.CommandJoinEtcdCluster, true
-	case op.IsCommandInProgress(controlplanev1alpha1.CommandSyncHotReload):
-		return controlplanev1alpha1.CommandSyncHotReload, true
 	default:
 		return "", false
 	}
@@ -283,31 +268,7 @@ func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOpe
 			return false, err
 		}
 		return memberExists, nil
-	case controlplanev1alpha1.CommandSyncHotReload:
-		diskChecksum, err := hotReloadChecksumFromDisk(constants.ExtraFilesPath)
-		if err != nil {
-			return false, err
-		}
-		return diskChecksum == op.Spec.DesiredConfigChecksum, nil
 	default:
 		return false, nil
 	}
-}
-
-func hotReloadChecksumFromDisk(extraFilesDir string) (string, error) {
-	hash := sha256.New()
-	for _, key := range checksum.HotReloadChecksumDependsOn {
-		filePath := filepath.Join(extraFilesDir, strings.TrimPrefix(key, "extra-file-"))
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return "", fmt.Errorf("read hot-reload file %s: %w", filePath, err)
-		}
-		if _, err := hash.Write(content); err != nil {
-			return "", fmt.Errorf("hash hot-reload file %s: %w", filePath, err)
-		}
-	}
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }

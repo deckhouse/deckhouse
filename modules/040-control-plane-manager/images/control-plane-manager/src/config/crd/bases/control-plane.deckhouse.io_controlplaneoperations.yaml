@@ -85,7 +85,6 @@ spec:
                   - SyncManifests
                   - JoinEtcdCluster
                   - WaitPodReady
-                  - SyncHotReload
                   - CertObserve
                   type: string
                 minItems: 1
@@ -98,7 +97,6 @@ spec:
                 - KubeAPIServer
                 - KubeControllerManager
                 - KubeScheduler
-                - HotReload
                 - CertObserver
                 type: string
               desiredCaChecksum:

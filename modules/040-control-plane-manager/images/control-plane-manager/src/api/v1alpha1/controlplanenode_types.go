@@ -89,7 +89,7 @@ type ComponentsStatus struct {
 }
 
 // Component returns a pointer to the ComponentSpec for the given component.
-// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+// Returns nil for non-static-pod components (for example CertObserver).
 func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
 	switch comp {
 	case OperationComponentEtcd:
@@ -105,7 +105,7 @@ func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
 }
 
 // Component returns a pointer to the ComponentStatus for the given component.
-// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+// Returns nil for non-static-pod components (for example CertObserver).
 func (c *ComponentsStatus) Component(comp OperationComponent) *ComponentStatus {
 	switch comp {
 	case OperationComponentEtcd:
@@ -128,10 +128,6 @@ type ControlPlaneNodeSpec struct {
 	// Checksums per component
 	// +optional
 	Components ComponentsSpec `json:"components,omitempty"`
-
-	// For reload mechanisms (e.g. in-place reload)
-	// +optional
-	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 }
 
 type ControlPlaneNodeStatus struct {
@@ -140,9 +136,6 @@ type ControlPlaneNodeStatus struct {
 
 	// +optional
 	Components ComponentsStatus `json:"components,omitempty"`
-
-	// +optional
-	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 
 	// LastObservedAt is the timestamp of the last completed Observe operation.
 	// +optional

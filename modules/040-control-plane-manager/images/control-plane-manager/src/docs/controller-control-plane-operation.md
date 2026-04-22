@@ -52,13 +52,11 @@ Commit-point commands:
 
 - `SyncManifests`
 - `JoinEtcdCluster`
-- `SyncHotReload`
 
 Before cancelling stale desired state, controller can recover an in-progress commit-point if disk/etcd state already matches desired:
 
 - `manifestMatchesDesired` for static pod checksum + renewal-id annotations
 - etcd member presence check for `JoinEtcdCluster`
-- hot-reload checksum-from-disk check for `SyncHotReload`
 
 ## Diff Behavior
 

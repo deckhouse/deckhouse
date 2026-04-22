@@ -38,7 +38,6 @@ var (
 	_ Command = (*syncManifestsCommand)(nil)
 	_ Command = (*joinEtcdClusterCommand)(nil)
 	_ Command = (*waitPodReadyCommand)(nil)
-	_ Command = (*syncHotReloadCommand)(nil)
 	_ Command = (*certObserveCommand)(nil)
 )
 
@@ -58,7 +57,6 @@ func defaultCommands() map[controlplanev1alpha1.CommandName]Command {
 		controlplanev1alpha1.CommandSyncManifests:    &syncManifestsCommand{},
 		controlplanev1alpha1.CommandJoinEtcdCluster:  &joinEtcdClusterCommand{},
 		controlplanev1alpha1.CommandWaitPodReady:     &waitPodReadyCommand{},
-		controlplanev1alpha1.CommandSyncHotReload:    &syncHotReloadCommand{},
 		controlplanev1alpha1.CommandCertObserve:      &certObserveCommand{},
 	}
 }
@@ -242,23 +240,6 @@ func (c *waitPodReadyCommand) Execute(ctx context.Context, env *CommandEnv, logg
 			checksum.ShortChecksum(op.Spec.DesiredConfigChecksum),
 			checksum.ShortChecksum(op.Spec.DesiredPKIChecksum)))
 	return c.waitForPod(ctx, env.State, logger)
-}
-
-// syncHotReloadCommand writes config files that kube-apiserver picks up without restart.
-type syncHotReloadCommand struct{}
-
-func (c *syncHotReloadCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
-	logger.Info("writing hot-reload files")
-	results, err := writeExtraFilesIfChanged(controlplanev1alpha1.OperationComponentHotReload, env.Secrets.CPMData, constants.ExtraFilesPath)
-	if err != nil {
-		logger.Error("failed to write hot-reload files", log.Err(err))
-		return reconcile.Result{}, err
-	}
-	saveDiffResults(controlplanev1alpha1.OperationComponentHotReload, env.State.Raw().Name, results, logger)
-	if !hasChangedFiles(results) {
-		logger.Info("sync hot-reload no-op: desired content already on disk")
-	}
-	return reconcile.Result{}, nil
 }
 
 func hasChangedFiles(results []fileWriteResult) bool {
