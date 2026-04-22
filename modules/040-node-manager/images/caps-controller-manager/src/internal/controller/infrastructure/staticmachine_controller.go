@@ -103,14 +103,13 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, fmt.Errorf("failed to get StaticMachine: %w", err)
 	}
 
-	defer func() {
-		staticMachinePatchHelper, err := patch.NewHelper(staticMachine, r.Client)
-		if err != nil {
-			resErr = errors.Join(resErr, fmt.Errorf("failed to create staticMachine patch helper: %w", err))
-			return
-		}
+	staticMachinePatchHelper, err := patch.NewHelper(staticMachine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create staticMachine patch helper: %w", err)
+	}
 
-		if err = patchStaticMachine(ctx, staticMachinePatchHelper, staticMachine); err != nil {
+	defer func() {
+		if err := patchStaticMachine(ctx, staticMachinePatchHelper, staticMachine); err != nil {
 			resErr = errors.Join(resErr, fmt.Errorf("failed to patch staticMachine: %w", err))
 		}
 	}()
@@ -124,14 +123,13 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	defer func() {
-		machinePatchHelper, err := patch.NewHelper(machine, r.Client)
-		if err != nil {
-			resErr = errors.Join(resErr, fmt.Errorf("failed to create Machine patch helper: %w", err))
-			return
-		}
+	machinePatchHelper, err := patch.NewHelper(machine, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create Machine patch helper: %w", err)
+	}
 
-		if err = machinePatchHelper.Patch(ctx, machine); err != nil {
+	defer func() {
+		if err := machinePatchHelper.Patch(ctx, machine); err != nil {
 			resErr = errors.Join(resErr, fmt.Errorf("failed to patch Machine: %w", err))
 		}
 	}()
@@ -168,21 +166,18 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		staticInstance = &instances.Items[0]
 		logger = logger.WithValues("staticInstance", staticInstance.Name)
 		ctx = ctrl.LoggerInto(ctx, logger)
-	}
 
-	defer func() {
-		if staticInstance != nil {
-			staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
-			if err != nil {
-				resErr = errors.Join(resErr, fmt.Errorf("failed to create StaticInstance patch helper: %w", err))
-				return
-			}
+		staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to create StaticInstance patch helper: %w", err)
+		}
 
-			if err = patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
+		defer func() {
+			if err := patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
 				resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticInstance: %w", err))
 			}
-		}
-	}()
+		}()
+	}
 
 	// Return early if the object or Cluster is paused
 	if annotations.IsPaused(cluster, staticMachine) {
@@ -291,14 +286,13 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	logger = logger.WithValues("staticInstance", newStaticInstance.Name)
 	ctx = ctrl.LoggerInto(ctx, logger)
 
-	defer func() {
-		staticInstancePatchHelper, err := patch.NewHelper(newStaticInstance, r.Client)
-		if err != nil {
-			resErr = errors.Join(resErr, fmt.Errorf("failed to create StaticInstance patch helper: %w", err))
-			return
-		}
+	staticInstancePatchHelper, err := patch.NewHelper(newStaticInstance, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create StaticInstance patch helper: %w", err)
+	}
 
-		if err = patchStaticInstance(ctx, staticInstancePatchHelper, newStaticInstance); err != nil {
+	defer func() {
+		if err := patchStaticInstance(ctx, staticInstancePatchHelper, newStaticInstance); err != nil {
 			resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticInstance: %w", err))
 		}
 	}()

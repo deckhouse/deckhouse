@@ -128,14 +128,13 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine, machine *clusterv1.Machine) (res ctrl.Result, resErr error) {
 	logger := ctrl.LoggerFrom(ctx)
 
-	defer func() {
-		staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
-		if err != nil {
-			resErr = errors.Join(resErr, fmt.Errorf("failed to create staticInstance patch helper: %w", err))
-			return
-		}
+	staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create staticInstance patch helper: %w", err)
+	}
 
-		if err = patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
+	defer func() {
+		if err := patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
 			resErr = errors.Join(resErr, fmt.Errorf("failed to patch staticInstance: %w", err))
 		}
 	}()
