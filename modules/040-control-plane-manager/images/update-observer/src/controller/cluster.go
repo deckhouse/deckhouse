@@ -32,12 +32,14 @@ import (
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {
-	nodesState, err := r.getNodesState(ctx, cfg.DesiredVersion)
+	sourceVersion := configmapLabels[common.K8sVersionLabelKey]
+
+	nodesState, err := r.getNodesState(ctx, cfg.DesiredVersion, sourceVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get nodes state: %w", err)
 	}
 
-	controlPlaneState, err := r.getControlPlaneState(ctx, cfg.DesiredVersion)
+	controlPlaneState, err := r.getControlPlaneState(ctx, cfg.DesiredVersion, sourceVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get control plane state: %w", err)
 	}
@@ -48,7 +50,7 @@ func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configura
 		return nil, fmt.Errorf("failed to parse versions from env: %w", err)
 	}
 
-	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, maxUsedVersion, downgradeInProgress), nil
+	return cluster.GetState(cfg, nodesState, controlPlaneState, versionSettings, maxUsedVersion, sourceVersion, downgradeInProgress), nil
 }
 
 func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Configuration, error) {
@@ -64,23 +66,23 @@ func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Conf
 	return cluster.GetConfiguration(secret)
 }
 
-func (r *reconciler) getNodesState(ctx context.Context, desiredVersion string) (*cluster.NodesState, error) {
+func (r *reconciler) getNodesState(ctx context.Context, desiredVersion, sourceVersion string) (*cluster.NodesState, error) {
 	list := &corev1.NodeList{}
 	err := r.client.List(ctx, list)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	return cluster.GetNodesState(list.Items, desiredVersion)
+	return cluster.GetNodesState(list.Items, desiredVersion, sourceVersion)
 }
 
-func (r *reconciler) getControlPlaneState(ctx context.Context, desiredVersion string) (*cluster.ControlPlaneState, error) {
+func (r *reconciler) getControlPlaneState(ctx context.Context, desiredVersion, sourceVersion string) (*cluster.ControlPlaneState, error) {
 	pods, err := r.getControlPlanePods(ctx, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get control plane pods: %w", err)
 	}
 
-	return cluster.GetControlPlaneState(pods, desiredVersion)
+	return cluster.GetControlPlaneState(pods, desiredVersion, sourceVersion)
 }
 
 func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*corev1.PodList, error) {

@@ -151,6 +151,15 @@ properties:
 
           Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
           > **Важно!** Этот режим нельзя отключить!
+  rootKubeconfigSymlink:
+    description: |
+      Поддерживать ли символическую ссылку `/root/.kube/config` на `/etc/kubernetes/admin.conf` на узлах control-plane.
+
+      Когда включён модуль [user-authz](/modules/user-authz/) и этот параметр равен `false`, символическая ссылка удаляется, в подах `control-plane-manager` выставляется переменная окружения `NODE_ADMIN_KUBECONFIG` соответствующим образом. Для доступа к API с узла используйте `d8 k` с `--kubeconfig=/etc/kubernetes/admin.conf` (или другие учётные данные).
+
+      Если модуль `user-authz` выключен, `control-plane-manager` этот параметр не учитывает и сохраняет поведение по умолчанию (симлинк создаётся).
+
+      Переключение обратно на `true` восстанавливает симлинк при следующем цикле согласования.
   etcd:
     description: |
       Параметры etcd.

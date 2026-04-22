@@ -115,7 +115,7 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 
 	annotations := configMap.GetAnnotations()
 	labels := configMap.GetLabels()
-	now := time.Now().Format(time.RFC3339)
+	now := time.Now().UTC().Format(time.RFC3339)
 
 	annotations[common.LastReconciliationTime] = now
 	annotations[common.CauseLabelKey] = string(reconcileTrigger)

@@ -61,7 +61,7 @@ func monitoringAPIHosts(_ context.Context, input *go_hook.HookInput, dc dependen
 		apiHost := m.Get("apiHost").String()
 		apiJWT := m.Get("apiJWT").String()
 		apiSkipVerify := m.Get("insecureSkipVerify").Bool()
-		apiAdditionalCA := m.Get("ca").String()
+		apiAdditionalCA := m.Get("metadataExporterCA").String()
 
 		var options []http.Option
 		if apiSkipVerify {

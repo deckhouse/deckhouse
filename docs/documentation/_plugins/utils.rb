@@ -1,11 +1,31 @@
 module JekyllLiquidBlockUtils
   def dedent(text)
     lines = text.split("\n")
-    non_empty = lines.select { |l| l =~ /\S/ }
+    # Exclude HTML lines (already-rendered inner tags) from indent calculation
+    # so their col-0 position doesn't force min_indent to 0.
+    non_empty = lines.select { |l| l =~ /\S/ && !l.lstrip.start_with?('<') }
+    non_empty = lines.select { |l| l =~ /\S/ } if non_empty.empty?
     return text if non_empty.empty?
     min_indent = non_empty.map { |l| l.match(/^(\s*)/)[1].length }.min
     return text if min_indent == 0
     lines.map { |l| l.length >= min_indent ? l[min_indent..] : l }.join("\n")
+  end
+
+  # Collapse all newlines outside <pre> blocks and replace blank lines inside
+  # <pre> blocks with a newline entity. Kramdown's block HTML parser stops at
+  # any newline that introduces a new block element even inside
+  # <div markdown="0">, so the output must be newline-free outside <pre>.
+  def collapse_inter_block_newlines(html)
+    parts = html.split(/(<pre\b[^>]*>.*?<\/pre>)/m)
+    parts.map.with_index do |part, i|
+      if i.even?
+        part.strip.gsub(/\n+/, ' ')
+      else
+        # Replace blank lines inside <pre> with a newline entity so Kramdown
+        # does not see a blank line while browsers still render a blank line.
+        part.gsub(/\n([ \t]*\n)+/, "&#10;\n")
+      end
+    end.join
   end
 end
 
