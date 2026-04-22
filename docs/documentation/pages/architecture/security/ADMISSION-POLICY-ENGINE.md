@@ -5,7 +5,7 @@ search: admission-policy-engine, pod security, gatekeeper
 description: Architecture of the admission-policy-engine module in Deckhouse Kubernetes Platform.
 ---
 
-The `admission-policy-engine` module enforces security policies and operational restrictions in a Kubernetes cluster, including checks based on [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) and rules from the `SecurityPolicy` and `OperationPolicy` custom resources.
+The `admission-policy-engine` module enforces security policies and operational restrictions in a Kubernetes cluster, including checks based on [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) and rules from the SecurityPolicy and OperationPolicy custom resources.
 
 For a detailed description of the module, refer to [the corresponding documentation section](/modules/admission-policy-engine/).
 
@@ -55,6 +55,8 @@ The module consists of the following components:
 
    The ratify component is available in the following DKP editions: SE+, EE, CSE Lite, CSE Pro.
 
+   Gatekeeper uses `Provider` custom resource to extend resource verification and validation capabilities in Kubernetes. The `Provider` resource describes the service endpoint to which Gatekeeper sends requests during `ValidationWebhook` execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create `Provider` custom resources and thereby extend the verification capabilities.
+
 ## Module interactions
 
 The module interacts with the following components:
@@ -62,7 +64,7 @@ The module interacts with the following components:
 * **Kube-apiserver**:
 
   * Watches all Kubernetes resources.
-  * Works with the ConstraintTemplate, constraints.gatekeeper.sh/*, Assign, AssignImage, AssignMetadata, ModifySet, and config.ratify.deislabs.io/* custom resources.
+  * Manages ConstraintTemplate, `constraints.gatekeeper.sh/*`, Assign, AssignImage, AssignMetadata, ModifySet, and `config.ratify.deislabs.io/*` custom resources.
 
 The following external components interact with the module:
 

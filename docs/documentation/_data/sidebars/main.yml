@@ -1363,8 +1363,8 @@ entries:
                 ru: Аудит событий безопасности
               url: /architecture/security/runtime-audit.html
             - title:
-                en: Admission policy engine
-                ru: Модуль admission policy engine
+                en: Admission-policy-engine module
+                ru: Модуль admission-policy-engine
               url: /architecture/security/admission-policy-engine.html
         - title:
             en: Network subsystem

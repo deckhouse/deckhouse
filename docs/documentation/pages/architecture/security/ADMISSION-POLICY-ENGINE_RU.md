@@ -6,7 +6,7 @@ search: admission-policy-engine, pod security, gatekeeper
 description: Архитектура модуля admission-policy-engine в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `admission-policy-engine` обеспечивает применение политик безопасности и операционных ограничений в кластере Kubernetes, включая проверки по [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и правилам из кастомных ресурсов `SecurityPolicy` и `OperationPolicy`.
+Модуль [`admission-policy-engine`](/modules/admission-policy-engine/) обеспечивает применение политик безопасности и операционных ограничений в кластере Kubernetes, включая проверки по [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и правилам из кастомных ресурсов SecurityPolicy и OperationPolicy.
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/admission-policy-engine/).
 
@@ -56,6 +56,8 @@ description: Архитектура модуля admission-policy-engine в Deck
 
    Компонент ratify доступен в следующих редакциях DKP: SE+, EE, CSE Lite, CSE Pro.
 
+   Gatekeeper использует кастомный ресурс Provider для расширения функционала по проверке и валидации ресурсов Kubernetes. Ресурс Provider описывает endpoint сервиса, куда Gatekeeper передает запрос при выполнении ValidationWebhook. Некоторые модули DKP, такие как [operator-trivy](/modules/operator-trivy), могут создавать кастомные ресурсы Provider и тем самым расширять функционал проверок.
+
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
@@ -63,7 +65,7 @@ description: Архитектура модуля admission-policy-engine в Deck
 * **Kube-apiserver**:
 
   * мониторинг всех ресурсов Kubernetes;
-  * работа с кастомными ресурсами ConstraintTemplate, constraints.gatekeeper.sh/*, Assign, AssignImage, AssignMetadata, ModifySet, config.ratify.deislabs.io/\*.
+  * работа с кастомными ресурсами ConstraintTemplate, `constraints.gatekeeper.sh/*`, Assign, AssignImage, AssignMetadata, ModifySet и `config.ratify.deislabs.io/*`.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
