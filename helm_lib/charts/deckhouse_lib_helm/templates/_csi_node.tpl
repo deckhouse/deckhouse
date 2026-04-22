@@ -98,7 +98,7 @@ spec:
       {{- if or (hasPrefix "cloud-provider-" $context.Chart.Name) ($additionalCsiNodePodAnnotations) }}
       annotations:
       {{- if hasPrefix "cloud-provider-" $context.Chart.Name }}
-        cloud-config-checksum: {{ include (print $context.Template.BasePath "/cloud-controller-manager/secret.yaml") $context | sha256sum }}
+        cloud-config-checksum: {{ include (print $context.Template.BasePath (ternary "/credentials.yaml" "/cloud-controller-manager/secret.yaml" (eq $context.Chart.Name "cloud-provider-dvp"))) $context | sha256sum }}
       {{- end }}
       {{- if $additionalCsiNodePodAnnotations }}
         {{- $additionalCsiNodePodAnnotations | toYaml | nindent 8 }}
