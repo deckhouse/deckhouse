@@ -43,7 +43,11 @@ userAuthn:
     enabled: true
     https:
       mode: SelfSigned
-  internal: {}
+  internal:
+    publishAPI:
+      enabled: true
+      https:
+        mode: SelfSigned
   https:
     mode: CertManager`,
 		"",
@@ -78,15 +82,15 @@ metadata:
 data:
   ca.crt: a3ViZXJuZXRlcy10bHMtY3VzdG9tY2VydGlmaWNhdGU=
 `
-	cpmCertificateConfigMap := `
+	cpmConfigSecret := `
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
-  name: d8-publish-api-master-ca
+  name: d8-publish-api-config
   namespace: kube-system
 data:
-  publishedAPIKubeconfigGeneratorMasterCA: "controlPlaneManagerCA"
+  publishedAPIKubeconfigGeneratorMasterCA: Y29udHJvbFBsYW5lTWFuYWdlckNB
 `
 	DescribeTable("publishAPI discovery cert",
 		func(in inputPublishAPICACert, out string) {
@@ -101,7 +105,7 @@ data:
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal(out))
+			Expect(f.ValuesGet("userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal(out))
 		},
 		Entry("On first start: SelfSigned",
 			inputPublishAPICACert{
@@ -204,7 +208,7 @@ data:
 		),
 		Entry("With control-plane-manager imported CM:",
 			inputPublishAPICACert{
-				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret + cpmCertificateConfigMap,
+				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret + cpmConfigSecret,
 				publishAPIMode: "Global",
 				httpMode:       "CustomCertificate",
 			},

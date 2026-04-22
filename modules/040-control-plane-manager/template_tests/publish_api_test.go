@@ -78,12 +78,21 @@ const globalValues = `
     podSubnet: 10.0.1.0/16
     kubernetesVersion: 1.32.13
 `
+const publishAPIValues = (`
+publishAPI:
+  ingress:
+    enabled: true
+    addKubeconfigGeneratorEntry: true
+    https:
+      mode: SelfSigned
+  loadBalancer:
+    port: 443
+`)
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: publish api", func() {
 	hec := SetupHelmConfig(`controlPlaneManager: {}`)
 
 	BeforeEach(func() {
-		var emptyObj struct{}
 		hec.ValuesSetFromYaml("global", globalValues)
 		hec.ValuesSet("global.discovery.kubernetesVersion", "1.32.13")
 		hec.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
@@ -98,17 +107,10 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		hec.ValuesSet("controlPlaneManager.internal.pkiChecksum", "4da1e937a9acd5475640d55cec899e77865e51ce2ab86d372c3ed1e19a532d19")
 		hec.ValuesSet("controlPlaneManager.internal.rolloutEpoch", 2.049844452e+09)
 		hec.ValuesSet("controlPlaneManager.internal.authn.enableBasicAuth", true)
-		hec.ValuesSet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA", "true")
+		hec.ValuesSet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA", "publishedapica")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.cert", "test")
 		hec.ValuesSet("controlPlaneManager.internal.selfSignedCA.key", "testCA")
-		hec.ValuesSet("controlPlaneManager.apiserver", emptyObj)
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI", emptyObj)
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress", emptyObj)
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer", emptyObj)
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.enabled", true)
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "SelfSigned")
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.addKubeconfigGeneratorEntry", true)
-		hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.loadBalancer.port", 443)
+		hec.ValuesSetFromYaml("controlPlaneManager.apiserver", publishAPIValues)
 	})
 
 	Context("By default", func() {

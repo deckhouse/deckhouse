@@ -38,7 +38,7 @@ clusters:
   {{- $_ := set $publish_api_cluster "id" (include "helm_lib_module_public_domain" (list . "api")) }}
   {{- $_ := set $publish_api_cluster "client_id" "kubeconfig-generator" }}
   {{- $_ := set $publish_api_cluster "description" $publish_api_master_url }}
-  {{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA }}
+  {{- $_ := set $publish_api_cluster "masterCA" .Values.userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA }}
 
   {{- if and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry) }}
 {{- include "kubeconfig_settings" (list $ "" $publish_api_cluster) }}

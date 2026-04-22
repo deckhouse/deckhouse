@@ -20,14 +20,38 @@ import (
 	"context"
 	"fmt"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func applyIngressFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	return obj.GetName(), nil
+}
+
+type PublishAPIConfig struct {
+	Name                        string `json:"name"`
+	AddKubeconfigGeneratorEntry []byte `json:"addKubeconfigGeneratorEntry"`
+	WhitelistSourceRanges       []byte `json:"whitelistSourceRanges"`
+	HttpsMode                   []byte `json:"httpsMode"`
+}
+
+func applyPublishAPIConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	s := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, s)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
+	}
+
+	return PublishAPIConfig{
+			Name:                        obj.GetName(),
+			AddKubeconfigGeneratorEntry: s.Data["addKubeconfigGeneratorEntry"],
+			WhitelistSourceRanges:       s.Data["whitelistSourceRanges"],
+			HttpsMode:                   s.Data["httpsMode"]},
+		nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -47,20 +71,41 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			FilterFunc: applyIngressFilter,
 		},
+		{
+			Name:       "secret_cpm",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-publish-api-config"},
+			},
+			FilterFunc: applyPublishAPIConfigFilter,
+		},
 	},
-}, discoverIngress)
+}, discoverPublishAPI)
 
-func discoverIngress(_ context.Context, input *go_hook.HookInput) error {
+func discoverPublishAPI(_ context.Context, input *go_hook.HookInput) error {
 	const (
-		publishAPIEnabled = "userAuthn.internal.publishAPIEnabled"
+		publishAPIEnabled = "userAuthn.internal.publishAPI.enabled"
 	)
-	fmt.Println(input.Snapshots.Get("ingress"))
 	if len(input.Snapshots.Get("ingress")) == 0 {
-		fmt.Println("Set publish api internal value to false")
 		input.Values.Set(publishAPIEnabled, false)
 	} else {
-		fmt.Println("Set publish api internal value to true")
 		input.Values.Set(publishAPIEnabled, true)
+	}
+
+	for configs, err := range sdkobjectpatch.SnapshotIter[PublishAPIConfig](input.Snapshots.Get("secret_cpm")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'secret_cpm' snapshot: %w", err)
+		}
+
+		input.Values.Set("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", string(configs.AddKubeconfigGeneratorEntry))
+		input.Values.Set("userAuthn.internal.publishAPI.whitelistSourceRanges", string(configs.WhitelistSourceRanges))
+		input.Values.Set("userAuthn.internal.publishAPI.httpsMode", string(configs.HttpsMode))
 	}
 	return nil
 }

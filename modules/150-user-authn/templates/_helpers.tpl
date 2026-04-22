@@ -30,7 +30,7 @@
 
 
 {{- define "is_basic_auth_enabled" }}
-  {{- if .Values.userAuthn.internal.publishAPIEnabled }}
+  {{- if .Values.userAuthn.internal.publishAPI.enabled }}
     {{- range $provider := .Values.userAuthn.internal.providers }}
       {{- if eq $provider.type "Crowd" }}
         {{- if $provider.crowd.enableBasicAuth }}

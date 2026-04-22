@@ -106,7 +106,7 @@ type provider struct {
 
 func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	// check proxy rollout conditions
-	if !input.Values.Get("userAuthn.internal.publishAPIEnabled").Bool() {
+	if !input.Values.Get("userAuthn.internal.publishAPI.enabled").Bool() {
 		return nil
 	}
 

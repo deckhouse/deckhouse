@@ -21,7 +21,7 @@ import (
 )
 
 var _ = Describe("User Authn hooks :: discover enabled publish API ::", func() {
-	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{}}}`, "")
+	f := HookExecutionConfigInit(`{"userAuthn":{"internal":{"publishAPI":{}}}}`, "")
 
 	Context("Detect enabled publish API via ingress existence", func() {
 		BeforeEach(func() {
@@ -56,13 +56,24 @@ spec:
             port:
               number: 443
         pathType: ImplementationSpecific
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-publish-api-config
+  namespace: kube-system
+data:
+  publishedAPIKubeconfigGeneratorMasterCA: Y29udHJvbFBsYW5lTWFuYWdlckNB
+  addKubeconfigGeneratorEntry: dHJ1ZQ==
+  whitelistSourceRanges: WzEuMS4xLjEgMTkyLjE2OC4wLjAvMjRd
+  httpsMode: U2VsZlNpZ25lZA==
 `, 2))
 				f.RunHook()
 			})
 
 			It("Should set publishAPIEnabled to true", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("userAuthn.internal.publishAPIEnabled").Bool()).To(Equal(true))
+				Expect(f.ValuesGet("userAuthn.internal.publishAPI.enabled").Bool()).To(Equal(true))
 			})
 		})
 
@@ -74,7 +85,7 @@ spec:
 
 			It("Should set publishAPIEnabled to false", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("userAuthn.internal.publishAPIEnabled").Bool()).To(Equal(false))
+				Expect(f.ValuesGet("userAuthn.internal.publishAPI.enabled").Bool()).To(Equal(false))
 			})
 		})
 	})

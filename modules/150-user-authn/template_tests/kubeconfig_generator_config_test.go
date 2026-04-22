@@ -143,7 +143,7 @@ Multiline
 
 			Context("With https mode 'Global'", func() {
 				BeforeEach(func() {
-					hec.ValuesSet("userAuthn.internal.publishedAPIKubeconfigGeneratorMasterCA", "test_cert")
+					hec.ValuesSet("userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA", "test_cert")
 					hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 				})
 
