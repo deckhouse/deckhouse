@@ -31,6 +31,111 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2025-30153 связана с обработкой сжатых multipart/form-data запросов в компоненте ZipFileBodyDecoder библиотеки kin-openapi. terraform-provider-kubernetes использует kin-openapi только локально для чтения и валидации OpenAPI-схем, при этом прием multipart/form-data не реализован, уязвимый код не используется в провайдере",
       "timestamp": "2025-10-10T07:23:24.420648Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.0+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI Windows plugin search path vulnerability - Уязвимость CWE-427 (Uncontrolled Search Path Element) в Docker CLI затрагивает исключительно среду Microsoft Windows: поиск бинарных плагинов в каталоге C:\\ProgramData\\Docker\\cli-plugins может позволить подмену исполняемых файлов. Компонент deckhouse-controller эксплуатируется в среде Kubernetes на базе Linux; официальное описание CVE указывает, что уязвимость не затрагивает бинарные файлы под платформы, отличные от Windows (non-Windows binaries). Таким образом, в рамках текущей эксплуатационной модели уязвимый код не входит в исполняемый путь и возможность эксплуатации исключена.",
+      "timestamp": "2026-04-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24051"
+      },
+      "products": [
+        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.36.0"},
+        {"@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.39.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "OpenTelemetry SDK resource detection path hijacking vulnerability (macOS ioreg) - Уязвимость, связанная с потенциальным path hijacking в механизме определения ресурсов (resource detection) при использовании ioreg в среде macOS/Darwin, не оказывает влияния на безопасность deckhouse-controller, эксплуатируемого в Kubernetes на базе Linux. Уязвимый участок кода задействуется исключительно при формировании host id на macOS и не входит в исполняемый путь при целевом сценарии эксплуатации системы, что исключает возможность практической реализации угрозы.",
+      "timestamp": "2026-03-04T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал TUF клиента с использованием уязвимого кода sigstore версии v1.8.8 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-02-11T10:38:09.437468469Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39882"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Для эксплуатации уязвимости CVE-2026-39882 в opentofu должен быть запущен и настроен экспортер трассировки OpenTelemetry. В поставке Deckhouse по умолчанию не заданы необходимые для этого переменные окружения, а также нет настроек, позволяющих включить данную функциональность, что исключает выполнение уязвимого кода.",
+      "timestamp": "2026-04-13T14:56:27.526756Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-xmrv-pmrh-hhx2"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream"
+        },
+        {
+          "@id": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/s3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость GHSA-xmrv-pmrh-hhx2 находится в декодере AWS EventStream. В OpenTofu пакет S3 из AWS SDK используется для backend удаленного состояния и выполняет только обычные операции с объектами и списками: HeadObject, GetObject, PutObject, DeleteObject и ListObjectsV2. EventStream API, включая S3 SelectObjectContent, в этом сценарии не вызываются. Поэтому уязвимый декодер попадает в зависимости транзитивно, но в рабочем пути OpenTofu не выполняется.",
+      "timestamp": "2026-04-22T10:48:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-4660"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/hashicorp/go-getter"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость CVE-2026-4660 требует, чтобы go-getter получил специально сформированный Git URL от атакующего. В данной поставке OpenTofu не принимает произвольные module source-адреса от внешних пользователей: конфигурация, с которой запускается tofu init, поставляется и контролируется продуктом. Поэтому атакующий не может передать в go-getter malicious Git URL, необходимый для эксплуатации.",
+      "timestamp": "2026-04-22T10:48:17Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-53859"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/cli/go-gh"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "В OpenTofu github.com/cli/go-gh не используется в рабочем коде продукта, зависимость присутствует только как вспомогательная часть build/tooling и не вызывается при выполнении tofu. В поставке Deckhouse этот код не обрабатывает пользовательские GitHub-хосты и не работает с GitHub-токенами во время выполнения OpenTofu, поэтому условие утечки токена отсутствует.",
+      "timestamp": "2026-04-22T11:06:38Z"
     }
   ],
   "timestamp": "2025-10-10T07:23:24Z"
