@@ -17,64 +17,126 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
-	"math/rand"
-	"slices"
+	"io"
+	"log/slog"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
 	"time"
+
+	"gitlab.com/greyxor/slogor"
+
+	"syncer/pkg/config"
+	"syncer/pkg/syncer"
+)
+
+var (
+	shutdownSignals = []os.Signal{os.Interrupt, syscall.SIGTERM}
 )
 
 func main() {
-	repoSizes := map[string]int{
-		"system/deckhouse":                              50,
-		"system/deckhouse/install":                      30,
-		"system/deckhouse/install-standalone":           25,
-		"system/deckhouse/installer":                    20,
-		"system/deckhouse/modules":                      40,
-		"system/deckhouse/modules/console":              35,
-		"system/deckhouse/modules/console/release":      28,
-		"system/deckhouse/modules/pod-reloader":         22,
-		"system/deckhouse/modules/pod-reloader/release": 18,
-		"system/deckhouse/modules/prompp":               15,
-		"system/deckhouse/modules/prompp/release":       12,
-		"system/deckhouse/release-channel":              10,
-		"system/deckhouse/security/trivy-bdu":           8,
-		"system/deckhouse/security/trivy-checks":        6,
-		"system/deckhouse/security/trivy-db":            5,
-		"system/deckhouse/security/trivy-java-db":       4,
+	// Args validation
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %v <config file>\n", filepath.Base(os.Args[0]))
+		os.Exit(1)
 	}
 
-	repos := make([]string, 0, len(repoSizes))
-	for repo := range repoSizes {
-		repos = append(repos, repo)
-	}
-	slices.Sort(repos)
+	// Setup args
+	cfgPath := os.Args[1]
+	ctx := setupSignalHandler()
 
-	total := 0
-	current := 1
-
-	for _, size := range repoSizes {
-		total += size
-	}
-
-	for _, repo := range repos {
-		size := repoSizes[repo]
-		for i := 1; i <= size; i++ {
-			digest := generateDigest(current)
-
-			fmt.Printf("[%d / %d] Syncing localhost:8888/%s:%s\n",
-				current,
-				total,
-				repo,
-				digest,
-			)
-			current++
-
-			sleepTime := time.Duration(10+rand.Intn(90)) * time.Millisecond
-			time.Sleep(sleepTime)
-		}
+	// Start
+	if err := runSync(ctx, newLogger(os.Stdout), cfgPath); err != nil {
+		newLogger(os.Stderr).Error("sync failed", "error", err.Error())
+		os.Exit(1)
 	}
 }
 
-func generateDigest(seq int) string {
-	return fmt.Sprintf("%064x", seq)
+func runSync(ctx context.Context, logger *slog.Logger, cfgPath string) error {
+	logger.Debug("Loading config", "path", cfgPath)
+	cfg, err := config.FromFile(cfgPath)
+	if err != nil {
+		return fmt.Errorf("load config file %q: %w", cfgPath, err)
+	}
+
+	logger.Debug("Validating config", "path", cfgPath)
+	err = cfg.Validate()
+	if err != nil {
+		return fmt.Errorf("validation config file %q: %w", cfgPath, err)
+	}
+
+	logger.Debug("Initializing syncer")
+	syncer, err := syncer.New(
+		logger,
+		cfg,
+	)
+	if err != nil {
+		return fmt.Errorf("create syncer: %w", err)
+	}
+
+	logger.Debug("Starting syncer")
+	if err = syncer.Run(ctx); err != nil {
+		return fmt.Errorf("sync error: %w", err)
+	}
+	return nil
+}
+
+func setupSignalHandler() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, shutdownSignals...)
+	go func() {
+		<-c
+		cancel()
+		<-c
+		os.Exit(1) // second signal. Exit directly.
+	}()
+
+	return ctx
+}
+
+func newLogger(writer io.Writer) *slog.Logger {
+	// Set log level
+	options := []slogor.OptionFn{
+		slogor.SetLevel(
+			logLevelFromStr(
+				os.Getenv("LOG_LEVEL"),
+			),
+		),
+	}
+
+	// Enable log timestamp
+	if os.Getenv("LOG_TIMESTAMP") != "" {
+		options = append(options,
+			slogor.SetTimeFormat(
+				time.StampMilli,
+			),
+		)
+	}
+
+	slogorhandler := slogor.NewHandler(
+		writer,
+		options...,
+	)
+	return slog.New(slogorhandler)
+}
+
+func logLevelFromStr(rawLogLevel string) slog.Level {
+	switch strings.ToLower(rawLogLevel) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
