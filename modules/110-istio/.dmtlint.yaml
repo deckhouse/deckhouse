@@ -16,6 +16,8 @@ linters-settings:
       controller-security-context:
         - kind: Deployment
           name: kiali
+        - kind: DaemonSet
+          name: ztunnel-1x25
       security-context:
         - kind: Deployment
           name: kiali
@@ -24,12 +26,21 @@ linters-settings:
           name: operator-1x21
           container: operator
         - kind: Deployment
+          name: operator-1x25
+          container: operator
+        - kind: Deployment
           name: metadata-exporter
           container: metadata-discovery
       liveness-probe:
         - kind: Deployment
           name: operator-1x21
           container: operator
+        - kind: Deployment
+          name: operator-1x25
+          container: operator
+        - kind: DaemonSet
+          name: ztunnel-1x25
+          container: istio-proxy
         - kind: Deployment
           name: metadata-exporter
           container: metadata-discovery
@@ -54,9 +65,15 @@ linters-settings:
         - kind: Deployment
           name: operator-1x21
           container: operator
+        - kind: Deployment
+          name: operator-1x25
+          container: operator
         - kind: DaemonSet
           name: istio-cni-node
           container: kube-rbac-proxy
+      vpa:
+        - kind: DaemonSet
+          name: ztunnel-1x25
   module:
     conversions:
       disable: true
