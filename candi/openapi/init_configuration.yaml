@@ -37,7 +37,6 @@ apiVersions:
               Address of a container registry with Deckhouse images.
 
             minLength: 1
-            default: registry.deckhouse.io/deckhouse/ce
           registryDockerCfg:
             type: string
             description: |

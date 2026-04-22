@@ -52,7 +52,7 @@ spec:
                         The list of prefixes a container image is allowed to have.
                       items:
                         type: string
-                        x-doc-examples: ["registry.deckhouse.io"]
+                        x-doc-examples: ["registry-cse.deckhouse.ru"]
                     requiredResources:
                       type: object
                       description: |

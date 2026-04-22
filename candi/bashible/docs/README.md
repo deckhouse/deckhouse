@@ -61,7 +61,7 @@ bundle: ubuntu-lts
 provider: OpenStack
 runType: ClusterBootstrap
 registry:
-  host: registry.deckhouse.io
+  host: registry-cse.deckhouse.ru
   auth: "test:test"
 clusterBootstrap:
   clusterDNSAddress: 10.222.0.10

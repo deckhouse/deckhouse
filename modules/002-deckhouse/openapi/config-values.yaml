@@ -327,11 +327,11 @@ properties:
       - mode: Unmanaged
       - mode: Unmanaged
         unmanaged:
-          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
           license: "DECKHOUSE_LICENSE_KEY"
       - mode: Direct
         direct:
-          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
           license: "DECKHOUSE_LICENSE_KEY"
     properties:
       mode:
@@ -350,7 +350,7 @@ properties:
           Parameters for the `Direct` access mode.
           These parameters are required when `mode` is set to `Direct`.
         x-examples:
-          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+          - imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
             license: "DECKHOUSE_LICENSE_KEY"
           - imagesRepo: "my-private-registry.com/deckhouse"
             username: "user"
@@ -371,8 +371,8 @@ properties:
               In firewalled environments, this might be a private registry address that mirrors the public one.
             minLength: 1
             x-examples:
-            - registry.deckhouse.io/deckhouse/ee
-            - private-registry:5000/deckhouse/ce
+            - registry-cse.deckhouse.ru/deckhouse/cse
+            - private-registry:5000/deckhouse/cse
           license:
             type: string
             description: |
@@ -426,7 +426,7 @@ properties:
         description: |
           Parameters for the `Unmanaged` access mode.
         x-examples:
-          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+          - imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
             license: "DECKHOUSE_LICENSE_KEY"
           - imagesRepo: "my-private-registry.com/deckhouse"
             username: "user"

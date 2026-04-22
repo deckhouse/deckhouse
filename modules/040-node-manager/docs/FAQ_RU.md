@@ -570,7 +570,7 @@ capiEmergencyBrake: true
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы компонентов control plane (например, удалена директория `/var/lib/containerd`).
-В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.ru`.
+В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry-cse.deckhouse.ru`.
 
 Далее приведена инструкция по восстановлению master-узла.
 
@@ -581,7 +581,7 @@ capiEmergencyBrake: true
 ```shell
 d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.deckhouse.ru".auth'
+jq -r '.auths."registry-cse.deckhouse.ru".auth'
 ```
 
 Вывод команды нужно скопировать и присвоить переменной `AUTH` на поврежденном master-узле.
@@ -998,7 +998,7 @@ crictl pull private.registry.example/image/repo:tag
 ├── private.registry.example:5001
 │   ├── ca.crt
 │   └── hosts.toml
-└── registry.deckhouse.ru
+└── registry-cse.deckhouse.ru
     ├── ca.crt
     └── hosts.toml
 ```

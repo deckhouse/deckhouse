@@ -10,7 +10,7 @@ containerd v2 использует новую схему по умолчанию
 
 ### Для containerd v2
 
-1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
+1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry-cse.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
 
    Посмотреть текущие настройки реестра можно с помощью команды:
 
@@ -32,7 +32,7 @@ containerd v2 использует новую схему по умолчанию
        registry:
          mode: Unmanaged
          unmanaged:
-           imagesRepo: registry.deckhouse.ru/deckhouse/ee
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
@@ -116,7 +116,7 @@ containerd v2 использует новую схему по умолчанию
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
 
-1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
+1. Выполните переключение на использование модуля `registry`. Для этого, укажите в `moduleConfig` `deckhouse` параметры `Unmanaged` режима. Если используется registry, отличный от `registry-cse.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
 
    Посмотреть текущие настройки реестра можно с помощью команды:
 
@@ -138,7 +138,7 @@ containerd v2 использует новую схему по умолчанию
        registry:
          mode: Unmanaged
          unmanaged:
-           imagesRepo: registry.deckhouse.ru/deckhouse/ee
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
@@ -233,7 +233,7 @@ containerd v2 использует новую схему по умолчанию
 - Во время переключения, [пользовательские конфигурации реестра](../node-manager/faq.html#как-добавить-конфигурацию-для-дополнительного-registry) для containerd v1 будут временно недоступны.
 {% endalert %}
 
-1. Переведите registry в режим `Unmanaged`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
+1. Переведите registry в режим `Unmanaged`. Если используется registry, отличный от `registry-cse.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [deckhouse](../deckhouse/) для корректной настройки.
 
    Пример конфигурации:
 
@@ -249,7 +249,7 @@ containerd v2 использует новую схему по умолчанию
        registry:
          mode: Unmanaged
          unmanaged:
-           imagesRepo: registry.deckhouse.ru/deckhouse/ee
+           imagesRepo: registry-cse.deckhouse.ru/deckhouse/cse
            scheme: HTTPS
            license: <LICENSE_KEY> # Замените на ваш лицензионный ключ
    ```
@@ -397,7 +397,7 @@ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .sta
 ```yaml
 conditions:
   - lastTransitionTime: "2025-07-15T12:52:46Z"
-    message: 'registry.deckhouse.ru: all 157 items are checked'
+    message: 'registry-cse.deckhouse.ru: all 157 items are checked'
     reason: Ready
     status: "True"
     type: RegistryContainsRequiredImages

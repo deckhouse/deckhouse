@@ -43,6 +43,7 @@ fi
 # standby
 # Deckhouse - > Deckhouse Platform Certified Security Edition
 # Hugo replacements are in docs/documentation/werf-web.inc.yaml
+# search and replace for registry-cse.deckhouse.ru/deckhouse/cse and editions
 
 
 echo "Created the temporary directory $_TMPDIR"

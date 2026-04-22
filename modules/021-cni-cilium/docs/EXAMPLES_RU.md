@@ -4,8 +4,6 @@ title: "Модуль cni-cilium: примеры"
 
 ## Egress Gateway
 
-{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
-
 ### Принцип работы
 
 Для настройки egress-шлюза необходимы два кастомных ресурса:
