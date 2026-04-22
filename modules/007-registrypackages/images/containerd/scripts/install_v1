@@ -32,6 +32,7 @@ version = 2
 EOF
 
 cp -f containerd containerd-shim-runc-v1 containerd-shim-runc-v2 ctr runc /opt/deckhouse/bin
+rm -f /opt/deckhouse/bin/containerd-shim
 
 mkdir -p /lib/systemd/system/
 cp -f containerd.service /lib/systemd/system/containerd-deckhouse.service

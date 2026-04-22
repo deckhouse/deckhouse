@@ -40,7 +40,7 @@ type IstioMulticlusterDiscoveryCrdInfo struct {
 	Name                     string
 	ClusterUUID              string
 	EnableIngressGateway     bool
-	ClusterCA                string
+	MetadataExporterCA       string
 	EnableInsecureConnection bool
 	PublicMetadataEndpoint   string
 	PrivateMetadataEndpoint  string
@@ -88,7 +88,7 @@ func applyMulticlusterFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return IstioMulticlusterDiscoveryCrdInfo{
 		Name:                     multicluster.GetName(),
 		EnableIngressGateway:     multicluster.Spec.EnableIngressGateway,
-		ClusterCA:                multicluster.Spec.Metadata.ClusterCA,
+		MetadataExporterCA:       multicluster.Spec.Metadata.CA,
 		EnableInsecureConnection: multicluster.Spec.Metadata.EnableInsecureConnection,
 		ClusterUUID:              clusterUUID,
 		PublicMetadataEndpoint:   me + "/public/public.json",
@@ -133,8 +133,8 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata
 		var httpOption []http.Option
 
-		if multiclusterInfo.ClusterCA != "" {
-			caCerts := [][]byte{[]byte(multiclusterInfo.ClusterCA)}
+		if multiclusterInfo.MetadataExporterCA != "" {
+			caCerts := [][]byte{[]byte(multiclusterInfo.MetadataExporterCA)}
 			httpOption = append(httpOption, http.WithAdditionalCACerts(caCerts))
 		} else if multiclusterInfo.EnableInsecureConnection {
 			httpOption = append(httpOption, http.WithInsecureSkipVerify())

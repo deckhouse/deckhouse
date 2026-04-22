@@ -101,7 +101,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7 // indirect
-	github.com/deckhouse/lib-dhctl v0.13.0 // indirect
+	github.com/deckhouse/lib-dhctl v0.17.0 // indirect
 	github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 // indirect
 	github.com/dop251/goja v0.0.0-20251121114222-56b1242a5f86 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20251015164255-5e94316bedaf // indirect
