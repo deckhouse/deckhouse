@@ -110,6 +110,8 @@ spec:
 
 ## Расширенный балансировщик
 
+Расширенный балансировщик реализуется с помощью ресурсов ServiceWithHealthcheck модуля [service-with-healthchecks](/modules/service-with-healthchecks/).
+
 В отличие от стандартного балансировщика, где readiness-пробы привязаны к состоянию контейнеров, ресурс ServiceWithHealthcheck, который используется в балансировщике, позволяет настраивать активные пробы на отдельные TCP-порты. Таким образом, каждый балансировщик, обслуживающий один и тот же под, может работать независимо от других.
 
 ### Внутреннее устройство балансировщика
@@ -128,6 +130,15 @@ spec:
 Миграция с Service на ресурс ServiceWithHealthchecks, например в рамках CI/CD, не должна вызвать затруднений. Спецификация ServiceWithHealthchecks в основе своей повторяет спецификацию Service, но содержит дополнительный раздел `healthcheck`. Во время жизненного цикла ресурса ServiceWithHealthchecks создается одноименный сервис в том же пространстве имён, чтобы привычным способом (`kube-proxy` или cni) направить трафик на рабочие нагрузки в кластере.
 
 ### Настройка балансировщика
+
+{% alert level="warning" %}
+Для использования расширенных балансировщиков необходимо:
+
+- Настроить сетевые политики проекта, где будут использоваться балансировщики ServiceWithHealthchecks.
+- Если есть необходимость, перейти вручную на использование ServiceWithHealthchecks вместо стандартных балансировщиков (заменить используемые объекты Service на ServiceWithHealthchecks).
+
+Подробнее — в документации модуля [service-with-healthchecks](/modules/service-with-healthchecks/configuration.html).
+{% endalert %}
 
 Настроить данный способ балансировки можно при помощи ресурса [ServiceWithHealthchecks](/modules/service-with-healthchecks/cr.html#servicewithhealthchecks):
 

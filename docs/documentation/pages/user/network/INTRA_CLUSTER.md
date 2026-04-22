@@ -115,6 +115,8 @@ spec:
 
 ## Advanced load balancer
 
+The advanced load balancer is implemented using the ServiceWithHealthcheck resources from the [service-with-healthchecks](/modules/service-with-healthchecks/) module.
+
 Unlike the standard load balancer where readiness probes are tied to container states,
 the ServiceWithHealthcheck–based load balancer allows you to configure active probes for individual TCP ports.
 This way, each load balancer serving the same Pod can operate independently from the others.
@@ -146,6 +148,15 @@ During the resource lifecycle, a Service with the same name is created in the sa
 to route traffic to workloads in the cluster in the usual way (via `kube-proxy` or CNI).
 
 ### Configuring the load balancer
+
+{% alert level="warning" %}
+To use advanced load balancers, you must:
+
+- Configure the network policies for the project where ServiceWithHealthchecks load balancers will be used.
+- If necessary, manually switch to using ServiceWithHealthchecks instead of standard load balancers (replace the existing Service objects with ServiceWithHealthchecks).
+
+For more details, see the [service-with-healthchecks](/modules/service-with-healthchecks/configuration.html) module documentation.
+{% endalert %}
 
 You can configure this type of load balancing
 using the [ServiceWithHealthchecks](/modules/service-with-healthchecks/cr.html#servicewithhealthchecks) resource:
