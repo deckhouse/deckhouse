@@ -58,7 +58,7 @@ func (c *Client) Bootstrap(ctx context.Context,
 
 	result, err := c.bootstrapStaticInstance(ctx, staticInstance, staticMachine, machine)
 	if err != nil {
-		return result, errors.Wrapf(err, "failed to bootstrap StaticInstance from '%s' phase", phase)
+		return result, fmt.Errorf("failed to bootstrap StaticInstance from '%s' phase: %w", phase, err)
 	}
 
 	return result, nil
@@ -71,7 +71,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 
 	credentials := &deckhousev1.SSHCredentials{}
 	if err := c.client.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
+		return ctrl.Result{}, fmt.Errorf("failed to load SSHCredentials: %w", err)
 	}
 
 	sshLegacyMode := true
@@ -110,8 +110,8 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 			sshCl, err = gossh.CreateSSHClient(t.address, t.credentials)
 		}
 		if err != nil {
-			tLogger.Error(err, "Failed to bootstrap StaticInstance: failed to create ssh client")
-			return errors.Wrap(err, "failed to bootstrap StaticInstance: failed to create ssh client")
+			tLogger.Error(err, "failed to create ssh client")
+			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
 		data, err := sshCl.ExecSSHCommandToString(
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
@@ -128,17 +128,16 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 				}
 			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
-			tLogger.Error(err, "Failed to bootstrap StaticInstance: failed to exec ssh command")
-			return errors.Wrap(err, "failed to bootstrap StaticInstance: failed to exec ssh command")
+			tLogger.Error(err, "failed to exec ssh command")
+			return fmt.Errorf("failed to exec ssh command: %w", err)
 		}
-
 		return nil
 	}
 
 	bootstrapScript, err := c.getBootstrapScript(ctx, staticMachine, machine)
 	if err != nil {
 		c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "BootstrapScriptFetchingFailed", "Bootstrap script unreachable")
-		return ctrl.Result{}, errors.Wrap(err, "failed to get bootstrap script")
+		return ctrl.Result{}, fmt.Errorf("failed to get bootstrap script: %w", err)
 	}
 
 	taskData := taskDataStr{
@@ -153,7 +152,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 	taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
 	err, finished := c.taskManager.Spawn(taskCtx, string(staticMachine.Spec.ProviderID), "bootstrap", taskData, taskFunc)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to bootstrap StaticInstance")
+		return ctrl.Result{}, fmt.Errorf("failed to bootstrap StaticInstance: %w", err)
 	}
 
 	if finished {
@@ -243,7 +242,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			conn, tErr := net.DialTimeout("tcp", t.address, t.delay)
 			if tErr != nil {
 				logger.Error(tErr, "Failed to connect to instance by TCP", "address", t.address)
-				return errors.Wrap(tErr, "Failed to check the StaticInstance address by establishing a tcp connection")
+				return fmt.Errorf("Failed to check the StaticInstance address by establishing a tcp connection: %w", tErr)
 			}
 
 			defer conn.Close()
@@ -331,8 +330,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				sshCl, err = gossh.CreateSSHClient(t.address, t.credentials)
 			}
 			if err != nil {
-				logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
-				return errors.Wrap(err, fmt.Sprintf("Failed to connect via ssh with address %s", t.address))
+				logger.Error(err, "Failed to connect via ssh")
+				return fmt.Errorf("failed to connect via ssh with address %s: %w", t.address, err)
 			}
 			res, err := sshCl.ExecSSHCommandToString("echo check_ssh")
 			if err != nil {
@@ -428,14 +427,14 @@ func (c *Client) reserveStaticInstance(ctx context.Context, staticInstance *deck
 	// TODO: Patch here?
 	// staticInstancePatchHelper, err := patch.NewHelper(staticInstance, c.client)
 	// if err != nil {
-	// 	return errors.Wrap(err, "failed to init patch helper")
+	// 	return fmt.Errorf(err, "failed to init patch helper")
 	// }
 	//
 	// if err = staticInstancePatchHelper.Patch(ctx, staticInstance); err != nil {
 	// 	if apierrors.IsConflict(err) {
-	// 		return errors.Wrap(err, "StaticInstance already reserved by another machine")
+	// 		return fmt.Errorf(err, "StaticInstance already reserved by another machine")
 	// 	}
-	// 	return errors.Wrap(err, "failed to reserve StaticInstance for StaticMachine")
+	// 	return fmt.Errorf(err, "failed to reserve StaticInstance for StaticMachine")
 	// }
 
 	return nil
@@ -459,7 +458,7 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, staticInst
 
 	node, err := c.getNodeByProviderID(ctx, staticMachine)
 	if err != nil {
-		return errors.Wrap(err, "failed to get Node by provider id")
+		return fmt.Errorf("failed to get Node by provider id: %w", err)
 	}
 
 	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "NodeBootstrappingSucceeded", "Node successfully bootstrapped")
@@ -507,7 +506,7 @@ func (c *Client) getNodeByProviderID(ctx context.Context, staticMachine *infrav1
 		client.MatchingFieldsSelector{Selector: nodeSelector},
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to find Node by provider id '%s'", staticMachine.Spec.ProviderID)
+		return nil, fmt.Errorf("failed to find Node by provider id '%s': %w", staticMachine.Spec.ProviderID, err)
 	}
 
 	if len(nodes.Items) == 0 {
@@ -541,13 +540,11 @@ func (c *Client) getBootstrapScript(ctx context.Context, staticMachine *infrav1.
 		Name:      *machine.Spec.Bootstrap.DataSecretName,
 	}
 
-	err := c.client.Get(ctx, key, secret)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"failed to retrieve bootstrap data secret for StaticMachine '%s/%s'",
+	if err := c.client.Get(ctx, key, secret); err != nil {
+		return nil, fmt.Errorf("failed to retrieve bootstrap data secret for StaticMachine '%s/%s': %w",
 			staticMachine.Namespace,
 			staticMachine.Name,
+			err,
 		)
 	}
 

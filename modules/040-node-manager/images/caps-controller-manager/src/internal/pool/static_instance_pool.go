@@ -18,6 +18,7 @@ package pool
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ func (p *StaticInstancePool) PickStaticInstance(ctx context.Context, staticMachi
 		deckhousev1.StaticInstanceStatusCurrentStatusPhasePending,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find static instances in pending phase")
+		return nil, fmt.Errorf("failed to find static instances in pending phase: %w", err)
 	}
 	if len(staticInstances) == 0 {
 		return nil, nil
@@ -71,7 +72,7 @@ func (p *StaticInstancePool) findStaticInstancesInPhase(ctx context.Context, sta
 
 	labelSelector, err := staticMachineLabelSelector(staticMachine)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get label selector")
+		return nil, fmt.Errorf("failed to get label selector: %w", err)
 	}
 
 	err = p.List(
@@ -80,7 +81,7 @@ func (p *StaticInstancePool) findStaticInstancesInPhase(ctx context.Context, sta
 		client.MatchingLabelsSelector{Selector: labelSelector},
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to find static instances in phase '%s'", phase)
+		return nil, fmt.Errorf("failed to find static instances in phase '%s': %w", phase, err)
 	}
 
 	var staticInstancesInPhase []deckhousev1.StaticInstance
@@ -108,7 +109,7 @@ func staticMachineLabelSelector(staticMachine *infrav1.StaticMachine) (labels.Se
 
 	labelSelector, err := metav1.LabelSelectorAsSelector(staticMachine.Spec.LabelSelector)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
+		return nil, fmt.Errorf("unable to convert StaticMachine label selector: %w", err)
 	}
 
 	requirements, _ := labelSelector.Requirements()

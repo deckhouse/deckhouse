@@ -46,7 +46,7 @@ func (c *Client) AdoptStaticInstance(ctx context.Context,
 
 	credentials := &deckhousev1.SSHCredentials{}
 	if err := c.client.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
+		return ctrl.Result{}, fmt.Errorf("failed to load SSHCredentials: %w", err)
 	}
 
 	sshLegacyMode := true
@@ -68,13 +68,13 @@ func (c *Client) AdoptStaticInstance(ctx context.Context,
 	}
 
 	if err := c.adoptStaticInstance(ctx, staticInstance, staticMachine, machine, credentials.Spec, sshLegacyMode); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to adopt static instance")
+		return ctrl.Result{}, fmt.Errorf("failed to adopt static instance: %w", err)
 	}
 
 	delete(staticInstance.Annotations, deckhousev1.SkipBootstrapPhaseAnnotation)
 
 	if err := c.setStaticInstancePhaseToRunning(ctx, staticInstance, staticMachine); err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance phase to Running")
+		return ctrl.Result{}, fmt.Errorf("failed to set StaticInstance phase to Running: %w", err)
 	}
 
 	return ctrl.Result{}, nil
@@ -113,8 +113,8 @@ func (c *Client) adoptStaticInstance(ctx context.Context,
 		}
 
 		if err != nil {
-			tLogger.Error(err, "Failed to adopt StaticInstance: failed to create ssh client")
-			return errors.Wrap(err, "failed to adopt StaticInstance: failed to create ssh client")
+			tLogger.Error(err, "failed to create ssh client")
+			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
 
 		data, err := sshCl.ExecSSHCommandToString(
@@ -129,8 +129,8 @@ func (c *Client) adoptStaticInstance(ctx context.Context,
 				}
 			}
 			// If Node reboots, the ssh connection will close, and we will get an error.
-			tLogger.Error(err, "Failed to adopt StaticInstance: failed to exec ssh command")
-			return errors.Wrap(err, "failed to adopt StaticInstance: failed to exec ssh command")
+			tLogger.Error(err, "failed to exec ssh command")
+			return fmt.Errorf("failed to exec ssh command: %w", err)
 		}
 		return nil
 	}

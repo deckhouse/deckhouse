@@ -18,9 +18,9 @@ package ssh
 
 import (
 	"bufio"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 )
 
 // Logger is a wrapper around logr.Logger that implements io.Writer.
@@ -44,7 +44,7 @@ func (l *Logger) Write(p []byte) (int, error) {
 	for {
 		advance, output, err := bufio.ScanLines(p, false)
 		if err != nil {
-			return 0, errors.Wrap(err, "failed to scan lines")
+			return 0, fmt.Errorf("failed to scan lines: %w", err)
 		}
 
 		if advance == 0 {

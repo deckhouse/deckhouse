@@ -25,8 +25,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
@@ -46,14 +44,14 @@ func CreateSSHClient(address string, credentials deckhousev1.SSHCredentialsSpec)
 func (s *SSH) ExecSSHCommand(command string, stdout io.Writer, stderr io.Writer) error {
 	privateSSHKey, err := base64.StdEncoding.DecodeString(s.credentials.PrivateSSHKey)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode private ssh key")
+		return fmt.Errorf("failed to decode private ssh key: %w", err)
 	}
 
 	privateSSHKey = append(bytes.TrimSpace(privateSSHKey), '\n')
 
 	sshKey, err := os.CreateTemp("", "ssh-key-")
 	if err != nil {
-		return errors.Wrap(err, "failed to create a temporary file for private ssh key")
+		return fmt.Errorf("failed to create a temporary file for private ssh key: %w", err)
 	}
 	defer func() {
 		// It is not critical if we can't close the file.
@@ -64,7 +62,7 @@ func (s *SSH) ExecSSHCommand(command string, stdout io.Writer, stderr io.Writer)
 
 	_, err = io.Copy(sshKey, bytes.NewReader(privateSSHKey))
 	if err != nil {
-		return errors.Wrapf(err, "failed to write private ssh key to temporary file '%s'", sshKey.Name())
+		return fmt.Errorf("failed to write private ssh key to temporary file '%s': %w", sshKey.Name(), err)
 	}
 
 	args := []string{
@@ -124,7 +122,7 @@ func (s *SSH) ExecSSHCommand(command string, stdout io.Writer, stderr io.Writer)
 
 	err = cmd.Run()
 	if err != nil {
-		return errors.Wrap(err, "failed to run ssh command")
+		return fmt.Errorf("failed to run ssh command: %w", err)
 	}
 
 	return nil
@@ -138,7 +136,7 @@ func (s *SSH) ExecSSHCommandToString(command string) (string, error) {
 	if err != nil {
 		stderrBytes, err2 := io.ReadAll(stderr)
 		if err2 != nil {
-			return "", errors.Wrap(err2, "failed to read stderr from ssh command")
+			return "", fmt.Errorf("failed to read stderr from ssh command: %w", err2)
 		}
 		str := strings.TrimSpace(string(stderrBytes))
 		return str, err
@@ -146,7 +144,7 @@ func (s *SSH) ExecSSHCommandToString(command string) (string, error) {
 
 	stdoutBytes, err := io.ReadAll(stdout)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read stdout from ssh command")
+		return "", fmt.Errorf("failed to read stdout from ssh command: %w", err)
 	}
 
 	return strings.TrimSpace(string(stdoutBytes)), nil

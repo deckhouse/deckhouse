@@ -18,9 +18,9 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
-	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -75,9 +75,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-
-		logger.Error(err, "failed to get StaticInstance")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to get StaticInstance: %w", err)
 	}
 
 	// Return early if the object is paused
@@ -93,7 +91,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			logger.Info("StaticMachine is not found")
 			staticMachine = nil
 		} else {
-			return ctrl.Result{}, errors.Wrap(err, "failed to get StaticMachine")
+			return ctrl.Result{}, fmt.Errorf("failed to get StaticMachine: %w", err)
 		}
 	}
 
@@ -106,7 +104,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 		machine, err = util.GetOwnerMachine(ctx, r.Client, staticMachine.ObjectMeta)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to get Machine")
+			return ctrl.Result{}, fmt.Errorf("failed to get Machine: %w", err)
 		}
 		if machine == nil {
 			logger.Info("StaticMachine has not OwnerRef")
@@ -133,13 +131,12 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 	defer func() {
 		staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
 		if err != nil {
-			resErr = err
-			logger.Error(err, "failed to create staticInstance patch helper")
+			resErr = errors.Join(resErr, fmt.Errorf("failed to create staticInstance patch helper: %w", err))
+			return
 		}
 
 		if err = patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
-			resErr = err
-			logger.Error(err, "failed to patch staticInstance")
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch staticInstance: %w", err))
 		}
 	}()
 
@@ -167,7 +164,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 			nodeGroup = staticMachine.Labels["node-group"]
 		}
 		r.Recorder.SendWarningEvent(staticInstance, nodeGroup, "StaticInstanceCredentialsUnavailable", err.Error())
-		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
+		return ctrl.Result{}, fmt.Errorf("failed to load SSHCredentials: %w", err)
 	}
 
 	if credentialsStatus == nil || credentialsStatus.Status != metav1.ConditionTrue {
@@ -202,13 +199,13 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 
 	labelSelector, err := staticMachineLabelSelector(staticMachine)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to get label selector")
+		return ctrl.Result{}, fmt.Errorf("failed to get label selector: %w", err)
 	}
 
 	instances := &deckhousev1.StaticInstanceList{}
 	uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(staticMachine.UID))
 	if err = r.List(ctx, instances, client.MatchingLabelsSelector{Selector: labelSelector}, client.MatchingFieldsSelector{Selector: uidSelector}); err != nil {
-		return ctrl.Result{}, errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", staticMachine.UID)
+		return ctrl.Result{}, fmt.Errorf("failed to find StaticInstance by static machine uid '%s': %w", staticMachine.UID, err)
 	}
 
 	if len(instances.Items) == 0 {
@@ -217,7 +214,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 
 		if machine != nil {
 			if err = r.Client.Delete(ctx, machine); err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to delete Machine")
+				return ctrl.Result{}, fmt.Errorf("failed to delete Machine: %w", err)
 			}
 		}
 
@@ -254,7 +251,7 @@ func staticMachineLabelSelector(staticMachine *infrav1.StaticMachine) (labels.Se
 
 	labelSelector, err := metav1.LabelSelectorAsSelector(staticMachine.Spec.LabelSelector)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to convert StaticMachine label selector")
+		return nil, fmt.Errorf("unable to convert StaticMachine label selector: %w", err)
 	}
 
 	requirements, _ := labelSelector.Requirements()

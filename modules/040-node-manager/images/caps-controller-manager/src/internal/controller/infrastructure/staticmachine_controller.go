@@ -18,10 +18,10 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -101,52 +101,56 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, errors.Wrap(err, "failed to get StaticMachine")
+		return ctrl.Result{}, fmt.Errorf("failed to get StaticMachine: %w", err)
 	}
 
 	defer func() {
 		staticMachinePatchHelper, err := patch.NewHelper(staticMachine, r.Client)
 		if err != nil {
-			resErr = err
-			logger.Error(err, "failed to create staticMachine patch helper")
+			resErr = errors.Join(resErr, fmt.Errorf("failed to create staticMachine patch helper: %w", err))
+			return
 		}
 
 		if err = patchStaticMachine(ctx, staticMachinePatchHelper, staticMachine); err != nil {
-			resErr = err
-			logger.Error(err, "failed to patch staticMachine")
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch staticMachine: %w", err))
 		}
 	}()
 
 	machine, err := util.GetOwnerMachine(ctx, r.Client, staticMachine.ObjectMeta)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to get Machine")
+		return ctrl.Result{}, fmt.Errorf("failed to get Machine: &w", err)
 	}
 	if machine == nil {
 		logger.Info("Machine Controller has not yet set OwnerRef. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
+
+	defer func() {
+		machinePatchHelper, err := patch.NewHelper(machine, r.Client)
+		if err != nil {
+			resErr = errors.Join(resErr, fmt.Errorf("failed to create Machine patch helper: %w", err))
+			return
+		}
+
+		if err = machinePatchHelper.Patch(ctx, machine); err != nil {
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch Machine: %w", err))
+		}
+	}()
+
 	logger = logger.WithValues("machine", machine.Name)
 	ctx = ctrl.LoggerInto(ctx, logger)
 
 	nodeGroupLabel, ok := machine.Labels["node-group"]
 	if !ok {
-		patchHelper, err := patch.NewHelper(machine, r.Client)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
-		}
-
 		machine.Labels["node-group"] = staticMachine.Labels["node-group"]
-		if err = patchHelper.Patch(ctx, machine); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine with node-group label")
-		}
 	} else if nodeGroupLabel != staticMachine.Labels["node-group"] {
-		logger.Info("'node-group' label in StaticMachine and Machine are different")
+		logger.Info("'node-group' label in StaticMachine and Machine are different. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
 	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, staticMachine.ObjectMeta)
 	if err != nil {
-		logger.Info("Machine is missing cluster label or cluster does not exist")
+		logger.Info("Machine is missing cluster label or cluster does not exist. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
@@ -157,7 +161,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		instances,
 		k8sClient.MatchingFieldsSelector{Selector: uidSelector},
 	); err != nil {
-		return ctrl.Result{}, errors.Wrapf(err, "failed to find StaticInstance by static machine uid %s", string(staticMachine.UID))
+		return ctrl.Result{}, fmt.Errorf("failed to find StaticInstance by static machine uid %s: %w", string(staticMachine.UID), err)
 	}
 
 	var staticInstance *deckhousev1.StaticInstance
@@ -171,13 +175,12 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if staticInstance != nil {
 			staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
 			if err != nil {
-				resErr = err
-				logger.Error(err, "failed to create staticInstance patch helper")
+				resErr = errors.Join(resErr, fmt.Errorf("failed to create StaticInstance patch helper: %w", err))
+				return
 			}
 
 			if err = patchStaticInstance(ctx, staticInstancePatchHelper, staticInstance); err != nil {
-				resErr = err
-				logger.Error(err, "failed to patch staticInstance")
+				resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticInstance: %w", err))
 			}
 		}
 	}()
@@ -237,7 +240,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	}
 
 	if !conditions.IsTrue(cluster, clusterv1.InfrastructureReadyCondition) {
-		logger.Info("Cluster infrastructure is not ready yet")
+		logger.Info("Cluster infrastructure is not ready yet, requeuing")
 		conditions.Set(staticMachine, metav1.Condition{
 			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
 			Reason:             infrav1.StaticMachineWaitingForClusterInfrastructureReason,
@@ -263,17 +266,17 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	}
 
 	if staticInstance != nil {
-		return r.reconcileStaticInstancePhase(ctx, cluster, machine, staticMachine, staticInstance)
+		return r.reconcileStaticInstancePhase(ctx, machine, staticMachine, staticInstance)
 	}
 
 	// If there is not yet a StaticInstance for this StaticMachine,
 	// then pick one from the static instance pool
 	newStaticInstance, err := pool.NewStaticInstancePool(r.Client, r.Config, r.Recorder).PickStaticInstance(ctx, staticMachine)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to pick StaticInstance")
+		return ctrl.Result{}, fmt.Errorf("failed to pick StaticInstance: %w", err)
 	}
 	if newStaticInstance == nil {
-		logger.Info("No pending StaticInstance available, waiting...")
+		logger.Info("No pending StaticInstance available, requeuing")
 		r.Recorder.SendWarningEvent(staticMachine, staticMachine.Labels["node-group"], "StaticInstanceSelectionFailed", "No available StaticInstance")
 		conditions.Set(staticMachine, metav1.Condition{
 			Type:               infrav1.StaticMachineStaticInstanceReadyCondition,
@@ -292,13 +295,12 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	defer func() {
 		staticInstancePatchHelper, err := patch.NewHelper(newStaticInstance, r.Client)
 		if err != nil {
-			resErr = err
-			logger.Error(err, "failed to create staticInstance patch helper")
+			resErr = errors.Join(resErr, fmt.Errorf("failed to create StaticInstance patch helper: %w", err))
+			return
 		}
 
 		if err = patchStaticInstance(ctx, staticInstancePatchHelper, newStaticInstance); err != nil {
-			resErr = err
-			logger.Error(err, "failed to patch staticInstance")
+			resErr = errors.Join(resErr, fmt.Errorf("failed to patch StaticInstance: %w", err))
 		}
 	}()
 
@@ -330,9 +332,10 @@ func (r *StaticMachineReconciler) reconcileDelete(ctx context.Context,
 	if staticInstance != nil {
 		result, err := r.cleanup(ctx, machine, staticMachine, staticInstance)
 		if err != nil {
-			return result, errors.Wrap(err, "failed to cleanup StaticInstance")
+			return result, fmt.Errorf("failed to cleanup StaticInstance: %w", err)
 		}
 
+		// if requeued
 		if !result.IsZero() {
 			return result, nil
 		}
@@ -361,11 +364,6 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 		staticMachine.Status.Ready = false
 		staticMachine.Status.Initialization.Provisioned = ptr.To(false)
 
-		patchHelper, err := patch.NewHelper(machine, r.Client)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
-		}
-
 		// Cluster API controller is a raceful service. We must fix bug https://github.com/kubernetes-sigs/cluster-api/issues/7237.
 		if machine.Status.NodeRef.Name == "" {
 			machine.Status.NodeRef.Name = staticInstance.Status.NodeRef.Name
@@ -381,7 +379,7 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 
 		cond := conditions.Get(machine, clusterv1.DeletingCondition)
 		if cond != nil && cond.Status == metav1.ConditionTrue {
-			err = r.HostClient.Cleanup(ctx, staticInstance, staticMachine, machine)
+			err := r.HostClient.Cleanup(ctx, staticInstance, staticMachine, machine)
 			if err != nil {
 				// don't return here
 				logger.Error(err, "failed to clean up StaticInstance")
@@ -390,16 +388,11 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 			delete(machine.Annotations, clusterv1.PreTerminateDeleteHookAnnotationPrefix)
 		}
 
-		err = patchHelper.Patch(ctx, machine)
-		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to patch Machine with NodeRef")
-		}
-
 		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
 	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time) > DefaultStaticInstanceCleanupTimeout {
-		logger.Error(StaticInstanceCleanupTimedOut, "StaticInstance is cleaning")
+		logger.Error(StaticInstanceCleanupTimedOut, "")
 		r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
 
 		staticMachine.Status.FailureReason = ptr.To("DeleteError")
@@ -411,19 +404,17 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 
 	err := r.HostClient.Cleanup(ctx, staticInstance, staticMachine, machine)
 	if err != nil {
+		// don't return here
 		logger.Error(err, "failed to clean up StaticInstance")
 	}
 
 	return ctrl.Result{RequeueAfter: RequeueForStaticInstanceCleaning}, nil
 }
 
-func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
-	ctx context.Context,
-	cluster *clusterv1.Cluster,
+func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Context,
 	machine *clusterv1.Machine,
 	staticMachine *infrav1.StaticMachine,
-	staticInstance *deckhousev1.StaticInstance,
-) (ctrl.Result, error) {
+	staticInstance *deckhousev1.StaticInstance) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
 	switch staticInstance.GetPhase() {
@@ -497,7 +488,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return []string{string(staticInstance.Status.MachineRef.UID)}
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to setup StaticInstance field 'status.machineRef.uid' indexer")
+		return fmt.Errorf("failed to setup StaticInstance field 'status.machineRef.uid' indexer: %w", err)
 	}
 
 	err = mgr.GetFieldIndexer().IndexField(
@@ -518,7 +509,7 @@ func (r *StaticMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return []string{node.Spec.ProviderID}
 		})
 	if err != nil {
-		return errors.Wrap(err, "failed to setup Node field 'spec.providerID' indexer")
+		return fmt.Errorf("failed to setup Node field 'spec.providerID' indexer: %w", err)
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
