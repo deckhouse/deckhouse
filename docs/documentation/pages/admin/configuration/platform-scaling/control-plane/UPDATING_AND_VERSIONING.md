@@ -270,7 +270,11 @@ metadata:
 
 #### Intermediate step of a multi-hop upgrade (e.g. 1.33 → 1.35)
 
-The target version in configuration may be several minors ahead of the cluster’s current minor. `status.currentVersion` follows the active minor step, while individual components can temporarily run different minors during a hop. `progress` reflects how much of the overall path (including intermediate minors) is done—so it can be well above 0% before the final target is reached.
+In the configuration, the target Kubernetes version may be several minor versions ahead of the current cluster version. In this case, the upgrade is performed step by step through intermediate minor versions.
+
+The `status.currentVersion` field reflects the current upgrade step (the active minor version the cluster is being brought to at the moment). Within a single step, individual control plane components may temporarily run different minor versions.
+
+The `progress` field reflects the entire upgrade path, including intermediate versions. Therefore, its value can be significantly greater than 0% even before all components reach the target version.
 
 ```yaml
 apiVersion: v1
