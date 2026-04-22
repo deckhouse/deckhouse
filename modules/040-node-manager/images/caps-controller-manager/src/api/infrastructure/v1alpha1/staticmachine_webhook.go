@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -90,12 +89,12 @@ func (*StaticMachineCustomValidator) ValidateUpdate(ctx context.Context, new, ol
 	// By convention, StaticMachine.spec is immutable except for the providerID field.
 	newStaticMachine, err := runtime.DefaultUnstructuredConverter.ToUnstructured(new)
 	if err != nil {
-		return nil, apierrors.NewInternalError(errors.Wrap(err, "failed to convert new StaticMachine to unstructured object"))
+		return nil, apierrors.NewInternalError(fmt.Errorf("failed to convert new StaticMachine to unstructured object: %w", err))
 	}
 
 	oldStaticMachine, err := runtime.DefaultUnstructuredConverter.ToUnstructured(old)
 	if err != nil {
-		return nil, apierrors.NewInternalError(errors.Wrap(err, "failed to convert old StaticMachine to unstructured object"))
+		return nil, apierrors.NewInternalError(fmt.Errorf("failed to convert old StaticMachine to unstructured object: %w,", err))
 	}
 
 	newStaticMachineSpec := newStaticMachine["spec"].(map[string]interface{})

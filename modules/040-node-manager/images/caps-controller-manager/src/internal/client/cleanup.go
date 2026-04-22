@@ -18,6 +18,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
@@ -41,8 +42,7 @@ func (c *Client) Cleanup(ctx context.Context,
 
 	credentials := &deckhousev1.SSHCredentials{}
 	if err := c.client.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
-		logger.Error(err, "failed to load SSHCredentials")
-		return errors.Wrap(err, "failed to load SSHCredentials")
+		return fmt.Errorf("failed to load SSHCredentials: %w", err)
 	}
 
 	sshLegacyMode := true
@@ -56,12 +56,12 @@ func (c *Client) Cleanup(ctx context.Context,
 		deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
 		err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode)
 		if err != nil {
-			return errors.Wrap(err, "failed to clean up StaticInstance from running phase")
+			return fmt.Errorf("failed to clean up StaticInstance from running phase: %w", err)
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
 		err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode)
 		if err != nil {
-			return errors.Wrap(err, "failed to clean up StaticInstance from cleaning phase")
+			return fmt.Errorf("failed to clean up StaticInstance from cleaning phase: %w", err)
 		}
 	case
 		deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
@@ -122,13 +122,13 @@ func (c *Client) cleanup(ctx context.Context,
 			sshCl, err = gossh.CreateSSHClient(dataStr.address, dataStr.credentials)
 		}
 		if err != nil {
-			tLogger.Error(err, "Failed to clean up StaticInstance: failed to create ssh client")
-			return errors.Wrap(err, "failed to clean up StaticInstance: failed to create ssh client")
+			tLogger.Error(err, "failed to create ssh client")
+			return fmt.Errorf("failed to create ssh client: %w", err)
 		}
 		err = sshCl.ExecSSHCommand("if [ ! -f /var/lib/bashible/cleanup_static_node.sh ]; then rm -rf /var/lib/bashible; (sleep 5 && shutdown -r now) & else bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing; fi", nil, nil)
 		if err != nil {
-			tLogger.Error(err, "Failed to clean up StaticInstance: failed to exec ssh command")
-			return errors.Wrap(err, "failed to clean up StaticInstance: failed to exec ssh command")
+			tLogger.Error(err, "failed to exec ssh command")
+			return fmt.Errorf("failed to exec ssh command: %w", err)
 		}
 		return nil
 	}

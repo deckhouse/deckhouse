@@ -18,10 +18,10 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 
-	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -68,16 +68,13 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-
-		logger.Error(err, "failed to get StaticCluster")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to get StaticCluster: %w", err)
 	}
 
 	// Fetch the Cluster.
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, staticCluster.ObjectMeta)
 	if err != nil {
-		logger.Error(err, "failed to get owner Cluster")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to get owner Cluster: %w", err)
 	}
 	if cluster == nil {
 		logger.V(1).Info("Cluster Controller has not yet set OwnerRef. Won't reconcile")
@@ -95,12 +92,12 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 func (r *StaticClusterReconciler) reconcile(ctx context.Context, staticCluster *infrav1.StaticCluster) (ctrl.Result, error) {
 	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server host")
+		return ctrl.Result{}, fmt.Errorf("failed to parse api server host: %w", err)
 	}
 
 	port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server port")
+		return ctrl.Result{}, fmt.Errorf("failed to parse api server port: %w", err)
 	}
 
 	staticCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
@@ -111,12 +108,12 @@ func (r *StaticClusterReconciler) reconcile(ctx context.Context, staticCluster *
 
 	patchHelper, err := patch.NewHelper(staticCluster, r.Client)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to init patch helper")
+		return ctrl.Result{}, fmt.Errorf("failed to init patch helper: %w", err)
 	}
 
 	err = patchHelper.Patch(ctx, staticCluster)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticCluster")
+		return ctrl.Result{}, fmt.Errorf("failed to patch StaticCluster: %w", err)
 	}
 
 	return ctrl.Result{}, nil
