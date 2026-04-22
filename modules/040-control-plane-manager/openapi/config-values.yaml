@@ -258,6 +258,19 @@ properties:
 
           Generates `kube-system/d8-secret-encryption-key` Secret with encryption key.
           > **Note!** This mode cannot be disabled!
+  rootKubeconfigSymlink:
+    type: boolean
+    default: true
+    description: |
+      Whether to maintain a symlink from `/root/.kube/config` to `/etc/kubernetes/admin.conf` on control-plane nodes.
+
+      When the [user-authz](/modules/user-authz/) module is enabled and this parameter is `false`, the symlink is removed and the `NODE_ADMIN_KUBECONFIG` environment variable is set on control-plane-manager pods accordingly. Use `d8 k` with `--kubeconfig=/etc/kubernetes/admin.conf` (or other credentials) when you need API access from the node.
+
+      When the `user-authz` module is disabled, `control-plane-manager` ignores this parameter and keeps the default (symlink present).
+
+      Setting the value back to `true` restores the symlink on the next reconciliation.
+    x-doc-default: true
+    x-examples: [true, false]
   etcd:
     type: object
     description: |
