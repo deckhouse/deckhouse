@@ -152,7 +152,11 @@ type ControlPlaneNodeStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=cpn
-// +kubebuilder:printcolumn:name="APIReady",type="string",JSONPath=".status.conditions[?(@.type=='APIServerReady')].status",description="API server ready"
+// +kubebuilder:printcolumn:name="ETCD",type="string",JSONPath=".status.conditions[?(@.type=='EtcdReady')].status",description="Etcd ready"
+// +kubebuilder:printcolumn:name="APISERVER",type="string",JSONPath=".status.conditions[?(@.type=='APIServerReady')].status",description="API server ready"
+// +kubebuilder:printcolumn:name="CONTROLLERMANAGER",type="string",JSONPath=".status.conditions[?(@.type=='ControllerManagerReady')].status",description="Controller manager ready"
+// +kubebuilder:printcolumn:name="SCHEDULER",type="string",JSONPath=".status.conditions[?(@.type=='SchedulerReady')].status",description="Scheduler ready"
+// +kubebuilder:printcolumn:name="CA",type="string",JSONPath=".status.conditions[?(@.type=='CASynced')].status",description="CA synced"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 type ControlPlaneNode struct {

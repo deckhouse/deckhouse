@@ -20,9 +20,25 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
+    - description: Etcd ready
+      jsonPath: .status.conditions[?(@.type=='EtcdReady')].status
+      name: ETCD
+      type: string
     - description: API server ready
       jsonPath: .status.conditions[?(@.type=='APIServerReady')].status
-      name: APIReady
+      name: APISERVER
+      type: string
+    - description: Controller manager ready
+      jsonPath: .status.conditions[?(@.type=='ControllerManagerReady')].status
+      name: CONTROLLERMANAGER
+      type: string
+    - description: Scheduler ready
+      jsonPath: .status.conditions[?(@.type=='SchedulerReady')].status
+      name: SCHEDULER
+      type: string
+    - description: CA synced
+      jsonPath: .status.conditions[?(@.type=='CASynced')].status
+      name: CA
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
