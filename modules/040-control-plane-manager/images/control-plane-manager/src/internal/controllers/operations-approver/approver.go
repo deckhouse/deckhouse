@@ -84,6 +84,7 @@ type component struct {
 	concurrencyLimit          int
 	approvedOperationsTotal   int
 	approvedOperationsPerNode map[string]int
+	approvedOperationsQueue   []controlplanev1alpha1.ControlPlaneOperation
 }
 
 // newApprover builds an approver for one reconcile pass: partitions operations into
@@ -206,6 +207,7 @@ func (link *approveLink) tryReserveApproval(unapprovedOperation controlplanev1al
 	component := link.components[unapprovedOperation.Spec.Component]
 
 	if component.approvedOperationsTotal >= component.concurrencyLimit {
+		component.approvedOperationsQueue = append(component.approvedOperationsQueue, unapprovedOperation)
 		return false
 	}
 
@@ -239,7 +241,7 @@ func (link *approveLink) hasAnyApprovedOperation() bool {
 
 func (link *approveLink) hasAnyApprovedOperationOnNode(nodeName string) bool {
 	for _, component := range link.components {
-		if component.approvedOperationsPerNode[nodeName] > 0 {
+		if component.approvedOperationsPerNode[nodeName] > 0 || len(component.approvedOperationsQueue) > 0 {
 			return true
 		}
 	}
