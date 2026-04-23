@@ -82,15 +82,12 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	var machine *clusterv1.Machine
-	staticMachine := &infrav1.StaticMachine{}
-	if err = r.Get(ctx, req.NamespacedName, staticMachine); err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Info("StaticMachine is not found")
-			staticMachine = nil
-		} else {
-			return ctrl.Result{}, fmt.Errorf("failed to get StaticMachine: %w", err)
-		}
+	staticMachine, err := r.getStaticMachine(ctx, staticInstance)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get StaticMachine: %w", err)
+	}
+	if staticMachine == nil {
+		logger.Info("No StaticMachine is associated with StaticInstance")
 	}
 
 	if staticMachine != nil {
@@ -98,14 +95,6 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		if err != nil {
 			logger.Info("StaticMachine is missing cluster label or cluster does not exist. Won't reconcile")
 			return ctrl.Result{}, nil
-		}
-
-		machine, err = util.GetOwnerMachine(ctx, r.Client, staticMachine.ObjectMeta)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to get Machine: %w", err)
-		}
-		if machine == nil {
-			logger.Info("StaticMachine has not OwnerRef")
 		}
 
 		// Return early if the Cluster is paused
@@ -120,10 +109,10 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	return r.reconcileNormal(ctx, staticInstance, staticMachine, machine)
+	return r.reconcileNormal(ctx, staticInstance, staticMachine)
 }
 
-func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine, machine *clusterv1.Machine) (res ctrl.Result, resErr error) {
+func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine) (res ctrl.Result, resErr error) {
 	logger := ctrl.LoggerFrom(ctx)
 
 	staticInstancePatchHelper, err := patch.NewHelper(staticInstance, r.Client)
@@ -209,17 +198,43 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 		logger.Info("Labels on StaticInstance have changed and StaticInstance has left the StaticMachine.spec.labelSelector, " +
 			"trying to clean up StaticInstance (transfer Node to another NodeGroup)")
 
-		if machine != nil {
-			if err = r.Client.Delete(ctx, machine); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete Machine: %w", err)
-			}
+		machine, err := util.GetOwnerMachine(ctx, r.Client, staticMachine.ObjectMeta)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get Machine: %w", err)
+		}
+		if machine == nil {
+			logger.Info("StaticMachine has not OwnerRef")
+			return ctrl.Result{}, nil
 		}
 
+		if err = r.Client.Delete(ctx, machine); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to delete Machine: %w", err)
+		}
 		r.Recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceNodeGroupLeaved", fmt.Sprintf("StaticInstance has left the StaticMachine.spec.labelSelector in NodeGroup '%s'", staticMachine.Labels["node-group"]))
-		return ctrl.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *StaticInstanceReconciler) getStaticMachine(ctx context.Context, staticInstance *deckhousev1.StaticInstance) (*infrav1.StaticMachine, error) {
+	if staticInstance.Status.MachineRef == nil {
+		return nil, nil
+	}
+
+	staticMachine := &infrav1.StaticMachine{}
+	staticMachineNamespacedName := client.ObjectKey{
+		Namespace: staticInstance.Status.MachineRef.Namespace,
+		Name:      staticInstance.Status.MachineRef.Name,
+	}
+
+	err := r.Get(ctx, staticMachineNamespacedName, staticMachine)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return staticMachine, nil
 }
 
 func patchStaticInstance(ctx context.Context, patchHelper *patch.Helper, staticInstance *deckhousev1.StaticInstance, options ...patch.Option) error {
