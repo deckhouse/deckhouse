@@ -1486,6 +1486,40 @@ You cannot create an Instance resource yourself, but you can delete it. In this 
 
 Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).
 
+## How fencing handles different node types
+
+Fencing activates when a node loses connectivity to the cluster and protects the cluster from "zombie" nodes in an undefined state. To prevent short-term failures from triggering cascading action, fencing operates in two steps: first it marks the node as suspect (at the `memberlist`/Lifeguard gossip-protocol level), and only then "builds a fence around it" — powers the node off and (if applicable) deletes its Node object.
+
+The action depends on the node type (label `node.deckhouse.io/type`) and on the fencing mode (label `node-manager.deckhouse.io/fencing-mode`, see [`spec.fencing.mode`](cr.html#nodegroup-v1-spec-fencing-mode)).
+
+### Cloud nodes (CloudEphemeral, CloudPermanent)
+
+For cloud nodes in `Watchdog` mode, fencing behaves as follows:
+
+- The fencing-agent stops feeding the watchdog (the `softdog` kernel module) and, once the timeout expires, the kernel enters kernel panic. This guarantees no running workload remains on the node.
+- The fencing-controller deletes the Node object from the cluster.
+- Deletion of the Node object is picked up by the cloud-provider controller (MCM/CAPI): it deletes the underlying virtual machine and, if needed, provisions a new one. This way the faulty node is recreated automatically.
+
+There is a theoretical scenario where kubelet on a "stuck" VM could come back before the cloud-provider deletes the machine and try to re-register the node in the cluster. The probability of this is minimal thanks to multiple safeguards:
+
+- Kernel panic leaves the node unusable — bringing it back requires someone to restart the VM manually.
+- Automatic node reboot after kernel panic is disabled at the OS level for every node with fencing enabled.
+- There are safety timings between kernel panic and the point when the cloud-provider picks up the machine.
+
+### Static nodes (Static, CloudStatic)
+
+For static nodes the Node object is **not deleted**, because there is no controller that will recreate it: no machine can be provisioned under such a Node. The fencing-agent still powers the node off via kernel panic to rule out undefined behavior, and the fencing-controller only evicts workloads (deletes pods). The Node object itself remains, and the node waits until an operator manually brings it back online.
+
+### `Notify` mode
+
+In `Notify` mode the fencing-agent runs and monitors the cluster, but the watchdog is not armed and the node is not rebooted. For nodes in this mode the fencing-controller also does not delete the Node object — the mode is intended for debugging and for observing fencing without actually affecting nodes.
+
+### Disabling automatic reboot after kernel panic
+
+In all cases, when fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level (via a kernel setting). This prevents the node from coming back by itself, in an undefined state, before the cloud-provider removes or recreates the machine (for cloud nodes) or an operator brings the node back online (for static nodes).
+
+If you run into a scenario where a node with fencing enabled returns to the cluster differently from what is described above, please contact support: this will help refine the chain of checks and safeguards.
+
 ## How do I work with GPU nodes?
 
 {% alert level="info" %}
