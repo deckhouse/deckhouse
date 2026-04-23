@@ -142,10 +142,13 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 	var (
 		bashibleActualParams    *bashible.ModeParams
 		bashibleUnmanagedParams *bashible.UnmanagedModeParams
+		registryService         = registryservice.ModeDisabled
 	)
 
 	switch inputs.Params.Mode {
 	case registry_const.ModeDirect:
+		registryService = registryservice.ModeInClusterProxy
+
 		bashibleActualParams = &bashible.ModeParams{
 			Direct: &bashible.DirectModeParams{
 				ImagesRepo: inputs.Params.ImagesRepo,
@@ -164,7 +167,9 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 			Password:   inputs.Params.Password,
 		}
 
-	case registry_const.ModeProxy:
+	case registry_const.ModeProxy, registry_const.ModeLocal:
+		registryService = registryservice.ModeNodeServices
+
 		bashibleActualParams = &bashible.ModeParams{
 			Proxy: &bashible.ProxyLocalModeParams{
 				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
@@ -184,6 +189,8 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 	case registry_const.ModeUnmanaged:
 		// Only for configurable unmanaged mode
 		if inputs.Params.ImagesRepo != "" {
+			registryService = registryservice.ModeDisabled
+
 			bashibleActualParams = &bashible.ModeParams{
 				Unmanaged: &bashible.UnmanagedModeParams{
 					ImagesRepo: inputs.Params.ImagesRepo,
@@ -204,6 +211,7 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 		}
 	}
 
+	state.RegistryService = registryService
 	state.Bashible.ActualParams = bashibleActualParams
 	state.Bashible.UnmanagedParams = bashibleUnmanagedParams
 	return nil
