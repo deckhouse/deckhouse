@@ -105,6 +105,11 @@ rules:
   - modulesources
   - moduleupdatepolicies
   - modulepulloverrides
+  - packagerepositories
+  - packagerepositoryoperations
+  - applicationpackageversions
+  - applicationpackages
+  - applications
   - nodegroups
   - nodeusers
   - staticinstances

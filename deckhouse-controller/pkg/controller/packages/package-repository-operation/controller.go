@@ -441,7 +441,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		}
 
 		successMessage := fmt.Sprintf("Successfully scanned repository, found %d package(s)", operation.Status.Packages.Total)
-		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, true, "", successMessage); updateErr != nil {
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, true, v1alpha1.PackageRepositoryOperationReasonPackageListingSuccess, successMessage); updateErr != nil {
 			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
