@@ -1,0 +1,34 @@
+image: base/jekyll
+from: {{ index $.Images "base/ruby-bundler-v3_4_9" }}
+imageSpec:
+  config:
+    env: { "PATH": "${PATH}:/usr/bundle/bin" }
+shell:
+  install:
+  - |
+      cd /srv/jekyll-data/documentation
+
+      bundle install
+      echo "Ruby: $(ruby --version)"
+      echo "Gem: $(gem --version)"
+      bundle --version
+      /usr/bundle/bin/jekyll -version
+      yq -V
+      echo "jq: $(jq -V)"
+import:
+- from: {{ index $.Images "tools/jq" }}
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: install
+- from: {{ index $.Images "tools/yq" }}
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: install
+git:
+- add: /docs/documentation
+  to: /srv/jekyll-data/documentation
+  includePaths:
+    - Gemfile
+    - Gemfile.lock
+  stageDependencies:
+    install: '**/*'

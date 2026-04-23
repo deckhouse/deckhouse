@@ -40,4 +40,7 @@ imageSpec:
     entrypoint: [ "/opt/nginx-static/sbin/nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
 ---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
+---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
+---
+{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-jekyll-base.inc.yaml" .ModulePath)) . }}
