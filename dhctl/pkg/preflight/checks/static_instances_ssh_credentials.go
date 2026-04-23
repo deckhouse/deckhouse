@@ -193,27 +193,30 @@ func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsS
 }
 
 func testSSHConnection(ctx context.Context, nodeInterface node.Interface, address string, cred *v1alpha2.SSHCredentialsSpec) error {
-	sshClient := nodeInterface.(*ssh.NodeInterfaceWrapper).Client()
-	sess := sshClient.Session()
-
 	config := sshclient.ClientConfig{
 		User:                cred.User,
 		SSHPort:             cred.SSHPort,
 		PrivateSSHKey:       cred.PrivateSSHKey,
 		SudoPasswordEncoded: cred.SudoPasswordEncoded,
-		BastionKeys:         sshClient.PrivateKeys(),
 	}
 
-	if sess.BastionHost != "" {
-		config.BastionHost = sess.BastionHost
-		config.BastionPort = sess.BastionPort
-		config.BastionUser = sess.BastionUser
-		config.BastionPassword = sess.BastionPassword
-	} else {
-		config.BastionHost = sess.AvailableHosts()[0].Host
-		config.BastionPort = sess.Port
-		config.BastionUser = sess.User
-		config.BastionPassword = sess.BecomePass
+	if wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper); ok {
+		sshClient := wrapper.Client()
+		sess := sshClient.Session()
+
+		config.BastionKeys = sshClient.PrivateKeys()
+
+		if sess.BastionHost != "" {
+			config.BastionHost = sess.BastionHost
+			config.BastionPort = sess.BastionPort
+			config.BastionUser = sess.BastionUser
+			config.BastionPassword = sess.BastionPassword
+		} else {
+			config.BastionHost = sess.AvailableHosts()[0].Host
+			config.BastionPort = sess.Port
+			config.BastionUser = sess.User
+			config.BastionPassword = sess.BecomePass
+		}
 	}
 
 	client, err := sshclient.NewClientFromConfig(ctx, address, config)
