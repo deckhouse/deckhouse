@@ -69,3 +69,5 @@ git:
 imageSpec:
   config:
     entrypoint: ["/bin/mimir"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

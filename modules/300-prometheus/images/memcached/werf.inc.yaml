@@ -66,3 +66,5 @@ imageSpec:
   config:
     entrypoint: ["/usr/bin/memcached_exporter"]
     expose: ["9150"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-exporter" $.ModuleName $.ImageName )) }}

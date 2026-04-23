@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-29ee29150ad2b251ccdee6c203c52b31b355dd476df45ac4f10de08d24ac9ee6",
+  "@id": "merged-vex-865d72013a3c26ee54a5a122ff23bd39f2f94de489a07c167aab7e3c3b28a6db",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2025-10-10T19:56:32.366855+03:00",
+  "timestamp": "2026-04-23T12:00:00.000000+03:00",
   "version": 1,
   "statements": [
     {
@@ -32,6 +32,48 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2025-54410 связана с работой демона Docker (dockerd) при использовании firewalld - при перезагрузке firewalld не восстанавливаются iptables правила изоляции bridge сетей между контейнерами. Promxy является Go-бинарем, который выступает агрегирующим прокси для Prometheus и использует библиотеку github.com/docker/docker только как зависимость Go модуля. Promxy не запускает Docker daemon, не управляет контейнерами и не создает bridge сети. Уязвимый код находится в функциях управления сетями Docker daemon (libnetwork/iptables/firewalld.go), которые никогда не вызываются в контексте работы Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в рамках использования Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33186"
+      },
+      "timestamp": "2026-04-23T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/google.golang.org/grpc@v1.58.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33186 представляет собой обход авторизации в gRPC-Go: gRPC-сервер слишком лояльно валидирует HTTP/2 псевдо-заголовок ':path' и принимает запросы без ведущего слэша, при этом authz-интерсепторы видят неканонический путь и не срабатывают на 'deny'-правилах в канонической форме. Эксплуатация требует одновременного выполнения двух условий: (1) gRPC-сервер использует path-based authz-интерсептор (google.golang.org/grpc/authz или кастомный, опирающийся на info.FullMethod / grpc.Method(ctx)), (2) политика содержит 'deny' для канонических путей и fallback 'allow'. Promxy v0.0.93 является агрегирующим прокси Prometheus, основной транспорт — HTTP/HTTPS PromQL API; gRPC используется только клиентски (через зависимость prometheus/prometheus → grpc). Promxy не запускает gRPC-сервер во внешнем сетевом контуре, не подключает google.golang.org/grpc/authz и не задаёт path-based deny/allow-правил. Защита API выполняется уровнем выше через kube-rbac-proxy. Предусловия эксплуатации CVE-2026-33186 в Promxy отсутствуют."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-34040"
+      },
+      "timestamp": "2026-04-23T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-34040 представляет собой обход авторизации в подсистеме AuthZ-плагинов Docker-демона (Moby). Promxy использует исключительно клиентский SDK Docker (github.com/docker/docker/client) как транзитивную зависимость через prometheus/prometheus для service discovery Docker и Docker Swarm контейнеров. Promxy не содержит, не запускает и не взаимодействует с подсистемой авторизационных плагинов Docker-демона. Уязвимый код существует исключительно в бинарнике Docker-демона, который не компилируется и не выполняется в составе Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33997"
+      },
+      "timestamp": "2026-04-23T12:00:00.000000+03:00",
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость CVE-2026-33997 связана с обходом проверки привилегий при установке Docker-плагинов через команду 'docker plugin install'. Promxy использует исключительно клиентский SDK Docker (github.com/docker/docker/client) для запросов к Docker API с целью перечисления контейнеров и сервисов в рамках механизма service discovery. Promxy никогда не устанавливает, не управляет и не взаимодействует с Docker-плагинами. Уязвимый код находится в обработчике установки плагинов Docker-демона, который не компилируется и не вызывается в составе Promxy. Таким образом, данная уязвимость не может быть эксплуатирована в контексте Promxy."
     }
   ]
 }
