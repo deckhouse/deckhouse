@@ -67,25 +67,6 @@ func (c *Client) AdoptStaticInstance(ctx context.Context,
 		UID:        staticMachine.UID,
 	}
 
-	if err := c.adoptStaticInstance(ctx, staticInstance, staticMachine, machine, credentials.Spec, sshLegacyMode); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to adopt static instance: %w", err)
-	}
-
-	delete(staticInstance.Annotations, deckhousev1.SkipBootstrapPhaseAnnotation)
-
-	if err := c.setStaticInstancePhaseToRunning(ctx, staticInstance, staticMachine); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to set StaticInstance phase to Running: %w", err)
-	}
-
-	return ctrl.Result{}, nil
-}
-
-func (c *Client) adoptStaticInstance(ctx context.Context,
-	staticInstance *deckhousev1.StaticInstance,
-	staticMachine *infrav1.StaticMachine,
-	machine *clusterv1.Machine,
-	credentials deckhousev1.SSHCredentialsSpec,
-	sshLegacyMode bool) error {
 	type taskDataStr struct {
 		address       string
 		credentials   deckhousev1.SSHCredentialsSpec
@@ -137,7 +118,7 @@ func (c *Client) adoptStaticInstance(ctx context.Context,
 
 	taskData := taskDataStr{
 		address:       staticInstance.Spec.Address,
-		credentials:   credentials,
+		credentials:   credentials.Spec,
 		sshLegacyMode: sshLegacyMode,
 		providerID:    machine.Spec.ProviderID,
 		machineName:   machine.Name,
@@ -146,16 +127,22 @@ func (c *Client) adoptStaticInstance(ctx context.Context,
 	taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
 	err, finished := c.taskManager.Spawn(taskCtx, string(staticMachine.Spec.ProviderID), "adopt", taskData, taskFunc)
 	if err != nil {
-		return err
+		return ctrl.Result{}, fmt.Errorf("failed to adopt StaticInstance: %w", err)
 	}
 
-	logger := ctrl.LoggerFrom(ctx)
-	if finished {
-		logger.Info("Adoption script executed successfully")
-		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "AdoptionScriptSucceeded", "Adoption script executed successfully")
-		return nil
+	if !finished {
+		logger.Info("Adopting is not finished yet, waiting...")
+		return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
 	}
 
-	logger.Info("Adopting is not finished yet, waiting...")
-	return nil
+	logger.Info("Adoption script executed successfully")
+	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "AdoptionScriptSucceeded", "Adoption script executed successfully")
+
+	delete(staticInstance.Annotations, deckhousev1.SkipBootstrapPhaseAnnotation)
+
+	if err := c.setStaticInstancePhaseToRunning(ctx, staticInstance, staticMachine); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to set StaticInstance phase to Running: %w", err)
+	}
+
+	return ctrl.Result{}, nil
 }

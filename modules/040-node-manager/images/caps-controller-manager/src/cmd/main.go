@@ -20,7 +20,6 @@ package main
 import (
 	"flag"
 	"os"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -34,7 +33,6 @@ import (
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -66,25 +64,12 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	var syncPeriod time.Duration
-	var leaderElectionLeaseDuration time.Duration
-	var leaderElectionRenewDeadline time.Duration
-	var leaderElectionRetryPeriod time.Duration
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.DurationVar(&syncPeriod, "sync-period", 10*time.Minute, "The minimum interval at which watched resources are reconciled (e.g. 15m).")
-	flag.DurationVar(&leaderElectionLeaseDuration, "leader-elect-lease-duration", 15*time.Second,
-		"Interval at which non-leader candidates will wait to force acquire leadership (duration string)")
-
-	flag.DurationVar(&leaderElectionRenewDeadline, "leader-elect-renew-deadline", 10*time.Second,
-		"Duration that the leading controller manager will retry refreshing leadership before giving up (duration string)")
-
-	flag.DurationVar(&leaderElectionRetryPeriod, "leader-elect-retry-period", 2*time.Second,
-		"Duration the LeaderElector clients should wait between tries of actions (duration string)")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
 
 	logs.AddGoFlags(flag.CommandLine)
@@ -112,10 +97,7 @@ func main() {
 		Metrics:                metricsServerOptions,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "controller-leader-election-caps",
-		LeaseDuration:          &leaderElectionLeaseDuration,
-		RenewDeadline:          &leaderElectionRenewDeadline,
-		RetryPeriod:            &leaderElectionRetryPeriod,
+		LeaderElectionID:       "caps-controller-leader.cluster.x-k8s.io",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -127,9 +109,6 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
-		Cache: cache.Options{
-			SyncPeriod: &syncPeriod,
-		},
 		WebhookServer: webhookserver,
 	})
 	if err != nil {
