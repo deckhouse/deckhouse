@@ -62,6 +62,7 @@ func TestSecretEdit(t *testing.T) {
 
 		abstractEditing = EditMock
 		err := SecretEdit(
+			t.Context(),
 			f, "test", secretTest.Namespace, secretTest.Name, "cluster-configuration.yaml",
 			map[string]string{"name": "test"},
 			nil,

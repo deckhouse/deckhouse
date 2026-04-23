@@ -16,6 +16,7 @@ package log
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 
@@ -118,6 +119,13 @@ func (d *DummyLogger) CreateBufferLogger(buffer *bytes.Buffer) Logger {
 
 func (d *DummyLogger) FlushAndClose() error {
 	return nil
+}
+
+func (d *DummyLogger) LogProcessCtx(ctx context.Context, p, t string, run func(ctx context.Context) error) error {
+	fmt.Println(t)
+	err := run(ctx)
+	fmt.Println(t)
+	return err
 }
 
 func (d *DummyLogger) LogProcess(_, t string, run func() error) error {

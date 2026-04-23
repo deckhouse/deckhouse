@@ -42,7 +42,7 @@ func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCo
 
 	err := retry.NewLoop(title, 30, 10*time.Second).RunContext(ctx, func() error {
 		for _, check := range checkers {
-			err := log.Process(sourceCommandName, check.Name(), func() error {
+			err := log.ProcessCtx(ctx, sourceCommandName, check.Name(), func(ctx context.Context) error {
 				isReady, err := check.IsReady(ctx, nodeName)
 				if err != nil {
 					return err

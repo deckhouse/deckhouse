@@ -15,6 +15,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -66,6 +67,7 @@ func logTemplatesData(name string, data map[string]interface{}) {
 }
 
 func PrepareBundle(
+	ctx context.Context,
 	templateController *Controller,
 	nodeIP string,
 	devicePath string,
@@ -84,11 +86,11 @@ func PrepareBundle(
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
+	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
 		return err
 	}
 
-	if err := PrepareKubeadmConfig(templateController, kubeadmData, dc); err != nil {
+	if err := PrepareKubeadmConfig(ctx, templateController, kubeadmData, dc); err != nil {
 		return err
 	}
 
@@ -107,6 +109,7 @@ func PrepareBundle(
 
 //nolint:prealloc
 func PrepareBashibleBundle(
+	ctx context.Context,
 	templateController *Controller,
 	templateData map[string]interface{},
 	provider string,
@@ -170,7 +173,12 @@ func GetKubeadmVersion(kubernetesVersion string) (string, error) {
 	return kubeadmV1Beta4, nil
 }
 
-func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}, dc *directoryconfig.DirectoryConfig) error {
+func PrepareKubeadmConfig(
+	ctx context.Context,
+	templateController *Controller,
+	templateData map[string]interface{},
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	_, err := os.Stat(candiDir)
 	if err != nil {
 		// fallback to alternative

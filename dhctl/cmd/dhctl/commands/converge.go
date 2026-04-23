@@ -15,17 +15,17 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/name212/govalue"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
@@ -38,8 +38,9 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -93,7 +94,6 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-	return cmd
 }
 
 func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -102,7 +102,9 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		tmpDir := app.TmpDirName
 		logger := log.GetDefaultLogger()
 		isDebug := app.IsDebug
@@ -131,9 +133,9 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			IsDebug:         isDebug,
 			DirectoryConfig: app.GetDirConfig(),
 		})
-		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
+
+		return converger.AutoConverge(ctx, app.AutoConvergeListenAddress, app.ApplyInterval)
 	})
-	return cmd
 }
 
 func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -142,8 +144,9 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -190,8 +193,8 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			IsDebug:                               isDebug,
 			DirectoryConfig:                       app.GetDirConfig(),
 		})
-		err = converger.ConvergeMigration(ctx)
-		if err != nil {
+
+		if err := converger.ConvergeMigration(ctx); err != nil {
 			msg := fmt.Sprintf("ConvergeMigration failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
 			return err
@@ -199,5 +202,4 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-	return cmd
 }

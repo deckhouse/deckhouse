@@ -22,7 +22,7 @@ import (
 )
 
 func RestartStateExporter(ctx context.Context, kubeClProvider kubernetes.KubeClientProvider) error {
-	return log.Process("default", "Restart state exporter", func() error {
+	return log.ProcessCtx(ctx, "default", "Restart state exporter", func(ctx context.Context) error {
 		return checkAndRestartDeployment(ctx, kubeClProvider, "terraform-state-exporter")
 	})
 }

@@ -41,8 +41,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		return err
 	}
 
-	err = terminal.AskBecomePassword()
-	if err != nil {
+	if err := terminal.AskBecomePassword(); err != nil {
 		return err
 	}
 	if err := terminal.AskBastionPassword(); err != nil {

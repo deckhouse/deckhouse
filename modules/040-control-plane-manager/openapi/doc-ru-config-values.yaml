@@ -147,10 +147,16 @@ properties:
               Путь к директории. Действует только в случае `output: "File"`.
       encryptionEnabled:
         description: |
-          Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Включает шифрование данных в etcd ([Encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
 
-          Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
-          > **Важно!** Этот режим нельзя отключить!
+          При включении создаётся Secret `kube-system/d8-secret-encryption-key` с ключом шифрования.
+
+          Включение этого параметра автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver`,
+          который защищает поля кастомных ресурсов, помеченные маркером `x-kubernetes-sensitive-data: true`,
+          через шифрование в etcd, фильтрацию полей через субресурс `<resource>/sensitive` на основе RBAC
+          и маскировку значений в журнале аудита.
+
+          > **Внимание.** После включения этот параметр нельзя отключить.
   rootKubeconfigSymlink:
     description: |
       Поддерживать ли символическую ссылку `/root/.kube/config` на `/etc/kubernetes/admin.conf` на узлах control-plane.

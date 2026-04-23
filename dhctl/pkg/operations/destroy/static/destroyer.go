@@ -105,7 +105,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 
 	var err error
 
-	d.nodesWithCredentials, err = d.params.State.NodeUser()
+	d.nodesWithCredentials, err = d.params.State.NodeUser(ctx)
 
 	if err != nil {
 		if !errors.Is(err, errNotFoundCredentials) {
@@ -137,7 +137,7 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 		return errors.New("Internal error. SSH provider did not pass")
 	}
 
-	return d.params.PhasedActionProvider().Run(phases.AllNodesPhase, true, func() (phases.DefaultContextType, error) {
+	return d.params.PhasedActionProvider().Run(ctx, phases.AllNodesPhase, true, func() (phases.DefaultContextType, error) {
 		err := d.destroyCluster(ctx, autoApprove)
 		if err != nil {
 			return nil, err
@@ -177,14 +177,17 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	if len(ips) > 0 {
-		err := logger.LogProcess("default", "Get internal node IP for passed control-plane host", func() error {
+		err := logger.LogProcessCtx(ctx, "default", "Get internal node IP for passed control-plane host", func(ctx context.Context) error {
 			file := sshClient.File()
+
 			bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 			if err != nil {
 				return err
 			}
+
 			hostToExclude = strings.TrimSpace(string(bytes))
 			logger.LogDebugF("Got internal node IP for passed control-plane host: %s\n", hostToExclude)
+
 			return nil
 		})
 		if err != nil {
@@ -302,7 +305,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHCli
 		return err
 	}
 
-	return d.addHostAsProcessed(host)
+	return d.addHostAsProcessed(ctx, host)
 }
 
 func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
@@ -411,12 +414,12 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 
 	logger := d.logger()
 
-	if d.params.State.IsNodeUserExists() {
+	if d.params.State.IsNodeUserExists(ctx) {
 		logger.LogDebugLn("NodeUser for static destroyer exists getting from cache")
 		return nil
 	}
 
-	return d.params.PhasedActionProvider().Run(phases.WaitStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
+	return d.params.PhasedActionProvider().Run(ctx, phases.WaitStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
 		if !isSingleMaster(d.nodesWithCredentials.IPs) {
 			// waiter checks if nil params
 			waiter := entity.NewConvergerNodeUserExistsWaiter(d.params.KubeProvider).
@@ -429,7 +432,7 @@ func (d *Destroyer) waitNodeUserExists(ctx context.Context) error {
 			logger.LogDebugLn("No wait NodeUser for single-master cluster")
 		}
 
-		return nil, d.params.State.SetNodeUserExists()
+		return nil, d.params.State.SetNodeUserExists(ctx)
 	})
 }
 
@@ -473,7 +476,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 	// always create node user creds so we have only master
 	var nodesWithCredentials *NodesWithCredentials
 
-	err = d.params.PhasedActionProvider().Run(phases.CreateStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
+	err = d.params.PhasedActionProvider().Run(ctx, phases.CreateStaticDestroyerNodeUserPhase, false, func() (phases.DefaultContextType, error) {
 		nodeUserCredentials, err := d.createNodeUserCredentials(ctx, nodeIPs, logger)
 		if err != nil {
 			return nil, err
@@ -484,7 +487,7 @@ func (d *Destroyer) createAndSaveCredentials(ctx context.Context, logger log.Log
 			IPs:      nodeIPs,
 		}
 
-		if err := d.params.State.SaveNodeUser(nodesWithCredentials); err != nil {
+		if err := d.params.State.SaveNodeUser(ctx, nodesWithCredentials); err != nil {
 			return nil, err
 		}
 
@@ -508,16 +511,16 @@ func (d *Destroyer) hostProcessed(host session.Host) bool {
 	return d.nodesWithCredentials.SetHostAsProcessed(host)
 }
 
-func (d *Destroyer) addHostAsProcessed(host session.Host) error {
+func (d *Destroyer) addHostAsProcessed(ctx context.Context, host session.Host) error {
 	// for abort we do not have nodesWithCredentials
 	if d.nodesWithCredentials == nil {
 		return nil
 	}
 
-	return d.params.PhasedActionProvider().Run(phases.UpdateStaticDestroyerIPs, false, func() (phases.DefaultContextType, error) {
+	return d.params.PhasedActionProvider().Run(ctx, phases.UpdateStaticDestroyerIPs, false, func() (phases.DefaultContextType, error) {
 		d.nodesWithCredentials.AddToProcessed(host)
 
-		if err := d.params.State.SaveNodeUser(d.nodesWithCredentials); err != nil {
+		if err := d.params.State.SaveNodeUser(ctx, d.nodesWithCredentials); err != nil {
 			return nil, err
 		}
 

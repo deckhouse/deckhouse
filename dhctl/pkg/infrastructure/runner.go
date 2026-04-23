@@ -282,7 +282,7 @@ func (r *Runner) Init(ctx context.Context) error {
 		stateName := r.stateName()
 		r.statePath = r.stateCache.GetPath(stateName)
 
-		hasState, err := r.stateCache.InCache(stateName)
+		hasState, err := r.stateCache.InCache(ctx, stateName)
 		if err != nil {
 			return err
 		}
@@ -308,7 +308,7 @@ func (r *Runner) Init(ctx context.Context) error {
 				}
 			}
 
-			stateData, err := r.stateCache.Load(stateName)
+			stateData, err := r.stateCache.Load(ctx, stateName)
 			if err != nil {
 				return err
 			}
@@ -329,7 +329,7 @@ func (r *Runner) Init(ctx context.Context) error {
 		r.WithState(nil)
 	}
 
-	return r.logger.LogProcess("default", "infrastructure init ...", func() error {
+	return r.logger.LogProcessCtx(ctx, "default", "infrastructure init ...", func(ctx context.Context) error {
 		_, err := r.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 			err := r.infraExecutor.Init(ctx)
 			return 0, err
@@ -409,7 +409,7 @@ func (r *Runner) Apply(ctx context.Context) error {
 		return ErrRunnerStopped
 	}
 
-	return r.logger.LogProcess("default", "infrastructure apply ...", func() error {
+	return r.logger.LogProcessCtx(ctx, "default", "infrastructure apply ...", func(ctx context.Context) error {
 		skip, err := r.isSkipChanges(ctx)
 		if err != nil {
 			return err
@@ -420,7 +420,7 @@ func (r *Runner) Apply(ctx context.Context) error {
 		}
 
 		if !govalue.IsNil(r.stateChecker) {
-			err = r.logger.LogProcess("default", "infrastructure state check before apply...", func() error {
+			err = r.logger.LogProcessCtx(ctx, "default", "infrastructure state check before apply...", func(ctx context.Context) error {
 				if r.statePath == "" {
 					log.InfoF("Infrastructure state path is empty. Skip infrastructure state check.\n")
 					return nil
@@ -493,7 +493,7 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 		return ErrRunnerStopped
 	}
 
-	return r.logger.LogProcess("default", "infrastructure plan ...", func() error {
+	return r.logger.LogProcessCtx(ctx, "default", "infrastructure plan ...", func(ctx context.Context) error {
 		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhousePlanSuffix)
 		if err != nil {
 			return fmt.Errorf("Can't create temp file for plan: %w", err)
@@ -572,7 +572,7 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 	processName := fmt.Sprintf("infrastructure debug plan for %s...", target)
 
 	res := ""
-	err := r.logger.LogProcess("default", processName, func() error {
+	return res, r.logger.LogProcessCtx(ctx, "default", processName, func(ctx context.Context) error {
 		tmpFile, err := os.CreateTemp(r.infraExecutor.GetStatesDir(), string(r.infraExecutor.Step())+deckhouseDebugPlanSuffix)
 		if err != nil {
 			return fmt.Errorf("Can't create temp file for debug plan: %w", err)
@@ -613,12 +613,6 @@ func (r *Runner) DebugPlanTarget(ctx context.Context, destroy bool, step, target
 
 		return nil
 	})
-
-	if err != nil {
-		return "", err
-	}
-
-	return res, nil
 }
 
 func (r *Runner) GetInfrastructureOutput(ctx context.Context, output string) ([]byte, error) {
@@ -697,7 +691,7 @@ func (r *Runner) Destroy(ctx context.Context) error {
 		return err
 	}
 
-	return r.logger.LogProcess("default", "infrastructure destroy ...", func() error {
+	return r.logger.LogProcessCtx(ctx, "default", "infrastructure destroy ...", func(ctx context.Context) error {
 		err := r.stateSaver.Start(r)
 		if err != nil {
 			return err

@@ -16,6 +16,7 @@ package log
 
 import (
 	"bytes"
+	"context"
 	"io"
 
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
@@ -43,6 +44,7 @@ const (
 type Logger interface {
 	FlushAndClose() error
 
+	LogProcessCtx(context.Context, string, string, func(context.Context) error) error
 	LogProcess(string, string, func() error) error
 
 	LogInfoF(format string, a ...interface{})
@@ -225,6 +227,13 @@ func (e *ExternalLogger) FlushAndClose() error {
 	return e.logger.FlushAndClose()
 }
 
+// todo: refactor in lib-dhctl too
+func (e *ExternalLogger) LogProcessCtx(ctx context.Context, p, t string, run func(ctx context.Context) error) error {
+	return e.logger.Process(external.Process(p), t, func() error {
+		return run(ctx)
+	})
+}
+
 func (e *ExternalLogger) LogProcess(p, t string, run func() error) error {
 	return e.logger.Process(external.Process(p), t, run)
 }
@@ -283,6 +292,10 @@ func (e *ExternalLogger) Write(content []byte) (int, error) {
 
 func FlushAndClose() error {
 	return defaultLogger.FlushAndClose()
+}
+
+func ProcessCtx(ctx context.Context, p, t string, run func(ctx context.Context) error) error {
+	return defaultLogger.LogProcessCtx(ctx, p, t, run)
 }
 
 func Process(p, t string, run func() error) error {

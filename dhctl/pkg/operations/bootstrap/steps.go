@@ -122,10 +122,10 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	templateController := template.NewTemplateController("")
 	bashible := dhbashible.NewRunner(nodeInterface, loggerProvider)
 
-	err := log.Process("bootstrap", "Preparing bootstrap", func() error {
+	err := log.ProcessCtx(ctx, "bootstrap", "Preparing bootstrap", func(ctx context.Context) error {
 		log.DebugF("Rendered templates directory %s\n", templateController.TmpDir)
 
-		if err := template.PrepareBootstrap(templateController, nodeIP, cfg, dc); err != nil {
+		if err := template.PrepareBootstrap(ctx, templateController, nodeIP, cfg, dc); err != nil {
 			return fmt.Errorf("prepare bootstrap: %v", err)
 		}
 
@@ -177,7 +177,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 
 	defer registryPackagesProxyCleanup()
 
-	if err = PrepareBashibleBundle(nodeIP, devicePath, cfg, templateController, dc); err != nil {
+	if err = PrepareBashibleBundle(ctx, nodeIP, devicePath, cfg, templateController, dc); err != nil {
 		return err
 	}
 	tomb.RegisterOnShutdown("Delete templates temporary directory", func() {
@@ -227,7 +227,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, contro
 		return nil
 	}
 
-	return log.Process("bootstrap", "Initial bootstrap", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Initial bootstrap", func(ctx context.Context) error {
 		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
@@ -244,16 +244,22 @@ func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, contro
 	})
 }
 
-func PrepareBashibleBundle(nodeIP, devicePath string, metaConfig *config.MetaConfig, controller *template.Controller, dc *directoryconfig.DirectoryConfig) error {
-	return log.Process("bootstrap", "Prepare Bashible", func() error {
-		return template.PrepareBundle(controller, nodeIP, devicePath, metaConfig, dc)
+func PrepareBashibleBundle(
+	ctx context.Context,
+	nodeIP, devicePath string,
+	metaConfig *config.MetaConfig,
+	controller *template.Controller,
+	dc *directoryconfig.DirectoryConfig,
+) error {
+	return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible", func(ctx context.Context) error {
+		return template.PrepareBundle(ctx, controller, nodeIP, devicePath, metaConfig, dc)
 	})
 }
 
 func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient node.SSHClient) error {
-	return log.Process("bootstrap", "Wait for SSH on Master become Ready", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on Master become Ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
-		_ = log.Process("default", "Connection string", func() error {
+		_ = log.ProcessCtx(ctx, "default", "Connection string", func(ctx context.Context) error {
 			log.InfoLn(availabilityCheck.String())
 			return nil
 		})
@@ -274,9 +280,15 @@ type InstallDeckhouseParams struct {
 	State               *State
 }
 
-func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, config *config.DeckhouseInstaller, params InstallDeckhouseParams) (*InstallDeckhouseResult, error) {
+func InstallDeckhouse(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	config *config.DeckhouseInstaller,
+	params InstallDeckhouseParams,
+) (*InstallDeckhouseResult, error) {
 	res := &InstallDeckhouseResult{}
-	err := log.Process("bootstrap", "Install Deckhouse", func() error {
+
+	return res, log.ProcessCtx(ctx, "bootstrap", "Install Deckhouse", func(ctx context.Context) error {
 		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
 		if err != nil {
 			return err
@@ -289,7 +301,7 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 
 		res.ManifestResult = resManifests
 
-		if err := params.State.SaveManifestsCreated(); err != nil {
+		if err := params.State.SaveManifestsCreated(ctx); err != nil {
 			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
@@ -308,26 +320,28 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
 }
 
-func BootstrapTerraNodes(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, terraNodeGroups []config.TerraNodeGroupSpec, infrastructureContext *infrastructure.Context) error {
-	return log.Process("bootstrap", "Create CloudPermanent NG", func() error {
+func BootstrapTerraNodes(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	metaConfig *config.MetaConfig,
+	terraNodeGroups []config.TerraNodeGroupSpec,
+	infrastructureContext *infrastructure.Context,
+) error {
+	return log.ProcessCtx(ctx, "bootstrap", "Create CloudPermanent NG", func(ctx context.Context) error {
 		return operations.ParallelCreateNodeGroup(ctx, kubeCl, metaConfig, terraNodeGroups, infrastructureContext)
 	})
 }
 
-func SaveBastionHostToCache(host string) {
-	if err := cache.Global().Save(BastionHostCacheKey, []byte(host)); err != nil {
+func SaveBastionHostToCache(ctx context.Context, host string) {
+	if err := cache.Global().Save(ctx, BastionHostCacheKey, []byte(host)); err != nil {
 		log.ErrorF("Cannot save ssh hosts: %v\n", err)
 	}
 }
 
-func GetBastionHostFromCache() (string, error) {
-	exists, err := cache.Global().InCache(BastionHostCacheKey)
+func GetBastionHostFromCache(ctx context.Context) (string, error) {
+	exists, err := cache.Global().InCache(ctx, BastionHostCacheKey)
 	if err != nil {
 		return "", err
 	}
@@ -336,7 +350,7 @@ func GetBastionHostFromCache() (string, error) {
 		return "", nil
 	}
 
-	host, err := cache.Global().Load(BastionHostCacheKey)
+	host, err := cache.Global().Load(ctx, BastionHostCacheKey)
 	if err != nil {
 		return "", err
 	}
@@ -350,7 +364,7 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 		return nil
 	}
 
-	return log.Process("bootstrap", "Bootstrap additional master nodes", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Bootstrap additional master nodes", func(ctx context.Context) error {
 		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs, log.GetDefaultLogger())
 		if err != nil {
 			return err
@@ -363,20 +377,24 @@ func BootstrapAdditionalMasterNodes(ctx context.Context, kubeCl *client.Kubernet
 			}
 			addressTracker[fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)] = outputs.MasterIPForSSH
 
-			state.SaveMasterHostsToCache(stateCache, addressTracker)
+			state.SaveMasterHostsToCache(ctx, stateCache, addressTracker)
 		}
 
 		return nil
 	})
 }
 
-func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.Cache) (map[string]map[int]string, error) {
+func BootstrapGetNodesFromCache(
+	ctx context.Context,
+	metaConfig *config.MetaConfig,
+	stateCache state.Cache,
+) (map[string]map[int]string, error) {
 	nodeGroupRegex := fmt.Sprintf("^%s-(.*)-([0-9]+)\\.tfstate$", metaConfig.ClusterPrefix)
 	groupsReg, _ := regexp.Compile(nodeGroupRegex)
 
 	nodesFromCache := make(map[string]map[int]string)
 
-	err := stateCache.Iterate(func(name string, content []byte) error {
+	err := stateCache.Iterate(ctx, func(name string, content []byte) error {
 		switch {
 		case strings.HasSuffix(name, ".backup"):
 			fallthrough
@@ -408,7 +426,11 @@ func BootstrapGetNodesFromCache(metaConfig *config.MetaConfig, stateCache state.
 	return nodesFromCache, err
 }
 
-func applyPostBootstrapModuleConfigs(kubeCl *client.KubernetesClient, tasks []actions.ModuleConfigTask) error {
+func applyPostBootstrapModuleConfigs(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	tasks []actions.ModuleConfigTask,
+) error {
 	for _, task := range tasks {
 		err := retry.NewLoop(task.Title, 15, 5*time.Second).
 			Run(func() error {
@@ -428,7 +450,7 @@ func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, r
 		return nil
 	}
 
-	return log.Process("bootstrap", "Run post bootstrap actions", func() error {
-		return applyPostBootstrapModuleConfigs(kubeCl, result.ManifestResult.PostBootstrapMCTasks)
+	return log.ProcessCtx(ctx, "bootstrap", "Run post bootstrap actions", func(ctx context.Context) error {
+		return applyPostBootstrapModuleConfigs(ctx, kubeCl, result.ManifestResult.PostBootstrapMCTasks)
 	})
 }

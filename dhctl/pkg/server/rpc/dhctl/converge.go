@@ -188,7 +188,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.ProviderSpecificClusterConfig),
@@ -209,7 +209,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		return &pb.ConvergeResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
 		var initialState phases.DhctlState
 		if p.request.State != "" {
@@ -219,6 +219,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 			}
 		}
 		err = cache.InitWithOptions(
+			ctx,
 			cachePath,
 			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
 		)
@@ -328,7 +329,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	result, convergeErr := converger.Converge(ctx)
 	resultData, marshalResultErr := json.Marshal(result)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(convergeErr, stateErr, marshalResultErr)
 

@@ -24,11 +24,17 @@ linters-settings:
           name: operator-1x21
           container: operator
         - kind: Deployment
+          name: operator-1x25
+          container: operator
+        - kind: Deployment
           name: metadata-exporter
           container: metadata-discovery
       liveness-probe:
         - kind: Deployment
           name: operator-1x21
+          container: operator
+        - kind: Deployment
+          name: operator-1x25
           container: operator
         - kind: Deployment
           name: metadata-exporter
@@ -53,6 +59,9 @@ linters-settings:
       pdb:
         - kind: Deployment
           name: operator-1x21
+          container: operator
+        - kind: Deployment
+          name: operator-1x25
           container: operator
         - kind: DaemonSet
           name: istio-cni-node

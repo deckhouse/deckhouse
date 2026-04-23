@@ -34,36 +34,47 @@ type ClusterConnectionsOptions struct {
 	SSHConnectionConfig string
 }
 
-func InitializeClusterConnections(ctx context.Context, opts ClusterConnectionsOptions) (*client.KubernetesClient, node.SSHClient, func() error, error) {
+func InitializeClusterConnections(
+	ctx context.Context,
+	opts ClusterConnectionsOptions,
+) (
+	*client.KubernetesClient,
+	node.SSHClient,
+	func() error, // cleanup function
+	error,
+) {
+	var cleanup = func() error { return nil }
+
 	if opts.CommanderMode && opts.APIServerURL != "" {
 		kubeCl, err := CreateKubeClient(ctx, opts.APIServerURL, opts.APIServerOptions)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error creating kubernetes client: %w", err)
 		}
-		return kubeCl, nil, func() error { return nil }, nil
-	} else {
-		var sshClient node.SSHClient
-		var cleanup func() error
 
-		err := log.Process("default", "Preparing SSH client", func() error {
-			connectionConfig, err := config.ParseConnectionConfig(
-				opts.SSHConnectionConfig,
-				opts.SchemaStore,
-				config.ValidateOptionCommanderMode(opts.CommanderMode),
-				config.ValidateOptionStrictUnmarshal(opts.CommanderMode),
-				config.ValidateOptionValidateExtensions(opts.CommanderMode),
-			)
-			if err != nil {
-				return fmt.Errorf("parsing connection config: %w", err)
-			}
-
-			sshClient, cleanup, err = CreateSSHClient(ctx, connectionConfig)
-			if err != nil {
-				return fmt.Errorf("preparing ssh client: %w", err)
-			}
-			return nil
-		})
-
-		return nil, sshClient, cleanup, err
+		return kubeCl, nil, cleanup, nil
 	}
+
+	var sshClient node.SSHClient
+
+	err := log.ProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
+		connectionConfig, err := config.ParseConnectionConfig(
+			opts.SSHConnectionConfig,
+			opts.SchemaStore,
+			config.ValidateOptionCommanderMode(opts.CommanderMode),
+			config.ValidateOptionStrictUnmarshal(opts.CommanderMode),
+			config.ValidateOptionValidateExtensions(opts.CommanderMode),
+		)
+		if err != nil {
+			return fmt.Errorf("parsing connection config: %w", err)
+		}
+
+		sshClient, cleanup, err = CreateSSHClient(ctx, connectionConfig)
+		if err != nil {
+			return fmt.Errorf("preparing ssh client: %w", err)
+		}
+
+		return nil
+	})
+
+	return nil, sshClient, cleanup, err
 }

@@ -247,7 +247,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 }
 
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	return d.pipeline.Run(func(switcher phases.DefaultPipelinePhaseSwitcher) error {
+	return d.pipeline.Run(ctx, func(switcher phases.DefaultPipelinePhaseSwitcher) error {
 		return d.destroy(ctx, autoApprove)
 	})
 }
@@ -299,7 +299,7 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
-	d.stateCache.Clean()
+	d.stateCache.Clean(ctx)
 
 	return nil
 }

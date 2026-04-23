@@ -81,7 +81,7 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.createNodeUser(ctx)
 		if err != nil {
 			return err
@@ -100,7 +100,8 @@ func (s *KubeClientSwitcher) CleanupNodeUser() error {
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	// todo(ctx): does it's real need to use s.ctx.Ctx() instead of param context?
+	return s.logger.LogProcessCtx(s.ctx.Ctx(), "default", action, func(ctx context.Context) error {
 		err := s.ctx.deleteConvergeState()
 		if err != nil {
 			return err
@@ -121,7 +122,7 @@ func (s *KubeClientSwitcher) SwitchToFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -163,7 +164,7 @@ func (s *KubeClientSwitcher) SwitchToNotFirstMaster(ctx context.Context) error {
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -222,7 +223,7 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
@@ -298,7 +299,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	return s.logger.LogProcess("default", action, func() error {
+	return s.logger.LogProcessCtx(ctx, "default", action, func(ctx context.Context) error {
 		convergeState, err := s.ctx.ConvergeState()
 		if err != nil {
 			return fmt.Errorf("Cannot get converge state: %w", err)
