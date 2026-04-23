@@ -339,16 +339,9 @@
              d8 k -n d8-upmeter logs -l app=upmeter-agent --tail=-1 | jq -rR 'fromjson? | select(.group=="control-plane" and .probe == "controller-manager") | [.time, .level, .msg] | @tsv'
              ```
 
-          2. List the stuck Pods and inspect them — pay attention to the status, finalizers, and how long they have been alive:
+          2. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`.
 
-             ```shell
-             d8 k -n d8-upmeter get pods -l upmeter-probe=controller-manager -o wide
-             d8 k -n d8-upmeter get pods -l upmeter-probe=controller-manager -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{.metadata.deletionTimestamp}{"\t"}{.metadata.finalizers}{"\n"}{end}'
-             ```
-
-          3. Ensure the control plane is operating normally. Pay close attention to `kube-controller-manager`, `kube-apiserver`, `etcd`, and `kubelet` on the master nodes.
-
-          4. Delete stale Pods manually (use `--force --grace-period=0` if a Pod is stuck in `Terminating`):
+          3. Delete stale Pods manually:
 
              ```shell
              d8 k -n d8-upmeter delete pods -l upmeter-probe=controller-manager
