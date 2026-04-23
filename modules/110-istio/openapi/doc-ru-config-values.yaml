@@ -444,12 +444,10 @@ properties:
   ambient:
     description: |
       Настройки, связанные с ambient mesh.
-    x-experimental: true
     properties:
       enabled:
         description: |
           Включить ambient mesh.
-        x-experimental: true
   nodeSelector:
     description: |
       Опциональный селектор для компонентов istio-operator, metadata-exporter и Kiali.
