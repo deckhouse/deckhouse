@@ -6,14 +6,14 @@ import:
   add: /relocate
   to: /
   before: setup
-- from: {{ index $.Images "base/python" }}
+- from: {{ index $.Images "base/python-3.12" }}
   add: /
   to: /
   includePaths:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/libc.so
+  - usr/lib/lib*.so
   excludePaths:
   - usr/lib/python3*/site-packages/pip-25.3*
   before: install
