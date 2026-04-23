@@ -1,0 +1,211 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8allowedingresses
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "The allowed ingress"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Controls that the ingress satisfies the following conditions: 
+        - Does not contain `*` in the hosts field 
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AllowedIngresses
+      validation:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Controls the allowed configuration for the Ingress. 
+          properties:
+            blockWildcardDomains:
+              type: boolean
+              description: "Block creation of ingress objects with `*` in DNS domains."
+
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                # =============================================================================
+                # Library: lib.common
+                # =============================================================================
+                # Container iteration, field access helpers, and exception label utilities.
+                # =============================================================================
+                package lib.common
+                
+                # Backwards-compatible container iterator (uses input.review)
+                input_containers contains c if {
+                  c := input.review.object.spec.containers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.initContainers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.ephemeralContainers[_]
+                }
+                
+                # Parameterized container iterator (uses passed object)
+                input_containers_from(obj) := containers if {
+                  base := object.get(obj, ["spec", "containers"], [])
+                  init := object.get(obj, ["spec", "initContainers"], [])
+                  eph := object.get(obj, ["spec", "ephemeralContainers"], [])
+                  containers := array.concat(array.concat(base, init), eph)
+                }
+                
+                has_field(object, field) if {
+                  object[field]
+                }
+                
+                has_path(obj, path) if {
+                  object.get(obj, path, {"__missing__": true}) != {"__missing__": true}
+                }
+                
+                get_field(obj, path, _default) := out if {
+                  out := object.get(obj, path, _default)
+                }
+                
+                # Backwards-compatible exception label lookup (uses input.review)
+                get_exception_label(container) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := input.review.object.metadata.labels[key]
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(input.review.object.metadata.labels, key, "") == ""
+                  label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+                # Parameterized exception label lookup (uses labels map)
+                get_exception_label_from_labels(container, labels) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := object.get(labels, key, "")
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(labels, key, "") == ""
+                  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+              - |
+                # =============================================================================
+                # Library: lib.str
+                # =============================================================================
+                # String helpers.
+                # =============================================================================
+                package lib.str
+                
+                import data.lib.common.get_field
+                
+                has_prefix(value, prefix) if {
+                  startswith(value, prefix)
+                }
+                
+                has_suffix(value, suffix) if {
+                  endswith(value, suffix)
+                }
+                
+                any_prefix_matches(prefixes, value) if {
+                  p := prefixes[_]
+                  has_prefix(value, p)
+                }
+                
+                any_suffix_matches(suffixes, value) if {
+                  s := suffixes[_]
+                  has_suffix(value, s)
+                }
+                
+                contains_any(value, substrings) if {
+                  s := substrings[_]
+                  contains(value, s)
+                }
+                
+                has_wildcard(value) if {
+                  contains(value, "*")
+                }
+                
+                check_prefix(obj, fields, prefixes, _) := {"allowed": true, "msg": ""} if {
+                  not prefix_violation(obj, fields, prefixes)
+                }
+                
+                check_prefix(obj, fields, prefixes, _) := {"allowed": false, "msg": msg} if {
+                  v := prefix_violation(obj, fields, prefixes)
+                  msg := v.msg
+                }
+                
+                prefix_violation(obj, fields, prefixes) := {"msg": msg} if {
+                  field := fields[_]
+                  value := get_field(obj, field.path, null)
+                  value != null
+                  not any_prefix_matches(prefixes, value)
+                  name := object.get(field, "name", field.path)
+                  msg := sprintf("Field %v has value %v which does not match allowed prefixes %v", [name, value, prefixes])
+                }
+                
+                check_suffix(obj, fields, suffixes, _) := {"allowed": true, "msg": ""} if {
+                  not suffix_violation(obj, fields, suffixes)
+                }
+                
+                check_suffix(obj, fields, suffixes, _) := {"allowed": false, "msg": msg} if {
+                  v := suffix_violation(obj, fields, suffixes)
+                  msg := v.msg
+                }
+                
+                suffix_violation(obj, fields, suffixes) := {"msg": msg} if {
+                  field := fields[_]
+                  value := get_field(obj, field.path, null)
+                  value != null
+                  not any_suffix_matches(suffixes, value)
+                  name := object.get(field, "name", field.path)
+                  msg := sprintf("Field %v has value %v which does not match allowed suffixes %v", [name, value, suffixes])
+                }
+                
+                check_contains(obj, fields, substrings, _) := {"allowed": true, "msg": ""} if {
+                  not contains_violation(obj, fields, substrings)
+                }
+                
+                check_contains(obj, fields, substrings, _) := {"allowed": false, "msg": msg} if {
+                  v := contains_violation(obj, fields, substrings)
+                  msg := v.msg
+                }
+                
+                contains_violation(obj, fields, substrings) := {"msg": msg} if {
+                  field := fields[_]
+                  value := get_field(obj, field.path, null)
+                  value != null
+                  not contains_any(value, substrings)
+                  name := object.get(field, "name", field.path)
+                  msg := sprintf("Field %v has value %v which does not contain required substrings %v", [name, value, substrings])
+                }
+                
+            rego: |
+              package d8.security_policies
+
+              import data.lib.str.has_wildcard
+
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                object.get(input.parameters, "blockWildcardDomains", true)
+                ingress_name := input.review.object.metadata.name
+                some i
+                host := input.review.object.spec.rules[i].host
+                host != ""
+                has_wildcard(host)
+                msg := sprintf("Ingress '%s' contains a wildcard '*' in host '%s', which is not allowed.", [ingress_name, host])
+              }

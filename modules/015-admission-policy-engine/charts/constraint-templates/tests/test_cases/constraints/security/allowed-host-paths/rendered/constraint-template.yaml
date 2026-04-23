@@ -1,0 +1,360 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8allowedhostpaths
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Allowed Host Paths"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Controls what host paths are allowed to be mount inside a container. 
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8AllowedHostPaths
+      validation:
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Controls what host paths are allowed to be mounted inside a container. 
+          properties:
+            allowedHostPaths:
+              type: array
+              description: "The list of allowed hostpath prefixes."
+              items:
+                type: object
+                properties:
+                  pathPrefix:
+                    type: string
+                  readOnly:
+                    type: boolean
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                # =============================================================================
+                # Library: lib.common
+                # =============================================================================
+                # Container iteration, field access helpers, and exception label utilities.
+                # =============================================================================
+                package lib.common
+                
+                # Backwards-compatible container iterator (uses input.review)
+                input_containers contains c if {
+                  c := input.review.object.spec.containers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.initContainers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.ephemeralContainers[_]
+                }
+                
+                # Parameterized container iterator (uses passed object)
+                input_containers_from(obj) := containers if {
+                  base := object.get(obj, ["spec", "containers"], [])
+                  init := object.get(obj, ["spec", "initContainers"], [])
+                  eph := object.get(obj, ["spec", "ephemeralContainers"], [])
+                  containers := array.concat(array.concat(base, init), eph)
+                }
+                
+                has_field(object, field) if {
+                  object[field]
+                }
+                
+                has_path(obj, path) if {
+                  object.get(obj, path, {"__missing__": true}) != {"__missing__": true}
+                }
+                
+                get_field(obj, path, _default) := out if {
+                  out := object.get(obj, path, _default)
+                }
+                
+                # Backwards-compatible exception label lookup (uses input.review)
+                get_exception_label(container) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := input.review.object.metadata.labels[key]
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(input.review.object.metadata.labels, key, "") == ""
+                  label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+                # Parameterized exception label lookup (uses labels map)
+                get_exception_label_from_labels(container, labels) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := object.get(labels, key, "")
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(labels, key, "") == ""
+                  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+              - |
+                # =============================================================================
+                # Library: lib.path
+                # =============================================================================
+                # Filesystem path helpers.
+                # =============================================================================
+                package lib.path
+                
+                import data.lib.common.get_field
+                
+                path_matches(prefix, path) if {
+                  a := path_array(prefix)
+                  b := path_array(path)
+                  prefix_matches(a, b)
+                }
+                
+                path_array(p) := out if {
+                  p != "/"
+                  out := split(trim(p, "/"), "/")
+                }
+                
+                path_array("/") := []
+                
+                prefix_matches(a, b) if {
+                  count(a) <= count(b)
+                  not any_not_equal_upto(a, b, count(a))
+                }
+                
+                any_not_equal_upto(a, b, n) if {
+                  a[i] != b[i]
+                  i < n
+                }
+                
+                check_path_prefix(obj, fields, allowed_prefixes, _) := {"allowed": true, "msg": ""} if {
+                  not path_prefix_violation(obj, fields, allowed_prefixes)
+                }
+                
+                check_path_prefix(obj, fields, allowed_prefixes, _) := {"allowed": false, "msg": msg} if {
+                  v := path_prefix_violation(obj, fields, allowed_prefixes)
+                  msg := v.msg
+                }
+                
+                path_prefix_violation(obj, fields, allowed_prefixes) := {"msg": msg} if {
+                  field := fields[_]
+                  value := get_field(obj, field.path, null)
+                  value != null
+                  not any_prefix_matches(allowed_prefixes, value)
+                  name := object.get(field, "name", field.path)
+                  msg := sprintf("Field %v has value %v which is not under allowed prefixes %v", [name, value, allowed_prefixes])
+                }
+                
+                any_prefix_matches(prefixes, value) if {
+                  p := prefixes[_]
+                  path_matches(p, value)
+                }
+                
+              - |
+                # =============================================================================
+                # Library: lib.check_path
+                # =============================================================================
+                # HostPath validator with readOnly cross-check and SPE support.
+                #
+                # Usage:
+                # - check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths)
+                # allowed_paths/spe_allowed_paths items: {pathPrefix|path, readOnly}
+                # Returns: {"allowed": bool, "msg": string, "detail": object}
+                # =============================================================================
+                package lib.check_path
+                
+                import data.lib.common.has_field
+                import data.lib.common.input_containers_from
+                import data.lib.path.path_matches
+                
+                check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {
+                  input_hostpath_allowed(allowed_paths, volume, containers)
+                  result := {"allowed": true, "msg": "", "detail": {}}
+                }
+                
+                check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {
+                  not input_hostpath_allowed(allowed_paths, volume, containers)
+                  input_hostpath_allowed_exact(spe_allowed_paths, volume, containers)
+                  result := {"allowed": true, "msg": "", "detail": {}}
+                }
+                
+                check_hostpath_allowed(volume, allowed_paths, containers, spe_allowed_paths) := result if {
+                  not input_hostpath_allowed(allowed_paths, volume, containers)
+                  not input_hostpath_allowed_exact(spe_allowed_paths, volume, containers)
+                  msg := sprintf("HostPath %v is not allowed", [volume.hostPath.path])
+                  result := {
+                    "allowed": false,
+                    "msg": msg,
+                    "detail": {
+                      "field": "hostPath.path",
+                      "actual": volume.hostPath.path,
+                      "policy_allowed": allowed_paths,
+                      "spe_applied": count(spe_allowed_paths) > 0,
+                      "spe_allowed": spe_allowed_paths,
+                    }
+                  }
+                }
+                
+                input_hostpath_allowed(allowed_paths, volume, containers) if {
+                  allowedHostPath := allowed_paths[_]
+                  path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
+                  not allowedHostPath.readOnly == true
+                }
+                
+                input_hostpath_allowed(allowed_paths, volume, containers) if {
+                  allowedHostPath := allowed_paths[_]
+                  path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
+                  allowedHostPath.readOnly
+                  not writeable_input_volume_mounts(volume.name, containers)
+                }
+                
+                writeable_input_volume_mounts(volume_name, containers) if {
+                  container := containers[_]
+                  mount := container.volumeMounts[_]
+                  mount.name == volume_name
+                  not mount.readOnly
+                }
+                
+                input_hostpath_allowed_exact(allowedPaths, volume, containers) if {
+                  allowedHostPath := allowedPaths[_]
+                  allowedHostPath.path == volume.hostPath.path
+                  volume_mount_readonly_matches(allowedHostPath.readOnly, volume.name, containers)
+                }
+                
+                volume_mount_readonly_matches(expectedReadOnly, volume_name, containers) if {
+                  actualReadOnly := get_volume_mount_readonly(volume_name, containers)
+                  actualReadOnly == expectedReadOnly
+                }
+                
+                get_volume_mount_readonly(volume_name, containers) := readOnly if {
+                  container := containers[_]
+                  mount := container.volumeMounts[_]
+                  mount.name == volume_name
+                  has_field(mount, "readOnly")
+                  readOnly := mount.readOnly
+                }
+                
+                get_volume_mount_readonly(volume_name, containers) := false if {
+                  container := containers[_]
+                  mount := container.volumeMounts[_]
+                  mount.name == volume_name
+                  not has_field(mount, "readOnly")
+                }
+                
+                get_volume_mount_readonly(volume_name, containers) := false if {
+                  not volume_mount_exists(volume_name, containers)
+                }
+                
+                volume_mount_exists(volume_name, containers) if {
+                  container := containers[_]
+                  mount := container.volumeMounts[_]
+                  mount.name == volume_name
+                }
+                
+              - |
+                # =============================================================================
+                # Library: lib.exception
+                # =============================================================================
+                # SecurityPolicyException (SPE) resolution utilities.
+                # =============================================================================
+                package lib.exception
+                
+                import data.lib.common.get_exception_label_from_labels
+                
+                resolve_spe_from_labels(labels, namespace) := spe if {
+                  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                  spe := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                } else := {} if {
+                  true
+                }
+                
+                resolve_spe_for_container(container, labels, namespace) := spe if {
+                  label := get_exception_label_from_labels(container, labels)
+                  label != ""
+                  spe := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                } else := {} if {
+                  true
+                }
+                
+                path_value_resolved(spe, path) := true if {
+                  object.get(spe, path, null) != null
+                } else := false if {
+                  true
+                }
+                
+                allowed_values_or_empty(spe, path) := out if {
+                  val := object.get(spe, path, null)
+                  val == null
+                  out := []
+                } else := out if {
+                  val := object.get(spe, path, null)
+                  is_array(val)
+                  out := val
+                } else := out if {
+                  val := object.get(spe, path, null)
+                  not is_array(val)
+                  out := [val]
+                }
+                
+            rego: |
+              package d8.security_policies
+
+              import data.lib.check_path.check_hostpath_allowed
+              import data.lib.common.has_field
+              import data.lib.common.input_containers
+              import data.lib.exception.allowed_values_or_empty
+              import data.lib.exception.resolve_spe_from_labels
+
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                volume := input.review.object.spec.volumes[_]
+                has_field(volume, "hostPath")
+                allowed_paths := get_allowed_paths(input)
+                labels := object.get(input.review.object.metadata, "labels", {})
+                spe := resolve_spe_from_labels(labels, input.review.object.metadata.namespace)
+                spe_paths := allowed_values_or_empty(spe, ["spec", "volumes", "hostPath", "allowedValues"])
+                result := check_hostpath_allowed(
+                  volume,
+                  allowed_paths,
+                  input_containers,
+                  spe_paths
+                )
+                not result.allowed
+                actual_value := sprintf("Actual HostPath volume: %v", [volume])
+                allowed_by_policy := sprintf("Allowed paths: %v", [allowed_paths])
+                msg := sprintf("HostPath volume is not allowed, pod: %v. | %v | %v", [input.review.object.metadata.name, actual_value, allowed_by_policy])
+              }
+
+              get_allowed_paths(arg) := out if {
+                not arg.parameters
+                out = []
+              }
+
+              get_allowed_paths(arg) := out if {
+                not arg.parameters.allowedHostPaths
+                out = []
+              }
+
+              get_allowed_paths(arg) := out if {
+                out = arg.parameters.allowedHostPaths
+              }
+
+              input_hostpath_volumes contains v if {
+                v := input.review.object.spec.volumes[_]
+                has_field(v, "hostPath")
+              }

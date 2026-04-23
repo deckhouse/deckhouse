@@ -1,0 +1,126 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8disallowedtags
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Disallow tags"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Requires container images to have an image tag different from the ones in
+      the specified list.
+
+      https://kubernetes.io/docs/concepts/containers/images/#image-names
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8DisallowedTags
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          properties:
+            tags:
+              type: array
+              description: Disallowed container image tags.
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                # =============================================================================
+                # Library: lib.common
+                # =============================================================================
+                # Container iteration, field access helpers, and exception label utilities.
+                # =============================================================================
+                package lib.common
+                
+                # Backwards-compatible container iterator (uses input.review)
+                input_containers contains c if {
+                  c := input.review.object.spec.containers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.initContainers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.ephemeralContainers[_]
+                }
+                
+                # Parameterized container iterator (uses passed object)
+                input_containers_from(obj) := containers if {
+                  base := object.get(obj, ["spec", "containers"], [])
+                  init := object.get(obj, ["spec", "initContainers"], [])
+                  eph := object.get(obj, ["spec", "ephemeralContainers"], [])
+                  containers := array.concat(array.concat(base, init), eph)
+                }
+                
+                has_field(object, field) if {
+                  object[field]
+                }
+                
+                has_path(obj, path) if {
+                  object.get(obj, path, {"__missing__": true}) != {"__missing__": true}
+                }
+                
+                get_field(obj, path, _default) := out if {
+                  out := object.get(obj, path, _default)
+                }
+                
+                # Backwards-compatible exception label lookup (uses input.review)
+                get_exception_label(container) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := input.review.object.metadata.labels[key]
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(input.review.object.metadata.labels, key, "") == ""
+                  label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+                # Parameterized exception label lookup (uses labels map)
+                get_exception_label_from_labels(container, labels) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := object.get(labels, key, "")
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(labels, key, "") == ""
+                  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+            rego: |
+              package d8.operation_policies
+
+              import data.lib.common.input_containers
+
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers[_]
+                disallowed_tags := [tag | tag := input.parameters.tags[_]; endswith(container.image, concat(":", ["", tag]))]
+                count(disallowed_tags) > 0
+                msg := sprintf("container <%v> uses a disallowed tag <%v>; disallowed tags are %v", [container.name, container.image, input.parameters.tags])
+              }
+
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := input_containers[_]
+                not contains(container.image, ":")
+                msg := sprintf("container <%v> didn't specify an image tag <%v>", [container.name, container.image])
+              }

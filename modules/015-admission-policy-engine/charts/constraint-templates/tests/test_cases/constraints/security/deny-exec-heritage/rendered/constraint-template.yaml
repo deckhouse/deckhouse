@@ -1,0 +1,120 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8denyexecheritage
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "Deny Exec in Heritage Pods"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Deny CONNECT requests to pods/exec and pods/attach for Pods with
+      label `heritage: deckhouse`, except selected service accounts and users.
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8DenyExecHeritage
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.security_policies
+
+        is_connect {
+          object.get(input.review, "operation", "CONNECT") == "CONNECT"
+        }
+
+        is_connect {
+          object.get(input.review, "operation", "") == "CREATE"
+        }
+
+        is_connect {
+          object.get(input.review, "operation", "") == ""
+        }
+
+        subresource_is(sub) {
+          sr := object.get(input.review, "requestSubResource", object.get(input.review, "subResource", ""))
+          sr == sub
+        }
+
+        subresource_is(sub) {
+          sr := object.get(input.review, "requestSubResource", object.get(input.review, "subResource", ""))
+          endswith(sr, sprintf("/%v", [sub]))
+        }
+
+        is_pod_exec_or_attach {
+          subresource_is("exec")
+        }
+
+        is_pod_exec_or_attach {
+          subresource_is("attach")
+        }
+
+        connect_to_pod_exec_or_attach {
+          is_connect
+          is_pod_exec_or_attach
+        }
+
+        connect_to_pod_exec_or_attach {
+          is_connect
+          object.get(input.review, "requestSubResource", object.get(input.review, "subResource", "")) == ""
+        }
+
+        review_username := object.get(object.get(input.review, "userInfo", {}), "username", "")
+
+        is_allowed_user {
+          review_username == "system:sudouser"
+        }
+
+        is_allowed_user {
+          startswith(review_username, "system:serviceaccount:d8-")
+        }
+
+        is_allowed_user {
+          startswith(review_username, "system:serviceaccount:kube-")
+        }
+
+        deny_candidate {
+          connect_to_pod_exec_or_attach
+          not is_allowed_user
+        }
+
+        is_heritage_pod {
+          deny_candidate
+          heritage_label == "deckhouse"
+        }
+
+        heritage_label := label {
+          labels := object.get(object.get(input.review, "object", {}), ["metadata", "labels"], {})
+          label := object.get(labels, "heritage", "")
+          label != ""
+        }
+
+        heritage_label := label {
+          labels := object.get(object.get(input.review, "oldObject", {}), ["metadata", "labels"], {})
+          label := object.get(labels, "heritage", "")
+          label != ""
+        }
+
+        heritage_label := label {
+          labels := object.get(object.get(input.review, "newObject", {}), ["metadata", "labels"], {})
+          label := object.get(labels, "heritage", "")
+          label != ""
+        }
+
+        heritage_label := label {
+          namespace := input.review.namespace
+          podName := input.review.name
+          pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
+          label := object.get(pod.metadata.labels, "heritage", "")
+        }
+
+        violation[{"msg": msg}] {
+          is_heritage_pod
+          pod  := object.get(input.review, "name", object.get(input.review.object.metadata, "name", "unknown-pod"))
+          ns   := object.get(input.review, "namespace", object.get(input.review.object.metadata, "namespace", "unknown-namespace"))
+          user := review_username
+          msg  := sprintf("Exec/attach to Pod %q in namespace %q with label 'heritage: deckhouse' is forbidden for user %q", [pod, ns, user])
+        }

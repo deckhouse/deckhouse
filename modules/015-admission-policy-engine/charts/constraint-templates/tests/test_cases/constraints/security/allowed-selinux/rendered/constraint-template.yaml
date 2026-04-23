@@ -1,0 +1,309 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8selinux
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: security-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "SELinux V2"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Defines an allow-list of seLinuxOptions configurations for pod
+      containers. Corresponds to a PodSecurityPolicy requiring SELinux configs.
+      For more information, see
+      https://kubernetes.io/docs/concepts/policy/pod-security-policy/#selinux
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8SeLinux
+      validation:
+        # Schema for the `parameters` field
+        openAPIV3Schema:
+          type: object
+          description: >-
+            Defines an allow-list of seLinuxOptions configurations for pod
+            containers. Corresponds to a PodSecurityPolicy requiring SELinux configs.
+            For more information, see
+            https://kubernetes.io/docs/concepts/policy/pod-security-policy/#selinux
+          properties:
+            allowedSELinuxOptions:
+              type: array
+              description: "An allow-list of SELinux options configurations."
+              items:
+                type: object
+                description: "An allowed configuration of SELinux options for a pod container."
+                properties:
+                  level:
+                    type: string
+                    description: "An SELinux level."
+                  role:
+                    type: string
+                    description: "An SELinux role."
+                  type:
+                    type: string
+                    description: "An SELinux type."
+                  user:
+                    type: string
+                    description: "An SELinux user."
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                # =============================================================================
+                # Library: lib.common
+                # =============================================================================
+                # Container iteration, field access helpers, and exception label utilities.
+                # =============================================================================
+                package lib.common
+                
+                # Backwards-compatible container iterator (uses input.review)
+                input_containers contains c if {
+                  c := input.review.object.spec.containers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.initContainers[_]
+                }
+                
+                input_containers contains c if {
+                  c := input.review.object.spec.ephemeralContainers[_]
+                }
+                
+                # Parameterized container iterator (uses passed object)
+                input_containers_from(obj) := containers if {
+                  base := object.get(obj, ["spec", "containers"], [])
+                  init := object.get(obj, ["spec", "initContainers"], [])
+                  eph := object.get(obj, ["spec", "ephemeralContainers"], [])
+                  containers := array.concat(array.concat(base, init), eph)
+                }
+                
+                has_field(object, field) if {
+                  object[field]
+                }
+                
+                has_path(obj, path) if {
+                  object.get(obj, path, {"__missing__": true}) != {"__missing__": true}
+                }
+                
+                get_field(obj, path, _default) := out if {
+                  out := object.get(obj, path, _default)
+                }
+                
+                # Backwards-compatible exception label lookup (uses input.review)
+                get_exception_label(container) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := input.review.object.metadata.labels[key]
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(input.review.object.metadata.labels, key, "") == ""
+                  label := object.get(input.review.object.metadata.labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+                # Parameterized exception label lookup (uses labels map)
+                get_exception_label_from_labels(container, labels) := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  label := object.get(labels, key, "")
+                  label != ""
+                } else := label if {
+                  key := sprintf("security.deckhouse.io/security-policy-exception/%v", [container.name])
+                  object.get(labels, key, "") == ""
+                  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                } else := "" if {
+                  true
+                }
+                
+              - |
+                # =============================================================================
+                # Library: lib.check_object_match
+                # =============================================================================
+                # Multi-field partial matching with SPE support.
+                #
+                # Usage:
+                # - check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list)
+                # match_fields is a list of keys to compare; empty string in a pattern field is a wildcard.
+                # Returns: {"allowed": bool, "msg": string, "detail": object}
+                # =============================================================================
+                package lib.check_object_match
+                
+                import data.lib.object.partial_match
+                
+                check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list) := result if {
+                  allowed_list_match(actual_obj, allowed_list, match_fields)
+                  result := {"allowed": true, "msg": "", "detail": {}}
+                }
+                
+                check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list) := result if {
+                  not allowed_list_match(actual_obj, allowed_list, match_fields)
+                  spe_allowed_list_match(actual_obj, spe_allowed_list, match_fields)
+                  result := {"allowed": true, "msg": "", "detail": {}}
+                }
+                
+                check_partial_match_in_list(actual_obj, allowed_list, match_fields, spe_allowed_list) := result if {
+                  not allowed_list_match(actual_obj, allowed_list, match_fields)
+                  not spe_allowed_list_match(actual_obj, spe_allowed_list, match_fields)
+                  msg := sprintf("Object %v does not match allowed list %v", [actual_obj, allowed_list])
+                  result := {
+                    "allowed": false,
+                    "msg": msg,
+                    "detail": {
+                      "field": "object_match",
+                      "actual": actual_obj,
+                      "policy_allowed": allowed_list,
+                      "spe_applied": count(spe_allowed_list) > 0,
+                      "spe_allowed": spe_allowed_list,
+                    }
+                  }
+                }
+                
+                allowed_list_match(actual_obj, allowed_list, match_fields) if {
+                  allowed := allowed_list[_]
+                  partial_match_with_empty_wildcards(allowed, actual_obj, match_fields)
+                }
+                
+                spe_allowed_list_match(actual_obj, spe_allowed_list, match_fields) if {
+                  allowed := spe_allowed_list[_]
+                  partial_match_with_empty_wildcards(allowed, actual_obj, match_fields)
+                }
+                
+                partial_match_with_empty_wildcards(pattern, obj, fields) if {
+                  every f in fields {
+                    field_matches(pattern, obj, f)
+                  }
+                }
+                
+                field_matches(pattern, obj, f) if {
+                  not has_field(pattern, f)
+                }
+                
+                field_matches(pattern, obj, f) if {
+                  pattern[f] == ""
+                }
+                
+                field_matches(pattern, obj, f) if {
+                  pattern[f] == obj[f]
+                }
+                
+                has_field(obj, field) if {
+                  object.get(obj, field, {"__missing__": true}) != {"__missing__": true}
+                }
+                
+              - |
+                # =============================================================================
+                # Library: lib.exception
+                # =============================================================================
+                # SecurityPolicyException (SPE) resolution utilities.
+                # =============================================================================
+                package lib.exception
+                
+                import data.lib.common.get_exception_label_from_labels
+                
+                resolve_spe_from_labels(labels, namespace) := spe if {
+                  label := object.get(labels, "security.deckhouse.io/security-policy-exception", "")
+                  label != ""
+                  spe := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                } else := {} if {
+                  true
+                }
+                
+                resolve_spe_for_container(container, labels, namespace) := spe if {
+                  label := get_exception_label_from_labels(container, labels)
+                  label != ""
+                  spe := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                } else := {} if {
+                  true
+                }
+                
+                path_value_resolved(spe, path) := true if {
+                  object.get(spe, path, null) != null
+                } else := false if {
+                  true
+                }
+                
+                allowed_values_or_empty(spe, path) := out if {
+                  val := object.get(spe, path, null)
+                  val == null
+                  out := []
+                } else := out if {
+                  val := object.get(spe, path, null)
+                  is_array(val)
+                  out := val
+                } else := out if {
+                  val := object.get(spe, path, null)
+                  not is_array(val)
+                  out := [val]
+                }
+                
+            rego: |
+              package d8.security_policies
+
+              import data.lib.check_object_match.check_partial_match_in_list
+              import data.lib.common.has_field
+              import data.lib.exception.allowed_values_or_empty
+              import data.lib.exception.resolve_spe_for_container
+              import data.lib.exception.resolve_spe_from_labels
+
+              # Disallow top-level custom SELinux options
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                has_field(input.review.object.spec.securityContext, "seLinuxOptions")
+                labels := object.get(input.review.object.metadata, "labels", {})
+                spe := resolve_spe_from_labels(labels, input.review.object.metadata.namespace)
+                spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
+                result := check_partial_match_in_list(
+                  input.review.object.spec.securityContext.seLinuxOptions,
+                  input.parameters.allowedSELinuxOptions,
+                  ["level", "role", "type", "user"],
+                  spe_allowed
+                )
+                not result.allowed
+                actual_value := sprintf("Actual SELinux options: %v", [input.review.object.spec.securityContext.seLinuxOptions])
+                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
+                msg := sprintf("SELinux options are not allowed, pod: %v. | %v | %v", [input.review.object.metadata.name, actual_value, allowed_by_policy])
+              }
+
+              # Disallow container-level custom SELinux options
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                c := input_security_context[_]
+                has_field(c.securityContext, "seLinuxOptions")
+                labels := object.get(input.review.object.metadata, "labels", {})
+                spe := resolve_spe_for_container(c, labels, input.review.object.metadata.namespace)
+                spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
+                result := check_partial_match_in_list(
+                  c.securityContext.seLinuxOptions,
+                  input.parameters.allowedSELinuxOptions,
+                  ["level", "role", "type", "user"],
+                  spe_allowed
+                )
+                not result.allowed
+                actual_value := sprintf("Actual SELinux options: %v", [c.securityContext.seLinuxOptions])
+                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
+                msg := sprintf("SELinux options are not allowed, pod: %v, container %v. | %v | %v", [input.review.object.metadata.name, c.name, actual_value, allowed_by_policy])
+              }
+
+              input_security_context contains c if {
+                c := input.review.object.spec.containers[_]
+                has_field(c.securityContext, "seLinuxOptions")
+              }
+
+              input_security_context contains c if {
+                c := input.review.object.spec.initContainers[_]
+                has_field(c.securityContext, "seLinuxOptions")
+              }
+
+              input_security_context contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+                has_field(c.securityContext, "seLinuxOptions")
+              }
