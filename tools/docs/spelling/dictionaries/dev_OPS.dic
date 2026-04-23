@@ -116,6 +116,7 @@ backends
 backet
 Backlink
 base64
+basename
 BaseDN
 bashbooster
 bashible
@@ -476,6 +477,7 @@ enableMultiTenancy
 endofftopic
 enum
 env
+entrypoint
 EnvoyFilter
 EOF
 erlier
@@ -2518,6 +2520,7 @@ ZvirtInstanceClass
 фич
 фичах
 фичи
+фикстур
 Флант
 Фланта
 флаппинга
