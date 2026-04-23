@@ -63,6 +63,9 @@ properties:
           enabled:
             type: boolean
             default: false
+          ingressClass:
+            type: string
+            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
           addKubeconfigGeneratorEntry:
             type: boolean
             default: true

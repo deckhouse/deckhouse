@@ -41,7 +41,7 @@ spec:
     port: 80
     protocol: HTTP
   {{- end }}
-  {{- if or .Values.userAuthn.publishAPI.enabled (include "is_basic_auth_enabled" .) }}
+  {{- if or .Values.userAuthn.internal.publishAPI.enabled (include "is_basic_auth_enabled" .) }}
   {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
   - allowedRoutes:
       namespaces:
@@ -74,7 +74,7 @@ spec:
     protocol: HTTP
   {{- end }}
   {{- end }}
-  {{- if or (and (.Values.userAuthn.publishAPI.enabled) (.Values.userAuthn.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
+  {{- if or (and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator) }}
   - allowedRoutes:
       namespaces:
         from: Same

@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.userAuthn.publishAPI.enabled (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate .Values.userAuthn.internal.publishAPI.enabled (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
 {{- $apiHost := include "helm_lib_module_public_domain" (list . "api") }}
 {{- if include "is_basic_auth_enabled" . }}
 ---
@@ -11,8 +11,8 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   annotations:
     alb.network.deckhouse.io/buffer-max-request-bytes: "10485760"
-  {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
-    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
+  {{- if .Values.userAuthn.internal.publishAPI.whitelistSourceRanges }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.internal.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
@@ -94,8 +94,8 @@ metadata:
   annotations:
     alb.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
     alb.network.deckhouse.io/buffer-max-request-bytes: "10485760"
-  {{- if .Values.userAuthn.publishAPI.whitelistSourceRanges }}
-    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.publishAPI.whitelistSourceRanges | join "," }}
+  {{- if .Values.userAuthn.internal.publishAPI.whitelistSourceRanges }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.userAuthn.internal.publishAPI.whitelistSourceRanges | join "," }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'

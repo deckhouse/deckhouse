@@ -40,6 +40,7 @@ type PublishAPIConfig struct {
 	AddKubeconfigGeneratorEntry []byte `json:"addKubeconfigGeneratorEntry"`
 	WhitelistSourceRanges       []byte `json:"whitelistSourceRanges"`
 	HTTPSMode                   []byte `json:"httpsMode"`
+	IngressClass                []byte `json:"ingressClass"`
 }
 
 func applyPublishAPIConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -53,7 +54,8 @@ func applyPublishAPIConfigFilter(obj *unstructured.Unstructured) (go_hook.Filter
 			Name:                        obj.GetName(),
 			AddKubeconfigGeneratorEntry: s.Data["addKubeconfigGeneratorEntry"],
 			WhitelistSourceRanges:       s.Data["whitelistSourceRanges"],
-			HTTPSMode:                   s.Data["httpsMode"]},
+			HTTPSMode:                   s.Data["httpsMode"],
+			IngressClass:                s.Data["ingressClass"]},
 		nil
 }
 
@@ -119,6 +121,7 @@ func discoverPublishAPI(_ context.Context, input *go_hook.HookInput) error {
 		input.Values.Set("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", addKCGEBool)
 		input.Values.Set("userAuthn.internal.publishAPI.whitelistSourceRanges", whitelistsSlice)
 		input.Values.Set("userAuthn.internal.publishAPI.https.mode", string(configs.HTTPSMode))
+		input.Values.Set("userAuthn.internal.publishAPI.ingressClass", string(configs.IngressClass))
 	}
 	return nil
 }
