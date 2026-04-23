@@ -44,6 +44,10 @@ import (
 	"caps-controller-manager/internal/ssh/gossh"
 )
 
+const (
+	RequeueForStaticInstanceBootstrapping = 1 * time.Minute
+)
+
 // Bootstrap runs the bootstrap script on StaticInstance.
 func (c *Client) Bootstrap(ctx context.Context, staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine, machine *clusterv1.Machine) (ctrl.Result, error) {
@@ -64,6 +68,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 	staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine,
 	machine *clusterv1.Machine) (ctrl.Result, error) {
+	logger := ctrl.LoggerFrom(ctx)
 
 	credentials := &deckhousev1.SSHCredentials{}
 	if err := c.client.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
@@ -152,6 +157,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 	}
 
 	if finished {
+		logger.Info("Bootstrap script executed successfully")
 		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "BootstrapScriptSucceeded", "Bootstrap script executed successfully")
 		if staticInstance.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping {
 			if err = c.setStaticInstancePhaseToRunning(ctx, staticInstance, staticMachine); err != nil {
@@ -161,9 +167,8 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		return ctrl.Result{}, nil
 	}
 
-	logger := ctrl.LoggerFrom(ctx)
-	logger.Info("Bootstrapping is not finished yet, waiting...")
-	return ctrl.Result{}, nil
+	logger.Info("Bootstrapping is not finished yet, requeuing")
+	return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
 }
 
 func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
@@ -341,7 +346,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	}
 
 	staticMachine.Spec.ProviderID = providerid.GenerateProviderID(staticInstance.Name)
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
 }
 
 func (c *Client) reserveStaticInstance(staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine) error {

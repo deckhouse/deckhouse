@@ -51,20 +51,15 @@ func (c *Client) Cleanup(ctx context.Context,
 	}
 
 	switch phase {
-	case
-		deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping,
-		deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
-		err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode)
-		if err != nil {
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping, deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
+		if err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode); err != nil {
 			return fmt.Errorf("failed to clean up StaticInstance from running phase: %w", err)
 		}
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning:
-		err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode)
-		if err != nil {
+		if err := c.cleanup(ctx, staticInstance, staticMachine, credentials.Spec, sshLegacyMode); err != nil {
 			return fmt.Errorf("failed to clean up StaticInstance from cleaning phase: %w", err)
 		}
-	case
-		deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
+	case deckhousev1.StaticInstanceStatusCurrentStatusPhasePending:
 		if !canSkipCleanupForPendingPhase(staticInstance, staticMachine, machine) {
 			return errors.New("StaticInstance is pending outside delete flow")
 		}
@@ -74,7 +69,6 @@ func (c *Client) Cleanup(ctx context.Context,
 	default:
 		return errors.New("StaticInstance is not running or cleaning")
 	}
-
 	return nil
 }
 
@@ -99,6 +93,7 @@ func (c *Client) cleanup(ctx context.Context,
 	staticMachine *infrav1.StaticMachine,
 	credentials deckhousev1.SSHCredentialsSpec,
 	sshLegacyMode bool) error {
+
 	type taskDataStr struct {
 		address       string
 		credentials   deckhousev1.SSHCredentialsSpec
@@ -141,20 +136,20 @@ func (c *Client) cleanup(ctx context.Context,
 		sshLegacyMode: sshLegacyMode,
 	}
 
-	taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
-	err, finished := c.taskManager.Spawn(taskCtx, string(staticMachine.Spec.ProviderID), "cleanup", taskData, taskFunc)
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "cleanup", taskData, taskFunc)
 	if err != nil {
 		return err
 	}
 
 	logger := ctrl.LoggerFrom(ctx)
-	if finished {
-		logger.Info("Cleanup script executed successfully")
-		c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
-		staticInstance.ToPending()
+	if !finished {
+		logger.Info("Cleaning is not finished yet, waiting...")
 		return nil
 	}
 
-	logger.Info("Cleaning is not finished yet, waiting...")
+	logger.Info("Cleanup script executed successfully")
+	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "CleanupScriptSucceeded", "Cleanup script executed successfully")
+	staticInstance.ToPending()
+
 	return nil
 }

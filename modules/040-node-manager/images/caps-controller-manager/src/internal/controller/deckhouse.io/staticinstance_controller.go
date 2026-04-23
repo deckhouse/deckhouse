@@ -198,7 +198,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 			return ctrl.Result{}, fmt.Errorf("failed to get Machine: %w", err)
 		}
 		if machine == nil {
-			logger.Info("StaticMachine has not OwnerRef")
+			logger.Info("StaticMachine has no Machine OwnerRef, nothing to delete")
 			return ctrl.Result{}, nil
 		}
 
