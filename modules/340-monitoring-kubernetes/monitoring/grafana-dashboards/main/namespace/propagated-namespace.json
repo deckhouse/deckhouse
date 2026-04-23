@@ -5178,7 +5178,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval])\n))",
+              "expr": "sum by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__rate_interval])\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Capacity",
@@ -5191,7 +5191,7 @@
                 "uid": "$ds_prometheus"
               },
               "editorMode": "code",
-              "expr": "sum(max by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval]) - max_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=\"$persistentvolumeclaim\"}[$__rate_interval])\n))",
+              "expr": "sum by (persistentvolumeclaim) (\n  max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__rate_interval]) - max_over_time(kubelet_volume_stats_available_bytes{node=~\"$node\", namespace=\"$namespace\", persistentvolumeclaim=~\"$persistentvolumeclaim\"}[$__rate_interval])\n)",
               "format": "time_series",
               "intervalFactor": 1,
               "legendFormat": "Used",
@@ -5410,7 +5410,7 @@
           "uid": "$ds_prometheus"
         },
         "definition": "query_result(max_over_time(kubelet_volume_stats_capacity_bytes{node=~\"$node\", namespace=\"$namespace\"}[$__range]))",
-        "hide": 2,
+        "hide": 0,
         "includeAll": true,
         "label": "PersistentVolumeClaim",
         "multi": true,
