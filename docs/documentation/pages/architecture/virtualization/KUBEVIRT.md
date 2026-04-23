@@ -1,12 +1,14 @@
 ---
-title: Virt сontroller/API
-permalink: ru/architecture/virtualization/virt-controller.html
+title: KubeVirt
+permalink: ru/architecture/virtualization/kubevirt.html
 lang: ru
-search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, сабресурсы, kubevirt
-description: Архитектура компонента virt сontroller/API модуля virtualization в Deckhouse Kubernetes Platform.
+search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, сабресурсы, kubevirt, virt-operator
+description: Архитектура компонента KubeVirt модуля virtualization в Deckhouse Kubernetes Platform.
 ---
 
-Компонент virt сontroller/API модуля [`virtualization`](/modules/virtualization/) управляет кастомными ресурсами следующих API Group:
+В модуле [`virtualization`](/modules/virtualization/) непосредственно за работу с ВМ отвечает компонент KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это открытый проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он позволяет сосуществовать традиционным виртуальным машинам и контейнерным рабочим нагрузкам в одном кластере Kubernetes, обеспечивая единую плоскость управления. 
+
+Для управления ВМ KubeVirt использует кастомные ресурсы следующих API Group:
 
 1. `Kubervirt.io` — основная группа, включает в себя следующие кастомные ресурсы:
 
@@ -32,8 +34,7 @@ description: Архитектура компонента virt сontroller/API м
 
    Сабресурсами управляет компонент virt-api. Перечисленные выше сабресурсы KubeVirt используются в качестве бэкенда для аналогичных ресурсов из `subresources.virtualization.deckhouse.io` API Group, управляемых virtualization-api.
 
-## Архитектура virt сontroller/API
-
+## Архитектура KubeVirt
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
 
@@ -41,18 +42,18 @@ description: Архитектура компонента virt сontroller/API м
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура компонента virt сontroller/api модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура компонента KubeVirt модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура компонента virt сontroller/API модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-virt-controller.ru.png)
 
-## Компоненты virt сontroller/API
+## Компоненты KubeVirt
 
-Virt сontroller/API состоит из следующих компонентов:
+KubeVirt состоит из следующих компонентов:
 
 1. **Virt-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.kubevirt.io` API Group. Virt-api выполняет валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API Group с помощью механизма [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Запросы проходят через сайдкар-контейнер **proxy**, который переименовывает метаданные из API Group `internal.virtualization.deckhouse.io` в API Group `kubervirt.io` и проксирует их на эндпойнт virt-api.
 
-   Компонент содержит следующие контейнеры:
+   Cостоит из следующих контейнеров:
 
    - **virt-api** — основной контейнер, реализующий контроллер и вебхук-сервер;
    - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API, а именно переименование метаданных кастомных ресурсов. Это необходимо, поскольку компоненты Kubevirt используют API Group вида `*.kubervirt.io`, а другие компоненты модуля [`virtualization`](/modules/virtualization/) используют аналогичные ресурсы, но с API Group вида `*.virtualization.deckhouse.io`. Kube-api-rewriter является шлюзом, проксирующим запросы между контроллерами, управляющими ресурсами из разных API Group;
@@ -60,7 +61,7 @@ Virt сontroller/API состоит из следующих компоненто
 
 1. **Virt-controller** — контроллер, управляющий кастомными ресурсами основной `kubervirt.io` API Group и отвечающий за функциональность виртуализации на уровне кластера (cluster wide). Для каждого ресурса VirtualMachineInstance он создает отдельный под, в котором запускается ВМ. Virt-controller следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами.
 
-   Компонент содержит следующие контейнеры:
+   Cостоит из следующих контейнеров:
 
    - **virt-controller** — основной контейнер;
    - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API. Подробно описан выше;
@@ -74,25 +75,35 @@ Virt сontroller/API состоит из следующих компоненто
 
    - принимает через console-port команды от компонента virt-api, соответствующие запросам на сабресурсы, и пересылает их на исполнение в virt-launcher. Благодаря функционалу сабресурсов осуществляется проброс портов до ВМ, а также обычной и VNC-консоли;
 
-   Компонент содержит следующие контейнеры:
+   Cостоит из следующих контейнеров:
 
    - **virt-launcher** — init-контейнер, запускающий через virt-launcher скрипт `node-labeller.sh`. Этот скрипт подготовливает данные по характеристикам процессоров, их функциям и типам машин, которые virt-handler будет использвать для установки соответствующих лейблов на ресурсах Node. Эти лейблы в свою очередь будут использоваться для планирования ВМ на узлах, которые поддерживают соответствующие параметры;
    - **virt-handler** — основной контейнер;
    - **virt-launcher-image-holder** — служебный сайдкар-контейнер для предварительного скачивания образа virt-launcher. Контейнер стоит на паузе и выполняет только функцию хранения образа;
-   - **pr-helper** — [QEMU persistent reservation helper](https://www.qemu.org/docs/master/tools/qemu-pr-helper.html), служебный сайдкар-контейнер, создаёт сокет-слушатель, который принимает входящие соединения для коммуникации с QEMU. Это необходимо поскольку операционная система ограничивает отправку отправка команд SCSI с постоянным резервированием непривилегированным программам, что не позволяет совместно использовать блочные SCSI-устройства несколькими ВМ, например в случае кластеризации;
-   - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API. Подробно описан выше;
-   - **kube-rbac-proxy** — сайдкар-контейнер, обеспечивающий авторизованный доступа к метрикам и состоянию контроллера. Подробно описан выше.
+   - **pr-helper** — [QEMU persistent reservation helper](https://www.qemu.org/docs/master/tools/qemu-pr-helper.html), служебный сайдкар-контейнер, создаёт сокет-слушатель, который принимает входящие соединения для коммуникации с QEMU. Это необходимо поскольку операционная система ограничивает отправку отправка команд SCSI с постоянным резервированием непривилегированным программам, что не позволяет совместно использовать блочные SCSI-устройства несколькими ВМ, например в случае кластеризации. [QEMU](https://www.qemu.org/) — свободная программа с открытым исходным кодом для эмуляции аппаратного обеспечения различных платформ, которая используется для запуска ВМ в поде.
 
-## Взаимодействия компонента virt сontroller/API
+1. **Virt-operator** — оператор Kubernetes, управляющий жизненным циклом компонентов KubeVirt при помощи кастомного ресурса KubeVirt. Virt-operator устанавливает в кластере virt-api, virt-controller и virt-handler, а также выполняет их настройку.
 
-Virt сontroller/API взаимодействует со следующими компонентами:
+   Cостоит из следующих контейнеров:
+
+   - **virt-operator** — основной контейнер;
+   - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API. Подробно описан выше.
+
+## Взаимодействия KubeVirt
+
+KubeVirt взаимодействует со следующими компонентами:
 
 1. **Kube-apiserver**:
 
+   - cледит за кастомными ресурсами KubeVirt, управляет компонентами KubeVirt;
    - следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами;
    - выполняет авторизацию запросов на получение метрик.
 
-С Virt сontroller/API взаимодействуют следующие внешние компоненты:
+С KubeVirt взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — отправляет запросы на валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API Group;
+1. **Kube-apiserver**:
+
+   - отправляет запросы на валидацию кастомных ресурсов KubeVirt;
+   - отправляет запросы на валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API Group.
+
 1. **Prometheus-main** — собирает метрики компонентов.
