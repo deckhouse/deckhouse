@@ -96,7 +96,9 @@ The {{ page.title_main }} installation is not available in the Community Edition
 </div>
 {%- endfor %}
 
+
 {% if page.platform_code == 'yandex' %}
+<div class="dimmer-block-content{% if revision != 'ce' %} disabled{% else %} common{% endif %}" markdown="1">
   <div class="warning alert__wrap">
     <svg class="alert__icon icon--warning">
       <use xlink:href="/images/sprite.svg#warning-icon"></use>
@@ -109,7 +111,9 @@ The {{ page.title_main }} installation is not available in the Community Edition
       {% endif %}
     </div>
   </div>
+</div>
 {% endif %}
+
 
 {%- for revision in site.data.getting_started.dkp_data.global.revisions %}
 {%- if page.platform_code == 'vsphere' and revision == 'se' %}{% continue %}{% endif %}

@@ -1,5 +1,6 @@
 global:
   revisions:
+    - ce
     - be
     - se
     - se-plus
@@ -58,6 +59,7 @@ installTypes:
         template: getting_started/stronghold/global/STEP_FINISH.md
   vsphere:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
+    ce_only: true
     ee_only: true
     se_support: true
     type: cloud
