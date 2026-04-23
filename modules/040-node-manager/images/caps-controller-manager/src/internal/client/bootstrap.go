@@ -176,12 +176,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	credentials deckhousev1.SSHCredentialsSpec,
 	sshLegacyMode bool) (res ctrl.Result, resErr error) {
 	logger := ctrl.LoggerFrom(ctx).WithValues("machineUID", staticMachine.UID, "address", staticInstance.Spec.Address)
-	logger.Info("Starting reservation process")
 
-	if err := c.reserveStaticInstance(ctx, staticInstance, staticMachine); err != nil {
+	if err := c.reserveStaticInstance(staticInstance, staticMachine); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reserve StaticInstance: %w", err)
 	}
-	logger.Info("StaticInstance successfully reserved")
 
 	defer func() {
 		if resErr != nil {
@@ -230,7 +228,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 
 		tcpTaskID := address
 		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
-		logger.Info("Scheduling TCP check", "timeout", delay, "taskID", tcpTaskID)
+		logger.Info("Scheduling TCP check", "timeout", delay, "address", address)
 		err, finished := c.taskManager.Spawn(taskCtx, tcpTaskID, "tcp-check", taskData, taskFunc)
 		if err != nil {
 			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
@@ -304,6 +302,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				scanner := bufio.NewScanner(strings.NewReader(tRes))
 				for scanner.Scan() {
 					str := scanner.Text()
+					tLogger.Info("debug", "str", str)
 					if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
 						return errors.New(str)
 					}
@@ -316,6 +315,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		}
 
 		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
+		logger.Info("Scheduling SSH check", "timeout", delay, "address", address)
 		err, finished := c.taskManager.Spawn(taskCtx, sshTaskID, "ssh-check", taskData, taskFunc)
 		if err != nil {
 			logger.Error(err, "Failed to connect via ssh to StaticInstance address")
@@ -350,7 +350,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	return ctrl.Result{}, nil
 }
 
-func (c *Client) reserveStaticInstance(ctx context.Context, staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine) error {
+func (c *Client) reserveStaticInstance(staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine) error {
 	currentRef := staticInstance.Status.MachineRef
 
 	if currentRef != nil && currentRef.UID == staticMachine.UID {
@@ -374,19 +374,6 @@ func (c *Client) reserveStaticInstance(ctx context.Context, staticInstance *deck
 	}
 
 	staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
-
-	// TODO: Patch here?
-	// staticInstancePatchHelper, err := patch.NewHelper(staticInstance, c.client)
-	// if err != nil {
-	// 	return fmt.Errorf(err, "failed to init patch helper")
-	// }
-	//
-	// if err = staticInstancePatchHelper.Patch(ctx, staticInstance); err != nil {
-	// 	if apierrors.IsConflict(err) {
-	// 		return fmt.Errorf(err, "StaticInstance already reserved by another machine")
-	// 	}
-	// 	return fmt.Errorf(err, "failed to reserve StaticInstance for StaticMachine")
-	// }
 
 	return nil
 }
