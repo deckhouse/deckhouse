@@ -2385,7 +2385,7 @@ spec:
                         - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster. Also in this mode, the fencing agent monitors the nodes available in the cluster.
                         - `Notify`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots). In this mode, the fencing agent monitors the nodes available in the cluster.
 
-                        When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with the `soft_margin=<timeout>` and `soft_panic=1` parameters.
+                        When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with `soft_margin` set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`.
 
                         How the fencing-agent works:
                         - Opens `/dev/watchdog` and sets two labels on the node: `node-manager.deckhouse.io/fencing-enabled` and `node-manager.deckhouse.io/fencing-mode` (the value of the second label is taken from `spec.fencing.mode` — either `Watchdog` or `Notify`).

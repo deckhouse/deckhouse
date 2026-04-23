@@ -58,14 +58,14 @@ The module managing CloudStatic nodes consists of the following components:
 
    As long as quorum is held or the API is reachable, the agent periodically resets the Watchdog timer. If neither is available, the agent stops resetting the timer, and the kernel triggers a kernel panic once the timer expires. The exact behavior depends on `spec.fencing.mode`:
 
-   * `Watchdog`: The `softdog` kernel module is loaded with `soft_margin=<timeout>` and `soft_panic=1`. When fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level — this prevents the node from coming back with an undefined state before the operator returns it to service manually.
+   * `Watchdog`: The `softdog` kernel module is loaded with `soft_margin` set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`. When fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level — this prevents the node from coming back with an undefined state before the operator returns it to service manually.
    * `Notify`: The agent runs and monitors the cluster, but the watchdog is not armed, and the node is not rebooted. The mode is intended for debugging and observation.
 
    The agent also exposes a local gRPC API over the Unix socket `/tmp/fencing-agent.sock` (methods `GetAll()` and `StreamEvents()`): external consumers (for example, CNI agents) can retrieve the node list and subscribe to node join/leave events without talking to the Kubernetes API.
 
    The agent honors the maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, and `update.node.deckhouse.io/disruption-approved`, and temporarily disables the watchdog during planned maintenance operations.
 
-   The `softdog` kernel module is used as the watchdog. The default timeout is 60 seconds (configurable via `spec.fencing.watchdog.timeout`).
+   The `softdog` kernel module is used as the watchdog.
 
    Consists of a single container:
 

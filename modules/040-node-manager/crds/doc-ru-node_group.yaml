@@ -941,7 +941,7 @@ spec:
                           - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером. Также в этом режиме fencing-agent следит за доступными в кластере нодами.
                           - `Notify` — запускает fencing-агент, но не активирует watchdog (режим проверки, без перезагрузок). В этом режиме fencing-agent следит за доступными в кластере нодами.
 
-                        При включении fencing скрипт NodeGroupConfiguration загружает модуль ядра softdog с параметрами `soft_margin=<timeout>` и `soft_panic=1`.
+                        При включении fencing скрипт NodeGroupConfiguration загружает модуль ядра softdog с параметром `soft_margin`, равным значению `spec.fencing.watchdog.timeout` (по умолчанию 60 секунд), и `soft_panic=1`.
 
                         Как работает fencing-агент:
                           - Открывает устройство `/dev/watchdog` и устанавливает на узле два лейбла: `node-manager.deckhouse.io/fencing-enabled` и `node-manager.deckhouse.io/fencing-mode` (значение второго лейбла берётся из `spec.fencing.mode` — `Watchdog` или `Notify`).
