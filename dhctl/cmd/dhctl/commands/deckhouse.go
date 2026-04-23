@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -60,6 +61,10 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			err = kubeCl.Init(client.AppKubernetesInitParams())
 			if err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
+			}
+
+			if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+				return err
 			}
 
 			err = deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)

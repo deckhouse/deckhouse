@@ -89,6 +89,10 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
+		if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+			return err
+		}
+
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
 			kubeCl,
