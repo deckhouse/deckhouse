@@ -43,8 +43,6 @@ shell:
 git:
 - add: /docs/site
   to: /srv/jekyll-data/site
-  owner: jekyll
-  group: jekyll
   excludePaths:
   - '*.md'
   - werf*.yaml
