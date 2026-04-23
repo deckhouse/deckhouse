@@ -113,7 +113,7 @@ func convergeComponents() error {
 
 	var components []string
 	if config.EtcdArbiter {
-		components = []string{"etcd"}
+		//components = []string{"etcd"}
 		log.Info("ETCD_ARBITER mode: skipping control-plane components")
 	} else {
 		components = []string{"kube-apiserver", "etcd", "kube-controller-manager", "kube-scheduler"}
