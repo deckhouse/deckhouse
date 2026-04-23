@@ -123,20 +123,17 @@ html {
                         gap: 15px;
                         line-height: 20px;
                         margin-bottom: 16px;
+                        padding-right: 16px;
 
                         &::after {
                             content: '';
                             position: absolute;
                             right: 0;
-                            top: 5px;
+                            top: 8px;
                             width: 8px;
                             height: 5px;
                             background:url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTMiIGhlaWdodD0iOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTEuMDIgMS41LTUgNS01LTUiIHN0cm9rZT0iIzIyMkE1RCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48L3N2Zz4=") bottom / contain no-repeat ;
                             transition: .15s;
-
-                            @include breakpoints.max-w(s) {
-                                right: 0;
-                            }
                         }
 
                         > .module-name {

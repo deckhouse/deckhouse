@@ -2635,6 +2635,14 @@ select#contact-select {
       transform: rotate(180deg);
     }
   }
+
+  &[data-placement^='bottom'] .tippy-svg-arrow {
+    top: -12px;
+
+    svg {
+      transform: rotate(-90deg);
+    }
+  }
 }
 
 .layout-sidebar__content--guides {
