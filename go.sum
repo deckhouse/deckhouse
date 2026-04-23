@@ -206,6 +206,8 @@ github.com/felixge/httpsnoop v1.0.4 h1:NFTV2Zj1bL4mc9sqWACXbQFVBBg2W3GPvqp8/ESS2
 github.com/felixge/httpsnoop v1.0.4/go.mod h1:m8KPJKqk1gH5J9DgRY2ASl2lWCfGKXixSwevea8zH2U=
 github.com/flant/addon-operator v1.20.4 h1:m5O/9bPe5R/2pI57YHMJz4UAuju/S6XTjIZ9IBRKZgU=
 github.com/flant/addon-operator v1.20.4/go.mod h1:GRpXoewZrkkJpK4g+bZ9t8weHpaBuS2OYZ5V97EKz7g=
+github.com/flant/addon-operator v1.20.5-0.20260423130450-ceb60a33fdff h1:V8VTlqUUb2JR4MeIHd3/Qt/cCjkSqAy6AO1TlUKcRf0=
+github.com/flant/addon-operator v1.20.5-0.20260423130450-ceb60a33fdff/go.mod h1:GRpXoewZrkkJpK4g+bZ9t8weHpaBuS2OYZ5V97EKz7g=
 github.com/flant/kube-client v1.6.0 h1:g6ksfIgTlrvLgp/Iu1a9c5aC4yPClLplq3w9e/qtYbk=
 github.com/flant/kube-client v1.6.0/go.mod h1:dYJyx7aMldXR/F8hlhRxlcEhSkxKcMZV2Oz8d+o/Up4=
 github.com/flant/shell-operator v1.16.4 h1:yuNKohNC74N5pIGuLmbbA4YkFlP1HgaY/xd4JtaR8mg=
