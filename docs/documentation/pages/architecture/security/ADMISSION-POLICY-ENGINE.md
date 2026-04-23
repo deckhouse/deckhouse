@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`admission-policy-engine`](/modules/admission-policy-engine/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`admission-policy-engine`](/modules/admission-policy-engine/) module and its interaction with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Admission-policy-engine architecture](../../../images/architecture/security/c4-l2-admission-policy-engine.png)
@@ -27,16 +27,13 @@ The Level 2 C4 architecture of the [`admission-policy-engine`](/modules/admissio
 
 The module consists of the following components:
 
-1. **Gatekeeper-controller-manager**: It is a [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) controller that validates newly created Kubernetes resources against security rules.
+1. **Gatekeeper-controller-manager**: A [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) controller that performs the following operations:
 
-   Security rules are defined using ConstraintTemplate and `constraints.gatekeeper.sh/*` custom resources. A ConstraintTemplate defines new policy types, based on which specific security policies are created to validate resources.
+   * manages Gatekeeper custom resources;
+   * validates Kubernetes resources specified in custom resources from the `constraints.gatekeeper.sh/*` API group;
+   * mutates Kubernetes resources specified in the [AssignMetadata](/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata), [Assign](/modules/admission-policy-engine/gatekeeper-cr.html#assign), [ModifySet](/modules/admission-policy-engine/gatekeeper-cr.html#modifyset), and [AssignImage](/modules/admission-policy-engine/gatekeeper-cr.html#assignimage) custom resources.
 
-   The **gatekeeper-controller-manager** also mutates Kubernetes resources based on the following Gatekeeper custom resources:
-
-   * AssignMetadata: Defines mutation rules for the `metadata` section.
-   * Assign: Defines mutation rules for fields outside the `metadata` section.
-   * ModifySet: Defines rules for adding or removing items in a list.
-   * AssignImage: Defines mutation rules for the `image` field.
+   Security rules are defined using the ConstraintTemplate custom resource and custom resources from the `constraints.gatekeeper.sh/*` API group. A ConstraintTemplate defines new policy types, based on which specific security policies are created to validate resources.
 
    It consists of the following containers:
 
@@ -51,11 +48,9 @@ The module consists of the following components:
    * **constraint-exporter**: Sidecar container that exposes additional metrics for the `constraints.gatekeeper.sh/*` and `mutations.gatekeeper.sh/*` custom resources.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to metrics from `manager` and `constraint-exporter`.
 
-1. **ratify**: Optional component that consists of a single [**ratify**](https://ratify.dev/docs/what-is-ratify) container and provides a [Gatekeeper provider](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) implementation for validating metadata of used artifacts. In DKP, this provider is used to verify container image signatures.
+1. **ratify**: An optional component consisting of a single [**ratify**](https://ratify.dev/docs/what-is-ratify) container. It provides a [Gatekeeper provider](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) implementation for validating metadata of used artifacts. In DKP, this provider is used to verify container image signatures and is available in the SE+, EE, CSE Lite, and CSE Pro editions.
 
-   The ratify component is available in the following DKP editions: SE+, EE, CSE Lite, CSE Pro.
-
-   Gatekeeper uses Provider custom resource to extend resource verification and validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.
+   Gatekeeper uses the Provider custom resource to extend resource verification and validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.
 
 ## Module interactions
 
@@ -63,8 +58,8 @@ The module interacts with the following components:
 
 * **Kube-apiserver**:
 
-  * Watches all Kubernetes resources.
-  * Manages ConstraintTemplate, `constraints.gatekeeper.sh/*`, Assign, AssignImage, AssignMetadata, ModifySet, and `config.ratify.deislabs.io/*` custom resources.
+  * Monitors Kubernetes resources specified in custom resources from the `constraints.gatekeeper.sh/*` and `mutations.gatekeeper.sh/*` API groups.
+  * Manages ConstraintTemplate, Assign, AssignImage, AssignMetadata, ModifySet, as well as resources from the `constraints.gatekeeper.sh/*` and `config.ratify.deislabs.io/*` API groups.
 
 The following external components interact with the module:
 
@@ -74,7 +69,7 @@ The following external components interact with the module:
 
 ## Custom resources
 
-The `admission-policy-engine` module adds custom resources to the DKP platform that simplify configuration of the most commonly used security policies. The following [custom resources](admission-policy-engine/cr.html) are used:
+The `admission-policy-engine` module adds custom resources to the DKP platform that simplify configuration of the most commonly used security policies. The following [custom resources](/modules/admission-policy-engine/cr.html) are used:
 
 * OperationPolicy: Describes the operational policy of the cluster.
 * SecurityPolicy: Describes the security policy of the cluster.
