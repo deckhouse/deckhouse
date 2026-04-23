@@ -121,7 +121,7 @@
     "user-authn",
     "user-authz",
     "vertical-pod-autoscaler",
-    "virtualization",
+    "virtualization"
     ]
   },
   "se-plus": {
