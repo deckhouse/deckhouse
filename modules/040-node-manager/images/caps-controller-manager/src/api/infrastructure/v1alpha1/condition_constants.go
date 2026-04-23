@@ -32,6 +32,7 @@ const (
 	// Checking ssh connection
 	StaticInstanceCheckSSHCondition = "CheckSshCondition"
 
+	StaticInstanceCheckFailedReason = "CheckFailed"
 	StaticInstanceCheckPassedReason = "CheckPassed"
 
 	StaticInstanceReadyReason = "InstanceReady"

@@ -126,20 +126,18 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 		}
 	}()
 
-	credentialsStatus := conditions.Get(staticInstance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	credentials := &deckhousev1.SSHCredentials{}
 	if err := r.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
 		logger.Error(err, "failed to load SSHCredentials")
-		if credentialsStatus == nil || credentialsStatus.Status != metav1.ConditionFalse {
-			conditions.Set(staticInstance, metav1.Condition{
-				// TODO: StaticInstanceBootstrapSucceededCondition type?
-				Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
-				Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
-				Status:             metav1.ConditionFalse,
-				Message:            err.Error(),
-				LastTransitionTime: metav1.Now(),
-			})
-		}
+
+		conditions.Set(staticInstance, metav1.Condition{
+			// TODO: StaticInstanceBootstrapSucceededCondition type?
+			Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
+			Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+			Status:             metav1.ConditionFalse,
+			Message:            err.Error(),
+			LastTransitionTime: metav1.Now(),
+		})
 
 		if staticInstance.Status.CurrentStatus == nil || staticInstance.Status.CurrentStatus.Phase == "" {
 			staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
@@ -153,16 +151,14 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 		return ctrl.Result{}, fmt.Errorf("failed to load SSHCredentials: %w", err)
 	}
 
-	if credentialsStatus == nil || credentialsStatus.Status != metav1.ConditionTrue {
-		conditions.Set(staticInstance, metav1.Condition{
-			// TODO: StaticInstanceBootstrapSucceededCondition type?
-			Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
-			Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
-			Status:             metav1.ConditionTrue,
-			Message:            "SSHCredentials are available",
-			LastTransitionTime: metav1.Now(),
-		})
-	}
+	conditions.Set(staticInstance, metav1.Condition{
+		// TODO: StaticInstanceBootstrapSucceededCondition type?
+		Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
+		Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
+		Status:             metav1.ConditionTrue,
+		Message:            "SSHCredentials are available",
+		LastTransitionTime: metav1.Now(),
+	})
 
 	if staticInstance.Status.CurrentStatus == nil || staticInstance.Status.CurrentStatus.Phase == "" ||
 		staticInstance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError {

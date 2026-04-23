@@ -233,18 +233,17 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		logger.Info("Scheduling TCP check", "timeout", delay, "taskID", tcpTaskID)
 		err, finished := c.taskManager.Spawn(taskCtx, tcpTaskID, "tcp-check", taskData, taskFunc)
 		if err != nil {
-			if status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckTCPConnection); status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
-				c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
-				logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection")
+			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
+			logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection")
 
-				conditions.Set(staticInstance, metav1.Condition{
-					Type:               infrav1.StaticInstanceCheckTCPConnection,
-					Status:             metav1.ConditionFalse,
-					Reason:             err.Error(),
-					Message:            err.Error(),
-					LastTransitionTime: metav1.Now(),
-				})
-			}
+			conditions.Set(staticInstance, metav1.Condition{
+				Type:               infrav1.StaticInstanceCheckTCPConnection,
+				Status:             metav1.ConditionFalse,
+				Reason:             infrav1.StaticInstanceCheckFailedReason,
+				Message:            err.Error(),
+				LastTransitionTime: metav1.Now(),
+			})
+
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
@@ -253,15 +252,13 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
-		if status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckTCPConnection); status == nil || status.Status != metav1.ConditionTrue {
-			conditions.Set(staticInstance, metav1.Condition{
-				Type:               infrav1.StaticInstanceCheckTCPConnection,
-				Status:             metav1.ConditionTrue,
-				Reason:             infrav1.StaticInstanceCheckPassedReason,
-				Message:            "TCP connection check passed",
-				LastTransitionTime: metav1.Now(),
-			})
-		}
+		conditions.Set(staticInstance, metav1.Condition{
+			Type:               infrav1.StaticInstanceCheckTCPConnection,
+			Status:             metav1.ConditionTrue,
+			Reason:             infrav1.StaticInstanceCheckPassedReason,
+			Message:            "TCP connection check passed",
+			LastTransitionTime: metav1.Now(),
+		})
 	}
 
 	sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition)
@@ -322,17 +319,15 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		err, finished := c.taskManager.Spawn(taskCtx, sshTaskID, "ssh-check", taskData, taskFunc)
 		if err != nil {
 			logger.Error(err, "Failed to connect via ssh to StaticInstance address")
+			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceSshFailed", err.Error())
 
-			if status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition); status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
-				c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceSshFailed", err.Error())
-				conditions.Set(staticInstance, metav1.Condition{
-					Type:               infrav1.StaticInstanceCheckSSHCondition,
-					Status:             metav1.ConditionFalse,
-					Reason:             err.Error(),
-					Message:            err.Error(),
-					LastTransitionTime: metav1.Now(),
-				})
-			}
+			conditions.Set(staticInstance, metav1.Condition{
+				Type:               infrav1.StaticInstanceCheckSSHCondition,
+				Status:             metav1.ConditionFalse,
+				Reason:             infrav1.StaticInstanceCheckFailedReason,
+				Message:            err.Error(),
+				LastTransitionTime: metav1.Now(),
+			})
 
 			return ctrl.Result{}, err
 		}
@@ -342,15 +337,13 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
-		if status := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition); status == nil || status.Status != metav1.ConditionTrue {
-			conditions.Set(staticInstance, metav1.Condition{
-				Type:               infrav1.StaticInstanceCheckSSHCondition,
-				Status:             metav1.ConditionTrue,
-				Reason:             infrav1.StaticInstanceCheckPassedReason,
-				Message:            "SSH connectivity check passed",
-				LastTransitionTime: metav1.Now(),
-			})
-		}
+		conditions.Set(staticInstance, metav1.Condition{
+			Type:               infrav1.StaticInstanceCheckSSHCondition,
+			Status:             metav1.ConditionTrue,
+			Reason:             infrav1.StaticInstanceCheckPassedReason,
+			Message:            "SSH connectivity check passed",
+			LastTransitionTime: metav1.Now(),
+		})
 	}
 
 	staticMachine.Spec.ProviderID = providerid.GenerateProviderID(staticInstance.Name)
