@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+#
 # The step is 000_ because we need to be able to create users before possible errors occur in other steps and not lose access to the node
 
 {{- if eq .runType "Normal" }}
