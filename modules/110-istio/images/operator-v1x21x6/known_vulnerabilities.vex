@@ -73,7 +73,35 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Helm Chart JSON Schema denial of service - Функционал обработки JSON схем в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы без предварительной проверки линтером. Все чарты проходят обязательную валидацию на отсутствие ссылок , указывающих на /dev/zero, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-10T15:35:45.218482198Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35206"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm pull --untar output directory confusion (CVE-2026-35206, GHSA-hr2v-4r36-88hr, CWE-22) — Функционал helm pull с распаковкой chart (флаг --untar) из произвольного URL или имени из репозитория в программном продукте helm версии 3.14.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов Istio Operator. Манифесты и chart-артефакты для control-plane Istio подготавливаются на этапе сборки образа и не подменяются из недоверенных источников во время работы в кластере, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-04-22T13:37:28.415381647Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prometheus stored XSS in web UI (CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79) — Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (Graph, Metric Explorer и др.) при отображении имён метрик и значений лейблов, в т.ч. после приёма данных через remote write или OTLP receiver. Бинарник Istio Operator не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory (актуальные затронутые версии — ветка 3.x сервера). Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-04-22T15:16:18.524739084Z"
     }
   ],
-  "timestamp": "2025-10-22T11:59:26Z"
+  "timestamp": "2026-04-22T15:16Z"
 }
