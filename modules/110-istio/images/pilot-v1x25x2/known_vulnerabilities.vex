@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-3e208fba9793ecf1255fc7d1dfadf6ceb9a3232bcedde94d639352f880ebcde6",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prometheus stored XSS in web UI (CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79) — Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (Graph, Metric Explorer и др.) при отображении имён метрик и значений лейблов, в т.ч. после приёма данных через remote write или OTLP receiver. Бинарник Istio Pilot (istiod) не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory (актуальные затронутые версии — ветка 3.x сервера). Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-04-23T11:21:18.406527193Z"
+    }
+  ],
+  "timestamp": "2026-04-23T11:21Z"
+}
