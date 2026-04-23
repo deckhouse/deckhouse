@@ -481,7 +481,7 @@
         "en": "Required if the csi-nfs or csi-scsi-generic modules are not used",
         "ru": "Обязательный, если не используются модули csi-nfs или csi-scsi-generic"
       }
-    }
+    },
     "external": "true",
     "path": "/modules/sds-local-volume/stable/"
   },
