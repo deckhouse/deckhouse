@@ -297,7 +297,6 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		}
 	}()
 
-	logger.Info("picked StaticInstance")
 	r.Recorder.SendNormalEvent(newStaticInstance, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached to StaticMachine %s", staticMachine.Name))
 	r.Recorder.SendNormalEvent(staticMachine, staticMachine.Labels["node-group"], "StaticInstanceAttachSucceeded", fmt.Sprintf("Attached StaticInstance %s", newStaticInstance.Name))
 

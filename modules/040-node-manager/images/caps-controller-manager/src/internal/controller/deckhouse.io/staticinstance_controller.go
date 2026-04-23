@@ -130,8 +130,8 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 	if err := r.Get(ctx, client.ObjectKey{Name: staticInstance.Spec.CredentialsRef.Name}, credentials); err != nil {
 		logger.Error(err, "failed to load SSHCredentials")
 
+		// TODO: StaticInstanceBootstrapSucceededCondition type?
 		conditions.Set(staticInstance, metav1.Condition{
-			// TODO: StaticInstanceBootstrapSucceededCondition type?
 			Type:               infrav1.StaticInstanceWaitingForCredentialsRefReason,
 			Reason:             infrav1.StaticInstanceWaitingForCredentialsRefReason,
 			Status:             metav1.ConditionFalse,
@@ -139,7 +139,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 			LastTransitionTime: metav1.Now(),
 		})
 
-		if staticInstance.Status.CurrentStatus == nil || staticInstance.Status.CurrentStatus.Phase == "" {
+		if staticInstance.GetPhase() == "" {
 			staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
 		}
 
@@ -160,10 +160,9 @@ func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticIn
 		LastTransitionTime: metav1.Now(),
 	})
 
-	if staticInstance.Status.CurrentStatus == nil || staticInstance.Status.CurrentStatus.Phase == "" ||
-		staticInstance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError {
+	if phase := staticInstance.GetPhase(); phase == "" || phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError {
+		// TODO: StaticInstanceBootstrapSucceededCondition type?
 		conditions.Set(staticInstance, metav1.Condition{
-			// TODO: StaticInstanceBootstrapSucceededCondition type?
 			Type:               infrav1.StaticInstanceAddedToNodeGroupCondition,
 			Reason:             infrav1.StaticInstanceAddedToNodeGroupCondition,
 			Status:             metav1.ConditionTrue,
