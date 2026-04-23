@@ -90,7 +90,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 	}
 
 	type taskDataStr struct {
-		address       string
+		host          string
 		credentials   deckhousev1.SSHCredentialsSpec
 		sshLegacyMode bool
 
@@ -100,7 +100,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 	}
 
 	taskData := taskDataStr{
-		address:         staticInstance.Spec.Address,
+		host:            staticInstance.Spec.Address,
 		credentials:     credentials.Spec,
 		sshLegacyMode:   sshLegacyMode,
 		providerID:      string(staticMachine.Spec.ProviderID),
@@ -119,10 +119,10 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		var tErr error
 		if t.sshLegacyMode {
 			tLogger.Info("using clissh")
-			sshCl = clissh.CreateSSHClient(t.address, t.credentials)
+			sshCl = clissh.CreateSSHClient(t.host, t.credentials)
 		} else {
 			tLogger.Info("using gossh")
-			sshCl, tErr = gossh.CreateSSHClient(t.address, t.credentials)
+			sshCl, tErr = gossh.CreateSSHClient(t.host, t.credentials)
 		}
 		if tErr != nil {
 			tLogger.Error(err, "failed to create ssh client")
@@ -226,10 +226,9 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			return nil
 		}
 
-		tcpTaskID := address
 		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
 		logger.Info("Scheduling TCP check", "timeout", delay, "address", address)
-		err, finished := c.taskManager.Spawn(taskCtx, tcpTaskID, "tcp-check", taskData, taskFunc)
+		err, finished := c.taskManager.Spawn(taskCtx, address, "tcp-check", taskData, taskFunc)
 		if err != nil {
 			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
 			logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection")
@@ -261,15 +260,16 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 
 	sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition)
 	if sshCondition == nil || sshCondition.Status != metav1.ConditionTrue {
-		sshTaskID := address
 
 		type taskDataStr struct {
+			host          string
 			address       string
 			credentials   deckhousev1.SSHCredentialsSpec
 			sshLegacyMode bool
 		}
 
 		taskData := taskDataStr{
+			host:          staticInstance.Spec.Address,
 			address:       address,
 			credentials:   credentials,
 			sshLegacyMode: sshLegacyMode,
@@ -288,10 +288,10 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			var tErr error
 			if t.sshLegacyMode {
 				tLogger.Info("using clissh")
-				sshCl = clissh.CreateSSHClient(t.address, t.credentials)
+				sshCl = clissh.CreateSSHClient(t.host, t.credentials)
 			} else {
 				tLogger.Info("using gossh")
-				sshCl, tErr = gossh.CreateSSHClient(t.address, t.credentials)
+				sshCl, tErr = gossh.CreateSSHClient(t.host, t.credentials)
 			}
 			if tErr != nil {
 				tLogger.Error(tErr, "Failed to connect via ssh")
@@ -302,8 +302,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				scanner := bufio.NewScanner(strings.NewReader(tRes))
 				for scanner.Scan() {
 					str := scanner.Text()
-					tLogger.Info("debug", "str", str)
-					if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") {
+					if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") || strings.Contains(str, "Could not resolve hostname") {
 						return errors.New(str)
 					}
 				}
@@ -316,7 +315,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 
 		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
 		logger.Info("Scheduling SSH check", "timeout", delay, "address", address)
-		err, finished := c.taskManager.Spawn(taskCtx, sshTaskID, "ssh-check", taskData, taskFunc)
+		err, finished := c.taskManager.Spawn(taskCtx, address, "ssh-check", taskData, taskFunc)
 		if err != nil {
 			logger.Error(err, "Failed to connect via ssh to StaticInstance address")
 			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceSshFailed", err.Error())
