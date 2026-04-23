@@ -106,6 +106,7 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 			rootMap["addKubeconfigGeneratorEntry"] = true
 		}
 
+		// Create https map if it does not exist
 		var httpsMap map[string]interface{}
 		if httpsVal, exists := rootMap["https"]; exists && httpsVal != nil {
 			httpsMap = httpsVal.(map[string]interface{})
@@ -135,10 +136,14 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 
 	input.Logger.Info("Setting PublishAPI values from 'd8-publishapi-config-migration' configmap.")
 
+	fmt.Println(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
+
 	setBoolPtrValue(input, "enabled", publishAPIConfig.Enabled)
 	setStringPtrValue(input, "ingressClass", publishAPIConfig.IngressClass)
 	setStringSliceValue(input, "whitelistSourceRanges", publishAPIConfig.WhitelistSourceRanges)
 	setBoolPtrValue(input, "addKubeconfigGeneratorEntry", publishAPIConfig.AddKubeconfigGeneratorEntry)
+
+	fmt.Println(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
 
 	if publishAPIConfig.HTTPS != nil {
 		setStringPtrValue(input, "https.mode", publishAPIConfig.HTTPS.Mode)
