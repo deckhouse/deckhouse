@@ -39,7 +39,7 @@ const (
 	PackageRepositoryOperationReasonPackageRepositoryNotFound    = "PackageRepositoryNotFound"
 	PackageRepositoryOperationReasonRegistryClientCreationFailed = "RegistryClientCreationFailed"
 	PackageRepositoryOperationReasonPackageListingFailed         = "PackageListingFailed"
-	PackageRepositoryOperationReasonPackageScanSuccess           = "PackageScanSuccess"
+	PackageRepositoryOperationReasonSuccessfulScan               = "SuccessfulScan"
 
 	// PackagesRepositoryOperationLabelRepository is the label used to identify PackageRepositoryOperations
 	// that belong to a specific PackageRepository
