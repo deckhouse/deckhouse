@@ -1,15 +1,15 @@
 {!{ define "promote_image_setup_steps" }!}
 {!{- $ctx := index . 0 -}!}
 # <template: promote_image_setup_steps>
-{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 4 }!}
+{!{ tmpl.Exec "docker_config_isolation" | strings.Indent 2 }!}
 
     {!{- $secrets := slice -}!}
     {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_REGISTRY_STAGE_HOST" "DECKHOUSE_REGISTRY_STAGE_HOST" ) $secrets -}!}
     {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "login" "DECKHOUSE_REGISTRY_STAGE_USER" ) $secrets -}!}
     {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
-    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
+    {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
 {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
-{!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 4 }!}
+{!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
 # </template: promote_image_setup_steps>
@@ -133,12 +133,12 @@ detect_editions:
   name: Detect editions
   runs-on: "regular"
   outputs:
-    PROMOTE_CE: ${{ steps.detect_editions.outputs.PROMOTE_CE }}
-    PROMOTE_EE: ${{ steps.detect_editions.outputs.PROMOTE_EE }}
-    PROMOTE_FE: ${{ steps.detect_editions.outputs.PROMOTE_FE }}
-    PROMOTE_BE: ${{ steps.detect_editions.outputs.PROMOTE_BE }}
-    PROMOTE_SE: ${{ steps.detect_editions.outputs.PROMOTE_SE }}
-    PROMOTE_SE-plus: ${{ steps.detect_editions.outputs['PROMOTE_SE-plus'] }}
+    PROMOTE_CE: ${{ steps.detect_editions.outputs.promote_ce }}
+    PROMOTE_EE: ${{ steps.detect_editions.outputs.promote_ee }}
+    PROMOTE_FE: ${{ steps.detect_editions.outputs.promote_fe }}
+    PROMOTE_BE: ${{ steps.detect_editions.outputs.promote_be }}
+    PROMOTE_SE: ${{ steps.detect_editions.outputs.promote_se }}
+    PROMOTE_SE-plus: ${{ steps.detect_editions.outputs['promote_se-plus'] }}
   steps:
     - name: Detect editions
       id: detect_editions
@@ -146,9 +146,7 @@ detect_editions:
         EDITIONS: ${{ github.event.inputs.editions || '' }}
       run: |
         echo "Promote editions filter: '${EDITIONS}' (empty => all)"
-
         RESTRICTED=no
-
         for edition in CE EE FE BE SE SE-plus ; do
           if grep -i ",${edition}," <<<",${EDITIONS}," 2>/dev/null 1>&2 ; then
             echo "  - enable promote of ${edition} edition."
@@ -156,7 +154,6 @@ detect_editions:
             RESTRICTED=yes
           fi
         done
-
         if [[ $RESTRICTED == "no" ]] ; then
           echo "No restrictions. Enable promote for all editions."
           for edition in CE EE FE BE SE SE-plus ; do
@@ -170,13 +167,13 @@ promote_{!{$jobId}!}:
   name: Promote images ({!{$edition}!})
   needs:
     - detect_editions
-  if: ${{ needs.detect_editions.outputs['PROMOTE_{!{$edition}!}'] == 'true' && github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
+  if: ${{ needs.detect_editions.outputs['promote_{!{$edition | toLower}!}'] == 'true' && github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
   runs-on: [self-hosted, stage]
   env:
     CI_COMMIT_TAG: ${{ github.ref_name }}
   steps:
-{!{ tmpl.Exec "promote_image_setup_steps" (slice $ctx) | strings.Indent 4 }!}
-{!{ tmpl.Exec "promote_image_edition_steps" (slice $edition) | strings.Indent 8 }!}
+{!{ tmpl.Exec "promote_image_setup_steps" (slice $ctx) | strings.Indent 2 }!}
+{!{ tmpl.Exec "promote_image_edition_steps" (slice $edition) | strings.Indent 4 }!}
 {!{ end }!}
 # </template: promote_image>
 {!{ end }!}
