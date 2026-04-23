@@ -19,7 +19,19 @@ set -euo pipefail
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIBS_DIR="${BASE_DIR}/libs"
 CONSTRAINTS_ROOT="${BASE_DIR}/constraints"
-CONSTRAINT_TESTGEN="${BASE_DIR}/../tools/constraint_testgen"
+CONSTRAINT_TESTGEN_SRC="${BASE_DIR}/../tools/constraint_testgen"
+CONSTRAINT_TESTGEN="${CONSTRAINT_TESTGEN:-}"
+if [ -z "${CONSTRAINT_TESTGEN}" ] && command -v constraint_testgen >/dev/null 2>&1; then
+  CONSTRAINT_TESTGEN="$(command -v constraint_testgen)"
+fi
+
+run_constraint_testgen() {
+  if [ -n "${CONSTRAINT_TESTGEN}" ]; then
+    "${CONSTRAINT_TESTGEN}" "$@"
+  else
+    go run "${CONSTRAINT_TESTGEN_SRC}" "$@"
+  fi
+}
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -118,7 +130,7 @@ run_constraint_tests() {
 
     rm -rf "${constraint_dir}/rendered"
 
-    if ! (cd "${constraint_dir}" && go run "${CONSTRAINT_TESTGEN}" generate -bundle ./test-matrix.yaml); then
+    if ! (cd "${constraint_dir}" && run_constraint_testgen generate -bundle ./test-matrix.yaml); then
       echo -e "${RED}[FAIL]${NC} ${rel}: generate failed"
       FAILED_CONSTRAINTS+=("${rel} (generate)")
       continue
@@ -155,7 +167,7 @@ run_coverage_checks() {
   echo "=========================================="
 
   local coverage_output
-  if ! coverage_output="$(go run "${CONSTRAINT_TESTGEN}" coverage -tests-root "${CONSTRAINTS_ROOT}" -format json 2>&1)"; then
+  if ! coverage_output="$(run_constraint_testgen coverage -tests-root "${CONSTRAINTS_ROOT}" -format json 2>&1)"; then
     echo -e "${RED}[FAIL]${NC} coverage command failed"
     printf '%s\n' "${coverage_output}" | tail -n 40
     FAILED_TESTS+=("coverage")
@@ -163,31 +175,82 @@ run_coverage_checks() {
   fi
 
   local coverage_parse_output
-  if ! coverage_parse_output="$(printf '%s\n' "${coverage_output}" | python3 -c '
-import json
-import re
-import sys
+  local go_parser_tmp
+  go_parser_tmp="${BASE_DIR}/coverage_parser_${$}.go"
 
-raw = sys.stdin.read()
-match = re.search(r"\{.*\}", raw, re.S)
-if not match:
-    print("PARSE_ERROR")
-    sys.exit(1)
+  cat >"${go_parser_tmp}" <<'EOF'
+package main
 
-report = json.loads(match.group(0))
-constraints = report.get("constraints", [])
-print(f"TOTAL={len(constraints)}")
+import (
+ "encoding/json"
+ "fmt"
+ "os"
+ "regexp"
+)
 
-for c in constraints:
-    fields = c.get("fields")
-    if isinstance(fields, dict):
-        pct = fields.get("coverage_pct")
-        if isinstance(pct, int) and pct < 100:
-            name = c.get("directory") or c.get("name") or "unknown"
-            print(f"LOW={name}:{pct}%")
-')"; then
+type report struct {
+ Constraints []constraint `json:"constraints"`
+}
+
+type constraint struct {
+ Directory string  `json:"directory"`
+ Name      string  `json:"name"`
+ Fields    *fields `json:"fields"`
+}
+
+type fields struct {
+ CoveragePct *int `json:"coverage_pct"`
+}
+
+func main() {
+ input, err := os.ReadFile("/dev/stdin")
+ if err != nil {
+  fmt.Fprintln(os.Stderr, err)
+  os.Exit(1)
+ }
+
+ re := regexp.MustCompile(`(?s)\{.*\}`)
+ rawJSON := re.Find(input)
+ if rawJSON == nil {
+  fmt.Fprintln(os.Stderr, "json payload not found in coverage output")
+  os.Exit(1)
+ }
+
+ var r report
+ if err := json.Unmarshal(rawJSON, &r); err != nil {
+  fmt.Fprintln(os.Stderr, err)
+  os.Exit(1)
+ }
+
+ fmt.Printf("TOTAL=%d\n", len(r.Constraints))
+
+ for _, c := range r.Constraints {
+  if c.Fields == nil || c.Fields.CoveragePct == nil {
+  	continue
+  }
+  if *c.Fields.CoveragePct < 100 {
+  	name := c.Directory
+  	if name == "" {
+  		name = c.Name
+  	}
+  	if name == "" {
+  		name = "unknown"
+  	}
+  	fmt.Printf("LOW=%s:%d%%\n", name, *c.Fields.CoveragePct)
+  }
+ }
+}
+EOF
+
+  set +e
+  coverage_parse_output="$(printf '%s\n' "${coverage_output}" | go run "${go_parser_tmp}" 2>&1)"
+  local parse_exit=$?
+  rm -f "${go_parser_tmp}"
+  set -e
+
+  if [ ${parse_exit} -ne 0 ]; then
     echo -e "${RED}[FAIL]${NC} coverage output parse failed"
-    printf '%s\n' "${coverage_output}" | tail -n 40
+    printf '%s\n' "${coverage_parse_output}" | tail -n 40
     FAILED_TESTS+=("coverage(parse)")
     return
   fi
@@ -294,8 +357,10 @@ print_final_summary() {
 main() {
   require_command opa
   require_command gator
-  require_command go
-  require_command python3
+
+  if [ -z "${CONSTRAINT_TESTGEN}" ]; then
+    require_command go
+  fi
 
   run_opa_library_tests
   run_constraint_tests
