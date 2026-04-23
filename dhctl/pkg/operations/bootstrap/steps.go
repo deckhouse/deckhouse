@@ -149,7 +149,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	// Bundle registry tunnel
 	if cfg.Registry.Settings.IsLocal() {
 		if wrapper, ok := params.Node.(*ssh.NodeInterfaceWrapper); ok {
-			stopTunnel, err := bundle.StartTunnel(ctx, bundle.TunnelParams{
+			stop, err := bundle.StartTunnel(ctx, bundle.TunnelParams{
 				SSHClient:       wrapper.Client(),
 				LoggerProvider:  params.LoggerProvider,
 				DirectoryConfig: dc,
@@ -159,7 +159,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 				return fmt.Errorf("Start bundle registry tunnel: %w", err)
 			}
 
-			defer stopTunnel()
+			defer stop()
 		}
 	}
 
