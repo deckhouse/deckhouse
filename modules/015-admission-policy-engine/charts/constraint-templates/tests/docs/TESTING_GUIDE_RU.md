@@ -670,8 +670,9 @@ spec:
 ### Шаг 6: Сгенерируйте, проверьте, протестируйте
 
 ```bash
-# Из директории constraint:
-constraint_testgen=../../../../tools/constraint_testgen
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
 # Генерация артефактов
 go run $constraint_testgen generate -bundle ./test-matrix.yaml
@@ -740,6 +741,34 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 
 ## 11. Полезные команды
 
+### Точка входа через Makefile (рекомендуется)
+
+Запускайте команды из корня чарта (`modules/015-admission-policy-engine/charts/constraint-templates`):
+
+```bash
+# Полный прогон: OPA library tests + generate + gator + coverage
+make test all
+
+# То же в Docker
+make test all -- --docker
+
+# Coverage для всех constraint-ов
+make test coverage all
+make test coverage all -- --docker
+
+# Generate + gator verify для одного constraint
+make test constraint -- --name <constraint-name>
+make test constraint -- --name <constraint-name> --docker
+
+# Coverage для одного constraint
+make test coverage constraint -- --name <constraint-name>
+make test coverage constraint -- --name <constraint-name> --docker
+```
+
+> GNU Make воспринимает `--name` и `--docker` как опции CLI, поэтому передавайте их после `--` строго как в примерах.
+
+### Прямой запуск Go tooling (без Docker и без Makefile)
+
 Все команды предполагают, что вы находитесь в **корне модуля** (`modules/015-admission-policy-engine`):
 
 ```bash
@@ -777,8 +806,10 @@ gator verify -v ./rendered
 ### Из директории constraint
 
 ```bash
-# Путь к инструменту (относительный из директории constraint)
-constraint_testgen=../../../../tools/constraint_testgen
+# Путь к инструменту 
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
 # Генерация
 go run $constraint_testgen generate -bundle ./test-matrix.yaml
@@ -797,9 +828,28 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 
 Должны быть установлены:
 - `go` — компилятор Go (для запуска `constraint_testgen`)
-- `gator` — CLI OPA Gatekeeper (`go install github.com/open-policy-agent/gatekeeper/v3/cmd/gator@latest`)
+- `gator` — CLI OPA Gatekeeper
 - `opa` — CLI Open Policy Agent (для тестов OPA-библиотек)
 - `python3` — используется скриптом запуска для парсинга покрытия
+
+Требуемые версии `gator` и `opa` нужно брать из корневого `Makefile` репозитория (не из `charts/constraint-templates/Makefile`):
+
+```bash
+# из корня репозитория
+awk -F '=' '/^GATOR_VERSION[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2}' ./Makefile
+awk -F '=' '/^OPA_VERSION[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2}' ./Makefile
+```
+
+Примеры установки/проверки:
+
+```bash
+# установка gator с фиксированной требуемой версией (подставьте значение из root Makefile)
+go install github.com/open-policy-agent/gatekeeper/v3/cmd/gator@v3.22.0
+
+# проверка установленных версий
+gator version
+opa version
+```
 
 ---
 

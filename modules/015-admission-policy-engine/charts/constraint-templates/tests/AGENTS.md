@@ -138,7 +138,9 @@ spec:
 ### Step 5: Generate and verify
 
 ```bash
-constraint_testgen=../../../../tools/constraint_testgen
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
 # Generate
 go run $constraint_testgen generate -bundle ./test-matrix.yaml

@@ -36,7 +36,7 @@ This guide covers everything you need to write, run, and maintain tests for Gate
 | `Scenario`           | A specific test angle for a field (positive, negative, absent, etc.).                                                                                                                             |
 | `Block`              | A named section in the generated test suite (`rendered/test_suite.yaml`), grouping cases that share a template+constraint pair.                                                                   |
 | `Gator`              | The OPA Gatekeeper CLI tool used to verify constraint tests offline.                                                                                                                              |
-| `constraint_testgen` | The Go-based code generator that converts `test-matrix.yaml` into rendered test artifacts.                                                                                                        |
+| `constraint_testgen` | The Go-based code generator that converts `test-matrix.yaml` into rendered test artifacts.                   x                                                                                     |
 
 ---
 
@@ -670,8 +670,10 @@ spec:
 ### Step 6: Generate, verify, test
 
 ```bash
-# From the constraint directory:
-constraint_testgen=../../tools/constraint_testgen
+# Set tool path
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
 # Generate rendered artifacts
 go run $constraint_testgen generate -bundle ./test-matrix.yaml
@@ -740,56 +742,71 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 
 ## 11. Useful commands
 
-All commands assume you are in the **module root** (`modules/015-admission-policy-engine`):
+### Makefile entrypoint (recommended)
+
+Run commands from chart root (`modules/015-admission-policy-engine/charts/constraint-templates`):
+
+```bash
+# Full flow: OPA library tests + generate + gator + coverage
+make test all
+
+# Full flow in Docker
+make test all -- --docker
+
+# Coverage for all constraints
+make test coverage all
+make test coverage all -- --docker
+
+# Generate + gator verify for a single constraint
+make test constraint -- --name <constraint-name>
+make test constraint -- --name <constraint-name> --docker
+
+# Coverage for a single constraint
+make test coverage constraint -- --name <constraint-name>
+make test coverage constraint -- --name <constraint-name> --docker
+```
+
+> GNU Make parses `--name` and `--docker` as CLI options, so pass them after `--` exactly as shown.
+
+### Direct run without Docker and without Makefile
+
+From the module root (`modules/015-admission-policy-engine`):
 
 ```bash
 # Set tool path
-constraint_testgen=./tools/constraint_testgen
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
-# Generate rendered artifacts from matrix (single constraint)
+# 1) Generate artifacts for one constraint
+
 go run $constraint_testgen generate \
   -bundle ./charts/constraint-templates/tests/test_cases/constraints/<group>/<constraint>/test-matrix.yaml
 
-# Generate all constraints at once
-go run $constraint_testgen generate -all \
-  -tests-root ./charts/constraint-templates/tests/test_cases/constraints
-
-# Verify constraint profiles
-go run $constraint_testgen verify \
-  -tests-root ./charts/constraint-templates/tests/test_cases/constraints
-
-# Check coverage (table format)
-go run $constraint_testgen coverage \
-  -tests-root ./charts/constraint-templates/tests/test_cases/constraints -format table
-
-# Check coverage (JSON format)
-go run $constraint_testgen coverage \
-  -tests-root ./charts/constraint-templates/tests/test_cases/constraints -format json
-
-# Run gator verification for a single constraint
+# 2) Verify rendered suite with gator
 cd ./charts/constraint-templates/tests/test_cases/constraints/<group>/<constraint>
 gator verify -v ./rendered
 
-# Run all tests (OPA library + gator + coverage)
-./charts/constraint-templates/tests/test_cases/run_all_tests.sh
+# 3) Verify profiles for all constraints
+cd ${GIT_ROOT}/modules/015-admission-policy-engine
+go run $constraint_testgen verify \
+  -tests-root ./charts/constraint-templates/tests/test_cases/constraints
+
+# 4) Check coverage for all constraints
+go run $constraint_testgen coverage \
+  -tests-root ./charts/constraint-templates/tests/test_cases/constraints -format table
 ```
 
-### From within a constraint directory
+From within a constraint directory:
 
 ```bash
-# Set tool path (relative from constraint dir)
-constraint_testgen=../../../../tools/constraint_testgen
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
-# Generate
 go run $constraint_testgen generate -bundle ./test-matrix.yaml
-
-# Verify
-go run $constraint_testgen verify
-
-# Gator
 gator verify -v ./rendered
-
-# Coverage
+go run $constraint_testgen verify
 go run $constraint_testgen coverage -tests-root ./ -format table
 ```
 
@@ -797,9 +814,28 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 
 The following tools must be installed:
 - `go` — Go compiler (for running `constraint_testgen`)
-- `gator` — OPA Gatekeeper CLI (`go install github.com/open-policy-agent/gatekeeper/v3/cmd/gator@latest`)
+- `gator` — OPA Gatekeeper CLI
 - `opa` — Open Policy Agent CLI (for OPA library tests)
 - `python3` — used by the test runner for coverage parsing
+
+Required versions for `gator` and `opa` must be taken from the repository root `Makefile` (not from `charts/constraint-templates/Makefile`):
+
+```bash
+# from repository root
+awk -F '=' '/^GATOR_VERSION[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2}' ./Makefile
+awk -F '=' '/^OPA_VERSION[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print $2}' ./Makefile
+```
+
+Install/check examples:
+
+```bash
+# install gator with explicit required version (replace with value from root Makefile)
+go install github.com/open-policy-agent/gatekeeper/v3/cmd/gator@v3.22.0
+
+# check installed versions
+gator version
+opa version
+```
 
 ---
 
