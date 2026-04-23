@@ -37,6 +37,8 @@ tests/
 └── AGENTS.md                 # AI agent prompt
 ```
 
+> Important: do not add extra large files to this directory. In tests, this directory is processed as a Helm chart, and additional heavy files can break template rendering.
+
 ### Test flow at a glance
 
 - Define test scenarios in `test_fields.yaml`, `test-matrix.yaml`, and `test_profile.yaml`.
