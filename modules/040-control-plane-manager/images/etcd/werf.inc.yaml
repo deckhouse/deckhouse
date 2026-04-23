@@ -32,7 +32,6 @@ import:
   add: /
   to: /usr/bin
   includePaths:
-  - etcdctl
   - etcdutl
   before: setup
 git:
@@ -40,6 +39,7 @@ git:
   to: /usr/bin
   includePaths:
     - etcd
+    - etcdctl
 {{- include "image mount points" . }}
 imageSpec:
   config:
