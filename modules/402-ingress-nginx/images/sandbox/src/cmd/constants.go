@@ -40,6 +40,7 @@ var sandboxExtraAllowSyscalls = []string{
 	"gettid",
 	"prlimit64",
 	"getrandom",
+	"getsockname",
 	"getuid",
 	"getgid",
 	"geteuid",
@@ -76,6 +77,8 @@ var sandboxExtraAllowSyscalls = []string{
 }
 
 var sandboxExtraReadBase = []string{
+	"/etc/hosts",
+	"/etc/resolv.conf",
 	"/etc/nginx/",
 	"/etc/ld-musl-x86_64.path",
 	"/usr/ssl/openssl.cnf",

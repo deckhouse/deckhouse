@@ -248,12 +248,12 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
     validationEnabled: true
     annotationValidationEnabled: true
     controllerVersion: "1.14"
-    validationSandboxMode: Full
+    validationIsolationMode: IsolatedProcess
 `)
-		Expect(fullMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_SANDBOX_MODE"))
-		Expect(fullMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("value: Full"))
-		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_SANDBOX_MODE"))
-		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("value: Full"))
+		Expect(fullMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(fullMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
+		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
 		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("serviceAccountName: validator-full"))
 		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).NotTo(ContainSubstring("--watch-namespace=d8-ingress-nginx"))
 		Expect(fullMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).To(ContainSubstring("name: validator-full\n  namespace: d8-ingress-nginx"))
@@ -267,18 +267,18 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
     validationEnabled: true
     annotationValidationEnabled: true
     controllerVersion: "1.14"
-    validationSandboxMode: Standard
+    validationIsolationMode: IsolatedProcess
 `)
-		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_SANDBOX_MODE"))
-		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("value: Standard"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
 		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /chroot/tmp"))
 		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/tmp"))
 		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/ingress-controller"))
 		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/etc/ingress-controller"))
 		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/nginx/ssl/"))
 		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/etc/nginx/ssl/"))
-		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_SANDBOX_MODE"))
-		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("value: Standard"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
 		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /chroot/tmp"))
 		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/nginx/ssl/"))
 		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/nginx/webhook-ssl/"))
@@ -298,10 +298,10 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
     validationEnabled: true
     annotationValidationEnabled: true
     controllerVersion: "1.14"
-    validationSandboxMode: Disabled
+    validationIsolationMode: NoIsolation
 `)
-		Expect(disabledMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_SANDBOX_MODE"))
-		Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_SANDBOX_MODE"))
+		Expect(disabledMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
 		Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("serviceAccountName: validator"))
 		Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("--watch-namespace=d8-ingress-nginx"))
 		Expect(disabledMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).NotTo(ContainSubstring("name: validator-full"))

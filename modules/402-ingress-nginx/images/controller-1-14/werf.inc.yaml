@@ -666,7 +666,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ index $.Images "builder/alpine-3.21" }}
-fromCacheVersion: "1x1x1xrr761"
 final: false
 mount:
 - from: build_dir
@@ -917,7 +916,6 @@ import:
   - var/log
   - etc/nginx
   - tmp
-  - etc/ingress-controller
   - var/log/nginx
   - sbin/nginx
   before: install
@@ -1007,7 +1005,7 @@ git:
 {{- include "image mount points" $ }}
 shell:
   install:
-  - /usr/bin/cp -al /chroot /validation-chroot
+  - /usr/bin/cp -alf /chroot/. /validation-chroot/
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap -v cap_sys_chroot,cap_net_bind_service=+ep /nginx-ingress-controller
   - /apps/setcap    cap_sys_chroot,cap_net_bind_service=+ep /usr/bin/unshare

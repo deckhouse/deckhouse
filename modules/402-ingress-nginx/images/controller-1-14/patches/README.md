@@ -156,12 +156,12 @@ The fix is to use registration when checking if informer has been synced.
 
 This patch adds validating `X-Forwarded-Port` and `X-Forwarded-Proto` when redirecting from/to www.
 
-### 026-add-sandbox-for-validation.patch
+### 026-isolated-validation.patch
 
-This patch switches `nginx -t` execution according to `spec.validationSandboxMode` for ingress-nginx `1.14`:
+This patch switches `nginx -t` execution according to `spec.validationIsolationMode` for ingress-nginx `1.14`:
 
-- `Disabled`: uses the regular `nginx -t` path without sandbox isolation.
-- `Standard`: runs validation via `/usr/bin/unshare -S 64535 -R /chroot/validation-chroot ...`.
-- `Full`: runs validation via `/usr/bin/sandbox` using the ptrace-based sandbox runner.
+- `NoIsolation`: uses the regular `nginx -t` path without isolation.
+- `IsolatedFilesystem`: runs validations on an isolated filesystem.
+- `IsolatedProcess`: runs validations in an isolated sandbox with syscall tracing.
 
-Both `Full` and `Standard` modes keep the full cluster-wide validation context enabled. The `Standard` mode uses a dedicated minimal validation root nested under `/chroot`, but it is weaker than the full sandbox because it does not use the ptrace-based runtime file checks or seccomp filtering from `/usr/bin/sandbox`.
+Both `IsolatedProcess` and `IsolatedFilesystem` modes keep the full cluster-wide validation context enabled.

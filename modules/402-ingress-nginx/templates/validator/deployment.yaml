@@ -7,9 +7,9 @@
 {{- $checksum := toJson $crd | sha256sum }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
-{{- $validationSandboxMode := $crd.spec.validationSandboxMode | default "Disabled" }}
-{{- $validationSandboxEnabled := eq $controllerVersion "1.14" }}
-{{- $fullValidation := and $validationSandboxEnabled (not (eq $validationSandboxMode "Disabled")) }}
+{{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
+{{- $validationIsolationEnabled := eq $controllerVersion "1.14" }}
+{{- $fullValidation := and $validationIsolationEnabled (not (eq $validationIsolationMode "NoIsolation")) }}
 {{- $validatorServiceAccountName := "validator" }}
 {{- if $fullValidation }}
   {{- $validatorServiceAccountName = "validator-full" }}
@@ -77,7 +77,7 @@ spec:
         name: init
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
         volumeMounts:
-        {{- if $validationSandboxEnabled }}
+        {{- if $validationIsolationEnabled }}
         - mountPath: /etc/ingress-controller
         {{- else }}
         - mountPath: /chroot/etc/ingress-controller
@@ -85,7 +85,7 @@ spec:
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp
-        {{- if $validationSandboxEnabled }}
+        {{- if $validationIsolationEnabled }}
         - mountPath: /validation-chroot/tmp
           name: validation-tmp
         {{- end }}
@@ -99,7 +99,7 @@ spec:
         - |
           mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
             /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi \
-        {{- if $validationSandboxEnabled }}
+        {{- if $validationIsolationEnabled }}
             /etc/ingress-controller/ssl /etc/ingress-controller/lua /etc/ingress-controller/nginx \
             /etc/ingress-controller/resolv /etc/ingress-controller/geoip \
             /etc/ingress-controller/auth /etc/ingress-controller/telemetry \
@@ -111,7 +111,7 @@ spec:
         {{- end }}
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
-        {{- if $validationSandboxEnabled }}
+        {{- if $validationIsolationEnabled }}
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /etc/ingress-controller/nginx/nginx.conf
         {{- else }}
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
@@ -146,9 +146,9 @@ spec:
                 fieldPath: metadata.namespace
           - name: POD_IP
             value: "127.0.0.1"
-          {{- if $validationSandboxEnabled }}
-          - name: VALIDATION_SANDBOX_MODE
-            value: {{ $validationSandboxMode | quote }}
+          {{- if $validationIsolationEnabled }}
+          - name: VALIDATION_ISOLATION_MODE
+            value: {{ $validationIsolationMode | quote }}
           {{- end }}
           {{- if $geoIP2 }}
           - name: LUA_USE_GEOIP2
@@ -228,7 +228,7 @@ spec:
             containerPort: 8443
             protocol: TCP
         volumeMounts:
-        {{- if $validationSandboxEnabled }}
+        {{- if $validationIsolationEnabled }}
         - mountPath: /validation-chroot/tmp
           name: validation-tmp
         - mountPath: /validation-chroot/etc/ingress-controller
@@ -261,7 +261,7 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        {{- if $validationSandboxEnabled }}
+        {{- if $validationIsolationEnabled }}
         - name: validation-tmp
           emptyDir: {}
         {{- end }}

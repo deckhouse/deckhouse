@@ -50,7 +50,7 @@ index a97f31314..b1f89d969 100644
 -				if n.syncStatus != nil {
 -					go n.syncStatus.Run(stopCh)
 -				}
-+	if n.cfg.ValidationWebhook == "" { // Disabled in validation mode
++	if n.cfg.ValidationWebhook == "" { // NoIsolation in validationIsolationMode
 +		if !n.cfg.DisableLeaderElection {
 +			electionID := n.cfg.ElectionID
 +			setupLeaderElection(&leaderElectionConfig{

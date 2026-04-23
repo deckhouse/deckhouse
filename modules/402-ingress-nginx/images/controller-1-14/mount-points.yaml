@@ -1,9 +1,11 @@
 dirs:
-# /chroot/validation-chroot/* first so /chroot exists before sibling /chroot/tmp (gitArchive mount markers)
-- /chroot/validation-chroot/tmp
 - /chroot/tmp
-- /chroot/validation-chroot/var/lib/nginx
-- /chroot/validation-chroot/var/log/nginx
-- /chroot/validation-chroot/etc/nginx/ssl/
-- /chroot/validation-chroot/etc/nginx/webhook-ssl
-- /chroot/validation-chroot/etc/ingress-controller
+- /validation-chroot/tmp
+- /chroot/var/lib/nginx
+- /chroot/var/log/nginx
+- /chroot/etc/nginx/ssl/
+- /validation-chroot/etc/nginx/ssl/
+- /chroot/etc/nginx/webhook-ssl
+- /chroot/etc/ingress-controller
+- /validation-chroot/etc/ingress-controller
+- /etc/ingress-controller

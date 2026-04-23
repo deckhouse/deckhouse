@@ -3,8 +3,8 @@
 {{- if and $context.Values.ingressNginx.internal $context.Values.ingressNginx.internal.ingressControllers }}
   {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
     {{- $controllerVersion := ($crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion) }}
-    {{- $validationSandboxMode := ($crd.spec.validationSandboxMode | default "Disabled") }}
-    {{- if and (eq $controllerVersion "1.14") (ne $validationSandboxMode "Disabled") }}
+    {{- $validationIsolationMode := ($crd.spec.validationIsolationMode | default "NoIsolation") }}
+    {{- if and (eq $controllerVersion "1.14") (ne $validationIsolationMode "NoIsolation") }}
       {{- $_ := set $validatorFullState "enabled" true }}
     {{- end }}
   {{- end }}

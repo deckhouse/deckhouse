@@ -20,14 +20,15 @@ import (
 	"context"
 	"log"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	runprogconf "github.com/criyle/go-sandbox/cmd/runprog/config"
+	"github.com/criyle/go-sandbox/pkg/forkexec"
 	"github.com/criyle/go-sandbox/pkg/seccomp"
 	sbseccomp "github.com/criyle/go-sandbox/pkg/seccomp/libseccomp"
+	"github.com/criyle/go-sandbox/ptracer"
 	"github.com/criyle/go-sandbox/runner"
-	"github.com/criyle/go-sandbox/runner/ptrace"
+	sbptrace "github.com/criyle/go-sandbox/runner/ptrace"
 )
 
 func main() {
@@ -37,9 +38,10 @@ func main() {
 func run(argv []string) int {
 	debug := isDebug()
 	debugCrashOnDeny := isDebugCrashOnDeny()
-
-	if len(argv) > 0 && argv[0] == "--" {
-		argv = argv[1:]
+	dnsPolicy, argv, err := parseSandboxArgs(argv)
+	if err != nil {
+		log.Print(err)
+		return 1
 	}
 	if len(argv) == 0 {
 		log.Print("not enough arguments after --")
@@ -52,12 +54,7 @@ func run(argv []string) int {
 		return 1
 	}
 
-	realPathNginxConf, err := filepath.EvalSymlinks(nginxConfigPath)
-	if err != nil {
-		log.Printf("can't eval real config path for nginx config: %v", err)
-		return 1
-	}
-	extraRead := getSandboxExtraRead(realPathNginxConf)
+	extraRead := getSandboxExtraRead(nginxConfigPath)
 
 	workDir, err := os.Getwd()
 	if err != nil {
@@ -67,18 +64,19 @@ func run(argv []string) int {
 	extraWrite := getSandboxExtraWrite()
 	// Wrapper chain (`/usr/bin/nginx` shell script -> `unshare` -> nginx binary) needs fork/exec syscalls.
 	args, allow, trace, handler := runprogconf.GetConf("default", workDir, argv, extraRead, extraWrite, true) // :contentReference[oaicite:4]{index=4}
-	var traceHandler ptrace.Handler = handler
+	var traceHandler sbptrace.Handler = handler
 	if debug {
 		traceHandler = withDebugHandler(handler, debugCrashOnDeny)
 	}
 	allow = append(allow, sandboxExtraAllowSyscalls...)
+	trace = append(trace, sandboxExtraTraceSyscalls(dnsPolicy)...)
 
 	limit := runner.Limit{
 		TimeLimit:   sandboxCPUTimeLimit,
 		MemoryLimit: sandboxMemoryLimit,
 	}
 
-	res, err := runWithPtrace(args, allow, trace, workDir, traceHandler, limit, debug)
+	res, err := runWithPtrace(args, allow, trace, workDir, traceHandler, dnsPolicy, limit, debug)
 	if err != nil {
 		log.Printf("seccomp build (ptrace): %v", err)
 		return 1
@@ -114,44 +112,47 @@ func run(argv []string) int {
 func runWithPtrace(
 	args, allow, trace []string,
 	workDir string,
-	handler ptrace.Handler,
+	handler sbptrace.Handler,
+	dnsPolicy *sandboxDNSPolicy,
 	limit runner.Limit,
 	debug bool,
 ) (runner.Result, error) {
-	filter, err := buildFilter(allow, trace, debug)
+	filter, err := buildFilter(allow, trace)
 	if err != nil {
 		return runner.Result{}, err
 	}
 
-	r := &ptrace.Runner{
-		Args:    args,
-		Env:     os.Environ(),
-		WorkDir: workDir,
-		Files:   []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+	r := &forkexec.Runner{
+		Args:     args,
+		Env:      os.Environ(),
+		WorkDir:  workDir,
+		Files:    []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
+		Seccomp:  filter.SockFprog(),
+		Ptrace:   true,
+		SyncFunc: nil,
+
+		UnshareCgroupAfterSync: os.Getuid() == 0,
+	}
+	traceHandler := newSandboxTraceHandler(handler, dnsPolicy, debug)
+	tracer := ptracer.Tracer{
+		Handler: traceHandler,
+		Runner:  r,
 		Limit:   limit,
-		Seccomp: filter,
-		Handler: handler,
-		// Debug
-		ShowDetails: debug,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), sandboxWallTimeLimit)
 	defer cancel()
 
-	return r.Run(ctx), nil
+	return tracer.Trace(ctx), nil
 }
 
-func buildFilter(allow, trace []string, debug bool) (seccomp.Filter, error) {
-	defaultAction := sbseccomp.ActionKill
-	if debug {
-		// In debug mode, trace unknown syscalls to make missing allowlist entries observable.
-		defaultAction = sbseccomp.ActionTrace
-	}
-
+func buildFilter(allow, trace []string) (seccomp.Filter, error) {
 	return (&sbseccomp.Builder{
-		Allow:   allow,
-		Trace:   trace,
-		Default: defaultAction,
+		Allow: allow,
+		Trace: trace,
+		// Trace unknown syscalls so production mode can log the denied syscall name
+		// before converting it into a hard failure in the ptrace handler.
+		Default: sbseccomp.ActionTrace,
 	}).Build()
 }
 

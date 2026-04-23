@@ -88,11 +88,11 @@ properties:
                 annotationValidationEnabled:
                   type: boolean
                   default: false
-                validationSandboxMode:
+                validationIsolationMode:
                   type: string
-                  enum: ["Disabled", "Standard", "Full"]
+                  enum: ["NoIsolation", "IsolatedFilesystem", "IsolatedProcess"]
                   description: |
-                    Selects the validation isolation mode for controller version 1.14: Disabled uses the regular validation path, Standard uses direct unshare with /chroot/validation-chroot, and Full uses the ptrace-based sandbox.
+                    Selects the validation isolation mode for controller version 1.14.
                 controllerPodsAdditionalAnnotations:
                   type: object
                   additionalProperties:
