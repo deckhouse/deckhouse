@@ -84,7 +84,7 @@ make test coverage constraint -- --name <constraint-name>
 make test coverage constraint -- --name <constraint-name> --docker
 ```
 
-`--docker` mode builds [`images/test-container/dockerfile`](images/test-container/dockerfile) and runs tests in a container with repository files mounted.
+`--docker` mode builds [`images/test-container/Dockerfile`](images/test-container/Dockerfile) and runs tests in a container with repository files mounted.
 
 > GNU Make treats `--docker` and `--name` as options. Use the `--` separator exactly as shown in examples.
 

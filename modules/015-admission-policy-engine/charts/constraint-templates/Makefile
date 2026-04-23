@@ -13,7 +13,7 @@ CONTAINER_REPO_DIR := /work/deckhouse
 CONTAINER_TESTS_DIR := $(CONTAINER_REPO_DIR)/$(CHART_REL)/tests
 
 DOCKER_IMAGE ?= constraint-templates-tests:local
-DOCKERFILE := $(TESTS_DIR)/images/test-container/dockerfile
+DOCKERFILE := $(TESTS_DIR)/images/test-container/Dockerfile
 ROOT_MAKEFILE := $(REPO_ROOT)/Makefile
 ROOT_OPA_VERSION := $(strip $(shell awk -F '=' '/^OPA_VERSION[[:space:]]*=/{gsub(/[[:space:]]/,"",$$2); print $$2; exit}' "$(ROOT_MAKEFILE)"))
 ROOT_GATOR_VERSION := $(strip $(shell awk -F '=' '/^GATOR_VERSION[[:space:]]*=/{gsub(/[[:space:]]/,"",$$2); print $$2; exit}' "$(ROOT_MAKEFILE)"))
