@@ -1191,7 +1191,7 @@ entries:
                 ru: Обзор
               url: /architecture/deckhouse/
             - title:
-                en: Web interfaces modules
+                en: Web interface modules
                 ru: Модули веб-интерфейса
               url: /architecture/deckhouse/web-modules.html
             - title:
