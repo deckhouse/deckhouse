@@ -18,7 +18,7 @@
   {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
     {{- $vexFile = true }}
   {{- end }}
-  {{- if false }}
+  {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
 fromImage: base/vex
