@@ -779,8 +779,11 @@
 }
 
 .sidebar__item {
-    margin-bottom: 18px;
     position: relative;
+
+    &:not(:last-child) {
+        margin-bottom: 18px;
+    }
 }
 
 .sidebar__item > a {
