@@ -145,3 +145,49 @@ spec:
 Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Защита чувствительных полей кастомных ресурсов
+
+Feature gate `CRDSensitiveData` обеспечивает защиту чувствительных данных на уровне полей в ресурсах, помеченных маркером `x-kubernetes-sensitive-data: true`. Функция реализована в виде патча к `kube-apiserver` (apiextensions-apiserver)
+и поддерживается, начиная с версии Kubernetes 1.31.
+
+Маркер `x-kubernetes-sensitive-data` проверяется `kube-apiserver` при применении ресурса:
+
+- маркер требует, чтобы был включен feature gate `CRDSensitiveData` (включается автоматически, когда `apiserver.encryptionEnabled` равен `true`);
+- маркер не допускается устанавливать на корне схемы (на самом узле `openAPIV3Schema`). Чтобы защитить все поля ресурса, добавьте маркер на свойство `spec` (или на поддерево ниже него), а не на корень схемы — на корне также находятся системные поля (`apiVersion`, `kind`, `metadata`), которые невозможно зашифровать;
+- тип поля должен быть одним из типов OpenAPI v3: `string`, `integer`, `number`, `boolean`, `object` или `array`. Маркер на `object` или `array` делает чувствительным всё поддерево;
+- поддерживаются поля, объявленные как `x-kubernetes-int-or-string: true`;
+- маркер запрещён внутри веток `anyOf`, `oneOf`, `allOf` и `not` (это проверяет валидатор структурной схемы).
+
+Если хотя бы одно поле в схеме ресурса помечено `x-kubernetes-sensitive-data: true`, ко всем кастомным ресурсам этого типа применяются следующие меры защиты:
+
+- **Шифрование в etcd** — весь ресурс шифруется с помощью того же механизма, что и Kubernetes Secrets.
+  Требует включения параметра `apiserver.encryptionEnabled`.
+- **Фильтрация полей на основе RBAC** — при выполнении запросов `get`, `list`, или `watch` чувствительные поля удаляются из ответа API, если у вызывающей стороны нет прав `get`, `list` или `watch` на субресурс `<resource>/sensitive`.
+- **Маскировка в журнале аудита** — значения чувствительных полей всегда заменяются на `"******"` в журнале аудита, независимо от прав RBAC и уровня аудита.
+
+Чтобы включить защиту чувствительных полей, установите [параметр `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в `true`.
+Feature gate `CRDSensitiveData` включается
+автоматически при активации шифрования, его не следует указывать вручную:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+```
+
+{% alert level="warning" %}
+Включение `encryptionEnabled` необратимо и приводит к перезапуску `kube-apiserver`.
+{% endalert %}
+
+За подробностями обратитесь к следующим разделам:
+
+- [«FAQ»](faq.html#как-защитить-чувствительные-поля-кастомных-ресурсов) — инструкция по включению защиты чувствительных полей;
+- [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями) — примеры конфигурации и результатов.

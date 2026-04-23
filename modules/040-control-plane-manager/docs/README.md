@@ -145,3 +145,56 @@ The Kubernetes version update (controlled by the [kubernetesVersion](/products/k
 More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Protecting sensitive fields in custom resources
+
+The `CRDSensitiveData` feature gate provides field-level protection for sensitive data in resources
+marked with the `x-kubernetes-sensitive-data: true` annotation.
+This feature is implemented as a patch to `kube-apiserver` (apiextensions-apiserver)
+and is supported starting from Kubernetes version 1.31.
+
+The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when applying a resource:
+
+- Marker requires the `CRDSensitiveData` feature gate to be enabled, which is enabled automatically when `apiserver.encryptionEnabled` is set to `true`.
+- Marker can't be set on the root of the schema (the `openAPIV3Schema` node).
+  To protect all fields of a resource, add the marker to the `spec` property (or a subtree below it),
+  not to the schema root — the root also includes system fields (`apiVersion`, `kind`, `metadata`), which cannot be encrypted.
+- Field type must be one of the OpenAPI v3 types: `string`, `integer`, `number`, `boolean`, `object`, or `array`.
+  Applying the marker to `object` or `array` makes the entire subtree sensitive.
+- Fields defined with `x-kubernetes-int-or-string: true` are supported.
+- Marker is not allowed inside `anyOf`, `oneOf`, `allOf`, or `not` branches (this is enforced by the structural schema validator).
+
+If at least one field in the resource schema is marked with `x-kubernetes-sensitive-data: true`,
+the following protection mechanisms are applied to all custom resources of this type:
+
+- **Encryption in etcd**: Entire resource is encrypted using the same mechanism as Kubernetes Secrets.
+  Requires enabling the `apiserver.encryptionEnabled` parameter.
+- **RBAC-based field filtering**: For `get`, `list`, and `watch` requests, sensitive fields are removed from API responses
+  if the caller does not have the corresponding permissions on the `<resource>/sensitive` subresource.
+- **Audit log masking**: Values of sensitive fields are replaced with `"******"` in audit logs,
+  regardless of RBAC permissions and audit level.
+
+To enable sensitive data protection, set the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter to `true`.
+The `CRDSensitiveData` feature gate is enabled automatically and it shouldn't be specified manually:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    apiserver:
+      encryptionEnabled: true
+```
+
+{% alert level="warning" %}
+Enabling `encryptionEnabled` is irreversible and triggers a `kube-apiserver` restart.
+{% endalert %}
+
+For details, see the following sections:
+
+- [FAQ](faq.html#how-do-i-protect-sensitive-fields-in-custom-resources): Instructions for enabling sensitive data protection.
+- [Examples](examples.html#protecting-resources-with-sensitive-fields): Configuration examples and results.

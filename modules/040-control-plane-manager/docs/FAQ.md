@@ -1366,3 +1366,46 @@ To update the certificates, do the following on each master node:
    ```shell
    kubeadm certs renew all
    ```
+
+## How do I protect sensitive fields in custom resources?
+
+To protect sensitive fields (such as passwords, tokens, or keys) in resource schemas from unauthorized access via the API, unencrypted storage in etcd, or exposure in audit logs, use the `CRDSensitiveData` feature gate together with the `x-kubernetes-sensitive-data` schema marker.
+
+To enable field protection, do the following:
+
+1. Enable etcd encryption using the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter in the module settings. The `CRDSensitiveData` feature gate is enabled automatically along with the encryption and shouldn't be specified manually.
+
+   {% alert level="warning" %}
+   Enabling `apiserver.encryptionEnabled` is irreversible and triggers a `kube-apiserver` restart.
+   {% endalert %}
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
+
+1. Mark sensitive fields in the resource schema with `x-kubernetes-sensitive-data: true`.
+
+   The marker can be applied to the fields of the following types: `string`, `integer`, `number`, `boolean`, `object` and `array` (applying the marker to an `object` or `array` makes the entire subtree sensitive). Fields marked with `x-kubernetes-int-or-string: true` are supported as well.
+
+   The marker can't be set on the schema root (the `openAPIV3Schema` node) and inside `anyOf`, `oneOf`, `allOf`, or `not` branches.
+
+1. For users and ServiceAccounts that require access to full data, grant RBAC permissions for the `<resource>/sensitive` subresource.
+
+### Protection mechanisms
+
+| Protection | Description |
+| ---------- | ----------- |
+| Encryption in etcd | The entire resource is encrypted using the same AES-CBC transformer as Kubernetes Secrets. |
+| API field filtering | Sensitive fields are removed from responses to `get`, `list`, and `watch` requests if the caller does not have permissions on the `<resource>/sensitive` subresource. |
+| Audit log masking | Values of sensitive fields are replaced with `"******"` in all audit events, regardless of RBAC permissions and audit level. |
+
+A complete configuration example and results are available in the [Examples](examples.html#protecting-resources-with-sensitive-fields) section.

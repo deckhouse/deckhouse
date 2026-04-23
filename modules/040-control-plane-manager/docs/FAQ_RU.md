@@ -1377,3 +1377,49 @@ Kubelet использует клиентский TLS-сертификат (`/va
    ```shell
    kubeadm certs renew all
    ```
+
+## Как защитить чувствительные поля кастомных ресурсов?
+
+Для защиты чувствительных полей (паролей, токенов или ключей) в схемах ресурсов от несанкционированного доступа через API,
+хранения в etcd в незашифрованном виде и попадания в журнал аудита используйте feature gate `CRDSensitiveData`
+совместно с маркером схемы `x-kubernetes-sensitive-data`.
+
+Чтобы включить защиту полей, выполните следующие действия:
+
+1. Включите шифрование etcd с помощью [параметра `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в настройках модуля. Feature gate `CRDSensitiveData` включается автоматически одновременно с шифрованием — его не следует указывать вручную.
+
+   {% alert level="warning" %}
+   Включение параметра `apiserver.encryptionEnabled` необратимо и приводит к перезапуску `kube-apiserver`.
+   {% endalert %}
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
+
+1. Отметьте чувствительные поля в схеме ресурсов маркером `x-kubernetes-sensitive-data: true`.
+
+   Маркер должен находиться на поле типа `string`, `integer`, `number`, `boolean`, `object` или `array` (маркер на `object` или `array` делает чувствительным всё поддерево); также поддерживаются поля с `x-kubernetes-int-or-string: true`.
+
+   Маркер нельзя указывать на корне схемы (узел `openAPIV3Schema`) и внутри веток `anyOf`, `oneOf`, `allOf`, `not`.
+
+1. Для пользователей и ServiceAccount, которым нужен доступ к полным данным, добавьте в правила RBAC
+   разрешение на субресурс `<resource>/sensitive`.
+
+### Применяемые меры защиты
+
+| Защита | Описание |
+| ------ | -------- |
+| Шифрование в etcd | Весь ресурс шифруется при хранении с помощью трансформера AES-CBC (аналогично Kubernetes Secrets). |
+| Фильтрация полей в API | Чувствительные поля удаляются из ответов на запросы `get`, `list` и `watch`, если у вызывающей стороны нет прав на субресурс `<resource>/sensitive`. |
+| Маскировка в журнале аудита | Значения чувствительных полей заменяются на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита. |
+
+Полный пример конфигурации и результатов доступен в разделе [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями).
