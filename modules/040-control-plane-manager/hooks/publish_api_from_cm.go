@@ -145,9 +145,12 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 
 	fmt.Println(input.Values.Get("controlPlaneManager.apiserver.publishAPI.ingress"))
 
+	var emptyObj struct{}
 	if publishAPIConfig.HTTPS != nil {
+		input.Values.Set(publishAPIIngressConfigPath+"https", emptyObj)
 		setStringPtrValue(input, "https.mode", publishAPIConfig.HTTPS.Mode)
 		if publishAPIConfig.HTTPS.Global != nil {
+			input.Values.Set(publishAPIIngressConfigPath+"https.global", emptyObj)
 			setStringPtrValue(input, "https.global.kubeconfigGeneratorMasterCA", publishAPIConfig.HTTPS.Global.KubeconfigGeneratorMasterCA)
 		}
 	}
