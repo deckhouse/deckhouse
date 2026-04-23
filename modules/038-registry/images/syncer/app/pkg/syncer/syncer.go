@@ -94,10 +94,22 @@ func (rs *Syncer) Run(ctx context.Context) error {
 		)
 	}()
 
-	tags, err := rs.discoverTags(ctx)
-	if err != nil {
+	var tags []name.Tag
+	if err := retry.Default().
+		WithBreak(func(lastErr error) bool {
+			return errors.Is(lastErr, context.Canceled)
+		}).
+		WithBefore(func(interval time.Duration, attempts, attempt uint, _ error) {
+			rs.log.Debug(fmt.Sprintf("attempt [%d / %d] failed, next retry in %v", attempt, attempts, interval))
+		}).
+		Do(ctx, func() error {
+			var err error
+			tags, err = rs.discoverTags(ctx)
+			return err
+		}); err != nil {
 		return fmt.Errorf("discover tags: %w", err)
 	}
+
 	total := len(tags)
 
 	rs.log.Info(
@@ -112,7 +124,7 @@ func (rs *Syncer) Run(ctx context.Context) error {
 				return errors.Is(lastErr, context.Canceled)
 			}).
 			WithBefore(func(interval time.Duration, attempts, attempt uint, _ error) {
-				rs.log.Warn(fmt.Sprintf("attempt [%d / %d] failed, next retry in %v", attempt, attempts, interval))
+				rs.log.Debug(fmt.Sprintf("attempt [%d / %d] failed, next retry in %v", attempt, attempts, interval))
 			}).
 			Do(ctx, func() error {
 				return rs.syncTag(ctx, tag)

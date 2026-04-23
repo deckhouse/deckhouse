@@ -313,6 +313,7 @@ func bundleSSHOutputHandler(
 			match := stepOutputHeaderRegexp.FindStringSubmatch(l)
 			if len(match) >= 2 {
 				log.InfoLn(match[1])
+				return
 			}
 		}
 
