@@ -233,10 +233,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.ch <- name
 }
 
-// UpdateSettings stores the effective settings of a package and notifies listeners.
-// Called after the Configure task succeeds so that the last applied configuration is
-// propagated to the CR status alongside the package version.
-// If the package is not tracked by the service, the update is silently ignored.
+// UpdateSettings stores the effective settings of a package.
+// Does not notify — the caller pairs this with SetConditionTrue which notifies.
 func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -247,7 +245,6 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 	}
 
 	st.Settings = settings
-	s.ch <- name
 }
 
 // ClearRuntimeConditions sets runtime conditions to unknown

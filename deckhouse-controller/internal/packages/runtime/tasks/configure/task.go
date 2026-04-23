@@ -82,7 +82,7 @@ func (t *task) String() string {
 // Execute validates settings and applies them to the package.
 // Sets ConditionSettingsValid on success or delegates error handling to status service.
 func (t *task) Execute(ctx context.Context) error {
-	if err := t.configure(ctx); err != nil {
+	if err := t.applySettings(ctx); err != nil {
 		t.status.HandleError(t.pkg.GetName(), err)
 		return fmt.Errorf("configure: %w", err)
 	}
@@ -98,8 +98,8 @@ func (t *task) Execute(ctx context.Context) error {
 	return nil
 }
 
-// configure validates and applies settings to the package.
-func (t *task) configure(ctx context.Context) error {
+// applySettings validates and applies settings to the package.
+func (t *task) applySettings(ctx context.Context) error {
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "Configure")
 	defer span.End()
 
