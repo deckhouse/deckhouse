@@ -55,8 +55,8 @@ var _ = Describe("Module :: node-local-dns :: helm template", func() {
 			Expect(configMap.Exists()).To(BeTrue())
 
 			corefile := configMap.Field("data.Corefile").String()
-			Expect(strings.Contains(corefile, "template IN AAAA . {\n          rcode NOERROR\n      }")).To(BeTrue())
-			Expect(strings.Contains(corefile, "template IN PTR ip6.arpa {\n          rcode NXDOMAIN\n      }")).To(BeTrue())
+			Expect(corefile).To(MatchRegexp(`template IN AAAA \. \{\n\s*rcode NOERROR\n\s*\}`))
+			Expect(corefile).To(MatchRegexp(`template IN PTR ip6\.arpa \{\n\s*rcode NXDOMAIN\n\s*\}`))
 		})
 
 	})
