@@ -105,7 +105,15 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		if _, exists := rootMap["addKubeconfigGeneratorEntry"]; !exists {
 			rootMap["addKubeconfigGeneratorEntry"] = true
 		}
-		httpsMap := rootMap["https"].(map[string]interface{})
+
+		var httpsMap map[string]interface{}
+		if httpsVal, exists := rootMap["https"]; exists && httpsVal != nil {
+			httpsMap = httpsVal.(map[string]interface{})
+		} else {
+			httpsMap = make(map[string]interface{})
+			rootMap["https"] = httpsMap
+		}
+
 		if _, exists := httpsMap["mode"]; !exists {
 			httpsMap["mode"] = "SelfSigned"
 		}
