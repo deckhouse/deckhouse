@@ -5,7 +5,6 @@ go 1.25.8
 require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/go-containerregistry v0.20.7
-	gitlab.com/greyxor/slogor v1.6.9
 	sigs.k8s.io/yaml v1.6.0
 )
 
