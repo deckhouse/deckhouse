@@ -15,13 +15,13 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -38,8 +38,9 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, false)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -53,12 +54,9 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 		}
 
 		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(
-				ssh.NewNodeInterfaceWrapper(sshClient),
-			)
-		// auto init
-		err = kubeCl.Init(client.AppKubernetesInitParams())
-		if err != nil {
+			WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
 
@@ -76,7 +74,6 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 
 		return nil
 	})
-	return cmd
 }
 
 func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -85,8 +82,9 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, true)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -100,12 +98,9 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 		}
 
 		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(
-				ssh.NewNodeInterfaceWrapper(sshClient),
-			)
-		// auto init
-		err = kubeCl.Init(client.AppKubernetesInitParams())
-		if err != nil {
+			WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+
+		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return fmt.Errorf("open kubernetes connection: %v", err)
 		}
 
@@ -129,5 +124,4 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 
 		return nil
 	})
-	return cmd
 }

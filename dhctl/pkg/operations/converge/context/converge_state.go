@@ -15,6 +15,7 @@
 package context
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -51,29 +52,34 @@ func newInSecretStateStore() *inSecretStateStore {
 	return &inSecretStateStore{}
 }
 
-func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
+func (s *inSecretStateStore) GetState(convergeCtx *Context) (*State, error) {
 	var state State
 
-	err := retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
-		c, cancel := ctx.WithTimeout(10 * time.Second)
-		defer cancel()
+	err := retry.NewLoop("Get converge state from Kubernetes cluster", 5, 5*time.Second).
+		RunContext(
+			convergeCtx.Ctx(),
+			func() error {
+				c, cancel := convergeCtx.WithTimeout(10 * time.Second)
+				defer cancel()
 
-		convergeStateSecret, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Get(c, stateSecretName, metav1.GetOptions{})
-		if err != nil {
-			if k8errors.IsNotFound(err) {
+				convergeStateSecret, err := convergeCtx.KubeClient().
+					CoreV1().Secrets("d8-system").
+					Get(c, stateSecretName, metav1.GetOptions{})
+				if err != nil {
+					if k8errors.IsNotFound(err) {
+						return nil
+					}
+
+					return fmt.Errorf("failed to get secret: %w", err)
+				}
+
+				err = json.Unmarshal(convergeStateSecret.Data["state.json"], &state)
+				if err != nil {
+					return fmt.Errorf("failed to unmarshal state: %w", err)
+				}
+
 				return nil
-			}
-
-			return fmt.Errorf("failed to get secret: %w", err)
-		}
-
-		err = json.Unmarshal(convergeStateSecret.Data["state.json"], &state)
-		if err != nil {
-			return fmt.Errorf("failed to unmarshal state: %w", err)
-		}
-
-		return nil
-	})
+			})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get `%s` secret: %w", stateSecretName, err)
 	}
@@ -81,25 +87,30 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 	return &state, nil
 }
 
-func (s *inSecretStateStore) Delete(ctx *Context) error {
-	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).RunContext(ctx.Ctx(), func() error {
-		c, cancel := ctx.WithTimeout(10 * time.Second)
-		defer cancel()
+func (s *inSecretStateStore) Delete(convergeCtx *Context) error {
+	return retry.NewLoop("Cleanup converge state from Kubernetes cluster", 5, 5*time.Second).
+		RunContext(
+			convergeCtx.Ctx(),
+			func() error {
+				c, cancel := convergeCtx.WithTimeout(10 * time.Second)
+				defer cancel()
 
-		err := ctx.KubeClient().CoreV1().Secrets("d8-system").Delete(c, stateSecretName, metav1.DeleteOptions{})
-		if err != nil {
-			if k8errors.IsNotFound(err) {
+				err := convergeCtx.KubeClient().
+					CoreV1().Secrets("d8-system").
+					Delete(c, stateSecretName, metav1.DeleteOptions{})
+				if err != nil {
+					if k8errors.IsNotFound(err) {
+						return nil
+					}
+
+					return fmt.Errorf("failed to delete state secret: %w", err)
+				}
+
 				return nil
-			}
-
-			return fmt.Errorf("failed to delete state secret: %w", err)
-		}
-
-		return nil
-	})
+			})
 }
 
-func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
+func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error {
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("failed to marshal state: %w", err)
@@ -110,22 +121,24 @@ func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
 		Manifest: func() interface{} {
 			return manifests.SecretConvergeState(stateBytes)
 		},
-		CreateFunc: func(manifest interface{}) error {
-			c, cancel := ctx.WithTimeout(10 * time.Second)
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			c, cancel := convergeCtx.WithTimeout(10 * time.Second)
 			defer cancel()
 
-			_, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Create(c, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			_, err := convergeCtx.KubeClient().CoreV1().Secrets("d8-system").Create(c, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to create secret: %w", err)
 			}
 
 			return nil
 		},
-		UpdateFunc: func(manifest interface{}) error {
-			c, cancel := ctx.WithTimeout(10 * time.Second)
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			c, cancel := convergeCtx.WithTimeout(10 * time.Second)
 			defer cancel()
 
-			_, err := ctx.KubeClient().CoreV1().Secrets("d8-system").Update(c, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			_, err := convergeCtx.KubeClient().
+				CoreV1().Secrets("d8-system").
+				Update(c, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("failed to update secret: %w", err)
 			}
@@ -134,5 +147,11 @@ func (s *inSecretStateStore) SetState(ctx *Context, state *State) error {
 		},
 	}
 
-	return retry.NewLoop("Save dhctl converge state", 45, 10*time.Second).RunContext(ctx.Ctx(), task.CreateOrUpdate)
+	return retry.NewLoop("Save dhctl converge state", 45, 10*time.Second).
+		RunContext(
+			convergeCtx.Ctx(),
+			func() error {
+				return task.CreateOrUpdate(convergeCtx.Ctx())
+			},
+		)
 }

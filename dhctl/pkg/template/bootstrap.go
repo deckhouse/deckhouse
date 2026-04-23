@@ -15,6 +15,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -26,11 +27,18 @@ import (
 
 const bootstrapDir = "/bootstrap"
 
-func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig *config.MetaConfig, dc *directoryconfig.DirectoryConfig) error {
+func PrepareBootstrap(
+	ctx context.Context,
+	templateController *Controller,
+	nodeIP string,
+	metaConfig *config.MetaConfig,
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	bashibleData, err := metaConfig.ConfigForBashibleBundleTemplate(nodeIP)
 	if err != nil {
 		return err
 	}
+
 	_, err = os.Stat(candiDir)
 	if err != nil {
 		if dc == nil {
@@ -39,6 +47,7 @@ func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig 
 		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
 		candiBashibleDir = filepath.Join(candiDir, "bashible")
 	}
+
 	saveInfo := []saveFromTo{
 		{
 			from: filepath.Join(candiBashibleDir, "bootstrap"),
@@ -55,13 +64,14 @@ func PrepareBootstrap(templateController *Controller, nodeIP string, metaConfig 
 		},
 	}
 
-	return log.Process("default", "Render bootstrap templates", func() error {
+	return log.ProcessCtx(ctx, "default", "Render bootstrap templates", func(ctx context.Context) error {
 		for _, info := range saveInfo {
 			log.InfoF("From %q to %q\n", info.from, info.to)
 			if err := templateController.RenderAndSaveTemplates(info.from, info.to, info.data, info.ignorePaths); err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
 }

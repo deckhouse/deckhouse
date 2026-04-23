@@ -187,7 +187,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	defer logBeforeExit()
 
 	var metaConfig *config.MetaConfig
-	err = loggerFor.LogProcess("default", "Parsing cluster config", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Parsing cluster config", func(ctx context.Context) error {
 		metaConfig, err = config.ParseConfigFromData(
 			ctx,
 			input.CombineYAMLs(p.request.ClusterConfig, p.request.InitConfig, p.request.ProviderSpecificClusterConfig),
@@ -208,8 +208,9 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		return &pb.DestroyResult{Err: err.Error()}
 	}
 
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		cachePath := metaConfig.CachePath()
+
 		var initialState phases.DhctlState
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
@@ -217,13 +218,17 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 				return fmt.Errorf("unmarshalling dhctl state: %w", err)
 			}
 		}
+
 		err = cache.InitWithOptions(
+			ctx,
 			cachePath,
 			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
 		)
+
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -231,7 +236,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	}
 
 	var sshClient node.SSHClient
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
 			s.params.SchemaStore,
@@ -285,7 +290,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 	}
 
 	destroyErr := destroyer.DestroyCluster(ctx, true)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 
 	err = errors.Join(destroyErr, stateErr)
 

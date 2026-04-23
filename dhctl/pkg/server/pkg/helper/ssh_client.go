@@ -62,7 +62,7 @@ func CreateSSHClient(ctx context.Context, config *config.ConnectionConfig) (node
 			sshHosts = append(sshHosts, session.Host{Host: h.Host, Name: h.Host})
 		}
 	} else {
-		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
+		mastersIPs, err := state.GetMasterHostsIPs(ctx, cache.Global())
 		if err != nil {
 			return nil, cleanuper.AsFunc(), err
 		}

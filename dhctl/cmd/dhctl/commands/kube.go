@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -39,7 +40,9 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		doneCh := make(chan struct{})
 		tomb.RegisterOnShutdown("wait kubernetes-api-connection to stop", func() {
 			<-doneCh
@@ -57,7 +60,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 		}
 
 		// ip is empty because we want check via ssh-hosts passed via cm args
-		ready, err := checker.IsReady(context.Background(), "")
+		ready, err := checker.IsReady(ctx, "")
 		if err != nil {
 			proxyClose()
 			return err
@@ -73,7 +76,6 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 
 		return nil
 	})
-	return cmd
 }
 
 func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -89,8 +91,9 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	cmd.Flag("name", "Deployment name").
 		StringVar(&Name)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -103,30 +106,17 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		err = log.Process("bootstrap", "Wait for Deckhouse to become Ready", func() error {
+		return log.ProcessCtx(ctx, "bootstrap", "Wait for Deckhouse to become Ready", func(ctx context.Context) error {
 			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(
-					ssh.NewNodeInterfaceWrapper(sshClient),
-				)
-			// auto init
-			err = kubeCl.Init(client.AppKubernetesInitParams())
-			if err != nil {
+				WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+
+			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(ctx, kubeCl)
-			if err != nil {
-				return err
-			}
-			return nil
+			return deckhouse.WaitForReadiness(ctx, kubeCl)
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
 	})
-	return cmd
 }
 
 func TestCommandDelay() {

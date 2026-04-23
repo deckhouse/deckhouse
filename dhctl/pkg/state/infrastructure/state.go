@@ -264,7 +264,13 @@ func extractNodesStatesFromSecrets(secrets []*v1.Secret) (map[string]state.NodeG
 	return extractedState, nil
 }
 
-func SaveNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName, nodeGroup string, tfState, settings []byte, logger log.Logger) error {
+func SaveNodeInfrastructureState(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	nodeName, nodeGroup string,
+	tfState, settings []byte,
+	logger log.Logger,
+) error {
 	if len(tfState) == 0 {
 		return ErrNoInfrastructureState
 	}
@@ -274,17 +280,24 @@ func SaveNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesC
 		Manifest: func() interface{} {
 			return manifests.SecretWithNodeInfrastructureState(nodeName, nodeGroup, tfState, settings)
 		},
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 			return err
 		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
 			return err
 		},
 	}
 	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for Node %q", nodeName), 45, 10*time.Second).
-		WithLogger(logger).RunContext(ctx, task.CreateOrUpdate)
+		WithLogger(logger).
+		RunContext(ctx, func() error { return task.CreateOrUpdate(ctx) })
 }
 
 func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, tfState, devicePath []byte) error {
@@ -303,27 +316,37 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		{
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getInfrastructureStateManifest,
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+				_, err := kubeCl.
+					CoreV1().Secrets("d8-system").
+					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+				_, err := kubeCl.
+					CoreV1().Secrets("d8-system").
+					Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
 				return err
 			},
 		},
 		{
 			Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 			Manifest: getDevicePathManifest,
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+			CreateFunc: func(ctx context.Context, manifest interface{}) error {
+				_, err := kubeCl.
+					CoreV1().Secrets("d8-system").
+					Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 				data, err := json.Marshal(manifest.(*v1.Secret))
 				if err != nil {
 					return err
 				}
+
 				_, err = kubeCl.CoreV1().Secrets("d8-system").Patch(
 					ctx,
 					"d8-masters-kubernetes-data-device-path",
@@ -336,15 +359,19 @@ func SaveMasterNodeInfrastructureState(ctx context.Context, kubeCl *client.Kuber
 		},
 	}
 
-	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 45, 10*time.Second).RunContext(ctx, func() error {
-		var allErrs *multierror.Error
-		for _, task := range tasks {
-			if err := task.CreateOrUpdate(); err != nil {
-				allErrs = multierror.Append(allErrs, err)
-			}
-		}
-		return allErrs.ErrorOrNil()
-	})
+	return retry.NewLoop(fmt.Sprintf("Save infrastructure state for master Node %s", nodeName), 45, 10*time.Second).
+		RunContext(
+			ctx,
+			func() error {
+				var allErrs *multierror.Error
+				for _, task := range tasks {
+					if err := task.CreateOrUpdate(ctx); err != nil {
+						allErrs = multierror.Append(allErrs, err)
+					}
+				}
+				return allErrs.ErrorOrNil()
+			},
+		)
 }
 
 func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.KubernetesClient, outputs *infrastructure.PipelineOutputs) error {
@@ -355,17 +382,29 @@ func SaveClusterInfrastructureState(ctx context.Context, kubeCl *client.Kubernet
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-cluster-terraform-state"`,
 		Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(outputs.InfrastructureState) },
-		CreateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Create(ctx, manifest.(*v1.Secret), metav1.CreateOptions{})
+
 			return err
 		},
-		UpdateFunc: func(manifest interface{}) error {
-			_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
+			_, err := kubeCl.
+				CoreV1().Secrets("d8-system").
+				Update(ctx, manifest.(*v1.Secret), metav1.UpdateOptions{})
+
 			return err
 		},
 	}
 
-	err := retry.NewLoop("Save Cluster infrastructure state", 45, 10*time.Second).RunContext(ctx, task.CreateOrUpdate)
+	err := retry.NewLoop("Save Cluster infrastructure state", 45, 10*time.Second).
+		RunContext(
+			ctx,
+			func() error {
+				return task.CreateOrUpdate(ctx)
+			},
+		)
 	if err != nil {
 		return err
 	}

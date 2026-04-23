@@ -15,14 +15,14 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 	v1 "k8s.io/api/coordination/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
@@ -46,8 +46,9 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -61,9 +62,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(
-				ssh.NewNodeInterfaceWrapper(sshClient),
-			)
+			WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err
 		}
@@ -80,6 +79,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			}
 
 			c := input.NewConfirmation()
+
 			approve := c.WithMessage(fmt.Sprintf("Do you want to release lock:\n\n%s", info)).Ask()
 			if !approve {
 				return fmt.Errorf("Don't confirm release lock")
@@ -91,5 +91,4 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		cnf := lock.GetLockLeaseConfig("lock-releaser")
 		return lease.RemoveLease(ctx, kubeCl, cnf, confirm)
 	})
-	return cmd
 }

@@ -211,12 +211,12 @@ func TestBackupStates(t *testing.T) {
 }
 
 func saveCacheState(t *testing.T, c state.Cache, key string, val string) {
-	err := c.Save(key, []byte(val))
+	err := c.Save(t.Context(), key, []byte(val))
 	require.NoError(t, err)
 }
 
 func assertCacheState(t *testing.T, c state.Cache, key string, val string) {
-	baseBackup, err := c.Load(key)
+	baseBackup, err := c.Load(t.Context(), key)
 	require.NoError(t, err)
 	require.Equal(t, baseBackup, []byte(val))
 }

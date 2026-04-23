@@ -306,7 +306,7 @@ func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, mas
 
 	// Get current master hosts from cache
 	stateCache := ctx.StateCache()
-	currentHosts, err := state.GetMasterHostsIPs(stateCache)
+	currentHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
 	if err != nil {
 		log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
 		currentHosts = []session.Host{}
@@ -324,7 +324,7 @@ func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, mas
 
 	log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
 
-	state.SaveMasterHostsToCache(stateCache, hostsMap)
+	state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
 
 	log.DebugF("Successfully updated master hosts cache with %d new masters. hostsMap: %v\n", len(masterIPForSSHList), hostsMap)
 }
@@ -417,7 +417,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 		// Get current master hosts from cache
 		stateCache := ctx.StateCache()
-		currentHosts, err := state.GetMasterHostsIPs(stateCache)
+		currentHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
 		if err != nil {
 			log.DebugF("Could not load current master hosts from cache (this is OK for first master): %v\n", err)
 			currentHosts = []session.Host{}
@@ -433,7 +433,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 		log.DebugF("Saving updated master hosts to cache: %v\n", hostsMap)
 
-		state.SaveMasterHostsToCache(stateCache, hostsMap)
+		state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
 
 		log.DebugF("Successfully updated master hosts cache with node %s IP %s. hostsMap: %v\n", nodeName, outputs.MasterIPForSSH, hostsMap)
 	} else {
@@ -500,7 +500,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 			// Get current master hosts from cache
 			stateCache := ctx.StateCache()
-			currentHosts, cacheErr := state.GetMasterHostsIPs(stateCache)
+			currentHosts, cacheErr := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
 			if cacheErr != nil {
 				log.DebugF("Could not load current master hosts from cache: %v\n", cacheErr)
 				return err
@@ -520,7 +520,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 
 			log.DebugF("Saving updated master hosts to cache after deletion: %v\n", hostsMap)
 
-			state.SaveMasterHostsToCache(stateCache, hostsMap)
+			state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
 
 			log.DebugF("Successfully updated master hosts cache after deleting %d masters. hostsMap: %v\n", len(nodesToDelete), hostsMap)
 		}

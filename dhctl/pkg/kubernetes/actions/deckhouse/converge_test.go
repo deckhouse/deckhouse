@@ -449,7 +449,7 @@ func (tt *testConvergeManifests) assetAndRun(t *testing.T) {
 		assertContainsOrNotCommanderUUID(t, tasksNames, `ConfigMap "d8-commander-uuid"`)
 
 		for _, task := range tasks {
-			err := task.CreateOrUpdate()
+			err := task.CreateOrUpdate(t.Context())
 			require.NoError(t, err)
 		}
 
