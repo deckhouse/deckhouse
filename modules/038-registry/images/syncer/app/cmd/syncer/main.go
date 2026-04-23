@@ -19,16 +19,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
-	"time"
-
-	"gitlab.com/greyxor/slogor"
 
 	"syncer/pkg/config"
 	"syncer/pkg/syncer"
@@ -98,45 +93,4 @@ func setupSignalHandler() context.Context {
 	}()
 
 	return ctx
-}
-
-func newLogger(writer io.Writer) *slog.Logger {
-	// Set log level
-	options := []slogor.OptionFn{
-		slogor.SetLevel(
-			logLevelFromStr(
-				os.Getenv("LOG_LEVEL"),
-			),
-		),
-	}
-
-	// Enable log timestamp
-	if os.Getenv("LOG_TIMESTAMP") != "" {
-		options = append(options,
-			slogor.SetTimeFormat(
-				time.StampMilli,
-			),
-		)
-	}
-
-	slogorhandler := slogor.NewHandler(
-		writer,
-		options...,
-	)
-	return slog.New(slogorhandler)
-}
-
-func logLevelFromStr(rawLogLevel string) slog.Level {
-	switch strings.ToLower(rawLogLevel) {
-	case "debug":
-		return slog.LevelDebug
-	case "info":
-		return slog.LevelInfo
-	case "warn":
-		return slog.LevelWarn
-	case "error":
-		return slog.LevelError
-	default:
-		return slog.LevelInfo
-	}
 }
