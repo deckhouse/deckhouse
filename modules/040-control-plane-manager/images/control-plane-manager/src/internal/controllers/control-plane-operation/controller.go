@@ -51,10 +51,10 @@ const (
 )
 
 type Reconciler struct {
-	client   client.Client
-	log      *log.Logger
-	node     NodeIdentity
-	commands map[controlplanev1alpha1.CommandName]Command
+	client client.Client
+	log    *log.Logger
+	node   NodeIdentity
+	steps  map[controlplanev1alpha1.StepName]Step
 }
 
 func Register(mgr manager.Manager) error {
@@ -64,13 +64,13 @@ func Register(mgr manager.Manager) error {
 	}
 
 	r := &Reconciler{
-		client:   mgr.GetClient(),
-		log:      log.Default().With(slog.String("controller", constants.CpoControllerName)),
-		node:     node,
-		commands: defaultCommands(),
+		client: mgr.GetClient(),
+		log:    log.Default().With(slog.String("controller", constants.CpoControllerName)),
+		node:   node,
+		steps:  defaultSteps(),
 	}
-	// Inject Reconciler-level deps into commands that need them.
-	r.commands[controlplanev1alpha1.CommandWaitPodReady].(*waitPodReadyCommand).waitForPod = r.waitForPod
+	// Inject Reconciler-level deps into steps that need them.
+	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -122,15 +122,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		syncOperationExecutionMetrics(op)
 	}()
 
+	state := controlplanev1alpha1.NewOperationState(op)
+
+	// Initialize default unknown conditions
+	if !op.IsTerminal() {
+		state.EnsureInitialConditions()
+		if err := r.patchStatus(ctx, state); err != nil {
+			return reconcile.Result{}, fmt.Errorf("initialize conditions: %w", err)
+		}
+	}
+
 	if !op.Spec.Approved || op.IsTerminal() {
 		return reconcile.Result{}, nil
 	}
 
-	state := controlplanev1alpha1.NewOperationState(op)
-
 	logger.Info("reconciling operation",
 		slog.String("component", string(op.Spec.Component)),
-		slog.Any("commands", op.Spec.Commands))
+		slog.Any("steps", op.Spec.Steps))
 	defer func() {
 		if err != nil {
 			logger.Error("reconcile failed", log.Err(err))
@@ -167,11 +175,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		if completionErr != nil {
 			return reconcile.Result{}, completionErr
 		} else if completion.Applied {
-			logger.Info("recovered in-progress commit-point command from disk state", slog.String("command", string(completion.Command)))
+			logger.Info("recovered in-progress commit-point step from disk state", slog.String("step", string(completion.Step)))
 		}
 
-		logger.Info("desired checksums stale, cancelling", slog.String("reason", reason))
-		state.MarkOperationCancelled(reason)
+		logger.Info("desired checksums stale, operation abandoned", slog.String("reason", reason))
+		state.MarkOperationAbandoned(reason)
 		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
@@ -216,48 +224,48 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets Clus
 }
 
 type CommitPointCompletionResult struct {
-	Command controlplanev1alpha1.CommandName
+	Step    controlplanev1alpha1.StepName
 	Applied bool
 }
 
 func (r *Reconciler) markInProgressCommitPointCompletedIfApplied(ctx context.Context, state *controlplanev1alpha1.OperationState) (CommitPointCompletionResult, error) {
 	op := state.Raw()
-	cmd, ok := inProgressCommitPoint(op)
+	step, ok := inProgressCommitPoint(op)
 	if !ok {
 		return CommitPointCompletionResult{}, nil
 	}
 
-	matches, err := r.diskMatchesDesired(op, cmd)
+	matches, err := r.diskMatchesDesired(op, step)
 	if err != nil {
-		return CommitPointCompletionResult{}, fmt.Errorf("check disk state for %s: %w", cmd, err)
+		return CommitPointCompletionResult{}, fmt.Errorf("check disk state for %s: %w", step, err)
 	}
 	if !matches {
-		return CommitPointCompletionResult{Command: cmd, Applied: false}, nil
+		return CommitPointCompletionResult{Step: step, Applied: false}, nil
 	}
 
-	state.MarkCommandCompleted(cmd)
+	state.MarkStepCompleted(step)
 	if err := r.patchStatus(ctx, state); err != nil {
-		return CommitPointCompletionResult{}, fmt.Errorf("persist recovered command %s: %w", cmd, err)
+		return CommitPointCompletionResult{}, fmt.Errorf("persist recovered step %s: %w", step, err)
 	}
-	return CommitPointCompletionResult{Command: cmd, Applied: true}, nil
+	return CommitPointCompletionResult{Step: step, Applied: true}, nil
 }
 
-func inProgressCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) (controlplanev1alpha1.CommandName, bool) {
+func inProgressCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) (controlplanev1alpha1.StepName, bool) {
 	switch {
-	case op.IsCommandInProgress(controlplanev1alpha1.CommandSyncManifests):
-		return controlplanev1alpha1.CommandSyncManifests, true
-	case op.IsCommandInProgress(controlplanev1alpha1.CommandJoinEtcdCluster):
-		return controlplanev1alpha1.CommandJoinEtcdCluster, true
+	case op.IsStepInProgress(controlplanev1alpha1.StepSyncManifests):
+		return controlplanev1alpha1.StepSyncManifests, true
+	case op.IsStepInProgress(controlplanev1alpha1.StepJoinEtcdCluster):
+		return controlplanev1alpha1.StepJoinEtcdCluster, true
 	default:
 		return "", false
 	}
 }
 
-func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOperation, cmd controlplanev1alpha1.CommandName) (bool, error) {
-	switch cmd {
-	case controlplanev1alpha1.CommandSyncManifests:
+func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOperation, step controlplanev1alpha1.StepName) (bool, error) {
+	switch step {
+	case controlplanev1alpha1.StepSyncManifests:
 		return manifestMatchesDesired(op)
-	case controlplanev1alpha1.CommandJoinEtcdCluster:
+	case controlplanev1alpha1.StepJoinEtcdCluster:
 		manifestMatches, err := manifestMatchesDesired(op)
 		if err != nil || !manifestMatches {
 			return manifestMatches, err

@@ -21,7 +21,6 @@ import (
 	"control-plane-manager/internal/constants"
 
 	"github.com/prometheus/client_golang/prometheus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
@@ -50,7 +49,6 @@ func syncOperationExecutionMetrics(op *controlplanev1alpha1.ControlPlaneOperatio
 
 	cond := op.GetCondition(controlplanev1alpha1.CPOConditionCompleted)
 	if cond != nil &&
-		cond.Status == metav1.ConditionFalse &&
 		cond.Reason == controlplanev1alpha1.CPOReasonOperationInProgress &&
 		!cond.LastTransitionTime.IsZero() {
 		operationInprogressStart.WithLabelValues(nodeLabel, componentLabel, operationLabel).Set(float64(cond.LastTransitionTime.Unix()))

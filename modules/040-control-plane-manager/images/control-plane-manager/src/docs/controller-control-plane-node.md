@@ -37,10 +37,10 @@ This mode is useful for manual node maintenance or administrative operations wit
 - active (non-terminal) -> completed -> other terminal
 - apply checksums from latest terminal operation that is either:
 - `Completed`, or
-- has commit-point command completed (`SyncManifests` / `JoinEtcdCluster`)
-- apply cert dates from completed operations that include `CertObserve` command, in monotonic `observedAt` order
+- has commit-point step completed (`SyncManifests` / `JoinEtcdCluster`)
+- apply cert dates from completed operations that include `CertObserve` step, in monotonic `observedAt` order
 - update per-component `status.components.<component>.lastObservedAt`
-- update component conditions, `CASynced`, `CertsHealthy`
+- update component conditions and global `CertificatesHealthy`
 4. Check for maintenance mode (label `maintenance`); if present, exit reconciliation (operations remain unchanged).
 5. Create missing drift CPOs for components where `spec != status`.
 6. Ensure cert-renewal CPO exists for components expiring within threshold (30 days):
@@ -49,7 +49,7 @@ This mode is useful for manual node maintenance or administrative operations wit
 - renewal CPO is created with the same `DesiredConfig/PKI/CA` checksums tuple as current component state
 7. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
 - `spec.component=<real component>`
-- `spec.commands=[CertObserve]`
+- `spec.steps=[CertObserve]`
 - `spec.approved=true`
 
 ## Operation Creation Rules
@@ -61,8 +61,8 @@ This mode is useful for manual node maintenance or administrative operations wit
 - Cert-renewal operations are expiry-triggered, but still use the same desired checksums tuple and normal stale/cancel flow in CPO controller.
 - CPO name uses `GenerateName` with deterministic prefix:
 - `<component>-<short desired checksums>-`
-- Commands are selected by component and changed dimensions (`config`, `pki`, `ca`).
-- Generated command list always starts with `Backup`.
+- Steps are selected by component and changed dimensions (`config`, `pki`, `ca`).
+- Generated step list always starts with `Backup`.
 - After creating a CPO, keep only latest 5 terminal CPOs per component (active CPOs are never deleted).
 
 ## Condition Logic (CPN)
@@ -71,7 +71,9 @@ This mode is useful for manual node maintenance or administrative operations wit
 - `PendingUpdate` when matching operation exists but not approved.
 - `Updating` when matching operation is approved and running.
 - `UpdateFailed` when matching operation failed.
-- `CASynced=True` only when all static pod components report target CA in status.
+- `CertificatesHealthy=True` when:
+- all static pod components report target CA in status, and
+- all observed component certificates are not expiring within renewal threshold.
 
 ## Logic Basis
 

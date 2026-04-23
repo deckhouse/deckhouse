@@ -20,19 +20,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CommandName defines a single unit of work in the operation pipeline.
+// StepName defines a single unit of work in the operation pipeline.
 // +kubebuilder:validation:Enum=Backup;SyncCA;RenewPKICerts;RenewKubeconfigs;SyncManifests;JoinEtcdCluster;WaitPodReady;CertObserve
-type CommandName string
+type StepName string
 
 const (
-	CommandBackup           CommandName = "Backup"
-	CommandSyncCA           CommandName = "SyncCA"
-	CommandRenewPKICerts    CommandName = "RenewPKICerts"
-	CommandRenewKubeconfigs CommandName = "RenewKubeconfigs"
-	CommandSyncManifests    CommandName = "SyncManifests"
-	CommandJoinEtcdCluster  CommandName = "JoinEtcdCluster"
-	CommandWaitPodReady     CommandName = "WaitPodReady"
-	CommandCertObserve      CommandName = "CertObserve"
+	StepBackup           StepName = "Backup"
+	StepSyncCA           StepName = "SyncCA"
+	StepRenewPKICerts    StepName = "RenewPKICerts"
+	StepRenewKubeconfigs StepName = "RenewKubeconfigs"
+	StepSyncManifests    StepName = "SyncManifests"
+	StepJoinEtcdCluster  StepName = "JoinEtcdCluster"
+	StepWaitPodReady     StepName = "WaitPodReady"
+	StepCertObserve      StepName = "CertObserve"
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
@@ -91,6 +91,10 @@ func (c OperationComponent) IsStaticPodComponent() bool {
 	return c.PodComponentName() != ""
 }
 
+func (c OperationComponent) LabelValue() string {
+	return c.PodComponentName()
+}
+
 // OperationComponentFromPodName returns the OperationComponent for a given pod component label value.
 // Returns "", false if the name is not a known static pod component.
 func OperationComponentFromPodName(name string) (OperationComponent, bool) {
@@ -108,23 +112,23 @@ type ControlPlaneOperationSpec struct {
 	// +kubebuilder:validation:Required
 	Component OperationComponent `json:"component"`
 
-	// Commands defines the ordered list of actions to perform on the component.
+	// Steps defines the ordered list of actions to perform on the component.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
-	Commands []CommandName `json:"commands"`
+	Steps []StepName `json:"steps"`
 
 	// DesiredConfigChecksum is the expected configChecksum after the operation completed.
-	// Present for Update and UpdateWithPKI commands.
+	// Present for Update and UpdateWithPKI steps.
 	// +optional
 	DesiredConfigChecksum string `json:"desiredConfigChecksum,omitempty"`
 
 	// DesiredPKIChecksum is the expected pkiChecksum after the operation completed.
-	// Present for UpdatePKI and UpdateWithPKI commands.
+	// Present for UpdatePKI and UpdateWithPKI steps.
 	// +optional
 	DesiredPKIChecksum string `json:"desiredPkiChecksum,omitempty"`
 
 	// DesiredCAChecksum is the expected caChecksum after the operation completed.
-	// Present for UpdatePKI and UpdateWithPKI commands.
+	// Present for UpdatePKI and UpdateWithPKI steps.
 	// +optional
 	DesiredCAChecksum string `json:"desiredCaChecksum,omitempty"`
 
@@ -162,7 +166,7 @@ type ControlPlaneOperationStatus struct {
 // +kubebuilder:printcolumn:name="Component",type="string",JSONPath=".spec.component",description="Target component",priority=1
 // +kubebuilder:printcolumn:name="Node",type="string",JSONPath=".spec.nodeName",description="Target node"
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=`.status.conditions[?(@.type=="Completed")].reason`,description="Operation phase"
-// +kubebuilder:printcolumn:name="CurrentStep",type="string",JSONPath=`.status.conditions[?(@.reason=="InProgress")].type`,description="Currently executing command",priority=1
+// +kubebuilder:printcolumn:name="CurrentStep",type="string",JSONPath=`.status.conditions[?(@.reason=="InProgress")].type`,description="Currently executing step",priority=1
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // ControlPlaneOperation represents a single pending or completed action
@@ -178,14 +182,14 @@ type ControlPlaneOperation struct {
 // IsObserveOnlyOperation reports whether this operation is a read-only observe for a single static-pod component.
 func (op *ControlPlaneOperation) IsObserveOnlyOperation() bool {
 	return op.Spec.Component.IsStaticPodComponent() &&
-		len(op.Spec.Commands) == 1 &&
-		op.Spec.Commands[0] == CommandCertObserve
+		len(op.Spec.Steps) == 1 &&
+		op.Spec.Steps[0] == StepCertObserve
 }
 
-// HasCommand reports whether operation command pipeline includes cmd.
-func (op *ControlPlaneOperation) HasCommand(cmd CommandName) bool {
-	for i := range op.Spec.Commands {
-		if op.Spec.Commands[i] == cmd {
+// HasStep reports whether operation step pipeline includes step.
+func (op *ControlPlaneOperation) HasStep(step StepName) bool {
+	for i := range op.Spec.Steps {
+		if op.Spec.Steps[i] == step {
 			return true
 		}
 	}

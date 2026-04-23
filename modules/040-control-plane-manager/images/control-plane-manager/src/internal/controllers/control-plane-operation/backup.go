@@ -31,12 +31,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// backupCommand creates a per-component backup of files.
+// backupStep creates a per-component backup of files.
 // Now it is always the first command in every pipeline.
 // Writes directly into per-operation final directory.
-type backupCommand struct{}
+type backupStep struct{}
 
-func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *backupStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
 	component := env.State.Raw().Spec.Component
 	operationName := env.State.Raw().Name
 	files := backupFilesForComponent(component, env.Node.KubeconfigDir)

@@ -33,9 +33,9 @@ spec:
       jsonPath: .status.conditions[?(@.type=='SchedulerReady')].status
       name: SCHEDULER
       type: string
-    - description: CA synced
-      jsonPath: .status.conditions[?(@.type=='CASynced')].status
-      name: CA
+    - description: Certificates healthy
+      jsonPath: .status.conditions[?(@.type=='CertificatesHealthy')].status
+      name: CERTIFICATES
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age

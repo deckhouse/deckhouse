@@ -24,22 +24,33 @@ import (
 const (
 	CPOConditionApproved  = "Approved"
 	CPOConditionCompleted = "Completed"
+
+	CPOConditionBackupDone           = "BackupDone"
+	CPOConditionCASynced             = "CASynced"
+	CPOConditionPKICertsRenewed      = "PKICertsRenewed"
+	CPOConditionKubeconfigsRenewed   = "KubeconfigsRenewed"
+	CPOConditionManifestsSynced      = "ManifestsSynced"
+	CPOConditionEtcdClusterJoined    = "EtcdClusterJoined"
+	CPOConditionPodReady             = "PodReady"
+	CPOConditionCertificatesObserved = "CertificatesObserved"
 )
 
 const (
-	CPOReasonCommandInProgress = "InProgress"
-	CPOReasonCommandCanceled   = "Canceled"
-	CPOReasonCommandCompleted  = "Completed"
-	CPOReasonCommandFailed     = "Failed"
+	CPOReasonStepUnknown    = "Unknown"
+	CPOReasonStepInProgress = "InProgress"
+	CPOReasonStepAbandoned  = "Abandoned"
+	CPOReasonStepCompleted  = "Completed"
+	CPOReasonStepFailed     = "Failed"
 
+	CPOReasonOperationUnknown    = "OperationUnknown"
 	CPOReasonOperationInProgress = "OperationInProgress"
 	CPOReasonOperationCompleted  = "OperationCompleted"
 	CPOReasonOperationFailed     = "OperationFailed"
-	CPOReasonOperationCancelled  = "OperationCancelled"
+	CPOReasonOperationAbandoned  = "OperationAbandoned"
 
-	// For RenewPKICerts and RenewKubeconfigs commands, used as Message for the command completed condition.
-	CPOCommandResultRenewed    = "Renewed"
-	CPOCommandResultNotRenewed = "NotRenewed"
+	// For RenewPKICerts and RenewKubeconfigs steps, used as Message for the step completed condition.
+	CPOStepResultRenewed    = "Renewed"
+	CPOStepResultNotRenewed = "NotRenewed"
 )
 
 func (op *ControlPlaneOperation) GetCondition(conditionType string) *metav1.Condition {
@@ -48,4 +59,27 @@ func (op *ControlPlaneOperation) GetCondition(conditionType string) *metav1.Cond
 
 func (op *ControlPlaneOperation) IsConditionTrue(conditionType string) bool {
 	return meta.IsStatusConditionTrue(op.Status.Conditions, conditionType)
+}
+
+func StepConditionType(step StepName) string {
+	switch step {
+	case StepBackup:
+		return CPOConditionBackupDone
+	case StepSyncCA:
+		return CPOConditionCASynced
+	case StepRenewPKICerts:
+		return CPOConditionPKICertsRenewed
+	case StepRenewKubeconfigs:
+		return CPOConditionKubeconfigsRenewed
+	case StepSyncManifests:
+		return CPOConditionManifestsSynced
+	case StepJoinEtcdCluster:
+		return CPOConditionEtcdClusterJoined
+	case StepWaitPodReady:
+		return CPOConditionPodReady
+	case StepCertObserve:
+		return CPOConditionCertificatesObserved
+	default:
+		return string(step)
+	}
 }

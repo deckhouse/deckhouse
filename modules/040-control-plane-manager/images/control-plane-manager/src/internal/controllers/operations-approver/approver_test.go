@@ -171,7 +171,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
 			Type:               "Completed",
 			Status:             metav1.ConditionTrue,
-			Reason:             "Test",
+			Reason:             controlplanev1alpha1.CPOReasonOperationCompleted,
 			LastTransitionTime: metav1.Now(),
 		})
 		a := newApprover(nodeCounts{masters: 1}, []controlplanev1alpha1.ControlPlaneOperation{op})

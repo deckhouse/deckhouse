@@ -21,15 +21,13 @@ const (
 	CPNConditionAPIServerReady         = "APIServerReady"
 	CPNConditionControllerManagerReady = "ControllerManagerReady"
 	CPNConditionSchedulerReady         = "SchedulerReady"
-	CPNConditionCASynced               = "CASynced"
-	CPNConditionCertsHealthy           = "CertsHealthy"
+	CPNConditionCertificatesHealthy    = "CertificatesHealthy"
 )
 
 const (
-	CPNReasonSynced               = "Synced"
-	CPNReasonUpdating             = "Updating"
-	CPNReasonPendingUpdate        = "PendingUpdate"
-	CPNReasonUpdateFailed         = "UpdateFailed"
+	CPNReasonReady    = "Ready"
+	CPNReasonNotReady = "NotReady"
+
 	CPNReasonWaitingForComponents = "WaitingForComponents"
 	CPNReasonHealthy              = "Healthy"
 	CPNReasonExpiredSoon          = "ExpiredSoon"

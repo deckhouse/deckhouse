@@ -27,12 +27,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// approvedCPOPredicate triggers on CPO that become Approved.
+// approvedCPOPredicate triggers on CPO create and on approval transition.
 func approvedCPOPredicate() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			op, ok := e.Object.(*controlplanev1alpha1.ControlPlaneOperation)
-			return ok && op.Spec.Approved
+			_, ok := e.Object.(*controlplanev1alpha1.ControlPlaneOperation)
+			return ok
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldOp, okOld := e.ObjectOld.(*controlplanev1alpha1.ControlPlaneOperation)

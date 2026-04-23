@@ -24,7 +24,8 @@ import (
 )
 
 func (op *ControlPlaneOperation) IsCompleted() bool {
-	return op.IsConditionTrue(CPOConditionCompleted)
+	cond := op.GetCondition(CPOConditionCompleted)
+	return cond != nil && cond.Status == metav1.ConditionTrue && cond.Reason == CPOReasonOperationCompleted
 }
 
 func (op *ControlPlaneOperation) IsFailed() bool {
@@ -32,28 +33,29 @@ func (op *ControlPlaneOperation) IsFailed() bool {
 	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationFailed
 }
 
-func (op *ControlPlaneOperation) IsCancelled() bool {
+func (op *ControlPlaneOperation) IsAbandoned() bool {
 	cond := op.GetCondition(CPOConditionCompleted)
-	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationCancelled
+	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationAbandoned
 }
 
 // IsTerminal reports whether the operation reached a not retryable state.
 func (op *ControlPlaneOperation) IsTerminal() bool {
-	return op.IsCompleted() || op.IsFailed() || op.IsCancelled()
+	return op.IsCompleted() || op.IsFailed() || op.IsAbandoned()
 }
 
-func (op *ControlPlaneOperation) IsCommandCompleted(name CommandName) bool {
-	return op.IsConditionTrue(string(name))
+func (op *ControlPlaneOperation) IsStepCompleted(name StepName) bool {
+	cond := op.GetCondition(StepConditionType(name))
+	return cond != nil && cond.Status == metav1.ConditionTrue && cond.Reason == CPOReasonStepCompleted
 }
 
-func (op *ControlPlaneOperation) IsCommandInProgress(name CommandName) bool {
-	cond := op.GetCondition(string(name))
-	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonCommandInProgress
+func (op *ControlPlaneOperation) IsStepInProgress(name StepName) bool {
+	cond := op.GetCondition(StepConditionType(name))
+	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonStepInProgress
 }
 
 func (op *ControlPlaneOperation) FailureMessage() string {
 	cond := op.GetCondition(CPOConditionCompleted)
-	if cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationFailed {
+	if cond != nil && cond.Reason == CPOReasonOperationFailed {
 		return cond.Message
 	}
 	return ""
@@ -72,12 +74,12 @@ func NewOperationState(op *ControlPlaneOperation) *OperationState {
 func (s *OperationState) IsCompleted() bool { return s.op.IsCompleted() }
 func (s *OperationState) IsFailed() bool    { return s.op.IsFailed() }
 func (s *OperationState) IsTerminal() bool  { return s.op.IsTerminal() }
-func (s *OperationState) IsCancelled() bool { return s.op.IsCancelled() }
-func (s *OperationState) IsCommandCompleted(name CommandName) bool {
-	return s.op.IsCommandCompleted(name)
+func (s *OperationState) IsAbandoned() bool { return s.op.IsAbandoned() }
+func (s *OperationState) IsStepCompleted(name StepName) bool {
+	return s.op.IsStepCompleted(name)
 }
-func (s *OperationState) IsCommandInProgress(name CommandName) bool {
-	return s.op.IsCommandInProgress(name)
+func (s *OperationState) IsStepInProgress(name StepName) bool {
+	return s.op.IsStepInProgress(name)
 }
 func (s *OperationState) FailureMessage() string { return s.op.FailureMessage() }
 
@@ -98,42 +100,66 @@ func (s *OperationState) SetCondition(cond metav1.Condition) {
 	meta.SetStatusCondition(&s.op.Status.Conditions, cond)
 }
 
-func (s *OperationState) MarkCommandInProgress(name CommandName) {
-	s.MarkCommandInProgressWithMessage(name, "")
+// EnsureInitialConditions populates missing operation and step conditions with Unknown state.
+// Existing conditions are not modified.
+func (s *OperationState) EnsureInitialConditions() {
+	if s.op.GetCondition(CPOConditionCompleted) == nil {
+		s.SetCondition(metav1.Condition{
+			Type:   CPOConditionCompleted,
+			Status: metav1.ConditionUnknown,
+			Reason: CPOReasonOperationUnknown,
+		})
+	}
+
+	for _, name := range s.op.Spec.Steps {
+		conditionType := StepConditionType(name)
+		if s.op.GetCondition(conditionType) != nil {
+			continue
+		}
+		s.SetCondition(metav1.Condition{
+			Type:   conditionType,
+			Status: metav1.ConditionFalse,
+			Reason: CPOReasonStepUnknown,
+		})
+	}
 }
 
-func (s *OperationState) MarkCommandInProgressWithMessage(name CommandName, message string) {
+func (s *OperationState) MarkStepInProgress(name StepName) {
+	s.MarkStepInProgressWithMessage(name, "")
+}
+
+func (s *OperationState) MarkStepInProgressWithMessage(name StepName, message string) {
 	s.SetCondition(metav1.Condition{
-		Type:    string(name),
+		Type:    StepConditionType(name),
 		Status:  metav1.ConditionFalse,
-		Reason:  CPOReasonCommandInProgress,
+		Reason:  CPOReasonStepInProgress,
 		Message: message,
 	})
 }
 
-func (s *OperationState) MarkCommandCompleted(name CommandName) {
-	s.MarkCommandCompletedWithMessage(name, "")
+func (s *OperationState) MarkStepCompleted(name StepName) {
+	s.MarkStepCompletedWithMessage(name, "")
 }
 
-func (s *OperationState) MarkCommandCompletedWithMessage(name CommandName, message string) {
+func (s *OperationState) MarkStepCompletedWithMessage(name StepName, message string) {
 	s.SetCondition(metav1.Condition{
-		Type:    string(name),
+		Type:    StepConditionType(name),
 		Status:  metav1.ConditionTrue,
-		Reason:  CPOReasonCommandCompleted,
+		Reason:  CPOReasonStepCompleted,
 		Message: message,
 	})
 }
 
-func (s *OperationState) MarkCommandFailed(name CommandName, message string) {
+func (s *OperationState) MarkStepFailed(name StepName, message string) {
 	s.SetCondition(metav1.Condition{
-		Type:    string(name),
+		Type:    StepConditionType(name),
 		Status:  metav1.ConditionFalse,
-		Reason:  CPOReasonCommandFailed,
+		Reason:  CPOReasonStepFailed,
 		Message: message,
 	})
 }
 
-func (s *OperationState) setOperationCompletedFalse(reason, message string) {
+func (s *OperationState) setOperationCondition(reason, message string) {
 	s.SetCondition(metav1.Condition{
 		Type:    CPOConditionCompleted,
 		Status:  metav1.ConditionFalse,
@@ -143,16 +169,16 @@ func (s *OperationState) setOperationCompletedFalse(reason, message string) {
 }
 
 func (s *OperationState) MarkOperationInProgress(message string) {
-	s.setOperationCompletedFalse(CPOReasonOperationInProgress, message)
+	s.setOperationCondition(CPOReasonOperationInProgress, message)
 }
 
-func (s *OperationState) MarkOperationCancelled(message string) {
-	s.markCurrentInProgressCommandCanceled()
-	s.setOperationCompletedFalse(CPOReasonOperationCancelled, message)
+func (s *OperationState) MarkOperationAbandoned(message string) {
+	s.markCurrentInProgressStepAbandoned()
+	s.setOperationCondition(CPOReasonOperationAbandoned, message)
 }
 
 func (s *OperationState) MarkOperationFailed(message string) {
-	s.setOperationCompletedFalse(CPOReasonOperationFailed, message)
+	s.setOperationCondition(CPOReasonOperationFailed, message)
 }
 
 func (s *OperationState) MarkOperationCompleted() {
@@ -168,16 +194,16 @@ func (s *OperationState) SetObservedState(state *ObservedComponentState) {
 	s.op.Status.ObservedState = state
 }
 
-func (s *OperationState) markCurrentInProgressCommandCanceled() {
-	for _, name := range s.op.Spec.Commands {
-		cond := s.op.GetCondition(string(name))
-		if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != CPOReasonCommandInProgress {
+func (s *OperationState) markCurrentInProgressStepAbandoned() {
+	for _, name := range s.op.Spec.Steps {
+		cond := s.op.GetCondition(StepConditionType(name))
+		if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != CPOReasonStepInProgress {
 			continue
 		}
 		s.SetCondition(metav1.Condition{
 			Type:    cond.Type,
 			Status:  metav1.ConditionFalse,
-			Reason:  CPOReasonCommandCanceled,
+			Reason:  CPOReasonStepAbandoned,
 			Message: cond.Message,
 		})
 		return

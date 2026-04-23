@@ -4,12 +4,12 @@ metadata:
   name: etcd-215dfa-aaa111-b69a6e
   labels:
     control-plane.deckhouse.io/node: master-1
-    control-plane.deckhouse.io/component: Etcd
+    control-plane.deckhouse.io/component: etcd
 spec:
   configVersion: "999.999"
   nodeName: master-1
   component: Etcd
-  commands:
+  steps:
     - Backup
     - SyncCA
     - RenewPKICerts
@@ -27,12 +27,12 @@ metadata:
   name: kubeapiserver-55803a-bbb222-b69a6e
   labels:
     control-plane.deckhouse.io/node: master-1
-    control-plane.deckhouse.io/component: KubeAPIServer
+    control-plane.deckhouse.io/component: kube-apiserver
 spec:
   configVersion: "999.999"
   nodeName: master-1
   component: KubeAPIServer
-  commands:
+  steps:
     - Backup
     - SyncCA
     - RenewPKICerts
@@ -51,12 +51,12 @@ metadata:
   name: kubecontrollermanager-814a2f-b69a6e
   labels:
     control-plane.deckhouse.io/node: master-1
-    control-plane.deckhouse.io/component: KubeControllerManager
+    control-plane.deckhouse.io/component: kube-controller-manager
 spec:
   configVersion: "999.999"
   nodeName: master-1
   component: KubeControllerManager
-  commands:
+  steps:
     - Backup
     - SyncCA
     - RenewKubeconfigs
@@ -73,12 +73,12 @@ metadata:
   name: kubescheduler-32be06-b69a6e
   labels:
     control-plane.deckhouse.io/node: master-1
-    control-plane.deckhouse.io/component: KubeScheduler
+    control-plane.deckhouse.io/component: kube-scheduler
 spec:
   configVersion: "999.999"
   nodeName: master-1
   component: KubeScheduler
-  commands:
+  steps:
     - Backup
     - SyncCA
     - RenewKubeconfigs

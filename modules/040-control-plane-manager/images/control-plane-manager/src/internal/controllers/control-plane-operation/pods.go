@@ -43,7 +43,7 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 
 	if isPodCrashLooping(pod) {
 		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
-		state.MarkCommandInProgressWithMessage(controlplanev1alpha1.CommandWaitPodReady,
+		state.MarkStepInProgressWithMessage(controlplanev1alpha1.StepWaitPodReady,
 			fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
@@ -51,7 +51,7 @@ func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1
 	expected := checksumAnnotationsFromSpec(op.Spec)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
-		state.MarkCommandInProgressWithMessage(controlplanev1alpha1.CommandWaitPodReady,
+		state.MarkStepInProgressWithMessage(controlplanev1alpha1.StepWaitPodReady,
 			fmt.Sprintf("pod %s is not ready with expected checksums, will retry", podName))
 		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
 	}
@@ -80,7 +80,7 @@ func (r *Reconciler) mapPodToOperations(ctx context.Context, obj client.Object) 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
 	if err := r.client.List(ctx, ops, client.MatchingLabels{
 		constants.ControlPlaneNodeNameLabelKey:  r.node.Name,
-		constants.ControlPlaneComponentLabelKey: string(opComponent),
+		constants.ControlPlaneComponentLabelKey: opComponent.LabelValue(),
 	}); err != nil {
 		return nil
 	}
