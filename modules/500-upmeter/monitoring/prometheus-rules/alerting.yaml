@@ -297,13 +297,25 @@
 
     - alert: D8UpmeterProbeGarbagePodsFromDeployments
       expr: |
-        (
-          count (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter",
-                                                         label_upmeter_probe="controller-manager"})
-          /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
-        ) >= 1
-      for: 10m
+        absent_over_time(
+          (
+            (
+              count(last_over_time(kube_pod_labels{
+                namespace="d8-upmeter",
+                label_heritage="upmeter",
+                label_upmeter_probe="controller-manager"
+              }[__SCRAPE_INTERVAL__]))
+              /
+              clamp_min(
+                count(last_over_time(kube_pod_labels{
+                  namespace="d8-upmeter",
+                  label_app="upmeter-agent"
+                }[__SCRAPE_INTERVAL__])),
+                1
+              )
+            ) < 1
+          )[10m:__SCRAPE_INTERVAL__]
+        ) == 1
       labels:
         severity_level: "9"
         tier: cluster
