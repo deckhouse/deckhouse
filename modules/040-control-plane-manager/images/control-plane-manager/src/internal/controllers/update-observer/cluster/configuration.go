@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert/yaml"
 	corev1 "k8s.io/api/core/v1"
 
-	"update-observer/pkg/version"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 type UpdateMode string

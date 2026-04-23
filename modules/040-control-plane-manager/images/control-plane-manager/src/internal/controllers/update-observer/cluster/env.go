@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"update-observer/pkg/version"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 type VersionSettings struct {

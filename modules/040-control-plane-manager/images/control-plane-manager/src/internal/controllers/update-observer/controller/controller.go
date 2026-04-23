@@ -35,10 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"update-observer/cluster"
-	"update-observer/common"
-	v1 "update-observer/pkg/v1"
-	"update-observer/pkg/version"
+	"control-plane-manager/internal/controllers/update-observer/cluster"
+	"control-plane-manager/internal/controllers/update-observer/common"
+	v1 "control-plane-manager/internal/controllers/update-observer/pkg/v1"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 const (

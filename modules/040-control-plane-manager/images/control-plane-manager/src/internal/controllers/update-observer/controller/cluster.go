@@ -26,9 +26,9 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"update-observer/cluster"
-	"update-observer/common"
-	podstatus "update-observer/pkg/pod-status"
+	"control-plane-manager/internal/controllers/update-observer/cluster"
+	"control-plane-manager/internal/controllers/update-observer/common"
+	podstatus "control-plane-manager/internal/controllers/update-observer/pkg/pod-status"
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {
