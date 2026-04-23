@@ -482,7 +482,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"containerd1730VexArtifact":       "imageHash-registrypackages-containerd1730VexArtifact",
 		"containerd216":                   "imageHash-registrypackages-containerd216",
 		"containerd216VexArtifact":        "imageHash-registrypackages-containerd216VexArtifact",
-		"containerLogs01":                 "imageHash-registrypackages-containerLogs01",
 		"crictl131":                       "imageHash-registrypackages-crictl131",
 		"crictl131VexArtifact":            "imageHash-registrypackages-crictl131VexArtifact",
 		"crictl132":                       "imageHash-registrypackages-crictl132",
