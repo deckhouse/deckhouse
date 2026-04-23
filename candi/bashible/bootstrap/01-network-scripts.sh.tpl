@@ -33,6 +33,9 @@ bootstrap_log_init "01-network-scripts.sh.tpl"
 
 {{- if and (ne .nodeGroup.nodeType "Static") (.provider )}}
   {{- if $bootstrap_script_network := $.Files.Get (printf "deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) | default ($.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) ) }}
+echo "Bootstrap: applying network scripts for provider {{ .provider }}"
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}
 {{- end }}
+
+echo "Bootstrap: finished network scripts"

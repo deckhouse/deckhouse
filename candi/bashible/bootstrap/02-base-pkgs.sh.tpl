@@ -48,3 +48,5 @@ bootstrap_log_init "02-base-pkgs.sh.tpl"
 {{ with .images.registrypackages }}
 bb-package-install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "netcat:{{ .netcat110501 }}"
 {{- end }}
+
+echo "Bootstrap: finished base packages installation"
