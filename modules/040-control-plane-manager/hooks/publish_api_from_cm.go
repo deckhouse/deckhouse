@@ -32,7 +32,7 @@ import (
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        moduleQueue,
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       "cm_publishapi_config_migration",
