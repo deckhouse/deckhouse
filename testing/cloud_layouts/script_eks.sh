@@ -52,6 +52,19 @@ kubectl_config_file="/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig"
 function prepare_environment() {
   root_wd="/deckhouse/testing/cloud_layouts/"
   export cwd="/deckhouse/testing/cloud_layouts/EKS/WithoutNAT/"
+  
+  export TF_CLI_CONFIG_FILE="$cwd/.tofurc"
+  cat <<EOF > $TF_CLI_CONFIG_FILE
+  provider_installation {
+    network_mirror {
+      url = "https://terraform-mirror.yandexcloud.net/"
+      include = ["registry.opentofu.org/*/*"]
+    }
+    direct {
+      exclude = ["registry.opentofu.org/*/*"]
+    }
+  }
+  EOF
 
   export AWS_ACCESS_KEY_ID="$LAYOUT_AWS_ACCESS_KEY"
   export AWS_SECRET_ACCESS_KEY="$LAYOUT_AWS_SECRET_ACCESS_KEY"
@@ -108,7 +121,7 @@ function prepare_environment() {
   fi
 
   # shellcheck disable=SC2016
-  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" ="$FOX_DOCKERCFG" IMAGES_REPO="$IMAGES_REPO"\
+  env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" FOX_DOCKERCFG="$FOX_DOCKERCFG" IMAGES_REPO="$IMAGES_REPO" \
       envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
   env KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" PREFIX="$PREFIX" \
@@ -166,7 +179,11 @@ type: kubernetes.io/service-account-token
 EOF
   TOKEN=$(KUBECONFIG=$_tmp_kubeconfig kubectl get secrets $_username_-secret -n $NS -o json | jq -r .data.token | base64 -d)
   CA=$(KUBECONFIG=$_tmp_kubeconfig kubectl get secrets $_username_-secret -n $NS -o json | jq -r '.data | .["ca.crt"]')
-  SERVER=$(aws eks describe-cluster --name $cluster_name | jq -r .cluster.endpoint)
+  SERVER=$(aws eks --region "$region" describe-cluster --name "$cluster_name" --query 'cluster.endpoint' --output text)
+  if [[ -z "$SERVER" || "$SERVER" == "None" ]]; then
+    >&2 echo "ERROR: empty or invalid EKS API endpoint from describe-cluster (cluster_name=$cluster_name region=$region)"
+    return 1
+  fi
   cat <<-EOF > $kubectl_config_file
 apiVersion: v1
 kind: Config
