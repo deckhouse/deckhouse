@@ -18,25 +18,19 @@
 set -Eeuo pipefail
 
 bootstrap_log_init() {
-  local current_file="$1"
-
-  if [[ -z ${bootstrap_log_initialized:-} ]]; then
+  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
     mkdir -p /var/log/d8/bashible
     exec {bootstrap_stdout_fd}>&1
     exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
-    bootstrap_log_initialized=1
+    export BOOTSTRAP_LOG_INITIALIZED=1
   fi
-
-  printf '\n====================\n'
-  printf '== %s ==\n' "${current_file}"
-  printf '====================\n'
 }
 
 BOOTSTRAP_DIR="/var/lib/bashible"
 TMPDIR="/opt/deckhouse/tmp"
 mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
 
-bootstrap_log_init "_bootstrap.tpl"
+bootstrap_log_init
 
 
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
