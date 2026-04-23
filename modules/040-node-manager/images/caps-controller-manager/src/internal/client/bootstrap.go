@@ -45,20 +45,16 @@ import (
 )
 
 // Bootstrap runs the bootstrap script on StaticInstance.
-func (c *Client) Bootstrap(ctx context.Context,
-	staticInstance *deckhousev1.StaticInstance,
-	staticMachine *infrav1.StaticMachine,
-	machine *clusterv1.Machine) (ctrl.Result, error) {
-	phase := staticInstance.GetPhase()
-
-	if phase != deckhousev1.StaticInstanceStatusCurrentStatusPhasePending &&
+func (c *Client) Bootstrap(ctx context.Context, staticInstance *deckhousev1.StaticInstance,
+	staticMachine *infrav1.StaticMachine, machine *clusterv1.Machine) (ctrl.Result, error) {
+	if phase := staticInstance.GetPhase(); phase != deckhousev1.StaticInstanceStatusCurrentStatusPhasePending &&
 		phase != deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping {
 		return ctrl.Result{}, errors.New("StaticInstance is not pending or bootstrapping")
 	}
 
 	result, err := c.bootstrapStaticInstance(ctx, staticInstance, staticMachine, machine)
 	if err != nil {
-		return result, fmt.Errorf("failed to bootstrap StaticInstance from '%s' phase: %w", phase, err)
+		return result, fmt.Errorf("failed to bootstrap StaticInstance from '%s' phase: %w", staticInstance.GetPhase(), err)
 	}
 
 	return result, nil
@@ -128,6 +124,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 			tLogger.Error(err, "failed to create ssh client")
 			return fmt.Errorf("failed to create ssh client: %w", tErr)
 		}
+		tLogger.Info("bootstrapping node")
 		tRes, tErr := sshCl.ExecSSHCommandToString(
 			fmt.Sprintf("mkdir -p /var/lib/bashible && echo '%s' > /var/lib/bashible/node-spec-provider-id && echo '%s' > /var/lib/bashible/machine-name && echo '%s' | base64 -d | bash",
 				t.providerID, t.machineName, base64.StdEncoding.EncodeToString(t.bootstrapScript)))
@@ -149,8 +146,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		return nil
 	}
 
-	taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
-	err, finished := c.taskManager.Spawn(taskCtx, string(staticMachine.Spec.ProviderID), "bootstrap", taskData, taskFunc)
+	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "bootstrap", taskData, taskFunc)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to bootstrap StaticInstance: %w", err)
 	}
@@ -213,7 +209,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				return errors.New("invalid task data")
 			}
 
-			tLogger.Info("Waiting for TCP connection for boostrap with timeout", "address", t.address, "timeout", t.delay.String())
+			tLogger.Info("Checking TCP connection", "address", t.address, "timeout", t.delay.String())
 			conn, tErr := net.DialTimeout("tcp", t.address, t.delay)
 			if tErr != nil {
 				tLogger.Error(tErr, "Failed to connect to instance by TCP", "address", t.address)
@@ -226,9 +222,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			return nil
 		}
 
-		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
-		logger.Info("Scheduling TCP check", "timeout", delay, "address", address)
-		err, finished := c.taskManager.Spawn(taskCtx, address, "tcp-check", taskData, taskFunc)
+		logger.Info("Running TCP check", "timeout", delay, "address", address)
+		err, finished := c.taskManager.Spawn(c.taskManagerCtx, address, "tcp-check", taskData, taskFunc)
 		if err != nil {
 			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
 			logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection")
@@ -249,6 +244,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
+		logger.Info("TCP connection check passed")
 		conditions.Set(staticInstance, metav1.Condition{
 			Type:               infrav1.StaticInstanceCheckTCPConnection,
 			Status:             metav1.ConditionTrue,
@@ -258,9 +254,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 		})
 	}
 
-	sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition)
-	if sshCondition == nil || sshCondition.Status != metav1.ConditionTrue {
-
+	if sshCondition := conditions.Get(staticInstance, infrav1.StaticInstanceCheckSSHCondition); sshCondition == nil ||
+		sshCondition.Status != metav1.ConditionTrue {
 		type taskDataStr struct {
 			host          string
 			address       string
@@ -313,9 +308,8 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			return nil
 		}
 
-		taskCtx := ctrl.LoggerInto(c.taskManagerCtx, ctrl.LoggerFrom(ctx))
-		logger.Info("Scheduling SSH check", "timeout", delay, "address", address)
-		err, finished := c.taskManager.Spawn(taskCtx, address, "ssh-check", taskData, taskFunc)
+		logger.Info("Running SSH check", "timeout", delay, "address", address)
+		err, finished := c.taskManager.Spawn(c.taskManagerCtx, address, "ssh-check", taskData, taskFunc)
 		if err != nil {
 			logger.Error(err, "Failed to connect via ssh to StaticInstance address")
 			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceSshFailed", err.Error())
@@ -336,6 +330,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 			return ctrl.Result{RequeueAfter: delay}, nil
 		}
 
+		logger.Info("SSH connectivity check passed")
 		conditions.Set(staticInstance, metav1.Condition{
 			Type:               infrav1.StaticInstanceCheckSSHCondition,
 			Status:             metav1.ConditionTrue,
@@ -373,16 +368,11 @@ func (c *Client) reserveStaticInstance(staticInstance *deckhousev1.StaticInstanc
 	}
 
 	staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping)
-
 	return nil
 }
 
 func (c *Client) releaseStaticInstance(staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine) {
-	if staticInstance.Status.MachineRef == nil {
-		return
-	}
-
-	if staticInstance.Status.MachineRef.UID != staticMachine.UID {
+	if staticInstance.Status.MachineRef == nil || staticInstance.Status.MachineRef.UID != staticMachine.UID {
 		return
 	}
 
@@ -399,7 +389,6 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, staticInst
 	}
 
 	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "NodeBootstrappingSucceeded", "Node successfully bootstrapped")
-
 	logger.Info("Node successfully bootstrapped", "node", node.Name)
 
 	staticMachine.Status.Addresses = mapAddresses(node.Status.Addresses)
@@ -428,7 +417,6 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, staticInst
 	})
 
 	staticInstance.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning)
-
 	return nil
 }
 
@@ -437,12 +425,11 @@ func (c *Client) getNodeByProviderID(ctx context.Context, staticMachine *infrav1
 	nodes := &corev1.NodeList{}
 	nodeSelector := fields.OneTermEqualSelector("spec.providerID", string(staticMachine.Spec.ProviderID))
 
-	err := c.client.List(
+	if err := c.client.List(
 		ctx,
 		nodes,
 		client.MatchingFieldsSelector{Selector: nodeSelector},
-	)
-	if err != nil {
+	); err != nil {
 		return nil, fmt.Errorf("failed to find Node by provider id '%s': %w", staticMachine.Spec.ProviderID, err)
 	}
 
