@@ -272,7 +272,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeScheduler134VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler134VexArtifact",
 		"kubeScheduler135":                    "imageHash-controlPlaneManager-kubeScheduler135",
 		"kubeScheduler135VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler135VexArtifact",
-		"updateObserver":                      "imageHash-controlPlaneManager-updateObserver",
 	},
 	"deckhouse": map[string]interface{}{
 		"init":                      "imageHash-deckhouse-init",
