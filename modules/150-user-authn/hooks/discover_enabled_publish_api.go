@@ -120,8 +120,13 @@ func discoverPublishAPI(_ context.Context, input *go_hook.HookInput) error {
 
 		input.Values.Set("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", addKCGEBool)
 		input.Values.Set("userAuthn.internal.publishAPI.whitelistSourceRanges", whitelistsSlice)
-		input.Values.Set("userAuthn.internal.publishAPI.https.mode", string(configs.HTTPSMode))
-		input.Values.Set("userAuthn.internal.publishAPI.ingressClass", string(configs.IngressClass))
+
+		if configs.HTTPSMode != nil {
+			input.Values.Set("userAuthn.internal.publishAPI.https.mode", string(configs.HTTPSMode))
+		}
+		if configs.IngressClass != nil {
+			input.Values.Set("userAuthn.internal.publishAPI.ingressClass", string(configs.IngressClass))
+		}
 	}
 	return nil
 }
