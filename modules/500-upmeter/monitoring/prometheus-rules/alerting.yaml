@@ -300,21 +300,27 @@
         absent_over_time(
           (
             (
-              count(last_over_time(kube_pod_labels{
-                namespace="d8-upmeter",
-                label_heritage="upmeter",
-                label_upmeter_probe="controller-manager"
-              }[__SCRAPE_INTERVAL__]))
-              /
-              clamp_min(
+              (
                 count(last_over_time(kube_pod_labels{
                   namespace="d8-upmeter",
-                  label_app="upmeter-agent"
-                }[__SCRAPE_INTERVAL__])),
+                  label_heritage="upmeter",
+                  label_upmeter_probe="controller-manager"
+                }[30s]))
+                or on() vector(0)
+              )
+              /
+              clamp_min(
+                (
+                  count(last_over_time(kube_pod_labels{
+                    namespace="d8-upmeter",
+                    label_app="upmeter-agent"
+                  }[30s]))
+                  or on() vector(0)
+                ),
                 1
               )
             ) < 1
-          )[10m:__SCRAPE_INTERVAL__]
+          )[10m:30s]
         ) == 1
       labels:
         severity_level: "9"
