@@ -19,18 +19,12 @@ set -Eeuo pipefail
 shopt -s failglob
 
 bootstrap_log_init() {
-  local current_file="$1"
-
   if [[ -z ${bootstrap_log_initialized:-} ]]; then
     mkdir -p /var/log/d8/bashible
     exec {bootstrap_stdout_fd}>&1
     exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
     bootstrap_log_initialized=1
   fi
-
-  printf '\n=================================\n'
-  printf '== %s ==\n' "${current_file}"
-  printf '=================================\n'
 }
 
 bootstrap_log_init "03-prepare-bashible.sh.tpl"
