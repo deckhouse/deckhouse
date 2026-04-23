@@ -84,10 +84,11 @@ Run the sync:
 
 ## Environment Variables
 
-| Variable        | Default   | Description                                              |
-| --------------- | --------- | -------------------------------------------------------- |
-| `LOG_LEVEL`     | `info`    | Log verbosity: `debug`, `info`, `warn`, `error`          |
-| `LOG_TIMESTAMP` | *(unset)* | Set to any non-empty value to include timestamps in logs |
+| Variable             | Default   | Description                                              |
+| -------------------- | --------- | -------------------------------------------------------- |
+| `LOG_LEVEL`          | `info`    | Log verbosity: `debug`, `info`, `warn`, `error`          |
+| `SHOW_LOG_LEVEL`     | *(unset)* | Set to `true` to include log level in output             |
+| `SHOW_LOG_TIMESTAMP` | *(unset)* | Set to `true` to include timestamps in logs              |
 
 ## How It Works
 
