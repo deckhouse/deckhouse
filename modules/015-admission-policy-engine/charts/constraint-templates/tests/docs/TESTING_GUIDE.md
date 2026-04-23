@@ -214,7 +214,7 @@ spec:
   outputTestDirectory: rendered           # Output directory (always "rendered")
   defaultObjectBase: admissionPod         # Default base key for case objects
   defaultInventory:                       # Inventory prepended to every case
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:                                  # Reusable base documents
     admissionPod:
       document:
@@ -275,6 +275,20 @@ Cases use a **base + merge** pattern:
 - `merge` is a deep-merge patch applied on top of the base document
 - Maps recurse; **arrays in `merge` replace** the whole array at that path
 - Use `containerMerges` / `initContainerMerges` for single-container deltas when the base already defines that container
+
+### Inventory `ref` paths and `$TEST_ROOT`
+
+For shared fixtures, use the `$TEST_ROOT` token in `ref` paths:
+
+```yaml
+defaultInventory:
+  - ref: $TEST_ROOT/_test-samples/ns.yaml
+```
+
+Rules:
+- `$TEST_ROOT` is resolved by the generator to the tests root (`tests/test_cases`)
+- Prefer `$TEST_ROOT` for shared samples instead of deep relative paths like `../../../...`
+- Rendering normalizes resulting paths in `rendered/test_suite.yaml` to stable relative references
 
 ### Fields annotations
 
@@ -346,7 +360,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -602,7 +616,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:

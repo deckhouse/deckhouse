@@ -363,7 +363,20 @@ func copyIntoRendered(target, renderedDir, sourceDir, testsRoot, relPath string)
 }
 
 func resolveSourcePath(renderedDir, sourceDir, testsRoot, relPath string) (string, error) {
-	clean := filepath.Clean(strings.TrimSpace(relPath))
+	cleanInput := strings.TrimSpace(relPath)
+	if cleanInput == "" {
+		return "", fmt.Errorf("empty path")
+	}
+	if abs, ok, err := resolveTokenToAbsPath(cleanInput, sourceDir, renderedDir); err != nil {
+		return "", err
+	} else if ok {
+		if st, statErr := os.Stat(abs); statErr == nil && !st.IsDir() {
+			return abs, nil
+		}
+		return "", fmt.Errorf("source file not found for %q", relPath)
+	}
+
+	clean := filepath.Clean(cleanInput)
 	if clean == "." || clean == "" {
 		return "", fmt.Errorf("empty path")
 	}
@@ -980,6 +993,10 @@ func resolveMatrixInventoryItem(raw interface{}, bases map[string]matrixBase, sa
 		if ref == "" {
 			return "", fmt.Errorf("empty inventory ref")
 		}
+		ref, err := normalizeRefForSuite(ref, outDir)
+		if err != nil {
+			return "", err
+		}
 		if tracker != nil {
 			return tracker.dedupRefPath(ref)
 		}
@@ -988,6 +1005,10 @@ func resolveMatrixInventoryItem(raw interface{}, bases map[string]matrixBase, sa
 		if ref, ok := v["ref"].(string); ok && ref != "" {
 			if v["base"] != nil || v["merge"] != nil || v["path"] != nil || v["containerMerges"] != nil || v["initContainerMerges"] != nil {
 				return "", fmt.Errorf("inventory item: ref cannot mix with base/merge/path/containerMerges/initContainerMerges")
+			}
+			ref, err := normalizeRefForSuite(ref, outDir)
+			if err != nil {
+				return "", err
 			}
 			if tracker != nil {
 				return tracker.dedupRefPath(ref)
@@ -1032,6 +1053,10 @@ func resolveMatrixObject(raw interface{}, bases map[string]matrixBase, samplesDi
 	if ref, ok := v["ref"].(string); ok && ref != "" {
 		if v["base"] != nil || v["merge"] != nil || v["path"] != nil || v["containerMerges"] != nil || v["initContainerMerges"] != nil || podName != "" {
 			return "", fmt.Errorf("object: ref cannot mix with base/merge/path/containerMerges/podName")
+		}
+		ref, err := normalizeRefForSuite(ref, outDir)
+		if err != nil {
+			return "", err
 		}
 		if tracker != nil {
 			return tracker.dedupRefPath(ref)

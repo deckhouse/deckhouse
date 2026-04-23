@@ -214,7 +214,7 @@ spec:
   outputTestDirectory: rendered           # Директория вывода (всегда "rendered")
   defaultObjectBase: admissionPod         # Base по умолчанию для объектов кейсов
   defaultInventory:                       # Inventory, добавляемый к каждому кейсу
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:                                  # Переиспользуемые базовые документы
     admissionPod:
       document:
@@ -275,6 +275,20 @@ blocks:
 - `merge` — deep-merge патч, применяемый поверх базового документа
 - Словари рекурсивно мержатся; **массивы в `merge` заменяют** весь массив по этому пути
 - Используйте `containerMerges` / `initContainerMerges` для точечных патчей контейнеров, когда base уже определяет этот контейнер
+
+### Пути `ref` в inventory и `$TEST_ROOT`
+
+Для общих фикстур используйте токен `$TEST_ROOT` в путях `ref`:
+
+```yaml
+defaultInventory:
+  - ref: $TEST_ROOT/_test-samples/ns.yaml
+```
+
+Правила:
+- `$TEST_ROOT` резолвится генератором в корень тестов (`tests/test_cases`)
+- Для общих sample-файлов предпочитайте `$TEST_ROOT`, а не глубокие относительные пути вида `../../../...`
+- При рендеринге пути в `rendered/test_suite.yaml` нормализуются в стабильные относительные ссылки
 
 ### Аннотации fields
 
@@ -346,7 +360,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -602,7 +616,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:

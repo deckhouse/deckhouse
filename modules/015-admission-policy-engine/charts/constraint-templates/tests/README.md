@@ -4,10 +4,11 @@ This directory contains the testing infrastructure for Gatekeeper ConstraintTemp
 
 ## Documentation
 
-| Document                                             | Description                                                                                      |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)       | **Comprehensive testing guide (EN)** — everything a newcomer needs to write tests from scratch   |
-| [AGENTS.md](AGENTS.md)                               | AI agent prompt for writing constraint tests                                                     |
+| Document                                          | Description                                                                                    |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)    | **Comprehensive testing guide (EN)** — everything a newcomer needs to write tests from scratch |
+| [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE_RU.md) | **Comprehensive testing guide (RU)** — everything a newcomer needs to write tests from scratch |
+| [AGENTS.md](AGENTS.md)                            | AI agent prompt for writing constraint tests                                                   |
 
 ## OpenAPI Schemas
 
@@ -26,6 +27,7 @@ tests/
 ├── tools/constraint_testgen/ # Go code generator tool
 ├── test_cases/
 │   ├── run_all_tests.sh      # Master test runner
+│   ├── libs/                 # Library with test files (simlink to templates/libs folder)
 │   └── constraints/
 │       ├── security/         # Security policy constraints
 │       └── operation/        # Operational policy constraints
@@ -57,7 +59,9 @@ From the module root (`modules/015-admission-policy-engine`):
 
 ```bash
 # Set tool path
-constraint_testgen=./tools/constraint_testgen
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
 # Generate rendered artifacts from matrix
 go run $constraint_testgen generate \
@@ -79,7 +83,9 @@ go run $constraint_testgen coverage \
 ### From within a constraint directory
 
 ```bash
-constraint_testgen=../../../../tools/constraint_testgen
+GIT_ROOT=$(git rev-parse --show-toplevel)
+CHART_DIR=${GIT_ROOT}/modules/015-admission-policy-engine/charts/constraint-templates
+constraint_testgen=${CHART_DIR}/tests/tools/constraint_testgen
 
 go run $constraint_testgen generate -bundle ./test-matrix.yaml
 gator verify -v ./rendered
@@ -87,3 +93,20 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 ```
 
 For detailed instructions, see [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md).
+
+## Make-based test entrypoint
+
+From the chart root [Makefile](../Makefile):
+
+- `make test all`
+- `make test all -- --docker`
+- `make test coverage all`
+- `make test coverage all -- --docker`
+- `make test constraint -- --name <constraint-name>`
+- `make test constraint -- --name <constraint-name> --docker`
+- `make test coverage constraint -- --name <constraint-name>`
+- `make test coverage constraint -- --name <constraint-name> --docker`
+
+`--docker` mode builds [tests/images/test-container/dockerfile](images/test-container/dockerfile) and runs tests inside the container with [tests](.) mounted as a volume.
+
+> GNU Make treats `--docker` and `--name` as CLI options. To pass them as goal-like tokens, use `--` separator as shown above.

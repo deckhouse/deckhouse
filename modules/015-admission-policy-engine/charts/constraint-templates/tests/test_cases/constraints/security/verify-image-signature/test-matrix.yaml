@@ -7,7 +7,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
   externalData:
     providers:
       - name: ratify-provider

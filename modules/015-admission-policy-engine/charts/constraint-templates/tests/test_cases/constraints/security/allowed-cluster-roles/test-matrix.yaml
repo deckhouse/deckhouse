@@ -6,7 +6,7 @@ spec:
   suiteName: allowed-cluster-roles
   outputTestDirectory: rendered
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
   bases:
     roleBinding:
       document:

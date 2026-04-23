@@ -82,7 +82,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -156,12 +156,13 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 ## Critical rules
 
 1. **Path matching**: every `fields[].path` in test-matrix.yaml must be **byte-for-byte identical** to the corresponding `path` in test_fields.yaml.
-2. **Array merge semantics**: arrays in `merge` patches **replace** the entire array. Use `containerMerges`/`initContainerMerges` for targeted container patches.
-3. **Never edit `rendered/`**: all files under `rendered/` are generated. Re-run `generate` after any matrix change.
-4. **SPE label**: SPE cases must set `metadata.labels.security.deckhouse.io/security-policy-exception: <exception-name>` on the Pod, where `<exception-name>` matches the SPE `metadata.name`.
-5. **Constraint naming**: use `pss_baseline.yaml`, `pss_restricted.yaml`, `policy_<n>.yaml` (numbering from 1).
-6. **external_data constraints** (e.g. `verify-image-signature`, `vulnerable-images`) are tested via the inventory-based mock pattern: set `parameters.isTest: true` in the constraint manifest, declare `spec.externalData.providers` in the matrix for default mock responses, and use per-case `externalData.providers` overrides to simulate errors/vulnerabilities. The Rego template's `external_data_from_inventory` helper reads mock data from gator inventory instead of calling real `external_data`.
-7. **RFC1123 names are strict in `test-matrix.yaml`**: values provided directly in matrix for Kubernetes object names must already match RFC1123 subdomain (no auto-fix). This includes `spec.suiteName`, explicit `metadata.name` values in merged objects, `exception/exceptionRef` names, and `metadata.labels.security.deckhouse.io/security-policy-exception` (must exactly match valid exception name). Only generator-derived fallback names may be normalized deterministically.
+2. **`$TEST_ROOT` token in `ref` paths**: use `ref: $TEST_ROOT/...` for shared fixtures. The generator resolves `$TEST_ROOT` to `tests/test_cases` and normalizes it to stable relative paths in rendered suites.
+3. **Array merge semantics**: arrays in `merge` patches **replace** the entire array. Use `containerMerges`/`initContainerMerges` for targeted container patches.
+4. **Never edit `rendered/`**: all files under `rendered/` are generated. Re-run `generate` after any matrix change.
+5. **SPE label**: SPE cases must set `metadata.labels.security.deckhouse.io/security-policy-exception: <exception-name>` on the Pod, where `<exception-name>` matches the SPE `metadata.name`.
+6. **Constraint naming**: use `pss_baseline.yaml`, `pss_restricted.yaml`, `policy_<n>.yaml` (numbering from 1).
+7. **external_data constraints** (e.g. `verify-image-signature`, `vulnerable-images`) are tested via the inventory-based mock pattern: set `parameters.isTest: true` in the constraint manifest, declare `spec.externalData.providers` in the matrix for default mock responses, and use per-case `externalData.providers` overrides to simulate errors/vulnerabilities. The Rego template's `external_data_from_inventory` helper reads mock data from gator inventory instead of calling real `external_data`.
+8. **RFC1123 names are strict in `test-matrix.yaml`**: values provided directly in matrix for Kubernetes object names must already match RFC1123 subdomain (no auto-fix). This includes `spec.suiteName`, explicit `metadata.name` values in merged objects, `exception/exceptionRef` names, and `metadata.labels.security.deckhouse.io/security-policy-exception` (must exactly match valid exception name). Only generator-derived fallback names may be normalized deterministically.
 
 ## SPE case pattern
 
@@ -261,7 +262,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -332,7 +333,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: ../../../_test-samples/ns.yaml
+    - ref: $TEST_ROOT/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
