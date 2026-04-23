@@ -18,7 +18,6 @@ package internal
 
 import (
 	"context"
-	"manager/src/internal/helper"
 	"os"
 
 	"github.com/go-logr/logr"
@@ -27,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	v1 "manager/src/api/v1"
+	"manager/src/internal/helper"
 )
 
 type IngressNginxController struct {
