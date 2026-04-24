@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index ee1916998..435931ac9 100644
+index ee1916998..cbfe6a1cd 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,14 +1,14 @@
@@ -70,7 +70,7 @@ index ee1916998..435931ac9 100644
  	github.com/go-logr/stdr v1.2.2 // indirect
  	github.com/go-logr/zapr v1.3.0 // indirect
  	github.com/go-openapi/jsonpointer v0.21.0 // indirect
-@@ -66,7 +67,7 @@ require (
+@@ -66,11 +67,11 @@ require (
  	github.com/google/pprof v0.0.0-20241029153458-d1b30febd7db // indirect
  	github.com/google/uuid v1.6.0 // indirect
  	github.com/gorilla/websocket v1.5.1 // indirect
@@ -79,6 +79,11 @@ index ee1916998..435931ac9 100644
  	github.com/josharian/intern v1.0.0 // indirect
  	github.com/json-iterator/go v1.1.12 // indirect
  	github.com/mailru/easyjson v0.7.7 // indirect
+-	github.com/moby/spdystream v0.5.0 // indirect
++	github.com/moby/spdystream v0.5.1 // indirect
+ 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+ 	github.com/modern-go/reflect2 v1.0.2 // indirect
+ 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 @@ -83,21 +84,21 @@ require (
  	github.com/stretchr/objx v0.5.2 // indirect
  	github.com/vjeantet/grok v1.0.0 // indirect
@@ -112,7 +117,7 @@ index ee1916998..435931ac9 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 diff --git a/go.sum b/go.sum
-index 8cba35f8b..b15c00d30 100644
+index 8cba35f8b..e71e993c7 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -8,6 +8,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
@@ -162,6 +167,17 @@ index 8cba35f8b..b15c00d30 100644
  github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
  github.com/josharian/intern v1.0.0/go.mod h1:5DoeVV0s6jJacbCEi61lwdGj/aVlrQvzHFFd8Hwg//Y=
  github.com/jpillora/backoff v1.0.0 h1:uvFg412JmmHBHw7iwprIxkPMI+sGQ4kzOWsMeHnm2EA=
+@@ -83,8 +85,8 @@ github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJ
+ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
+ github.com/mitchellh/mapstructure v1.4.3 h1:OVowDSCllw/YjdLkam3/sm7wEtOy59d8ndGgCcyj8cs=
+ github.com/mitchellh/mapstructure v1.4.3/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
+-github.com/moby/spdystream v0.5.0 h1:7r0J1Si3QO/kjRitvSLVVFUjxMEb/YLj6S9FF62JBCU=
+-github.com/moby/spdystream v0.5.0/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
++github.com/moby/spdystream v0.5.1 h1:9sNYeYZUcci9R6/w7KDaFWEWeV4LStVG78Mpyq/Zm/Y=
++github.com/moby/spdystream v0.5.1/go.mod h1:xBAYlnt/ay+11ShkdFKNAG7LsyK/tmNBVvVOwrfMgdI=
+ github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
+ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd h1:TRLaZ9cD/w8PVh93nsPXa1VrQ6jlwL5oN8l14QlcNfg=
+ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJC0mAP4ikYIbvyc7fijjWJddQyLn8Ig3JB5CqoB9Q=
 @@ -122,8 +124,8 @@ github.com/prometheus/common v0.55.0 h1:KEi6DK7lXW/m7Ig5i47x0vRzuBsHuvJdi5ee6Y3G
  github.com/prometheus/common v0.55.0/go.mod h1:2SECS4xJG1kd8XF9IcM1gMX6510RAEL65zxzNImwdc8=
  github.com/prometheus/procfs v0.15.1 h1:YagwOFzUgYfKKHX6Dr+sHT7km/hxC76UB0learggepc=
