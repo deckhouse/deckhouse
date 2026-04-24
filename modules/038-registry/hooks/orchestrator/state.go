@@ -164,7 +164,7 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 			Password:   inputs.Params.Password,
 		}
 
-	case registry_const.ModeProxy, registry_const.ModeLocal:
+	case registry_const.ModeProxy:
 		bashibleActualParams = &bashible.ModeParams{
 			Proxy: &bashible.ProxyLocalModeParams{
 				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
@@ -179,6 +179,15 @@ func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
 			CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
 			Username:   inputs.Params.UserName,
 			Password:   inputs.Params.Password,
+		}
+
+	case registry_const.ModeLocal:
+		bashibleActualParams = &bashible.ModeParams{
+			Local: &bashible.ProxyLocalModeParams{
+				CA:       string(registry_pki.EncodeCertificate(pkiResult.CA.Cert)),
+				Username: state.Users.RO.UserName,
+				Password: state.Users.RO.Password,
+			},
 		}
 
 	case registry_const.ModeUnmanaged:
