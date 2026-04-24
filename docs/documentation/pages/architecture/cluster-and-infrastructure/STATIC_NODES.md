@@ -49,7 +49,7 @@ The module managing Static nodes consists of the following components:
 
 5. **Fencing-agent** (DaemonSet): Deployed to a node group when the [`spec.fencing`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing) parameter of the NodeGroup custom resource is enabled.
 
-   After startup, the agent sets the labels `node-manager.deckhouse.io/fencing-enabled` and `node-manager.deckhouse.io/fencing-mode` (the label value is taken from `spec.fencing.mode` — either `Watchdog` or `Notify`) on the node. Agents from the same NodeGroup form a gossip cluster based on the [`memberlist`](https://github.com/hashicorp/memberlist) library and continuously monitor each other over the SWIM protocol, without depending on control-plane availability.
+   After startup, the agent sets the labels `node-manager.deckhouse.io/fencing-enabled` and `node-manager.deckhouse.io/fencing-mode` (the label value is taken from `spec.fencing.mode` — either `Watchdog`) on the node. Agents from the same NodeGroup form a gossip cluster based on the [`memberlist`](https://github.com/hashicorp/memberlist) library and continuously monitor each other over the SWIM protocol, without depending on control-plane availability.
 
    Fencing works in two stages so that short-term connectivity issues do not trigger cascading action:
 
@@ -59,7 +59,6 @@ The module managing Static nodes consists of the following components:
    As long as quorum is held or the API is reachable, the agent periodically resets the Watchdog timer. If neither is available, the agent stops resetting the timer, and the kernel triggers a kernel panic once the timer expires. The exact behavior depends on `spec.fencing.mode`:
 
    * `Watchdog`: The `softdog` kernel module is loaded with `soft_margin` set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`. When fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level — this prevents the node from coming back with an undefined state before the operator returns it to service manually.
-   * `Notify`: The agent runs and monitors the cluster, but the watchdog is not armed, and the node is not rebooted. The mode is intended for debugging and observation.
 
    The agent also exposes a local gRPC API over the Unix socket `/tmp/fencing-agent.sock` (methods `GetAll()` and `StreamEvents()`): external consumers (for example, CNI agents) can retrieve the node list and subscribe to node join/leave events without talking to the Kubernetes API.
 
@@ -73,7 +72,7 @@ The module managing Static nodes consists of the following components:
 
 6. **Fencing-controller**: A controller that watches all nodes labeled with `node-manager.deckhouse.io/fencing-enabled`.
 
-   If a node is unavailable for more than 60 seconds, the controller deletes all pods from the node but **does not delete the Node object** for static nodes (`node.deckhouse.io/type=Static`) or nodes running in `Notify` mode (label `node-manager.deckhouse.io/fencing-mode=Notify`). This preserves the node's cluster registration so it can return to service after being manually put back online.
+   If a node is unavailable for more than 60 seconds, the controller deletes all pods from the node but **does not delete the Node object** for static nodes (`node.deckhouse.io/type=Static`). This preserves the node's cluster registration so it can return to service after being manually put back online.
 
 For details on how fencing handles different node types, see the [How fencing handles different node types](/modules/node-manager/faq.html#how-fencing-handles-different-node-types) section in the `node-manager` FAQ.
 

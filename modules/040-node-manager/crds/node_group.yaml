@@ -2379,16 +2379,14 @@ spec:
                       type: string
                       enum:
                         - "Watchdog"
-                        - "Notify"
                       description: |
-                        Fencing operating modes:
+                        Fencing operating mode:
                         - `Watchdog`: uses the kernel watchdog module to automatically reboot nodes that have lost connectivity to the cluster. Also in this mode, the fencing agent monitors the nodes available in the cluster.
-                        - `Notify`: runs the fencing-agent but does not activate the watchdog (validation mode, no reboots). In this mode, the fencing agent monitors the nodes available in the cluster.
 
                         When fencing is enabled, the NodeGroupConfiguration script loads the `softdog` kernel module with `soft_margin` set to the value of `spec.fencing.watchdog.timeout` (60 seconds by default) and `soft_panic=1`.
 
                         How the fencing-agent works:
-                        - Opens `/dev/watchdog` and sets two labels on the node: `node-manager.deckhouse.io/fencing-enabled` and `node-manager.deckhouse.io/fencing-mode` (the value of the second label is taken from `spec.fencing.mode` — either `Watchdog` or `Notify`).
+                        - Opens `/dev/watchdog` and sets two labels on the node: `node-manager.deckhouse.io/fencing-enabled` and `node-manager.deckhouse.io/fencing-mode`, value of this label set to `Watchdog`.
                         - Joins a gossip cluster (`memberlist`) with other fencing-agents in the same NodeGroup.
                         - Regularly checks quorum (availability of a majority of nodes in the NodeGroup).
                         - If quorum is not reached (`quorum=false`), performs a fallback check of Kubernetes API availability.
@@ -2399,7 +2397,7 @@ spec:
 
                         When fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level to prevent the node from coming back in an undefined state before it is properly reconciled (manually for static nodes, by the cloud-provider controller for cloud nodes).
 
-                        The fencing-controller takes the node type (`node.deckhouse.io/type`) and fencing mode into account when reacting to a fenced node: for cloud nodes (`CloudEphemeral`, `CloudPermanent`) in `Watchdog` mode it deletes the Node object (so the cloud-provider recreates the underlying virtual machine); for static nodes (`Static`, `CloudStatic`) and for `Notify` mode it only evicts workloads and keeps the Node object. See the [node-manager FAQ](../../modules/node-manager/faq.html#how-fencing-handles-different-node-types) for details.
+                        The fencing-controller takes the node type (`node.deckhouse.io/type`) into account when reacting to a fenced node: for cloud nodes (`CloudEphemeral`, `CloudPermanent`) it deletes the Node object (so the cloud-provider recreates the underlying virtual machine); for static nodes (`Static`, `CloudStatic`) it only evicts workloads and keeps the Node object. See the [node-manager FAQ](../../modules/node-manager/faq.html#how-fencing-handles-different-node-types) for details.
                     watchdog:
                       type: object
                       properties:

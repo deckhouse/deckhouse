@@ -1510,10 +1510,6 @@ There is a theoretical scenario where kubelet on a "stuck" VM could come back be
 
 For static nodes the Node object is **not deleted**, because there is no controller that will recreate it: no machine can be provisioned under such a Node. The fencing-agent still powers the node off via kernel panic to rule out undefined behavior, and the fencing-controller only evicts workloads (deletes pods). The Node object itself remains, and the node waits until an operator manually brings it back online.
 
-### `Notify` mode
-
-In `Notify` mode the fencing-agent runs and monitors the cluster, but the watchdog is not armed and the node is not rebooted. For nodes in this mode the fencing-controller also does not delete the Node object — the mode is intended for debugging and for observing fencing without actually affecting nodes. But pods will be deleted from the node.
-
 ### Disabling automatic reboot after kernel panic
 
 In all cases, when fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level (via a kernel setting). This prevents the node from coming back by itself, in an undefined state, before the cloud-provider removes or recreates the machine (for cloud nodes) or an operator brings the node back online (for static nodes).
