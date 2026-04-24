@@ -53,7 +53,7 @@ Bashible — это ключевой компонент подсистемы Clu
 
 5. **Fencing-agent** (DaemonSet) и **Fencing-controller** — компоненты, реализующие механизм fencing. Подробное описание приведено на странице [Управление Static-узлами](static-nodes.html#компоненты-модуля). Подробнее о том, как fencing обрабатывает разные типы узлов, см. раздел [«Как fencing обрабатывает разные типы узлов»](/modules/node-manager/faq.html#как-fencing-обрабатывает-разные-типы-узлов) в FAQ модуля `node-manager`.
 
-7. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
+6. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
 
    Резервный узел — это узел кластера, на котором резервируются ресурсы, доступные в любой момент для масштабирования. Наличие такого узла позволяет cluster-autoscaler не ждать инициализации узла (которая может занимать несколько минут), а сразу размещать на нем нагрузку.
 

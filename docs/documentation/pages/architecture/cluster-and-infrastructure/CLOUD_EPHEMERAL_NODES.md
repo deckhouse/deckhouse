@@ -52,7 +52,7 @@ The module managing CloudEphemeral nodes consists of the following components:
 
 5. **Fencing-agent** (DaemonSet) and **Fencing-controller**: Components that implement node fencing. For a detailed description, see the [Static node management](static-nodes.html#module-components) page. For details on how fencing handles different node types, see the [How fencing handles different node types](/modules/node-manager/faq.html#how-fencing-handles-different-node-types) section in the `node-manager` FAQ.
 
-7. **Standby-holder** (Deployment): A pod used to reserve nodes. When the [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter is enabled in the NodeGroup custom resource, standby nodes are created in all configured [zones](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones).
+6. **Standby-holder** (Deployment): A pod used to reserve nodes. When the [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter is enabled in the NodeGroup custom resource, standby nodes are created in all configured [zones](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones).
 
    A standby node is a cluster node with pre-reserved resources available for immediate scaling. This allows cluster-autoscaler to schedule workloads without waiting for node initialization, which may take several minutes.
 
