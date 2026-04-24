@@ -74,6 +74,19 @@ spec:
           && "security.deckhouse.io/heritage-bypass" in oldObject.metadata.labels
           && oldObject.metadata.labels["security.deckhouse.io/heritage-bypass"] == "delete"
         )
+    - name: 'exclude-module-source-scan-interval'
+      expression: |
+        !(
+          request.operation == "UPDATE"
+          && has(request.kind) && request.kind.kind == "ModuleSource"
+          && (
+            (!has(oldObject.spec.scanInterval) && has(object.spec.scanInterval))
+            || (has(oldObject.spec.scanInterval) && !has(object.spec.scanInterval))
+            || (has(oldObject.spec.scanInterval) && has(object.spec.scanInterval)
+                && oldObject.spec.scanInterval != object.spec.scanInterval)
+          )
+          && object.spec.registry == oldObject.spec.registry
+        )
   validations:
     - expression: |
         request.userInfo.username.startsWith("system:serviceaccount:d8-")
