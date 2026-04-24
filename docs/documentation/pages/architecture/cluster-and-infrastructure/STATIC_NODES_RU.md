@@ -61,8 +61,6 @@ Bashible — это ключевой компонент подсистемы Clu
 
    * `Watchdog` — модуль ядра `softdog` загружается с параметром `soft_margin`, равным значению `spec.fencing.watchdog.timeout` (по умолчанию 60 секунд), и `soft_panic=1`. При включённом fencing автоматическая перезагрузка узла после kernel panic отключена на уровне ОС — это исключает возврат узла с неопределённым состоянием до того, как оператор вручную введёт его обратно в строй.
 
-   Дополнительно агент предоставляет локальный gRPC API через Unix-сокет `/tmp/fencing-agent.sock` (методы `GetAll()` и `StreamEvents()`): это позволяет внешним потребителям (например, CNI-агентам) получать список узлов и подписываться на события подключения/отключения узлов без обращения к Kubernetes API.
-
    Агент учитывает аннотации обслуживания `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved` и временно отключает watchdog на время плановых операций.
 
    В качестве watchdog используется модуль ядра *softdog*.

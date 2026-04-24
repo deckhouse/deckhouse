@@ -2392,7 +2392,6 @@ spec:
                         - If quorum is not reached (`quorum=false`), performs a fallback check of Kubernetes API availability.
                         - If quorum is present or the Kubernetes API is available, the agent resets the watchdog timer.
                         - If neither quorum nor Kubernetes API access is available, the watchdog timer stops being reset, expires, and triggers a kernel panic.
-                        - Provides a local gRPC API over the `/tmp/fencing-agent.sock` Unix socket (`GetAll()` and `StreamEvents()` methods), which lets external consumers retrieve the node list and subscribe to node join/leave events without calling the Kubernetes API.
                         - Watches the maintenance annotations `node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, and `update.node.deckhouse.io/disruption-approved` to temporarily disable the watchdog during planned maintenance operations.
 
                         When fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level to prevent the node from coming back in an undefined state before it is properly reconciled (manually for static nodes, by the cloud-provider controller for cloud nodes).
