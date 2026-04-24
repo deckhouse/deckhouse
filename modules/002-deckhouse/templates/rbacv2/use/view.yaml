@@ -24,7 +24,6 @@ rules:
   - packagerepositoryoperations
   - applicationpackageversions
   - applicationpackages
-  - applications
   verbs:
   - get
   - list
