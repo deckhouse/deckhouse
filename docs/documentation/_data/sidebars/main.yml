@@ -389,6 +389,10 @@ entries:
                     en: Hybrid cluster
                     ru: Гибридный кластер
                   url: /admin/integrations/hybrid/overview.html
+                - title:
+                    en: Hybrid clusters
+                    ru: Гибридные кластера
+                  url: /admin/integrations/hybrid/hybrid-new.html  
             - title:
                 en: High reliability and availability
                 ru: Высокая надежность и доступность
