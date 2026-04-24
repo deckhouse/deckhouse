@@ -1512,7 +1512,7 @@ For static nodes the Node object is **not deleted**, because there is no control
 
 ### `Notify` mode
 
-In `Notify` mode the fencing-agent runs and monitors the cluster, but the watchdog is not armed and the node is not rebooted. For nodes in this mode the fencing-controller also does not delete the Node object — the mode is intended for debugging and for observing fencing without actually affecting nodes.
+In `Notify` mode the fencing-agent runs and monitors the cluster, but the watchdog is not armed and the node is not rebooted. For nodes in this mode the fencing-controller also does not delete the Node object — the mode is intended for debugging and for observing fencing without actually affecting nodes. But pods will be deleted from the node.
 
 ### Disabling automatic reboot after kernel panic
 
