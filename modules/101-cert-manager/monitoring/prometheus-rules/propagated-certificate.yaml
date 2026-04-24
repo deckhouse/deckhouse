@@ -22,7 +22,7 @@
 
   - alert: CertmanagerCertificateExpired
     expr: |
-      max by (name, exported_namespace) (certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 0)
+      max by (name, exported_namespace) ((certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} - time() < 0) and certmanager_certificate_expiration_timestamp_seconds{job="cert-manager"} > 0)
     for: 1h
     labels:
       severity_level: "4"
