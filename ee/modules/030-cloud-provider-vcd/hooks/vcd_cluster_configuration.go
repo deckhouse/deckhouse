@@ -233,5 +233,15 @@ func mergeDiscoveryData(
 		result.LoadBalancer.Enabled = newValue.LoadBalancer.Enabled
 	}
 
+	if result.APIVersion == "" {
+		result.APIVersion = "deckhouse.io/v1"
+	}
+	if result.Kind == "" {
+		result.Kind = "VCDCloudProviderDiscoveryData"
+	}
+	if len(result.Zones) == 0 {
+		result.Zones = []string{"default"}
+	}
+
 	return result
 }
