@@ -350,7 +350,8 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
-	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time) > DefaultStaticInstanceCleanupTimeout {
+	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning &&
+		time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time) > DefaultStaticInstanceCleanupTimeout {
 		logger.Error(StaticInstanceCleanupTimedOut, "")
 		r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
 

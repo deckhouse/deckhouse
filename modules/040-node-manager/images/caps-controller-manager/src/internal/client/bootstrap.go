@@ -151,6 +151,8 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		return nil
 	}
 
+	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger.Info("Running bootstrap task")
 	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "bootstrap", taskData, taskFunc)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to bootstrap StaticInstance: %w", err)
@@ -176,7 +178,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	staticMachine *infrav1.StaticMachine,
 	credentials deckhousev1.SSHCredentialsSpec,
 	sshLegacyMode bool) (res ctrl.Result, resErr error) {
-	logger := ctrl.LoggerFrom(ctx).WithValues("machineUID", staticMachine.UID, "address", staticInstance.Spec.Address)
+	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachineUID", staticMachine.UID, "staticInstanceAddress", staticInstance.Spec.Address)
 
 	if err := c.reserveStaticInstance(staticInstance, staticMachine); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to reserve StaticInstance: %w", err)
@@ -223,11 +225,11 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 
 			defer conn.Close()
 
-			tLogger.Info("TCP connection check completed successfully", "address", t.address, "elapsed", time.Since(start))
+			tLogger.Info("TCP connection check completed successfully", "elapsed", time.Since(start))
 			return nil
 		}
 
-		logger.Info("Running TCP check", "timeout", delay, "address", address)
+		logger.Info("Running TCP check task", "taskID", address)
 		err, finished := c.taskManager.Spawn(c.taskManagerCtx, address, "tcp-check", taskData, taskFunc)
 		if err != nil {
 			c.recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
@@ -302,18 +304,20 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 				scanner := bufio.NewScanner(strings.NewReader(tRes))
 				for scanner.Scan() {
 					str := scanner.Text()
-					if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) || strings.Contains(str, "Permission denied (publickey).") || strings.Contains(str, "Could not resolve hostname") {
+					if (strings.Contains(str, "Connection to ") && strings.Contains(str, " timed out")) ||
+						strings.Contains(str, "Permission denied (publickey).") ||
+						strings.Contains(str, "Could not resolve hostname") {
 						return errors.New(str)
 					}
 				}
 				return tErr
 			}
 
-			tLogger.Info("SSH connectivity check completed", "address", t.address, "elapsed", time.Since(start))
+			tLogger.Info("SSH connectivity check completed", "elapsed", time.Since(start))
 			return nil
 		}
 
-		logger.Info("Running SSH check", "timeout", delay, "address", address)
+		logger.Info("Running SSH check task", "taskID", address)
 		err, finished := c.taskManager.Spawn(c.taskManagerCtx, address, "ssh-check", taskData, taskFunc)
 		if err != nil {
 			logger.Error(err, "Failed to connect via ssh to StaticInstance address")
@@ -390,7 +394,7 @@ func (c *Client) setStaticInstancePhaseToRunning(ctx context.Context, staticInst
 
 	node, err := c.getNodeByProviderID(ctx, staticMachine)
 	if err != nil {
-		return fmt.Errorf("failed to get Node by provider id: %w", err)
+		return err
 	}
 
 	c.recorder.SendNormalEvent(staticInstance, staticMachine.Labels["node-group"], "NodeBootstrappingSucceeded", "Node successfully bootstrapped")
