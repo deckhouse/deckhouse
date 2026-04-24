@@ -197,7 +197,7 @@ func (link *approveLink) tryReserveApproval(unapprovedOperation controlplanev1al
 			if link.hasAnyApprovedOperation() {
 				return false
 			}
-		} else if link.hasAnyApprovedOperationOnNode(unapprovedOperation.Spec.NodeName) {
+		} else if link.hasAnyActiveOperationOnNode(unapprovedOperation.Spec.NodeName) {
 			return false
 		}
 
@@ -239,9 +239,20 @@ func (link *approveLink) hasAnyApprovedOperation() bool {
 	return false
 }
 
-func (link *approveLink) hasAnyApprovedOperationOnNode(nodeName string) bool {
+// hasAnyActiveOperationOnNode returns true if there is any approved or queued operation on the node.
+func (link *approveLink) hasAnyActiveOperationOnNode(nodeName string) bool {
 	for _, component := range link.components {
-		if component.approvedOperationsPerNode[nodeName] > 0 || len(component.approvedOperationsQueue) > 0 {
+		if component.approvedOperationsPerNode[nodeName] > 0 || component.hasQueuedOnNode(nodeName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *component) hasQueuedOnNode(nodeName string) bool {
+	for _, op := range c.approvedOperationsQueue {
+		if op.Spec.NodeName == nodeName {
 			return true
 		}
 	}

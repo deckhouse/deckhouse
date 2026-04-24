@@ -117,6 +117,20 @@ func TestApprover_TryApprove_StageOrdering(t *testing.T) {
 		require.True(t, a.tryApprove(newOperation("k1", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
 	})
 
+	t.Run("queued apiserver blocks kcm on same node but not on other nodes", func(t *testing.T) {
+		t.Parallel()
+		// 3 nodes -> apiserver concurrency limit 2
+		a := newApprover(nodeCounts{masters: 3}, nil)
+		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		require.True(t, a.tryApprove(newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		// a3 hits concurrency limit -> goes to queue
+		require.False(t, a.tryApprove(newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		// kcm on n3 must be blocked (apiserver queued on n3)
+		require.False(t, a.tryApprove(newOperation("k1", "n3", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
+		// kcm on n1 must be blocked (apiserver approved on n1)
+		require.False(t, a.tryApprove(newOperation("k2", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
+	})
+
 	t.Run("allows kcm and scheduler concurrently on same pipeline stage", func(t *testing.T) {
 		t.Parallel()
 		a := newApprover(nodeCounts{masters: 3}, nil)
