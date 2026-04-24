@@ -14,7 +14,18 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - applications
+  - deckhousereleases
+  - moduleconfigs
+  - moduledocumentations
+  - modulepulloverrides
+  - modulereleases
+  - modules
+  - modulesources
+  - moduleupdatepolicies
+  - packagerepositories
+  - packagerepositoryoperations
+  - applicationpackageversions
+  - applicationpackages
   verbs:
   - create
   - update

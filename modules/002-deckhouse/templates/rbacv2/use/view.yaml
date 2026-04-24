@@ -12,18 +12,7 @@ rules:
 - apiGroups:
   - deckhouse.io
   resources:
-  - deckhousereleases
-  - moduleconfigs
-  - moduledocumentations
-  - modulepulloverrides
-  - modulereleases
-  - modules
-  - modulesources
-  - moduleupdatepolicies
-  - packagerepositories
-  - packagerepositoryoperations
-  - applicationpackageversions
-  - applicationpackages
+  - applications
   verbs:
   - get
   - list
