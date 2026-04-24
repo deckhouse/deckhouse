@@ -158,43 +158,50 @@ func getNodeGroupPredicate() predicate.Predicate {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	klog.Info("Reconcile started")
+	klog.Infof("[update-observer] Reconcile started (trigger: %s/%s)", req.Namespace, req.Name)
 
 	configMap, err := r.getConfigMap(ctx)
 	if err != nil {
-		klog.Error("Failed to get configMap", err)
+		klog.Errorf("[update-observer] Failed to get configMap %s/%s: %v", common.KubeSystemNamespace, common.ConfigMapName, err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
+	klog.Infof("[update-observer] ConfigMap fetched (exists=%v)", configMap.ResourceVersion != "")
 
 	clusterCfg, err := r.getClusterConfiguration(ctx)
 	if err != nil {
-		klog.Info("Error occurred while getting cluster configuration", err)
+		klog.Errorf("[update-observer] Failed to get cluster configuration from secret %s/%s: %v", common.KubeSystemNamespace, common.SecretName, err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
+	klog.Infof("[update-observer] Cluster configuration loaded (desiredVersion=%s, updateMode=%s)", clusterCfg.DesiredVersion, clusterCfg.UpdateMode)
 
 	reconcileTrigger := determineReconcileTrigger(configMap, clusterCfg)
+	klog.Infof("[update-observer] Reconcile trigger: %s", reconcileTrigger)
 
 	clusterState, err := r.getClusterState(ctx, clusterCfg, configMap.Labels, reconcileTrigger == ReconcileTriggerDowngradeK8s)
 	if err != nil {
-		klog.Error("Error encountered while getting cluster state", err)
+		klog.Errorf("[update-observer] Failed to get cluster state: %v", err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
+	klog.Infof("[update-observer] Cluster state computed (phase=%s, currentVersion=%s, progress=%s)", clusterState.Status.Phase, clusterState.CurrentVersion, clusterState.Progress)
 
 	configMap, err = fillConfigMap(configMap, clusterState, reconcileTrigger)
 	if err != nil {
-		klog.Error("Failed to fill configMap", err)
+		klog.Errorf("[update-observer] Failed to fill configMap: %v", err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
 	if err = r.touchConfigMap(ctx, configMap); err != nil {
-		klog.Error("Failed to touch configMap", err)
+		klog.Errorf("[update-observer] Failed to write configMap %s/%s: %v", common.KubeSystemNamespace, common.ConfigMapName, err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
+	klog.Infof("[update-observer] ConfigMap %s/%s successfully written", common.KubeSystemNamespace, common.ConfigMapName)
 
 	if clusterState.Status.Phase != cluster.ClusterUpToDate {
+		klog.Infof("[update-observer] Cluster not up-to-date, requeuing after %s", requeueInterval)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
+	klog.Infof("[update-observer] Reconcile complete, cluster is up-to-date")
 	return reconcile.Result{}, nil
 }
 
