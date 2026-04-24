@@ -70,7 +70,7 @@ The module interacts with the following components:
 
 * **Kube-apiserver**:
 
-  * Monitors Kubernetes resources specified in custom resources from the `constraints.gatekeeper.sh/*` and `mutations.gatekeeper.sh/*` API groups.
+  * Monitors Kubernetes resources specified in custom resources of the `constraints.gatekeeper.sh/*` and `mutations.gatekeeper.sh/*` API groups.
   * Manages ConstraintTemplate, Assign, AssignImage, AssignMetadata, ModifySet, as well as resources from the `constraints.gatekeeper.sh/*` and `config.ratify.deislabs.io/*` API groups.
 
 The following external components interact with the module:
