@@ -779,8 +779,11 @@
 }
 
 .sidebar__item {
-    margin-bottom: 18px;
     position: relative;
+
+    &:not(:last-child) {
+        margin-bottom: 18px;
+    }
 }
 
 .sidebar__item > a {
@@ -2630,6 +2633,14 @@ select#contact-select {
 
     svg {
       transform: rotate(180deg);
+    }
+  }
+
+  &[data-placement^='bottom'] .tippy-svg-arrow {
+    top: -12px;
+
+    svg {
+      transform: rotate(-90deg);
     }
   }
 }
