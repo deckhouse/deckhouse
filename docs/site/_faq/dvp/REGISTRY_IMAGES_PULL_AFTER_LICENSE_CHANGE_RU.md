@@ -1,64 +1,9 @@
 ---
-title: "FAQ: Управление платформой"
-permalink: ru/virtualization-platform/documentation/faq/platform-management.html
+title: Как восстановить кластер, если после смены лицензии образы из registry.deckhouse.io не загружаются?
+sections:
+- platform_management
 lang: ru
 ---
-
-## Как увеличить размер DVCR?
-
-Размер тома DVCR задаётся в ModuleConfig модуля `virtualization` (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). Новое значение должно быть больше текущего.
-
-1. Проверьте текущий размер DVCR:
-
-   ```shell
-   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-   ```
-
-   Пример вывода:
-
-   ```console
-    {"size":"58G","storageClass":"linstor-thick-data-r1"}
-   ```
-
-1. Увеличьте `size` через `patch` (подставьте нужное значение):
-
-   ```shell
-   d8 k patch mc virtualization \
-     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
-   ```
-
-   Пример вывода:
-
-   ```console
-   moduleconfig.deckhouse.io/virtualization patched
-   ```
-
-1. Убедитесь, что в ModuleConfig отображается новый размер:
-
-   ```shell
-   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-   ```
-
-   Пример вывода:
-
-   ```console
-   {"size":"59G","storageClass":"linstor-thick-data-r1"}
-   ```
-
-1. Проверьте текущее состояние DVCR:
-
-   ```shell
-   d8 k get pvc dvcr -n d8-virtualization
-   ```
-
-   Пример вывода:
-
-   ```console
-   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
-   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
-   ```
-
-## Как восстановить кластер, если после смены лицензии образы из registry.deckhouse.io не загружаются?
 
 После смены лицензии на кластере с `containerd v1` и удаления устаревшей лицензии образы из `registry.deckhouse.io` могут перестать загружаться. При этом на узлах остаётся устаревший файл конфигурации `/etc/containerd/conf.d/dvcr.toml`, который не удаляется автоматически. Из-за него не запускается модуль `registry`, без которого не работает DVCR.
 

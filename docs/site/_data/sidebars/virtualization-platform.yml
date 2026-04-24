@@ -571,19 +571,7 @@ entries:
         - title:
             en: FAQ
             ru: FAQ
-          folders:
-            - title:
-                en: VM operations
-                ru: Работа с ВМ
-              url: /virtualization-platform/documentation/faq/vm-operations.html
-            - title:
-                en: VM configuration
-                ru: Конфигурирование ВМ
-              url: /virtualization-platform/documentation/faq/vm-configuration.html
-            - title:
-                en: Platform management
-                ru: Управление платформой
-              url: /virtualization-platform/documentation/faq/platform-management.html
+          url: /virtualization-platform/documentation/faq.html
     - title:
         en: Release notes
         ru: История изменений

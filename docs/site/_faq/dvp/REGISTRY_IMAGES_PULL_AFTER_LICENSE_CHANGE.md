@@ -1,63 +1,9 @@
 ---
-title: "FAQ: Platform management"
-permalink: en/virtualization-platform/documentation/faq/platform-management.html
+title: How to restore the cluster if images from registry.deckhouse.io cannot be pulled after a license change?
+sections:
+- platform_management
+lang: en
 ---
-
-## How to increase the DVCR size?
-
-The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). The new value must be greater than the current one.
-
-1. Check the current DVCR size:
-
-   ```shell
-   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-   ```
-
-   Example output:
-
-   ```console
-    {"size":"58G","storageClass":"linstor-thick-data-r1"}
-   ```
-
-1. Increase `size` using `patch` (set the value you need):
-
-   ```shell
-   d8 k patch mc virtualization \
-     --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
-   ```
-
-   Example output:
-
-   ```console
-   moduleconfig.deckhouse.io/virtualization patched
-   ```
-
-1. Verify that ModuleConfig shows the new size:
-
-   ```shell
-   d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
-   ```
-
-   Example output:
-
-   ```console
-   {"size":"59G","storageClass":"linstor-thick-data-r1"}
-   ```
-
-1. Check the current DVCR status:
-
-   ```shell
-   d8 k get pvc dvcr -n d8-virtualization
-   ```
-
-   Example output:
-
-   ```console
-   NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE
-   dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
-   ```
-
-## How to restore the cluster if images from registry.deckhouse.io cannot be pulled after a license change?
 
 After a license change on a cluster with `containerd v1` and removal of the outdated license, images from `registry.deckhouse.io` may stop being pulled. Nodes then retain the outdated configuration file `/etc/containerd/conf.d/dvcr.toml`, which is not removed automatically. Because of it, the `registry` module does not start, and without it DVCR does not work.
 
