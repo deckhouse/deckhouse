@@ -9,6 +9,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/candi/bashible/common-steps/all/100_configure_sysctl_tuner_fstec.sh.tpl
+  to: /deckhouse/candi/bashible/common-steps/all/100_configure_sysctl_tuner_fstec.sh.tpl
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/candi/openapi/cluster_configuration.yaml
   to: /deckhouse/candi/openapi/cluster_configuration.yaml
   stageDependencies:

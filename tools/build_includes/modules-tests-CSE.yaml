@@ -875,6 +875,22 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/crds/mcm.yaml
+  to: /deckhouse/modules/040-node-manager/crds/mcm.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/templates/machine-controller-manager
+  to: /deckhouse/modules/040-node-manager/templates/machine-controller-manager
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
+  stageDependencies:
+    setup:
+        - '**/*'
 - add: /ee/cse/modules/150-user-authn/templates/basic-auth-proxy
   to: /deckhouse/modules/150-user-authn/templates/basic-auth-proxy
   excludePaths:
