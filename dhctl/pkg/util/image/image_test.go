@@ -652,10 +652,6 @@ CRl8TSg922cXTLVt8Q==
 					require.NoError(t, err)
 				}
 				err := DownloadAndUnpackImage(ctx, c.image, c.directory, filepath.Join(c.directory, "cache"), c.rc)
-				// temporary quick fix for rate limiter issue
-				if err != nil && strings.Contains(err.Error(), "You have reached your unauthenticated pull rate limit") {
-					return
-				}
 				if !c.wantErr {
 					require.NoError(t, err)
 					require.DirExists(t, filepath.Join(c.directory, "cache"))
@@ -716,10 +712,6 @@ func TestRestoreImageFromTarGz(t *testing.T) {
 					require.NoError(t, err)
 				}
 				_, err := restoreImageFromTarGz(c.path, nil)
-				// temporary quick fix for rate limiter issue
-				if err != nil && strings.Contains(err.Error(), "You have reached your unauthenticated pull rate limit") {
-					return
-				}
 				if !c.wantErr {
 					require.NoError(t, err)
 				} else {
