@@ -72,16 +72,16 @@ kubectl --kubeconfig=/etc/kubernetes/admin.conf taint node "$(bb-d8-node-name)" 
 # CIS benchmark purposes
 chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
 
-<<<<<<< HEAD
 # Restrict permissions on admin kubeconfig files for security
 chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/super-admin.conf 2>/dev/null || true
 
-<<<<<<< HEAD
 # Force admin-cert auth for operations requiring elevated privileges
 export BB_KUBE_AUTH_TYPE="admin-cert"
 export BB_KUBE_APISERVER_URL=""
 bb-curl-helper-extract-admin-certs
 
+=======
+>>>>>>> ea10d4c427 (after rebase)
 # Upload pki for deckhouse
 bb-curl-kube "/api/v1/namespaces/kube-system/secrets/d8-pki" -X DELETE || true
 

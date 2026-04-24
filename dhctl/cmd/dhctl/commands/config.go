@@ -129,8 +129,6 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-<<<<<<< HEAD
-=======
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig, app.GetDirConfig())
@@ -162,7 +160,6 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
->>>>>>> 92d070bf84 (control-plane-manager global refactor)
 		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return err

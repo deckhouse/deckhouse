@@ -79,11 +79,7 @@ func PrepareBundle(
 	}
 	logTemplatesData("bashible", bashibleData)
 
-<<<<<<< HEAD
 	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
-=======
-	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
->>>>>>> 92d070bf84 (control-plane-manager global refactor)
 		return err
 	}
 
