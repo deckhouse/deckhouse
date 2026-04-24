@@ -77,7 +77,7 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +kubebuilder:printcolumn:name=Completed,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].status
 // +kubebuilder:printcolumn:name=CompletionTime,type=date,JSONPath=.status.completionTime
 // +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Completed')].message
-// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.status.completionTime
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
