@@ -5,7 +5,17 @@ search: admission-policy-engine, pod security, gatekeeper
 description: Architecture of the admission-policy-engine module in Deckhouse Kubernetes Platform.
 ---
 
-The [`admission-policy-engine`](/modules/admission-policy-engine/) module enforces security policies and operational restrictions in a Kubernetes cluster, including checks based on [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) and rules from the SecurityPolicy and OperationPolicy custom resources.
+The [`admission-policy-engine`](/modules/admission-policy-engine/) module enforces security policies and operational restrictions in a Kubernetes cluster. Policies are applied based on [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) checks and rules from the following custom resources:
+
+- OperationPolicy: Describes the operational policy of the cluster.
+- SecurityPolicy: Describes the security policy of the cluster.
+- SecurityPolicyException: Describes exceptions to the cluster security policy.
+
+{% alert level="info" %}
+These custom resources are processed using [hooks](../module-development/structure/#hooks). For details on the hooks concept, refer to the [addon-operator documentation](https://flant.github.io/addon-operator/OVERVIEW.html).
+
+Based on the OperationPolicy and SecurityPolicy custom resources, the [Deckhouse controller](/modules/deckhouse/) uses [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) to create custom resources for [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/). Gatekeeper then validates newly created or updated Kubernetes resources using these custom resources.
+{% endalert %}
 
 For a detailed description of the module, refer to [the corresponding documentation section](/modules/admission-policy-engine/).
 
@@ -29,7 +39,7 @@ The module consists of the following components:
 
 1. **Gatekeeper-controller-manager**: A [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) controller that performs the following operations:
 
-   * manages Gatekeeper custom resources;
+   * manages [Gatekeeper custom resources]((https://github.com/open-policy-agent/gatekeeper/tree/master/charts/gatekeeper/crds));
    * validates Kubernetes resources specified in custom resources from the `constraints.gatekeeper.sh/*` API group;
    * mutates Kubernetes resources specified in the [AssignMetadata](/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata), [Assign](/modules/admission-policy-engine/gatekeeper-cr.html#assign), [ModifySet](/modules/admission-policy-engine/gatekeeper-cr.html#modifyset), and [AssignImage](/modules/admission-policy-engine/gatekeeper-cr.html#assignimage) custom resources.
 
@@ -50,7 +60,9 @@ The module consists of the following components:
 
 1. **ratify**: An optional component consisting of a single [**ratify**](https://ratify.dev/docs/what-is-ratify) container. It provides a [Gatekeeper provider](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) implementation for validating metadata of used artifacts. In DKP, this provider is used to verify container image signatures and is available in the SE+, EE, CSE Lite, and CSE Pro editions.
 
-   Gatekeeper uses the Provider custom resource to extend resource verification and validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.
+{% alert level="info" %}
+   Gatekeeper uses the Provider custom resource to extend resource validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.
+{% endalert %}
 
 ## Module interactions
 
@@ -66,15 +78,3 @@ The following external components interact with the module:
 1. **Kube-apiserver**: Validates Kubernetes resources and checks their compliance with the defined security rules.
 
 1. **Prometheus-main**: Collects module metrics.
-
-## Custom resources
-
-The `admission-policy-engine` module adds custom resources to the DKP platform that simplify configuration of the most commonly used security policies. The following [custom resources](/modules/admission-policy-engine/cr.html) are used:
-
-* OperationPolicy: Describes the operational policy of the cluster.
-* SecurityPolicy: Describes the security policy of the cluster.
-* SecurityPolicyException: Describes exceptions to the cluster security policy.
-
-  These custom resources are processed using the [hooks](../module-development/structure/#hooks) mechanism. For details on this mechanism, refer to the [addon-operator documentation](https://flant.github.io/addon-operator/OVERVIEW.html).
-
-  Based on OperationPolicy and SecurityPolicy, [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) custom resources are generated.

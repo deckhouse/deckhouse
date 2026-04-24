@@ -6,7 +6,17 @@ search: admission-policy-engine, pod security, gatekeeper
 description: Архитектура модуля admission-policy-engine в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`admission-policy-engine`](/modules/admission-policy-engine/) обеспечивает применение политик безопасности и операционных политик в кластере Kubernetes. Применение политик осуществляется на основе проверок по [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и правил из кастомных ресурсов SecurityPolicy и OperationPolicy.
+Модуль [`admission-policy-engine`](/modules/admission-policy-engine/) обеспечивает применение политик безопасности и операционных политик в кластере Kubernetes. Политики применяются на основе проверок по [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) и правил из следующих кастомных ресурсов:
+
+- OperationPolicy — описывает операционную политику кластера;
+- SecurityPolicy — описывает политику безопасности кластера;
+- SecurityPolicyException — описывает исключения из политики безопасности кластера.
+
+{% alert level="info" %}
+Обработка этих кастомных ресурсов выполняется с использованием [хуков](../module-development/structure/#hooks). Подробнее о концепции хуков можно узнать из документации [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html).
+
+На основе кастомных ресурсов OperationPolicy и SecurityPolicy [Deckhouse-контроллер](/modules/deckhouse/) с использованием [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) создает кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/). Gatekeeper на основе этих кастомных ресурсов валидирует создаваемые или обновляемые ресурсы Kubernetes.
+{% endalert %}
 
 Подробнее с описанием модуля можно ознакомиться [в разделе документации модуля](/modules/admission-policy-engine/).
 
@@ -30,7 +40,7 @@ description: Архитектура модуля admission-policy-engine в Deck
 
 1. **Gatekeeper-controller-manager** — это контроллер ([Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/)), выполняющий следующие операции:
 
-   * управление кастомными ресурсами Gatekeeper;
+   * управление [кастомными ресурсами Gatekeeper](https://github.com/open-policy-agent/gatekeeper/tree/master/charts/gatekeeper/crds);
 
    * валидация ресурсов Kubernetes, указанных в кастомных ресурсах из `constraints.gatekeeper.sh/*` API-группы;
 
@@ -53,7 +63,9 @@ description: Архитектура модуля admission-policy-engine в Deck
 
 1. **ratify** — опциональный компонент, состоящий из одного контейнера [**ratify**](https://ratify.dev/docs/what-is-ratify). Он представляет собой реализацию [провайдера Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) для проверки метаданных используемых артефактов. В DKP этот провайдер применяется для проверки подписи образов контейнеров и доступен в редакциях DKP SE+, EE, CSE Lite и CSE Pro.
 
-   Gatekeeper использует кастомный ресурс Provider для расширения функционала по валидации ресурсов Kubernetes. Ресурс Provider описывает endpoint сервиса, куда Gatekeeper передает запрос при выполнении ValidationWebhook. Некоторые модули DKP, такие как [operator-trivy](/modules/operator-trivy), могут создавать кастомные ресурсы Provider и тем самым расширять функционал проверок.
+{% alert level="info" %}
+   Gatekeeper использует кастомный ресурс Provider для расширения функционала по валидации ресурсов Kubernetes. Ресурс Provider описывает endpoint сервиса, на который Gatekeeper передает запрос при выполнении ValidationWebhook. Некоторые модули DKP, такие как [operator-trivy](/modules/operator-trivy), могут создавать кастомные ресурсы Provider и тем самым расширять функционал проверок.
+{% endalert %}
 
 ## Взаимодействия модуля
 
@@ -69,15 +81,3 @@ description: Архитектура модуля admission-policy-engine в Deck
 1. **Kube-apiserver** — валидация ресурсов Kubernetes и проверка на соответствие заданным правилам безопасности.
 
 1. **Prometheus-main** — сбор метрик модуля.
-
-## Кастомные ресурсы
-
-Модуль `admission-policy-engine` добавляет в платформу DKP кастомные ресурсы, упрощающие настройку наиболее часто встречающихся политик безопасности. Используются следующие [кастомные ресурсы](/modules/admission-policy-engine/cr.html):
-
-* OperationPolicy — описывает операционную политику кластера;
-* SecurityPolicy — описывает политику безопасности кластера;
-* SecurityPolicyException — описывает исключения из политики безопасности кластера.
-
-Обработка этих кастомных ресурсов происходит с использованием механизма [hooks](../module-development/structure/#hooks). Подробнее об этом механизме можно узнать из документации [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html).
-
-На основе OperationPolicy и SecurityPolicy создаются кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/).
