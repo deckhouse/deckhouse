@@ -173,11 +173,12 @@ func (s *OperationState) MarkOperationInProgress(message string) {
 }
 
 func (s *OperationState) MarkOperationAbandoned(message string) {
-	s.markCurrentInProgressStepAbandoned()
+	s.markCurrentInProgressStep(CPOReasonStepAbandoned, "")
 	s.setOperationCondition(CPOReasonOperationAbandoned, message)
 }
 
 func (s *OperationState) MarkOperationFailed(message string) {
+	s.markCurrentInProgressStep(CPOReasonStepFailed, message)
 	s.setOperationCondition(CPOReasonOperationFailed, message)
 }
 
@@ -194,17 +195,21 @@ func (s *OperationState) SetObservedState(state *ObservedComponentState) {
 	s.op.Status.ObservedState = state
 }
 
-func (s *OperationState) markCurrentInProgressStepAbandoned() {
+func (s *OperationState) markCurrentInProgressStep(reason, message string) {
 	for _, name := range s.op.Spec.Steps {
 		cond := s.op.GetCondition(StepConditionType(name))
 		if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != CPOReasonStepInProgress {
 			continue
 		}
+		msg := message
+		if msg == "" {
+			msg = cond.Message
+		}
 		s.SetCondition(metav1.Condition{
 			Type:    cond.Type,
 			Status:  metav1.ConditionFalse,
-			Reason:  CPOReasonStepAbandoned,
-			Message: cond.Message,
+			Reason:  reason,
+			Message: msg,
 		})
 		return
 	}

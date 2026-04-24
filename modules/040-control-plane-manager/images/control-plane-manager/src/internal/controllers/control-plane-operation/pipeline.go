@@ -83,42 +83,31 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 }
 
 // executeStep runs a single pipeline step with status tracking and start/finish logging.
+// executeStep is the only writer of step-level conditions: steps describe the outcome
+// via StepResult and leave condition updates to the pipeline.
 func (r *Reconciler) executeStep(ctx context.Context, state *controlplanev1alpha1.OperationState, name controlplanev1alpha1.StepName, step Step, env *StepEnv, logger *log.Logger) (result reconcile.Result, err error) {
 	stepLogger := logger.With(slog.String("step", string(name)))
-	var execErr error
+	var res StepResult
 
 	stepLogger.Info("executing step")
 	defer func() {
 		if recovered := recover(); recovered != nil {
-			execErr = fmt.Errorf("panic in step %s: %v", name, recovered)
+			err = fmt.Errorf("panic in step %s: %v", name, recovered)
 		}
-
 		switch {
-		case execErr != nil:
-			state.MarkStepFailed(name, execErr.Error())
-			err = execErr
-		case result.RequeueAfter > 0:
+		case err != nil:
+			state.MarkStepFailed(name, err.Error())
+		case res.Outcome == OutcomePending:
+			state.MarkStepInProgressWithMessage(name, res.Message)
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 				stepLogger.Warn("failed to flush status on requeue", log.Err(patchErr))
 			}
-			err = nil
+			result = reconcile.Result{RequeueAfter: res.RequeueAfter}
 		default:
-			// Step may already have a completed condition (with extra details in Message), don't override it.
-			cond := state.Raw().GetCondition(controlplanev1alpha1.StepConditionType(name))
-			if cond == nil || cond.Reason != controlplanev1alpha1.CPOReasonStepCompleted {
-				state.MarkStepCompleted(name)
-			}
+			state.MarkStepCompletedWithMessage(name, res.Message)
 			if patchErr := r.patchStatus(ctx, state); patchErr != nil {
 				err = fmt.Errorf("set completed condition for %s: %w", name, patchErr)
-			} else {
-				err = nil
 			}
-		}
-
-		if err != nil {
-			stepLogger.Error("step failed", log.Err(err))
-		} else {
-			stepLogger.Info("step finished")
 		}
 	}()
 
@@ -130,8 +119,8 @@ func (r *Reconciler) executeStep(ctx context.Context, state *controlplanev1alpha
 		stepLogger.Warn("failed to set in-progress condition", log.Err(patchErr))
 	}
 
-	result, execErr = step.Execute(ctx, env, stepLogger)
-	return result, execErr
+	res, err = step.Execute(ctx, env, stepLogger)
+	return
 }
 
 func isCommitPointStep(name controlplanev1alpha1.StepName) bool {

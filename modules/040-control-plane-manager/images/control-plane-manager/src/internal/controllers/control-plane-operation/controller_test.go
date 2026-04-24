@@ -54,23 +54,19 @@ type execCall struct {
 }
 
 type mockCommand struct {
-	name            controlplanev1alpha1.StepName
-	result          reconcile.Result
-	err             error
-	completedResult string
-	calls           *[]execCall
+	name   controlplanev1alpha1.StepName
+	result StepResult
+	err    error
+	calls  *[]execCall
 }
 
-func (m *mockCommand) Execute(_ context.Context, env *StepEnv, _ *log.Logger) (reconcile.Result, error) {
+func (m *mockCommand) Execute(_ context.Context, env *StepEnv, _ *log.Logger) (StepResult, error) {
 	*m.calls = append(*m.calls, execCall{name: m.name, component: env.State.Raw().Spec.Component})
-	if m.completedResult != "" {
-		env.State.MarkStepCompletedWithMessage(m.name, m.completedResult)
-	}
 	return m.result, m.err
 }
 
 func newMockOK(calls *[]execCall, name controlplanev1alpha1.StepName) Step {
-	return &mockCommand{name: name, calls: calls}
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeCompleted}, calls: calls}
 }
 
 func newMockError(calls *[]execCall, name controlplanev1alpha1.StepName, err error) Step {
@@ -78,11 +74,11 @@ func newMockError(calls *[]execCall, name controlplanev1alpha1.StepName, err err
 }
 
 func newMockRequeue(calls *[]execCall, name controlplanev1alpha1.StepName, after time.Duration) Step {
-	return &mockCommand{name: name, result: reconcile.Result{RequeueAfter: after}, calls: calls}
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomePending, RequeueAfter: after}, calls: calls}
 }
 
 func newMockCompleteWithMessage(calls *[]execCall, name controlplanev1alpha1.StepName, message string) Step {
-	return &mockCommand{name: name, completedResult: message, calls: calls}
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeCompleted, Message: message}, calls: calls}
 }
 
 // helpers

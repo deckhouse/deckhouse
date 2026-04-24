@@ -20,13 +20,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Compile-time checks.
@@ -41,9 +41,25 @@ var (
 	_ Step = (*certObserveStep)(nil)
 )
 
+// StepOutcome is the terminal state when Step.Execute finishes.
+type StepOutcome int
+
+const (
+	// OutcomeCompleted: the step finished; pipeline advances to the next step.
+	OutcomeCompleted StepOutcome = iota
+	// OutcomePending: the step is not finished; pipeline RequeueAfter and preserves the in-progress condition with the given Message.
+	OutcomePending
+)
+
+type StepResult struct {
+	Outcome      StepOutcome
+	Message      string        // attached to the Completed/InProgress step condition
+	RequeueAfter time.Duration // only when Outcome == OutcomePending
+}
+
 // Step is the interface each pipeline step must satisfy.
 type Step interface {
-	Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error)
+	Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error)
 }
 
 // defaultSteps returns a fresh step registry with all known steps.
@@ -74,20 +90,20 @@ func resolveSteps(registry map[controlplanev1alpha1.StepName]Step, names []contr
 // syncCAStep installs CA files from the d8-pki secret to disk.
 type syncCAStep struct{}
 
-func (c *syncCAStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *syncCAStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	logger.Info("installing CA files from secret")
 	if err := installCAsFromSecret(env.Secrets.PKIData, constants.KubernetesPkiPath); err != nil {
 		logger.Error("failed to install CAs", log.Err(err))
-		return reconcile.Result{}, err
+		return StepResult{}, err
 	}
-	return reconcile.Result{}, nil
+	return StepResult{Outcome: OutcomeCompleted}, nil
 }
 
 // renewPKICertsStep renews leaf certificates for the component.
 // No-op for KCM/Scheduler (certTree=nil).
 type renewPKICertsStep struct{}
 
-func (c *renewPKICertsStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *renewPKICertsStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	renewResult := controlplanev1alpha1.CPOStepResultNotRenewed
 	certTree := componentDeps(env.State.Raw().Spec.Component).CertTree
 	if certTree != nil {
@@ -96,52 +112,50 @@ func (c *renewPKICertsStep) Execute(_ context.Context, env *StepEnv, logger *log
 		report, err := renewCertsIfNeeded(params, certTree)
 		if err != nil {
 			logger.Error("failed to renew certs", log.Err(err))
-			return reconcile.Result{}, err
+			return StepResult{}, err
 		}
 		if hasRegeneratedCerts(report) {
 			logger.Info("leaf certificates were regenerated")
 			renewResult = controlplanev1alpha1.CPOStepResultRenewed
 		}
 	}
-	env.State.MarkStepCompletedWithMessage(controlplanev1alpha1.StepRenewPKICerts, renewResult)
-	return reconcile.Result{}, nil
+	return StepResult{Outcome: OutcomeCompleted, Message: renewResult}, nil
 }
 
 // renewKubeconfigsStep renews kubeconfig files for the component.
 // No-op for Etcd (no kubeconfigs). For KubeAPIServer also updates the root kubeconfig symlink.
 type renewKubeconfigsStep struct{}
 
-func (c *renewKubeconfigsStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *renewKubeconfigsStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	component := env.State.Raw().Spec.Component
 	kubeconfigDir := env.Node.KubeconfigDir
 	renewResult := controlplanev1alpha1.CPOStepResultNotRenewed
 	kubeconfigsRenewed, err := renewKubeconfigsForComponent(component, env.Secrets.CPMData, constants.KubernetesPkiPath, kubeconfigDir, env.Node.AdvertiseIP)
 	if err != nil {
 		logger.Error("failed to renew kubeconfigs", log.Err(err))
-		return reconcile.Result{}, err
+		return StepResult{}, err
 	}
 	if kubeconfigsRenewed {
 		logger.Info("kubeconfigs were regenerated")
 		renewResult = controlplanev1alpha1.CPOStepResultRenewed
 	}
-	// dont return error if failed to update root kubeconfig symlink, maybe return reconcile.Result{}, err later.
+	// dont return error if failed to update root kubeconfig symlink, maybe return err later.
 	if componentDeps(component).NeedsRootKubeconfig {
 		if err := updateRootKubeconfig(kubeconfigDir, env.Node.HomeDir); err != nil {
 			logger.Warn("failed to update root kubeconfig symlink", log.Err(err))
 		}
 	}
-	env.State.MarkStepCompletedWithMessage(controlplanev1alpha1.StepRenewKubeconfigs, renewResult)
-	return reconcile.Result{}, nil
+	return StepResult{Outcome: OutcomeCompleted, Message: renewResult}, nil
 }
 
 // joinEtcdClusterStep checks if etcd needs to join the cluster and handles the full join flow.
 // No-op for non-etcd components.
 type joinEtcdClusterStep struct{}
 
-func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	op := env.State.Raw()
 	if op.Spec.Component != controlplanev1alpha1.OperationComponentEtcd {
-		return reconcile.Result{}, nil
+		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
 	kubeconfigDir := env.Node.KubeconfigDir
@@ -149,35 +163,38 @@ func (c *joinEtcdClusterStep) Execute(_ context.Context, env *StepEnv, logger *l
 	// Ensure admin.conf exists before checking membership on fresh nodes (including etcd-arbiter)
 	if err := ensureAdminKubeconfig(env.Secrets.CPMData, constants.KubernetesPkiPath, kubeconfigDir, env.Node.AdvertiseIP); err != nil {
 		logger.Error("failed to ensure admin kubeconfig", log.Err(err))
-		return reconcile.Result{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
+		return StepResult{}, fmt.Errorf("ensure admin kubeconfig: %w", err)
 	}
 
 	needsJoin, err := etcdNeedsJoin(env.Node, constants.KubernetesPkiPath, kubeconfigDir)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("check etcd join need: %w", err)
+		return StepResult{}, fmt.Errorf("check etcd join need: %w", err)
 	}
 	if !needsJoin {
 		logger.Info("etcd already in cluster, syncing manifest to desired state")
 		annotations := buildSyncManifestAnnotations(op)
-		results, err := (&syncManifestsStep{}).syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations)
+		results, err := syncFullManifest(op.Spec.Component, env.Secrets.CPMData, annotations)
 		if err != nil {
 			logger.Error("failed to sync manifests for joined etcd member", log.Err(err))
-			return reconcile.Result{}, err
+			return StepResult{}, err
 		}
 		saveDiffResults(op.Spec.Component, op.Name, results, logger)
 		if !hasChangedFiles(results) {
 			logger.Info("sync manifests no-op: desired content already on disk")
 		}
-		return reconcile.Result{}, nil
+		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 	logger.Info("etcd needs join, executing join flow")
-	return reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger)
+	if err := reconcileEtcdJoin(env.Node, op.Spec.Component, env.Secrets.CPMData, checksumAnnotationsFromSpec(op.Spec), logger); err != nil {
+		return StepResult{}, err
+	}
+	return StepResult{Outcome: OutcomeCompleted}, nil
 }
 
 // syncManifestsStep writes the static pod manifest (or patches annotations for PKI-only updates).
 type syncManifestsStep struct{}
 
-func (c *syncManifestsStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *syncManifestsStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	op := env.State.Raw()
 	component := op.Spec.Component
 	annotations := buildSyncManifestAnnotations(op)
@@ -187,23 +204,25 @@ func (c *syncManifestsStep) Execute(_ context.Context, env *StepEnv, logger *log
 	)
 
 	if annotations.ConfigChecksum != "" {
-		results, err = c.syncFullManifest(component, env.Secrets.CPMData, annotations)
+		results, err = syncFullManifest(component, env.Secrets.CPMData, annotations)
 	} else {
-		results, err = c.syncAnnotationsOnly(component, annotations)
+		results, err = syncAnnotationsOnly(component, annotations)
 	}
 	if err != nil {
 		logger.Error("failed to sync manifests", log.Err(err))
-		return reconcile.Result{}, err
+		return StepResult{}, err
 	}
 
 	saveDiffResults(component, op.Name, results, logger)
 	if !hasChangedFiles(results) {
 		logger.Info("sync manifests no-op: desired content already on disk")
 	}
-	return reconcile.Result{}, nil
+	return StepResult{Outcome: OutcomeCompleted}, nil
 }
 
-func (c *syncManifestsStep) syncFullManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations) ([]fileWriteResult, error) {
+// syncFullManifest writes the static pod manifest plus extra files, and removes stale extras.
+// Used by syncManifestsStep and joinEtcdClusterStep (post-join sync).
+func syncFullManifest(component controlplanev1alpha1.OperationComponent, secretData map[string][]byte, annotations checksumAnnotations) ([]fileWriteResult, error) {
 	extraResults, err := writeExtraFilesIfChanged(component, secretData, constants.ExtraFilesPath)
 	if err != nil {
 		return nil, fmt.Errorf("write extra-files: %w", err)
@@ -219,7 +238,9 @@ func (c *syncManifestsStep) syncFullManifest(component controlplanev1alpha1.Oper
 	return results, nil
 }
 
-func (c *syncManifestsStep) syncAnnotationsOnly(component controlplanev1alpha1.OperationComponent, annotations checksumAnnotations) ([]fileWriteResult, error) {
+// syncAnnotationsOnly patches checksum annotations on the existing manifest without rewriting the template.
+// Used when only PKI/CA checksums change.
+func syncAnnotationsOnly(component controlplanev1alpha1.OperationComponent, annotations checksumAnnotations) ([]fileWriteResult, error) {
 	manifestResult, err := updateChecksumAnnotationsIfChanged(component, annotations, constants.ManifestsPath)
 	if err != nil {
 		return nil, fmt.Errorf("update checksum annotations: %w", err)
@@ -229,17 +250,19 @@ func (c *syncManifestsStep) syncAnnotationsOnly(component controlplanev1alpha1.O
 
 // waitPodReadyStep waits for the static pod to become ready with the expected checksum annotations.
 type waitPodReadyStep struct {
-	waitForPod func(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (reconcile.Result, error)
+	waitForPod func(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error)
 }
 
-func (c *waitPodReadyStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
-	op := env.State.Raw()
-	env.State.MarkStepInProgressWithMessage(controlplanev1alpha1.StepWaitPodReady,
-		fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
-			op.Spec.Component.PodComponentName(),
-			checksum.ShortChecksum(op.Spec.DesiredConfigChecksum),
-			checksum.ShortChecksum(op.Spec.DesiredPKIChecksum)))
+func (c *waitPodReadyStep) Execute(ctx context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	return c.waitForPod(ctx, env.State, logger)
+}
+
+// waitPodInitialMessage is the in-progress message used while the pod has not been observed yet.
+func waitPodInitialMessage(op *controlplanev1alpha1.ControlPlaneOperation) string {
+	return fmt.Sprintf("waiting for %s pod with config-checksum %s pki-checksum %s",
+		op.Spec.Component.PodComponentName(),
+		checksum.ShortChecksum(op.Spec.DesiredConfigChecksum),
+		checksum.ShortChecksum(op.Spec.DesiredPKIChecksum))
 }
 
 func hasChangedFiles(results []fileWriteResult) bool {
@@ -254,21 +277,21 @@ func hasChangedFiles(results []fileWriteResult) bool {
 // certObserveStep collects certificate expiration dates from disk and writes them to CPO status.
 type certObserveStep struct{}
 
-func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *certObserveStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	kubeconfigDir := env.Node.KubeconfigDir
 	component := env.State.Raw().Spec.Component
 	observedState, ok := observeCertExpirationsForStaticPod(component, kubeconfigDir, logger)
 	if !ok {
 		logger.Warn("CertObserve skipped: not a static pod component")
-		return reconcile.Result{}, nil
+		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
 	if len(observedState.CertificatesExpirationDate) == 0 {
 		logger.Info("observed certificate expiration", slog.Int("certificates", 0))
-		return reconcile.Result{}, nil
+		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
 	env.State.SetObservedState(&observedState)
 	logger.Info("observed certificate expiration", slog.Int("certificates", len(observedState.CertificatesExpirationDate)))
-	return reconcile.Result{}, nil
+	return StepResult{Outcome: OutcomeCompleted}, nil
 }

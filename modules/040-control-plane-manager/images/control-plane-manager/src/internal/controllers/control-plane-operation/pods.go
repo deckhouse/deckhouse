@@ -32,32 +32,40 @@ import (
 )
 
 // waitForPod checks if the static pod is ready with the expected checksums annotations.
-func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (reconcile.Result, error) {
+func (r *Reconciler) waitForPod(ctx context.Context, state *controlplanev1alpha1.OperationState, logger *log.Logger) (StepResult, error) {
 	op := state.Raw()
 	podName := fmt.Sprintf("%s-%s", op.Spec.Component.PodComponentName(), r.node.Name)
 	pod := &corev1.Pod{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: podName, Namespace: constants.KubeSystemNamespace}, pod); err != nil {
 		logger.Info("pod not found yet, requeue", slog.String("pod", podName))
-		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      waitPodInitialMessage(op),
+			RequeueAfter: requeueWaitPod,
+		}, nil
 	}
 
 	if isPodCrashLooping(pod) {
 		logger.Warn("pod is crash looping, will retry", slog.String("pod", podName))
-		state.MarkStepInProgressWithMessage(controlplanev1alpha1.StepWaitPodReady,
-			fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName))
-		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      fmt.Sprintf("pod %s is in CrashLoopBackOff, will retry", podName),
+			RequeueAfter: requeueWaitPod,
+		}, nil
 	}
 
 	expected := checksumAnnotationsFromSpec(op.Spec)
 	if !isPodReadyWithChecksums(pod, expected) {
 		logger.Info("pod not ready with expected checksums, requeue", slog.String("pod", podName))
-		state.MarkStepInProgressWithMessage(controlplanev1alpha1.StepWaitPodReady,
-			fmt.Sprintf("pod %s is not ready with expected checksums, will retry", podName))
-		return reconcile.Result{RequeueAfter: requeueWaitPod}, nil
+		return StepResult{
+			Outcome:      OutcomePending,
+			Message:      fmt.Sprintf("pod %s is not ready with expected checksums, will retry", podName),
+			RequeueAfter: requeueWaitPod,
+		}, nil
 	}
 
 	logger.Info("pod ready with matching checksums", slog.String("pod", podName))
-	return reconcile.Result{}, nil
+	return StepResult{Outcome: OutcomeCompleted}, nil
 }
 
 // mapPodToOperations finds in-progress CPOs for the component matching this pod.
