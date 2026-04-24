@@ -93,6 +93,7 @@ func (c *Client) cleanup(ctx context.Context,
 	staticMachine *infrav1.StaticMachine,
 	credentials deckhousev1.SSHCredentialsSpec,
 	sshLegacyMode bool) error {
+	logger := ctrl.LoggerFrom(ctx)
 
 	type taskDataStr struct {
 		address       string
@@ -136,12 +137,13 @@ func (c *Client) cleanup(ctx context.Context,
 		sshLegacyMode: sshLegacyMode,
 	}
 
+	logger = logger.WithValues("taskID", string(staticMachine.Spec.ProviderID))
+	logger.Info("Running cleanup task")
 	err, finished := c.taskManager.Spawn(c.taskManagerCtx, string(staticMachine.Spec.ProviderID), "cleanup", taskData, taskFunc)
 	if err != nil {
 		return err
 	}
 
-	logger := ctrl.LoggerFrom(ctx)
 	if !finished {
 		logger.Info("Cleaning is not finished yet, waiting...")
 		return nil
