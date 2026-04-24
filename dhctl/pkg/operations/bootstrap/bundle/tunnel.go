@@ -90,7 +90,7 @@ type Tunnel struct {
 func (t *Tunnel) start(ctx context.Context) error {
 	t.debug("Up bundle registry tunnel...")
 
-	preflightURL := fmt.Sprintf("https://%s/healthz", net.JoinHostPort(t.address, t.remotePort))
+	preflightURL := fmt.Sprintf("http://%s/healthz", net.JoinHostPort(t.address, t.remotePort))
 
 	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.dc)
 	if err != nil {
