@@ -30,25 +30,25 @@ entries:
                     ru: Обзор
                   url: /admin/configuration/registry/
                 - title:
-                    en: DKP settings
-                    ru: Настройки DKP
+                    en: DKP component registry configuration and maintenance
+                    ru: Настройка и обслуживание registry компонентов DKP
                   folders:
                   - title:
                       en: Settings in a DKP-managed cluster
                       ru: Настройки в кластере, управляемом DKP
-                    url: /admin/configuration/registry/managing-interaction.html
+                    url: /admin/configuration/registry/dkp-component/managing-interaction.html
                   - title:
                       en: Settings in a Managed Kubernetes cluster
                       ru: Настройки в Managed Kubernetes кластере
-                    url: /admin/configuration/registry/third-party.html
+                    url: /admin/configuration/registry/dkp-component/third-party.html
                 - title:
                     en: Custom registry
                     ru: Пользовательское хранилище
-                  folders:
-                  - title:
-                      en: Custom registry (payload-registry module)
-                      ru: Пользовательское хранилище (модуль payload-registry)
-                    url: /admin/configuration/registry/payload-registry.html
+                  url: /admin/configuration/registry/payload-registry.html
+                - title:
+                    en: Switching editions
+                    ru: Переключение редакций
+                  url: /admin/configuration/registry/switching-editions.html
             - title:
                 en: IAM
                 ru: IAM
@@ -881,6 +881,13 @@ entries:
                 en: Updating Kubernetes and versioning
                 ru: Обновление Kubernetes и управление версиями
               url: /admin/configuration/platform-scaling/control-plane/updating-and-versioning.html
+            - title:
+                en: Switching editions
+                ru: Переключение редакций (кроме CSE)
+              url: /admin/configuration/update/switching-editions.html
+            - title:
+                ru: Переключение на DKP CSE
+              url: /admin/configuration/update/switching-cse.html
         - title:
             en: Platform uninstalling
             ru: Удаление платформы
@@ -1421,7 +1428,7 @@ entries:
             - title:
                 en: Sds-node-configurator module
                 ru: Модуль sds-node-configurator
-              url: /architecture/storage/sds-node-configurator.html               
+              url: /architecture/storage/sds-node-configurator.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
