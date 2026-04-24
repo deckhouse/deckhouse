@@ -61,13 +61,7 @@ func (lo *LogOutput) MarshalJSON() ([]byte, error) {
 	}
 
 	if len(lo.Fields) > 0 {
-		b, err := json.Marshal(lo.Fields)
-		if err != nil {
-			return nil, err
-		}
-
-		// ignore first and last '{' and '}' symbols
-		render.buf = append(render.buf, b[1:len(b)-1]...)
+		render.appendJSONFields(lo.Fields)
 		render.buf = append(render.buf, ',')
 	}
 
@@ -185,42 +179,6 @@ func (r *Render) escapes(s string) {
 	r.buf = append(r.buf, s[j:]...)
 }
 
-func (lo *LogOutput) Text() ([]byte, error) {
-	render := Render{}
-
-	render.buf = append(render.buf, lo.Time...)
-	render.buf = append(render.buf, ' ')
-
-	render.buf = append(render.buf, strings.ToUpper(lo.Level)...)
-	render.buf = append(render.buf, ' ')
-
-	if lo.Name != "" {
-		render.TextKeyValue(LoggerNameKey, lo.Name)
-		render.buf = append(render.buf, ' ')
-	}
-
-	render.TextQuotedKeyValue(slog.MessageKey, lo.Message)
-	render.buf = append(render.buf, ' ')
-
-	if lo.Source != "" {
-		render.TextKeyValue(slog.SourceKey, lo.Source)
-		render.buf = append(render.buf, ' ')
-	}
-
-	if len(lo.Fields) > 0 {
-		render.FieldsToString(lo.Fields, "")
-		render.buf = append(render.buf, ' ')
-	}
-
-	if lo.Stacktrace != "" {
-		render.TextKeyValue(StacktraceKey, lo.Stacktrace)
-	}
-
-	render.buf = append(render.buf, '\n')
-
-	return render.buf, nil
-}
-
 func (r *Render) TextKeyValue(key, value string) {
 	r.string(key)
 	r.buf = append(r.buf, '=')
@@ -232,6 +190,58 @@ func (r *Render) TextQuotedKeyValue(key, value string) {
 	r.buf = append(r.buf, '=', '\'')
 	r.string(value)
 	r.buf = append(r.buf, '\'')
+}
+
+func (r *Render) appendJSONValue(v any) {
+	switch val := v.(type) {
+	case string:
+		r.buf = append(r.buf, '"')
+		r.string(val)
+		r.buf = append(r.buf, '"')
+	case int64:
+		r.buf = strconv.AppendInt(r.buf, val, 10)
+	case int:
+		r.buf = strconv.AppendInt(r.buf, int64(val), 10)
+	case uint64:
+		r.buf = strconv.AppendUint(r.buf, val, 10)
+	case float64:
+		r.buf = strconv.AppendFloat(r.buf, val, 'g', -1, 64)
+	case bool:
+		r.buf = strconv.AppendBool(r.buf, val)
+	case map[string]any:
+		r.buf = append(r.buf, '{')
+		r.appendJSONFields(val)
+		r.buf = append(r.buf, '}')
+	case []any:
+		r.buf = append(r.buf, '[')
+		for i, item := range val {
+			if i > 0 {
+				r.buf = append(r.buf, ',')
+			}
+			r.appendJSONValue(item)
+		}
+		r.buf = append(r.buf, ']')
+	case nil:
+		r.buf = append(r.buf, "null"...)
+	case json.Marshaler:
+		data, err := val.MarshalJSON()
+		if err != nil {
+			r.buf = append(r.buf, '"')
+			r.string(fmt.Sprintf("%v", val))
+			r.buf = append(r.buf, '"')
+		} else {
+			r.buf = append(r.buf, data...)
+		}
+	default:
+		data, err := json.Marshal(val)
+		if err != nil {
+			r.buf = append(r.buf, '"')
+			r.string(fmt.Sprintf("%v", val))
+			r.buf = append(r.buf, '"')
+		} else {
+			r.buf = append(r.buf, data...)
+		}
+	}
 }
 
 func (r *Render) FieldsToString(m any, keyPrefix string) {

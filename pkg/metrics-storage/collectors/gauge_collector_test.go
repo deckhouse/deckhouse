@@ -912,3 +912,106 @@ func extractGaugeLabels(t *testing.T, metric prometheus.Metric) map[string]strin
 	}
 	return labels
 }
+
+// Benchmarks
+
+func BenchmarkConstGaugeCollector_Set_SameMetric(b *testing.B) {
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "bench_gauge",
+		LabelNames: []string{"method"},
+	})
+	labels := map[string]string{"method": "GET"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Set(float64(i), labels, collectors.WithGroup("g"))
+	}
+}
+
+func BenchmarkConstGaugeCollector_Add_SameMetric(b *testing.B) {
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "bench_gauge",
+		LabelNames: []string{"method"},
+	})
+	labels := map[string]string{"method": "GET"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Add(1.0, labels, collectors.WithGroup("g"))
+	}
+}
+
+func BenchmarkConstGaugeCollector_Set_DifferentMetrics(b *testing.B) {
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "bench_gauge",
+		LabelNames: []string{"method"},
+	})
+	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Set(float64(i), map[string]string{"method": methods[i%len(methods)]}, collectors.WithGroup("g"))
+	}
+}
+
+func BenchmarkConstGaugeCollector_Set_ManyLabels(b *testing.B) {
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "bench_gauge",
+		LabelNames: []string{"method", "status", "endpoint", "region", "service"},
+	})
+	labels := map[string]string{
+		"method": "GET", "status": "200", "endpoint": "/api",
+		"region": "us-east", "service": "web",
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Set(float64(i), labels, collectors.WithGroup("g"))
+	}
+}
+
+func BenchmarkConstGaugeCollector_Collect(b *testing.B) {
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "bench_gauge",
+		LabelNames: []string{"method"},
+	})
+	for _, m := range []string{"GET", "POST", "PUT", "DELETE", "PATCH"} {
+		collector.Set(1.0, map[string]string{"method": m}, collectors.WithGroup("g"))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ch := make(chan prometheus.Metric, 10)
+		collector.Collect(ch)
+		close(ch)
+		for range ch {
+		}
+	}
+}
+
+func BenchmarkConstGaugeCollector_ExpireGroupMetrics(b *testing.B) {
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
+		collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+			Name:       "bench_gauge",
+			LabelNames: []string{"idx"},
+		})
+		for j := 0; j < 100; j++ {
+			collector.Set(float64(j), map[string]string{"idx": fmt.Sprintf("%d", j)}, collectors.WithGroup("target"))
+		}
+		b.StartTimer()
+		collector.ExpireGroupMetrics("target")
+		b.StopTimer()
+	}
+}
+
+func BenchmarkConstGaugeCollector_Set_Parallel(b *testing.B) {
+	collector := collectors.NewConstGaugeCollector(&collectors.MetricDescription{
+		Name:       "bench_gauge",
+		LabelNames: []string{"worker"},
+	})
+	b.RunParallel(func(pb *testing.PB) {
+		labels := map[string]string{"worker": "w"}
+		i := 0
+		for pb.Next() {
+			collector.Set(float64(i), labels, collectors.WithGroup("g"))
+			i++
+		}
+	})
+}

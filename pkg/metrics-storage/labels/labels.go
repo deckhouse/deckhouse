@@ -15,14 +15,27 @@
 package labels
 
 import (
-	"sort"
+	"slices"
 )
 
 // MergeLabels merges several maps into one. Last map keys overrides keys from first maps.
 //
 // Can be used to copy a map if just one argument is used.
 func MergeLabels(labelsMaps ...map[string]string) map[string]string {
-	labels := make(map[string]string)
+	if len(labelsMaps) == 1 {
+		src := labelsMaps[0]
+		dst := make(map[string]string, len(src))
+		for k, v := range src {
+			dst[k] = v
+		}
+		return dst
+	}
+
+	size := 0
+	for _, m := range labelsMaps {
+		size += len(m)
+	}
+	labels := make(map[string]string, size)
 	for _, labelsMap := range labelsMaps {
 		for k, v := range labelsMap {
 			labels[k] = v
@@ -37,14 +50,14 @@ func LabelNames(labels map[string]string) []string {
 	for labelName := range labels {
 		names = append(names, labelName)
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	return names
 }
 
 func LabelValues(labels map[string]string, labelNames []string) []string {
-	values := make([]string, 0, len(labelNames))
-	for _, name := range labelNames {
-		values = append(values, labels[name])
+	values := make([]string, len(labelNames))
+	for i, name := range labelNames {
+		values[i] = labels[name]
 	}
 	return values
 }

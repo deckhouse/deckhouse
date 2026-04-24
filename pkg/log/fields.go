@@ -23,11 +23,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// formatter identifies the data format for Raw log values.
 type formatter string
 
 const (
-	jsonFormatter = "json"
-	yamlFormatter = "yaml"
+	jsonFormatter formatter = "json"
+	yamlFormatter formatter = "yaml"
 )
 
 func Type(key string, t any) slog.Attr {
@@ -74,30 +75,32 @@ func RawYAML(key, text string) slog.Attr {
 	}
 }
 
-// made them public to use without slog.Attr
 func NewJSONRaw(text string) *raw {
 	return &raw{
-		formatter: jsonFormatter,
-		text:      text,
+		format: jsonFormatter,
+		text:   text,
 	}
 }
 
 func NewYAMLRaw(text string) *raw {
 	return &raw{
-		formatter: yamlFormatter,
-		text:      text,
+		format: yamlFormatter,
+		text:   text,
 	}
 }
 
+// raw is a log value that parses a JSON or YAML string into a
+// structured map for embedding into log output. If parsing fails,
+// the original text is used as a plain string value.
 type raw struct {
-	formatter formatter
-	text      string
+	format formatter
+	text   string
 }
 
 func (r *raw) LogValue() slog.Value {
 	raw := make(map[string]any, 1)
 
-	switch r.formatter {
+	switch r.format {
 	case jsonFormatter:
 		if err := json.Unmarshal([]byte(r.text), &raw); err == nil {
 			return slog.AnyValue(raw)

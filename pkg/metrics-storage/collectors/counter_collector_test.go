@@ -698,3 +698,93 @@ func extractCounterLabels(t *testing.T, metric prometheus.Metric) map[string]str
 	}
 	return labels
 }
+
+// Benchmarks
+
+func BenchmarkConstCounterCollector_Add_SameMetric(b *testing.B) {
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "bench_counter",
+		LabelNames: []string{"method"},
+	})
+	labels := map[string]string{"method": "GET"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Add(1, labels)
+	}
+}
+
+func BenchmarkConstCounterCollector_Add_DifferentMetrics(b *testing.B) {
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "bench_counter",
+		LabelNames: []string{"method"},
+	})
+	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Add(1, map[string]string{"method": methods[i%len(methods)]})
+	}
+}
+
+func BenchmarkConstCounterCollector_Add_ManyLabels(b *testing.B) {
+	labelNames := []string{"method", "status", "endpoint", "region", "service"}
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "bench_counter",
+		LabelNames: labelNames,
+	})
+	labels := map[string]string{
+		"method": "GET", "status": "200", "endpoint": "/api",
+		"region": "us-east", "service": "web",
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Add(1, labels)
+	}
+}
+
+func BenchmarkConstCounterCollector_Collect(b *testing.B) {
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "bench_counter",
+		LabelNames: []string{"method"},
+	})
+	for _, m := range []string{"GET", "POST", "PUT", "DELETE", "PATCH"} {
+		collector.Add(1, map[string]string{"method": m})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ch := make(chan prometheus.Metric, 10)
+		collector.Collect(ch)
+		close(ch)
+		for range ch {
+		}
+	}
+}
+
+func BenchmarkConstCounterCollector_ExpireGroupMetrics(b *testing.B) {
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
+		collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+			Name:       "bench_counter",
+			LabelNames: []string{"idx"},
+		})
+		for j := 0; j < 100; j++ {
+			collector.Add(1, map[string]string{"idx": fmt.Sprintf("%d", j)}, collectors.WithGroup("target"))
+		}
+		b.StartTimer()
+		collector.ExpireGroupMetrics("target")
+		b.StopTimer()
+	}
+}
+
+func BenchmarkConstCounterCollector_Add_Parallel(b *testing.B) {
+	collector := collectors.NewConstCounterCollector(collectors.MetricDescription{
+		Name:       "bench_counter",
+		LabelNames: []string{"worker"},
+	})
+	b.RunParallel(func(pb *testing.PB) {
+		labels := map[string]string{"worker": "w"}
+		for pb.Next() {
+			collector.Add(1, labels)
+		}
+	})
+}

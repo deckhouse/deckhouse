@@ -1068,3 +1068,110 @@ func extractHistogramData(t *testing.T, metric prometheus.Metric) HistogramData 
 		Labels:  labels,
 	}
 }
+
+// Benchmarks
+
+func BenchmarkConstHistogramCollector_Observe_SameMetric(b *testing.B) {
+	collector := collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+		Name:       "bench_hist",
+		LabelNames: []string{"method"},
+	}, []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0})
+	labels := map[string]string{"method": "GET"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Observe(float64(i%100)*0.01, labels, collectors.WithGroup("g"))
+	}
+}
+
+func BenchmarkConstHistogramCollector_Observe_DifferentMetrics(b *testing.B) {
+	collector := collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+		Name:       "bench_hist",
+		LabelNames: []string{"method"},
+	}, []float64{0.1, 1.0, 10.0})
+	methods := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Observe(float64(i%100)*0.1, map[string]string{"method": methods[i%len(methods)]}, collectors.WithGroup("g"))
+	}
+}
+
+func BenchmarkConstHistogramCollector_Observe_ManyBuckets(b *testing.B) {
+	buckets := make([]float64, 50)
+	for i := range buckets {
+		buckets[i] = float64(i+1) * 0.1
+	}
+	collector := collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+		Name:       "bench_hist",
+		LabelNames: []string{},
+	}, buckets)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		collector.Observe(float64(i%100)*0.05, nil, collectors.WithGroup("g"))
+	}
+}
+
+func BenchmarkConstHistogramCollector_Collect(b *testing.B) {
+	collector := collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+		Name:       "bench_hist",
+		LabelNames: []string{"method"},
+	}, []float64{0.1, 1.0, 10.0})
+	for _, m := range []string{"GET", "POST", "PUT", "DELETE", "PATCH"} {
+		collector.Observe(0.5, map[string]string{"method": m}, collectors.WithGroup("g"))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ch := make(chan prometheus.Metric, 10)
+		collector.Collect(ch)
+		close(ch)
+		for range ch {
+		}
+	}
+}
+
+func BenchmarkConstHistogramCollector_UpdateBuckets(b *testing.B) {
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
+		collector := collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+			Name:       "bench_hist",
+			LabelNames: []string{"method"},
+		}, []float64{0.1, 1.0, 10.0})
+		for j := 0; j < 50; j++ {
+			collector.Observe(float64(j)*0.1, map[string]string{"method": "GET"}, collectors.WithGroup("g"))
+		}
+		b.StartTimer()
+		collector.UpdateBuckets([]float64{0.05, 0.5, 5.0, 50.0})
+		b.StopTimer()
+	}
+}
+
+func BenchmarkConstHistogramCollector_Observe_Parallel(b *testing.B) {
+	collector := collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+		Name:       "bench_hist",
+		LabelNames: []string{"worker"},
+	}, []float64{0.1, 1.0, 10.0})
+	b.RunParallel(func(pb *testing.PB) {
+		labels := map[string]string{"worker": "w"}
+		i := 0
+		for pb.Next() {
+			collector.Observe(float64(i%100)*0.01, labels, collectors.WithGroup("g"))
+			i++
+		}
+	})
+}
+
+func BenchmarkConstHistogramCollector_ExpireGroupMetrics(b *testing.B) {
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
+		collector := collectors.NewConstHistogramCollector(&collectors.MetricDescription{
+			Name:       "bench_hist",
+			LabelNames: []string{"idx"},
+		}, []float64{0.1, 1.0, 10.0})
+		for j := 0; j < 100; j++ {
+			collector.Observe(0.5, map[string]string{"idx": fmt.Sprintf("%d", j)}, collectors.WithGroup("target"))
+		}
+		b.StartTimer()
+		collector.ExpireGroupMetrics("target")
+		b.StopTimer()
+	}
+}

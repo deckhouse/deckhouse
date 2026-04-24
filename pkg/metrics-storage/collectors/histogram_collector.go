@@ -15,7 +15,7 @@
 package collectors
 
 import (
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -43,7 +43,6 @@ type ConstHistogramCollector struct {
 	desc       *prometheus.Desc
 	buckets    []float64
 	collection map[uint64]GroupedHistogramMetric
-	bucketsMtx sync.RWMutex
 }
 
 func NewConstHistogramCollector(desc *MetricDescription, buckets []float64) *ConstHistogramCollector {
@@ -54,7 +53,7 @@ func NewConstHistogramCollector(desc *MetricDescription, buckets []float64) *Con
 	// Ensure buckets are sorted
 	sortedBuckets := make([]float64, len(buckets))
 	copy(sortedBuckets, buckets)
-	sort.Float64s(sortedBuckets)
+	slices.Sort(sortedBuckets)
 
 	d := prometheus.NewDesc(
 		desc.Name,
@@ -76,10 +75,10 @@ func (c *ConstHistogramCollector) Observe(value float64, labels map[string]strin
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	options := NewConstCollectorOptions(opts...)
+	group := resolveGroup(opts)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	metricHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(group, labelValues)
 
 	// Get or create metric
 	storedMetric, ok := c.collection[metricHash]
@@ -89,7 +88,7 @@ func (c *ConstHistogramCollector) Observe(value float64, labels map[string]strin
 			Sum:         NewMetricValue(0.0),
 			Count:       NewMetricValue(uint64(0)),
 			LabelValues: labelValues,
-			Group:       options.Group,
+			Group:       group,
 		}
 	}
 
@@ -104,6 +103,43 @@ func (c *ConstHistogramCollector) Observe(value float64, labels map[string]strin
 	}
 
 	// Update buckets
+	for i, upperBound := range c.buckets {
+		if value <= upperBound {
+			storedMetric.Buckets[i]++
+		}
+	}
+
+	c.collection[metricHash] = storedMetric
+}
+
+// ObserveWithGroup is like Observe but takes the group as a direct parameter,
+// avoiding the closure allocation from WithGroup.
+func (c *ConstHistogramCollector) ObserveWithGroup(value float64, labels map[string]string, group string) {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	labelValues := labelspkg.LabelValues(labels, c.labelNames)
+	metricHash := HashMetric(group, labelValues)
+
+	storedMetric, ok := c.collection[metricHash]
+	if !ok {
+		storedMetric = GroupedHistogramMetric{
+			Buckets:     make([]uint64, len(c.buckets)),
+			Sum:         NewMetricValue(0.0),
+			Count:       NewMetricValue(uint64(0)),
+			LabelValues: labelValues,
+			Group:       group,
+		}
+	}
+
+	storedMetric.Sum.Add(value)
+	storedMetric.Count.Add(1)
+
+	if value < 0 {
+		c.collection[metricHash] = storedMetric
+		return
+	}
+
 	for i, upperBound := range c.buckets {
 		if value <= upperBound {
 			storedMetric.Buckets[i]++
@@ -155,8 +191,8 @@ func (c *ConstHistogramCollector) Name() string {
 }
 
 func (c *ConstHistogramCollector) Buckets() []float64 {
-	c.bucketsMtx.RLock()
-	defer c.bucketsMtx.RUnlock()
+	c.mtx.RLock()
+	defer c.mtx.RUnlock()
 
 	result := make([]float64, len(c.buckets))
 	copy(result, c.buckets)
@@ -165,9 +201,7 @@ func (c *ConstHistogramCollector) Buckets() []float64 {
 
 func (c *ConstHistogramCollector) UpdateBuckets(buckets []float64) {
 	c.mtx.Lock()
-	c.bucketsMtx.Lock()
 	defer c.mtx.Unlock()
-	defer c.bucketsMtx.Unlock()
 
 	if len(buckets) == 0 {
 		return
@@ -176,7 +210,7 @@ func (c *ConstHistogramCollector) UpdateBuckets(buckets []float64) {
 	// Sort new buckets
 	sortedBuckets := make([]float64, len(buckets))
 	copy(sortedBuckets, buckets)
-	sort.Float64s(sortedBuckets)
+	slices.Sort(sortedBuckets)
 
 	// Check if buckets actually changed
 	if len(sortedBuckets) == len(c.buckets) {
@@ -264,7 +298,7 @@ func (c *ConstHistogramCollector) UpdateLabels(labels []string) {
 	}
 
 	// Sort labels for consistency
-	sort.Strings(c.labelNames)
+	slices.Sort(c.labelNames)
 
 	// Create new description and collection with updated labels
 	c.desc = prometheus.NewDesc(c.name, c.name, c.labelNames, nil)
@@ -300,12 +334,12 @@ func (c *ConstHistogramCollector) Reset(labels map[string]string, opts ...ConstC
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 
-	options := NewConstCollectorOptions(opts...)
+	group := resolveGroup(opts)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	metricHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(group, labelValues)
 
-	if metric, ok := c.collection[metricHash]; ok && metric.Group == options.Group {
+	if metric, ok := c.collection[metricHash]; ok && metric.Group == group {
 		// Reset all buckets to zero
 		for i := range metric.Buckets {
 			metric.Buckets[i] = 0
@@ -321,12 +355,12 @@ func (c *ConstHistogramCollector) GetObservationCount(labels map[string]string, 
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
 
-	options := NewConstCollectorOptions(opts...)
+	group := resolveGroup(opts)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	metricHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(group, labelValues)
 
-	if metric, ok := c.collection[metricHash]; ok && metric.Group == options.Group {
+	if metric, ok := c.collection[metricHash]; ok && metric.Group == group {
 		return metric.Count.Get()
 	}
 	return 0
@@ -337,12 +371,12 @@ func (c *ConstHistogramCollector) GetSum(labels map[string]string, opts ...Const
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
 
-	options := NewConstCollectorOptions(opts...)
+	group := resolveGroup(opts)
 
 	labelValues := labelspkg.LabelValues(labels, c.labelNames)
-	metricHash := HashMetric(options.Group, labelValues)
+	metricHash := HashMetric(group, labelValues)
 
-	if metric, ok := c.collection[metricHash]; ok && metric.Group == options.Group {
+	if metric, ok := c.collection[metricHash]; ok && metric.Group == group {
 		return metric.Sum.Get()
 	}
 	return 0.0

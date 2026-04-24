@@ -656,3 +656,72 @@ stubArg:
 		})
 	}
 }
+
+func Test_Logger_ErrorContext(t *testing.T) {
+	t.Parallel()
+
+	buf := bytes.NewBuffer(nil)
+
+	logger := log.NewLogger(
+		log.WithOutput(buf),
+		log.WithTimeFunc(func(_ time.Time) time.Time {
+			parsedTime, _ := time.Parse(time.DateTime, "2006-01-02 15:04:05")
+			return parsedTime
+		}),
+	)
+
+	ctx := context.WithValue(context.Background(), "trace_id", "abc-123")
+	logger.ErrorContext(ctx, "error with context")
+
+	line := strings.TrimSpace(buf.String())
+	assert.Contains(t, line, `"level":"error"`)
+	assert.Contains(t, line, `"stacktrace"`)
+	assert.Contains(t, line, `"msg":"error with context"`)
+}
+
+func Test_ParseLevel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input    string
+		expected log.Level
+		wantErr  bool
+	}{
+		{"trace", log.LevelTrace, false},
+		{"TRACE", log.LevelTrace, false},
+		{"debug", log.LevelDebug, false},
+		{"info", log.LevelInfo, false},
+		{"warn", log.LevelWarn, false},
+		{"error", log.LevelError, false},
+		{"fatal", log.LevelFatal, false},
+		{"unknown", log.LevelInfo, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			level, err := log.ParseLevel(tt.input)
+			assert.Equal(t, tt.expected, level)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.input)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_LogLevelFromStr(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, log.LevelDebug, log.LogLevelFromStr("debug"))
+	assert.Equal(t, log.LevelInfo, log.LogLevelFromStr("invalid"))
+}
+
+func Test_NewNop(t *testing.T) {
+	t.Parallel()
+
+	logger := log.NewNop()
+	assert.NotNil(t, logger)
+	logger.Info("should not panic")
+}
