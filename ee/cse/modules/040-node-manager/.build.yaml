@@ -1,2 +1,3 @@
 crds/mcm.yaml
 templates/*
+monitoring/prometheus-rules/early-oom.tpl
