@@ -75,8 +75,10 @@ func hasRegeneratedKubeconfigs(report kubeconfig.KubeconfigApplyReport) bool {
 	return false
 }
 
-// updateRootKubeconfig ensures /root/.kube/config is a symlink to admin.conf.
-func updateRootKubeconfig(kubeconfigDir, homeDir string) error {
+// updateRootKubeconfig ensures the root kubeconfig symlink matches the node policy:
+// nodeAdminKubeconfig=true, /root/.kube/config -> admin.conf
+// nodeAdminKubeconfig=false, symlink is removed
+func updateRootKubeconfig(kubeconfigDir, homeDir string, nodeAdminKubeconfig bool) error {
 	var symlinkPath string
 	if homeDir != "" && homeDir != "/" {
 		symlinkPath = filepath.Join(homeDir, ".kube", "config")
@@ -85,6 +87,10 @@ func updateRootKubeconfig(kubeconfigDir, homeDir string) error {
 	}
 
 	adminConfPath := filepath.Join(kubeconfigDir, "admin.conf")
+
+	if !nodeAdminKubeconfig {
+		return removeRootKubeconfigSymlink(symlinkPath, adminConfPath)
+	}
 
 	if info, err := os.Lstat(symlinkPath); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
@@ -103,4 +109,48 @@ func updateRootKubeconfig(kubeconfigDir, homeDir string) error {
 	}
 
 	return os.Symlink(adminConfPath, symlinkPath)
+}
+
+// removeRootKubeconfigSymlink deletes the root kubeconfig symlink only if it is still exists and points to admin.conf
+func removeRootKubeconfigSymlink(symlinkPath, adminConfPath string) error {
+	fi, err := os.Lstat(symlinkPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if fi.Mode()&os.ModeSymlink == 0 {
+		return nil
+	}
+	target, err := filepath.EvalSymlinks(symlinkPath)
+	if err != nil {
+		return nil
+	}
+	if target != adminConfPath {
+		return nil
+	}
+	return os.Remove(symlinkPath)
+}
+
+// hardenAdminKubeconfigs restricts file permissions on admin.conf and super-admin.conf to 0600.
+// missing files - skipped, files already at 0600 - untouched.
+func hardenAdminKubeconfigs(kubeconfigDir string) error {
+	for _, name := range []string{"super-admin.conf", "admin.conf"} {
+		path := filepath.Join(kubeconfigDir, name)
+		fi, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("stat %s: %w", path, err)
+		}
+		if fi.Mode().Perm() == 0o600 {
+			continue
+		}
+		if err := os.Chmod(path, 0o600); err != nil {
+			return fmt.Errorf("chmod %s: %w", path, err)
+		}
+	}
+	return nil
 }

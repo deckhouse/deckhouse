@@ -113,6 +113,9 @@ func Register(mgr manager.Manager) error {
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
 	logger := r.log.With(slog.String("operation", req.Name))
 
+	// harden admin kubeconfig perms and align root kubeconfig symlink.
+	r.enforceNodePolicy(logger)
+
 	op := &controlplanev1alpha1.ControlPlaneOperation{}
 	if err := r.client.Get(ctx, req.NamespacedName, op); err != nil {
 		return reconcile.Result{}, client.IgnoreNotFound(err)
@@ -184,6 +187,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 
 	return r.reconcilePipeline(ctx, state, secrets, logger)
+}
+
+// enforceNodePolicy applies node security policy on every reconcile:
+// keep admin kubeconfig perms at 0600 and align root kubeconfig symlink.
+func (r *Reconciler) enforceNodePolicy(logger *log.Logger) {
+	if err := hardenAdminKubeconfigs(r.node.KubeconfigDir); err != nil {
+		logger.Warn("failed to harden admin kubeconfigs", log.Err(err))
+	}
+	if err := updateRootKubeconfig(r.node.KubeconfigDir, r.node.HomeDir, r.node.NodeAdminKubeconfig); err != nil {
+		logger.Warn("failed to enforce root kubeconfig symlink", log.Err(err))
+	}
 }
 
 // isDesiredStale checks that secret content still matches with desired checksums in the operation spec.

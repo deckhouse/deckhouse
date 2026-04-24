@@ -139,10 +139,13 @@ func (c *renewKubeconfigsStep) Execute(_ context.Context, env *StepEnv, logger *
 		logger.Info("kubeconfigs were regenerated")
 		renewResult = controlplanev1alpha1.CPOStepResultRenewed
 	}
-	// dont return error if failed to update root kubeconfig symlink, maybe return err later.
+	// best-effort: symlink/hardening failures must not fail the operation.
 	if componentDeps(component).NeedsRootKubeconfig {
-		if err := updateRootKubeconfig(kubeconfigDir, env.Node.HomeDir); err != nil {
+		if err := updateRootKubeconfig(kubeconfigDir, env.Node.HomeDir, env.Node.NodeAdminKubeconfig); err != nil {
 			logger.Warn("failed to update root kubeconfig symlink", log.Err(err))
+		}
+		if err := hardenAdminKubeconfigs(kubeconfigDir); err != nil {
+			logger.Warn("failed to harden admin kubeconfigs", log.Err(err))
 		}
 	}
 	return StepResult{Outcome: OutcomeCompleted, Message: renewResult}, nil

@@ -305,6 +305,10 @@ spec:
           value: {{ $.Values.global.clusterConfiguration.clusterDomain | quote }}
         - name: SERVICE_SUBNET_CIDR
           value: {{ $.Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
+        {{- if eq (include "cpm.disableRootKubeconfigSymlink" $ | trim) "true" }}
+        - name: NODE_ADMIN_KUBECONFIG
+          value: "false"
+        {{- end }}
         livenessProbe:
           httpGet:
             host: 127.0.0.1
