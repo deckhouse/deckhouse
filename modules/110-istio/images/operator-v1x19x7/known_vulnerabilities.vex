@@ -104,6 +104,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-35206"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.12.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm pull --untar output directory confusion (CVE-2026-35206, GHSA-hr2v-4r36-88hr, CWE-22) — Функционал helm pull с распаковкой chart (флаг --untar) из произвольного URL или имени из репозитория в программном продукте helm версии 3.12.2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов Istio Operator. Манифесты и chart-артефакты для control-plane Istio подготавливаются на этапе сборки образа и не подменяются из недоверенных источников во время работы в кластере, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-04-24T08:00:11.336647814Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2026-33186"
       },
       "products": [
@@ -129,7 +143,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Компонент Istio Operator использует библиотеку go.opentelemetry.io/otel/sdk как зависимость. Уязвимость CVE-2026-39883 связана с детектированием ресурсов в SDK: на платформах BSD и Solaris вызывается утилита kenv без абсолютного пути, что теоретически допускает подмену через PATH (CWE-426), см. GHSA-hfvc-g4fc-pqhx. Образ оператора собран и выполняется в контейнере на Linux; указанный путь исполнения относится к BSD/Solaris и на типовом рабочем окружении Deckhouse не задействован, поэтому эксплуатация в контексте данного компонента недоступна.",
       "timestamp": "2026-04-13T10:54:18.629437851Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prometheus stored XSS in web UI (CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79) — Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (Graph, Metric Explorer и др.) при отображении имён метрик и значений лейблов, в т.ч. после приёма данных через remote write или OTLP receiver. Бинарник Istio Operator не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.45.0 (Istio 1.19.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory (актуальные затронутые версии — ветка 3.x сервера). Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-04-24T08:00:33.447758925Z"
     }
   ],
-  "timestamp": "2026-04-13T10:55Z"
+  "timestamp": "2026-04-24T08:00Z"
 }

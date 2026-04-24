@@ -31,7 +31,21 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Компонент Istio Pilot (istiod) использует библиотеку go.opentelemetry.io/otel/sdk как зависимость. Уязвимость CVE-2026-39883 связана с детектированием ресурсов в SDK: на платформах BSD и Solaris вызывается утилита kenv без абсолютного пути, что теоретически допускает подмену через PATH (CWE-426), см. GHSA-hfvc-g4fc-pqhx. Образ pilot собран и выполняется в контейнере на Linux; указанный путь исполнения относится к BSD/Solaris и на типовом рабочем окружении Deckhouse не задействован, поэтому эксплуатация в контексте данного компонента недоступна.",
       "timestamp": "2026-04-13T11:00:41.218374056Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.45.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Prometheus stored XSS in web UI (CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79) — Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (Graph, Metric Explorer и др.) при отображении имён метрик и значений лейблов, в т.ч. после приёма данных через remote write или OTLP receiver. Бинарник Istio Pilot (istiod) не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.45.0 (Istio 1.19.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory (актуальные затронутые версии — ветка 3.x сервера). Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-04-24T07:49:02.492836027Z"
     }
   ],
-  "timestamp": "2026-04-13T11:02Z"
+  "timestamp": "2026-04-24T07:49Z"
 }
