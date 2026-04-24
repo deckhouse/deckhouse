@@ -76,4 +76,5 @@ import:
   - usr/lib/python3*
   - usr/lib/lib*.so
   excludePaths:
-  - usr/lib/python3*/site-packages/pip-25.3*
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test

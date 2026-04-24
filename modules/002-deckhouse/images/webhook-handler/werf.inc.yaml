@@ -31,6 +31,9 @@ import:
   - usr/bin/python3*
   - usr/lib/python3*
   - usr/lib/lib*.so
+  excludePaths:
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test
 git:
 - add: /{{ .ModulePath }}
   to: /available_hooks
