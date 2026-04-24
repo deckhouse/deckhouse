@@ -30,3 +30,54 @@ properties:
           * the first (in lexicographic order) StorageClass created by the module.
 
           > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+  provider:
+    type: object
+    additionalProperties: false
+    description: Parameters for connecting to the VCD API.
+    properties:
+      server:
+        type: string
+        description: The host or the IP address of the VCD server.
+      username:
+        type: string
+        description: The login ID.
+      password:
+        type: string
+        description: The user's password.
+      apiToken:
+        type: string
+        description: |
+          The token for authentication.
+
+          > **Caution!** When using `apiToken`, leave `username` and `password` empty.
+      insecure:
+        type: boolean
+        description: Set to `true` if VCD has a self-signed certificate.
+        x-doc-default: false
+  organization:
+    type: string
+    description: VMware Cloud Director Organization name.
+  virtualDataCenter:
+    type: string
+    description: VMware Cloud Director Virtual Data Center name (belongs to Organization).
+  virtualApplicationName:
+    type: string
+      # cluster api getting app by VCDCluster name and we should create app with kubernetes resources name restrictions
+    # base on this answer https://stackoverflow.com/a/67387967
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+    description: VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
+  mainNetwork:
+    type: string
+    description: Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+    example: internal
+  sshPublicKey:
+    type: string
+    description: A public key for accessing nodes.
+  metadata:
+    type: object
+    description: |
+      Custom metadata entries to be stored in cluster objects such as virtual machines, disks and network.
+
+      > **Caution!** Changing the metadata will cause the recreation of CloudEphemeral nodes.
+    additionalProperties:
+      type: string

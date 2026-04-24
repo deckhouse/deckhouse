@@ -18,3 +18,34 @@ properties:
           * первый (по алфавиту) StorageClass из тех, что создаются модулем.
 
           > **Параметр устарел**. Вместо этого параметра используйте глобальный параметр [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+  provider:
+    description: Параметры подключения к VCD.
+    properties:
+      server:
+        description: Хост или IP-адрес сервера VCD-сервера.
+      username:
+        description: Имя пользователя с полными правами на проект.
+      password:
+        description: Пароль пользователя.
+      apiToken:
+        description: |
+          Токен для аутентификации.
+
+          > **Внимание!** При использовании `apiToken` необходимо оставить `username` и `password` пустыми.
+      insecure:
+        description: Установите `true`, если VCD использует самоподписанный сертификат.
+  organization:
+    description: Имя Organization в VMware Cloud Director.
+  virtualDataCenter:
+    description: Имя Virtual Data Center в VMware Cloud Director, принадлежащего указанной Organization.
+  virtualApplicationName:
+    description: Имя Virtual Application в VMware Cloud Director, принадлежащего указанному Virtual Data Center.
+  mainNetwork:
+    description: Путь к сети, к которой будут подключены основные сетевые интерфейсы VirtualMachine.
+  sshPublicKey:
+    description: Публичный ключ для доступа к узлам.
+  metadata:
+    description: |
+      Пользовательские записи metadata, которые будут сохранены в объектах кластера, например в виртуальных машинах, дисках и сетях.
+
+       > **Внимание!** Изменение метаданных приведет к пересозданию CloudEphemeral-узлов.
