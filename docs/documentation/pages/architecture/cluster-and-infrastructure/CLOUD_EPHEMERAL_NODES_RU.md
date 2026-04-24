@@ -51,7 +51,7 @@ Bashible — это ключевой компонент подсистемы Clu
    * **psi-monitor** — основной контейнер, который отслеживает метрику *PSI (Pressure Stall Information)*, отражающую время, в течение которого процессы ожидают освобождения определённых ресурсов, таких как CPU, память или I/O;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **early-oom**.
 
-5. **Fencing-agent** (DaemonSet) и **Fencing-controller** — компоненты, реализующие механизм fencing. Подробное описание приведено на странице [Управление Static-узлами](static-nodes.html#компоненты-модуля). Подробнее о том, как fencing обрабатывает разные типы узлов, см. раздел [«Как fencing обрабатывает разные типы узлов»](/modules/node-manager/faq.html#как-fencing-обрабатывает-разные-типы-узлов) в FAQ модуля `node-manager`.
+5. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
 6. **Standby-holder** (Deployment) — под для резервирования узлов. При включенном параметре [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) кастомного ресурса NodeGroup в соответствующей группе узлов во всех [зонах](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) создаются резервные узлы.
 

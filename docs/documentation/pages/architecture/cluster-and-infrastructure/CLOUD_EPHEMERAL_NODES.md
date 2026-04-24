@@ -50,7 +50,7 @@ The module managing CloudEphemeral nodes consists of the following components:
    * **psi-monitor**: Monitors the *PSI (Pressure Stall Information)* metric, which reflects how long processes wait for resources such as CPU, memory, or I/O.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to the early-oom metrics.
 
-5. **Fencing-agent** (DaemonSet) and **Fencing-controller**: Components that implement node fencing. For a detailed description, see the [Static node management](static-nodes.html#module-components) page. For details on how fencing handles different node types, see the [How fencing handles different node types](/modules/node-manager/faq.html#how-fencing-handles-different-node-types) section in the `node-manager` FAQ.
+5. **Fencing-agent** (DaemonSet) and **fencing-controller**: Components that implement the fencing mechanism. The operation principles of both components are described in detail in the [`spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) parameter description of the NodeGroup resource. For details on how the fencing mechanism handles different node types, refer to [FAQ](/modules/node-manager/faq.html#how-the-fencing-mechanism-handles-different-node-types) in the `node-manager` module documentation.
 
 6. **Standby-holder** (Deployment): A pod used to reserve nodes. When the [`spec.cloudinstances.standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) parameter is enabled in the NodeGroup custom resource, standby nodes are created in all configured [zones](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones).
 

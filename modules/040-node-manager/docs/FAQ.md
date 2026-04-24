@@ -1486,35 +1486,44 @@ You cannot create an Instance resource yourself, but you can delete it. In this 
 
 Node reboots may be required after configuration changes. For example, after changing certain sysctl settings, specifically when modifying the `kernel.yama.ptrace_scope` parameter (e.g., using `astra-ptrace-lock enable/disable` in the Astra Linux distribution).
 
-## How fencing handles different node types
+## How the fencing mechanism handles different node types?
 
-Fencing activates when a node loses connectivity to the cluster and protects the cluster from "zombie" nodes in an undefined state. To prevent short-term failures from triggering cascading action, fencing operates in two steps: first it marks the node as suspect (at the `memberlist`/Lifeguard gossip-protocol level), and only then "builds a fence around it" — powers the node off and (if applicable) deletes its Node object.
+The fencing mechanism is triggered when a node loses connectivity with the cluster and protects it from "zombie" nodes in an undefined state. To prevent short-time failures from causing cascading actions, the mechanism operates in two stages: first, it marks the node as suspicious (at the `memberlist/Lifeguard` gossip protocol level), and then isolates it — shuts the node down and, if necessary, deletes the associated Node object.
 
-The action depends on the node type (label `node.deckhouse.io/type`) and on the fencing mode (label `node-manager.deckhouse.io/fencing-mode`, see [`spec.fencing.mode`](cr.html#nodegroup-v1-spec-fencing-mode)).
+For more details on how the fencing-agent and fencing-controller work, refer to the description of the [`spec.fencing.mode`](cr.html#nodegroup-v1-spec-fencing-mode) parameter of the NodeGroup resource.
+
+The behavior depends on the node type (the `node.deckhouse.io/type` label).
 
 ### Cloud nodes (CloudEphemeral, CloudPermanent)
 
-For cloud nodes in `Watchdog` mode, fencing behaves as follows:
+When fencing is triggered in `Watchdog` mode:
 
-- The fencing-agent stops feeding the watchdog (the `softdog` kernel module) and, once the timeout expires, the kernel enters kernel panic. This guarantees no running workload remains on the node.
-- The fencing-controller deletes the Node object from the cluster.
-- Deletion of the Node object is picked up by the cloud-provider controller (MCM/CAPI): it deletes the underlying virtual machine and, if needed, provisions a new one. This way the faulty node is recreated automatically.
+1. The fencing-agent stops resetting the watchdog timer (the `softdog` kernel module). When the timeout expires, a kernel panic occurs — this guarantees that no workloads remain running on the node.
+2. The fencing-controller deletes the Node object from the cluster.
+3. The cloud-provider-controller (MCM/CAPI) picks up the Node deletion, removes the corresponding virtual machine, and provisions a new one if needed. As a result, the failed node is recreated automatically.
 
-There is a theoretical scenario where kubelet on a "stuck" VM could come back before the cloud-provider deletes the machine and try to re-register the node in the cluster. The probability of this is minimal thanks to multiple safeguards:
+Theoretically, a scenario is possible where kubelet on a "stuck" VM recovers before the cloud-provider deletes the machine and attempts to re-register the node in the cluster. The probability of this is minimal due to the following protecting mechanisms:
 
-- Kernel panic leaves the node unusable — bringing it back requires someone to restart the VM manually.
-- Automatic node reboot after kernel panic is disabled at the OS level for every node with fencing enabled.
-- There are safety timings between kernel panic and the point when the cloud-provider picks up the machine.
+- A kernel panic leaves the node in a non-operational state. Manual VM restart is required for recovery.
+- Automatic node reboot after a kernel panic is disabled at the OS level for all nodes with `fencing` enabled.
+- There are safety delays between the kernel panic and the moment the cloud-provider processes the machine.
 
 ### Static nodes (Static, CloudStatic)
 
-For static nodes the Node object is **not deleted**, because there is no controller that will recreate it: no machine can be provisioned under such a Node. The fencing-agent still powers the node off via kernel panic to rule out undefined behavior, and the fencing-controller only evicts workloads (deletes pods). The Node object itself remains, and the node waits until an operator manually brings it back online.
+For static nodes, the Node object is **not deleted**, since the underlying machine cannot be automatically recreated. In this case:
+
+1. The fencing-agent shuts the node down via a kernel panic to prevent undefined behavior.
+2. The fencing-controller only evicts workloads from the node (deletes pods).
+3. The Node object remains in the cluster, and the node waits until it is manually restored by an operator.
 
 ### Disabling automatic reboot after kernel panic
 
-In all cases, when fencing is enabled, automatic node reboot after kernel panic is disabled at the OS level (via a kernel setting). This prevents the node from coming back by itself, in an undefined state, before the cloud-provider removes or recreates the machine (for cloud nodes) or an operator brings the node back online (for static nodes).
+In all cases, when `fencing` is enabled, automatic node reboot after a kernel panic is disabled at the OS level (via kernel settings). This prevents a node from rejoining the cluster in an undefined state:
 
-If you run into a scenario where a node with fencing enabled returns to the cluster differently from what is described above, please contact support: this will help refine the chain of checks and safeguards.
+- **For cloud nodes**: Until the cloud-provider deletes or recreates the virtual machine.
+- **For static nodes**: Until the operator restores the node manually.
+
+If you observe a scenario where a node with `fencing` enabled returns to the cluster in a way that differs from the behavior described above, contact the [support](https://deckhouse.io/tech-support/). This will help clarify the sequence of checks and protecting mechanisms.
 
 ## How do I work with GPU nodes?
 
