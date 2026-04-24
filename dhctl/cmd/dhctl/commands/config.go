@@ -114,11 +114,11 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 
-	runFunc := func() error {
+	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
 
 		metaConfig, err := config.LoadConfigFromFile(
-			context.TODO(),
+			ctx,
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
@@ -144,11 +144,10 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
 	}
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Prepare ControlPlaneManifest and PKI", runFunc)
-	})
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-		return log.ProcessCtx(ctx, "bootstrap", "Prepare Kubeadm Config", runFunc)
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare ControlPlaneManifest and PKI", runFunc)
 	})
 }
 
