@@ -45,7 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
+	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
@@ -492,9 +492,9 @@ func (r *Runtime) Run() {
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
-// ApplySettings → Startup → Run tasks for the named package.
+// Configure → Startup → Run tasks for the named package.
 //
-// ApplySettings reads the latest pending settings from the Store and validates/applies
+// Configure reads the latest pending settings from the Store and validates/applies
 // them to the loaded package instance. This is the single point where settings reach
 // the runtime — both initial load and settings-only changes flow through here.
 //
@@ -521,13 +521,13 @@ func (r *Runtime) schedulePackage(name string) {
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}

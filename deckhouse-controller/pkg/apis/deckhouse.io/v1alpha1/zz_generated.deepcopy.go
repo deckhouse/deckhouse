@@ -400,6 +400,7 @@ func (in *ApplicationStatus) DeepCopyInto(out *ApplicationStatus) {
 		**out = **in
 	}
 	in.Tracking.DeepCopyInto(&out.Tracking)
+	in.LastAppliedConfiguration.DeepCopyInto(&out.LastAppliedConfiguration)
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]v1.Condition, len(*in))
