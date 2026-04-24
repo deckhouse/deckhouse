@@ -13,9 +13,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      summary: "Security events sent to Loki was found"
+      summary: "Security events sent to Loki were found"
       description: >
         The cluster has recorded security events sent via the Vector component in Loki.
         This may indicate potential signs of attacks or security policy violations.
 
-        For more information, see the Grafana dashboard: Security / Security Events
+        For more information, see the Grafana dashboard "Security / Security Events".
