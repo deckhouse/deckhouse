@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestParseNodeGroupConfigurations(t *testing.T) {
+func TestParseInternalBootstrapNodeGroupConfiguration(t *testing.T) {
 	resourcesYAML := `
 apiVersion: v1
 kind: ConfigMap
@@ -34,15 +34,39 @@ data:
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: master-settings
+  name: some-other-ngc
 spec:
   content: |
-    echo master
+    echo other
   nodeGroups:
     - master
   bundles:
     - ubuntu-lts
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: d8-early-node-bootstrap-internal.sh
+spec:
+  weight: 15
+  content: |
+    echo master
+  nodeGroups:
+    - master
+  bundles:
+    - "*"
+`
+
+	ngc, err := ParseInternalBootstrapNodeGroupConfiguration(context.Background(), resourcesYAML)
+	require.NoError(t, err)
+	require.NotNil(t, ngc)
+	require.Equal(t, InternalBootstrapNodeGroupConfigurationName, ngc.Name)
+	require.NotNil(t, ngc.Spec.Weight)
+	require.Equal(t, 15, *ngc.Spec.Weight)
+}
+
+func TestParseInternalBootstrapNodeGroupConfiguration_NotPresent(t *testing.T) {
+	resourcesYAML := `
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -51,69 +75,25 @@ spec:
   nodeType: CloudEphemeral
 `
 
-	nodeGroupConfigurations, err := ParseNodeGroupConfigurations(context.Background(), resourcesYAML)
+	ngc, err := ParseInternalBootstrapNodeGroupConfiguration(context.Background(), resourcesYAML)
 	require.NoError(t, err)
-
-	require.Len(t, nodeGroupConfigurations, 1)
-	require.Equal(t, "master-settings", nodeGroupConfigurations[0].Name)
-	require.Nil(t, nodeGroupConfigurations[0].Spec.Weight)
-	require.Equal(t, []string{"master"}, nodeGroupConfigurations[0].Spec.NodeGroups)
-	require.Equal(t, []string{"ubuntu-lts"}, nodeGroupConfigurations[0].Spec.Bundles)
+	require.Nil(t, ngc)
 }
 
-func TestParseNodeGroupConfigurations_ValidatesRequiredFields(t *testing.T) {
+func TestParseInternalBootstrapNodeGroupConfiguration_RejectsEmptyContent(t *testing.T) {
 	resourcesYAML := `
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: invalid
+  name: d8-early-node-bootstrap-internal.sh
 spec:
-  content: |
-    echo invalid
-  nodeGroups:
-    - master
-`
-
-	_, err := ParseNodeGroupConfigurations(context.Background(), resourcesYAML)
-	require.ErrorContains(t, err, "spec.bundles")
-}
-
-func TestParseNodeGroupConfigurations_PreservesExplicitZeroWeight(t *testing.T) {
-	resourcesYAML := `
-apiVersion: deckhouse.io/v1alpha1
-kind: NodeGroupConfiguration
-metadata:
-  name: zero-weight
-spec:
-  weight: 0
-  content: |
-    echo zero
+  content: ""
   nodeGroups:
     - master
   bundles:
     - "*"
 `
 
-	nodeGroupConfigurations, err := ParseNodeGroupConfigurations(context.Background(), resourcesYAML)
-	require.NoError(t, err)
-	require.Len(t, nodeGroupConfigurations, 1)
-	require.NotNil(t, nodeGroupConfigurations[0].Spec.Weight)
-	require.Equal(t, 0, *nodeGroupConfigurations[0].Spec.Weight)
-}
-
-func TestParseNodeGroupConfigurations_IgnoresTemplatedNonNodeGroupConfigurationDocuments(t *testing.T) {
-	resourcesYAML := `
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: system
-spec:
-  cloudInstances:
-    additionalSubnets:
-      - '{{ index .cloudDiscovery.zoneToSubnetIdMap "ru-central1-a" }}'
-`
-
-	nodeGroupConfigurations, err := ParseNodeGroupConfigurations(context.Background(), resourcesYAML)
-	require.NoError(t, err)
-	require.Empty(t, nodeGroupConfigurations)
+	_, err := ParseInternalBootstrapNodeGroupConfiguration(context.Background(), resourcesYAML)
+	require.ErrorContains(t, err, "spec.content is required")
 }

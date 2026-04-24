@@ -26,9 +26,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func ParseNodeGroupConfigurations(ctx context.Context, resourcesYAML string) ([]deckhousev1alpha1.NodeGroupConfiguration, error) {
+const InternalBootstrapNodeGroupConfigurationName = "d8-early-node-bootstrap-internal.sh"
+
+func ParseInternalBootstrapNodeGroupConfiguration(ctx context.Context, resourcesYAML string) (*deckhousev1alpha1.NodeGroupConfiguration, error) {
 	docs := dhctlyaml.SplitYAML(resourcesYAML)
-	nodeGroupConfigurations := make([]deckhousev1alpha1.NodeGroupConfiguration, 0)
 
 	for _, doc := range docs {
 		if ctx != nil {
@@ -51,20 +52,23 @@ func ParseNodeGroupConfigurations(ctx context.Context, resourcesYAML string) ([]
 			continue
 		}
 
-		nodeGroupConfiguration, err := dhctlyaml.UnmarshalString[deckhousev1alpha1.NodeGroupConfiguration](doc)
+		ngc, err := dhctlyaml.UnmarshalString[deckhousev1alpha1.NodeGroupConfiguration](doc)
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal NodeGroupConfiguration: %w", err)
 		}
 
-		err = validateNodeGroupConfiguration(nodeGroupConfiguration)
-		if err != nil {
+		if ngc.Name != InternalBootstrapNodeGroupConfigurationName {
+			continue
+		}
+
+		if err := validateInternalBootstrapNodeGroupConfiguration(ngc); err != nil {
 			return nil, err
 		}
 
-		nodeGroupConfigurations = append(nodeGroupConfigurations, nodeGroupConfiguration)
+		return &ngc, nil
 	}
 
-	return nodeGroupConfigurations, nil
+	return nil, nil
 }
 
 func isNodeGroupConfigurationIndex(index *yamlvalidation.SchemaIndex) bool {
@@ -75,13 +79,9 @@ func isNodeGroupConfigurationIndex(index *yamlvalidation.SchemaIndex) bool {
 	return index.Kind == "NodeGroupConfiguration" && index.Version == "deckhouse.io/v1alpha1"
 }
 
-func validateNodeGroupConfiguration(nodeGroupConfiguration deckhousev1alpha1.NodeGroupConfiguration) error {
-	if nodeGroupConfiguration.Name == "" {
-		return fmt.Errorf("NodeGroupConfiguration metadata.name is required")
-	}
-
-	if len(nodeGroupConfiguration.Spec.Bundles) == 0 {
-		return fmt.Errorf("NodeGroupConfiguration %q spec.bundles is required", nodeGroupConfiguration.Name)
+func validateInternalBootstrapNodeGroupConfiguration(ngc deckhousev1alpha1.NodeGroupConfiguration) error {
+	if strings.TrimSpace(ngc.Spec.Content) == "" {
+		return fmt.Errorf("NodeGroupConfiguration %q spec.content is required", ngc.Name)
 	}
 
 	return nil
