@@ -131,41 +131,59 @@ func (s *syncer) cleanupLoop(ctx context.Context) {
 }
 
 func (s *syncer) export(ctx context.Context) error {
-	// Get
-	timeseries, slot, err := s.getTimeseries()
-	if err != nil {
-		if errors.Is(err, ErrNoCompleteEpisodes) {
-			return nil
+	// Limit retries to avoid flooding Prometheus when all data is rejected (e.g. auth
+	// issues that also return 4xx). With 30s slots this covers ~50 min of backlog per tick.
+	const maxStaleSkips = 100
+
+	for skipped := 0; ; {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
-		return fmt.Errorf("cannot get timeseries: %v", err)
-	}
 
-	if s.logger.Level == log.DebugLevel {
-		// The logger prints "\n" symbols and thus makes the output unreadable
-		fmt.Println(stringifyTimeseries(timeseries, string(s.syncID)))
-	}
+		timeseries, slot, err := s.getTimeseries()
+		if err != nil {
+			if errors.Is(err, ErrNoCompleteEpisodes) {
+				if skipped > 0 {
+					s.logger.Warnf("skipped %d stale time slots", skipped)
+				}
+				return nil
+			}
+			return fmt.Errorf("cannot get timeseries: %v", err)
+		}
 
-	// Send to the remote storage
-	if err = s.exporter.Export(ctx, timeseries); err != nil {
+		if s.logger.Level == log.DebugLevel {
+			fmt.Println(stringifyTimeseries(timeseries, string(s.syncID)))
+		}
+
+		err = s.exporter.Export(ctx, timeseries)
+		if err == nil {
+			s.logger.Infof("exported timeseries %s", slot.Format("15:04:05"))
+			return s.clean(slot)
+		}
+
 		switch {
 		case errors.Is(err, ErrNotAcceptedByStorage):
-			// will not retry
-			s.logger.Warnf("timeseries (%s) was not accepted by storage: %v", slot.Format("15:04:05"), err)
-			return s.clean(slot)
+			s.logger.Debugf("timeseries (%s) was not accepted by storage: %v", slot.Format("15:04:05"), err)
+			if cleanErr := s.clean(slot); cleanErr != nil {
+				return cleanErr
+			}
+			skipped++
+			if skipped >= maxStaleSkips {
+				s.logger.Warnf("skipped %d stale time slots, will continue on next tick", skipped)
+				return nil
+			}
+			continue
 		case errors.Is(err, ErrInternalStorageError):
 			s.logger.Infof("timeseries (%s) sending postponed: %v", slot.Format("15:04:05"), err)
-			// will send later
 			return nil
 		case errors.Is(err, ErrNoCompleteEpisodes):
-			// will send later
 			return nil
 		default:
 			return fmt.Errorf("exporting timeseries (%s): %w", slot.Format("15:04:05"), err)
 		}
 	}
-
-	s.logger.Infof("exported timeseries %s", slot.Format("15:04:05"))
-	return s.clean(slot)
 }
 
 func (s *syncer) clean(slot time.Time) error {
@@ -199,7 +217,7 @@ func (s *syncer) getTimeseries() ([]*prompb.TimeSeries, time.Time, error) {
 	}
 	s.logger.Debugf("got %d episodes", len(episodes))
 
-	ts := convEpisodes2Timeseries(slot, episodes, s.labels)
+	ts := convEpisodes2Timeseries(slot.Add(s.slotSize), episodes, s.labels)
 
 	return ts, slot, nil
 }
