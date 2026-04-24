@@ -73,6 +73,11 @@ func ConfigBuilder(opts ...any) Config {
 			},
 		}
 
+	case constant.ModeLocal:
+		userSettings = module_config.DeckhouseSettings{
+			Mode: constant.ModeLocal,
+		}
+
 	default:
 		userSettings = module_config.DeckhouseSettings{
 			Mode:      constant.ModeUnmanaged,
@@ -150,6 +155,12 @@ func WithModeUnmanaged() updateMode {
 func WithModeProxy() updateMode {
 	return func() constant.ModeType {
 		return constant.ModeProxy
+	}
+}
+
+func WithModeLocal() updateMode {
+	return func() constant.ModeType {
+		return constant.ModeLocal
 	}
 }
 
@@ -297,6 +308,14 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "local -> not legacy && no errors",
+			input: input{
+				deckhouse: module_config.DeckhouseSettings{
+					Mode: constant.ModeLocal,
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -336,6 +355,13 @@ func TestConfig_DeepCopy(t *testing.T) {
 				name: "Unmanaged mode",
 				config: func() *Config {
 					c := ConfigBuilder(WithModeUnmanaged())
+					return &c
+				}(),
+			},
+			{
+				name: "Local mode",
+				config: func() *Config {
+					c := ConfigBuilder(WithModeLocal())
 					return &c
 				}(),
 			},
