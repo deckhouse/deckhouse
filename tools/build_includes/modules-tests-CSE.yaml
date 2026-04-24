@@ -869,6 +869,21 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/gpu_enabled.go
+  to: /deckhouse/modules/040-node-manager/hooks/gpu_enabled.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/hooks/mig_custom_config_name.go
+  to: /deckhouse/modules/040-node-manager/hooks/mig_custom_config_name.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/early-oom
   to: /deckhouse/modules/040-node-manager/templates/early-oom
   excludePaths:
@@ -901,11 +916,6 @@
     - crds
   stageDependencies:
     setup:
-        - '**/*'
-- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  stageDependencies:
-    install:
         - '**/*'
 - add: /ee/cse/modules/150-user-authn/templates/basic-auth-proxy
   to: /deckhouse/modules/150-user-authn/templates/basic-auth-proxy

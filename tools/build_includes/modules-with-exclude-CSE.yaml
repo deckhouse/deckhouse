@@ -1132,6 +1132,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/cse/modules/040-node-manager/templates/early-oom
   to: /deckhouse/modules/040-node-manager/templates/early-oom
   excludePaths:
@@ -1180,11 +1185,6 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
-- add: /ee/cse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  to: /deckhouse/modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/150-user-authn/templates/basic-auth-proxy
   to: /deckhouse/modules/150-user-authn/templates/basic-auth-proxy
   excludePaths:
