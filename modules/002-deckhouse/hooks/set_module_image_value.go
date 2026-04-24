@@ -84,13 +84,19 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 	}
 	tag := imageRepoTag.TagStr()
 
-	// Set deckhouse image only if it was not set before, e.g. by stabilize_release_channel hook
-	if input.Values.Get(deckhouseImagePath).String() == "" {
-		if !input.Values.Get(deckhouseBasePath).Exists() {
-			return fmt.Errorf("registry base path doesn't exist yet")
-		}
-		base := input.Values.Get(deckhouseBasePath).String()
-		input.Values.Set(deckhouseImagePath, fmt.Sprintf("%s:%s", base, tag))
+	if !input.Values.Get(deckhouseBasePath).Exists() {
+		return fmt.Errorf("registry base path doesn't exist yet")
+	}
+	base := input.Values.Get(deckhouseBasePath).String()
+	desired := fmt.Sprintf("%s:%s", base, tag)
+
+	// Overwrite when values-level image diverges from the Deployment image.
+	// Guards against a race with bumpDeckhouseDeployment: if the hook re-runs
+	// on the old leader pod between the Deployment bump and the leader handover,
+	// a stale cached value would make Helm re-render the previous image and
+	// roll the Deployment back.
+	if input.Values.Get(deckhouseImagePath).String() != desired {
+		input.Values.Set(deckhouseImagePath, desired)
 	}
 
 	return nil
