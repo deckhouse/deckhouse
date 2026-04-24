@@ -90,11 +90,9 @@ func parseDeckhouseImage(_ context.Context, input *go_hook.HookInput) error {
 	base := input.Values.Get(deckhouseBasePath).String()
 	desired := fmt.Sprintf("%s:%s", base, tag)
 
-	// Overwrite when values-level image diverges from the Deployment image.
-	// Guards against a race with bumpDeckhouseDeployment: if the hook re-runs
-	// on the old leader pod between the Deployment bump and the leader handover,
-	// a stale cached value would make Helm re-render the previous image and
-	// roll the Deployment back.
+	// Guards a race with bumpDeckhouseDeployment: if the hook re-runs on the
+	// old leader between the Deployment bump and leader handover, a stale
+	// values entry would make Helm roll the Deployment back.
 	if input.Values.Get(deckhouseImagePath).String() != desired {
 		input.Values.Set(deckhouseImagePath, desired)
 	}
