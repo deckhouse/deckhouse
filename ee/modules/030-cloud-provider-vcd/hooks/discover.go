@@ -25,7 +25,7 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -129,7 +129,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		return fmt.Errorf("failed to validate 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	var discoveryData v1alpha1.VCDCloudProviderDiscoveryData
+	var discoveryData cloudDataV1.VCDCloudProviderDiscoveryData
 	err = json.Unmarshal(discoveryDataJSON, &discoveryData)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
@@ -142,7 +142,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	return nil
 }
 
-func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []v1alpha1.VCDStorageProfile) {
+func handleDiscoveryDataVolumeTypes(input *go_hook.HookInput, volumeTypes []cloudDataV1.VCDStorageProfile) {
 	volumeTypesMap := make(map[string]string, len(volumeTypes))
 
 	for _, volumeType := range volumeTypes {
