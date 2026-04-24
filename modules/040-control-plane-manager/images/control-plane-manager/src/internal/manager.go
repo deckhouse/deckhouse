@@ -103,6 +103,11 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						constants.KubeSystemNamespace: {},
 					},
 				},
+				&corev1.ConfigMap{}: {
+					Namespaces: map[string]cache.Config{
+						constants.KubeSystemNamespace: {},
+					},
+				},
 				&corev1.Node{}: {
 					Transform: func(in any) (any, error) {
 						node, ok := in.(*corev1.Node)

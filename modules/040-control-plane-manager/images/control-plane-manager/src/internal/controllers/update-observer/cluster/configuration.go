@@ -56,7 +56,7 @@ func GetConfiguration(secret *corev1.Secret) (*Configuration, error) {
 
 		rawDefault, ok := secret.Data[defaultKubernetesVersion]
 		if !ok {
-			return nil, fmt.Errorf("'%s' is not found", rawDefault)
+			return nil, fmt.Errorf("'%s' is not found", defaultKubernetesVersion)
 		}
 
 		desiredVersion := strings.TrimSpace(string(rawDefault))

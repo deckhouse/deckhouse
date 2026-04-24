@@ -58,17 +58,18 @@ func buildControlPlaneTopology(pods *corev1.PodList, desiredVersion string) (map
 			return nil, fmt.Errorf("%s label are missing", componentLabelKey)
 		}
 
-		kubeVersion, exists := pod.GetAnnotations()[kubeVersionAnnotation]
-		if !exists {
-			return nil, fmt.Errorf("%s annotation are missing", kubeVersionAnnotation)
+		kubeVersion := pod.GetAnnotations()[kubeVersionAnnotation]
+
+		var normalizedVersion string
+		if kubeVersion != "" {
+			var err error
+			normalizedVersion, err = version.Normalize(kubeVersion)
+			if err != nil {
+				return nil, fmt.Errorf("failed to normalize kubernetes-version '%s': %w", kubeVersion, err)
+			}
 		}
 
-		version, err := version.Normalize(kubeVersion)
-		if err != nil {
-			return nil, fmt.Errorf("failed to normalize kubernetes-version '%s': %w", kubeVersion, err)
-		}
-
-		nodeState.Components[componentLabel] = newControlPlaneComponent(version, pod, desiredVersion)
+		nodeState.Components[componentLabel] = newControlPlaneComponent(normalizedVersion, pod, desiredVersion)
 	}
 
 	return nodesState, nil
