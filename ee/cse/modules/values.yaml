@@ -1,0 +1,37 @@
+global:
+  modules:
+    ingressClass: nginx
+    placement: {}
+    https:
+      mode: OnlyInURI
+    resourcesRequests:
+      everyNode:
+        cpu: 300m
+        memory: 512Mi
+nodeManager:
+  earlyOomEnabled: false
+certManager:
+  disableLetsencrypt: true
+admissionPolicyEngine:
+  denyVulnerableImages:
+    enabled: true
+controlPlaneManager:
+  apiserver:
+    auditPolicyEnabled: true
+operatorTrivy:
+  linkCVEtoBDU: true
+  severities:
+    - UNKNOWN
+    - LOW
+    - MEDIUM
+    - HIGH
+    - CRITICAL
+userAuthz:
+  enableMultiTenancy: true
+loki:
+  diskSizeGigabytes: 50
+  lokiConfig:
+    ingestionBurstSizeMB: 100
+    ingestionRateMB: 50
+    perStreamRateLimit: 30MB
+    perStreamRateLimitBurst: 50MB
