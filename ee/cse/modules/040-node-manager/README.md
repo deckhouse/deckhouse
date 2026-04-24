@@ -1,5 +1,7 @@
 # CSE edit
 
+## templates/nvidia-gpu
+## templates/early-oom
 ## templates/machine-controller-manager
 
 1. mapped to an empty folder to remove the functionality

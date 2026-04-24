@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -36,3 +37,4 @@ import:
 imageSpec:
   config:
     entrypoint: ["/psi-monitor"]
+{{- end }}
