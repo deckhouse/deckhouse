@@ -34,6 +34,7 @@ import (
 
 const (
 	neighborHTTPTimeout     = 2 * time.Second
+	maxErrors               = 2
 	outboundClusterTimeout  = 30 * time.Second
 	serverReadHeaderTimeout = 10 * time.Second
 	serverReadTimeout       = 30 * time.Second
@@ -153,7 +154,6 @@ func dnsHandler(w http.ResponseWriter, r *http.Request) {
 	if d == "" {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Error(r.RemoteAddr, r.RequestURI, " CLUSTER_DOMAIN is not set or empty")
-		fmt.Fprintf(w, "CLUSTER_DOMAIN is required\n")
 		return
 	}
 	host := "kubernetes.default.svc." + d + "."
@@ -185,11 +185,11 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{Timeout: neighborHTTPTimeout}
 	errorCount := 0
 	for i := 0; i < len(targetServices); i++ {
-		if errorCount <= 2 {
+		if errorCount <= maxErrors {
 			req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, singleTargetServiceURL(targetServices[i]), nil)
 			if err != nil {
 				log.Error(err)
-				errorCount++
+				errorCount = maxErrors + 1
 				continue
 			}
 			resp, err := client.Do(req)
@@ -218,8 +218,6 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 // service "cluster IP", i.e. via iptables rules. In worst case, the pod gets all responses from
 // itself.
 func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
-	maxErrors := 2
-
 	client := &http.Client{Timeout: neighborHTTPTimeout}
 
 	errorCount := 0
@@ -228,7 +226,7 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 			req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, clusterIPServiceURL, nil)
 			if err != nil {
 				log.Error(err)
-				errorCount++
+				errorCount = maxErrors + 1
 				continue
 			}
 			resp, err := client.Do(req)
