@@ -107,6 +107,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-ingress-nginx:geoproxy",
 	"system:serviceaccount:d8-ingress-nginx:ingress-nginx",
 	"system:serviceaccount:d8-ingress-nginx:kruise",
+	"system:serviceaccount:d8-ingress-nginx:manager",
 	"system:serviceaccount:d8-ingress-nginx:validator",
 	"system:serviceaccount:d8-istio:alliance-ingressgateway",
 	"system:serviceaccount:d8-istio:alliance-metadata-exporter",

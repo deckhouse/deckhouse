@@ -7,13 +7,13 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
     name: solid
-  name: proxy-solid-failover-native
+  name: proxy-solid-failover
   namespace: d8-ingress-nginx
 spec:
   targetRef:
-    apiVersion: apps/v1
+    apiVersion: apps.kruise.io/v1alpha1
     kind: DaemonSet
-    name: proxy-solid-failover-native
+    name: proxy-solid-failover
   updatePolicy:
     updateMode: "Off"
 ---
@@ -25,17 +25,16 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
     name: solid
-  name: proxy-solid-failover-native
+  name: proxy-solid-failover
   namespace: d8-ingress-nginx
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
       app: proxy-failover
-      ingress-nginx.deckhouse.io/workload-kind: native
       name: solid
 ---
-apiVersion: apps/v1
+apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
@@ -45,41 +44,22 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
     name: solid
-  name: proxy-solid-failover-native
+  name: proxy-solid-failover
   namespace: d8-ingress-nginx
 spec:
   selector:
     matchLabels:
       app: proxy-failover
-      ingress-nginx.deckhouse.io/workload-kind: native
       name: solid
   template:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
-        ingress-nginx-controller.deckhouse.io/checksum: 75f05158bf87157bb787e2c8cb81a77686c625ae745ed10ef04069935288049f
       labels:
         app: proxy-failover
-        ingress-nginx.deckhouse.io/workload-kind: native
         name: solid
         network.deckhouse.io/ingress-nginx-class: solid
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - proxy-failover
-              - key: name
-                operator: In
-                values:
-                - solid
-              - key: ingress-nginx.deckhouse.io/workload-kind
-                operator: DoesNotExist
-            topologyKey: kubernetes.io/hostname
       automountServiceAccountToken: true
       containers:
       - env:
@@ -288,4 +268,7 @@ spec:
           medium: Memory
         name: writable
   updateStrategy:
-    type: OnDelete
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate

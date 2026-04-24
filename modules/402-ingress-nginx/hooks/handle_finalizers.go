@@ -151,6 +151,10 @@ func applyIngressControllerWebhookFilter(obj *unstructured.Unstructured) (go_hoo
 func handleFinalizers(_ context.Context, input *go_hook.HookInput) error {
 	const finalizer = "finalizer.ingress-nginx.deckhouse.io"
 
+	if !input.Values.Get("ingressNginx.internal.legacyKruiseManagementEnabled").Bool() {
+		return nil
+	}
+
 	serviceNames := set.NewFromSnapshot(input.Snapshots.Get("services"))
 	daemonSetNames := set.NewFromSnapshot(input.Snapshots.Get("daemonsetscruise"))
 	var webhooks []string

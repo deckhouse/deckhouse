@@ -6,6 +6,7 @@ memory: 128Mi
 cpu: 50m
 memory: 100Mi
 {{- end }}
+{{- $legacyKruiseManagementEnabled := .Values.ingressNginx.internal.legacyKruiseManagementEnabled | default false }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -65,7 +66,11 @@ metadata:
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
     werf.io/track-termination-mode: NonBlocking
 spec:
-  {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- if $legacyKruiseManagementEnabled }}
+    {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- else }}
+  replicas: 0
+  {{- end }}
   selector:
     matchLabels:
       control-plane: controller-manager

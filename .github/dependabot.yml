@@ -817,6 +817,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/manager"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/402-ingress-nginx/images/protobuf-exporter/src"
   labels:
   - "type/dependencies"
