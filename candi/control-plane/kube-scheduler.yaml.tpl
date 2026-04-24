@@ -11,9 +11,6 @@
 {{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
 {{- end }}
-{{- if semverCompare ">=1.32 <1.33" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
-{{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
