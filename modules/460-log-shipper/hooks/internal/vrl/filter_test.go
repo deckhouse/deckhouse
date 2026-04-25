@@ -34,22 +34,14 @@ func TestFilterInRule(t *testing.T) {
 			values: []string{"test-1"},
 			res: strings.TrimSpace(`
 if is_array(.parsed_data.test) {
-    matched = false
-    for_each(array!(.parsed_data.test)) -> |_index, elem| {
-        if is_boolean(elem) || is_float(elem) {
-            data, err = to_string(elem);
-            if err == null {
-                if includes(["test-1"], data) {
-                    matched = true
-                }
-            }
-        } else if elem != null {
-            if includes(["test-1"], elem) {
-                matched = true
-            }
+    arr = array!(.parsed_data.test)
+    in_list_hit = false
+    for_each(["test-1"]) -> |_index, v| {
+        if !in_list_hit && includes(arr, v) {
+            in_list_hit = true
         }
     }
-    matched
+    in_list_hit
 } else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
@@ -69,22 +61,14 @@ if is_array(.parsed_data.test) {
 			values: []string{"test-1", "test-2"},
 			res: strings.TrimSpace(`
 if is_array(.parsed_data.test) {
-    matched = false
-    for_each(array!(.parsed_data.test)) -> |_index, elem| {
-        if is_boolean(elem) || is_float(elem) {
-            data, err = to_string(elem);
-            if err == null {
-                if includes(["test-1","test-2"], data) {
-                    matched = true
-                }
-            }
-        } else if elem != null {
-            if includes(["test-1","test-2"], elem) {
-                matched = true
-            }
+    arr = array!(.parsed_data.test)
+    in_list_hit = false
+    for_each(["test-1","test-2"]) -> |_index, v| {
+        if !in_list_hit && includes(arr, v) {
+            in_list_hit = true
         }
     }
-    matched
+    in_list_hit
 } else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
@@ -121,22 +105,14 @@ func TestFilterNotInRule(t *testing.T) {
 			values: []string{"test-1"},
 			res: strings.TrimSpace(`
 if is_array(.parsed_data.test) {
-    matched = false
-    for_each(array!(.parsed_data.test)) -> |_index, elem| {
-        if is_boolean(elem) || is_float(elem) {
-            data, err = to_string(elem);
-            if err == null {
-                if includes(["test-1"], data) {
-                    matched = true
-                }
-            }
-        } else if elem != null {
-            if includes(["test-1"], elem) {
-                matched = true
-            }
+    arr = array!(.parsed_data.test)
+    excluded_value_present = false
+    for_each(["test-1"]) -> |_index, v| {
+        if !excluded_value_present && includes(arr, v) {
+            excluded_value_present = true
         }
     }
-    !matched
+    !excluded_value_present
 } else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {
@@ -156,22 +132,14 @@ if is_array(.parsed_data.test) {
 			values: []string{"test-1", "test-2"},
 			res: strings.TrimSpace(`
 if is_array(.parsed_data.test) {
-    matched = false
-    for_each(array!(.parsed_data.test)) -> |_index, elem| {
-        if is_boolean(elem) || is_float(elem) {
-            data, err = to_string(elem);
-            if err == null {
-                if includes(["test-1","test-2"], data) {
-                    matched = true
-                }
-            }
-        } else if elem != null {
-            if includes(["test-1","test-2"], elem) {
-                matched = true
-            }
+    arr = array!(.parsed_data.test)
+    excluded_value_present = false
+    for_each(["test-1","test-2"]) -> |_index, v| {
+        if !excluded_value_present && includes(arr, v) {
+            excluded_value_present = true
         }
     }
-    !matched
+    !excluded_value_present
 } else if is_boolean(.parsed_data.test) || is_float(.parsed_data.test) {
     data, err = to_string(.parsed_data.test);
     if err != null {

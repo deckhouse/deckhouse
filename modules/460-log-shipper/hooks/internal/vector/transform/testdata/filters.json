@@ -13,14 +13,14 @@
 		"type": "filter"
 	},
 	{
-		"condition": "if is_array(.parsed_data) {\n    matched = false\n    for_each(array!(.parsed_data)) -\u003e |_index, elem| {\n        if is_boolean(elem) || is_float(elem) {\n            data, err = to_string(elem);\n            if err == null {\n                if includes([\".*\"], data) {\n                    matched = true\n                }\n            }\n        } else if elem != null {\n            if includes([\".*\"], elem) {\n                matched = true\n            }\n        }\n    }\n    matched\n} else if is_boolean(.parsed_data) || is_float(.parsed_data) {\n    data, err = to_string(.parsed_data);\n    if err != null {\n        false;\n    } else {\n        includes([\".*\"], data);\n    };\n} else if .parsed_data == null {\n    false;\n} else {\n    includes([\".*\"], .parsed_data);\n}",
+		"condition": "if is_array(.parsed_data) {\n    arr = array!(.parsed_data)\n    in_list_hit = false\n    for_each([\".*\"]) -\u003e |_index, v| {\n        if !in_list_hit \u0026\u0026 includes(arr, v) {\n            in_list_hit = true\n        }\n    }\n    in_list_hit\n} else if is_boolean(.parsed_data) || is_float(.parsed_data) {\n    data, err = to_string(.parsed_data);\n    if err != null {\n        false;\n    } else {\n        includes([\".*\"], data);\n    };\n} else if .parsed_data == null {\n    false;\n} else {\n    includes([\".*\"], .parsed_data);\n}",
 		"inputs": [
 			"transform/File/prefix/testit/01_log_filter"
 		],
 		"type": "filter"
 	},
 	{
-		"condition": "if is_array(.parsed_data.severity) {\n    matched = false\n    for_each(array!(.parsed_data.severity)) -\u003e |_index, elem| {\n        if is_boolean(elem) || is_float(elem) {\n            data, err = to_string(elem);\n            if err == null {\n                if includes([\"aaa\",42], data) {\n                    matched = true\n                }\n            }\n        } else if elem != null {\n            if includes([\"aaa\",42], elem) {\n                matched = true\n            }\n        }\n    }\n    matched\n} else if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity) {\n    data, err = to_string(.parsed_data.severity);\n    if err != null {\n        false;\n    } else {\n        includes([\"aaa\",42], data);\n    };\n} else if .parsed_data.severity == null {\n    false;\n} else {\n    includes([\"aaa\",42], .parsed_data.severity);\n}",
+		"condition": "if is_array(.parsed_data.severity) {\n    arr = array!(.parsed_data.severity)\n    in_list_hit = false\n    for_each([\"aaa\",42]) -\u003e |_index, v| {\n        if !in_list_hit \u0026\u0026 includes(arr, v) {\n            in_list_hit = true\n        }\n    }\n    in_list_hit\n} else if is_boolean(.parsed_data.severity) || is_float(.parsed_data.severity) {\n    data, err = to_string(.parsed_data.severity);\n    if err != null {\n        false;\n    } else {\n        includes([\"aaa\",42], data);\n    };\n} else if .parsed_data.severity == null {\n    false;\n} else {\n    includes([\"aaa\",42], .parsed_data.severity);\n}",
 		"inputs": [
 			"transform/File/prefix/testit/02_log_filter"
 		],

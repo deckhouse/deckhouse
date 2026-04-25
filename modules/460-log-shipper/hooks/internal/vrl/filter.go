@@ -29,22 +29,14 @@ const FilterDoesNotExistRule Rule = `
 // FilterInRule checks that the provided label value is in the following list.
 const FilterInRule Rule = `
 if is_array(.{{ $.filter.Field }}) {
-    matched = false
-    for_each(array!(.{{ $.filter.Field }})) -> |_index, elem| {
-        if is_boolean(elem) || is_float(elem) {
-            data, err = to_string(elem);
-            if err == null {
-                if includes({{ $.filter.Values | toJson }}, data) {
-                    matched = true
-                }
-            }
-        } else if elem != null {
-            if includes({{ $.filter.Values | toJson }}, elem) {
-                matched = true
-            }
+    arr = array!(.{{ $.filter.Field }})
+    in_list_hit = false
+    for_each({{ $.filter.Values | toJson }}) -> |_index, v| {
+        if !in_list_hit && includes(arr, v) {
+            in_list_hit = true
         }
     }
-    matched
+    in_list_hit
 } else if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
     data, err = to_string(.{{ $.filter.Field }});
     if err != null {
@@ -62,22 +54,14 @@ if is_array(.{{ $.filter.Field }}) {
 // FilterNotInRule checks that the provided label value is out of the following list.
 const FilterNotInRule Rule = `
 if is_array(.{{ $.filter.Field }}) {
-    matched = false
-    for_each(array!(.{{ $.filter.Field }})) -> |_index, elem| {
-        if is_boolean(elem) || is_float(elem) {
-            data, err = to_string(elem);
-            if err == null {
-                if includes({{ $.filter.Values | toJson }}, data) {
-                    matched = true
-                }
-            }
-        } else if elem != null {
-            if includes({{ $.filter.Values | toJson }}, elem) {
-                matched = true
-            }
+    arr = array!(.{{ $.filter.Field }})
+    excluded_value_present = false
+    for_each({{ $.filter.Values | toJson }}) -> |_index, v| {
+        if !excluded_value_present && includes(arr, v) {
+            excluded_value_present = true
         }
     }
-    !matched
+    !excluded_value_present
 } else if is_boolean(.{{ $.filter.Field }}) || is_float(.{{ $.filter.Field }}) {
     data, err = to_string(.{{ $.filter.Field }});
     if err != null {
