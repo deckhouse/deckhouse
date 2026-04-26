@@ -1,71 +1,15 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "merged-vex-456cde72932a77dd6020c21ebf56c0bd2ef74a75f1b19ab33d8a4b5feaacc76f",
+  "@id": "merged-vex-ffc0ec4119e1fc154ff048bb42d1d9e67ef4a4f3608ce32d9eb2fd513668b779",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "timestamp": "2026-04-23T12:00:00.000000+03:00",
+  "timestamp": "2026-04-26T15:00:00.000000+03:00",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2026-33186"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.66.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33186 представляет собой обход авторизации в gRPC-Go: gRPC-сервер слишком лояльно валидирует HTTP/2 псевдо-заголовок ':path' и принимает запросы без ведущего слэша (например, 'Service/Method' вместо '/Service/Method'), при этом authz-интерсепторы (включая официальный grpc/authz) видят неканонический путь и не срабатывают на 'deny'-правилах, заданных в канонической форме. Эксплуатация возможна только при одновременном выполнении двух условий: (1) сервер использует path-based authz-интерсептор (grpc/authz, или кастомный, опирающийся на info.FullMethod / grpc.Method(ctx)), (2) политика содержит 'deny' для канонических путей и 'allow' по умолчанию (fallback). Prometheus 2.55.1 не запускает gRPC-сервер во внешнем сетевом контуре: gRPC используется только клиентом (например, для удалённого хранилища через remote_write/remote_read с поддержкой gRPC, exemplars, OTLP receiver). Path-based authorization-интерсепторы из пакета google.golang.org/grpc/authz в Prometheus не подключены, deny/allow-правил по FullMethod не задано, а штатная защита эндпоинтов выполняется уровнем выше через kube-rbac-proxy. Соответственно вектор атаки CVE-2026-33186 в Prometheus недостижим."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-24051"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.29.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-24051 (PATH hijacking в OpenTelemetry Go SDK) затрагивает функцию определения host_id в sdk/resource/host_id.go, которая исполняет команду 'ioreg' с использованием PATH-поиска. Уязвимый код вызывается строго при runtime.GOOS == 'darwin' (macOS). Образ prometheus собирается на linux/amd64 и поставляется как distroless-контейнер (fromImage: common/distroless), запускается на узлах Kubernetes под Linux. Соответствующая ветка кода для Darwin при сборке и в рантайме не выполняется, бинарь /bin/ioreg отсутствует. Эксплуатация CVE-2026-24051 в составе образа Prometheus невозможна."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39883"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.29.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-39883 представляет собой PATH hijacking при вызове BSD-команды 'kenv' в OpenTelemetry Go SDK (host_id detection на BSD/Solaris-платформах). Это продолжение CVE-2026-24051 после фикса для Darwin. Уязвимый код активируется только при runtime.GOOS из множества freebsd/dragonfly/netbsd/openbsd/solaris. Образ Prometheus собран и запускается исключительно на linux/amd64 в distroless-контейнере, ветка с kenv компилируется условно через build tags и в финальном бинаре отсутствует. Эксплуатация CVE-2026-39883 в составе образа Prometheus невозможна."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39882"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.29.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Уязвимость CVE-2026-39882 связана с тем, что OTLP HTTP-экспортёры (traces/metrics/logs) в opentelemetry-go считывают тело HTTP-ответа в bytes.Buffer без ограничения размера, что позволяет вызвать исчерпание памяти, если endpoint OTLP-коллектора находится под контролем атакующего или подвержен MITM. В составе Deckhouse OTLP-экспорт трейсов из Prometheus по умолчанию выключен; включается оператором кластера через ModuleConfig, при этом адрес коллектора задаётся доверенным администратором (как правило, in-cluster Service со строгой mTLS-аутентификацией и NetworkPolicy). Сетевой путь между Prometheus и коллектором изолирован NetworkPolicy и ServiceAccount, недостижим из недоверенной сети, и не позволяет внешнему атакующему подменить ответ или провести MITM. Таким образом, предусловия эксплуатации CVE-2026-39882 в типовой инсталляции отсутствуют, риск компенсирован организационно-сетевыми мерами."
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-34040"
       },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
+      "timestamp": "2026-04-26T15:00:00.000000+03:00",
       "products": [
         {
           "@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"
@@ -79,7 +23,7 @@
       "vulnerability": {
         "name": "CVE-2026-33997"
       },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
+      "timestamp": "2026-04-26T15:00:00.000000+03:00",
       "products": [
         {
           "@id": "pkg:golang/github.com/docker/docker@v28.0.0+incompatible"
