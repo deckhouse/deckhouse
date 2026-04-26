@@ -873,7 +873,6 @@ shell:
   - ln -sf /chroot/etc/nginx /etc/nginx
   - rm -rf /tmp
   - ln -sf /chroot/tmp /tmp
-  # ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
   # a hack to let the controller update files via symlinks on a read-only file system
   - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
   - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json

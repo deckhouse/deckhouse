@@ -626,7 +626,7 @@ shell:
   # remove .a files
   - find /usr/local -name "*.a" -print | xargs /bin/rm
   setup:
-  # Source: rootfs/chroot.sh — physical rootfs lives directly under /chroot.
+  # Source: rootfs/chroot.sh
   - |
     bash -eu -c '
     writeDirs=(
@@ -642,8 +642,8 @@ shell:
       /chroot/opt/modsecurity/var/upload
       /chroot/opt/modsecurity/var/audit
       /chroot/var/log/audit
-      /chroot/var/log/nginx
       /chroot/var/lib/nginx
+      /chroot/var/log/nginx
       /chroot/var/lib/nginx/body
       /chroot/var/lib/nginx/fastcgi
       /chroot/var/lib/nginx/proxy
@@ -854,7 +854,7 @@ shell:
   - echo "deckhouse:x:64535:" >> /etc/group
   - echo "deckhouse:!::0:::::" >> /etc/shadow
 
-  # Source: rootfs/Dockerfile-chroot — files live directly under /chroot.
+  # Source: rootfs/Dockerfile-chroot
   - cp -a /src/rootfs/etc/* /chroot/etc
   - chown -R deckhouse:deckhouse /chroot/etc
   - chown root:root /chroot/etc/passwd /chroot/etc/group
@@ -886,7 +886,6 @@ shell:
   - ln -sf /chroot/etc/nginx /etc/nginx
   - rm -rf /tmp
   - ln -sf /chroot/tmp /tmp
-  # - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
   # a hack to let the controller update files via symlinks on a read-only file system
   - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
   - ln -sf /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json

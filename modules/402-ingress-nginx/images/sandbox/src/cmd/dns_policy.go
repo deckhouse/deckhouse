@@ -94,13 +94,6 @@ func parseSandboxArgs(argv []string) (*sandboxDNSPolicy, []string, error) {
 			}
 			dnsPolicy = policy
 			i += 2
-		case strings.HasPrefix(arg, sandboxAllowDNSToArg+"="):
-			policy, err := parseSandboxDNSPolicy(strings.TrimPrefix(arg, sandboxAllowDNSToArg+"="))
-			if err != nil {
-				return nil, nil, err
-			}
-			dnsPolicy = policy
-			i++
 		default:
 			return nil, nil, fmt.Errorf("unknown sandbox argument: %s", arg)
 		}
