@@ -49,104 +49,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-33186"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.71.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33186 представляет собой обход авторизации в gRPC-Go: gRPC-сервер слишком лояльно валидирует HTTP/2 псевдо-заголовок ':path' и принимает запросы без ведущего слэша, при этом authz-интерсепторы видят неканонический путь и не срабатывают на 'deny'-правилах в канонической форме. Эксплуатация требует одновременного выполнения двух условий: (1) gRPC-сервер использует path-based authz-интерсептор (google.golang.org/grpc/authz или кастомный, опирающийся на info.FullMethod / grpc.Method(ctx)), (2) политика содержит 'deny' для канонических путей и fallback 'allow'. Grafana 10.4.19 использует gRPC только для внутренней коммуникации с backend-плагинами через grafana-plugin-sdk-go (Hashicorp go-plugin поверх unix-socket внутри пода). Внешний публичный gRPC-сервер не запускается, пакет google.golang.org/grpc/authz не подключён, path-based deny/allow-правил по FullMethod не задано. Внешний доступ к Grafana проходит через HTTP-роутер, защищённый proxy-авторизацией dex и kube-rbac-proxy. Предусловия эксплуатации CVE-2026-33186 в Grafana отсутствуют."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-24051"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.35.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-24051 (PATH hijacking в OpenTelemetry Go SDK) затрагивает функцию определения host_id в sdk/resource/host_id.go, которая исполняет команду 'ioreg' с использованием PATH-поиска. Уязвимый код вызывается строго при runtime.GOOS == 'darwin' (macOS). Образ grafana-v10 собирается на linux/amd64 и поставляется как distroless-контейнер (fromImage: common/distroless), запускается на узлах Kubernetes под Linux. Соответствующая ветка кода для Darwin при сборке и в рантайме не выполняется, бинарь /bin/ioreg отсутствует. Эксплуатация CVE-2026-24051 в составе образа Grafana невозможна."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39883"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/sdk@v1.35.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-39883 представляет собой PATH hijacking при вызове BSD-команды 'kenv' в OpenTelemetry Go SDK (host_id detection на BSD/Solaris-платформах). Это продолжение CVE-2026-24051 после фикса для Darwin. Уязвимый код активируется только при runtime.GOOS из множества freebsd/dragonfly/netbsd/openbsd/solaris. Образ Grafana собран и запускается исключительно на linux/amd64 в distroless-контейнере, ветка с kenv компилируется условно через build tags и в финальном бинаре отсутствует. Эксплуатация CVE-2026-39883 в составе образа Grafana невозможна."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39882"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp@v1.35.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "inline_mitigations_already_exist",
-      "impact_statement": "Уязвимость CVE-2026-39882 связана с тем, что OTLP HTTP-экспортёры (traces/metrics/logs) в opentelemetry-go считывают тело HTTP-ответа в bytes.Buffer без ограничения размера, что позволяет вызвать исчерпание памяти при контролируемом атакующим endpoint OTLP-коллектора или при MITM. В составе Deckhouse OTLP-экспорт трейсов из Grafana по умолчанию выключен; включается оператором кластера через ModuleConfig, при этом адрес коллектора задаётся доверенным администратором (как правило, in-cluster Service со строгой mTLS-аутентификацией и NetworkPolicy). Сетевой путь Grafana → OTLP-collector изолирован NetworkPolicy и ServiceAccount, недостижим из недоверенной сети, MITM-атака невозможна. Предусловия эксплуатации CVE-2026-39882 в типовой инсталляции отсутствуют, риск компенсирован организационно-сетевыми мерами."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-33487"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/russellhaering/goxmldsig@v1.4.0"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33487 представляет собой обход проверки целостности XML Digital Signature в goxmldsig из-за loop variable capture в функции validateSignature: указатель ref всегда указывает на последний элемент SignedInfo.References, что позволяет подделывать подписи. Библиотека goxmldsig используется в Grafana только в составе SAML 2.0 Service Provider для проверки подписей IdP-ответов (assertion). В Deckhouse-сборке Grafana аутентификация пользователей выполняется через AuthRequest-прокси (dex/user-authn), а не через нативный SAML SP Grafana: задействован GF_AUTH_PROXY_ENABLED, тогда как auth.saml-секция в grafana.ini выключена и SAML-конфигурация не разворачивается templates. Кодовый путь, в котором вызывается goxmldsig.validateSignature на ответе IdP, не достижим в работающем экземпляре Grafana под управлением Deckhouse. Эксплуатация CVE-2026-33487 невозможна."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-34986"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/go-jose/go-jose/v3@v3.0.4"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-34986 представляет собой panic при дешифровании JSON Web Encryption (JWE) объекта, у которого заголовок 'alg' указывает алгоритм обёртывания ключа (любой *KW, кроме A128GCMKW/A192GCMKW/A256GCMKW), при пустом 'encrypted_key'. Эксплуатация требует, чтобы приложение принимало и парсило входящий JWE через ParseEncrypted/ParseEncryptedJSON/ParseEncryptedCompact с указанным списком key-wrapping-алгоритмов и затем вызывало Decrypt(). Grafana 10.4.19 использует go-jose v3 в составе провайдеров аутентификации (OAuth2/OIDC) только для верификации JWS-подписи ID Token, а не для приёма JWE-токенов. Функции go-jose.ParseEncrypted/Decrypt в кодовой базе Grafana не вызываются: проверка ID Token идёт через jose.ParseSigned. В Deckhouse-сборке внешняя аутентификация в Grafana проксируется через dex и AuthRequest, поэтому даже встроенный OIDC-клиент Grafana с приёмом ID Token не задействован. Уязвимый код-путь недостижим."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-68470"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:npm/react-router@6.21.3"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2025-68470 представляет собой неожиданный внешний redirect в react-router: специально сформированный путь, переданный в navigate() / <Link> / redirect(), приводит к навигации на внешний URL. Эксплуатация требует, чтобы приложение передавало в эти API контент, контролируемый атакующим. Уязвимая версия react-router 6.21.3 поставляется только в node_modules бандла плагина Tempo (usr/share/grafana/public/app/plugins/datasource/tempo/node_modules/react-router/package.json) и не входит в основной фронтенд Grafana. Tempo-плагин использует react-router исключительно для статической маршрутизации внутри собственного UI и не передаёт untrusted-данные в navigate()/redirect() — все пути формируются из захардкоженных констант или из доверенных полей конфигурации datasource, заданных администратором. Кроме того, в Deckhouse Tempo-datasource по умолчанию не разворачивается. Предусловия эксплуатации CVE-2025-68470 отсутствуют."
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-27877"
       },
       "timestamp": "2026-04-23T12:00:00.000000+03:00",
@@ -158,20 +60,6 @@
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
       "impact_statement": "Уязвимость CVE-2026-27877 связана с тем, что при использовании public dashboards вместе с direct data-sources пароли всех direct data-sources раскрываются в публичной выдаче, даже если эти data-sources не используются в дашборде. Данная утечка происходит только для data-sources, работающих в режиме direct (атрибут access: direct). В Deckhouse-сборке Grafana все провижионируемые data-sources заданы исключительно в режиме access: proxy (см. modules/300-prometheus/templates/grafana/secret-datasources-list.yaml: main, main-old, longterm, main-uncached-*) — все запросы к Prometheus/Trickster проходят через grafana-server и аутентифицируются bearer-токеном prometheus-token из секрета, никаких direct-data-sources не создаётся. Соответственно, даже если оператор кластера включит public dashboards, утекать будет нечему: список direct-datasources пустой. Уязвимая комбинация условий (public dashboards + direct data-sources) в типовой инсталляции отсутствует."
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-1229"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/cloudflare/circl@v1.6.1"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-1229 заключается в некорректном вычислении функции CombinedMult в реализации эллиптической кривой secp384r1 пакета cloudflare/circl/ecc/p384: для специально подобранных входных данных функция возвращает неверный результат. Согласно advisory от cloudflare/circl, операции ECDH и ECDSA-signing на этой кривой не затронуты (подпись и согласование ключей используют другие code-path). Grafana использует circl только транзитивно через зависимости quic-go / wireguard / tls-fingerprinting и не вызывает функцию CombinedMult на secp384r1 напрямую: TLS, проверка ECDSA-подписей и проверки интегрированных tokenов идут через стандартный crypto/ecdsa (Go runtime), а не через circl/ecc/p384. Уязвимый code-path в Grafana недостижим, а потенциальное некорректное вычисление CombinedMult не приводит к нарушению целостности подписей или согласования ключей в типовых сценариях."
     }
   ]
 }
