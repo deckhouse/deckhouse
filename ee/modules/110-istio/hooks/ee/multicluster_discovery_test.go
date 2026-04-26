@@ -233,21 +233,24 @@ status:
 				{
 					"clusterUUID": "proper-uuid-0",
 					"authnKeyPub": "proper-authn-0",
-					"rootCA": "proper-root-ca-0"
+					"rootCA": "proper-root-ca-0",
+					"allianceRef": {"kind": "IstioMulticluster", "name": "proper-multicluster-0"}
 				}
 	`))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-1").Field("status.metadataCache.public").String()).To(MatchJSON(`
 				{
 					"clusterUUID": "proper-uuid-1",
 					"authnKeyPub": "proper-authn-1",
-					"rootCA": "proper-root-ca-1"
+					"rootCA": "proper-root-ca-1",
+					"allianceRef": {"kind": "IstioMulticluster", "name": "proper-multicluster-1"}
 				}
 	`))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-2").Field("status.metadataCache.public").String()).To(MatchJSON(`
 				{
 					"clusterUUID": "proper-uuid-2",
 					"authnKeyPub": "proper-authn-2",
-					"rootCA": "proper-root-ca-2"
+					"rootCA": "proper-root-ca-2",
+					"allianceRef": {"kind": "IstioMulticluster", "name": "proper-multicluster-2"}
 				}
 	`))
 
@@ -563,17 +566,20 @@ status: {}
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "private-internal-error").Field("status.metadataCache.public").String()).To(MatchJSON(`{
 						  "clusterUUID": "proper-uuid-ie",
 						  "authnKeyPub": "proper-authn-ie",
-						  "rootCA": "proper-root-ca-ie"
+						  "rootCA": "proper-root-ca-ie",
+						  "allianceRef": {"kind": "IstioMulticluster", "name": "private-internal-error"}
 			}`))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "private-bad-json").Field("status.metadataCache.public").String()).To(MatchJSON(`{
 						  "clusterUUID": "proper-uuid-bj",
 						  "authnKeyPub": "proper-authn-bj",
-						  "rootCA": "proper-root-ca-bj"
+						  "rootCA": "proper-root-ca-bj",
+						  "allianceRef": {"kind": "IstioMulticluster", "name": "private-bad-json"}
 			}`))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "private-wrong-format").Field("status.metadataCache.public").String()).To(MatchJSON(`{
 						  "clusterUUID": "proper-uuid-wf",
 						  "authnKeyPub": "proper-authn-wf",
-						  "rootCA": "proper-root-ca-wf"
+						  "rootCA": "proper-root-ca-wf",
+						  "allianceRef": {"kind": "IstioMulticluster", "name": "private-wrong-format"}
 			}`))
 
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "private-internal-error").Field("status.metadataCache.private").Exists()).To(BeFalse())
@@ -676,6 +682,218 @@ status: {}
 					"endpoint":          "https://public-wrong-format/metadata/public/public.json",
 				},
 			}))
+		})
+	})
+})
+
+func multiclusterDeprecatedSubdomainBaseValues() string {
+	return `{
+  "global":{
+    "discovery":{"clusterUUID":"c1","clusterDomain": "my.cluster"},
+    "modules":{"publicDomainTemplate": "%s.example.com"}
+  },
+  "istio":{
+    "federation":{"enabled":false},
+    "multicluster":{"enabled":false},
+    "internal":{"remoteAuthnKeypair": {
+    "pub":"-----BEGIN ED25519 PUBLIC KEY-----\nMCowBQYDK2VwAyEAKWjdKDeIIT4xESCMhbol662vNMpq4DxFct8GvJ500Xs=\n-----END ED25519 PUBLIC KEY-----\n",
+    "priv":"-----BEGIN ED25519 PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIMgNk3rr2AmIIlkKTAM9fG6+hMKvwF+pMAT3ID3M0OFK\n-----END ED25519 PRIVATE KEY-----\n"
+  }}
+  }
+}`
+}
+
+var _ = Describe("Istio hooks :: multicluster_discovery :: metadata_endpoint_deprecated_subdomain", func() {
+	f := HookExecutionConfigInit(multiclusterDeprecatedSubdomainBaseValues(), "")
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "IstioMulticluster", false)
+
+	Context("multicluster disabled, IstioMulticluster with istio.* style host", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: mc-deprecated
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://istio.example.com/metadata/"
+`))
+			f.RunHook()
+		})
+
+		It("expires metrics without emitting deprecated subdomain metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(HaveLen(1))
+			Expect(m[0].Action).To(Equal(operation.ActionExpireMetrics))
+		})
+	})
+
+	Context("multicluster enabled, deprecated istio.* host", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.multicluster.enabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: mc-deprecated
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://istio.example.com/metadata/"
+status: {}
+`))
+			dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
+				host := strings.Split(req.Host, ":")[0]
+				uri := req.URL.Path
+				if host != "istio.example.com" {
+					return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(""))}, nil
+				}
+				var body string
+				var code int
+				switch uri {
+				case "/metadata/public/public.json":
+					code = http.StatusOK
+					body = `{"clusterUUID":"remote-uuid","authnKeyPub":"k","rootCA":"c"}`
+				case "/metadata/private/multicluster.json":
+					code = http.StatusOK
+					body = `{"ingressGateways":[{"address":"gw","port":443}],"apiHost":"api","networkName":"net"}`
+				default:
+					return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(""))}, nil
+				}
+				return &http.Response{
+					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					StatusCode: code,
+					Body:       io.NopCloser(bytes.NewBufferString(body)),
+				}, nil
+			})
+			f.RunHook()
+		})
+
+		It("sets deprecated subdomain metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			var dep *operation.MetricOperation
+			for i := range m {
+				if m[i].Name == deprecatedAllianceSubdomainMetricName {
+					dep = &m[i]
+					break
+				}
+			}
+			Expect(dep).NotTo(BeNil())
+			Expect(dep.Labels).To(Equal(map[string]string{
+				"alliance_kind": "IstioMulticluster",
+				"hostname":      "example.com",
+				"name":          "mc-deprecated",
+			}))
+			Expect(dep.Value).To(Equal(ptr.To(1.0)))
+		})
+	})
+
+	Context("multicluster enabled, non-deprecated metadata host", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.multicluster.enabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: mc-new
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://istio-metadata.example.com/metadata/"
+status: {}
+`))
+			dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
+				host := strings.Split(req.Host, ":")[0]
+				uri := req.URL.Path
+				if host != "istio-metadata.example.com" {
+					return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(""))}, nil
+				}
+				var body string
+				var code int
+				switch uri {
+				case "/metadata/public/public.json":
+					code = http.StatusOK
+					body = `{"clusterUUID":"remote-uuid","authnKeyPub":"k","rootCA":"c"}`
+				case "/metadata/private/multicluster.json":
+					code = http.StatusOK
+					body = `{"ingressGateways":[{"address":"gw","port":443}],"apiHost":"api","networkName":"net"}`
+				default:
+					return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(""))}, nil
+				}
+				return &http.Response{
+					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					StatusCode: code,
+					Body:       io.NopCloser(bytes.NewBufferString(body)),
+				}, nil
+			})
+			f.RunHook()
+		})
+
+		It("does not set deprecated subdomain metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			for _, op := range f.MetricsCollector.CollectedMetrics() {
+				Expect(op.Name).NotTo(Equal(deprecatedAllianceSubdomainMetricName))
+			}
+		})
+	})
+
+	Context("multicluster enabled, deprecated by first DNS label on partner host", func() {
+		BeforeEach(func() {
+			f.ValuesSet("istio.multicluster.enabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: mc-deprecated-remote-tld
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://istio.cluster-b.partner.example.net/metadata/"
+status: {}
+`))
+			dependency.TestDC.HTTPClient.DoMock.Set(func(req *http.Request) (*http.Response, error) {
+				host := strings.Split(req.Host, ":")[0]
+				uri := req.URL.Path
+				if host != "istio.cluster-b.partner.example.net" {
+					return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(""))}, nil
+				}
+				var body string
+				var code int
+				switch uri {
+				case "/metadata/public/public.json":
+					code = http.StatusOK
+					body = `{"clusterUUID":"remote-uuid","authnKeyPub":"k","rootCA":"c"}`
+				case "/metadata/private/multicluster.json":
+					code = http.StatusOK
+					body = `{"ingressGateways":[{"address":"gw","port":443}],"apiHost":"api","networkName":"net"}`
+				default:
+					return &http.Response{StatusCode: http.StatusNotFound, Body: io.NopCloser(strings.NewReader(""))}, nil
+				}
+				return &http.Response{
+					Header:     map[string][]string{"Content-Type": {"application/json"}},
+					StatusCode: code,
+					Body:       io.NopCloser(bytes.NewBufferString(body)),
+				}, nil
+			})
+			f.RunHook()
+		})
+
+		It("detects deprecated subdomain by first DNS label, not publicDomainTemplate", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			m := f.MetricsCollector.CollectedMetrics()
+			var dep *operation.MetricOperation
+			for i := range m {
+				if m[i].Name == deprecatedAllianceSubdomainMetricName {
+					dep = &m[i]
+					break
+				}
+			}
+			Expect(dep).NotTo(BeNil())
+			Expect(dep.Labels["name"]).To(Equal("mc-deprecated-remote-tld"))
+			Expect(dep.Labels["hostname"]).To(Equal("cluster-b.partner.example.net"))
 		})
 	})
 })

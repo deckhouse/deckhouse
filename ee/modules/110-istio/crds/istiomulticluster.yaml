@@ -102,6 +102,13 @@ spec:
                           type: string
                         clusterUUID:
                           type: string
+                        allianceRef:
+                          type: object
+                          properties:
+                            kind:
+                              type: string
+                            name:
+                              type: string
                     publicLastFetchTimestamp:
                       type: string
                       format: date-time

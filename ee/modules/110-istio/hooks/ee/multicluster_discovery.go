@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"time"
 
@@ -162,6 +163,12 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
+
+		publicMetadata.AllianceRef = &eeCrd.PublicMetadataAllianceRef{
+			Kind: "IstioMulticluster",
+			Name: multiclusterInfo.Name,
+		}
+
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 0)
 		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "public", publicMetadata)
 		if err != nil {
@@ -182,6 +189,9 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
+
+		multiclusterInfo.checkDeprecatedSubdomainIn(input)
+
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), multiclusterInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.Logger.Warn("cannot fetch private metadata endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PrivateMetadataEndpoint), slog.String("name", multiclusterInfo.Name), log.Err(err))
@@ -211,4 +221,51 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 		}
 	}
 	return nil
+}
+
+func (i *IstioMulticlusterDiscoveryCrdInfo) checkDeprecatedSubdomainIn(input *go_hook.HookInput) {
+	raw := strings.TrimSpace(i.PublicMetadataEndpoint)
+	if raw == "" {
+		input.Logger.Warn(
+			"failed to validate metadataEndpoint subdomain",
+			slog.String("name", i.Name),
+			log.Err(fmt.Errorf("empty metadataEndpoint")),
+		)
+		return
+	}
+	parseInput := raw
+	if !strings.Contains(parseInput, "://") {
+		parseInput = "https://" + parseInput
+	}
+	u, err := url.Parse(parseInput)
+	if err != nil {
+		input.Logger.Warn(
+			"failed to validate metadataEndpoint subdomain",
+			log.Err(err),
+		)
+		return
+	}
+	hostname := u.Hostname()
+	if hostname == "" {
+		input.Logger.Warn(
+			"failed to validate metadataEndpoint subdomain",
+			slog.String("name", i.Name),
+			slog.String("endpoint", i.PublicMetadataEndpoint),
+			slog.String("reason", "no host in metadataEndpoint"),
+		)
+		return
+	}
+	h := strings.TrimSpace(strings.ToLower(hostname))
+	leftmost, hostnameWithoutSubdomain, _ := strings.Cut(strings.TrimSuffix(h, "."), ".")
+
+	if leftmost != "istio" {
+		return
+	}
+
+	labels := map[string]string{
+		"alliance_kind": "IstioMulticluster",
+		"name":          i.Name,
+		"hostname":      hostnameWithoutSubdomain,
+	}
+	input.MetricsCollector.Set(deprecatedAllianceSubdomainMetricName, 1, labels, metrics.WithGroup(multiclusterMetricsGroup))
 }

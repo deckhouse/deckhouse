@@ -1699,6 +1699,44 @@ alerts:
         Additional control plane isn't working.
       severity: "4"
       markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointAccessedViaDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Remote {{$labels.alliance_kind}} `{{$labels.name}}` with uuid `{{$labels.remote_uuid}}` requests private metadata using domain name `{{$labels.requested_to_hostname}}` which has deprecated subdomain `istio`.
+
+        Remote cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `istio-metadata.<thisClusterPublicDomain>/metadata/`.
+
+        Migration steps:
+
+        1. On remote cluster. Ensure DNS to resolve the target `istio-metadata.<thisClusterPublicDomain>` (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).
+        2. On remote cluster. Update `spec.metadataEndpoint` on remote cluster object to use new domain name; keep the path `/metadata/`.
+        3. On remote cluster. Verify remote metadata fetch and alliance health after the change.
+      summary: |
+        A peer cluster still requests private metadata on this cluster using the deprecated subdomain.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8IstioAllianceDiscoveryMetadataEndpointUsesDeprecatedSubdomain
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/alliance.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        The `metadataEndpoint` of {{$labels.alliance_kind}} `{{$labels.name}}` uses domain name with a deprecated subdomain - `istio.{{$labels.hostname}}`.
+
+        Cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `istio-metadata.{{$labels.hostname}}/metadata/`.
+
+        Migration steps:
+
+        1. On this cluster. Ensure DNS to resolve the target `istio-metadata.{{$labels.hostname}}` (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).
+        2. On this cluster. Update `spec.metadataEndpoint` on this object to use that domain name; keep the path `/metadata/`.
+        3. On this cluster. Verify remote metadata fetch and alliance health after the change.
+      summary: |
+        Alliance metadataEndpoint uses a deprecated subdomain.
+      severity: "5"
+      markupFormat: markdown
     - name: D8IstioDataPlaneVersionMismatch
       sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/dataplane.yaml
       moduleUrl: 110-istio

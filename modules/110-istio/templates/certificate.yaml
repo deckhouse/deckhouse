@@ -18,6 +18,7 @@ spec:
   {{ include "helm_lib_module_generate_common_name" (list . "istio") | nindent 2 }}
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "istio") }}
+  - {{ include "helm_lib_module_public_domain" (list . "istio-metadata") }}
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer

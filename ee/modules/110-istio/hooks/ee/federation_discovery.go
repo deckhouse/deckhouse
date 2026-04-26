@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -31,6 +32,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/jwt"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+// shared vars for both discoveries
+var (
+	deprecatedAllianceSubdomainMetricName = "d8_istio_alliance_metadata_endpoint_uses_deprecated_subdomain"
 )
 
 var (
@@ -181,6 +187,11 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
+		publicMetadata.AllianceRef = &eeCrd.PublicMetadataAllianceRef{
+			Kind: "IstioFederation",
+			Name: federationInfo.Name,
+		}
+
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "public", publicMetadata)
 		if err != nil {
@@ -201,6 +212,9 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PrivateMetadataEndpoint, 1)
 			continue
 		}
+
+		federationInfo.checkDeprecatedSubdomainIn(input)
+
 		bodyBytes, statusCode, err = lib.HTTPGet(dc.GetHTTPClient(httpOption...), federationInfo.PrivateMetadataEndpoint, bearerToken)
 		if err != nil {
 			input.Logger.Warn("cannot fetch private metadata endpoint for IstioFederation", slog.String("endpoint", federationInfo.PrivateMetadataEndpoint), slog.String("name", federationInfo.Name), log.Err(err))
@@ -260,4 +274,50 @@ func updatePortProtocols(services *[]eeCrd.FederationPublicService, defaultProto
 			service.Ports[portIndex] = port
 		}
 	}
+}
+
+func (i *IstioFederationDiscoveryCrdInfo) checkDeprecatedSubdomainIn(input *go_hook.HookInput) {
+	raw := strings.TrimSpace(i.PublicMetadataEndpoint)
+	if raw == "" {
+		input.Logger.Warn(
+			"failed to validate metadataEndpoint subdomain",
+			slog.String("name", i.Name),
+			log.Err(fmt.Errorf("empty metadataEndpoint")),
+		)
+		return
+	}
+	parseInput := raw
+	if !strings.Contains(parseInput, "://") {
+		parseInput = "https://" + parseInput
+	}
+	u, err := url.Parse(parseInput)
+	if err != nil {
+		input.Logger.Warn(
+			"failed to validate metadataEndpoint subdomain",
+			log.Err(err),
+		)
+		return
+	}
+	hostname := u.Hostname()
+	if hostname == "" {
+		input.Logger.Warn(
+			"failed to validate metadataEndpoint subdomain",
+			slog.String("name", i.Name),
+			slog.String("endpoint", i.PublicMetadataEndpoint),
+			slog.String("reason", "no host in metadataEndpoint"),
+		)
+		return
+	}
+	h := strings.TrimSpace(strings.ToLower(hostname))
+	leftmost, _, _ := strings.Cut(strings.TrimSuffix(h, "."), ".")
+	if leftmost != "istio" {
+		return
+	}
+
+	labels := map[string]string{
+		"alliance_kind": "IstioFederation",
+		"name":          i.Name,
+		"hostname":      hostname,
+	}
+	input.MetricsCollector.Set(deprecatedAllianceSubdomainMetricName, 1, labels, metrics.WithGroup(federationMetricsGroup))
 }
