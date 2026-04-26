@@ -35,20 +35,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2026-33186"
-      },
-      "timestamp": "2026-04-23T12:00:00.000000+03:00",
-      "products": [
-        {
-          "@id": "pkg:golang/google.golang.org/grpc@v1.58.3"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость CVE-2026-33186 представляет собой обход авторизации в gRPC-Go: gRPC-сервер слишком лояльно валидирует HTTP/2 псевдо-заголовок ':path' и принимает запросы без ведущего слэша, при этом authz-интерсепторы видят неканонический путь и не срабатывают на 'deny'-правилах в канонической форме. Эксплуатация требует одновременного выполнения двух условий: (1) gRPC-сервер использует path-based authz-интерсептор (google.golang.org/grpc/authz или кастомный, опирающийся на info.FullMethod / grpc.Method(ctx)), (2) политика содержит 'deny' для канонических путей и fallback 'allow'. Promxy v0.0.93 является агрегирующим прокси Prometheus, основной транспорт — HTTP/HTTPS PromQL API; gRPC используется только клиентски (через зависимость prometheus/prometheus → grpc). Promxy не запускает gRPC-сервер во внешнем сетевом контуре, не подключает google.golang.org/grpc/authz и не задаёт path-based deny/allow-правил. Защита API выполняется уровнем выше через kube-rbac-proxy. Предусловия эксплуатации CVE-2026-33186 в Promxy отсутствуют."
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2026-34040"
       },
       "timestamp": "2026-04-23T12:00:00.000000+03:00",
