@@ -451,7 +451,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"memcached":                   "imageHash-prometheus-memcached",
 		"memcachedExporter":           "imageHash-prometheus-memcachedExporter",
 		"mimir":                       "imageHash-prometheus-mimir",
-		"mimirVexArtifact":            "imageHash-prometheus-mimirVexArtifact",
 		"prometheus":                  "imageHash-prometheus-prometheus",
 		"prometheusVexArtifact":       "imageHash-prometheus-prometheusVexArtifact",
 		"promxy":                      "imageHash-prometheus-promxy",
