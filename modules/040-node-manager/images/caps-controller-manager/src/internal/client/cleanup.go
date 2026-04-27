@@ -45,7 +45,7 @@ func (c *Client) Cleanup(ctx context.Context,
 		return fmt.Errorf("failed to load SSHCredentials: %w", err)
 	}
 
-	sshLegacyMode := true
+	sshLegacyMode := true //nolint:staticcheck
 	if len(credentials.Spec.PrivateSSHKey) == 0 {
 		sshLegacyMode = false
 	}

@@ -149,30 +149,3 @@ func (s *SSH) ExecSSHCommandToString(command string) (string, error) {
 
 	return strings.TrimSpace(string(stdoutBytes)), nil
 }
-
-func formatCommand(args []string) string {
-	const maxCommandLength = 1024
-	runes := []rune(strings.Join(args, " "))
-	if len(runes) <= maxCommandLength {
-		return string(runes)
-	}
-
-	return fmt.Sprintf("%s... (truncated, total length %d)", string(runes[:maxCommandLength]), len(runes))
-}
-
-func formatArgs(args []string) []string {
-	const maxArgLength = 512
-
-	formatted := make([]string, 0, len(args))
-	for _, arg := range args {
-		runes := []rune(arg)
-		if len(runes) <= maxArgLength {
-			formatted = append(formatted, arg)
-			continue
-		}
-
-		formatted = append(formatted, fmt.Sprintf("%s... (truncated, total length %d)", string(runes[:maxArgLength]), len(runes)))
-	}
-
-	return formatted
-}

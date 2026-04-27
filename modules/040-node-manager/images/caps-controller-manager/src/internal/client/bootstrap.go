@@ -75,7 +75,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 		return ctrl.Result{}, fmt.Errorf("failed to load SSHCredentials: %w", err)
 	}
 
-	sshLegacyMode := true
+	sshLegacyMode := true //nolint:staticcheck
 	if len(credentials.Spec.PrivateSSHKey) == 0 {
 		sshLegacyMode = false
 	}
@@ -173,6 +173,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context,
 	return ctrl.Result{RequeueAfter: RequeueForStaticInstanceBootstrapping}, nil
 }
 
+//nolint:nonamedreturns
 func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context,
 	staticInstance *deckhousev1.StaticInstance,
 	staticMachine *infrav1.StaticMachine,
@@ -490,7 +491,7 @@ func (c *Client) getBootstrapScript(ctx context.Context, staticMachine *infrav1.
 }
 
 func mapAddresses(addresses []corev1.NodeAddress) clusterv1.MachineAddresses {
-	var machineAddresses clusterv1.MachineAddresses
+	machineAddresses := make(clusterv1.MachineAddresses, 0, len(addresses))
 
 	for _, address := range addresses {
 		machineAddresses = append(machineAddresses, clusterv1.MachineAddress{

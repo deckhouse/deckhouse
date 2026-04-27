@@ -42,7 +42,9 @@ func NewTaskManager() *Manager {
 }
 
 // Spawn spawns a new task if it doesn't exist yet.
-func (m *Manager) Spawn(ctx context.Context, id, taskType string, data any, task Task) (result error, finished bool) {
+//
+//nolint:nonamedreturns
+func (m *Manager) Spawn(ctx context.Context, id, taskType string, data any, task Task) (res error, finished bool) {
 	log := ctrl.LoggerFrom(ctx).WithValues(
 		"taskID", id,
 		"taskType", taskType,
