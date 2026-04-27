@@ -162,7 +162,7 @@ osDistributions:
     en_support: false
     versions:
       - version: '15.4'
-        editions: [be, se, se-plus, ee]
+        editions: [cse, be, se, se-plus, ee]
       - version: '15.5'
         editions: [cse, be, se, se-plus, ee]
 
