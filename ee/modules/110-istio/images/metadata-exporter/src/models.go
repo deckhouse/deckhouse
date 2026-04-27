@@ -68,7 +68,7 @@ type MulticlusterPrivateMetadata struct {
 	NetworkName     string            `json:"networkName,omitempty"`
 }
 
-// map[custerUUID]pubilcMetadata
+// map[custerUUID]publicMetadata
 type RemotePublicMetadata map[string]AlliancePublicMetadata
 
 type JwtPayload struct {
