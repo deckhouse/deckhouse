@@ -88,6 +88,13 @@ spec:
               type: object
               required: []
               properties:
+                engine:
+                  type: string
+                  enum:
+                    - None
+                    - MCM
+                    - CAPI
+                  description: Machinery used to control nodes in this group.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
@@ -707,6 +714,13 @@ spec:
               type: object
               required: []
               properties:
+                engine:
+                  type: string
+                  enum:
+                    - None
+                    - MCM
+                    - CAPI
+                  description: Machinery used to control nodes in this group.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
@@ -1366,6 +1380,13 @@ spec:
               type: object
               required: []
               properties:
+                engine:
+                  type: string
+                  enum:
+                    - None
+                    - MCM
+                    - CAPI
+                  description: Machinery used to control nodes in this group.
                 ready:
                   type: integer
                   description: Number of ready Kubernetes nodes in the group.
