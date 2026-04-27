@@ -1,7 +1,6 @@
 ---
 title: Как использовать Ansible для конфигурирования виртуальных машин?
-sections:
-- vm_configuration
+section: vm_configuration
 lang: ru
 ---
 

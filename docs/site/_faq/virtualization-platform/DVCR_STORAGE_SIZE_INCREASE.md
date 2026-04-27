@@ -1,56 +1,55 @@
 ---
-title: Как увеличить размер DVCR?
-sections:
-- platform_management
-lang: ru
+title: How to increase the DVCR size?
+section: platform_management
+lang: en
 ---
 
-Размер тома DVCR задаётся в ModuleConfig модуля `virtualization` (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). Новое значение должно быть больше текущего.
+The DVCR volume size is set in the `virtualization` module ModuleConfig (`spec.settings.dvcr.storage.persistentVolumeClaim.size`). The new value must be greater than the current one.
 
-1. Проверьте текущий размер DVCR:
+1. Check the current DVCR size:
 
    ```shell
    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
    ```
 
-   Пример вывода:
+   Example output:
 
    ```console
     {"size":"58G","storageClass":"linstor-thick-data-r1"}
    ```
 
-1. Увеличьте `size` через `patch` (подставьте нужное значение):
+1. Increase `size` using `patch` (set the value you need):
 
    ```shell
    d8 k patch mc virtualization \
      --type merge -p '{"spec": {"settings": {"dvcr": {"storage": {"persistentVolumeClaim": {"size":"59G"}}}}}}'
    ```
 
-   Пример вывода:
+   Example output:
 
    ```console
    moduleconfig.deckhouse.io/virtualization patched
    ```
 
-1. Убедитесь, что в ModuleConfig отображается новый размер:
+1. Verify that ModuleConfig shows the new size:
 
    ```shell
    d8 k get mc virtualization -o jsonpath='{.spec.settings.dvcr.storage.persistentVolumeClaim}'
    ```
 
-   Пример вывода:
+   Example output:
 
    ```console
    {"size":"59G","storageClass":"linstor-thick-data-r1"}
    ```
 
-1. Проверьте текущее состояние DVCR:
+1. Check the current DVCR status:
 
    ```shell
    d8 k get pvc dvcr -n d8-virtualization
    ```
 
-   Пример вывода:
+   Example output:
 
    ```console
    NAME STATUS VOLUME                                    CAPACITY    ACCESS MODES   STORAGECLASS           AGE

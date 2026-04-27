@@ -1,20 +1,19 @@
 ---
-title: Как предоставить файл ответов Windows (Sysprep)?
-sections:
-- vm_operations
-lang: ru
+title: How to install an operating system in a virtual machine from an ISO image?
+section: vm_operations
+lang: en
 ---
 
-Автоматическая установка Windows выполняется с файлом ответов (`unattend.xml` или `autounattend.xml`).
+Unattended Windows installation uses an answer file (`unattend.xml` or `autounattend.xml`).
 
-В примере ниже файл ответов:
+The example answer file below:
 
-- задаёт русский язык интерфейса и раскладку;
-- подключает драйверы `VirtIO` для этапа установки (порядок устройств в `blockDeviceRefs` у ресурса [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) должен совпадать с путями в файле);
-- создаёт разметку диска для установки с EFI;
-- создаёт пользователя `cloud` (администратор, пароль `cloud`) и пользователя `user` (пароль `user`).
+- Sets the English UI language and keyboard layout.
+- Connects the `VirtIO` drivers for the setup stage (the order of devices in `blockDeviceRefs` on the [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) resource must match the paths in the file).
+- Creates disk layout for installation with EFI.
+- Creates a user `cloud` (administrator, password `cloud`) and a user `user` (password `user`).
 
-{% offtopic title="Пример содержимого файла autounattend.xml..." %}
+{% offtopic title="Example of the contents of the autounattend.xml file..." %}
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -23,11 +22,11 @@ lang: ru
   <settings pass="windowsPE">
     <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <SetupUILanguage>
-        <UILanguage>ru-RU</UILanguage>
+        <UILanguage>en-US</UILanguage>
       </SetupUILanguage>
-      <InputLocale>0409:00000409;0419:00000419</InputLocale>
+      <InputLocale>0409:00000409</InputLocale>
       <SystemLocale>en-US</SystemLocale>
-      <UILanguage>ru-RU</UILanguage>
+      <UILanguage>en-US</UILanguage>
       <UserLocale>en-US</UserLocale>
     </component>
     <component name="Microsoft-Windows-PnpCustomizationsWinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
@@ -149,9 +148,9 @@ lang: ru
   <settings pass="auditUser"></settings>
   <settings pass="oobeSystem">
     <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
-      <InputLocale>0409:00000409;0419:00000419</InputLocale>
+      <InputLocale>0409:00000409</InputLocale>
       <SystemLocale>en-US</SystemLocale>
-      <UILanguage>ru-RU</UILanguage>
+      <UILanguage>en-US</UILanguage>
       <UserLocale>en-US</UserLocale>
     </component>
     <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
@@ -205,15 +204,15 @@ lang: ru
 
 {% endofftopic %}
 
-1. Сохраните файл ответов в `autounattend.xml` (воспользуйтесь примером из блока выше или измените его под свои требования).
+1. Save the answer file as `autounattend.xml` (use the example above or adjust it to your needs).
 
-1. Создайте секрет с типом `provisioning.virtualization.deckhouse.io/sysprep`:
+1. Create a secret with the type `provisioning.virtualization.deckhouse.io/sysprep`:
 
    ```bash
    d8 k create secret generic sysprep-config --type="provisioning.virtualization.deckhouse.io/sysprep" --from-file=./autounattend.xml
    ```
 
-1. Создайте виртуальную машину, которая в процессе установки будет использовать файл ответов. Укажите в спецификации `provisioning` с типом `SysprepRef`. При необходимости добавьте в спецификацию другие файлы в формате Base64, необходимые для успешного выполнения скриптов внутри файла ответов:
+1. Create a virtual machine that will use the answer file during installation. Specify `provisioning` with type `SysprepRef` in the specification. If necessary, add other Base64-encoded files to the specification required for the answer file scripts to run successfully.
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2

@@ -1,7 +1,6 @@
 ---
 title: How to use cloud-init to configure virtual machines?
-sections:
-- vm_configuration
+section: vm_configuration
 lang: en
 ---
 

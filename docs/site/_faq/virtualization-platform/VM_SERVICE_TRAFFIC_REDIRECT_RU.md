@@ -1,7 +1,6 @@
 ---
 title: Как перенаправить трафик на виртуальную машину?
-sections:
-- vm_configuration
+section: vm_configuration
 lang: ru
 ---
 

@@ -1,7 +1,6 @@
 ---
 title: How to automatically generate inventory for Ansible?
-sections:
-- vm_configuration
+section: vm_configuration
 lang: en
 ---
 
@@ -27,9 +26,9 @@ The command includes only virtual machines with assigned IP addresses in the `Ru
    ANSIBLE_INVENTORY_ENABLED=yaml ansible -m shell -a "uptime" all -i <(d8 v ansible-inventory -n demo-app -o yaml)
    ```
 
-{% alert level="info" %}
-The `<(...)` construct is necessary because Ansible expects a file or script as the source of the host list. Simply specifying the command in quotes will not work — Ansible will try to execute the string as a script. The `<(...)` construct passes the command output as a file that Ansible can read.
-{% endalert %}
+   {% alert level="info" %}
+   The `<(...)` construct is necessary because Ansible expects a file or script as the source of the host list. Simply specifying the command in quotes will not work — Ansible will try to execute the string as a script. The `<(...)` construct passes the command output as a file that Ansible can read.
+   {% endalert %}
 
 1. Or save the inventory to a file and run the check:
 

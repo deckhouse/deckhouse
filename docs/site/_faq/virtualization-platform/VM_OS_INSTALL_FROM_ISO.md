@@ -1,13 +1,12 @@
 ---
-title: Как установить ОС в виртуальной машине из ISO-образа?
-sections:
-- vm_operations
-lang: ru
+title: How to install an operating system in a virtual machine from an ISO image?
+section: vm_operations
+lang: en
 ---
 
-Ниже приведён типовой сценарий установки гостевой ОС Windows из ISO-образа. Перед началом разместите ISO-образ на HTTP-ресурсе, доступном из кластера.
+Below is a typical Windows guest OS installation scenario from an ISO image. Before you begin, host the ISO on an HTTP endpoint reachable from the cluster.
 
-1. Создайте пустой [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) для установки ОС:
+1. Create an empty [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) for OS installation:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -21,7 +20,7 @@ lang: ru
        storageClassName: local-path
    ```
 
-1. Создайте ресурсы [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) для ISO-образа ОС Windows и дистрибутива драйверов `VirtIO`:
+1. Create [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resources for the Windows OS ISO and the VirtIO driver ISO:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -47,7 +46,7 @@ lang: ru
          url: "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
    ```
 
-1. Создайте виртуальную машину:
+1. Create a virtual machine:
 
    ```yaml
    apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -77,23 +76,23 @@ lang: ru
          name: win-virtio-iso
    ```
 
-1. Запустите виртуальную машину:
+1. Start the virtual machine:
 
    ```bash
    d8 v start win-vm
    ```
 
-1. Подключитесь к консоли ВМ и завершите установку ОС и драйверов `VirtIO` при помощи графического установщика.
+1. Connect to the VM console and complete the OS installation and VirtIO drivers using the graphical installer.
 
-   Подключение по VNC:
+   VNC connection:
 
    ```bash
    d8 v vnc -n default win-vm
    ```
 
-1. После завершения установки перезагрузите виртуальную машину.
+1. After the installation is complete, restart the virtual machine.
 
-1. Для дальнейшей работы снова подключитесь по VNC:
+1. For further work, connect via VNC again:
 
    ```bash
    d8 v vnc -n default win-vm

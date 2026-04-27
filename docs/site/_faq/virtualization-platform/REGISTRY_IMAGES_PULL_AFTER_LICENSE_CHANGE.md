@@ -1,7 +1,6 @@
 ---
 title: How to restore the cluster if images from registry.deckhouse.io cannot be pulled after a license change?
-sections:
-- platform_management
+section: platform_management
 lang: en
 ---
 

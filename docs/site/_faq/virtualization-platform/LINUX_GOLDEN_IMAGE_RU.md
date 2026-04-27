@@ -1,7 +1,6 @@
 ---
 title: Как создать golden image для Linux?
-sections:
-- vm_operations
+section: vm_operations
 lang: ru
 ---
 

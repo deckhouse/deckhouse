@@ -1,7 +1,6 @@
 ---
 title: How to use Ansible to provision virtual machines?
-sections:
-- vm_configuration
+section: vm_configuration
 lang: en
 ---
 

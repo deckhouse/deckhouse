@@ -1,7 +1,6 @@
 ---
 title: Как восстановить кластер, если после смены лицензии образы из registry.deckhouse.io не загружаются?
-sections:
-- platform_management
+section: platform_management
 lang: ru
 ---
 

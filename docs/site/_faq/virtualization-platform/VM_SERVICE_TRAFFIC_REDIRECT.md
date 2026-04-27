@@ -1,7 +1,6 @@
 ---
 title: How to redirect traffic to a virtual machine?
-sections:
-- vm_configuration
+section: vm_configuration
 lang: en
 ---
 
