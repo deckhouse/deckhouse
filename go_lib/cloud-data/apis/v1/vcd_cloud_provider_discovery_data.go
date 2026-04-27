@@ -36,3 +36,15 @@ type VCDStorageProfile struct {
 type VCDLoadBalancer struct {
 	Enabled bool `json:"enabled"`
 }
+
+func (d *VCDCloudProviderDiscoveryData) SetDefaults() {
+	if d.APIVersion == "" {
+		d.APIVersion = "deckhouse.io/v1"
+	}
+	if d.Kind == "" {
+		d.Kind = "VCDCloudProviderDiscoveryData"
+	}
+	if len(d.Zones) == 0 {
+		d.Zones = []string{"default"}
+	}
+}

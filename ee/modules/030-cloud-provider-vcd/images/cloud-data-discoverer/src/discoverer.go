@@ -140,6 +140,7 @@ func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
 	}
+	discoveryData.SetDefaults()
 
 	vcdClient, err := d.config.client()
 	if err != nil {

@@ -87,7 +87,7 @@ var _ = cluster_configuration.RegisterHook(
 			discoveryData = mergeDiscoveryData(currentDiscoveryData, discoveryData)
 		}
 
-		discoveryData = setDiscoveryDataDefaults(discoveryData)
+		discoveryData.SetDefaults()
 		input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", discoveryData)
 
 		return nil
@@ -237,20 +237,3 @@ func mergeDiscoveryData(
 	return result
 }
 
-func setDiscoveryDataDefaults(
-	value cloudDataV1.VCDCloudProviderDiscoveryData,
-) cloudDataV1.VCDCloudProviderDiscoveryData {
-	result := value
-
-	if result.APIVersion == "" {
-		result.APIVersion = "deckhouse.io/v1"
-	}
-	if result.Kind == "" {
-		result.Kind = "VCDCloudProviderDiscoveryData"
-	}
-	if len(result.Zones) == 0 {
-		result.Zones = []string{"default"}
-	}
-
-	return result
-}
