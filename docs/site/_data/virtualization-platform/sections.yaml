@@ -2,14 +2,14 @@ _common:
   en: Common
   ru: Общее
 platform_management:
-  en: platform_management
-  ru: platform_management
+  en: Platform management
+  ru: Управление платформой
 vm_operations:
-  en: vm_operations
-  ru: vm_operations
+  en: Working with virtual machines
+  ru: Работа с виртуальными машинами
 vm_configuration:
-  en: vm_configuration
-  ru: vm_configuration
+  en: Configuring virtual machines
+  ru: Конфигурирование виртуальных машин
 deckhouse:
   en: Deckhouse
   ru: Deckhouse
