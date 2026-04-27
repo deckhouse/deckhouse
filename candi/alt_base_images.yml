@@ -1,3 +1,4 @@
-# version=v1.0.8
+# version=v1.0.15
 REGISTRY_PATH: registry.deckhouse.io/container-factory
 builder/golang: "sha256:43946be0b3b8f80ddd71e3a666cdb24158e565cbcd0ac569c1932105a872b2dd" # from: base/distroless
+builder/golang-debian-1.26: "sha256:c01df60b8c5b260485247967ae56cd3b7a265fa6ae8b9ff693eb7b749014d3ae" # from: debian:13.1
