@@ -1,0 +1,95 @@
+---
+description: OpenAPI x-doc rules for configuration docs
+globs: openapi/**/*.yaml
+alwaysApply: false
+---
+
+# OpenAPI Documentation Fields
+
+- Use reserved `x-doc-` fields only for documentation rendering.
+- Supported keys:
+  - `x-doc-deprecated`
+  - `x-doc-required`
+  - `x-doc-default`
+  - `x-doc-examples`
+  - `x-doc-search`
+  - `x-doc-skip`
+  - `x-doc-map-key-name`
+  - `x-doc-pattern-name`
+
+# Value Constraints
+
+- `x-doc-default` must match target field type.
+- `x-doc-example` may contain markdown and has priority over `example` and `x-examples`.
+- `x-doc-examples` must be an array of YAML examples.
+- `examples`, `x-examples`, and `x-doc-examples` must always be arrays of examples.
+  - If target parameter type is `array`, example value must be an array of arrays.
+  - If target parameter type is `object`, example value must be an array of objects (maps).
+  - If target parameter type is string/integer/boolean, example value must be an array of string/integer/boolean.
+- `x-doc-skip: true` means field is not rendered in docs.
+
+Example (`type: array` -> array of arrays in `x-examples`):
+
+```yaml
+type: array
+description: |
+  List of plugins.
+x-examples:
+  - - name: "plugin1"
+      ignoreFailure: false
+items:
+  type: object
+```
+
+# Description Quality For OpenAPI Parameters
+
+- If a parameter has `default`, do not duplicate that value in `description`.
+  - Avoid phrases like "Default is ...", "По умолчанию ...", "It is ... by default".
+- If a parameter has `enum`, do not duplicate enum values as a plain "Possible values" list in `description`.
+  - Enum values are rendered automatically.
+  - It is allowed (and recommended) to explain semantic differences between each enum value.
+- Description structure rule:
+  - first 1-2 sentences define parameter purpose;
+  - usage details must be placed in separate paragraph(s), separated by blank lines (Markdown).
+
+Preferred enum description style (if it is necessary to describe possible values):
+
+```yaml
+mode:
+  type: string
+  description: |
+    The HTTPS usage mode.
+
+    Modes:
+    - `CertManager` — Stronghold will use HTTPS and get a certificate from the clusterissuer defined in the `certManager.clusterIssuerName` parameter.
+    - `CustomCertificate` — Stronghold will use HTTPS using the certificate from the `d8-system` namespace.
+  enum:
+    - "CertManager"
+    - "CustomCertificate"
+```
+
+Avoid style:
+
+```yaml
+mode:
+  type: string
+  description: |
+    The HTTPS usage mode:
+
+    Possible values: `CertManager`, `CustomCertificate`
+  enum:
+    - "CertManager"
+    - "CustomCertificate"
+```
+
+# OpenAPI RU Translation File
+
+- For `openapi/config-values.yaml`, create and maintain `openapi/doc-ru-config-values.yaml`.
+- Translation file should follow source structure and include RU `description` values.
+- Keep only translation-relevant structure for descriptions; avoid copying operational schema fields into translation file.
+
+# OpenAPI Translation Validation
+
+- `openapi/config-values.yaml` and `openapi/doc-ru-config-values.yaml` must be valid YAML.
+- Each translated `description` path in `doc-ru-config-values.yaml` must exist in `config-values.yaml`.
+- Do not leave orphan translation paths that have no source counterpart.

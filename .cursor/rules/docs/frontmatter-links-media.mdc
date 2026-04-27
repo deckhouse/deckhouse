@@ -1,0 +1,45 @@
+---
+description: Front matter, links, and media rules
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Front Matter
+
+- Use YAML front matter in page header.
+- `title`: required.
+- If `title` is missing, generate it from page purpose and module context.
+- For `README` title use template:
+  - RU file (`README.ru.md`): `Модуль <MODULENAME>`
+  - EN file (`README.md`): `Module <MODULENAME>`
+- `<MODULENAME>` must be the exact value from `module.yaml.name` (lowercase Kebab Case), without case/style changes.
+- `linkTitle`: optional, and applicable only to Hugo pages.
+- Do not use `linkTitle` in Jekyll page metadata.
+- `description`: required, concise, unique, and not a copy of `title`.
+- If `description` is missing, generate it automatically from page purpose and key context.
+- Do not set top-level front matter `url`; it is generated automatically.
+- `moduleStatus` in README front matter is deprecated and must not be used.
+- If `moduleStatus` is present:
+  - remove it from README front matter;
+  - validate that lifecycle status is set in `module.yaml` via `stage`;
+  - if README `moduleStatus` conflicts with `module.yaml.stage`, ask user before changing lifecycle value.
+
+# Related Links
+
+- For Hugo pages, use related links as `params.relatedLinks` in front matter.
+- For Jekyll pages, use related links as top-level `relatedLinks` in front matter (without `params`).
+- Do not add manual "Related links" or "Related pages" sections in Markdown body.
+- The related links block is rendered automatically from front matter.
+- If a `relatedLinks` item has no `url`, the link must not be rendered.
+- If `title` is missing, render only module links like `/modules/<module-name>/`.
+
+# Link Rules
+
+- Same module docs links must be relative (`cr.html`, `usage.html`).
+- Other module links must be absolute without domain (`/modules/<module-name>/...`).
+- Deckhouse Kubernetes Platform docs links must be absolute without domain (`/products/kubernetes-platform/documentation/v1/...`).
+
+# Media Rules
+
+- Store images, PDFs, and media only in `docs/` or its subdirectories.
+- Use relative links for files within the same module repository.
