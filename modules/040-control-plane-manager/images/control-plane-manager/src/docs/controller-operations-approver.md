@@ -15,6 +15,7 @@ Set `spec.approved=true` for queued operations using stage ordering and concurre
 | `ControlPlaneOperation` | update when operation becomes terminal |
 
 The controller recomputes approvals for the full operation set on each trigger.
+`OperationFailed` is not terminal: failed approved operations remain in-flight and keep occupying their approval slots while the CPO controller retries them.
 
 ## Approval Model
 

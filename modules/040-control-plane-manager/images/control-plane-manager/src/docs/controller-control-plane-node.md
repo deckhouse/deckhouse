@@ -56,6 +56,7 @@ This mode is useful for manual node maintenance or administrative operations wit
 
 - Regular drift operations are created only when no active operation with the same desired checksums tuple exists:
 - `DesiredConfigChecksum + DesiredPKIChecksum + DesiredCAChecksum`
+- `OperationFailed` is retryable and non-terminal, so a failed CPO with matching desired checksums prevents duplicate CPO creation while it is retried by the CPO controller.
 - Active-operation lookup is unified via shared predicate-based helper (used by regular, renewal, and observe-only creation paths).
 - For regular drift operations, if desired checksums changed while another operation is running, a new operation may be created for the same component.
 - Cert-renewal operations are expiry-triggered, but still use the same desired checksums tuple and normal stale/cancel flow in CPO controller.
@@ -70,7 +71,7 @@ This mode is useful for manual node maintenance or administrative operations wit
 - `Synced` when component checksums in status match desired and no operation is needed.
 - `PendingUpdate` when matching operation exists but not approved.
 - `Updating` when matching operation is approved and running.
-- `UpdateFailed` when matching operation failed.
+- `UpdateFailed` when matching operation is in retryable `OperationFailed` state.
 - `CertificatesHealthy=True` when:
 - all static pod components report target CA in status, and
 - all observed component certificates are not expiring within renewal threshold.
