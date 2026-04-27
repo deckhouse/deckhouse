@@ -188,77 +188,51 @@ run_coverage_checks() {
   fi
 
   local coverage_parse_output
-  local go_parser_tmp
-  go_parser_tmp="${BASE_DIR}/coverage_parser_${$}.go"
-
-  cat >"${go_parser_tmp}" <<'EOF'
-package main
-
-import (
- "encoding/json"
- "fmt"
- "os"
- "regexp"
-)
-
-type report struct {
- Constraints []constraint `json:"constraints"`
-}
-
-type constraint struct {
- Directory string  `json:"directory"`
- Name      string  `json:"name"`
- Fields    *fields `json:"fields"`
-}
-
-type fields struct {
- CoveragePct *int `json:"coverage_pct"`
-}
-
-func main() {
- input, err := os.ReadFile("/dev/stdin")
- if err != nil {
-  fmt.Fprintln(os.Stderr, err)
-  os.Exit(1)
- }
-
- re := regexp.MustCompile(`(?s)\{.*\}`)
- rawJSON := re.Find(input)
- if rawJSON == nil {
-  fmt.Fprintln(os.Stderr, "json payload not found in coverage output")
-  os.Exit(1)
- }
-
- var r report
- if err := json.Unmarshal(rawJSON, &r); err != nil {
-  fmt.Fprintln(os.Stderr, err)
-  os.Exit(1)
- }
-
- fmt.Printf("TOTAL=%d\n", len(r.Constraints))
-
- for _, c := range r.Constraints {
-  if c.Fields == nil || c.Fields.CoveragePct == nil {
-  	continue
-  }
-  if *c.Fields.CoveragePct < 100 {
-  	name := c.Directory
-  	if name == "" {
-  		name = c.Name
-  	}
-  	if name == "" {
-  		name = "unknown"
-  	}
-  	fmt.Printf("LOW=%s:%d%%\n", name, *c.Fields.CoveragePct)
-  }
- }
-}
-EOF
-
+  local parse_exit=0
   set +e
-  coverage_parse_output="$(printf '%s\n' "${coverage_output}" | go run "${go_parser_tmp}" 2>&1)"
-  local parse_exit=$?
-  rm -f "${go_parser_tmp}"
+  coverage_parse_output="$(printf '%s\n' "${coverage_output}" | awk '
+    BEGIN {
+      current_name = ""
+      total = 0
+    }
+    {
+      line = $0
+      if (match(line, /"directory"[[:space:]]*:[[:space:]]*"[^"]*"/)) {
+        value = substr(line, RSTART, RLENGTH)
+        sub(/^.*:[[:space:]]*"/, "", value)
+        sub(/"$/, "", value)
+        if (value != "") {
+          current_name = value
+        }
+      } else if (current_name == "" && match(line, /"name"[[:space:]]*:[[:space:]]*"[^"]*"/)) {
+        value = substr(line, RSTART, RLENGTH)
+        sub(/^.*:[[:space:]]*"/, "", value)
+        sub(/"$/, "", value)
+        if (value != "") {
+          current_name = value
+        }
+      } else if (match(line, /"coverage_pct"[[:space:]]*:[[:space:]]*[0-9]+/)) {
+        value = substr(line, RSTART, RLENGTH)
+        sub(/^.*:[[:space:]]*/, "", value)
+        cov = value + 0
+        total++
+
+        if (current_name == "") {
+          current_name = "unknown"
+        }
+
+        if (cov < 100) {
+          printf("LOW=%s:%d%%\n", current_name, cov)
+        }
+
+        current_name = ""
+      }
+    }
+    END {
+      printf("TOTAL=%d\n", total)
+    }
+  ' 2>&1)"
+  parse_exit=$?
   set -e
 
   if [ ${parse_exit} -ne 0 ]; then
