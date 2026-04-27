@@ -1,5 +1,9 @@
 /*
 Copyright The ORAS Authors.
+Copyright 2026 Flant JSC
+
+Modifications made by Flant JSC as part of the Deckhouse project.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
