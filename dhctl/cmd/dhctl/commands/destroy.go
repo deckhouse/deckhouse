@@ -55,12 +55,8 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
-		teeLogger, ok := logger.(*log.TeeLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to TeeLogger")
-		}
 
-		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
 			return fmt.Errorf("cannot convert logger to ExternalLogger")
 		}

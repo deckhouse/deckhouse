@@ -50,7 +50,7 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 			if c == nil {
 				return nil, fmt.Errorf("global cache is not initialized yet")
 			}
-			return state.GetMasterHosts(c)
+			return state.GetMasterHosts(context.Background(), c)
 		},
 	}
 

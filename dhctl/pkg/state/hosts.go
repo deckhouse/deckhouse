@@ -58,9 +58,9 @@ func GetMasterHostsIPs(ctx context.Context, cache Cache) ([]session.Host, error)
 	return mastersIPs, nil
 }
 
-func GetMasterHosts(cache Cache) ([]sshconfig.Host, error) {
+func GetMasterHosts(ctx context.Context, cache Cache) ([]sshconfig.Host, error) {
 	hostsToReturn := make([]sshconfig.Host, 0)
-	hosts, err := GetMasterHostsIPs(cache)
+	hosts, err := GetMasterHostsIPs(ctx, cache)
 	if err != nil {
 		return hostsToReturn, err
 	}

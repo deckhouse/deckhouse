@@ -149,12 +149,7 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		teeLogger, ok := logger.(*log.TeeLogger)
-		if !ok {
-			return fmt.Errorf("cannot convert logger to TeeLogger")
-		}
-
-		externalLogger, ok := teeLogger.GetLogger().(*log.ExternalLogger)
+		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
 			return fmt.Errorf("cannot convert logger to ExternalLogger")
 		}
