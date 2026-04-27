@@ -1,11 +1,10 @@
----
 global:
   revisions:
-  - ce
-  - be
-  - se
-  - se-plus
-  - ee
+    - ce
+    - be
+    - se
+    - se-plus
+    - ee
   step1:
     name:
       en: Selecting infrastructure
@@ -14,8 +13,9 @@ global:
   step:
     header: getting_started/global/HEADER.md
     footer: getting_started/global/FOOTER.md
-    output_dir_template: "<LANG>/gs/<INSTALL_CODE>/"
-    installer_output_dir_template: "<LANG>/gs/installer/<INSTALL_CODE>/"
+    output_dir_template: '<LANG>/gs/<INSTALL_CODE>/'
+    installer_output_dir_template: '<LANG>/gs/installer/<INSTALL_CODE>/'
+
 presets:
   minimal:
     name:
@@ -33,6 +33,7 @@ presets:
         - Управляющие компоненты Kubernetes-кластера и Deckhouse-контроллер работают на master-узле.
         - Deckhouse запускает несистемные компоненты (Ingress-контроллер, Prometheus, cert-manager и т.д.) на worker-узле.
         - Ваши приложения должны работать на worker-узле.
+
 installTypes:
   aws:
     iconPath: images/icons/platforms/amazon_aws.png
@@ -40,8 +41,8 @@ installTypes:
       code: without_nat
       name: WithoutNAT
     pages_title:
-      en: Deckhouse Kubernetes Platform in Amazon AWS
-      ru: Deckhouse Kubernetes Platform в Amazon AWS
+      en: "Deckhouse Kubernetes Platform in Amazon AWS"
+      ru: "Deckhouse Kubernetes Platform в Amazon AWS"
     type: cloud
     name:
       en: Amazon AWS
@@ -78,8 +79,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)
-      ru: Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)
+      en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
+      ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
     type: cloud
     installer_support: true
     name:
@@ -148,8 +149,8 @@ installTypes:
       code: without_nat
       name: WithoutNAT
     pages_title:
-      en: Deckhouse Kubernetes Platform in Google Cloud
-      ru: Deckhouse Kubernetes Platform в Google Cloud
+      en: "Deckhouse Kubernetes Platform in Google Cloud"
+      ru: "Deckhouse Kubernetes Platform в Google Cloud"
     type: cloud
     name:
       en: Google Cloud
@@ -187,8 +188,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform on Huawei Cloud
-      ru: Deckhouse Kubernetes Platform на Huawei Cloud
+      en: "Deckhouse Kubernetes Platform on Huawei Cloud"
+      ru: "Deckhouse Kubernetes Platform на Huawei Cloud"
     type: cloud
     name:
       en: Huawei Cloud
@@ -225,8 +226,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform in Microsoft Azure
-      ru: Deckhouse Kubernetes Platform в Microsoft Azure
+      en: "Deckhouse Kubernetes Platform in Microsoft Azure"
+      ru: "Deckhouse Kubernetes Platform в Microsoft Azure"
     type: cloud
     name:
       en: Microsoft Azure
@@ -264,8 +265,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform on OpenStack
-      ru: Deckhouse Kubernetes Platform на OpenStack
+      en: "Deckhouse Kubernetes Platform on OpenStack"
+      ru: "Deckhouse Kubernetes Platform на OpenStack"
     type: cloud
     installer_support: true
     name:
@@ -335,8 +336,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform on OVH (OpenStack)
-      ru: Deckhouse Kubernetes Platform в OVH (OpenStack)
+      en: "Deckhouse Kubernetes Platform on OVH (OpenStack)"
+      ru: "Deckhouse Kubernetes Platform в OVH (OpenStack)"
     type: cloud
     name:
       en: OVH Cloud
@@ -374,8 +375,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform on Selectel (OpenStack)
-      ru: Deckhouse Kubernetes Platform в Selectel (OpenStack)
+      en: "Deckhouse Kubernetes Platform on Selectel (OpenStack)"
+      ru: "Deckhouse Kubernetes Platform в Selectel (OpenStack)"
     type: cloud
     installer_support: true
     name:
@@ -445,8 +446,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform on VK Cloud (OpenStack)
-      ru: Deckhouse Kubernetes Platform в VK Cloud (OpenStack)
+      en: "Deckhouse Kubernetes Platform on VK Cloud (OpenStack)"
+      ru: "Deckhouse Kubernetes Platform в VK Cloud (OpenStack)"
     type: cloud
     installer_support: true
     name:
@@ -518,8 +519,8 @@ installTypes:
       en: VMware Cloud Director
       ru: VMware Cloud Director
     pages_title:
-      en: Deckhouse Kubernetes Platform on VMware Cloud Director
-      ru: Deckhouse Kubernetes Platform на VMware Cloud Director
+      en: "Deckhouse Kubernetes Platform on VMware Cloud Director"
+      ru: "Deckhouse Kubernetes Platform на VMware Cloud Director"
     layout:
       code: with_nat
       name: WithNAT
@@ -584,14 +585,14 @@ installTypes:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
     ee_only: true
     se_support: true
-    installer_support: true
     type: cloud
+    installer_support: true
     name:
       en: VMware vSphere
       ru: VMware vSphere
     pages_title:
-      en: Deckhouse Kubernetes Platform on VMware vSphere
-      ru: Deckhouse Kubernetes Platform на VMware vSphere
+      en: "Deckhouse Kubernetes Platform on VMware vSphere"
+      ru: "Deckhouse Kubernetes Platform на VMware vSphere"
     layout:
       code: standard
       name: Standard
@@ -658,13 +659,13 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform in Yandex Cloud
-      ru: Deckhouse Kubernetes Platform в Yandex Cloud
+      en: "Deckhouse Kubernetes Platform in Yandex Cloud"
+      ru: "Deckhouse Kubernetes Platform в Yandex Cloud"
     type: cloud
     installer_support: true
     name:
-      en: Yandex Cloud
-      ru: Yandex Cloud
+      en: "Yandex Cloud"
+      ru: "Yandex Cloud"
     steps:
       step2:
         name:
@@ -726,14 +727,15 @@ installTypes:
     iconPath: images/icons/platforms/zvirt.png
     ee_only: true
     se_support: true
-    installer_support: true
     layout:
       code: standard
       name: Standard
     pages_title:
-      en: Deckhouse Kubernetes Platform on Zvirt
-      ru: Deckhouse Kubernetes Platform на Zvirt
+      en: "Deckhouse Kubernetes Platform on Zvirt"
+      ru: "Deckhouse Kubernetes Platform на Zvirt"
     type: cloud
+    installer_support: true
+    # Например, это надписи на плитке
     name:
       en: zVirt
       ru: zVirt
@@ -795,19 +797,18 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   dynamix:
-    languages:
-    - ru
+    languages: ["ru"]
     iconPath: images/icons/platforms/dynamix.png
     ee_only: true
     layout:
       code: standard
       name: Standard
     pages_title:
-      ru: Deckhouse Kubernetes Platform в Базис.DynamiX
+      ru: "Deckhouse Kubernetes Platform в Базис.DynamiX"
     type: cloud
     name:
-      en: Базис.DynamiX
-      ru: Базис.DynamiX
+      en: "Базис.DynamiX"
+      ru: "Базис.DynamiX"
     steps:
       step2:
         name:
@@ -837,8 +838,8 @@ installTypes:
   existing:
     iconPath: images/icons/platforms/kubernetes.svg
     pages_title:
-      en: Deckhouse Kubernetes Platform in existing cluster
-      ru: Deckhouse Kubernetes Platform в существующем кластере
+      en: "Deckhouse Kubernetes Platform in existing cluster"
+      ru: "Deckhouse Kubernetes Platform в существующем кластере"
     type: existing
     name:
       en: Existing cluster
@@ -867,8 +868,8 @@ installTypes:
   kind:
     iconPath: images/icons/platforms/kind.png
     pages_title:
-      en: Deckhouse Kubernetes Platform in kind
-      ru: Deckhouse Kubernetes Platform в kind
+      en: "Deckhouse Kubernetes Platform in kind"
+      ru: "Deckhouse Kubernetes Platform в kind"
     type: special
     name:
       en: Using kind
@@ -890,8 +891,8 @@ installTypes:
     se_support: true
     be_support: false
     pages_title:
-      en: Deckhouse Kubernetes Platform in a private environment
-      ru: Deckhouse Kubernetes Platform в закрытом окружении
+      en: "Deckhouse Kubernetes Platform in a private environment"
+      ru: "Deckhouse Kubernetes Platform в закрытом окружении"
     type: baremetal
     name:
       en: Private environment
@@ -925,8 +926,8 @@ installTypes:
   bm:
     iconPath: images/icons/platforms/bare_metal.png
     pages_title:
-      en: Deckhouse Kubernetes Platform for bare metal
-      ru: Deckhouse Kubernetes Platform на bare metal
+      en: "Deckhouse Kubernetes Platform for bare metal"
+      ru: "Deckhouse Kubernetes Platform на bare metal"
     type: baremetal
     installer_support: true
     name:
@@ -990,23 +991,18 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   red:
-    languages:
-    - ru
+    languages: ["ru"]
     iconPath: images/icons/platforms/red.png
     pages_title:
-      en: Deckhouse Kubernetes Platform for RED virtualization
-      ru: Deckhouse Kubernetes Platform на РЕД виртуализации
+      en: "Deckhouse Kubernetes Platform for RED virtualization"
+      ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
     type: baremetal
     name:
       en: RED virtualization
       ru: РЕД виртуализация
     description:
-      ru: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a>
-        – система управления виртуализацией серверов и рабочих станций. Базируется
-        на гипервизоре KVM (kernel-based virtual machine) и открытой платформе управления
-        виртуальной инфраструктурой.
-      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a>
-        – система управления виртуализацией серверов и рабочих станций.
+      ru: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций. Базируется на гипервизоре KVM (kernel-based virtual machine) и открытой платформе управления виртуальной инфраструктурой.
+      en: <a href="https://redos.red-soft.ru/product/red-virtualizatsiya/">РЕД виртуализация</a> – система управления виртуализацией серверов и рабочих станций.
     steps:
       step2:
         name:
@@ -1034,24 +1030,18 @@ installTypes:
           ru: Куда двигаться дальше?
         template: getting_started/global/STEP_FINISH.md
   spacevm:
-    languages:
-    - ru
+    languages: ["ru"]
     iconPath: images/icons/platforms/spacevm.png
     pages_title:
-      en: Deckhouse Kubernetes Platform for SpaceVM
-      ru: Deckhouse Kubernetes Platform на SpaceVM
+      en: "Deckhouse Kubernetes Platform for SpaceVM"
+      ru: "Deckhouse Kubernetes Platform на SpaceVM"
     type: baremetal
     name:
       en: SpaceVM
       ru: SpaceVM
     description:
-      ru: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент
-        серверной виртуализации для эффективного управления ИТ-инфраструктурой. Представляет
-        собой комплексную платформу для развертывания полноценного частного облака
-        в корпоративной среде с необходимыми дополнительными инструментами для автоматизации
-        и оркестрации работы облачных сервисов.
-      en: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент
-        серверной виртуализации для эффективного управления ИТ-инфраструктурой.
+      ru: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой. Представляет собой комплексную платформу для развертывания полноценного частного облака в корпоративной среде с необходимыми дополнительными инструментами для автоматизации и оркестрации работы облачных сервисов.
+      en: <a href="https://spacevm.ru/">Облачная платформа на SpaceVM</a> – инструмент серверной виртуализации для эффективного управления ИТ-инфраструктурой.
     steps:
       step2:
         name:
