@@ -341,6 +341,11 @@ properties:
               type: string
               description: |
                 Value of NodeGroup's annotation "manual-rollout-id".
+            engine:
+              type: string
+              enum: ["None", "MCM", "CAPI"]
+              description: |
+                Effective machinery selected for this NodeGroup.
             serializedLabels:
               type: string
               description: |
