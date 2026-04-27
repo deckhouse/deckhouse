@@ -18,7 +18,6 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.1.1-0.20251230144142-2bad7c3d1edf
 	github.com/deckhouse/lib-connection v0.5.0
 	github.com/deckhouse/lib-dhctl v0.17.0
-	github.com/deckhouse/lib-connection v0.5.0
 	github.com/deckhouse/lib-gossh v0.3.0
 	github.com/deckhouse/module-sdk v0.5.0
 	github.com/flant/kube-client v1.6.0

@@ -89,7 +89,7 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
 		params := app.GetProviderParams(loggerProvider)
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
