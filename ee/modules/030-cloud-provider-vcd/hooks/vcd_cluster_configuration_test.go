@@ -134,6 +134,38 @@ cloudProviderVcd:
   mainNetwork: module-network
   internal: {}
 `
+		hybridValuesWithoutDiscoveryData = `
+global:
+  discovery: {}
+cloudProviderVcd:
+  provider:
+    server: https://module.example.com/api
+    username: module-user
+    password: module-password
+  organization: module-org
+  virtualDataCenter: module-vdc
+  virtualApplicationName: module-vapp
+  mainNetwork: module-network
+  internal: {}
+`
+		partialInlineDiscoveryValuesWithoutDefaults = `
+global:
+  discovery: {}
+cloudProviderVcd:
+  provider:
+    server: https://module.example.com/api
+    username: module-user
+    password: module-password
+  organization: module-org
+  virtualDataCenter: module-vdc
+  virtualApplicationName: module-vapp
+  mainNetwork: module-network
+  internal:
+    providerDiscoveryData:
+      storageProfiles:
+      - name: module-profile
+        isEnabled: true
+`
 		mergeDiscoveryValues = `
 global:
   discovery: {}
@@ -429,6 +461,50 @@ from: module
 		It("Should fail because auth modes are mutually exclusive", func() {
 			Expect(cfg).ToNot(ExecuteSuccessfully())
 			Expect(cfg.GoHookError).To(MatchError(ContainSubstring("provider authentication must use either apiToken or username/password")))
+		})
+	})
+
+	Context("Hybrid cluster without discovery data in secret and values", func() {
+		cfg := HookExecutionConfigInit(hybridValuesWithoutDiscoveryData, `{}`)
+		BeforeEach(func() {
+			cfg.BindingContexts.Set(cfg.KubeStateSet(""))
+			cfg.RunHook()
+		})
+
+		It("Should set default discovery data values", func() {
+			Expect(cfg).To(ExecuteSuccessfully())
+			Expect(cfg.ValuesGet("cloudProviderVcd.internal.providerDiscoveryData").String()).To(MatchJSON(`
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "VCDCloudProviderDiscoveryData",
+  "zones": ["default"]
+}
+`))
+		})
+	})
+
+	Context("Hybrid cluster with partial inline discovery data without defaults", func() {
+		cfg := HookExecutionConfigInit(partialInlineDiscoveryValuesWithoutDefaults, `{}`)
+		BeforeEach(func() {
+			cfg.BindingContexts.Set(cfg.KubeStateSet(""))
+			cfg.RunHook()
+		})
+
+		It("Should keep inline fields and apply missing defaults", func() {
+			Expect(cfg).To(ExecuteSuccessfully())
+			Expect(cfg.ValuesGet("cloudProviderVcd.internal.providerDiscoveryData").String()).To(MatchJSON(`
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "VCDCloudProviderDiscoveryData",
+  "zones": ["default"],
+  "storageProfiles": [
+    {
+      "name": "module-profile",
+      "isEnabled": true
+    }
+  ]
+}
+`))
 		})
 	})
 
