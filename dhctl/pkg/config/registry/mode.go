@@ -66,7 +66,7 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 	case settings.Mode == constant.ModeLocal:
 		remote := Data{
 			ImagesRepo: constant.BundleImagesRepo,
-			Scheme:     constant.BundleSchema,
+			Scheme:     constant.BundleScheme,
 		}
 
 		return ModeSettings{

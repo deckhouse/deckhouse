@@ -17,7 +17,7 @@ limitations under the License.
 package constant
 
 const (
-	BundleSchema          = SchemeHTTP
+	BundleScheme          = SchemeHTTP
 	BundlePort            = "5511"
 	BundleAddress         = "127.0.0.1"
 	BundleAddressWithPort = BundleAddress + ":" + BundlePort
