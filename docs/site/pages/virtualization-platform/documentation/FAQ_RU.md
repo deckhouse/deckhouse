@@ -9,7 +9,7 @@ faqIndexPage: true
 lang: ru
 ---
 
-На странице представлены часто задаваемые вопросы по настройке и использованию Deckhouse Kubernetes Platform.
+На странице представлены часто задаваемые вопросы по настройке и использованию Deckhouse Virtualization Platform.
 
 <button class="show__containers--expand">Развернуть все</button>
 <button class="show__containers--collapse">Свернуть все</button>
