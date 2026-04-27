@@ -33,7 +33,7 @@ type DeckhouseUserCheck struct {
 const DeckhouseUserCheckName preflight.CheckName = "deckhouse-user"
 
 func (DeckhouseUserCheck) Description() string {
-	return "deckhouse user and group aren't present on node"
+	return "no conflicting deckhouse user or group on the node"
 }
 
 func (DeckhouseUserCheck) Phase() preflight.Phase {
@@ -53,14 +53,17 @@ func (c DeckhouseUserCheck) Run(ctx context.Context) error {
 	cmd := c.Node.UploadScript(file)
 	out, err := cmd.Execute(ctx)
 	if err != nil {
+		outMsg := strings.TrimSpace(string(out))
+		if outMsg != "" {
+			return fmt.Errorf("Deckhouse user check failed: %s", outMsg)
+		}
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
-			return fmt.Errorf("Deckhouse user existence check failed: %w, %s", err, string(ee.Stderr))
+			return fmt.Errorf("Deckhouse user check failed: %w, %s", err, string(ee.Stderr))
 		}
 		return fmt.Errorf("Could not execute a script to check deckhouse user and group aren't present on the node: %w", err)
 	}
 
-	_ = strings.TrimSpace(string(out))
 	return nil
 }
 
