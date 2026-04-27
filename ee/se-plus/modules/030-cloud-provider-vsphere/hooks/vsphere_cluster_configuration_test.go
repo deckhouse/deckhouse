@@ -348,6 +348,18 @@ cloudProviderVsphere:
 			Expect(b.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
 		})
 	})
+	Context("Cluster with module configuration, without secret", func() {
+		BeforeEach(func() {
+			b.BindingContexts.Set(b.KubeStateSet(""))
+			b.RunHook()
+		})
+
+		It("Should fill values from module configuration", func() {
+			Expect(b).To(ExecuteSuccessfully())
+			Expect(b.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration2))
+			Expect(b.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
+		})
+	})
 	Context("Cluster with module configuration, with secret (without nsx-t)", func() {
 		BeforeEach(func() {
 			b.BindingContexts.Set(b.KubeStateSet(notEmptyProviderClusterConfigurationState))
@@ -422,9 +434,32 @@ cloudProviderVsphere:
 			Expect(d).To(Not(ExecuteSuccessfully()))
 		})
 	})
+	Context("Cluster with module configuration without zones, without secret", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.KubeStateSet(""))
+			d.RunHook()
+		})
+
+		It("Should fail", func() {
+			Expect(d).To(Not(ExecuteSuccessfully()))
+		})
+	})
 	Context("Cluster with module configuration with zones, but without zoneTagCategory and regionTagCategory, with empty secret", func() {
 		BeforeEach(func() {
 			d.BindingContexts.Set(d.KubeStateSet(emptyProviderClusterConfigurationState))
+			d.ValuesSet("cloudProviderVsphere.zones", []string{"test"})
+			d.RunHook()
+		})
+
+		It("Should fill values from module configuration", func() {
+			Expect(d).To(ExecuteSuccessfully())
+			Expect(d.ValuesGet("cloudProviderVsphere.internal.providerClusterConfiguration").String()).To(MatchYAML(stateAClusterConfiguration4))
+			Expect(d.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON("{}"))
+		})
+	})
+	Context("Cluster with module configuration with zones, but without zoneTagCategory and regionTagCategory, without secret", func() {
+		BeforeEach(func() {
+			d.BindingContexts.Set(d.KubeStateSet(""))
 			d.ValuesSet("cloudProviderVsphere.zones", []string{"test"})
 			d.RunHook()
 		})
@@ -445,6 +480,31 @@ cloudProviderVsphere:
 		It("Should fill values from secret", func() {
 			Expect(e).To(ExecuteSuccessfully())
 			Expect(e.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData").String()).To(MatchJSON(stateECloudDiscoveryData))
+		})
+	})
+
+	f := HookExecutionConfigInit(filledValues, `{}`)
+	Context("Cluster with module configuration and inline discovery data, without secret", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("cloudProviderVsphere.internal.providerDiscoveryData", []byte(`
+apiVersion: deckhouse.io/v1
+kind: VsphereCloudDiscoveryData
+vmFolderPath: module-test
+resourcePoolPath: module-pool
+datacenter: MODULE-DC
+zones:
+- module-zone
+`))
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.RunHook()
+		})
+
+		It("Should preserve inline discovery data", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.vmFolderPath").String()).To(Equal("module-test"))
+			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.resourcePoolPath").String()).To(Equal("module-pool"))
+			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.datacenter").String()).To(Equal("MODULE-DC"))
+			Expect(f.ValuesGet("cloudProviderVsphere.internal.providerDiscoveryData.zones").String()).To(MatchJSON(`["module-zone"]`))
 		})
 	})
 })

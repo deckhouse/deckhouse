@@ -45,7 +45,7 @@
 035-cni-flannel/                                                 @AndreyPavlovFlant @apolovov
 035-cni-simple-bridge/                                           @AndreyPavlovFlant @apolovov
 036-kube-proxy/                                                  @AndreyPavlovFlant @apolovov
-038-registry/                                                    @RaveNoX
+038-registry/                                                    @nabokihms @vadimartynov
 039-registry-packages-proxy/                                     @name212 @090809
 040-control-plane-manager/                                       @sprait
 040-node-manager/                                                @name212 @090809
@@ -124,4 +124,4 @@ testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
-go_lib/registry/                         @RaveNoX
+go_lib/registry/                         @nabokihms @vadimartynov

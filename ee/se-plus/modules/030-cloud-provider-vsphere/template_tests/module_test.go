@@ -62,6 +62,28 @@ const globalValues = `
     kubernetesVersion: "%s.1"
 `
 
+const hybridGlobalValues = `
+  enabledModules: ["vertical-pod-autoscaler"]
+  clusterConfiguration:
+    apiVersion: deckhouse.io/v1
+    clusterDomain: cluster.local
+    clusterType: Static
+    defaultCRI: Containerd
+    kind: ClusterConfiguration
+    kubernetesVersion: "%s"
+    podSubnetCIDR: 10.111.0.0/16
+    podSubnetNodeCIDRPrefix: "24"
+    serviceSubnetCIDR: 10.222.0.0/16
+  modules:
+    placement: {}
+  discovery:
+    d8SpecificNodeCountByRole:
+      worker: 1
+      master: 3
+    podSubnet: 10.0.1.0/16
+    kubernetesVersion: "%s.1"
+`
+
 const moduleValuesA = `
     internal:
       storageClasses:
@@ -223,6 +245,45 @@ const moduleValuesD = `
           - name: class1
             ipPoolName: pool2
             tcpAppProfileName: profile1
+`
+
+const moduleValuesHybrid = `
+    internal:
+      storageClasses:
+      - name: mydsname1
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash1/
+        path: /my/ds/path/mydsname1
+        zones: ["zonea", "zoneb"]
+      - name: mydsname2
+        datastoreType: Datastore
+        datastoreURL: ds:///vmfs/volumes/hash2/
+        path: /my/ds/path/mydsname2
+        zones: ["zonea", "zoneb"]
+      compatibilityFlag: ""
+      providerDiscoveryData:
+        datacenter: X1
+        zones: ["aaa", "bbb"]
+      providerClusterConfiguration:
+        provider:
+          server: myhost
+          username: myuname
+          password: myPaSsWd
+          insecure: true
+        regionTagCategory: myregtagcat
+        zoneTagCategory: myzonetagcat
+        region: myreg
+        zones: ["zone-a", "zone-b"]
+        sshPublicKey: mysshkey1
+        vmFolderPath: dev/test
+        masterNodeGroup:
+          instanceClass:
+            datastore: dev/lun_1
+            mainNetwork: k8s-msk/test_187
+            memory: 8192
+            numCPUs: 4
+            template: dev/golden_image
+          replicas: 1
 `
 
 const tolerationsAnyNodeWithUninitialized = `
@@ -403,6 +464,75 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+		})
+	})
+
+	Context("Hybrid vSphere", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.31", "1.31"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesHybrid)
+			f.HelmRender()
+		})
+
+		It("renders resources for hybrid clusters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
+			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+			Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+			expectedProviderRegistrationJSON := `{
+          "server": "myhost",
+          "insecure": true,
+          "password": "myPaSsWd",
+          "region": "myreg",
+          "regionTagCategory": "myregtagcat",
+          "instanceClassDefaults": {
+            "datastore": "dev/lun_1",
+            "template": "dev/golden_image",
+            "disableTimesync": true
+          },
+          "instances": {
+            "mainNetwork": "k8s-msk/test_187"
+          },
+          "sshKey": "mysshkey1",
+          "username": "myuname",
+          "vmFolderPath": "dev/test",
+          "zoneTagCategory": "myzonetagcat"
+        }`
+
+			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.vsphere").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			providerSpecificRegistrationData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.vsphere").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(providerSpecificRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+			zonesRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.zones").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(zonesRegistrationData)).To(Equal(`["zone-a","zone-b"]`))
+
+			cloudDataDiscovererSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-data-discoverer")
+			Expect(cloudDataDiscovererSecret.Exists()).To(BeTrue())
+
+			zonesDiscovererData, err := base64.StdEncoding.DecodeString(cloudDataDiscovererSecret.Field("data.zones").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(zonesDiscovererData)).To(Equal("zone-a,zone-b"))
+
+			Expect(f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID)).Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID)).Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com").Exists()).To(BeTrue())
 		})
 	})
 

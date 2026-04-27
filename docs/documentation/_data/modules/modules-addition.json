@@ -297,6 +297,15 @@
     "external": "true",
     "path": "/modules/csi-yadro-tatlin-unified/stable/"
   },
+  "dashboard": {
+    "editions": [
+      "ce",
+      "be",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/dashboard/"
+  },
   "delivery-kit": {
     "editions": [
       "cse-lite",

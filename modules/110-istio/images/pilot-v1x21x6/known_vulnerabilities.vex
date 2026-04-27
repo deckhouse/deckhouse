@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-istio-pilot-v1x21x6-cve-2026-35206",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35206"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Helm pull с распаковкой chart (флаг --untar) из произвольного URL или имени из репозитория (CVE-2026-35206, GHSA-hr2v-4r36-88hr, CWE-22) в программном продукте helm версии 3.14.2 не используется в рамках эксплуатации pilot-discovery (istiod). Манифесты и chart-артефакты подготавливаются на этапе сборки образа и не подменяются из недоверенных источников во время работы в кластере, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-03-30T10:17:01.000000000Z"
+    }
+  ],
+  "timestamp": "2026-03-30T10:17:00Z"
+}

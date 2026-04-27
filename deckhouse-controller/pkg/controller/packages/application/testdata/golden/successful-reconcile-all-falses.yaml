@@ -26,6 +26,7 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: v1.0.3
 status:
+  lastAppliedConfiguration: null
   tracking: null
 ---
 apiVersion: deckhouse.io/v1alpha1

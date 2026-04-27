@@ -1,0 +1,21 @@
+- name: security-events
+  rules:
+  - alert: SecurityEventsDetected
+    expr: |
+      sum(rate(vector_component_sent_events_total{component_kind="sink", component_type="loki", component_id="destination/cluster/se-d8-loki"}[5m])) > 0
+    for: 1m
+    labels:
+      severity: warning
+      severity_level: "4"
+      tier: cluster
+      d8_module: loki
+      d8_component: loki
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      summary: "Security events sent to Loki were found"
+      description: >
+        The cluster has recorded security events sent via the Vector component in Loki.
+        This may indicate potential signs of attacks or security policy violations.
+
+        For more information, see the Grafana dashboard "Security / Security Events".

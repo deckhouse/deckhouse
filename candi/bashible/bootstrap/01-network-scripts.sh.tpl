@@ -14,8 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 */}}
+bootstrap_log_init() {
+  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
+    mkdir -p /var/log/d8/bashible
+    exec {bootstrap_stdout_fd}>&1
+    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
+    export BOOTSTRAP_LOG_INITIALIZED=1
+  fi
+}
+
+bootstrap_log_init
+
 {{- if and (ne .nodeGroup.nodeType "Static") (.provider )}}
   {{- if $bootstrap_script_network := $.Files.Get (printf "deckhouse/candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) | default ($.Files.Get (printf "candi/cloud-providers/%s/bashible/bootstrap-networks.sh.tpl" .provider) ) }}
+echo "Bootstrap: applying network scripts for provider {{ .provider }}"
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}
 {{- end }}
+
+echo "Bootstrap: finished network scripts"

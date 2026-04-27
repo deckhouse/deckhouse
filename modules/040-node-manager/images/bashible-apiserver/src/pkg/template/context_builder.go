@@ -65,6 +65,7 @@ type BashibleContextData struct {
 	VersionMap map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
 	Registry   map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy      map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	Deckhouse  deckhouse                    `json:"deckhouse" yaml:"deckhouse"`
 }
 
 // Map returns context data as map[string]interface{} for proper yaml marshalling
@@ -79,6 +80,7 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 	result["registry"] = bd.Registry
 	result["versionMap"] = bd.VersionMap
 	result["proxy"] = bd.Proxy
+	result["deckhouse"] = bd.Deckhouse
 	if bashibleData, ok := bd.VersionMap["bashible"]; ok {
 		result["bashible"] = bashibleData
 	}
@@ -133,6 +135,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Images:           cb.imagesDigests,
 		Registry:         cb.registryData,
 		Proxy:            cb.clusterInputData.Proxy,
+		Deckhouse:        cb.clusterInputData.Deckhouse,
 	}
 
 	ngMap := make(map[string][]byte)
@@ -155,6 +158,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Registry:                   cb.registryData,
 		Images:                     cb.imagesDigests,
 		Proxy:                      cb.clusterInputData.Proxy,
+		Deckhouse:                  cb.clusterInputData.Deckhouse,
 		PackagesProxy:              cb.clusterInputData.PackagesProxy,
 		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
@@ -205,6 +209,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 		Images:                     cb.imagesDigests,
 		Registry:                   cb.registryData,
 		Proxy:                      cb.clusterInputData.Proxy,
+		Deckhouse:                  cb.clusterInputData.Deckhouse,
 		CloudProviderType:          cb.getCloudProvider(),
 		PackagesProxy:              cb.clusterInputData.PackagesProxy,
 		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
@@ -379,6 +384,7 @@ type bashibleContext struct {
 	Images                     map[string]map[string]string `json:"images" yaml:"images"`
 	Registry                   map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy                      map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	Deckhouse                  deckhouse                    `json:"deckhouse" yaml:"deckhouse"`
 	CloudProviderType          string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy              map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
 	AllowedKubeletFeatureGates []string                     `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
@@ -427,6 +433,7 @@ type tplContextCommon struct {
 	Registry map[string]interface{}       `json:"registry" yaml:"registry"`
 
 	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Deckhouse                  deckhouse              `json:"deckhouse" yaml:"deckhouse"`
 	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
@@ -455,7 +462,14 @@ type normal struct {
 	ModuleSourcesCA         map[string]string      `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
 }
 
+type deckhouse struct {
+	Channel string `json:"channel" yaml:"channel"`
+	Version string `json:"version" yaml:"version"`
+	Edition string `json:"edition" yaml:"edition"`
+}
+
 type inputData struct {
+	Deckhouse                  deckhouse              `json:"deckhouse" yaml:"deckhouse"`
 	PodSubnetNodeCIDRPrefix    string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
 	ClusterDomain              string                 `json:"clusterDomain" yaml:"clusterDomain"`
 	ClusterDNSAddress          string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
