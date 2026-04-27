@@ -135,7 +135,7 @@ func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.Cloud
 func (d *Discoverer) DiscoveryData(_ context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
 	discoveryData := &v1.VCDCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
-		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		err := json.Unmarshal(cloudProviderDiscoveryData, discoveryData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
