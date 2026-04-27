@@ -15,6 +15,20 @@
 # limitations under the License.
 */}}
 
+set -Eeuo pipefail
+shopt -s failglob
+
+bootstrap_log_init() {
+  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
+    mkdir -p /var/log/d8/bashible
+    exec {bootstrap_stdout_fd}>&1
+    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
+    export BOOTSTRAP_LOG_INITIALIZED=1
+  fi
+}
+
+bootstrap_log_init
+
 {{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
 {{- tpl $bbnn . }}
 
@@ -63,9 +77,6 @@ function get_bundle() {
     sleep 10
   done
 }
-
-set -Eeuo pipefail
-shopt -s failglob
 
 export BOOTSTRAP_DIR="/var/lib/bashible"
 export TMPDIR="/opt/deckhouse/tmp"

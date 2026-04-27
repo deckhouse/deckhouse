@@ -79,3 +79,4 @@ bb-deckhouse-get-disruptive-update-approval() {
     bb-log-info "Disruption approved!"
     bb-flag-set disruption
 }
+

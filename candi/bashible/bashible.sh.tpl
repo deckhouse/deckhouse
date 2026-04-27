@@ -298,6 +298,17 @@ log_configuration_checksum() {
   echo "Got $kind/$objName configuration checksum: $checksum" >&2
 }
 
+bootstrap_log_init() {
+  local current_file="$1"
+
+  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
+    mkdir -p /var/log/d8/bashible
+    exec {bootstrap_stdout_fd}>&1
+    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
+    export BOOTSTRAP_LOG_INITIALIZED=1
+  fi
+}
+
 function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
@@ -363,6 +374,11 @@ function main() {
 {{- end }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
+  if [ -f "$BOOTSTRAP_DIR/first_run" ] ; then
+    FIRST_BASHIBLE_RUN="yes"
+    bootstrap_log_init "bashible.sh.tpl"
+  fi
+
   bb-discover-node-name
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
 
@@ -386,10 +402,6 @@ function main() {
         >&2 echo "failed to get node group. Forgot set label 'node.deckhouse.io/group'"
       fi
     fi
-  fi
-
-  if [ -f /var/lib/bashible/first_run ] ; then
-    FIRST_BASHIBLE_RUN="yes"
   fi
 
   mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
