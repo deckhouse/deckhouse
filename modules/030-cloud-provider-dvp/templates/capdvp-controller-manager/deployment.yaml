@@ -2,6 +2,12 @@
 checksum/config: {{ include (print $.Template.BasePath "/capdvp-controller-manager/secret.yaml") . | sha256sum }}
 {{- end -}}
 
+{{- define "capdvp_controller_manager_pod_labels" -}}
+{{- if .Values.global.enabledModules | has "admission-policy-engine-crd" }}
+security.deckhouse.io/security-policy-exception: capdvp-controller-manager
+{{- end }}
+{{- end -}}
+
 {{- define "capdvp_controller_manager_args" -}}
 - "--leader-elect"
 {{- end -}}
@@ -33,6 +39,7 @@ checksum/config: {{ include (print $.Template.BasePath "/capdvp-controller-manag
 {{- $_ := set $capiConfig "additionalArgs" (include "capdvp_controller_manager_args" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalEnv" (include "capdvp_controller_manager_envs" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPodAnnotations" (include "capdvp_controller_manager_pod_annotations" . | fromYaml) -}}
+{{- $_ := set $capiConfig "additionalPodLabels" (include "capdvp_controller_manager_pod_labels" . | fromYaml) -}}
 {{- $_ := set $capiConfig "hostNetwork" true -}}
 {{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
 {{- $_ := set $capiConfig "securityPolicyExceptionEnabled" true -}}
