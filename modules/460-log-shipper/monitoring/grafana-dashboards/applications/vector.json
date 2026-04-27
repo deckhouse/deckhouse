@@ -191,18 +191,16 @@
       },
       "id": 46,
       "options": {
-        "legend": {
-          "calcs": [
-            "last"
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
           ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
+          "show": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "showHeader": true
       },
       "pluginVersion": "8.5.2",
       "targets": [
@@ -212,30 +210,31 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum by (short_name) (label_replace(rate(vector_component_received_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
-          "instant": false,
+          "expr": "sum by (component_kind, short_name) ((label_replace(label_replace(increase(vector_component_received_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\")) or (label_replace(label_replace(label_replace(increase(vector_component_sent_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\"), \"component_kind\", \"destination\", \"component_kind\", \".*\")))",
+          "format": "table",
+          "instant": true,
           "interval": "",
-          "legendFormat": "source: {{ short_name }}",
+          "legendFormat": "",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum by (short_name) (label_replace(rate(vector_component_sent_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
-          "instant": false,
-          "interval": "",
-          "legendFormat": "sink: {{ short_name }}",
-          "refId": "B"
         }
       ],
-      "title": "Utilization (source/sink logs rate)",
+      "title": "Utilization (source/destination logs count)",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "component_kind",
+                "short_name",
+                "Value"
+              ]
+            }
+          }
+        }
+      ],
       "transparent": true,
-      "type": "timeseries"
+      "type": "table"
     },
     {
       "datasource": {
@@ -729,7 +728,7 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (short_name) (label_replace(increase(vector_component_received_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
+          "expr": "sum by (short_name) (label_replace(label_replace(increase(vector_component_received_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\"))",
           "format": "table",
           "instant": true,
           "legendFormat": "",
@@ -795,7 +794,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Sink"
+                "value": "Destination"
               }
             ]
           },
@@ -839,14 +838,14 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (short_name) (label_replace(increase(vector_component_sent_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
+          "expr": "sum by (short_name) (label_replace(label_replace(increase(vector_component_sent_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\"))",
           "format": "table",
           "instant": true,
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Sinks: sent logs",
+      "title": "Destinations: sent logs",
       "transformations": [
         {
           "id": "filterFieldsByName",
