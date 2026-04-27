@@ -25,7 +25,6 @@ import (
 	"regexp"
 
 	"github.com/opencontainers/go-digest"
-	ociv1 "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/errs"
 )
@@ -65,10 +64,6 @@ func NewRegistryHandler(logger *slog.Logger, registry Registry) http.Handler {
 	h.Add(
 		regexp.MustCompile(`^/v2/`+patternRepo+`/manifests/`+patternRef+`$`),
 		rh.handleManifest,
-	)
-	h.Add(
-		regexp.MustCompile(`^/v2/`+patternRepo+`/referrers/`+patternRef+`$`),
-		rh.handleReferrers,
 	)
 
 	h.SetDefault(rh.defaultHandler)
@@ -190,54 +185,6 @@ func (rh *registryHandlers) handleCatalog(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Length", fmt.Sprint(len(msg)))
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(msg)
-}
-
-func (rh *registryHandlers) handleReferrers(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		_ = errs.
-			ErrStatusMethodUnknown.
-			Write(w)
-		return
-	}
-
-	ctx := r.Context()
-	repo := RegexpParam(r, paramRepo)
-
-	dgst, err := digest.Parse(RegexpParam(r, paramRef))
-	if err != nil {
-		_ = errs.
-			ErrStatusDigestInvalid.
-			Write(w)
-		return
-	}
-
-	descs, err := rh.registry.Predecessors(ctx, repo, dgst)
-	if err != nil {
-		_ = errs.
-			MapStatusError(err).
-			Write(w)
-		return
-	}
-
-	imIndex := ociv1.Index{
-		MediaType: ociv1.MediaTypeImageIndex,
-		Manifests: descs,
-	}
-	imIndex.Versioned.SchemaVersion = 2
-
-	msg, err := json.Marshal(imIndex)
-	if err != nil {
-		_ = errs.
-			ErrStatusInternalServerError.
-			WithMessage(err.Error()).
-			Write(w)
-		return
-	}
-
-	w.Header().Set("Content-Length", fmt.Sprint(len(msg)))
-	w.Header().Set("Content-Type", ociv1.MediaTypeImageIndex)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(msg)
 }
