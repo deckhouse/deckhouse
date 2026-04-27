@@ -17,12 +17,12 @@ package rpp
 import (
 	"context"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type Cleanup func()
@@ -31,7 +31,7 @@ type InitOpt func(*RegistryPackagesProxy)
 
 type InitParams struct {
 	MetaConfig     *config.MetaConfig
-	Node           node.Interface
+	Node           libcon.Interface
 	LoggerProvider log.LoggerProvider
 	SignCheck      bool
 	DirsConfig     *directoryconfig.DirectoryConfig

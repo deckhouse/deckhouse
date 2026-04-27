@@ -48,7 +48,12 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
-		loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.(*log.TeeLogger).GetLogger().(*log.ExternalLogger).GetLogger())
+		extLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("could not get external logger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(extLogger.GetLogger())
 		params := app.GetProviderParams(loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
 		if err != nil {

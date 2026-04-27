@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -433,7 +434,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 			if baseOutputs.BastionHost != "" {
 				connectionConfig.Config.BastionHost = baseOutputs.BastionHost
-				SaveBastionHostToCache(baseOutputs.BastionHost)
+				SaveBastionHostToCache(ctx, baseOutputs.BastionHost)
 			}
 
 			connectionConfig.Hosts = append(connectionConfig.Hosts, sshconfig.Host{Host: masterOutputs.MasterIPForSSH})
@@ -486,10 +487,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if b.SSHProviderInitializer.CheckHosts() {
 			connectionConfig := b.SSHProviderInitializer.GetConfig()
 			if connectionConfig.Config.BastionHost != "" {
-				SaveBastionHostToCache(connectionConfig.Config.BastionHost)
+				SaveBastionHostToCache(ctx, connectionConfig.Config.BastionHost)
 			}
 
-			state.SaveMasterHostsToCache(stateCache, map[string]string{
+			state.SaveMasterHostsToCache(ctx, stateCache, map[string]string{
 				"first-master": connectionConfig.Hosts[0].Host,
 			})
 		}
@@ -540,8 +541,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
+	nodeInterface, err := helper.GetNodeInterface(b.SSHProviderInitializer, ctx, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return fmt.Errorf("Could not get NodeInterface: %w", err)
+	}
+
 	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
-		Node:           b.NodeInterface,
+		Node:           nodeInterface,
 		NodeIP:         nodeIP,
 		DevicePath:     devicePath,
 		MetaConfig:     metaConfig,
@@ -599,7 +605,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if b.CommanderMode {
 				return action()
 			}
-			return lock.NewInLockLocalRunner(kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper").
+			return lock.NewInLockLocalRunner(ctx, kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper").
 				Run(ctx, action)
 		}
 

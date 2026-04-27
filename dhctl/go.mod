@@ -16,8 +16,8 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7
 	github.com/deckhouse/deckhouse/pkg/log v0.1.1-0.20251230144142-2bad7c3d1edf
-	github.com/deckhouse/lib-dhctl v0.17.0
 	github.com/deckhouse/lib-connection v0.5.0
+	github.com/deckhouse/lib-dhctl v0.17.0
 	github.com/deckhouse/lib-gossh v0.3.0
 	github.com/deckhouse/module-sdk v0.5.0
 	github.com/flant/kube-client v1.6.0

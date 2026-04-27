@@ -21,6 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
@@ -51,7 +52,22 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 	}
 
-	if err := RunBashiblePipeline(ctx, b.SSHProviderInitializer, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
+	nodeInterface, err := helper.GetNodeInterface(b.SSHProviderInitializer, ctx, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return fmt.Errorf("Could not get NodeInterface: %w", err)
+	}
+
+	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
+		Node:           nodeInterface,
+		NodeIP:         app.InternalNodeIP,
+		DevicePath:     app.DevicePath,
+		MetaConfig:     metaConfig,
+		CommanderMode:  b.CommanderMode,
+		DirsConfig:     b.DirectoryConfig,
+		LoggerProvider: b.loggerProvider,
+	})
+
+	if err != nil {
 		return err
 	}
 
