@@ -1037,8 +1037,8 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_received_event_bytes_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
+          "expr": "sum by (short_name) (label_replace(label_replace(rate(vector_component_received_event_bytes_total{component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\")) > 0",
+          "legendFormat": "{{ short_name }}",
           "range": true,
           "refId": "A"
         }
@@ -1135,9 +1135,9 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_event_bytes_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
+          "expr": "sum by (short_name) (label_replace(label_replace(rate(vector_component_sent_event_bytes_total{component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\")) > 0",
           "hide": false,
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
+          "legendFormat": "{{ short_name }}",
           "range": true,
           "refId": "B"
         }
