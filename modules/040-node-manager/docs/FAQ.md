@@ -1513,7 +1513,7 @@ Theoretically, a scenario is possible where kubelet on a "stuck" VM recovers bef
 For static nodes, the Node object is **not deleted**, since the underlying machine cannot be automatically recreated. In this case:
 
 1. The fencing-agent shuts the node down via a kernel panic to prevent undefined behavior.
-2. The fencing-controller only evicts workloads from the node (deletes pods).
+2. The fencing-controller only deletes pods from node.
 3. The Node object remains in the cluster, and the node waits until it is manually restored by an operator.
 
 ### Disabling automatic reboot after kernel panic
