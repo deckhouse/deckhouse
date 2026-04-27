@@ -123,7 +123,7 @@ func DefineConfigsForResourcesPhaseFlags(cmd *kingpin.CmdClause) {
 }
 
 func DefineImgBundleFlags(cmd *kingpin.CmdClause) {
-	cmd.Flag("img-bundle-path", `Path to the directory with tar or chunk.tar image bundles created by 'd8 mirror' command for Local registry mode.`).
+	cmd.Flag("img-bundle-path", `Path to the directory with tar or chunk.tar image bundles created by 'd8 mirror pull' command for Local registry mode.`).
 		Envar(configEnvName("IMG_BUNDLE_PATH")).
 		StringVar(&ImgBundlePath)
 }
