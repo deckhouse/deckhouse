@@ -187,7 +187,7 @@ var (
 			Name:       "control-plane-manifests",
 			Help:       "Render control-plane manifests and pki.",
 			DefineFunc: commands.DefineRenderControlPlaneAndPKI,
-			Parrent:    "render",
+			Parent:     "render",
 		},
 		{
 			Name:       "master-bootstrap-scripts",
