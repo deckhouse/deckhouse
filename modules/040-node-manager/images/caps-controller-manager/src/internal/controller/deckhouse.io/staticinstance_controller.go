@@ -63,6 +63,8 @@ type StaticInstanceReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
+//
+//nolint:nonamedreturns
 func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Reconciling StaticInstance")
@@ -112,6 +114,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return r.reconcileNormal(ctx, staticInstance, staticMachine)
 }
 
+//nolint:nonamedreturns
 func (r *StaticInstanceReconciler) reconcileNormal(ctx context.Context, staticInstance *deckhousev1.StaticInstance, staticMachine *infrav1.StaticMachine) (res ctrl.Result, resErr error) {
 	logger := ctrl.LoggerFrom(ctx)
 

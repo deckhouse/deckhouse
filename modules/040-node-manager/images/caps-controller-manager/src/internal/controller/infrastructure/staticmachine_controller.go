@@ -57,9 +57,9 @@ const (
 	RequeueForStaticMachineDeleting       = 5 * time.Second
 )
 
-var StaticInstanceCleanupTimedOut = errors.New("timed out waiting for StaticInstance to clean up")
-var StaticMachineBootstrapTimedOut = errors.New("timed out waiting for StaticInstance to bootstrap")
-var StaticMachineAdoptTimedOut = errors.New("timed out waiting for StaticInstance to adopt")
+var ErrStaticInstanceCleanupTimedOut = errors.New("timed out waiting for StaticInstance to clean up")
+var ErrStaticMachineBootstrapTimedOut = errors.New("timed out waiting for StaticInstance to bootstrap")
+var ErrStaticMachineAdoptTimedOut = errors.New("timed out waiting for StaticInstance to adopt")
 
 // StaticMachineReconciler reconciles a StaticMachine object
 type StaticMachineReconciler struct {
@@ -91,6 +91,8 @@ type StaticMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
+//
+//nolint:nonamedreturns
 func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, resErr error) {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Reconciling StaticMachine")
@@ -116,7 +118,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	machine, err := util.GetOwnerMachine(ctx, r.Client, staticMachine.ObjectMeta)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get Machine: &w", err)
+		return ctrl.Result{}, fmt.Errorf("failed to get Machine: %w", err)
 	}
 	if machine == nil {
 		logger.Info("Machine Controller has not yet set OwnerRef. Won't reconcile")
@@ -218,6 +220,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return r.reconcileNormal(ctx, cluster, machine, staticMachine, staticInstance)
 }
 
+//nolint:nonamedreturns
 func (r *StaticMachineReconciler) reconcileNormal(
 	ctx context.Context,
 	cluster *clusterv1.Cluster,
@@ -352,11 +355,11 @@ func (r *StaticMachineReconciler) cleanup(ctx context.Context, machine *clusterv
 
 	if phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning &&
 		time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time) > DefaultStaticInstanceCleanupTimeout {
-		logger.Error(StaticInstanceCleanupTimedOut, "")
+		logger.Error(ErrStaticInstanceCleanupTimedOut, "")
 		r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceCleanupTimeoutReached", "Timed out waiting for StaticInstance to clean up")
 
 		staticMachine.Status.FailureReason = ptr.To("DeleteError")
-		staticMachine.Status.FailureMessage = ptr.To(StaticInstanceCleanupTimedOut.Error())
+		staticMachine.Status.FailureMessage = ptr.To(ErrStaticInstanceCleanupTimedOut.Error())
 
 		staticInstance.ToPending()
 		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
@@ -391,9 +394,9 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 		estimated := DefaultStaticInstanceAdoptTimeout - time.Since(staticMachine.CreationTimestamp.Time)
 		if estimated < (10 * time.Second) {
 			staticMachine.Status.FailureReason = ptr.To("UpdateError")
-			staticMachine.Status.FailureMessage = ptr.To(StaticMachineAdoptTimedOut.Error())
+			staticMachine.Status.FailureMessage = ptr.To(ErrStaticMachineAdoptTimedOut.Error())
 			r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceAdoptTimeoutReached", "Timed out waiting for StaticInstance to adopt")
-			return ctrl.Result{}, StaticMachineAdoptTimedOut
+			return ctrl.Result{}, ErrStaticMachineAdoptTimedOut
 		}
 		return r.HostClient.AdoptStaticInstance(ctx, staticInstance, staticMachine, machine)
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
@@ -404,9 +407,9 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(ctx context.Conte
 
 		if time.Since(staticInstance.Status.CurrentStatus.LastUpdateTime.Time) > DefaultStaticInstanceBootstrapTimeout {
 			staticMachine.Status.FailureReason = ptr.To("CreateError")
-			staticMachine.Status.FailureMessage = ptr.To(StaticMachineBootstrapTimedOut.Error())
+			staticMachine.Status.FailureMessage = ptr.To(ErrStaticMachineBootstrapTimedOut.Error())
 			r.Recorder.SendWarningEvent(staticInstance, staticMachine.Labels["node-group"], "StaticInstanceBootstrapTimeoutReached", "Timed out waiting for StaticInstance to bootstrap")
-			return ctrl.Result{}, StaticMachineBootstrapTimedOut
+			return ctrl.Result{}, ErrStaticMachineBootstrapTimedOut
 		}
 		return r.HostClient.Bootstrap(ctx, staticInstance, staticMachine, machine)
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
