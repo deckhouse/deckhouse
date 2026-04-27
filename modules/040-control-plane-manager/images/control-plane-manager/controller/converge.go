@@ -168,11 +168,6 @@ func convergeComponent(componentName string) error {
 	if err := prepareConverge(componentName, true); err != nil {
 		return err
 	}
-	if componentName == EtcdComponent {
-		if err := PatchEtcdWitnessArgs(filepath.Join(config.TmpPath, manifestsPath, componentName+".yaml"), config.EtcdArbiter); err != nil {
-			return fmt.Errorf("failed to patch temporary etcd manifest with extra args: %w", err)
-		}
-	}
 
 	checksum, err := calculateChecksum(componentName)
 	if err != nil {
@@ -209,17 +204,9 @@ func convergeComponent(componentName string) error {
 			if err := EtcdJoinConverge(); err != nil {
 				return err
 			}
-			if err := PatchEtcdWitnessArgs(filepath.Join(manifestsPath, componentName+".yaml"), config.EtcdArbiter); err != nil {
-				return fmt.Errorf("failed to patch joined etcd manifest with extra args: %w", err)
-			}
 		} else {
 			if err := prepareConverge(componentName, false); err != nil {
 				return err
-			}
-			if componentName == EtcdComponent {
-				if err := PatchEtcdWitnessArgs(filepath.Join(manifestsPath, componentName+".yaml"), config.EtcdArbiter); err != nil {
-					return fmt.Errorf("failed to patch rendered etcd manifest with extra args: %w", err)
-				}
 			}
 		}
 

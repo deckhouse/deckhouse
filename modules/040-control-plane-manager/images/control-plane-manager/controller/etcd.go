@@ -25,7 +25,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +35,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -51,9 +49,6 @@ const (
 	caCertPath                           = "/etc/kubernetes/pki/etcd/ca.crt"
 	certPath                             = "/etc/kubernetes/pki/etcd/peer.crt"
 	keyPath                              = "/etc/kubernetes/pki/etcd/peer.key"
-	etcdWitnessRoleArg                   = "--role=witness"
-	etcdWitnessCommitArg                 = "--unsafe-witness-commit"
-	etcdWitnessMaxWALsArg                = "--max-wals=1"
 )
 
 var defaultETCDendpoints = []string{"https://127.0.0.1:2379"}
@@ -115,64 +110,6 @@ spec:
 	log.Info("generating etcd performance patch", slog.String("file", patchFile), slog.Int("heartbeat_interval_ms", params.HeartbeatInterval), slog.Int("election_timeout_ms", params.ElectionTimeout))
 
 	return os.WriteFile(patchFile, []byte(content), 0o600)
-}
-
-func PatchEtcdWitnessArgs(manifestPath string, etcdArbiter bool) error {
-	content, err := os.ReadFile(manifestPath)
-	if err != nil {
-		return err
-	}
-
-	pod := &corev1.Pod{}
-	if err := yaml.Unmarshal(content, pod); err != nil {
-		return fmt.Errorf("failed to unmarshal etcd manifest %s: %w", manifestPath, err)
-	}
-
-	for i := range pod.Spec.Containers {
-		if pod.Spec.Containers[i].Name != EtcdComponent {
-			continue
-		}
-
-		command := pod.Spec.Containers[i].Command
-		command, changed := appendMissingEtcdWitnessArgs(command, etcdArbiter)
-		if !changed {
-			log.Info("etcd extra args already present", slog.String("path", manifestPath), slog.Bool("etcd_arbiter", etcdArbiter))
-			return nil
-		}
-
-		pod.Spec.Containers[i].Command = command
-
-		patchedContent, err := yaml.Marshal(pod)
-		if err != nil {
-			return fmt.Errorf("failed to marshal patched etcd manifest %s: %w", manifestPath, err)
-		}
-
-		log.Info("patching etcd manifest with extra args", slog.String("path", manifestPath), slog.Bool("etcd_arbiter", etcdArbiter))
-		return os.WriteFile(manifestPath, patchedContent, 0o600)
-	}
-
-	return fmt.Errorf("container %q not found in etcd manifest %s", EtcdComponent, manifestPath)
-}
-
-func appendMissingEtcdWitnessArgs(command []string, etcdArbiter bool) ([]string, bool) {
-	witnessArgs := []string{etcdWitnessCommitArg}
-	if etcdArbiter {
-		witnessArgs = append(witnessArgs,
-			etcdWitnessRoleArg,
-			etcdWitnessMaxWALsArg,
-		)
-	}
-
-	changed := false
-	for _, arg := range witnessArgs {
-		if slices.Contains(command, arg) {
-			continue
-		}
-		command = append(command, arg)
-		changed = true
-	}
-
-	return command, changed
 }
 
 func EtcdJoinConverge() error {
@@ -289,8 +226,11 @@ func (c *Etcd) promoteLearnersIfNeeded() error {
 }
 
 func NewEtcd() (*Etcd, error) {
-	c := &Etcd{}
 	var err error
+	c := &Etcd{}
+	if err != nil {
+		return nil, err
+	}
 	c.client, err = c.newEtcdCli()
 	if err != nil {
 		return nil, err
