@@ -10,18 +10,18 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Install and configure qemu-guest-agent (recommended):
 
-  - For RHEL/CentOS:
+   - For RHEL/CentOS:
 
-   ```bash
-   yum install -y qemu-guest-agent
-   ```
+     ```bash
+     yum install -y qemu-guest-agent
+     ```
 
-  - For Debian/Ubuntu:
+   - For Debian/Ubuntu:
 
-   ```bash
-   apt-get update
-   apt-get install -y qemu-guest-agent
-   ```
+     ```bash
+     apt-get update
+     apt-get install -y qemu-guest-agent
+     ```
 
 1. Enable and start the service:
 
@@ -41,18 +41,18 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Clean network settings:
 
-  - For RHEL:
+   - For RHEL:
 
-   ```bash
-   nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
-   rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
-   ```
+     ```bash
+     nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
+     rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
+     ```
 
-  - For Debian/Ubuntu:
+   - For Debian/Ubuntu:
 
-   ```bash
-   rm -f /etc/network/interfaces.d/*
-   ```
+     ```bash
+     rm -f /etc/network/interfaces.d/*
+     ```
 
 1. Clean system identifiers:
 
@@ -76,17 +76,17 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Clean package manager cache:
 
-  - For RHEL:
+   - For RHEL:
 
-   ```bash
-   yum clean all
-   ```
+     ```bash
+     yum clean all
+     ```
 
-  - For Debian/Ubuntu:
+   - For Debian/Ubuntu:
 
-   ```bash
-   apt-get clean
-   ```
+     ```bash
+     apt-get clean
+     ```
 
 1. Clean temporary files:
 
@@ -109,17 +109,17 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    For RHEL: reset and restore SELinux contexts (choose one of the following):
 
-  - Option 1: Check and restore contexts immediately:
+   - Option 1: Check and restore contexts immediately:
 
-    ```bash
-    restorecon -R /
-    ```
+     ```bash
+     restorecon -R /
+     ```
 
-  - Option 2: Schedule relabel on next boot:
+   - Option 2: Schedule relabel on next boot:
 
-    ```bash
-    touch /.autorelabel
-    ```
+     ```bash
+     touch /.autorelabel
+     ```
 
 1. Verify that `/etc/fstab` references UUID or `LABEL` rather than names like `/dev/sdX`:
 
