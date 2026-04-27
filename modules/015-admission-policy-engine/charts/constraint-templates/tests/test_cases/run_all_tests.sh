@@ -21,8 +21,21 @@ LIBS_DIR="${BASE_DIR}/libs"
 CONSTRAINTS_ROOT="${BASE_DIR}/constraints"
 CONSTRAINT_TESTGEN_SRC="${BASE_DIR}/../tools/constraint_testgen"
 CONSTRAINT_TESTGEN="${CONSTRAINT_TESTGEN:-}"
-if [ -z "${CONSTRAINT_TESTGEN}" ] && command -v constraint_testgen >/dev/null 2>&1; then
-  CONSTRAINT_TESTGEN="$(command -v constraint_testgen)"
+
+is_running_in_container() {
+  if [ -f "/.dockerenv" ] || [ -f "/run/.containerenv" ]; then
+    return 0
+  fi
+
+  grep -qaE '(docker|containerd|kubepods|podman)' /proc/1/cgroup 2>/dev/null
+}
+
+if [ -z "${CONSTRAINT_TESTGEN}" ] && is_running_in_container; then
+  if command -v constraint_testgen >/dev/null 2>&1; then
+    CONSTRAINT_TESTGEN="$(command -v constraint_testgen)"
+  else
+    CONSTRAINT_TESTGEN="/usr/local/bin/constraint_testgen"
+  fi
 fi
 
 run_constraint_testgen() {
@@ -360,6 +373,11 @@ main() {
 
   if [ -z "${CONSTRAINT_TESTGEN}" ]; then
     require_command go
+  else
+    if [ ! -x "${CONSTRAINT_TESTGEN}" ]; then
+      echo -e "${RED}[FAIL]${NC} constraint_testgen binary is not executable: ${CONSTRAINT_TESTGEN}"
+      exit 1
+    fi
   fi
 
   run_opa_library_tests
