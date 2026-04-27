@@ -35,7 +35,7 @@
             "logo": "https://d33wubrfki0l68.cloudfront.net/a5bf5cefceefdba8ab3a9297fddab246355169a2/4a6f4/img/logo-white.png",
             "license": "Apache License 2.0",
             "id": "gatekeeper",
-            "version": "3.20.1"
+            "version": "3.22.0"
           }
         ]
       }
@@ -74,7 +74,7 @@
             "logo": "https://github.com/jetstack/cert-manager/raw/master/logo/logo.png",
             "license": "Apache License 2.0",
             "id": "cert-manager",
-            "version": "1.19.2"
+            "version": "1.20.0"
           }
         ]
       }
@@ -548,6 +548,7 @@
           "en": "Provides networking in a Kubernetes cluster using the Cilium CNI with eBPF-based networking and security.",
           "ru": "Обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium на базе eBPF."
         },
+        "exclusiveGroup": "cni",
         "oss": [
           {
             "name": "Cilium",
@@ -605,6 +606,7 @@
           "en": "Provides a network between multiple nodes in a cluster using the flannel module.",
           "ru": "Обеспечивает работу сети в кластере с помощью модуля flannel."
         },
+        "exclusiveGroup": "cni",
         "oss": [
           {
             "name": "Flannel",
@@ -646,6 +648,7 @@
           "en": "Provides networking with limited functionality in Kubernetes clusters.",
           "ru": "Обеспечивает работу сети с ограниченной функциональностью в кластерах Kubernetes."
         },
+        "exclusiveGroup": "cni",
         "oss": []
       }
     },
@@ -692,7 +695,7 @@
             "logo": "/images/logos/etcd-icon-color.svg",
             "license": "Apache License 2.0",
             "id": "etcd",
-            "version": "3.6.8"
+            "version": "3.6.10"
           }
         ]
       }
@@ -719,7 +722,7 @@
           "infrastructure"
         ],
         "namespace": "d8-csi-vsphere",
-        "stage": "General Availability",
+        "stage": "Deprecated",
         "descriptions": {
           "en": "Provides CSI for for VMware vSphere environments.",
           "ru": "Предоставляет CSI для сред VMware vSphere."
@@ -903,7 +906,7 @@
             "logo": "/images/logos/descheduler-stacked-color.png",
             "license": "Apache License 2.0",
             "id": "descheduler",
-            "version": "0.34.0"
+            "version": "0.35.1"
           }
         ]
       }
@@ -1016,7 +1019,7 @@
             "version": "1.10.4"
           },
           {
-            "name": "NGINX Ingress Controller",
+            "name": "Ingress NGINX Controller",
             "link": "https://github.com/kubernetes/ingress-nginx",
             "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
             "logo": "/images/logos/kubernetes.svg",
@@ -1025,13 +1028,13 @@
             "version": "1.12.1"
           },
           {
-            "name": "NGINX Ingress Controller",
+            "name": "Ingress NGINX Controller",
             "link": "https://github.com/kubernetes/ingress-nginx",
             "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
             "logo": "/images/logos/kubernetes.svg",
             "license": "Apache License 2.0",
             "id": "ingress-nginx-1-14",
-            "version": "1.14.3"
+            "version": "1.14.4"
           },
           {
             "name": "nlohmannJson",
@@ -1813,6 +1816,24 @@
             "link": "https://github.com/gardener/machine-controller-manager",
             "description": "An operator that manages VMs as a kubernetes custom resource.",
             "logo": "https://raw.githubusercontent.com/gardener/gardener/master/logo/gardener-large.png",
+            "license": "Apache License 2.0",
+            "id": "mcm",
+            "version": "v0.36.0"
+          },
+          {
+            "name": "Cluster API",
+            "link": "https://github.com/kubernetes-sigs/cluster-api",
+            "description": "Kubernetes Cluster API for declarative cluster lifecycle management.",
+            "logo": "/images/logos/kubernetes.svg",
+            "license": "Apache License 2.0",
+            "id": "cluster-api",
+            "version": "1.11.3"
+          },
+          {
+            "name": "Cluster Autoscaler",
+            "link": "https://github.com/gardener/autoscaler",
+            "description": "Kubernetes autoscaler that automatically adjusts the size of the cluster.",
+            "logo": "/images/logos/kubernetes.svg",
             "license": "Apache License 2.0"
           }
         ]
@@ -2478,7 +2499,7 @@
             "logo": "/images/logos/kubernetes.svg",
             "license": "Apache License 2.0",
             "id": "autoscaler",
-            "version": "1.5.1"
+            "version": "1.6.0"
           }
         ]
       }

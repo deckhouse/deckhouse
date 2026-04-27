@@ -19,7 +19,7 @@
           "logo": "https://d33wubrfki0l68.cloudfront.net/a5bf5cefceefdba8ab3a9297fddab246355169a2/4a6f4/img/logo-white.png",
           "license": "Apache License 2.0",
           "id": "gatekeeper",
-          "version": "3.20.1"
+          "version": "3.22.0"
         }
       ]
     },
@@ -52,7 +52,7 @@
           "logo": "https://github.com/jetstack/cert-manager/raw/master/logo/logo.png",
           "license": "Apache License 2.0",
           "id": "cert-manager",
-          "version": "1.19.2"
+          "version": "1.20.0"
         }
       ]
     },
@@ -285,6 +285,7 @@
         "en": "Provides networking in a Kubernetes cluster using the Cilium CNI with eBPF-based networking and security.",
         "ru": "Обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium на базе eBPF."
       },
+      "exclusiveGroup": "cni",
       "oss": [
         {
           "name": "Cilium",
@@ -326,6 +327,7 @@
         "en": "Provides a network between multiple nodes in a cluster using the flannel module.",
         "ru": "Обеспечивает работу сети в кластере с помощью модуля flannel."
       },
+      "exclusiveGroup": "cni",
       "oss": [
         {
           "name": "Flannel",
@@ -351,6 +353,7 @@
         "en": "Provides networking with limited functionality in Kubernetes clusters.",
         "ru": "Обеспечивает работу сети с ограниченной функциональностью в кластерах Kubernetes."
       },
+      "exclusiveGroup": "cni",
       "oss": []
     },
     "control-plane-manager": {
@@ -381,7 +384,7 @@
           "logo": "/images/logos/etcd-icon-color.svg",
           "license": "Apache License 2.0",
           "id": "etcd",
-          "version": "3.6.8"
+          "version": "3.6.10"
         }
       ]
     },
@@ -392,7 +395,7 @@
         "infrastructure"
       ],
       "namespace": "d8-csi-vsphere",
-      "stage": "General Availability",
+      "stage": "Deprecated",
       "descriptions": {
         "en": "Provides CSI for for VMware vSphere environments.",
         "ru": "Предоставляет CSI для сред VMware vSphere."
@@ -490,7 +493,7 @@
           "logo": "/images/logos/descheduler-stacked-color.png",
           "license": "Apache License 2.0",
           "id": "descheduler",
-          "version": "0.34.0"
+          "version": "0.35.1"
         }
       ]
     },
@@ -544,7 +547,7 @@
           "version": "1.10.4"
         },
         {
-          "name": "NGINX Ingress Controller",
+          "name": "Ingress NGINX Controller",
           "link": "https://github.com/kubernetes/ingress-nginx",
           "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
           "logo": "/images/logos/kubernetes.svg",
@@ -553,13 +556,13 @@
           "version": "1.12.1"
         },
         {
-          "name": "NGINX Ingress Controller",
+          "name": "Ingress NGINX Controller",
           "link": "https://github.com/kubernetes/ingress-nginx",
           "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0",
           "id": "ingress-nginx-1-14",
-          "version": "1.14.3"
+          "version": "1.14.4"
         },
         {
           "name": "nlohmannJson",
@@ -1023,6 +1026,24 @@
           "link": "https://github.com/gardener/machine-controller-manager",
           "description": "An operator that manages VMs as a kubernetes custom resource.",
           "logo": "https://raw.githubusercontent.com/gardener/gardener/master/logo/gardener-large.png",
+          "license": "Apache License 2.0",
+          "id": "mcm",
+          "version": "v0.36.0"
+        },
+        {
+          "name": "Cluster API",
+          "link": "https://github.com/kubernetes-sigs/cluster-api",
+          "description": "Kubernetes Cluster API for declarative cluster lifecycle management.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0",
+          "id": "cluster-api",
+          "version": "1.11.3"
+        },
+        {
+          "name": "Cluster Autoscaler",
+          "link": "https://github.com/gardener/autoscaler",
+          "description": "Kubernetes autoscaler that automatically adjusts the size of the cluster.",
+          "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0"
         }
       ]
@@ -1380,7 +1401,7 @@
           "logo": "/images/logos/kubernetes.svg",
           "license": "Apache License 2.0",
           "id": "autoscaler",
-          "version": "1.5.1"
+          "version": "1.6.0"
         }
       ]
     }
@@ -1391,7 +1412,9 @@
       "description": "A Kubernetes add-on to automate the management and issuance of TLS certificates from various issuing sources.",
       "logo": "https://github.com/jetstack/cert-manager/raw/master/logo/logo.png",
       "license": "Apache License 2.0",
-      "version": "1.19.2",
+      "versions": [
+        "1.20.0"
+      ],
       "modules": [
         "cert-manager"
       ]
@@ -1401,7 +1424,7 @@
       "description": "chrony is a versatile implementation of the Network Time Protocol (NTP)",
       "logo": "/images/logos/kubernetes.svg",
       "license": "GNU General Public License version 2",
-      "version": null,
+      "versions": [],
       "modules": [
         "chrony"
       ]
@@ -1411,9 +1434,33 @@
       "description": "Cilium is open source software for providing and transparently securing network connectivity and loadbalancing between application workloads such as application containers or processes.",
       "logo": "/images/logos/cilium.png",
       "license": "Apache License 2.0",
-      "version": "1.17.4",
+      "versions": [
+        "1.17.4"
+      ],
       "modules": [
         "cni-cilium"
+      ]
+    },
+    "Cluster API": {
+      "link": "https://github.com/kubernetes-sigs/cluster-api",
+      "description": "Kubernetes Cluster API for declarative cluster lifecycle management.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "versions": [
+        "1.11.3"
+      ],
+      "modules": [
+        "node-manager"
+      ]
+    },
+    "Cluster Autoscaler": {
+      "link": "https://github.com/gardener/autoscaler",
+      "description": "Kubernetes autoscaler that automatically adjusts the size of the cluster.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "versions": [],
+      "modules": [
+        "node-manager"
       ]
     },
     "CNI plugins": {
@@ -1421,7 +1468,9 @@
       "description": "Some reference and example networking plugins, maintained by the CNI team.",
       "logo": null,
       "license": "Apache License 2.0",
-      "version": "1.7.1",
+      "versions": [
+        "1.7.1"
+      ],
       "modules": [
         "cni-cilium"
       ]
@@ -1431,7 +1480,7 @@
       "description": "A DNS server/forwarder that chains plugins.",
       "logo": "https://raw.githubusercontent.com/coredns/logo/master/Icon/CoreDNS_Colour_Icon.svg",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "kube-dns"
       ]
@@ -1441,7 +1490,9 @@
       "description": "A tool to auto-fix scheduling issues Kubernetes does not cover itself.",
       "logo": "/images/logos/descheduler-stacked-color.png",
       "license": "Apache License 2.0",
-      "version": "0.34.0",
+      "versions": [
+        "0.35.1"
+      ],
       "modules": [
         "descheduler"
       ]
@@ -1451,7 +1502,9 @@
       "description": "A Federated OpenID Connect Provider with pluggable connectors.",
       "logo": "/images/logos/dex-icon-color.svg",
       "license": "Apache License 2.0",
-      "version": "2.44.0",
+      "versions": [
+        "2.44.0"
+      ],
       "modules": [
         "user-authn"
       ]
@@ -1461,7 +1514,9 @@
       "description": "A distributed reliable key-value store for the most critical data of a distributed system.",
       "logo": "/images/logos/etcd-icon-color.svg",
       "license": "Apache License 2.0",
-      "version": "3.6.8",
+      "versions": [
+        "3.6.10"
+      ],
       "modules": [
         "control-plane-manager"
       ]
@@ -1471,7 +1526,9 @@
       "description": "A simple and easy way to configure a layer 3 network fabric designed for Kubernetes.",
       "logo": "/images/logos/flannel-horizontal-color.svg",
       "license": "Apache License 2.0",
-      "version": "0.27.4",
+      "versions": [
+        "0.27.4"
+      ],
       "modules": [
         "cni-flannel"
       ]
@@ -1481,7 +1538,9 @@
       "description": "An operator that manages VMs as a kubernetes custom resource.",
       "logo": "https://raw.githubusercontent.com/gardener/gardener/master/logo/gardener-large.png",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [
+        "v0.36.0"
+      ],
       "modules": [
         "node-manager"
       ]
@@ -1491,7 +1550,9 @@
       "description": "Policy-based control for cloud native environments",
       "logo": "https://d33wubrfki0l68.cloudfront.net/a5bf5cefceefdba8ab3a9297fddab246355169a2/4a6f4/img/logo-white.png",
       "license": "Apache License 2.0",
-      "version": "3.20.1",
+      "versions": [
+        "3.22.0"
+      ],
       "modules": [
         "admission-policy-engine"
       ]
@@ -1501,7 +1562,9 @@
       "description": "A tool to list and diagnose Go processes currently running on your system.",
       "logo": null,
       "license": "BSD 3-Clause License",
-      "version": "0.3.27",
+      "versions": [
+        "0.3.27"
+      ],
       "modules": [
         "cni-cilium"
       ]
@@ -1511,7 +1574,7 @@
       "description": "An open-source platform for monitoring and observability.",
       "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
       "license": "GNU Affero General Public License v3.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus"
       ]
@@ -1521,7 +1584,9 @@
       "description": "Hubble UI is an open-source user interface for Cilium Hubble.",
       "logo": "/images/logos/cilium-hubble.png",
       "license": "Apache License 2.0",
-      "version": "0.13.2",
+      "versions": [
+        "0.13.2"
+      ],
       "modules": [
         "cilium-hubble"
       ]
@@ -1531,7 +1596,11 @@
       "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
-      "version": "1.10.4",
+      "versions": [
+        "1.10.4",
+        "1.12.1",
+        "1.14.4"
+      ],
       "modules": [
         "ingress-nginx"
       ]
@@ -1541,7 +1610,10 @@
       "description": "An open platform to connect, manage, and secure microservices.",
       "logo": "/images/logos/istio.svg",
       "license": "Apache License 2.0",
-      "version": "1.21.6",
+      "versions": [
+        "1.21.6",
+        "1.25.2"
+      ],
       "modules": [
         "istio"
       ]
@@ -1551,7 +1623,9 @@
       "description": "A lightweight and flexible command-line JSON processor.",
       "logo": "/images/logos/jq.svg",
       "license": "Mixed (https://github.com/stedolan/jq/blob/master/COPYING)",
-      "version": "1.7.1",
+      "versions": [
+        "1.7.1"
+      ],
       "modules": [
         "deckhouse"
       ]
@@ -1561,7 +1635,9 @@
       "description": "Provides simple and robust facilities for loadbalancing and high-availability to Linux system and Linux based infrastructures.",
       "logo": "https://pbs.twimg.com/profile_images/1132878189515218945/bq-C0K5C_400x400.png",
       "license": "GNU General Public License v2.0",
-      "version": "2.2.7",
+      "versions": [
+        "2.2.7"
+      ],
       "modules": [
         "keepalived"
       ]
@@ -1571,7 +1647,10 @@
       "description": "Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.",
       "logo": "/images/logos/kiali.png",
       "license": "Apache License 2.0",
-      "version": "1.81.0",
+      "versions": [
+        "1.81.0",
+        "2.7.1"
+      ],
       "modules": [
         "istio"
       ]
@@ -1581,7 +1660,9 @@
       "description": "A turnkey solution for Kubernetes networking with aim to provide operational simplicity and high performance.",
       "logo": "/images/logos/kube-router.svg",
       "license": "Apache License 2.0",
-      "version": "2.0.1",
+      "versions": [
+        "2.0.1"
+      ],
       "modules": [
         "network-policy-engine"
       ]
@@ -1591,7 +1672,7 @@
       "description": "A simple service that listens to the Kubernetes API server and generates metrics about the state of the objects.",
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "monitoring-kubernetes"
       ]
@@ -1601,7 +1682,7 @@
       "description": "An open source system for managing containerized applications across multiple hosts.",
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "control-plane-manager"
       ]
@@ -1611,19 +1692,11 @@
       "description": "A autoscaling-related components for Kubernetes.",
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
-      "version": "1.5.1",
+      "versions": [
+        "1.6.0"
+      ],
       "modules": [
         "vertical-pod-autoscaler"
-      ]
-    },
-    "Kubernetes Dashboard": {
-      "link": "https://github.com/kubernetes/dashboard",
-      "description": "A general purpose, web-based UI for Kubernetes clusters.",
-      "logo": "/images/logos/kubernetes.svg",
-      "license": "Apache License 2.0",
-      "version": null,
-      "modules": [
-        "dashboard"
       ]
     },
     "Kubernetes Metrics Server": {
@@ -1631,7 +1704,7 @@
       "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus-metrics-adapter"
       ]
@@ -1641,7 +1714,9 @@
       "description": "Libcap-ng is a library for Linux that makes using posix capabilities easy..",
       "logo": null,
       "license": "GNU General Public License v2.0",
-      "version": "0.8.5",
+      "versions": [
+        "0.8.5"
+      ],
       "modules": [
         "openvpn"
       ]
@@ -1651,7 +1726,7 @@
       "description": "Local Path Provisioner provides a way for the Kubernetes users to utilize the local storage in each node by creating hostPath based persistent volume on the node automatically.",
       "logo": "/images/logos/kubernetes.svg",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "local-path-provisioner"
       ]
@@ -1661,7 +1736,7 @@
       "description": "Loki: like Prometheus, but for logs.",
       "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
       "license": "GNU Affero General Public License v3.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "loki"
       ]
@@ -1671,7 +1746,7 @@
       "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
       "logo": "/images/logos/memcached-icon.svg",
       "license": "BSD-3-Clause license",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus"
       ]
@@ -1681,7 +1756,9 @@
       "description": "A load-balancer implementation for bare metal Kubernetes clusters, using standard routing protocols.",
       "logo": "/images/logos/metallb-blue.svg",
       "license": "Apache License 2.0",
-      "version": "0.15.2",
+      "versions": [
+        "0.15.2"
+      ],
       "modules": [
         "metallb"
       ]
@@ -1691,7 +1768,7 @@
       "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
       "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
       "license": "AGPL-3.0 license",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus"
       ]
@@ -1701,17 +1778,9 @@
       "description": "ModSecurity is an open source, cross platform web application firewall (WAF) engine for Apache, IIS and Nginx.",
       "logo": "/images/logos/modsec.png",
       "license": "Apache License 2.0",
-      "version": "3.0.14",
-      "modules": [
-        "ingress-nginx"
-      ]
-    },
-    "NGINX Ingress Controller": {
-      "link": "https://github.com/kubernetes/ingress-nginx",
-      "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
-      "logo": "/images/logos/kubernetes.svg",
-      "license": "Apache License 2.0",
-      "version": "1.12.1",
+      "versions": [
+        "3.0.14"
+      ],
       "modules": [
         "ingress-nginx"
       ]
@@ -1721,7 +1790,9 @@
       "description": "JSON for Modern C++",
       "logo": null,
       "license": "MIT License",
-      "version": "3.11.3",
+      "versions": [
+        "3.11.3"
+      ],
       "modules": [
         "ingress-nginx"
       ]
@@ -1731,7 +1802,7 @@
       "description": "Prometheus exporter for hardware and OS metrics exposed by *NIX kernels, written in Go with pluggable metric collectors.",
       "logo": "https://avatars.githubusercontent.com/u/3380462?s=200&v=4",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "monitoring-kubernetes"
       ]
@@ -1741,7 +1812,9 @@
       "description": "A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group.",
       "logo": "https://raw.githubusercontent.com/oauth2-proxy/oauth2-proxy/master/docs/static/img/logos/OAuth2_Proxy_icon.svg",
       "license": "MIT License",
-      "version": "7.5.1",
+      "versions": [
+        "7.5.1"
+      ],
       "modules": [
         "user-authn"
       ]
@@ -1751,7 +1824,9 @@
       "description": "OpenKruise is an extended component suite for Kubernetes, which mainly focuses on application automations, such as deployment, upgrade, ops and availability protection.",
       "logo": "https://openkruise.io/img/openkruise.ico",
       "license": "Apache License 2.0",
-      "version": "898dc482a0cbf4fa0db214f952319aa5e1229152",
+      "versions": [
+        "898dc482a0cbf4fa0db214f952319aa5e1229152"
+      ],
       "modules": [
         "ingress-nginx"
       ]
@@ -1761,7 +1836,9 @@
       "description": "TLS/SSL and crypto library.",
       "logo": "/images/logos/openssl.svg",
       "license": "Apache License 2.0",
-      "version": "3.3.2",
+      "versions": [
+        "3.3.2"
+      ],
       "modules": [
         "openvpn"
       ]
@@ -1771,7 +1848,9 @@
       "description": "A secure tunneling daemon.",
       "logo": "/images/logos/openvpn.png",
       "license": "<a target=\"_blank\" href=\"https://github.com/OpenVPN/openvpn/blob/master/COPYING\">Mixed</a>",
-      "version": "2.6.12",
+      "versions": [
+        "2.6.12"
+      ],
       "modules": [
         "openvpn"
       ]
@@ -1781,7 +1860,9 @@
       "description": "The OWASP CRS is a set of generic attack detection rules for use with ModSecurity or compatible web application firewalls.",
       "logo": null,
       "license": "Apache License 2.0",
-      "version": "4.10.0",
+      "versions": [
+        "4.10.0"
+      ],
       "modules": [
         "ingress-nginx"
       ]
@@ -1791,7 +1872,7 @@
       "description": "A systems and service monitoring system.",
       "logo": "/images/logos/prometheus-icon-color.svg",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus"
       ]
@@ -1801,7 +1882,7 @@
       "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
       "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "operator-prometheus"
       ]
@@ -1811,7 +1892,7 @@
       "description": "A tool to allow ephemeral and batch jobs to expose their metrics to Prometheus.",
       "logo": "https://avatars.githubusercontent.com/u/3380462?s=200&v=4",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus-pushgateway"
       ]
@@ -1821,7 +1902,7 @@
       "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
       "logo": "/images/logos/prometheus-icon-color.svg",
       "license": "MIT License",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus"
       ]
@@ -1831,7 +1912,9 @@
       "description": "A tool for running event-driven scripts in a Kubernetes cluster",
       "logo": "/images/logos/shell-operator-small.png",
       "license": "Apache License 2.0",
-      "version": "1.9.3",
+      "versions": [
+        "1.9.3"
+      ],
       "modules": [
         "deckhouse"
       ]
@@ -1841,7 +1924,7 @@
       "description": "A tool for building, changing, and versioning infrastructure safely and efficiently.",
       "logo": "/images/logos/terraform.png",
       "license": "Mozilla Public License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "terraform-manager"
       ]
@@ -1851,7 +1934,7 @@
       "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
       "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
       "license": "Apache License 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "prometheus"
       ]
@@ -1861,7 +1944,7 @@
       "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
       "logo": "/images/logos/vector.svg",
       "license": "Mozilla Public License, version 2.0",
-      "version": null,
+      "versions": [],
       "modules": [
         "log-shipper"
       ]
