@@ -249,24 +249,21 @@ status:
 				{
 					"clusterUUID": "proper-uuid-0",
 					"authnKeyPub": "proper-authn-0",
-					"rootCA": "proper-root-ca-0",
-					"allianceRef": {"kind": "IstioFederation", "name": "proper-federation-0"}
+					"rootCA": "proper-root-ca-0"
 				}
 	`))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-1").Field("status.metadataCache.public").String()).To(MatchJSON(`
 				{
 					"clusterUUID": "proper-uuid-1",
 					"authnKeyPub": "proper-authn-1",
-					"rootCA": "proper-root-ca-1",
-					"allianceRef": {"kind": "IstioFederation", "name": "proper-federation-1"}
+					"rootCA": "proper-root-ca-1"
 				}
 	`))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "proper-federation-2").Field("status.metadataCache.public").String()).To(MatchJSON(`
 				{
 					"clusterUUID": "proper-uuid-2",
 					"authnKeyPub": "proper-authn-2",
-					"rootCA": "proper-root-ca-2",
-					"allianceRef": {"kind": "IstioFederation", "name": "proper-federation-2"}
+					"rootCA": "proper-root-ca-2"
 				}
 	`))
 
@@ -608,20 +605,17 @@ status: {}
 			Expect(f.KubernetesGlobalResource("IstioFederation", "private-internal-error").Field("status.metadataCache.public").String()).To(MatchJSON(`{
 						  "clusterUUID": "proper-uuid-ie",
 						  "authnKeyPub": "proper-authn-ie",
-						  "rootCA": "proper-root-ca-ie",
-						  "allianceRef": {"kind": "IstioFederation", "name": "private-internal-error"}
+						  "rootCA": "proper-root-ca-ie"
 			}`))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "private-bad-json").Field("status.metadataCache.public").String()).To(MatchJSON(`{
 						  "clusterUUID": "proper-uuid-bj",
 						  "authnKeyPub": "proper-authn-bj",
-						  "rootCA": "proper-root-ca-bj",
-						  "allianceRef": {"kind": "IstioFederation", "name": "private-bad-json"}
+						  "rootCA": "proper-root-ca-bj"
 			}`))
 			Expect(f.KubernetesGlobalResource("IstioFederation", "private-wrong-format").Field("status.metadataCache.public").String()).To(MatchJSON(`{
 						  "clusterUUID": "proper-uuid-wf",
 						  "authnKeyPub": "proper-authn-wf",
-						  "rootCA": "proper-root-ca-wf",
-						  "allianceRef": {"kind": "IstioFederation", "name": "private-wrong-format"}
+						  "rootCA": "proper-root-ca-wf"
 			}`))
 
 			Expect(f.KubernetesGlobalResource("IstioFederation", "private-internal-error").Field("status.metadataCache.private").Exists()).To(BeFalse())
