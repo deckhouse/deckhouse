@@ -9,6 +9,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"gatekeeperVexArtifact": "imageHash-admissionPolicyEngine-gatekeeperVexArtifact",
 		"ratify":                "imageHash-admissionPolicyEngine-ratify",
 	},
+	"base": map[string]interface{}{
+		"jekyll": "imageHash-base-jekyll",
+	},
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
 	},
