@@ -17,26 +17,50 @@ limitations under the License.
 package controlplanenode
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
-	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	"errors"
+	"fmt"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
-var controlPlaneNodeMaintenanceModeEnabled = prometheus.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Name: "d8_control_plane_manager_maintenance_mode_enabled",
-		Help: "Maintenance mode status for control-plane nodes.",
-	},
-	[]string{"node"},
+const (
+	maintenanceModeEnabledMetricName = "d8_control_plane_manager_maintenance_mode_enabled"
+	maintenanceModeEnabledHelp       = "Maintenance mode status for control-plane nodes."
 )
 
-func init() {
-	ctrlmetrics.Registry.MustRegister(controlPlaneNodeMaintenanceModeEnabled)
+type metrics struct {
+	maintenanceMode *collectors.ConstGaugeCollector
 }
 
-func syncMaintenanceModeMetrics(cpn *controlplanev1alpha1.ControlPlaneNode) {
-	if cpn == nil {
+func newMetrics(storage metricsstorage.Storage) (*metrics, error) {
+	if storage == nil {
+		return nil, errors.New("metric storage is nil")
+	}
+
+	maintenanceMode, err := storage.RegisterGauge(
+		maintenanceModeEnabledMetricName,
+		[]string{"node"},
+		options.WithHelp(maintenanceModeEnabledHelp),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("register maintenance mode metric: %w", err)
+	}
+
+	return &metrics{
+		maintenanceMode: maintenanceMode,
+	}, nil
+}
+
+func maintenanceModeGroup(node string) string {
+	return "cpn/" + node
+}
+
+func (m *metrics) syncMaintenanceModeMetrics(cpn *controlplanev1alpha1.ControlPlaneNode) {
+	if m == nil || cpn == nil {
 		return
 	}
 
@@ -45,12 +69,19 @@ func syncMaintenanceModeMetrics(cpn *controlplanev1alpha1.ControlPlaneNode) {
 		value = 1.0
 	}
 
-	controlPlaneNodeMaintenanceModeEnabled.WithLabelValues(cpn.Name).Set(value)
+	m.maintenanceMode.Set(
+		value,
+		map[string]string{
+			"node": cpn.Name,
+		},
+		collectors.WithGroup(maintenanceModeGroup(cpn.Name)),
+	)
 }
 
-func deleteMaintenanceModeMetrics(node string) {
-	if node == "" {
+func (m *metrics) deleteMaintenanceModeMetrics(node string) {
+	if m == nil || node == "" {
 		return
 	}
-	controlPlaneNodeMaintenanceModeEnabled.DeleteLabelValues(node)
+
+	m.maintenanceMode.ExpireGroupMetrics(maintenanceModeGroup(node))
 }

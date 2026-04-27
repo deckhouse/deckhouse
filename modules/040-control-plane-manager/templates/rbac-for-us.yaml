@@ -87,6 +87,21 @@ roleRef:
   kind: ClusterRole
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
+---
+# Required for the in-process metrics auth middleware to call TokenReview/SubjectAccessReview when authorizing /metrics scrapes.
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: d8:control-plane-manager:auth-delegator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: d8-control-plane-manager
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: system:auth-delegator
+  apiGroup: rbac.authorization.k8s.io
 {{- if ($.Values.global.enabledModules | default list | has "user-authz") }}
 ---
 # Extra rules for identity kubernetes-admin (group kubeadm:cluster-admins) beyond user-authz:cluster-admin.

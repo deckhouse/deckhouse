@@ -63,7 +63,7 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 		}
 
 		state.MarkOperationInProgress(fmt.Sprintf("executing step %s", name))
-		syncOperationExecutionMetrics(state.Raw())
+		r.metrics.syncOperationExecutionMetrics(state.Raw())
 		step := r.steps[name]
 		result, err := r.executeStep(ctx, state, name, step, env, logger)
 		if err != nil {

@@ -18,7 +18,10 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -27,7 +30,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 
 	"control-plane-manager/internal/constants"
 	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
@@ -37,6 +42,9 @@ import (
 	updateobserver "control-plane-manager/internal/controllers/update-observer/controller"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/kube-api-rewriter/pkg/middleware/auth"
+	"github.com/go-logr/logr"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -44,13 +52,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 const (
-	healthProbeBindAddress   = ":8095"
+	healthProbeBindAddress   = "127.0.0.1:8095"
 	pprofBindAddress         = ":8096"
-	metricsserverBindAddress = ":8097"
+	metricsserverBindAddress = ":4233"
 )
 
 var (
@@ -84,7 +93,9 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 			return ctx
 		},
 		Metrics: metricsserver.Options{
-			BindAddress: metricsserverBindAddress,
+			BindAddress:    metricsserverBindAddress,
+			SecureServing:  true,
+			FilterProvider: metricsAuthFilterProvider,
 		},
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		PprofBindAddress:        pprofAddr,
@@ -156,15 +167,21 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		return nil, fmt.Errorf("add ready check: %w", err)
 	}
 
+	metricsStorage := metricsstorage.NewMetricStorage(
+		metricsstorage.WithNewRegistry(),
+		metricsstorage.WithLogger(log.Default().Named("metrics-storage")),
+	)
+	ctrlmetrics.Registry.MustRegister(metricsStorage.Collector())
+
 	if err = controlplaneconfiguration.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register controlplane controller: %w", err)
 	}
 
-	if err = controlplanenode.Register(runtimeManager); err != nil {
+	if err = controlplanenode.Register(runtimeManager, metricsStorage); err != nil {
 		return nil, fmt.Errorf("register control-plane-node controller: %w", err)
 	}
 
-	if err = controlplaneoperation.Register(runtimeManager); err != nil {
+	if err = controlplaneoperation.Register(runtimeManager, metricsStorage); err != nil {
 		return nil, fmt.Errorf("register control-plane-operation controller: %w", err)
 	}
 
@@ -178,6 +195,35 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 
 	return &Manager{
 		runtimeManager,
+	}, nil
+}
+
+// metricsAuthFilterProvider mirrors kube-rbac-proxy sidecar behavior.
+func metricsAuthFilterProvider(cfg *rest.Config, hc *http.Client) (metricsserver.Filter, error) {
+	dsName := os.Getenv(constants.DaemonSetNameEnvVar)
+	if dsName == "" {
+		return nil, fmt.Errorf("metrics auth: %s env not set", constants.DaemonSetNameEnvVar)
+	}
+
+	kc, err := kubernetes.NewForConfigAndClient(cfg, hc)
+	if err != nil {
+		return nil, fmt.Errorf("metrics auth: build kube client: %w", err)
+	}
+
+	mw := auth.NewMiddlewareFromKubeClient(kc, auth.ResourceAttributes{
+		Namespace:   constants.KubeSystemNamespace,
+		Group:       "apps",
+		Version:     "v1",
+		Resource:    "daemonsets",
+		Subresource: "prometheus-metrics",
+		Name:        dsName,
+	})
+
+	return func(_ logr.Logger, h http.Handler) (http.Handler, error) {
+		if h == nil {
+			return nil, errors.New("metrics auth: nil handler")
+		}
+		return mw.Handler(h), nil
 	}, nil
 }
 

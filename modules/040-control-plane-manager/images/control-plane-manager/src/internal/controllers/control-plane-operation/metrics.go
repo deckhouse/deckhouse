@@ -17,29 +17,52 @@ limitations under the License.
 package controlplaneoperation
 
 import (
+	"errors"
+	"fmt"
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
 
-	"github.com/prometheus/client_golang/prometheus"
-	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
-// operationInprogressStart stores the unix timestamp when the current in-progress operation started.
 // Prometheus alert uses time() - this_value to compute real-time duration without staleness.
-var operationInprogressStart = prometheus.NewGaugeVec(
-	prometheus.GaugeOpts{
-		Name: "d8_control_plane_manager_operation_inprogress_start_seconds",
-		Help: "Unix timestamp when the current in-progress operation started (per node/component/operation).",
-	},
-	[]string{"node", "component", "operation"},
+const (
+	operationInProgressMetricName = "d8_control_plane_manager_operation_inprogress_start_seconds"
+	operationInProgressMetricHelp = "Unix timestamp when the current in-progress operation started (per node/component/operation)."
 )
 
-func init() {
-	ctrlmetrics.Registry.MustRegister(operationInprogressStart)
+type metrics struct {
+	operationInProgress *collectors.ConstGaugeCollector
 }
 
-func syncOperationExecutionMetrics(op *controlplanev1alpha1.ControlPlaneOperation) {
-	if op == nil {
+func newMetrics(storage metricsstorage.Storage) (*metrics, error) {
+	if storage == nil {
+		return nil, errors.New("metric storage is nil")
+	}
+
+	operationInProgress, err := storage.RegisterGauge(
+		operationInProgressMetricName,
+		[]string{"node", "component", "operation"},
+		options.WithHelp(operationInProgressMetricHelp),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("register operation in progress metric: %w", err)
+	}
+
+	return &metrics{
+		operationInProgress: operationInProgress,
+	}, nil
+}
+
+func operationExecutionGroup(operation string) string {
+	return "cpo/" + operation
+}
+
+func (m *metrics) syncOperationExecutionMetrics(op *controlplanev1alpha1.ControlPlaneOperation) {
+	if m == nil || op == nil {
 		return
 	}
 
@@ -48,12 +71,26 @@ func syncOperationExecutionMetrics(op *controlplanev1alpha1.ControlPlaneOperatio
 	operationLabel := op.Name
 
 	cond := op.GetCondition(controlplanev1alpha1.CPOConditionCompleted)
-	if cond != nil &&
-		cond.Reason == controlplanev1alpha1.CPOReasonOperationInProgress &&
-		!cond.LastTransitionTime.IsZero() {
-		operationInprogressStart.WithLabelValues(nodeLabel, componentLabel, operationLabel).Set(float64(cond.LastTransitionTime.Unix()))
+	if cond != nil && cond.Reason == controlplanev1alpha1.CPOReasonOperationInProgress && !cond.LastTransitionTime.IsZero() {
+		m.operationInProgress.Set(
+			float64(cond.LastTransitionTime.Unix()),
+			map[string]string{
+				"node":      nodeLabel,
+				"component": componentLabel,
+				"operation": operationLabel,
+			},
+			collectors.WithGroup(operationExecutionGroup(operationLabel)),
+		)
 		return
 	}
 
-	operationInprogressStart.DeleteLabelValues(nodeLabel, componentLabel, operationLabel)
+	m.operationInProgress.ExpireGroupMetrics(operationExecutionGroup(operationLabel))
+}
+
+func (m *metrics) deleteOperationExecutionMetrics(operation string) {
+	if m == nil || operation == "" {
+		return
+	}
+
+	m.operationInProgress.ExpireGroupMetrics(operationExecutionGroup(operation))
 }

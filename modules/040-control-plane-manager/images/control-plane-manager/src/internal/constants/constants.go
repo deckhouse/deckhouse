@@ -39,6 +39,7 @@ const (
 	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
 	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
 	NodeNameEnvVar                      = "NODE_NAME"
+	DaemonSetNameEnvVar                 = "DAEMONSET_NAME"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"

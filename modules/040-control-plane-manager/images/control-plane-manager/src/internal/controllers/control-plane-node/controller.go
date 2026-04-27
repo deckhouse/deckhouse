@@ -32,6 +32,7 @@ import (
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"golang.org/x/time/rate"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -59,19 +60,26 @@ const (
 var errStatusConflict = errors.New("status update conflict")
 
 type Reconciler struct {
-	client client.Client
-	log    *log.Logger
+	client  client.Client
+	log     *log.Logger
+	metrics *metrics
 }
 
-func Register(mgr manager.Manager) error {
+func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error {
 	nodeName := os.Getenv(constants.NodeNameEnvVar)
 	if nodeName == "" {
 		return fmt.Errorf("environment variable %s is not set", constants.NodeNameEnvVar)
 	}
 
+	metricHandlers, err := newMetrics(metricsStorage)
+	if err != nil {
+		return fmt.Errorf("init metrics: %w", err)
+	}
+
 	r := &Reconciler{
-		client: mgr.GetClient(),
-		log:    log.Default().With(slog.String("controller", constants.CpnControllerName)),
+		client:  mgr.GetClient(),
+		log:     log.Default().With(slog.String("controller", constants.CpnControllerName)),
+		metrics: metricHandlers,
 	}
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
@@ -136,13 +144,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	cpn := &controlplanev1alpha1.ControlPlaneNode{}
 	if err := r.client.Get(ctx, client.ObjectKey{Name: nodeName}, cpn); err != nil {
 		if apierrors.IsNotFound(err) {
-			deleteMaintenanceModeMetrics(nodeName)
+			r.metrics.deleteMaintenanceModeMetrics(nodeName)
 			logger.Info("ControlPlaneNode not found, skipping")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
-	defer syncMaintenanceModeMetrics(cpn)
+	defer r.metrics.syncMaintenanceModeMetrics(cpn)
 
 	ops := &controlplanev1alpha1.ControlPlaneOperationList{}
 	if err := r.client.List(ctx, ops, client.MatchingLabels{

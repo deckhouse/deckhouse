@@ -28,8 +28,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
@@ -51,23 +53,30 @@ const (
 )
 
 type Reconciler struct {
-	client client.Client
-	log    *log.Logger
-	node   NodeIdentity
-	steps  map[controlplanev1alpha1.StepName]Step
+	client  client.Client
+	log     *log.Logger
+	node    NodeIdentity
+	steps   map[controlplanev1alpha1.StepName]Step
+	metrics *metrics
 }
 
-func Register(mgr manager.Manager) error {
+func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error {
 	node, err := nodeIdentityFromEnv()
 	if err != nil {
 		return fmt.Errorf("read node identity: %w", err)
 	}
 
+	metricHandlers, err := newMetrics(metricsStorage)
+	if err != nil {
+		return fmt.Errorf("init metrics: %w", err)
+	}
+
 	r := &Reconciler{
-		client: mgr.GetClient(),
-		log:    log.Default().With(slog.String("controller", constants.CpoControllerName)),
-		node:   node,
-		steps:  defaultSteps(),
+		client:  mgr.GetClient(),
+		log:     log.Default().With(slog.String("controller", constants.CpoControllerName)),
+		node:    node,
+		steps:   defaultSteps(),
+		metrics: metricHandlers,
 	}
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
@@ -118,11 +127,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 
 	op := &controlplanev1alpha1.ControlPlaneOperation{}
 	if err := r.client.Get(ctx, req.NamespacedName, op); err != nil {
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			r.metrics.deleteOperationExecutionMetrics(req.Name)
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, err
 	}
 
 	defer func() {
-		syncOperationExecutionMetrics(op)
+		r.metrics.syncOperationExecutionMetrics(op)
 	}()
 
 	state := controlplanev1alpha1.NewOperationState(op)

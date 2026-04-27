@@ -301,6 +301,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
+        - name: DAEMONSET_NAME
+          value: {{ $dsMode }}
         - name: CLUSTER_DOMAIN
           value: {{ $.Values.global.clusterConfiguration.clusterDomain | quote }}
         - name: SERVICE_SUBNET_CIDR
@@ -309,6 +311,9 @@ spec:
         - name: NODE_ADMIN_KUBECONFIG
           value: "false"
         {{- end }}
+        ports:
+        - containerPort: 4233
+          name: https-metrics
         livenessProbe:
           httpGet:
             host: 127.0.0.1
