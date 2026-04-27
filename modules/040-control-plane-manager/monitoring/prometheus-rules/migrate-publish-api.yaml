@@ -22,13 +22,13 @@
           **To complete the migration, follow the steps below:**
 
 
-          1. Review current settings for `publishAPI` in resource `modeleConfig user-authn`.
+          1. Review current settings for `publishAPI` in resource `moduleConfig user-authn`.
 
 
-          2. Update `moduleConfig control-plane-manager` spec to `spec.version: 3`, if the `mc` exists. This may require migrating `settings.apiserver.loadBalancer` to newer `settings.apiserver.publishAPI.loadBalancer` if it's set.
+          2. Update `moduleConfig control-plane-manager` spec to `spec.version: 3`, if said `moduleConfig` resource exists. This may require migrating `settings.apiserver.loadBalancer` to newer `settings.apiserver.publishAPI.loadBalancer` if it's set. If the `moduleConfig` does not exist, go to the next step.
 
 
-          3. If `moduleConfig` does not exist, create it via `d8`: 
+          3. If `moduleConfig control-plane-manager` does not exist, create it via `d8`: 
 
 
             ```
@@ -49,8 +49,7 @@
 
 
             ```bash
-            d8 k patch moduleconfig control-plane-manager --type merge \
-          -p "$(cat <<EOF
+            d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
           {"spec": {"settings": {"apiserver": {"publishAPI": {"ingress": \
           $(d8 k -n kube-system get cm d8-publishapi-config-migration -ojsonpath='{.data.config}')
                 }}}}}

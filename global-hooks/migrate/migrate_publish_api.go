@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 )
 
 const (
@@ -50,18 +51,13 @@ func publishAPIConfigMigration(_ context.Context, input *go_hook.HookInput, dc d
 
 	mcGVR := schema.ParseGroupResource("moduleconfigs.deckhouse.io").WithVersion("v1alpha1")
 
-	_, err = kubeCl.CoreV1().ConfigMaps(targetNS).Get(context.TODO(), temporaryConfigCM, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
-		return fmt.Errorf("get: %w", err)
-	}
-	if !errors.IsNotFound(err) {
-		input.Logger.Info("Migration cm already exists, skipping migration", slog.String("name", temporaryConfigCM))
-		return nil
-	}
-
 	moduleConfig, err := kubeCl.Dynamic().Resource(mcGVR).Get(context.TODO(), "user-authn", metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		input.Logger.Info("ModuleConfig for user-authn does not exists")
+		input.Logger.Info("ModuleConfig for user-authn does not exists, skipping PublishAPI migration")
+		err := cleanupMigrationCm(input, kubeCl)
+		if err != nil {
+			return err
+		}
 	} else if err != nil {
 		return fmt.Errorf("get: %w", err)
 	}
@@ -79,6 +75,10 @@ func publishAPIConfigMigration(_ context.Context, input *go_hook.HookInput, dc d
 		}
 	} else {
 		input.Logger.Info("Looks like publish API ingress settings are not set in ModuleConfig user-authn, skipping")
+		err := cleanupMigrationCm(input, kubeCl)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -113,4 +113,19 @@ func extractPublishAPISettingsFromMC(mc *unstructured.Unstructured) (map[string]
 	}
 
 	return publishAPISettings, true, nil
+}
+
+func cleanupMigrationCm(input *go_hook.HookInput, kubeCl k8s.Client) error {
+	_, err := kubeCl.CoreV1().ConfigMaps(targetNS).Get(context.TODO(), temporaryConfigCM, metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("get: %w", err)
+	}
+	if !errors.IsNotFound(err) {
+		input.Logger.Info("Migration configmap exists while user-authn publishAPI settings are empty, cleaning up the configmap", slog.String("name", temporaryConfigCM))
+		err = kubeCl.CoreV1().ConfigMaps(targetNS).Delete(context.TODO(), temporaryConfigCM, metav1.DeleteOptions{})
+		if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("delete: %w", err)
+		}
+	}
+	return nil
 }
