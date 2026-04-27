@@ -18,6 +18,7 @@ package main
 
 import (
 	"k8s.io/apimachinery/pkg/util/wait"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/cloud-provider/app"
 	cloudcontrollerconfig "k8s.io/cloud-provider/app/config"
