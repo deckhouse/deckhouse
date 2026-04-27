@@ -38,9 +38,9 @@ func (op *ControlPlaneOperation) IsAbandoned() bool {
 	return cond != nil && cond.Status == metav1.ConditionFalse && cond.Reason == CPOReasonOperationAbandoned
 }
 
-// IsTerminal reports whether the operation reached a not retryable state.
+// IsTerminal reports whether the operation reached a final state and must not be retried.
 func (op *ControlPlaneOperation) IsTerminal() bool {
-	return op.IsCompleted() || op.IsFailed() || op.IsAbandoned()
+	return op.IsCompleted() || op.IsAbandoned()
 }
 
 func (op *ControlPlaneOperation) IsStepCompleted(name StepName) bool {

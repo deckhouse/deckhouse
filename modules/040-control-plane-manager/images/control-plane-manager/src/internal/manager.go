@@ -58,8 +58,9 @@ import (
 
 const (
 	healthProbeBindAddress   = "127.0.0.1:8095"
-	pprofBindAddress         = ":8096"
-	metricsserverBindAddress = ":4233"
+	metricsserverBindAddress = ":8096"
+
+	pprofBindAddress = ":8097" // not used
 )
 
 var (
@@ -100,6 +101,14 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		PprofBindAddress:        pprofAddr,
 		GracefulShutdownTimeout: ptr.To(10 * time.Second),
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Pod{},
+					&corev1.ConfigMap{},
+				},
+			},
+		},
 		Cache: cache.Options{
 			ReaderFailOnMissingInformer: false,
 			DefaultTransform:            cache.TransformStripManagedFields(),

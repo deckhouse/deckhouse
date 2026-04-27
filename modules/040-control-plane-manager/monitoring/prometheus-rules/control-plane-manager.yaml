@@ -195,7 +195,7 @@
   rules:
   - alert: D8ControlPlaneOperationRunningTooLong
     expr: |
-      (time() - d8_control_plane_manager_operation_inprogress_start_seconds) > 600
+      d8_control_plane_manager_operation_too_long == 1
     labels:
       d8_component: control-plane-manager
       d8_module: control-plane-manager
@@ -204,9 +204,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Control-plane operation `{{ $labels.operation }}` for `{{ $labels.component }}` on node `{{ $labels.node }}` runs longer than 10 minutes.
+      summary: Control-plane operation `{{ $labels.operation }}` for `{{ $labels.component }}` on node `{{ $labels.node }}` runs or retries longer than 10 minutes.
       description: |-
-        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been in `OperationInProgress` for more than 10 minutes.
+        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been running or retrying for more than 10 minutes.
 
         Check the corresponding `ControlPlaneOperation` and logs of `d8-control-plane-manager` pod on that node:
 

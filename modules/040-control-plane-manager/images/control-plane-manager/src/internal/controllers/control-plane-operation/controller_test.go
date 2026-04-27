@@ -315,7 +315,7 @@ func (s *ControllerTestSuite) TestReconcileAlreadyCompleted() {
 }
 
 func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
-	s.Run("failed operation is skipped", func() {
+	s.Run("failed operation is retried", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
 			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
@@ -328,7 +328,14 @@ func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
 		require.Equal(s.T(), reconcile.Result{}, result)
-		require.Empty(s.T(), calls, "no steps should execute")
+		require.Len(s.T(), calls, 1)
+
+		got := s.getOp(r, "test-op")
+		require.NotEmpty(s.T(), got.Annotations[constants.OperationStartedAtAnnotationKey])
+		completedCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), completedCond)
+		require.Equal(s.T(), metav1.ConditionTrue, completedCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationCompleted, completedCond.Reason)
 	})
 }
 

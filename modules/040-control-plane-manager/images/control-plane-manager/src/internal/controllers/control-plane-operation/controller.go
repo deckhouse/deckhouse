@@ -99,7 +99,7 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 			CacheSyncTimeout:        cacheSyncTimeout,
 			NeedLeaderElection:      ptr.To(false),
 			RateLimiter: workqueue.NewTypedMaxOfRateLimiter(
-				workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 3*time.Second),
+				workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](5*time.Second, 30*time.Minute),
 				&workqueue.TypedBucketRateLimiter[reconcile.Request]{
 					Limiter: rate.NewLimiter(rate.Limit(1), 1),
 				},
@@ -150,6 +150,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 
 	if !op.Spec.Approved || op.IsTerminal() {
 		return reconcile.Result{}, nil
+	}
+
+	if err := r.ensureOperationStartedAt(ctx, op, time.Now()); err != nil {
+		return reconcile.Result{}, fmt.Errorf("set operation started timestamp: %w", err)
 	}
 
 	logger.Info("reconciling operation",
@@ -211,6 +215,20 @@ func (r *Reconciler) enforceNodePolicy(logger *log.Logger) {
 	if err := updateRootKubeconfig(r.node.KubeconfigDir, r.node.HomeDir, r.node.NodeAdminKubeconfig); err != nil {
 		logger.Warn("failed to enforce root kubeconfig symlink", log.Err(err))
 	}
+}
+
+func (r *Reconciler) ensureOperationStartedAt(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) error {
+	if op.Annotations != nil && op.Annotations[constants.OperationStartedAtAnnotationKey] != "" {
+		return nil
+	}
+
+	original := op.DeepCopy()
+	if op.Annotations == nil {
+		op.Annotations = make(map[string]string, 1)
+	}
+	op.Annotations[constants.OperationStartedAtAnnotationKey] = now.UTC().Format(time.RFC3339Nano)
+
+	return r.client.Patch(ctx, op, client.MergeFrom(original))
 }
 
 // isDesiredStale checks that secret content still matches with desired checksums in the operation spec.

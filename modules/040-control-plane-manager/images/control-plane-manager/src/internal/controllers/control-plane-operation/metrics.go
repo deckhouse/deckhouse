@@ -19,6 +19,7 @@ package controlplaneoperation
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
@@ -28,10 +29,10 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
 )
 
-// Prometheus alert uses time() - this_value to compute real-time duration without staleness.
 const (
-	operationInProgressMetricName = "d8_control_plane_manager_operation_inprogress_start_seconds"
-	operationInProgressMetricHelp = "Unix timestamp when the current in-progress operation started (per node/component/operation)."
+	operationInProgressTooLongThreshold = 10 * time.Minute
+	operationInProgressMetricName       = "d8_control_plane_manager_operation_too_long"
+	operationInProgressMetricHelp       = "Indicates that a control-plane operation has been running for more than 10 minutes."
 )
 
 type metrics struct {
@@ -70,10 +71,9 @@ func (m *metrics) syncOperationExecutionMetrics(op *controlplanev1alpha1.Control
 	componentLabel := string(op.Spec.Component)
 	operationLabel := op.Name
 
-	cond := op.GetCondition(controlplanev1alpha1.CPOConditionCompleted)
-	if cond != nil && cond.Reason == controlplanev1alpha1.CPOReasonOperationInProgress && !cond.LastTransitionTime.IsZero() {
+	if isOperationInProgressTooLong(op, time.Now()) {
 		m.operationInProgress.Set(
-			float64(cond.LastTransitionTime.Unix()),
+			1,
 			map[string]string{
 				"node":      nodeLabel,
 				"component": componentLabel,
@@ -85,6 +85,37 @@ func (m *metrics) syncOperationExecutionMetrics(op *controlplanev1alpha1.Control
 	}
 
 	m.operationInProgress.ExpireGroupMetrics(operationExecutionGroup(operationLabel))
+}
+
+func isOperationInProgressTooLong(op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) bool {
+	if op == nil || !op.Spec.Approved || op.IsTerminal() {
+		return false
+	}
+
+	startedAt, ok := operationStartedAt(op)
+	if !ok {
+		return false
+	}
+
+	return now.Sub(startedAt) > operationInProgressTooLongThreshold
+}
+
+func operationStartedAt(op *controlplanev1alpha1.ControlPlaneOperation) (time.Time, bool) {
+	if op == nil || op.Annotations == nil {
+		return time.Time{}, false
+	}
+
+	raw := op.Annotations[constants.OperationStartedAtAnnotationKey]
+	if raw == "" {
+		return time.Time{}, false
+	}
+
+	startedAt, err := time.Parse(time.RFC3339Nano, raw)
+	if err != nil {
+		return time.Time{}, false
+	}
+
+	return startedAt, true
 }
 
 func (m *metrics) deleteOperationExecutionMetrics(operation string) {

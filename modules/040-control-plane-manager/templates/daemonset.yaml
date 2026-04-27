@@ -314,7 +314,7 @@ spec:
           value: "false"
         {{- end }}
         ports:
-        - containerPort: 4233
+        - containerPort: 8096
           name: https-metrics
         livenessProbe:
           httpGet:
