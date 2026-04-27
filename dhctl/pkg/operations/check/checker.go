@@ -123,11 +123,11 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	}
 
 	if !c.Embedded {
-		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
+		if err = c.PhasedExecutionContext.InitPipeline(ctx, c.StateCache); err != nil {
 			return nil, cleaner, err
 		}
 		defer func() {
-			_ = c.PhasedExecutionContext.Finalize(c.StateCache)
+			_ = c.PhasedExecutionContext.Finalize(ctx, c.StateCache)
 		}()
 	}
 
@@ -207,7 +207,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		inClusterSource = "in-cluster"
 	)
 
-	defer c.switchPhase(phases.CheckConfiguration)()
+	defer c.switchPhase(ctx, phases.CheckConfiguration)()
 
 	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
@@ -220,7 +220,7 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		return "", fmt.Errorf("Unable to get static/provider cluster config: %w", err)
 	}
 
-	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger)
+	inClusterMetaConfig, err := entity.GetMetaConfig(ctx, kubeCl, c.logger, nil)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get in-cluster meta config: %w", err)
 	}
@@ -262,7 +262,7 @@ type InfraResult struct {
 }
 
 func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
-	defer c.switchPhase(phases.CheckInfra)()
+	defer c.switchPhase(ctx, phases.CheckInfra)()
 
 	stat, hasTerraformState, err := CheckState(
 		ctx, kubeCl, metaConfig, infrastructureContext,
@@ -348,9 +348,9 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 	return kubeCl, nil
 }
 
-func (c *Checker) switchPhase(s phases.OperationPhase) func() {
+func (c *Checker) switchPhase(ctx context.Context, s phases.OperationPhase) func() {
 	if !c.Embedded {
-		_, _ = c.PhasedExecutionContext.SwitchPhase(s, false, c.StateCache, nil)
+		_, _ = c.PhasedExecutionContext.SwitchPhase(ctx, s, false, c.StateCache, nil)
 		return func() {}
 	}
 

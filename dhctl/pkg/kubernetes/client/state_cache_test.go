@@ -42,7 +42,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		k8sCache := NewK8sStateCache(fakeClient, namespace, name, "/tmp/dhctl_tst").
 			WithLabels(additionalLabels)
 
-		err := k8sCache.Init()
+		err := k8sCache.Init(t.Context())
 		require.NoError(t, err)
 
 		secret, err := fakeClient.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
@@ -80,7 +80,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		require.NoError(t, err)
 
 		k8sCache := NewK8sStateCache(fakeClient, namespace, name, "/tmp/dhctl_tst")
-		err = k8sCache.Init()
+		err = k8sCache.Init(t.Context())
 		require.NoError(t, err)
 
 		list, err := fakeClient.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: labelKey("state")})
@@ -92,7 +92,7 @@ func TestDeckhouseInstall(t *testing.T) {
 		fakeClient := NewFakeKubernetesClient()
 
 		cacheState := NewK8sStateCache(fakeClient, "tsts", "state", "/tmp/dhctl_tst")
-		err := cacheState.Init()
+		err := cacheState.Init(t.Context())
 		require.NoError(t, err)
 
 		tests.RunStateCacheTests(t, cacheState)

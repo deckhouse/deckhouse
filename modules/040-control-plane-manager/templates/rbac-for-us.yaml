@@ -72,3 +72,131 @@ roleRef:
   kind: ClusterRole
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
+{{- if ($.Values.global.enabledModules | default list | has "user-authz") }}
+---
+# Extra rules for identity kubernetes-admin (group kubeadm:cluster-admins) beyond user-authz:cluster-admin.
+# No user-authz.deckhouse.io/access-level annotation: that pattern is for optional ClusterRoles merged into
+# ClusterAuthorizationRule bindings; this role must apply only to kubeadm:cluster-admins via explicit bindings below.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:control-plane-manager:admin-kubeconfig-supplement
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups: [""]
+  resources: ["pods/portforward"]
+  verbs: ["create", "get"]
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["patch", "update"]
+- apiGroups: [""]
+  resources: ["nodes/proxy"]
+  verbs: ["get", "create"]
+- apiGroups: [""]
+  resources: ["users", "groups", "serviceaccounts"]
+  verbs: ["impersonate"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["deckhouse.io"]
+  resources:
+  - moduleconfigs
+  - deckhousereleases
+  - modulesources
+  - moduleupdatepolicies
+  - modulepulloverrides
+  - packagerepositories
+  - packagerepositoryoperations
+  - applicationpackageversions
+  - applicationpackages
+  - applications
+  - nodegroups
+  - nodeusers
+  - staticinstances
+  - sshcredentials
+  - authorizationrules
+  - clusterauthorizationrules
+  - users
+  - useroperations
+  - dexproviders
+  - dexauthenticators
+  - ingressnginxcontrollers
+  - securitypolicies
+  - securitypolicyexceptions
+  - operationpolicies
+  - customprometheusrules
+  - clusterlogdestinations
+  - clusterloggingconfigs
+  - podloggingconfigs
+  - projects
+  verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests"]
+  verbs: ["get", "list", "watch", "create"]
+- apiGroups: ["certificates.k8s.io"]
+  resources: ["certificatesigningrequests/approval", "certificatesigningrequests/status"]
+  verbs: ["update"]
+- nonResourceURLs: ["/api", "/api/*", "/apis", "/apis/*", "/healthz", "/healthz/*", "/version", "/openapi/*", "/logs", "/metrics"]
+  verbs: ["get"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["scheduling.k8s.io"]
+  resources: ["priorityclasses"]
+  verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+- apiGroups: ["apiregistration.k8s.io"]
+  resources: ["apiservices"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps", "extensions"]
+  resources: ["deployments/scale", "statefulsets/scale", "replicasets/scale"]
+  verbs: ["get", "patch", "update"]
+{{/*
+  ClusterRoleBinding kubeadm:cluster-admins: binds group from admin.conf to RBAC roles.
+  - With user-authz: two bindings so the union matches high-level ClusterAdmin + machine-only extras (same group).
+  - Without user-authz: single binding to built-in cluster-admin (wildcard).
+  The global hook migrate_k8s_upgrade may create/update the same binding name on upgrade; Helm reconcile keeps it aligned.
+*/}}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:cluster-admin
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:control-plane-manager:kubeadm-cluster-admins-supplement
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:admin-kubeconfig-supplement
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+{{- else }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeadm:cluster-admins
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+{{- end }}

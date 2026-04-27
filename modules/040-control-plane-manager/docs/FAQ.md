@@ -697,6 +697,73 @@ To defragment etcd in a cluster with multiple master nodes:
 
    > If a timeout error occurs, increase the value of the `–command-timeout` parameter from the command above until defragmentation is successful.
 
+## Cluster admin access model
+
+The control-plane-manager module maintains several kubeconfig files on master nodes. Understanding their purpose is important for secure cluster administration.
+
+### Kubeconfig files on master nodes
+
+| File | Identity | Purpose |
+| --- | --- | --- |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (`kubeadm:cluster-admins` group) | Machine kubeconfig for kubeadm internals (join, renewal). With the [user-authz](/modules/user-authz/) module enabled, RBAC uses `user-authz:cluster-admin` plus an additional ClusterRole; with `user-authz` disabled, the group is bound to the built-in `cluster-admin` role. |
+| `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (`system:masters` group) | Break-glass emergency credential. Bypasses RBAC entirely. Restrict access to this file to trusted recovery scenarios. |
+| `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Used by kube-controller-manager. |
+| `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Used by kube-scheduler. |
+
+### RBAC-based admin access
+
+Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the `kubeadm:cluster-admins` ClusterRoleBinding(s).
+
+When the [user-authz](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
+
+When **user-authz** is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second ClusterRoleBinding adds ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
+
+### Recommended admin access
+
+When the [user-authn](/modules/user-authn/) module is enabled, use personalized OIDC-based kubeconfig obtained through the kubeconfig generator. This provides individual accountability and audit trail.
+
+When `user-authn` is disabled, administrators can explicitly use the admin kubeconfig on a master node:
+
+```bash
+d8 k --kubeconfig=/etc/kubernetes/admin.conf <command>
+```
+
+### Root kubeconfig symlink
+
+By default, the CPM module creates a symlink `/root/.kube/config` -> `/etc/kubernetes/admin.conf` on master nodes, allowing root to run `d8 k` without specifying `--kubeconfig`.
+
+When the **user-authz** module is enabled, you can disable this symlink by setting `rootKubeconfigSymlink: false` in the **control-plane-manager** module configuration:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    rootKubeconfigSymlink: false
+```
+
+If **user-authz** is disabled, CPM does not apply this setting and keeps the default symlink behavior.
+
+When the symlink is disabled (and **user-authz** is enabled), the symlink is removed when it pointed to `admin.conf`. Use personalized credentials or pass `--kubeconfig` explicitly.
+
+### Security hardening
+
+The CPM module automatically restricts file permissions on `admin.conf` and `super-admin.conf` to `0600` (owner read/write only) during every reconciliation cycle. This prevents unauthorized users from reading these sensitive credentials.
+
+### Break-glass access
+
+In emergency situations (RBAC misconfiguration, webhook failures), use `super-admin.conf`:
+
+```bash
+d8 k --kubeconfig=/etc/kubernetes/super-admin.conf <command>
+```
+
+This credential bypasses all RBAC checks. Use it only as a last resort and restrict who can read the file.
+
 ## How do I configure additional audit policies?
 
 1. Enable [the auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) flag in the module configuration:
@@ -1299,3 +1366,46 @@ To update the certificates, do the following on each master node:
    ```shell
    kubeadm certs renew all
    ```
+
+## How do I protect sensitive fields in custom resources?
+
+To protect sensitive fields (such as passwords, tokens, or keys) in resource schemas from unauthorized access via the API, unencrypted storage in etcd, or exposure in audit logs, use the `CRDSensitiveData` feature gate together with the `x-kubernetes-sensitive-data` schema marker.
+
+To enable field protection, do the following:
+
+1. Enable etcd encryption using the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter in the module settings. The `CRDSensitiveData` feature gate is enabled automatically along with the encryption and shouldn't be specified manually.
+
+   {% alert level="warning" %}
+   Enabling `apiserver.encryptionEnabled` is irreversible and triggers a `kube-apiserver` restart.
+   {% endalert %}
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
+
+1. Mark sensitive fields in the resource schema with `x-kubernetes-sensitive-data: true`.
+
+   The marker can be applied to the fields of the following types: `string`, `integer`, `number`, `boolean`, `object` and `array` (applying the marker to an `object` or `array` makes the entire subtree sensitive). Fields marked with `x-kubernetes-int-or-string: true` are supported as well.
+
+   The marker can't be set on the schema root (the `openAPIV3Schema` node) and inside `anyOf`, `oneOf`, `allOf`, or `not` branches.
+
+1. For users and ServiceAccounts that require access to full data, grant RBAC permissions for the `<resource>/sensitive` subresource.
+
+### Protection mechanisms
+
+| Protection | Description |
+| ---------- | ----------- |
+| Encryption in etcd | The entire resource is encrypted using the same AES-CBC transformer as Kubernetes Secrets. |
+| API field filtering | Sensitive fields are removed from responses to `get`, `list`, and `watch` requests if the caller does not have permissions on the `<resource>/sensitive` subresource. |
+| Audit log masking | Values of sensitive fields are replaced with `"******"` in all audit events, regardless of RBAC permissions and audit level. |
+
+A complete configuration example and results are available in the [Examples](examples.html#protecting-resources-with-sensitive-fields) section.

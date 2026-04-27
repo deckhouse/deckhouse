@@ -42,7 +42,7 @@ import (
 const SinglethreadedMethodsPrefix = "/dhctl.DHCTL" // full method example: /dhctl.DHCTL/Check
 
 // Serve starts GRPC server
-func Serve(params settings.ServerParams) error {
+func Serve(ctx context.Context, params settings.ServerParams) error {
 	if err := params.Validate(); err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func Serve(params settings.ServerParams) error {
 		return err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	defer close(done)
 	sem := make(chan struct{}, params.ParallelTasksLimit)
@@ -109,7 +109,7 @@ func Serve(params settings.ServerParams) error {
 	reflection.Register(s)
 
 	// init services
-	validationService := validation.New(config.NewSchemaStore())
+	validationService := validation.New(config.NewSchemaStore(params.DownloadDirConfig))
 	statusService := status.New(requestsCounter)
 
 	// register services

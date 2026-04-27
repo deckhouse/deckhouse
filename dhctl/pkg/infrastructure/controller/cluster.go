@@ -20,6 +20,7 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -29,7 +30,7 @@ import (
 )
 
 type StateLoader interface {
-	PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error)
+	PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error)
 	PopulateClusterState(ctx context.Context) ([]byte, map[string]state.NodeGroupInfrastructureState, error)
 }
 
@@ -49,6 +50,7 @@ type ClusterInfra struct {
 	tmpDir  string
 	isDebug bool
 	logger  log.Logger
+	dc      *directoryconfig.DirectoryConfig
 
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 }
@@ -58,6 +60,7 @@ type ClusterInfraOptions struct {
 	TmpDir                 string
 	IsDebug                bool
 	Logger                 log.Logger
+	DirectoryConfig        *directoryconfig.DirectoryConfig
 }
 
 func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infrastructureContext *infrastructure.Context, opts ClusterInfraOptions) *ClusterInfra {
@@ -75,11 +78,12 @@ func NewClusterInfraWithOptions(terraState StateLoader, cache state.Cache, infra
 		tmpDir:                 opts.TmpDir,
 		isDebug:                opts.IsDebug,
 		logger:                 logger,
+		dc:                     opts.DirectoryConfig,
 	}
 }
 
 func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	metaConfig, err := r.stateLoader.PopulateMetaConfig(ctx)
+	metaConfig, err := r.stateLoader.PopulateMetaConfig(ctx, r.dc)
 	if err != nil {
 		return err
 	}
@@ -113,7 +117,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.cache); err != nil {
+		if shouldStop, err := r.PhasedExecutionContext.StartPhase(ctx, phases.AllNodesPhase, true, r.cache); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -134,7 +138,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(phases.BaseInfraPhase, true, r.cache, nil); err != nil {
+		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(ctx, phases.BaseInfraPhase, true, r.cache, nil); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -147,7 +151,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.PhasedExecutionContext != nil {
-		return r.PhasedExecutionContext.CompletePhase(r.cache, nil)
+		return r.PhasedExecutionContext.CompletePhase(ctx, r.cache, nil)
 	} else {
 		return nil
 	}

@@ -188,7 +188,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		postBootstrapScriptPath string
 		cleanup                 func() error
 	)
-	err = loggerFor.LogProcess("default", "Preparing configuration", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing configuration", func(ctx context.Context) error {
 		for _, cfg := range []string{
 			p.request.ClusterConfig,
 			p.request.InitConfig,
@@ -230,7 +230,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	}
 
 	var initialState phases.DhctlState
-	err = loggerFor.LogProcess("default", "Preparing DHCTL state", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing DHCTL state", func(ctx context.Context) error {
 		if p.request.State != "" {
 			err = json.Unmarshal([]byte(p.request.State), &initialState)
 			if err != nil {
@@ -244,7 +244,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 	}
 
 	var sshClient node.SSHClient
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		connectionConfig, err := config.ParseConnectionConfig(
 			p.request.ConnectionConfig,
 			s.params.SchemaStore,
@@ -302,10 +302,11 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 		TmpDir:                     s.params.TmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		DirectoryConfig:            s.params.DownloadDirConfig,
 	})
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
-	state, stateErr := extractLastState()
+	state, stateErr := extractLastState(ctx)
 	err = errors.Join(bootstrapErr, stateErr)
 
 	return &pb.BootstrapResult{State: string(state), Err: util.ErrToString(err)}

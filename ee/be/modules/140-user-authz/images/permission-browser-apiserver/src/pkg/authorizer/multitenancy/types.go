@@ -11,6 +11,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// NamespaceAccessType represents the result of namespace access evaluation.
+type NamespaceAccessType int
+
+const (
+	// AllNamespacesAllowed means user has no MT restrictions (privileged or no filters).
+	AllNamespacesAllowed NamespaceAccessType = iota
+	// NoNamespacesAllowed means user has no CAR and is not privileged (deny-by-default).
+	NoNamespacesAllowed
+	// FilteredAccess means user has CAR with restrictions, each namespace must be checked.
+	FilteredAccess
+)
+
 // DirectoryEntry describes an entry with limited namespaces options for a single user
 type DirectoryEntry struct {
 	AllowAccessToSystemNamespaces bool

@@ -15,11 +15,15 @@
 package template
 
 import (
+	"context"
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -62,7 +66,14 @@ func logTemplatesData(name string, data map[string]interface{}) {
 	log.DebugF("Data %s\n%s", name, string(formattedData))
 }
 
-func PrepareBundle(templateController *Controller, nodeIP, devicePath string, metaConfig *config.MetaConfig) error {
+func PrepareBundle(
+	ctx context.Context,
+	templateController *Controller,
+	nodeIP string,
+	devicePath string,
+	metaConfig *config.MetaConfig,
+	dc *directoryconfig.DirectoryConfig,
+) error {
 	kubeadmData, err := metaConfig.ConfigForKubeadmTemplates("")
 	if err != nil {
 		return err
@@ -75,12 +86,24 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	}
 	logTemplatesData("bashible", bashibleData)
 
-	if err := PrepareBashibleBundle(templateController, bashibleData, metaConfig.ProviderName, devicePath); err != nil {
+	if err := PrepareBashibleBundle(ctx, templateController, bashibleData, metaConfig.ProviderName, devicePath, dc); err != nil {
 		return err
 	}
 
-	if err := PrepareKubeadmConfig(templateController, kubeadmData); err != nil {
+	if err := prepareNodeGroupConfigurationSteps(ctx, templateController, metaConfig.ResourcesYAML, bashibleData); err != nil {
 		return err
+	}
+
+	if err := PrepareKubeadmConfig(ctx, templateController, kubeadmData, dc); err != nil {
+		return err
+	}
+
+	_, err = os.Stat(candiBashibleDir)
+	if err != nil {
+		if dc == nil {
+			return fmt.Errorf("could not get value of dc.DownloadDir")
+		}
+		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
 	}
 
 	bashboosterDir := filepath.Join(candiBashibleDir, "bashbooster")
@@ -89,7 +112,22 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 }
 
 //nolint:prealloc
-func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, devicePath string) error {
+func PrepareBashibleBundle(
+	ctx context.Context,
+	templateController *Controller,
+	templateData map[string]interface{},
+	provider string,
+	devicePath string,
+	dc *directoryconfig.DirectoryConfig,
+) error {
+	_, err := os.Stat(candiBashibleDir)
+	if err != nil {
+		if dc == nil {
+			return fmt.Errorf("could not get value of dc.DownloadDir")
+		}
+		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
+		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
+	}
 	saveInfo := make([]saveFromTo, 0)
 	saveInfo = append(saveInfo, saveFromTo{
 		from: candiBashibleDir,
@@ -139,7 +177,21 @@ func GetKubeadmVersion(kubernetesVersion string) (string, error) {
 	return kubeadmV1Beta4, nil
 }
 
-func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {
+func PrepareKubeadmConfig(
+	ctx context.Context,
+	templateController *Controller,
+	templateData map[string]interface{},
+	dc *directoryconfig.DirectoryConfig,
+) error {
+	_, err := os.Stat(candiDir)
+	if err != nil {
+		// fallback to alternative
+		if dc == nil {
+			return fmt.Errorf("could not get value of dc.DownloadDir")
+		}
+		candiDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi")
+		candiBashibleDir = filepath.Join(dc.DownloadDir, "deckhouse", "candi", "bashible")
+	}
 	cc := templateData["clusterConfiguration"].(map[string]interface{})
 	k8sVer := cc["kubernetesVersion"].(string)
 	kubeadmVersion, err := GetKubeadmVersion(k8sVer)

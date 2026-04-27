@@ -260,6 +260,7 @@ CNIPlugin
 CoC
 codec
 CODEOWNERS
+Colocating
 Colour
 comparations
 compatibilityFlag
@@ -470,6 +471,7 @@ enableMultiTenancy
 endofftopic
 enum
 env
+EnvoyFilter
 EOF
 erlier
 ESXi
@@ -605,6 +607,7 @@ HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
 hostname
+hostnames
 hostNetwork
 hostpath
 hostPath
@@ -663,6 +666,7 @@ ingressClass
 IngressClass
 IngressClassParameters
 ingressgateway
+IngressGateway
 ingressgateways
 IngressIstioController
 ingressNginxController
@@ -832,6 +836,7 @@ LowNodeUtilization
 LRS
 lsblk
 LTS
+Lua
 LUN
 lv
 LV
@@ -1239,6 +1244,7 @@ resourcesTemplate
 resourcе
 RESTful
 Restic
+RHEL
 RockSolid
 roleRef
 RollingUpdate
@@ -1471,6 +1477,7 @@ UEFI
 UI
 uid
 UID
+UIs
 un
 uncordoned
 uninstall
@@ -1486,6 +1493,7 @@ uptick
 UPTODATE
 URIs
 urls
+URLs
 UsePAM
 username
 UserOperation
@@ -1863,6 +1871,7 @@ ZvirtInstanceClass
 запустившемся
 запушить
 иcпользовать
+ИБ
 иммутабельный
 имплементацию
 Имплементация
@@ -2068,6 +2077,7 @@ ZvirtInstanceClass
 неймспейс
 неймспейсах
 неймспейсе
+неймспейсы
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2178,6 +2188,7 @@ ZvirtInstanceClass
 перенаправлениям
 перенастраиваются
 переоткрытии
+переподключиться
 переразвернуть
 Переразвертывание
 переразвёртывание
@@ -2206,6 +2217,8 @@ ZvirtInstanceClass
 пиринговой
 пиринговую
 ПК
+плейсхолдер
+плейсхолдеров
 поддомен
 поддоменам
 поддоменами
@@ -2228,6 +2241,7 @@ ZvirtInstanceClass
 помотрим
 превью
 предзагрузки
+преднастроенного
 преднастроенные
 преднастроенный
 преднастроенными
@@ -2256,6 +2270,7 @@ ZvirtInstanceClass
 проксирования
 проксированы
 проксировать
+проксироваться
 проксируем
 проксирует
 проксируются
@@ -2346,6 +2361,7 @@ ZvirtInstanceClass
 сайдкаров
 сайдкаром
 сайдкары
+самоподписанном
 самоподписанные
 самоподписанный
 самоподписанных
@@ -2355,6 +2371,7 @@ ZvirtInstanceClass
 сгенерировали
 сгенерирован
 сгенерированного
+сгенерированному
 сгенерированную
 сгенерированные
 сгенерированный
@@ -2375,6 +2392,7 @@ ZvirtInstanceClass
 синтаксисы
 скачался
 скачаться
+скачиваются
 скейлить
 склонирован
 склонированные

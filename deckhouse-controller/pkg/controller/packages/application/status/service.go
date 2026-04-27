@@ -131,6 +131,12 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	// And this means we can commit the resulted version.
 	if internalConditionIsTrue(packageStatus.Conditions, status.ConditionReadyInCluster) {
 		app.Status.CurrentVersion.Version = packageStatus.Version
+
+		if packageStatus.Settings != nil {
+			if raw, err := json.Marshal(packageStatus.Settings); err == nil {
+				app.Status.LastAppliedConfiguration = runtime.RawExtension{Raw: raw}
+			}
+		}
 	}
 
 	raw, _ := json.Marshal(packageStatus.Tracking)

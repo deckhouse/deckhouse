@@ -13,7 +13,6 @@ import (
 	"github.com/flant/addon-operator/sdk"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -36,7 +35,7 @@ func checkRelease(_ context.Context, input *go_hook.HookInput, dc dependency.Con
 	if tag == "" {
 		tag = "latest"
 	}
-	regCli, err := dc.GetRegistryClient(repo, cr.WithAuth(""))
+	regCli, err := dc.GetRegistryClient(repo)
 	if err != nil {
 		return err
 	}

@@ -174,7 +174,8 @@ spec:
 
 {{- define "trivy.provider.enabled" }}
   {{- $context := . }}
-  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") ($context.Values.operatorTrivy.denyVulnerableImages.enabled) }}
+  {{- $denyEnabled := dig "operatorTrivy" "denyVulnerableImages" "enabled" false ($context.Values | merge (dict)) }}
+  {{- if and ($context.Values.global.enabledModules | has "operator-trivy") $denyEnabled }}
     {{- print "true" }}
   {{- end }}
   {{- print "" }}

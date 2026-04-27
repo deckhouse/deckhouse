@@ -42,7 +42,7 @@ import (
 )
 
 // Serve starts GRPC server
-func Serve(params settings.ServerSingleshotParams) error {
+func Serve(ctx context.Context, params settings.ServerSingleshotParams) error {
 	if err := params.Validate(); err != nil {
 		return err
 	}
@@ -52,7 +52,7 @@ func Serve(params settings.ServerSingleshotParams) error {
 	lvl.Set(slog.LevelDebug)
 	log := logger.NewLogger(lvl).With(slog.String("component", "singlethreaded_server"))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	defer close(done)
 
@@ -107,12 +107,13 @@ func Serve(params settings.ServerSingleshotParams) error {
 
 	// init services
 	dhctlService := dhctl.New(dhctl.ServiceParams{
-		PodName:      podName,
-		PodNamespace: podNamespace,
-		CacheDir:     cacheDir,
-		SchemaStore:  config.NewSchemaStore(),
-		TmpDir:       params.TmpDir,
-		IsDebug:      false,
+		PodName:           podName,
+		PodNamespace:      podNamespace,
+		CacheDir:          cacheDir,
+		SchemaStore:       config.NewSchemaStore(params.DownloadDirConfig),
+		TmpDir:            params.TmpDir,
+		IsDebug:           false,
+		DownloadDirConfig: params.DownloadDirConfig,
 	})
 
 	// register services

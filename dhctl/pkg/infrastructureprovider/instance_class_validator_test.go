@@ -62,6 +62,7 @@ metadata:
   name: d8-release-data
 `,
 		MetaConfigPreparatorProvider(NewPreparatorProviderParamsWithoutLogger()),
+		nil,
 	)
 	require.NoError(t, err)
 	metaConfig.ProviderName = "yandex"

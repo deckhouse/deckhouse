@@ -13,12 +13,20 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: controller
+      controlledValues: RequestsAndLimits
       maxAllowed:
         cpu: 200m
         memory: 200Mi
       minAllowed:
+        cpu: null
+        memory: null
+    - containerName: kube-rbac-proxy
+      maxAllowed:
+        cpu: 20m
+        memory: 25Mi
+      minAllowed:
         cpu: 10m
-        memory: 50Mi
+        memory: 25Mi
   targetRef:
     apiVersion: apps.kruise.io/v1alpha1
     kind: DaemonSet
@@ -47,7 +55,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 75f05158bf87157bb787e2c8cb81a77686c625ae745ed10ef04069935288049f
+    ingress-nginx-controller.deckhouse.io/checksum: 805484e6819e5a68d335e70f3f4a5c082e444f05faad0a41be128e3f2309931b
     ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
@@ -154,6 +162,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: Unconfined
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
@@ -334,12 +344,20 @@ spec:
   resourcePolicy:
     containerPolicies:
     - containerName: controller
+      controlledValues: RequestsAndLimits
       maxAllowed:
         cpu: 200m
         memory: 200Mi
       minAllowed:
+        cpu: null
+        memory: null
+    - containerName: kube-rbac-proxy
+      maxAllowed:
+        cpu: 20m
+        memory: 25Mi
+      minAllowed:
         cpu: 10m
-        memory: 50Mi
+        memory: 25Mi
   targetRef:
     apiVersion: apps.kruise.io/v1alpha1
     kind: DaemonSet
@@ -368,7 +386,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 75f05158bf87157bb787e2c8cb81a77686c625ae745ed10ef04069935288049f
+    ingress-nginx-controller.deckhouse.io/checksum: 805484e6819e5a68d335e70f3f4a5c082e444f05faad0a41be128e3f2309931b
     ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
@@ -468,6 +486,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: Unconfined
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx

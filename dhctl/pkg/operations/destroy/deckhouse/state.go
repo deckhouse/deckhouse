@@ -15,6 +15,7 @@
 package deckhouse
 
 import (
+	"context"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -35,16 +36,16 @@ func NewState(stateCache state.Cache) *State {
 	}
 }
 
-func (s *State) IsResourcesDestroyed() (bool, error) {
-	return s.cache.InCache(resourcesDestroyedKey)
+func (s *State) IsResourcesDestroyed(ctx context.Context) (bool, error) {
+	return s.cache.InCache(ctx, resourcesDestroyedKey)
 }
 
-func (s *State) SetResourcesDestroyed() error {
-	return s.cache.Save(resourcesDestroyedKey, []byte("yes"))
+func (s *State) SetResourcesDestroyed(ctx context.Context) error {
+	return s.cache.Save(ctx, resourcesDestroyedKey, []byte("yes"))
 }
 
-func (s *State) CommanderUUID() (string, error) {
-	inCache, err := s.cache.InCache(commanderUUIDCheckedKey)
+func (s *State) CommanderUUID(ctx context.Context) (string, error) {
+	inCache, err := s.cache.InCache(ctx, commanderUUIDCheckedKey)
 	if err != nil {
 		return "", err
 	}
@@ -52,7 +53,7 @@ func (s *State) CommanderUUID() (string, error) {
 		return "", nil
 	}
 
-	uuidInCache, err := s.cache.Load(commanderUUIDCheckedKey)
+	uuidInCache, err := s.cache.Load(ctx, commanderUUIDCheckedKey)
 	if err != nil {
 		return "", err
 	}
@@ -60,6 +61,6 @@ func (s *State) CommanderUUID() (string, error) {
 	return strings.TrimSpace(string(uuidInCache)), nil
 }
 
-func (s *State) SetCommanderUUID(uuid string) error {
-	return s.cache.Save(commanderUUIDCheckedKey, []byte(uuid))
+func (s *State) SetCommanderUUID(ctx context.Context, uuid string) error {
+	return s.cache.Save(ctx, commanderUUIDCheckedKey, []byte(uuid))
 }

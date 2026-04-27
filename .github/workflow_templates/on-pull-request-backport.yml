@@ -34,7 +34,7 @@ jobs:
   detect_pr_by_label:
     concurrency: source_pr
     if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.milestone != null && contains(github.event.pull_request.labels.*.name, 'status/backport') }}
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       release_branch: ${{ steps.from_milestone.outputs.release_branch }}
       commit: ${{ steps.from_milestone.outputs.commit }}
@@ -54,7 +54,7 @@ jobs:
   detect_pr_by_comment:
     concurrency: source_pr
     if: ${{ github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.state == 'closed' && github.event.pull_request.user.login != 'deckhouse-BOaTswain' && !contains(github.event.issue.labels.*.name, 'issue/release') }}
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       release_branch: ${{ steps.comment_info.outputs.branch }}
       commit: ${{ steps.pr_info.outputs.commit }}
@@ -87,7 +87,7 @@ jobs:
             core.setOutput('commit', response.data.merge_commit_sha)
 
   backport_to_release_branch:
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     needs: [detect_pr_by_label, detect_pr_by_comment]
     if: always() && (needs.detect_pr_by_label.outputs.release_branch || needs.detect_pr_by_comment.outputs.release_branch)
     steps:
@@ -102,6 +102,7 @@ jobs:
             commit=${{needs.detect_pr_by_comment.outputs.commit}}
             prNumber=${{needs.detect_pr_by_comment.outputs.pr_number}}
           fi
+
           echo "release_branch=${releaseBranch}" >> $GITHUB_OUTPUT
           echo "commit=${commit}" >> $GITHUB_OUTPUT
           echo "pr_number=${prNumber}" >> $GITHUB_OUTPUT
@@ -123,7 +124,7 @@ jobs:
           fetch-depth: 0
       - name: Cherry pick
         id: cherry_pick_pr
-        uses: deckhouse/backport-action@fix-backport-milestones
+        uses: deckhouse/backport-action@v1.1.0
         env:
           RELEASE_BRANCH: ${{ steps.prepare.outputs.release_branch }}
           COMMIT_SHA: ${{ steps.prepare.outputs.commit }}
@@ -173,8 +174,8 @@ jobs:
         if: ${{ failure() && (steps.cherry_pick_pr.conclusion == 'failure' || steps.check_target_branch.conclusion == 'failure') }}
         uses: peter-evans/create-or-update-comment@v2
         env:
-          error_message: ${{ steps.cherry_pick_pr.outputs.error_message }}
-          common_error: "Backport failed. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
+          error_message: "Backport failed ⚠️. ${{ steps.cherry_pick_pr.outputs.error_message }}"
+          common_error: "Backport failed ⚠️. See [Job](${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}) for details."
         with:
           token: ${{ secrets.CHANGELOG_ACCESS_TOKEN }}
           issue-number: ${{ steps.prepare.outputs.pr_number }}

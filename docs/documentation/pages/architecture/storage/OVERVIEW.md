@@ -28,11 +28,3 @@ The Storage subsystem includes the following modules:
   * [`csi-scsi-generic`](/modules/csi-scsi-generic/)
   * [`csi-vsphere`](/modules/csi-vsphere/)
   * [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/)
-
-The following modules are currently described in this section:
-
-* [`local-path-provisioner`](local-path-provisioner.html)
-* [`snapshot-controller`](snapshot-controller.html)
-* [`sds-local-volume`](sds-local-volume.html)
-
-Documentation for the remaining Storage subsystem modules will be added as it becomes available.

@@ -33,6 +33,10 @@ spec:
                 tracking:
                   description: |
                     Отображение Nelm-трекинга.
+                lastAppliedConfiguration:
+                  description: |
+                    Конфигурация (пользовательские настройки с учётом значений по умолчанию
+                    из схемы конфигурации), на основе которой было выполнено последнее успешное применение.
                 conditions:
                   description: |
                     Условия представляют последние доступные наблюдения за состоянием приложения.
@@ -55,7 +59,7 @@ spec:
                           Статус условия, один из True, False, Unknown.
                       type:
                         description: |
-                          Тип условия приложения.
+                          Тип условия приложения в CamelCase или в foo.example.com/CamelCase.
                 currentVersion:
                   description: |
                     Информация о текущей установленной версии.

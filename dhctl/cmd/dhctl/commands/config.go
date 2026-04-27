@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
@@ -39,15 +40,16 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 
-	runFunc := func() error {
+	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
 
 		metaConfig, err := config.LoadConfigFromFile(
-			context.TODO(),
+			ctx,
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
+			app.GetDirConfig(),
 		)
 		if err != nil {
 			return err
@@ -62,54 +64,58 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
 		return template.PrepareBashibleBundle(
+			ctx,
 			templateController,
 			templateData,
 			metaConfig.ProviderName,
 			"",
+			app.GetDirConfig(),
 		)
 	}
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
-	})
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-	return cmd
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
+	})
 }
 
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 
-	runFunc := func() error {
+	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
 
 		metaConfig, err := config.LoadConfigFromFile(
-			context.TODO(),
+			ctx,
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
-			))
+			),
+			app.GetDirConfig(),
+		)
 		if err != nil {
 			return err
 		}
 
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig)
+		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, app.GetDirConfig())
 	}
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
-	})
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-	return cmd
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare Bashible Bundle", runFunc)
+	})
 }
 
 func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 
-	runFunc := func() error {
+	runFunc := func(ctx context.Context) error {
 		templateData := make(map[string]interface{})
 		var err error
 		templateData["clusterConfiguration"], err = config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
@@ -120,20 +126,22 @@ func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareKubeadmConfig(templateController, templateData)
+		return template.PrepareKubeadmConfig(ctx, templateController, templateData, app.GetDirConfig())
 	}
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		return log.Process("bootstrap", "Prepare Kubeadm Config", runFunc)
-	})
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
 
-	return cmd
+		return log.ProcessCtx(ctx, "bootstrap", "Prepare Kubeadm Config", runFunc)
+	})
 }
 
 func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineInputOutputRenderFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		var err error
 		var metaConfig *config.MetaConfig
 
@@ -153,21 +161,17 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 			}
 
 			metaConfig, err = config.ParseConfigFromData(
-				context.TODO(),
+				ctx,
 				string(data),
 				preparatorProvider,
+				app.GetDirConfig(),
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(
-				context.TODO(),
-				[]string{app.ParseInputFile},
-				preparatorProvider,
-				config.ValidateOptionStrictUnmarshal(true),
-			)
+			metaConfig, err = config.ParseConfig(ctx, []string{app.ParseInputFile}, preparatorProvider, app.GetDirConfig())
 			if err != nil {
 				return err
 			}
@@ -185,14 +189,14 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause) *kingpin.Cmd
 		fmt.Print(string(output))
 		return nil
 	})
-
-	return cmd
 }
 
 func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineInputOutputRenderFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		_ = kpcontext.ExtractContext(c)
+
 		var err error
 		var data []byte
 
@@ -208,7 +212,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdCl
 			}
 		}
 
-		schemaStore := config.NewSchemaStore()
+		schemaStore := config.NewSchemaStore(app.GetDirConfig())
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)
@@ -227,8 +231,6 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdCl
 		fmt.Print(string(output))
 		return nil
 	})
-
-	return cmd
 }
 
 func InitGlobalVars(pwd string) {

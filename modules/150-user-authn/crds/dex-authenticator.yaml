@@ -31,6 +31,7 @@ spec:
             * Deployment containing OAuth2-Proxy and Redis containers;
             * Service, pointing to OAuth2-Proxy;
             * Ingress resource, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
+            * HTTPRoute resource (optional), configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
             * Secrets, needed to access Dex.
 
             **Warning.** DexAuthenticator only works with HTTPS. The application Ingress must have TLS configured.
@@ -91,6 +92,38 @@ spec:
                     The name of the Ingress class to be used in the Ingress resource (it must match the Ingress class name for the application domain).
                   x-doc-examples: ['nginx']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                gatewayAPI:
+                  type: object
+                  required:
+                  - applicationHTTPRouteListenerSetName
+                  description: |-
+                    A set of parameters to use in HTTPRoute object.
+                    
+                    > **Warning.** Only applicable in clusters with Gateway API support.
+                    
+                    > **Warning.** Define the same ListenerSet object which is used to publish the application domain. 
+                  properties:
+                    applicationHTTPRouteListenerSetName:
+                      type: string
+                      description: |
+                        Name of the ListenerSet object from the Gateway API to be referred to from the HTTPRoute.
+                      x-doc-examples: ['default-listenerset']
+                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      maxLength: 253
+                    applicationHTTPRouteListenerSetNamespace:
+                      type: string
+                      description: |
+                        Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
+                      x-doc-examples: ['default']
+                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      maxLength: 63
+                    applicationHTTPRouteListenerSetSectionName:
+                      type: string
+                      description: |
+                        Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
+                      x-doc-examples: ['default-listener']
+                      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                      maxLength: 
                 signOutURL:
                   type: string
                   description: |-
@@ -330,6 +363,40 @@ spec:
                           The URL of the application from which requests will be redirected to the sign-out URL of the `dex-authenticator`.
 
                           It is used in the application to direct logout requests. A separate Ingress resource will be created for the specified URL, and requests to it will be redirected to `dex-authenticator`.
+                      gatewayAPI:
+                        type: object
+                        required:
+                        - httpRouteListenerSetName
+                        description: |-
+                          A set of parameters to use in HTTPRoute object.
+                    
+                          > **Warning.** Only applicable in clusters with Gateway API support.
+
+                          > **Warning.** Define the same ListenerSet object which is used to publish the application domain.
+                        properties:
+                          httpRouteListenerSetName:
+                            type: string
+                            description: |
+                              Name of the ListenerSet object from the Gateway API to be referred to from the HTTPRoute.
+                            x-doc-examples: ['default-listener-set']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 253
+                          httpRouteListenerSetNamespace:
+                            type: string
+                            description: |
+                              Namespace where the ListenerSet object from the Gateway API is deployed to be referred to from the HTTPRoute.
+
+                              If not set, the namespace of the `DeAuthenticator` is used.
+                            x-doc-examples: ['default']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 63
+                          httpRouteListenerSetSectionName:
+                            type: string
+                            description: |
+                              Section name from the ListenerSet object in the Gateway API the HTTPRoute refers to.
+                            x-doc-examples: ['web-listener']
+                            pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+                            maxLength: 253
                       whitelistSourceRanges:
                         type: array
                         description: |

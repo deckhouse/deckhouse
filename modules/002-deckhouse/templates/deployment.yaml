@@ -274,6 +274,18 @@ spec:
                   name: d8-otlp-tracing
                   key: token
                   optional: true
+            - name: TRACING_OTLP_TLS_SKIP_VERIFY
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: tlsSkipVerify
+                  optional: true
+            - name: TRACING_OTLP_INSECURE
+              valueFrom:
+                secretKeyRef:
+                  name: d8-otlp-tracing
+                  key: insecure
+                  optional: true
           ports:
             - containerPort: 4222
               name: self

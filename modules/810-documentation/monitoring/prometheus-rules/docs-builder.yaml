@@ -1,0 +1,30 @@
+- name: d8.documentation.docs-builder
+  rules:
+  - alert: ModuleDocumentationRenderError
+    expr: |
+      max by (module) (docs_builder_module_render_error) > 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: documentation
+      d8_component: docs-builder
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Documentation rendering failed for module `{{ $labels.module }}`.
+      description: |-
+        An error occurred while rendering documentation for the `{{ $labels.module }}` module.
+        The broken module was removed from the documentation site during Hugo build.
+
+        Check the `ModuleDocumentation` resource status for details:
+
+        ```bash
+        d8 k get moduledocumentations {{ $labels.module }} -o yaml
+        ```
+
+        Check docs-builder logs for more information:
+
+        ```bash
+        d8 k -n d8-system logs -l app=docs-builder | grep -i "removed broken module"
+        ```

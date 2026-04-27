@@ -9,6 +9,7 @@ import (
 	mm_atomic "sync/atomic"
 	mm_time "time"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/gojuno/minimock/v3"
 )
 
@@ -17,9 +18,9 @@ type ServiceManagerMock[T any] struct {
 	t          minimock.Tester
 	finishOnce sync.Once
 
-	funcService          func(registryURL string, dockerCFG string, ca string, userAgent string, scheme string) (tp1 *T, err error)
+	funcService          func(registryURL string, config utils.RegistryConfig) (tp1 *T, err error)
 	funcServiceOrigin    string
-	inspectFuncService   func(registryURL string, dockerCFG string, ca string, userAgent string, scheme string)
+	inspectFuncService   func(registryURL string, config utils.RegistryConfig)
 	afterServiceCounter  uint64
 	beforeServiceCounter uint64
 	ServiceMock          mServiceManagerMockService[T]
@@ -68,19 +69,13 @@ type ServiceManagerMockServiceExpectation[T any] struct {
 // ServiceManagerMockServiceParams contains parameters of the ServiceManagerInterface.Service
 type ServiceManagerMockServiceParams[T any] struct {
 	registryURL string
-	dockerCFG   string
-	ca          string
-	userAgent   string
-	scheme      string
+	config      utils.RegistryConfig
 }
 
 // ServiceManagerMockServiceParamPtrs contains pointers to parameters of the ServiceManagerInterface.Service
 type ServiceManagerMockServiceParamPtrs[T any] struct {
 	registryURL *string
-	dockerCFG   *string
-	ca          *string
-	userAgent   *string
-	scheme      *string
+	config      *utils.RegistryConfig
 }
 
 // ServiceManagerMockServiceResults contains results of the ServiceManagerInterface.Service
@@ -93,10 +88,7 @@ type ServiceManagerMockServiceResults[T any] struct {
 type ServiceManagerMockServiceExpectationOrigins struct {
 	origin            string
 	originRegistryURL string
-	originDockerCFG   string
-	originCa          string
-	originUserAgent   string
-	originScheme      string
+	originConfig      string
 }
 
 // Marks this method to be optional. The default behavior of any method with Return() is '1 or more', meaning
@@ -110,7 +102,7 @@ func (mmService *mServiceManagerMockService[T]) Optional() *mServiceManagerMockS
 }
 
 // Expect sets up expected params for ServiceManagerInterface.Service
-func (mmService *mServiceManagerMockService[T]) Expect(registryURL string, dockerCFG string, ca string, userAgent string, scheme string) *mServiceManagerMockService[T] {
+func (mmService *mServiceManagerMockService[T]) Expect(registryURL string, config utils.RegistryConfig) *mServiceManagerMockService[T] {
 	if mmService.mock.funcService != nil {
 		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Set")
 	}
@@ -123,7 +115,7 @@ func (mmService *mServiceManagerMockService[T]) Expect(registryURL string, docke
 		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by ExpectParams functions")
 	}
 
-	mmService.defaultExpectation.params = &ServiceManagerMockServiceParams[T]{registryURL, dockerCFG, ca, userAgent, scheme}
+	mmService.defaultExpectation.params = &ServiceManagerMockServiceParams[T]{registryURL, config}
 	mmService.defaultExpectation.expectationOrigins.origin = minimock.CallerInfo(1)
 	for _, e := range mmService.expectations {
 		if minimock.Equal(e.params, mmService.defaultExpectation.params) {
@@ -157,8 +149,8 @@ func (mmService *mServiceManagerMockService[T]) ExpectRegistryURLParam1(registry
 	return mmService
 }
 
-// ExpectDockerCFGParam2 sets up expected param dockerCFG for ServiceManagerInterface.Service
-func (mmService *mServiceManagerMockService[T]) ExpectDockerCFGParam2(dockerCFG string) *mServiceManagerMockService[T] {
+// ExpectConfigParam2 sets up expected param config for ServiceManagerInterface.Service
+func (mmService *mServiceManagerMockService[T]) ExpectConfigParam2(config utils.RegistryConfig) *mServiceManagerMockService[T] {
 	if mmService.mock.funcService != nil {
 		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Set")
 	}
@@ -174,83 +166,14 @@ func (mmService *mServiceManagerMockService[T]) ExpectDockerCFGParam2(dockerCFG 
 	if mmService.defaultExpectation.paramPtrs == nil {
 		mmService.defaultExpectation.paramPtrs = &ServiceManagerMockServiceParamPtrs[T]{}
 	}
-	mmService.defaultExpectation.paramPtrs.dockerCFG = &dockerCFG
-	mmService.defaultExpectation.expectationOrigins.originDockerCFG = minimock.CallerInfo(1)
-
-	return mmService
-}
-
-// ExpectCaParam3 sets up expected param ca for ServiceManagerInterface.Service
-func (mmService *mServiceManagerMockService[T]) ExpectCaParam3(ca string) *mServiceManagerMockService[T] {
-	if mmService.mock.funcService != nil {
-		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Set")
-	}
-
-	if mmService.defaultExpectation == nil {
-		mmService.defaultExpectation = &ServiceManagerMockServiceExpectation[T]{}
-	}
-
-	if mmService.defaultExpectation.params != nil {
-		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Expect")
-	}
-
-	if mmService.defaultExpectation.paramPtrs == nil {
-		mmService.defaultExpectation.paramPtrs = &ServiceManagerMockServiceParamPtrs[T]{}
-	}
-	mmService.defaultExpectation.paramPtrs.ca = &ca
-	mmService.defaultExpectation.expectationOrigins.originCa = minimock.CallerInfo(1)
-
-	return mmService
-}
-
-// ExpectUserAgentParam4 sets up expected param userAgent for ServiceManagerInterface.Service
-func (mmService *mServiceManagerMockService[T]) ExpectUserAgentParam4(userAgent string) *mServiceManagerMockService[T] {
-	if mmService.mock.funcService != nil {
-		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Set")
-	}
-
-	if mmService.defaultExpectation == nil {
-		mmService.defaultExpectation = &ServiceManagerMockServiceExpectation[T]{}
-	}
-
-	if mmService.defaultExpectation.params != nil {
-		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Expect")
-	}
-
-	if mmService.defaultExpectation.paramPtrs == nil {
-		mmService.defaultExpectation.paramPtrs = &ServiceManagerMockServiceParamPtrs[T]{}
-	}
-	mmService.defaultExpectation.paramPtrs.userAgent = &userAgent
-	mmService.defaultExpectation.expectationOrigins.originUserAgent = minimock.CallerInfo(1)
-
-	return mmService
-}
-
-// ExpectSchemeParam5 sets up expected param scheme for ServiceManagerInterface.Service
-func (mmService *mServiceManagerMockService[T]) ExpectSchemeParam5(scheme string) *mServiceManagerMockService[T] {
-	if mmService.mock.funcService != nil {
-		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Set")
-	}
-
-	if mmService.defaultExpectation == nil {
-		mmService.defaultExpectation = &ServiceManagerMockServiceExpectation[T]{}
-	}
-
-	if mmService.defaultExpectation.params != nil {
-		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Expect")
-	}
-
-	if mmService.defaultExpectation.paramPtrs == nil {
-		mmService.defaultExpectation.paramPtrs = &ServiceManagerMockServiceParamPtrs[T]{}
-	}
-	mmService.defaultExpectation.paramPtrs.scheme = &scheme
-	mmService.defaultExpectation.expectationOrigins.originScheme = minimock.CallerInfo(1)
+	mmService.defaultExpectation.paramPtrs.config = &config
+	mmService.defaultExpectation.expectationOrigins.originConfig = minimock.CallerInfo(1)
 
 	return mmService
 }
 
 // Inspect accepts an inspector function that has same arguments as the ServiceManagerInterface.Service
-func (mmService *mServiceManagerMockService[T]) Inspect(f func(registryURL string, dockerCFG string, ca string, userAgent string, scheme string)) *mServiceManagerMockService[T] {
+func (mmService *mServiceManagerMockService[T]) Inspect(f func(registryURL string, config utils.RegistryConfig)) *mServiceManagerMockService[T] {
 	if mmService.mock.inspectFuncService != nil {
 		mmService.mock.t.Fatalf("Inspect function is already set for ServiceManagerMock.Service")
 	}
@@ -275,7 +198,7 @@ func (mmService *mServiceManagerMockService[T]) Return(tp1 *T, err error) *Servi
 }
 
 // Set uses given function f to mock the ServiceManagerInterface.Service method
-func (mmService *mServiceManagerMockService[T]) Set(f func(registryURL string, dockerCFG string, ca string, userAgent string, scheme string) (tp1 *T, err error)) *ServiceManagerMock[T] {
+func (mmService *mServiceManagerMockService[T]) Set(f func(registryURL string, config utils.RegistryConfig) (tp1 *T, err error)) *ServiceManagerMock[T] {
 	if mmService.defaultExpectation != nil {
 		mmService.mock.t.Fatalf("Default expectation is already set for the ServiceManagerInterface.Service method")
 	}
@@ -291,14 +214,14 @@ func (mmService *mServiceManagerMockService[T]) Set(f func(registryURL string, d
 
 // When sets expectation for the ServiceManagerInterface.Service which will trigger the result defined by the following
 // Then helper
-func (mmService *mServiceManagerMockService[T]) When(registryURL string, dockerCFG string, ca string, userAgent string, scheme string) *ServiceManagerMockServiceExpectation[T] {
+func (mmService *mServiceManagerMockService[T]) When(registryURL string, config utils.RegistryConfig) *ServiceManagerMockServiceExpectation[T] {
 	if mmService.mock.funcService != nil {
 		mmService.mock.t.Fatalf("ServiceManagerMock.Service mock is already set by Set")
 	}
 
 	expectation := &ServiceManagerMockServiceExpectation[T]{
 		mock:               mmService.mock,
-		params:             &ServiceManagerMockServiceParams[T]{registryURL, dockerCFG, ca, userAgent, scheme},
+		params:             &ServiceManagerMockServiceParams[T]{registryURL, config},
 		expectationOrigins: ServiceManagerMockServiceExpectationOrigins{origin: minimock.CallerInfo(1)},
 	}
 	mmService.expectations = append(mmService.expectations, expectation)
@@ -333,17 +256,17 @@ func (mmService *mServiceManagerMockService[T]) invocationsDone() bool {
 }
 
 // Service implements mm_service.ServiceManagerInterface
-func (mmService *ServiceManagerMock[T]) Service(registryURL string, dockerCFG string, ca string, userAgent string, scheme string) (tp1 *T, err error) {
+func (mmService *ServiceManagerMock[T]) Service(registryURL string, config utils.RegistryConfig) (tp1 *T, err error) {
 	mm_atomic.AddUint64(&mmService.beforeServiceCounter, 1)
 	defer mm_atomic.AddUint64(&mmService.afterServiceCounter, 1)
 
 	mmService.t.Helper()
 
 	if mmService.inspectFuncService != nil {
-		mmService.inspectFuncService(registryURL, dockerCFG, ca, userAgent, scheme)
+		mmService.inspectFuncService(registryURL, config)
 	}
 
-	mm_params := ServiceManagerMockServiceParams[T]{registryURL, dockerCFG, ca, userAgent, scheme}
+	mm_params := ServiceManagerMockServiceParams[T]{registryURL, config}
 
 	// Record call args
 	mmService.ServiceMock.mutex.Lock()
@@ -362,7 +285,7 @@ func (mmService *ServiceManagerMock[T]) Service(registryURL string, dockerCFG st
 		mm_want := mmService.ServiceMock.defaultExpectation.params
 		mm_want_ptrs := mmService.ServiceMock.defaultExpectation.paramPtrs
 
-		mm_got := ServiceManagerMockServiceParams[T]{registryURL, dockerCFG, ca, userAgent, scheme}
+		mm_got := ServiceManagerMockServiceParams[T]{registryURL, config}
 
 		if mm_want_ptrs != nil {
 
@@ -371,24 +294,9 @@ func (mmService *ServiceManagerMock[T]) Service(registryURL string, dockerCFG st
 					mmService.ServiceMock.defaultExpectation.expectationOrigins.originRegistryURL, *mm_want_ptrs.registryURL, mm_got.registryURL, minimock.Diff(*mm_want_ptrs.registryURL, mm_got.registryURL))
 			}
 
-			if mm_want_ptrs.dockerCFG != nil && !minimock.Equal(*mm_want_ptrs.dockerCFG, mm_got.dockerCFG) {
-				mmService.t.Errorf("ServiceManagerMock.Service got unexpected parameter dockerCFG, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmService.ServiceMock.defaultExpectation.expectationOrigins.originDockerCFG, *mm_want_ptrs.dockerCFG, mm_got.dockerCFG, minimock.Diff(*mm_want_ptrs.dockerCFG, mm_got.dockerCFG))
-			}
-
-			if mm_want_ptrs.ca != nil && !minimock.Equal(*mm_want_ptrs.ca, mm_got.ca) {
-				mmService.t.Errorf("ServiceManagerMock.Service got unexpected parameter ca, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmService.ServiceMock.defaultExpectation.expectationOrigins.originCa, *mm_want_ptrs.ca, mm_got.ca, minimock.Diff(*mm_want_ptrs.ca, mm_got.ca))
-			}
-
-			if mm_want_ptrs.userAgent != nil && !minimock.Equal(*mm_want_ptrs.userAgent, mm_got.userAgent) {
-				mmService.t.Errorf("ServiceManagerMock.Service got unexpected parameter userAgent, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmService.ServiceMock.defaultExpectation.expectationOrigins.originUserAgent, *mm_want_ptrs.userAgent, mm_got.userAgent, minimock.Diff(*mm_want_ptrs.userAgent, mm_got.userAgent))
-			}
-
-			if mm_want_ptrs.scheme != nil && !minimock.Equal(*mm_want_ptrs.scheme, mm_got.scheme) {
-				mmService.t.Errorf("ServiceManagerMock.Service got unexpected parameter scheme, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
-					mmService.ServiceMock.defaultExpectation.expectationOrigins.originScheme, *mm_want_ptrs.scheme, mm_got.scheme, minimock.Diff(*mm_want_ptrs.scheme, mm_got.scheme))
+			if mm_want_ptrs.config != nil && !minimock.Equal(*mm_want_ptrs.config, mm_got.config) {
+				mmService.t.Errorf("ServiceManagerMock.Service got unexpected parameter config, expected at\n%s:\nwant: %#v\n got: %#v%s\n",
+					mmService.ServiceMock.defaultExpectation.expectationOrigins.originConfig, *mm_want_ptrs.config, mm_got.config, minimock.Diff(*mm_want_ptrs.config, mm_got.config))
 			}
 
 		} else if mm_want != nil && !minimock.Equal(*mm_want, mm_got) {
@@ -403,9 +311,9 @@ func (mmService *ServiceManagerMock[T]) Service(registryURL string, dockerCFG st
 		return (*mm_results).tp1, (*mm_results).err
 	}
 	if mmService.funcService != nil {
-		return mmService.funcService(registryURL, dockerCFG, ca, userAgent, scheme)
+		return mmService.funcService(registryURL, config)
 	}
-	mmService.t.Fatalf("Unexpected call to ServiceManagerMock.Service. %v %v %v %v %v", registryURL, dockerCFG, ca, userAgent, scheme)
+	mmService.t.Fatalf("Unexpected call to ServiceManagerMock.Service. %v %v", registryURL, config)
 	return
 }
 

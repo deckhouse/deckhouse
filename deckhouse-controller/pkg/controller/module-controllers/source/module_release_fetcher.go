@@ -212,17 +212,21 @@ func (f *ModuleReleaseFetcher) fetchModuleReleases(ctx context.Context) error {
 	return nil
 }
 
-// ensureReleases create releases and return metadata of last created release.
-// flow:
-//  1. if no releases in cluster - create from channel
-//  2. if deployed release patch version is lower than channel (with same minor and major) - create from channel
-//  3. if deployed release minor version is lower than channel (with same major) - create from channel
-//  4. if deployed release minor version is lower by 2 or more than channel (with same major) - look at releases in cluster
-//     4.1 if update sequence between deployed release and last release in cluster is broken - get releases from registry between deployed and version from channel, and create releases
-//     4.2 if update sequence between deployed release and last release in cluster not broken - check update sequence between last release in cluster and version in channel
-//     4.2.1 if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
-//     4.2.2 if update sequence between last release in cluster and version in channel not broken - create from channel
-//     4.3 if update sequences not broken - create from channel
+// ensureReleases creates ModuleReleases for all intermediate versions between
+// the deployed release and the version from the channel.
+//
+// Flow:
+//  1. If no releases in cluster - create release from channel
+//  2. If release channel is LTS - create release from channel (no step-by-step)
+//  3. Otherwise - always use step-by-step update:
+//     3.1 Determine starting version:
+//     - Use deployed release, or
+//     - Use last release in sequence if all releases in cluster are sequential
+//     3.2 Get all new versions from registry between starting version and channel version
+//     (includes the highest patch of current minor to avoid skipping migrations)
+//     3.3 If no new versions (actual >= target) - no-op
+//     3.4 Create releases sequentially; if a gap is detected (missing minor version)
+//     and from-to mechanism does not resolve it - record the error and continue
 func (f *ModuleReleaseFetcher) ensureReleases(
 	ctx context.Context,
 	releaseForUpdate *v1alpha1.ModuleRelease,
@@ -273,48 +277,31 @@ func (f *ModuleReleaseFetcher) ensureReleases(
 		return nil
 	}
 
-	// create release if deployed release and new release are in updating sequence
+	// Determine starting version for step-by-step update
 	actual := releaseForUpdate
 	metricLabels[metrics.LabelActualVersion] = "v" + actual.GetVersion().String()
-	if isUpdatingSequence(actual.GetVersion(), newSemver) {
-		logger.Debug("from deployed")
 
-		err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from deployed")
-		if err != nil {
-			return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
-		}
-
-		return nil
-	}
-
-	isSequence := false
+	isSequenceInCluster := true
 	for i := 1; i < len(releasesInCluster); i++ {
-		isSequence = isUpdatingSequence(releasesInCluster[i-1].GetVersion(), releasesInCluster[i].GetVersion())
-		if !isSequence {
+		if !isUpdatingSequence(releasesInCluster[i-1].GetVersion(), releasesInCluster[i].GetVersion()) {
+			isSequenceInCluster = false
 			break
 		}
 	}
 
-	if isSequence {
-		// check
+	// If all releases are in sequence, use the last one as starting point
+	if isSequenceInCluster {
 		actual = releasesInCluster[len(releasesInCluster)-1]
-
-		// create release if last release and new release are in updating sequence
-		if isUpdatingSequence(actual.GetVersion(), newSemver) {
-			logger.Debug("from deployed")
-
-			err := f.ensureModuleRelease(ctx, f.targetReleaseMeta, "from last release in cluster")
-			if err != nil {
-				return fmt.Errorf("create release %s: %w", f.targetReleaseMeta.ModuleVersion, err)
-			}
-
-			return nil
-		}
 	}
 
 	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		return fmt.Errorf("get new versions: %w", err)
+	}
+
+	// Empty result means actual >= target, nothing to create
+	if len(vers) == 0 {
+		return nil
 	}
 
 	var ErrModuleIsCorrupted = errors.New("module is corrupted")
@@ -596,20 +583,20 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 	return nil
 }
 
-// getNewVersions - getting all last patches from registry
-// it's ignore last patch of actual minor version, if it has new minor version
+// getNewVersions - getting all last patches from registry for each minor version
+// between actual and target versions (inclusive of actual minor's patches).
 //
 // f.e.
 // in registry:
 // 1.66.3 (deployed)
 // 1.66.5
-// result will be 1.66.5
+// result will be [1.66.5]
 //
-// but if we have a new minor version like:
+// with a new minor version:
 // 1.66.3 (deployed)
 // 1.66.5
 // 1.67.11
-// result will be 1.67.11
+// result will be [1.66.5, 1.67.11]
 //
 // several patches:
 // 1.66.3 (deployed)
@@ -619,7 +606,7 @@ func (f *ModuleReleaseFetcher) ensureModuleRelease(ctx context.Context, meta *do
 // 1.68.1
 // 1.68.3
 // 1.68.5
-// result will be [1.67.11, 1.68.5]
+// result will be [1.66.5, 1.67.11, 1.68.5]
 func (f *ModuleReleaseFetcher) getNewVersions(ctx context.Context, actual, target *semver.Version) ([]*semver.Version, error) {
 	tags, err := f.registryClientTagFetcher.ListTags(ctx)
 	if err != nil {
@@ -667,15 +654,7 @@ func (f *ModuleReleaseFetcher) getNewVersions(ctx context.Context, actual, targe
 		}
 	}
 
-	// Remove highest patch from actual minor version if we have more versions
-	if len(result) > 1 && result[0].Minor() == actual.Minor() {
-		result = result[1:]
-	}
-
-	if len(result) == 0 {
-		return nil, fmt.Errorf("no acceptable for step by step update tags in registry")
-	}
-
+	// Empty result is not an error - it means actual >= target, no new versions needed
 	return result, nil
 }
 
@@ -701,10 +680,24 @@ func (f *ModuleReleaseFetcher) parseAndFilterVersions(tags []string) []*semver.V
 	return versions
 }
 
+// isVersionInRange checks if version 'ver' is within the range between 'actual' and 'target'.
+// Returns true if ver > actual and ver is within target's minor version.
+//
+// Example:
+//
+//	[actual=v1.4.1, ver=v1.4.0, target=v1.5.2] -> false  // ver <= actual
+//	[actual=v1.4.1, ver=v1.4.4, target=v1.5.2] -> true   // patch of current minor
+//	[actual=v1.4.1, ver=v1.5.2, target=v1.5.2] -> true   // target version
+//	[actual=v1.4.1, ver=v1.6.0, target=v1.5.2] -> false  // exceeds target minor
 func isVersionInRange(ver, actual, target *semver.Version) bool {
-	return (ver.Major() > actual.Major() ||
-		(ver.Major() == actual.Major() && ver.Minor() >= actual.Minor())) &&
-		(ver.Major() < target.Major() || (ver.Major() == target.Major() && ver.Minor() <= target.Minor()))
+	// Must be strictly greater than actual
+	if !ver.GreaterThan(actual) {
+		return false
+	}
+
+	// Must be within target minor
+	return ver.Major() < target.Major() ||
+		(ver.Major() == target.Major() && ver.Minor() <= target.Minor())
 }
 
 func isVersionGreaterThanTarget(ver, target *semver.Version) bool {

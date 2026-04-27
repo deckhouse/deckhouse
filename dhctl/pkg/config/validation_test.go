@@ -79,7 +79,7 @@ metadata:
 func TestValidateInitConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
 	const deckhouseSchemasDir = "./../../../modules/002-deckhouse/openapi"
-	newStore := newSchemaStore([]string{schemasDir, deckhouseSchemasDir})
+	newStore := newSchemaStore(nil, []string{schemasDir, deckhouseSchemasDir})
 
 	tests := map[string]struct {
 		config      string
@@ -177,7 +177,7 @@ metadata:
 
 func TestValidateClusterConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(nil, []string{schemasDir})
 
 	tests := map[string]struct {
 		config      string
@@ -271,7 +271,7 @@ clusterType: Static
 
 func TestValidateProviderSpecificClusterConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/cloud-providers"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(nil, []string{schemasDir})
 
 	tests := map[string]struct {
 		config        string
@@ -458,7 +458,7 @@ sshPublicKey: ssh-key`,
 
 func TestValidateStaticClusterConfiguration(t *testing.T) {
 	const schemasDir = "./../../../candi/openapi"
-	newStore := newSchemaStore([]string{schemasDir})
+	newStore := newSchemaStore(nil, []string{schemasDir})
 
 	tests := map[string]struct {
 		config      string

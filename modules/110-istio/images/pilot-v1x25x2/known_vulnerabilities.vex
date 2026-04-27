@@ -1,0 +1,23 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-istio-pilot-v1x25x2-cve-2026-40179",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-40179"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.301.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (stored XSS, CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79). Бинарник pilot-discovery не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.301.0 (Istio 1.25.x) подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-03-30T10:18:01.000000000Z"
+    }
+  ],
+  "timestamp": "2026-03-30T10:18:00Z"
+}

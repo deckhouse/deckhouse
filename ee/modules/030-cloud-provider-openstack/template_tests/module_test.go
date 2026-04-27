@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 	"golang.org/x/mod/semver"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
@@ -31,9 +32,15 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+const providerID = "openstack"
+const nameLabelKey = "cloud-provider\\.deckhouse\\.io/name"
+const registrationLabelKey = "cloud-provider\\.deckhouse\\.io/registration"
+const ephemeralNodesTemplatesLabelKey = "cloud-provider\\.deckhouse\\.io/ephemeral-nodes-templates"
+const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
+
 const globalValues = `
   clusterIsBootstrapped: true
-  enabledModules: ["vertical-pod-autoscaler"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -58,7 +65,7 @@ const globalValues = `
 `
 
 const hybridGlobalValues = `
-  enabledModules: ["vertical-pod-autoscaler"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     clusterDomain: cluster.local
@@ -83,6 +90,8 @@ const moduleValues = `
   storageClass:
     topologyEnabled: true
   ignoreVolumeMicroversion: false
+  csiDriver:
+    fsGroupPolicy: ReadWriteOnceWithFSType
   internal:
     storageClasses:
       - name: fastssd
@@ -187,8 +196,6 @@ func openstackCheck(f *Config, k8sVer string) {
 		namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
 		registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
-		providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
-
 		cinderControllerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 		cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
 		cinderNodePluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
@@ -219,7 +226,16 @@ func openstackCheck(f *Config, k8sVer string) {
 		Expect(registrySecret.Exists()).To(BeTrue())
 
 		// user story #1
+		providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 		Expect(providerRegistrationSecret.Exists()).To(BeTrue())
+		Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+		Expect(providerRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
+		providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
+		Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
+		Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", registrationLabelKey)).String()).To(Equal(""))
+		Expect(providerSpecificRegistrationSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+
 		expectedProviderRegistrationJSON := `{
           "connection": {
             "authURL": "http://my.cloud.lalla/123/",
@@ -243,9 +259,34 @@ func openstackCheck(f *Config, k8sVer string) {
           },
           "podNetworkMode": "VXLAN"
         }`
-		providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
+
+		providerRegistrationSecretData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.openstack").String())
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+		Expect(string(providerRegistrationSecretData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+		providerSpecificRegistrationSecretData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.openstack").String())
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(string(providerSpecificRegistrationSecretData)).To(MatchJSON(expectedProviderRegistrationJSON))
+
+		providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID))
+		Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
+		Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("mcm"))
+		Expect(providerSpecificMCMSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+		providerSpecificMCMSecretData := providerSpecificMCMSecret.Field("data").Map()
+		Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
+		Expect(len(providerSpecificMCMSecretData) >= 1).To(BeTrue())
+		Expect(len(providerSpecificMCMSecretData["config-for-machine-controller-manager.yaml"].String()) > 0).To(BeTrue())
+
+		providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
+		Expect(providerSpecificBashibleStepsSecret.Exists()).ToNot(BeTrue())
+
+		providerSpecificBashibleBootstrapSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-bootstrap", providerID))
+		Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeTrue())
+		Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", bashibleLabelKey)).String()).To(Equal("bootstrap"))
+		Expect(providerSpecificBashibleBootstrapSecret.Field(fmt.Sprintf("metadata.labels.%s", nameLabelKey)).String()).To(Equal(providerID))
+		providerSpecificBashibleBootstrapSecretData := providerSpecificBashibleBootstrapSecret.Field("data").Map()
+		Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
+		Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
 
 		// user story #2
 		Expect(cinderCSIDriver.Exists()).To(BeTrue())
@@ -288,8 +329,8 @@ ipv6-support-disabled = true
 [LoadBalancer]
 enabled = true
 create-monitor = "true"
-monitor-delay = "2s"
-monitor-timeout = "1s"
+monitor-delay = "5s"
+monitor-timeout = "3s"
 subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"
 enable-ingress-hostname = %s
@@ -320,6 +361,30 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Expect(cddDeployment.Exists()).To(BeTrue())
 		Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 		Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+	})
+
+	It("must not render security labels and SPE without admission-policy-engine", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+		Expect(namespace.Exists()).To(BeTrue())
+		Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/enable-security-policy-check").Exists()).To(BeFalse())
+
+		ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+		Expect(ccmDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+		Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+
+		csiControllerDeployment := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+		Expect(csiControllerDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+		Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
+
+		csiNodeDaemonSet := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+		Expect(csiNodeDaemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+		Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-node").Exists()).To(BeFalse())
+
+		cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+		Expect(cddDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+		Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-data-discoverer").Exists()).To(BeFalse())
 	})
 }
 
@@ -643,7 +708,7 @@ ca
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
-				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd"]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.HelmRender()
 			})
@@ -671,6 +736,165 @@ ca
 				d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 				Expect(d.Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("Openstack :: admission-policy-engine compatibility", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSet("global.enabledModules", []string{
+				"vertical-pod-autoscaler",
+				"vertical-pod-autoscaler-crd",
+				"admission-policy-engine",
+				"admission-policy-engine-crd",
+				"cloud-provider-openstack",
+			})
+			f.HelmRender()
+		})
+
+		It("must render core workloads with admission-policy-engine enabled", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+			Expect(namespace.Exists()).To(BeTrue())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			Expect(f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", moduleNamespace, "cloud-controller-manager").Exists()).To(BeTrue())
+
+			csiControllerDeployment := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiControllerDeployment.Exists()).To(BeTrue())
+			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+
+			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+		})
+
+		It("must render Namespace labels", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(namespace.Field("metadata.labels.security\\.deckhouse\\.io/enable-security-policy-check").String()).To(Equal("true"))
+		})
+
+		It("must render SecurityPolicyException for cloud-controller-manager", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("cloud-controller-manager"))
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-controller-manager")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.volumes.hostPath.allowedValues").Array()).To(
+				ConsistOf(
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/etc/kubernetes/pki")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeTrue()),
+					),
+				),
+			)
+		})
+
+		It("must render SecurityPolicyException for csi-controller", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiControllerDeployment := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiControllerDeployment.Exists()).To(BeTrue())
+			Expect(csiControllerDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("csi-controller"))
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-controller")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.volumes.hostPath.allowedValues").Exists()).To(BeFalse())
+		})
+
+		It("must render SecurityPolicyException for csi-node", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
+			Expect(csiNodeDaemonSet.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("csi-node"))
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "csi-node")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.securityContext.privileged.allowedValue").Bool()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.volumes.hostPath.allowedValues").Array()).To(
+				ConsistOf(
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/var/lib/kubelet/plugins_registry/")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/var/lib/kubelet")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/var/lib/kubelet/csi-plugins/cinder.csi.openstack.org/")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+					And(
+						WithTransform(func(v gjson.Result) string { return v.Get("path").String() }, Equal("/dev")),
+						WithTransform(func(v gjson.Result) bool { return v.Get("readOnly").Bool() }, BeFalse()),
+					),
+				),
+			)
+		})
+
+		It("must not render SecurityPolicyException for cloud-data-discoverer", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "cloud-data-discoverer").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Openstack :: bootstrap compatibility", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
+			f.ValuesSet("global.clusterIsBootstrapped", false)
+			f.HelmRender()
+		})
+
+		It("must keep bootstrap-specific DNS and env behavior", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ccmDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			Expect(ccmDeployment.Exists()).To(BeTrue())
+			Expect(ccmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.env.0.name").String()).To(Equal("KUBERNETES_SERVICE_HOST"))
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.env.0.valueFrom.fieldRef.fieldPath").String()).To(Equal("status.hostIP"))
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.env.1.name").String()).To(Equal("KUBERNETES_SERVICE_PORT"))
+			Expect(ccmDeployment.Field("spec.template.spec.containers.0.env.1.value").String()).To(Equal("6443"))
+
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+
+			csiControllerDeployment := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			Expect(csiControllerDeployment.Exists()).To(BeTrue())
+			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
+
+			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("Default"))
 		})
 	})
 })

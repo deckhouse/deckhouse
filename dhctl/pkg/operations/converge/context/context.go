@@ -23,6 +23,7 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
@@ -58,16 +59,18 @@ type Context struct {
 
 	providerGetter infrastructure.CloudProviderGetter
 
-	logger log.Logger
+	logger          log.Logger
+	directoryConfig *directoryconfig.DirectoryConfig
 }
 
 type Params struct {
-	KubeClient     *client.KubernetesClient
-	Cache          dstate.Cache
-	ChangeParams   infrastructure.ChangeActionSettings
-	ProviderGetter infrastructure.CloudProviderGetter
-	Logger         log.Logger
-	ClientSwitcher MultiMasterClientSwitcher
+	KubeClient      *client.KubernetesClient
+	Cache           dstate.Cache
+	ChangeParams    infrastructure.ChangeActionSettings
+	ProviderGetter  infrastructure.CloudProviderGetter
+	Logger          log.Logger
+	ClientSwitcher  MultiMasterClientSwitcher
+	DirectoryConfig *directoryconfig.DirectoryConfig
 }
 
 func newContext(ctx context.Context, params Params) *Context {
@@ -78,13 +81,14 @@ func newContext(ctx context.Context, params Params) *Context {
 	}
 
 	return &Context{
-		providerGetter: params.ProviderGetter,
-		kubeClient:     params.KubeClient,
-		stateCache:     params.Cache,
-		changeParams:   params.ChangeParams,
-		ctx:            ctx,
-		logger:         logger,
-		clientSwitcher: params.ClientSwitcher,
+		providerGetter:  params.ProviderGetter,
+		kubeClient:      params.KubeClient,
+		stateCache:      params.Cache,
+		changeParams:    params.ChangeParams,
+		ctx:             ctx,
+		logger:          logger,
+		clientSwitcher:  params.ClientSwitcher,
+		directoryConfig: params.DirectoryConfig,
 
 		stateStore: newInSecretStateStore(),
 	}
@@ -178,20 +182,20 @@ func (c *Context) ProviderGetter() infrastructure.CloudProviderGetter {
 	return c.providerGetter
 }
 
-func (c *Context) StarExecutionPhase(phase phases.OperationPhase, isCritical bool) (bool, error) {
+func (c *Context) StarExecutionPhase(ctx context.Context, phase phases.OperationPhase, isCritical bool) (bool, error) {
 	if c.phaseContext == nil {
 		return false, nil
 	}
 
-	return c.phaseContext.StartPhase(phase, isCritical, c.stateCache)
+	return c.phaseContext.StartPhase(ctx, phase, isCritical, c.stateCache)
 }
 
-func (c *Context) CompleteExecutionPhase(data any) error {
+func (c *Context) CompleteExecutionPhase(ctx context.Context, data any) error {
 	if c.phaseContext == nil {
 		return nil
 	}
 
-	return c.phaseContext.CompletePhase(c.stateCache, data)
+	return c.phaseContext.CompletePhase(ctx, c.stateCache, data)
 }
 
 func (c *Context) MetaConfig() (*config.MetaConfig, error) {
@@ -204,7 +208,7 @@ func (c *Context) MetaConfig() (*config.MetaConfig, error) {
 		return metaConfig, nil
 	}
 
-	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient, c.logger)
+	metaConfig, err := entity.GetMetaConfig(c.ctx, c.kubeClient, c.logger, c.directoryConfig)
 	if err != nil {
 		return nil, err
 	}

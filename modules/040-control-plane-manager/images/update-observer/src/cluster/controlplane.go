@@ -21,17 +21,15 @@ import (
 	"slices"
 	"strings"
 
-	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
 
 	"update-observer/pkg/version"
 )
 
 type ControlPlaneState struct {
-	DesiredCount           int
-	UpToDateCount          int
 	DesiredComponentCount  int
 	UpToDateComponentCount int
+	StepsCompleted         int
 	Phase                  ControlPlanePhase
 	MasterNodes            map[string]*MasterNode
 	versions               *version.UniqueAggregator
@@ -46,25 +44,24 @@ const (
 	ControlPlaneVersionDrift ControlPlanePhase = "VersionDrift"
 )
 
-func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion string) (*ControlPlaneState, error) {
+func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion, sourceVersion string) (*ControlPlaneState, error) {
 	masterNodes, err := buildControlPlaneTopology(controlPlanePods, desiredVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get components state: %w", err)
 	}
 
 	res := &ControlPlaneState{
-		DesiredCount: len(masterNodes),
-		MasterNodes:  masterNodes,
-		versions:     version.NewUniqueAggregator(semver.Sort),
+		MasterNodes: masterNodes,
+		versions:    version.NewUniqueAggregator(),
 	}
 
-	res.aggregateNodesState()
+	res.aggregateNodesState(sourceVersion, desiredVersion)
 
 	return res, nil
 }
 
-func (s *ControlPlaneState) aggregateNodesState() {
-	var desiredCount, upToDateCount, desiredComponentsCount, upToDateComponentsCount int
+func (s *ControlPlaneState) aggregateNodesState(sourceVersion, desiredVersion string) {
+	var upToDateCount, desiredCount, desiredComponentsCount, upToDateComponentsCount, stepsCompleted int
 	var phase ControlPlanePhase
 
 	for _, masterNode := range s.MasterNodes {
@@ -82,8 +79,10 @@ func (s *ControlPlaneState) aggregateNodesState() {
 				descriptions = append(descriptions, fmt.Sprintf("%s: %s", componentName, component.Description))
 			case ControlPlaneComponentUpdating:
 				updatingComponents++
+				stepsCompleted += version.ComponentSteps(component.Version, sourceVersion, desiredVersion)
 			case ControlPlaneComponentUpToDate:
 				upToDateComponentsCount++
+				stepsCompleted += version.ComponentSteps(component.Version, sourceVersion, desiredVersion)
 			}
 		}
 
@@ -109,9 +108,8 @@ func (s *ControlPlaneState) aggregateNodesState() {
 		phase = ControlPlaneUpToDate
 	}
 
-	s.DesiredCount = desiredCount
-	s.UpToDateCount = upToDateCount
 	s.DesiredComponentCount = desiredComponentsCount
 	s.UpToDateComponentCount = upToDateComponentsCount
+	s.StepsCompleted = stepsCompleted
 	s.Phase = phase
 }

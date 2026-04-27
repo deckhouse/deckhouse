@@ -24,6 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -37,8 +38,9 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -51,31 +53,17 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		err = log.Process("default", "Remove Deckhouse️", func() error {
+		return log.ProcessCtx(ctx, "default", "Remove Deckhouse️", func(ctx context.Context) error {
 			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(
-					ssh.NewNodeInterfaceWrapper(sshClient),
-				)
-			// auto init
-			err = kubeCl.Init(client.AppKubernetesInitParams())
-			if err != nil {
+				WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
+
+			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
-			if err != nil {
-				return err
-			}
-			return nil
+			return deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
 	})
-
-	return cmd
 }
 
 func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -84,21 +72,21 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 	app.DefineConfigFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
-	var DryRun bool
-	cmd.Flag("dry-run", "Output deployment yaml").
-		BoolVar(&DryRun)
+	var dryRun bool
+	cmd.Flag("dry-run", "Output deployment yaml").BoolVar(&dryRun)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
-
-		// Load deckhouse config
 		metaConfig, err := config.ParseConfig(
-			context.TODO(),
+			ctx,
 			app.ConfigPaths,
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
-			))
+			),
+			app.GetDirConfig(),
+		)
 		if err != nil {
 			return err
 		}
@@ -120,7 +108,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
-		if DryRun {
+		if dryRun {
 			manifest := deckhouse.CreateDeckhouseDeploymentManifest(installConfig)
 			out, err := yaml.Marshal(manifest)
 			if err != nil {
@@ -131,30 +119,25 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return nil
 		}
 
-		err = log.Process("bootstrap", "Create Deckhouse Deployment", func() error {
+		return log.ProcessCtx(ctx, "bootstrap", "Create Deckhouse Deployment", func(ctx context.Context) error {
 			kubeCl := client.NewKubernetesClient().
 				WithNodeInterface(
 					ssh.NewNodeInterfaceWrapper(sshClient),
 				)
+
 			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig)
-			if err != nil {
+			if err := deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig); err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(ctx, kubeCl)
-			if err != nil {
+			if err := deckhouse.WaitForReadiness(ctx, kubeCl); err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
+
 			return nil
 		})
-		if err != nil {
-			return err
-		}
-		return nil
 	})
-	return cmd
 }

@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+#
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -euo pipefail
+
+source /shell_lib.sh
+
+function __config__() {
+  cat <<'EOF'
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: v1_to_v2
+    crdName: ingressnginxcontrollers.deckhouse.io
+    conversions:
+      - fromVersion: deckhouse.io/v1
+        toVersion: deckhouse.io/v2
+
+  - name: v2_to_v1
+    crdName: ingressnginxcontrollers.deckhouse.io
+    conversions:
+      - fromVersion: deckhouse.io/v2
+        toVersion: deckhouse.io/v1
+EOF
+}
+
+function __on_conversion::v1_to_v2() {
+  if converted=$(context::jq -r '
+    .review.request.objects // [] | map(
+      if .apiVersion == "deckhouse.io/v1" then
+        .apiVersion = "deckhouse.io/v2" |
+        (
+          .spec.resourcesRequests? as $rr |
+          if ($rr == null) then
+            .
+          else
+            .spec.resourcesManagement = (
+              {}
+              + (if ($rr | has("mode")) then {mode: $rr.mode} else {} end)
+              + (if ($rr.vpa? != null) then
+                  {vpa:
+                    (
+                      {}
+                      + (if ($rr.vpa | has("mode")) then {mode: $rr.vpa.mode} else {} end)
+                      + (if ($rr.vpa.cpu? != null) then
+                          {cpu:
+                            (
+                              {}
+                              + (if ($rr.vpa.cpu | has("min")) then {min: $rr.vpa.cpu.min} else {} end)
+                              + (if ($rr.vpa.cpu | has("max")) then {max: $rr.vpa.cpu.max} else {} end)
+                              + (if ($rr.vpa.cpu | has("limitRatio")) then {limitRatio: $rr.vpa.cpu.limitRatio} else {} end)
+                            )
+                          }
+                        else {} end)
+                      + (if ($rr.vpa.memory? != null) then
+                          {memory:
+                            (
+                              {}
+                              + (if ($rr.vpa.memory | has("min")) then {min: $rr.vpa.memory.min} else {} end)
+                              + (if ($rr.vpa.memory | has("max")) then {max: $rr.vpa.memory.max} else {} end)
+                              + (if ($rr.vpa.memory | has("limitRatio")) then {limitRatio: $rr.vpa.memory.limitRatio} else {} end)
+                            )
+                          }
+                        else {} end)
+                    )
+                  }
+                else {} end)
+              + (if ($rr.static? != null) then
+                  {static:
+                    (
+                      {}
+                      + (if (($rr.static | has("cpu")) or ($rr.static | has("memory"))) then
+                          {requests:
+                            (
+                              {}
+                              + (if ($rr.static | has("cpu")) then {cpu: $rr.static.cpu} else {} end)
+                              + (if ($rr.static | has("memory")) then {memory: $rr.static.memory} else {} end)
+                            )
+                          }
+                        else {} end)
+                      + (if ($rr.static.limits? != null) then
+                          {limits:
+                            (
+                              {}
+                              + (if ($rr.static.limits | has("cpu")) then {cpu: $rr.static.limits.cpu} else {} end)
+                              + (if ($rr.static.limits | has("memory")) then {memory: $rr.static.limits.memory} else {} end)
+                            )
+                          }
+                        else {} end)
+                    )
+                  }
+                else {} end)
+            ) |
+            del(.spec.resourcesRequests)
+          end
+        )
+      else
+        .
+      end
+    )
+  '); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of ingressnginxcontrollers.deckhouse.io from v1 to v2 failed"}
+EOF
+  fi
+}
+
+function __on_conversion::v2_to_v1() {
+  if converted=$(context::jq -r '
+    .review.request.objects // [] | map(
+      if .apiVersion == "deckhouse.io/v2" then
+        .apiVersion = "deckhouse.io/v1" |
+        (
+          .spec.resourcesManagement? as $rm |
+          if ($rm == null) then
+            .
+          else
+            .spec.resourcesRequests = (
+              {}
+              + (if ($rm | has("mode")) then {mode: $rm.mode} else {} end)
+              + (if ($rm.vpa? != null) then
+                  {vpa:
+                    (
+                      {}
+                      + (if ($rm.vpa | has("mode")) then {mode: $rm.vpa.mode} else {} end)
+                      + (if ($rm.vpa.cpu? != null) then
+                          {cpu:
+                            (
+                              {}
+                              + (if ($rm.vpa.cpu | has("min")) then {min: $rm.vpa.cpu.min} else {} end)
+                              + (if ($rm.vpa.cpu | has("max")) then {max: $rm.vpa.cpu.max} else {} end)
+                              + (if ($rm.vpa.cpu | has("limitRatio")) then {limitRatio: $rm.vpa.cpu.limitRatio} else {} end)
+                            )
+                          }
+                        else {} end)
+                      + (if ($rm.vpa.memory? != null) then
+                          {memory:
+                            (
+                              {}
+                              + (if ($rm.vpa.memory | has("min")) then {min: $rm.vpa.memory.min} else {} end)
+                              + (if ($rm.vpa.memory | has("max")) then {max: $rm.vpa.memory.max} else {} end)
+                              + (if ($rm.vpa.memory | has("limitRatio")) then {limitRatio: $rm.vpa.memory.limitRatio} else {} end)
+                            )
+                          }
+                        else {} end)
+                    )
+                  }
+                else {} end)
+              + (if ($rm.static? != null) then
+                  {static:
+                    (
+                      {}
+                      + (if ($rm.static.requests? != null) and (($rm.static.requests | has("cpu")) or ($rm.static.requests | has("memory"))) then
+                          (
+                            {}
+                            + (if ($rm.static.requests | has("cpu")) then {cpu: $rm.static.requests.cpu} else {} end)
+                            + (if ($rm.static.requests | has("memory")) then {memory: $rm.static.requests.memory} else {} end)
+                          )
+                        else {} end)
+                      + (if ($rm.static.limits? != null) then
+                          {limits:
+                            (
+                              {}
+                              + (if ($rm.static.limits | has("cpu")) then {cpu: $rm.static.limits.cpu} else {} end)
+                              + (if ($rm.static.limits | has("memory")) then {memory: $rm.static.limits.memory} else {} end)
+                            )
+                          }
+                        else {} end)
+                    )
+                  }
+                else {} end)
+            ) |
+            del(.spec.resourcesManagement)
+          end
+        )
+      else
+        .
+      end
+    )
+  '); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of ingressnginxcontrollers.deckhouse.io from v2 to v1 failed"}
+EOF
+  fi
+}
+
+hook::run "$@"
+

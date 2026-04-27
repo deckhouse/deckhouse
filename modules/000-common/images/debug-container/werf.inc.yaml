@@ -2,7 +2,7 @@
 {{- $iptables_image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-binaries-artifact
-fromImage: common/relocate-artifact
+from: {{ index $.Images "builder/alpine" }}
 final: false
 import:
 - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
@@ -27,17 +27,13 @@ shell:
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless" }}
 import:
-- image: common-base-python-artifact
+- from: {{ index $.Images "libs/musl" }}
+  add: /usr/lib/libc.so
+  to: /usr/lib/libc.so
+  before: install
+- from: {{ index $.Images "libs/musl" }}
   add: /lib/ld-musl-x86_64.so.1
   to: /lib/ld-musl-x86_64.so.1
-  before: install
-- image: common-base-python-artifact
-  add: /usr
-  to: /usr
-  includePaths:
-  - bin/python*
-  - lib/python*
-  - lib/libc.so
   before: install
 - from: {{ index $.Images "tools/curl" }}
   add: /usr/bin/curl

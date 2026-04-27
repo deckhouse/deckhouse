@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -54,15 +55,16 @@ type Params struct {
 	CommanderUUID uuid.UUID
 	*commander.CommanderModeParams
 	Checker                    *check.Checker
-	OnCheckResult              func(*check.CheckResult) error
+	OnCheckResult              func(context.Context, *check.CheckResult) error
 	ApproveDestructiveChangeID string
 
 	InfrastructureContext *infrastructure.Context
 	ProviderGetter        infrastructure.CloudProviderGetter
 
-	TmpDir  string
-	Logger  log.Logger
-	IsDebug bool
+	TmpDir          string
+	Logger          log.Logger
+	IsDebug         bool
+	DirectoryConfig *directoryconfig.DirectoryConfig
 
 	NoSwitchToNodeUser bool
 
@@ -114,7 +116,7 @@ func (c *Converger) applyParams() error {
 func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	{
 		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
-		state, err := phases.ExtractDhctlState(cache.Global())
+		state, err := phases.ExtractDhctlState(ctx, cache.Global())
 		if err != nil {
 			return fmt.Errorf("unable to extract dhctl state: %w", err)
 		}
@@ -149,10 +151,6 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return err
 		}
 
-		if err != nil {
-			return err
-		}
-
 		kubeCl = client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err
@@ -177,7 +175,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
+		err = cache.InitWithOptions(ctx, cacheIdentity, cache.CacheOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 		}
@@ -185,12 +183,12 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 
 	stateCache := cache.Global()
 
-	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+	if err := c.PhasedExecutionContext.InitPipeline(ctx, stateCache); err != nil {
 		return err
 	}
 	c.lastState = nil
 	defer func() {
-		_ = c.PhasedExecutionContext.Finalize(stateCache)
+		_ = c.PhasedExecutionContext.Finalize(ctx, stateCache)
 	}()
 
 	var convergeCtx *convergectx.Context
@@ -235,7 +233,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	var inLockRunner *lock.InLockRunner
 	// No need for converge-lock in commander mode for bootstrap and converge operations
 	if !c.CommanderMode {
-		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
+		inLockRunner = lock.NewInLockLocalRunner(ctx, convergeCtx, "local-converger")
 	}
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, nil, convergectx.KubeClientSwitcherParams{
@@ -254,7 +252,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		return fmt.Errorf("converge problem: %v", err)
 	}
 
-	if err := c.PhasedExecutionContext.CompletePipeline(stateCache); err != nil {
+	if err := c.PhasedExecutionContext.CompletePipeline(ctx, stateCache); err != nil {
 		return err
 	}
 
@@ -264,7 +262,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	{
 		// TODO(dhctl-for-commander): pass stateCache externally using params as in the Destroyer, this block will be unneeded then
-		state, err := phases.ExtractDhctlState(cache.Global())
+		state, err := phases.ExtractDhctlState(ctx, cache.Global())
 		if err != nil {
 			return nil, fmt.Errorf("unable to extract dhctl state: %w", err)
 		}
@@ -309,7 +307,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err = cache.InitWithOptions(cacheIdentity, cache.CacheOptions{})
+		err = cache.InitWithOptions(ctx, cacheIdentity, cache.CacheOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize cache %s: %w", cacheIdentity, err)
 		}
@@ -317,12 +315,12 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 
 	stateCache := cache.Global()
 
-	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+	if err := c.PhasedExecutionContext.InitPipeline(ctx, stateCache); err != nil {
 		return nil, err
 	}
 	c.lastState = nil
 	defer func() {
-		_ = c.PhasedExecutionContext.Finalize(stateCache)
+		_ = c.PhasedExecutionContext.Finalize(ctx, stateCache)
 	}()
 
 	hasTerraformState := false
@@ -330,19 +328,21 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
 		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
+			KubeClient:      kubeCl,
+			Cache:           stateCache,
+			ChangeParams:    c.Params.ChangesSettings,
+			ProviderGetter:  c.ProviderGetter,
+			Logger:          c.Logger,
+			DirectoryConfig: c.DirectoryConfig,
 		}, c.Params.CommanderModeParams)
 	} else {
 		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
+			KubeClient:      kubeCl,
+			Cache:           stateCache,
+			ChangeParams:    c.Params.ChangesSettings,
+			ProviderGetter:  c.ProviderGetter,
+			Logger:          c.Logger,
+			DirectoryConfig: c.DirectoryConfig,
 		})
 	}
 
@@ -356,7 +356,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	if c.CommanderMode {
 		c.Checker.SetExternalPhasedContext(c.PhasedExecutionContext)
 
-		if shouldStop, err := c.PhasedExecutionContext.StartPhase(phases.ConvergeCheckPhase, false, stateCache); err != nil {
+		if shouldStop, err := c.PhasedExecutionContext.StartPhase(ctx, phases.ConvergeCheckPhase, false, stateCache); err != nil {
 			return nil, fmt.Errorf("unable to switch phase: %w", err)
 		} else if shouldStop {
 			return nil, nil
@@ -383,7 +383,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		log.InfoF("Has terraform state: %v\n", hasTerraformState)
 
 		if c.Params.OnCheckResult != nil {
-			if err := c.Params.OnCheckResult(checkRes); err != nil {
+			if err := c.Params.OnCheckResult(ctx, checkRes); err != nil {
 				return nil, cleanWithLog(err)
 			}
 		}
@@ -442,7 +442,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	var inLockRunner *lock.InLockRunner
 	// No need for converge-lock in commander mode for bootstrap and converge operations
 	if !c.CommanderMode {
-		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
+		inLockRunner = lock.NewInLockLocalRunner(ctx, convergeCtx, "local-converger")
 	}
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
@@ -478,7 +478,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		return nil, fmt.Errorf("converge problem: %v", err)
 	}
 
-	if err := c.PhasedExecutionContext.CompletePipeline(stateCache); err != nil {
+	if err := c.PhasedExecutionContext.CompletePipeline(ctx, stateCache); err != nil {
 		return nil, err
 	}
 
@@ -487,7 +487,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}, nil
 }
 
-func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Duration) error {
+func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
 	if err := c.applyParams(); err != nil {
 		return err
 	}

@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: f696557da90e4c6b50b933cfaeda46e6e858ea994620647fe9e371349a8827d4
+    ingress-nginx-controller.deckhouse.io/checksum: 15809cc09a1d17fa22c547906ca1df8847f6631e6ddb37595f450479a5bda1d8
     ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancerWithProxyProtocol
   labels:
@@ -139,6 +139,8 @@ spec:
           runAsGroup: 64535
           runAsNonRoot: true
           runAsUser: 64535
+          seccompProfile:
+            type: Unconfined
         volumeMounts:
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx

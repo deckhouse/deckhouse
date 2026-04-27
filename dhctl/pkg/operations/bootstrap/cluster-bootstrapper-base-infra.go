@@ -34,10 +34,11 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
-	metaConfig, err := config.ParseConfig(
+	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
+		b.DirectoryConfig,
 	)
 	if err != nil {
 		return err
@@ -57,7 +58,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
@@ -65,11 +66,11 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	stateCache := cache.Global()
 
 	if app.DropCache {
-		stateCache.Clean()
-		stateCache.Delete(state.TombstoneKey)
+		stateCache.Clean(ctx)
+		stateCache.Delete(ctx, state.TombstoneKey)
 	}
 
-	clusterUUID, err := generateClusterUUID(stateCache)
+	clusterUUID, err := generateClusterUUID(ctx, stateCache)
 	if err != nil {
 		return err
 	}
@@ -82,7 +83,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	defer cleanup()
 
-	return log.Process("bootstrap", "Cloud infrastructure", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Cloud infrastructure", func(ctx context.Context) error {
 		baseRunner, err := b.Params.InfrastructureContext.GetBootstrapBaseInfraRunner(ctx, metaConfig, stateCache)
 		if err != nil {
 			return err

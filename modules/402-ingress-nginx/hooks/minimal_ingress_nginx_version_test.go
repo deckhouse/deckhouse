@@ -26,7 +26,7 @@ var _ = Describe("Global hooks :: discovery :: minimal_ingress_version ", func()
 	initValuesString := `{"ingressNginx":{"defaultControllerVersion": "1.12", "internal": {}}}`
 	globalValuesString := `{}`
 	f := HookExecutionConfigInit(initValuesString, globalValuesString)
-	f.RegisterCRD("deckhouse.io", "v1", "IngressNginxController", false)
+	f.RegisterCRD("deckhouse.io", "v2", "IngressNginxController", false)
 
 	Context("IngressNginxController CR does not exist", func() {
 		BeforeEach(func() {
@@ -46,7 +46,7 @@ var _ = Describe("Global hooks :: discovery :: minimal_ingress_version ", func()
 	Context("Only one IngressNginxController CR exists", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: main
@@ -70,7 +70,7 @@ spec:
 	Context("IngressNginxController with default version", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: main
@@ -93,7 +93,7 @@ spec:
 	Context("Few IngressNginxController CR exist", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: first
@@ -101,7 +101,7 @@ spec:
   controllerVersion: "1.10"
   ingressClass: "test"
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: second
@@ -109,7 +109,7 @@ spec:
   controllerVersion: "0.33"
   ingressClass: "test2"
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: third
@@ -133,7 +133,7 @@ spec:
 	Context("Has incompatible ingress controllers", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: first
@@ -141,7 +141,7 @@ spec:
   controllerVersion: "1.10"
   ingressClass: "test"
 ---
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: second

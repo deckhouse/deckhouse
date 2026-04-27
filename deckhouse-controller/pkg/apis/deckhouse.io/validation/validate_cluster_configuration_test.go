@@ -282,6 +282,16 @@ func TestValidateKubernetesVersionDowngrade(t *testing.T) {
 			expectValid: false,
 			expectError: true,
 		},
+		{
+			name: "new version is numeric, old version is numeric too, " +
+				"but maxUsedControlPlaneKubernetesVersion is set and greater than old version",
+			oldVersion: "1.25.0",
+			newVersion: "1.24.0",
+			secretData: map[string][]byte{
+				"maxUsedControlPlaneKubernetesVersion": []byte("1.26.0"),
+			},
+			expectValid: false,
+		},
 	}
 
 	for _, tt := range tests {

@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -49,7 +50,7 @@ func (s *KubeTerraStateLoader) WithForceFromCache(f bool) *KubeTerraStateLoader 
 	return s
 }
 
-func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
+func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context, dc *directoryconfig.DirectoryConfig) (*config.MetaConfig, error) {
 	var metaConfig *config.MetaConfig
 	var err error
 
@@ -57,13 +58,13 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		WithMessage("Do you want to continue with Cluster configuration from local cache?").
 		WithYesByDefault()
 
-	ok, err := s.stateCache.InCache("cluster-config")
+	ok, err := s.stateCache.InCache(ctx, "cluster-config")
 	if err != nil {
 		return nil, err
 	}
 
 	if ok && (s.forceFromCache || confirmation.Ask()) {
-		if err := s.stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
+		if err := s.stateCache.LoadStruct(ctx, "cluster-config", &metaConfig); err != nil {
 			return nil, err
 		}
 		return metaConfig, nil
@@ -80,6 +81,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(s.logger),
 		),
+		dc,
 	)
 	if err != nil {
 		return nil, err
@@ -90,7 +92,7 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		return nil, err
 	}
 
-	if err := s.stateCache.SaveStruct("cluster-config", metaConfig); err != nil {
+	if err := s.stateCache.SaveStruct(ctx, "cluster-config", metaConfig); err != nil {
 		return nil, err
 	}
 
@@ -120,13 +122,13 @@ func (s *KubeTerraStateLoader) getNodesState(ctx context.Context) (map[string]st
 		WithMessage("Do you want to continue with Nodes state from local cache?").
 		WithYesByDefault()
 
-	ok, err := s.stateCache.InCache("nodes-state")
+	ok, err := s.stateCache.InCache(ctx, "nodes-state")
 	if err != nil {
 		return nil, err
 	}
 
 	if ok && (s.forceFromCache || confirmation.Ask()) {
-		if err := s.stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
+		if err := s.stateCache.LoadStruct(ctx, "nodes-state", &nodesState); err != nil {
 			return nil, err
 		}
 	} else {
@@ -137,7 +139,7 @@ func (s *KubeTerraStateLoader) getNodesState(ctx context.Context) (map[string]st
 		if err != nil {
 			return nil, err
 		}
-		err := s.stateCache.SaveStruct("nodes-state", nodesState)
+		err := s.stateCache.SaveStruct(ctx, "nodes-state", nodesState)
 		if err != nil {
 			return nil, err
 		}
@@ -155,13 +157,13 @@ func (s *KubeTerraStateLoader) getClusterState(ctx context.Context) ([]byte, err
 		WithMessage("Do you want to continue with Cluster state from local cache?").
 		WithYesByDefault()
 
-	ok, err := s.stateCache.InCache("cluster-state")
+	ok, err := s.stateCache.InCache(ctx, "cluster-state")
 	if err != nil {
 		return nil, err
 	}
 
 	if ok && (s.forceFromCache || confirmation.Ask()) {
-		clusterState, err = s.stateCache.Load("cluster-state")
+		clusterState, err = s.stateCache.Load(ctx, "cluster-state")
 		if err != nil || len(clusterState) == 0 {
 			return nil, fmt.Errorf("can't load cluster state from cache")
 		}
@@ -173,7 +175,7 @@ func (s *KubeTerraStateLoader) getClusterState(ctx context.Context) ([]byte, err
 		if err != nil {
 			return nil, err
 		}
-		if err := s.stateCache.Save("cluster-state", clusterState); err != nil {
+		if err := s.stateCache.Save(ctx, "cluster-state", clusterState); err != nil {
 			return nil, err
 		}
 	}

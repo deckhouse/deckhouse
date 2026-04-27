@@ -13,6 +13,21 @@
   pointer-events: auto;
 }
 
+.zoom-image-alt {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  right: 160px;
+  z-index: 2147483647;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 18px;
+  overflow: auto;
+}
+
 .zoom-image-toolbar .gclose {
   position: static;
   top: auto;
@@ -76,12 +91,19 @@
   display: none !important;
 }
 
-.gslide-image img.zoomable {
-    transform-origin: center center;
-    will-change: transform;
-    user-select: none;
-    touch-action: none;
+.gslide-image {
+  img {
+    max-height: 86vh !important;
+
+    &.zoomable {
+      transform-origin: center center;
+      will-change: transform;
+      user-select: none;
+      touch-action: none;
+    }
+  }
 }
+
 
 .glightbox-container .gslide-image img.zoom-image-svg {
   padding: 12px;

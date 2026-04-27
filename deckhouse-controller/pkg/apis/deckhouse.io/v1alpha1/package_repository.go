@@ -33,7 +33,7 @@ const (
 
 	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
 
-	PackageRepositoryConditionLastOperationScanFinished = "LastOperationScanFinished"
+	PackageRepositoryConditionLastScanSucceeded = "LastScanSucceeded"
 )
 
 var (
@@ -58,7 +58,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
 // +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.syncTime
-// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastOperationScanFinished')].message
+// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
 // PackageRepository is a source of packages for Deckhouse.
@@ -78,9 +78,9 @@ type PackageRepository struct {
 
 type PackageRepositorySpec struct {
 	// Interval for registry scan.
-	//
 	// Defines the frequency of checking the container registry for new packages.
 	// +optional
+	// +kubebuilder:validation:Pattern=`^(\d+h)?(\d+m)?(\d+s)?$`
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty"`
 	// Configuration for the package registry.
 	Registry PackageRepositorySpecRegistry `json:"registry"`
@@ -101,6 +101,14 @@ type PackageRepositorySpecRegistry struct {
 	// Certificate authority data for TLS verification.
 	// +optional
 	CA string `json:"ca,omitempty"`
+
+	// Login from the repository
+	// +optional
+	Login string `json:"login,omitempty"`
+
+	// Password from the repository
+	// +optional
+	Password string `json:"password,omitempty"`
 }
 
 type PackageRepositoryStatus struct {

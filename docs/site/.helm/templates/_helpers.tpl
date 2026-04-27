@@ -1,8 +1,30 @@
 {{- define "resources" }}
 resources:
   requests:
-    memory: {{ pluck .Values.web.env .Values.resources.requests.memory | first | default .Values.resources.requests.memory._default }}
+    memory: {{ pluck .Values.web.env .Values.resources.requests.memory._default | first | default .Values.resources.requests.memory._default._default }}
 {{- end }}
+
+{{- define "resources-registry-modules-watcher" }}
+resources:
+  requests:
+    memory: {{ pluck .Values.web.env .Values.resources.requests.memory.registryModulesWatcher._default | first | default .Values.resources.requests.memory.registryModulesWatcher._default._default }}
+{{- end }}
+
+{{- define "resources-moduleslibrary-builder" }}
+resources:
+  requests:
+    memory: {{ pluck .Values.web.env .Values.resources.requests.memory.moduleslibrary.builder | first | default .Values.resources.requests.memory.moduleslibrary.builder._default }}
+  limits:
+    memory: {{ pluck .Values.web.env .Values.resources.limits.memory.moduleslibrary.builder | first | default .Values.resources.limits.memory.moduleslibrary.builder._default }}
+{{- end}}
+
+{{- define "resources-moduleslibrary-web" }}
+resources:
+  requests:
+    memory: {{ pluck .Values.web.env .Values.resources.requests.memory.moduleslibrary.web | first | default .Values.resources.requests.memory.moduleslibrary.web._default }}
+  limits:
+    memory: {{ pluck .Values.web.env .Values.resources.limits.memory.moduleslibrary.web | first | default .Values.resources.limits.memory.moduleslibrary.web._default }}
+{{- end}}
 
 {{- define "vrouter_envs" }}
 - name: VROUTER_DEFAULT_GROUP

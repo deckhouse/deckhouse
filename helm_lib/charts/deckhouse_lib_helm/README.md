@@ -32,6 +32,13 @@
 | [helm_lib_application_container_security_context_capabilities_drop_all_and_add](#helm_lib_application_container_security_context_capabilities_drop_all_and_add) |
 | [helm_lib_application_container_security_context_capabilities_drop_all_and_run_as_user_custom](#helm_lib_application_container_security_context_capabilities_drop_all_and_run_as_user_custom) |
 | [helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted](#helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted) |
+| **Capi Controller Manager** |
+| [helm_lib_capi_controller_manager_manifests](#helm_lib_capi_controller_manager_manifests) |
+| **Cloud Controller Manager** |
+| [helm_lib_cloud_controller_manager_manifests](#helm_lib_cloud_controller_manager_manifests) |
+| **Cloud Data Discoverer** |
+| [helm_lib_cloud_data_discoverer_manifests](#helm_lib_cloud_data_discoverer_manifests) |
+| [helm_lib_cloud_data_discoverer_pod_monitor](#helm_lib_cloud_data_discoverer_pod_monitor) |
 | **Csi Controller** |
 | [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
 | **Dns Policy** |
@@ -474,6 +481,156 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+## Capi Controller Manager
+
+### helm_lib_capi_controller_manager_manifests
+
+ Renders common manifests for provider-specific CAPI Controller Managers. 
+ Includes Deployment, VerticalPodAutoscaler (optional) and PodDisruptionBudget (optional). 
+ Supported configuration parameters: 
+ + fullname (required) — resource base name used for Deployment, PDB, VPA, and by default for the main container name. 
+ + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. 
+ + image (required) — image for the main container. 
+ + capiProviderName (required) — value for the cluster.x-k8s.io/provider label in selectors and pod labels. 
+ + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. 
+ + priorityClassName (optional, default: `"system-cluster-critical"`) — Pod priority class name. 
+ + serviceAccountName (optional, default: `$config.fullname`) — ServiceAccount name used by the Pod. 
+ + automountServiceAccountToken (optional, default: `true`) — controls whether the service account token is mounted into the Pod. 
+ + revisionHistoryLimit (optional, default: `2`) — number of old ReplicaSets retained by the Deployment. 
+ + terminationGracePeriodSeconds (optional, default: `10`) — Pod termination grace period. 
+ + hostNetwork (optional, default: `false`) — enables host networking for the Pod. 
+ + dnsPolicy (optional, default: `nil`) — Pod DNS policy; if not set, the field is omitted. 
+ + nodeSelectorStrategy (optional, default: `"master"`) — strategy passed to helm_lib_node_selector. 
+ + tolerationsStrategies (optional, default: `["any-node", "uninitialized"]`) — arguments passed to helm_lib_tolerations. 
+ + livenessProbe (optional, default: `{httpGet: {path: /healthz, port: 8081}, initialDelaySeconds: 15, periodSeconds: 20}`) — liveness probe configuration for the main container. 
+ + readinessProbe (optional, default: `{httpGet: {path: /readyz, port: 8081}, initialDelaySeconds: 5, periodSeconds: 10}`) — readiness probe configuration for the main container. 
+ + additionalArgs (optional, default: `[]`) — extra args for the main container. 
+ + additionalEnv (optional, default: `[]`) — extra environment variables for the main container. 
+ + additionalPorts (optional, default: `[]`) — extra container ports for the main container. 
+ + additionalInitContainers (optional, default: `[]`) — extra initContainers for the Pod. 
+ + additionalVolumeMounts (optional, default: `[]`) — extra volumeMounts for the main container. 
+ + additionalVolumes (optional, default: `[]`) — extra Pod volumes. 
+ + additionalPodLabels (optional, default: `{}`) — extra labels added to the pod template metadata. 
+ + additionalPodAnnotations (optional, default: `{}`) — extra annotations added to the pod template metadata. 
+ + pdbEnabled (optional, default: `true`) — enables PodDisruptionBudget rendering. 
+ + pdbMaxUnavailable (optional, default: `1`) — maxUnavailable value for PodDisruptionBudget. 
+ + vpaEnabled (optional, default: `false`) — enables VerticalPodAutoscaler rendering. 
+ + vpaUpdateMode (optional, default: `"InPlaceOrRecreate"`) — VPA update mode. 
+ + vpaMaxAllowed (optional, default: `{cpu: 50m, memory: 50Mi}`) — maximum resource values used in VPA policy. 
+ + securityPolicyExceptionEnabled (optional, default: `false`) — enables SecurityPolicyException rendering and adds the related pod label. 
+
+#### Usage
+
+`{{ include "helm_lib_capi_controller_manager_manifests" (list . $config) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc. 
+-  Configuration dict for the CAPI Controller Manager. 
+
+## Cloud Controller Manager
+
+### helm_lib_cloud_controller_manager_manifests
+
+ Renders common manifests for provider-specific Cloud Controller Managers. 
+ Includes Deployment, VerticalPodAutoscaler (optional), PodDisruptionBudget (optional), and SecurityPolicyException (optional). 
+ Supported configuration parameters: 
+ + fullname (optional, default: `"cloud-controller-manager"`) — resource base name used for Deployment, PDB, VPA, SecurityPolicyException, and the main container name by default. 
+ + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. 
+ + image (required) — image for the main container. 
+ + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. 
+ + priorityClassName (optional, default: `"system-cluster-critical"`) — Pod priority class name. 
+ + nodeSelectorStrategy (optional, default: `"master"`) — strategy passed to helm_lib_node_selector. 
+ + tolerationsStrategies (optional, default: ["wildcard"]) — strategies passed to helm_lib_tolerations. 
+ + hostNetwork (optional, default: `true`) — enables host networking for the Pod and SecurityPolicyException network rule generation. 
+ + dnsPolicy (optional, default: `"Default"`) — Pod DNS policy. 
+ + automountServiceAccountToken (optional, default: `true`) — controls whether the service account token is mounted into the Pod. 
+ + serviceAccountName (optional, default: `$config.fullname`) — ServiceAccount name used by the Pod. 
+ + revisionHistoryLimit (optional, default: `2`) — number of old ReplicaSets retained by the Deployment. 
+ + livenessProbe (optional, default: `{httpGet: {path: /healthz, port: 10471, host: 127.0.0.1, scheme: HTTPS}}`) — liveness probe configuration for the main container. 
+ + readinessProbe (optional, default: `{httpGet: {path: /healthz, port: 10471, host: 127.0.0.1, scheme: HTTPS}}`) — readiness probe configuration for the main container. 
+ + additionalEnvs (optional, default: `[]`) — extra environment variables for the main container. 
+ + additionalArgs (optional, default: `nil`) — extra args for the main container. 
+ + additionalVolumeMounts (optional, default: `[]`) — extra volumeMounts for the main container. 
+ + additionalVolumes (optional, default: `[]`) — extra Pod volumes; hostPath volumes are also used to build SecurityPolicyException rules when enabled. 
+ + additionalPodLabels (optional, default: `{}`) — extra labels added to the pod template metadata. 
+ + additionalPodAnnotations (optional, default: `{}`) — extra annotations added to the pod template metadata. 
+ + pdbEnabled (optional, default: `true`) — enables PodDisruptionBudget rendering. 
+ + pdbMaxUnavailable (optional, default: `1`) — maxUnavailable value for PodDisruptionBudget. 
+ + additionalPDBAnnotations (optional, default: `{}`) — extra annotations added to PodDisruptionBudget metadata. 
+ + vpaEnabled (optional, default: `true`) — enables VerticalPodAutoscaler rendering. 
+ + vpaUpdateMode (optional, default: `"InPlaceOrRecreate"`) — VPA update mode. 
+ + vpaMaxAllowed (optional, default: `{cpu: 50m, memory: 50Mi}`) — maximum resource values used in VPA policy. 
+ + securityPolicyExceptionEnabled (optional, default: `false`) — enables SecurityPolicyException rendering and adds the related pod label. 
+
+#### Usage
+
+`{{ include "helm_lib_cloud_controller_manager_manifests" (list . $config) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc. 
+-  Configuration dict for the Cloud Controller Manager. 
+
+## Cloud Data Discoverer
+
+### helm_lib_cloud_data_discoverer_manifests
+
+ Renders common manifests for provider-specific Cloud Data Discoverers. 
+ Includes Deployment, VerticalPodAutoscaler (optional) and PodDisruptionBudget (optional). 
+ Supported configuration parameters: 
+ + fullname (optional, default: `"cloud-data-discoverer"`) — resource base name used for Deployment, PDB, VPA, and the main container name by default. 
+ + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. 
+ + image (required) — image for the main container. 
+ + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. 
+ + replicas (optional, default: `1`) — number of Deployment replicas. 
+ + revisionHistoryLimit (optional, default: `2`) — number of old ReplicaSets retained by the Deployment. 
+ + serviceAccountName (optional, default: `$config.fullname`) — ServiceAccount name used by the Pod. 
+ + automountServiceAccountToken (optional, default: `true`) — controls whether the service account token is mounted into the Pod. 
+ + priorityClassName (optional, default: `"cluster-low"`) — Pod priority class name. 
+ + nodeSelectorStrategy (optional, default: `"master"`) — strategy passed to helm_lib_node_selector. 
+ + tolerationsStrategies (optional, default: `["any-node", "with-uninitialized"]`) — strategies passed to helm_lib_tolerations. 
+ + livenessProbe (optional, default: `{httpGet: {path: /healthz, port: 8080, scheme: HTTPS}}`) — liveness probe configuration for the main container. 
+ + readinessProbe (optional, default: `{httpGet: {path: /healthz, port: 8080, scheme: HTTPS}}`) — readiness probe configuration for the main container. 
+ + additionalArgs (optional, default: `[]`) — extra args for the main container. 
+ + additionalEnv (optional, default: `[]`) — extra environment variables for the main container. 
+ + additionalPodLabels (optional, default: `{}`) — extra labels added to the pod template metadata. 
+ + additionalPodAnnotations (optional, default: `{}`) — extra annotations added to the pod template metadata. 
+ + additionalInitContainers (optional, default: `[]`) — extra initContainers for the Pod. 
+ + additionalVolumes (optional, default: `[]`) — extra Pod volumes. 
+ + additionalVolumeMounts (optional, default: `[]`) — extra volumeMounts for the main container. 
+ + pdbEnabled (optional, default: `true`) — enables PodDisruptionBudget rendering. 
+ + pdbMaxUnavailable (optional, default: `1`) — maxUnavailable value for PodDisruptionBudget. 
+ + vpaEnabled (optional, default: `true`) — enables VerticalPodAutoscaler rendering. 
+ + vpaUpdateMode (optional, default: `"Initial"`) — VPA update mode. 
+ + vpaMaxAllowed (optional, default: `{cpu: 50m, memory: 50Mi}`) — maximum resource values used in VPA policy. 
+
+#### Usage
+
+`{{ include "helm_lib_cloud_data_discoverer_manifests" (list . $config) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc. 
+-  Configuration dict for the Cloud Data Discoverer. 
+
+
+### helm_lib_cloud_data_discoverer_pod_monitor
+
+ Renders PodMonitor manifest for provider-specific Cloud Data Discoverers. 
+ Supported configuration parameters: 
+ + fullname (optional, default: `"cloud-data-discoverer"`) — PodMonitor base name. 
+ + targetNamespace (required) — target pod namespace for selector. 
+ + additionalRelabelings (optional, default: `[]`) — additional rules for labels rewriting. 
+
+#### Usage
+
+`{{ include "helm_lib_cloud_data_discoverer_pod_monitor" (list . $config) }} `
+
 
 ## Csi Controller
 

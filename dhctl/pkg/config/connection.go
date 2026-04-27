@@ -261,5 +261,9 @@ func parseConnectionConfigFromFile(path string) (*ConnectionConfig, error) {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
 	}
 
-	return ParseConnectionConfig(string(configData), NewSchemaStore(), ValidateOptionValidateExtensions(true))
+	return ParseConnectionConfig(
+		string(configData),
+		NewSchemaStore(app.GetDirConfig()),
+		ValidateOptionValidateExtensions(true),
+	)
 }

@@ -15,17 +15,17 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/name212/govalue"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -42,7 +42,9 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		logger := log.GetDefaultLogger()
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
@@ -53,10 +55,11 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 			Logger:   logger,
 			IsDebug:  app.IsDebug,
 		})
-		exporter.Start(context.Background())
+
+		exporter.Start(ctx)
+
 		return nil
 	})
-	return cmd
 }
 
 func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -65,9 +68,10 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
 		logger.LogInfoLn("Check started ...\n")
 
 		// Skip AskBecomePassword for terraform check as it will be requested later during SSH operations
@@ -81,7 +85,9 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		if govalue.IsNil(sshClient) && !app.KubeConfigInCluster {
-			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl terraform check --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
+			return fmt.Errorf("Not enough flags were passed to perform the operation.\n" +
+				"Use dhctl terraform check --help to get available flags.\n" +
+				"Ssh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
 
 		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
@@ -95,6 +101,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
+			app.GetDirConfig(),
 		)
 		if err != nil {
 			return err
@@ -118,7 +125,12 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		statistic, needMigrationToTofu, err := check.CheckState(
-			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter, logger), check.CheckStateOptions{}, false,
+			ctx,
+			kubeCl,
+			metaConfig,
+			infrastructure.NewContextWithProvider(providerGetter, logger),
+			check.CheckStateOptions{},
+			false,
 		)
 		if err != nil {
 			return err
@@ -129,13 +141,14 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return fmt.Errorf("Failed to format check result: %w", err)
 		}
 
+		// todo(log): why do not use logger?
 		fmt.Print(string(data))
 
 		if provider.NeedToUseTofu() && needMigrationToTofu {
+			// todo(log): why do not use logger?
 			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
 		}
 
 		return provider.Cleanup()
 	})
-	return cmd
 }

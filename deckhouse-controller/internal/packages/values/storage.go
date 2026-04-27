@@ -106,13 +106,18 @@ func (s *Storage) GetValues() addonutils.Values {
 	return s.resultValues
 }
 
-// GetConfigValues returns only user-defined config values (from Application.spec.settings).
-// Does not include static values, schema defaults, or patches.
-func (s *Storage) GetConfigValues() addonutils.Values {
+// GetSettings returns config values with config-schema defaults applied.
+// Available in templates as .Application.Settings or .Module.Settings.
+func (s *Storage) GetSettings() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return s.configValues
+	settings := s.configValues
+	if len(settings) == 0 {
+		settings = addonutils.Values{}
+	}
+
+	return s.openapiDefaultsTransformer(validation.ConfigValuesSchema).Transform(settings)
 }
 
 // ApplyDefaultsConfigValues returns a copy of the provided values with defaults

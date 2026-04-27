@@ -45,7 +45,7 @@ type Params struct {
 	CommanderMode         bool
 	CommanderUUID         uuid.UUID
 	SSHClient             node.SSHClient
-	OnCheckResult         func(*check.CheckResult) error
+	OnCheckResult         func(context.Context, *check.CheckResult) error
 	InfrastructureContext *infrastructure.Context
 	OnPhaseFunc           OnPhaseFunc
 	OnProgressFunc        phases.OnProgressFunc
@@ -114,14 +114,14 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 
 	stateCache := cache.Global()
 
-	if err = i.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+	if err = i.PhasedExecutionContext.InitPipeline(ctx, stateCache); err != nil {
 		return nil, err
 	}
 	defer func() {
-		_ = i.PhasedExecutionContext.Finalize(stateCache)
+		_ = i.PhasedExecutionContext.Finalize(ctx, stateCache)
 	}()
 
-	if shouldStop, err := i.PhasedExecutionContext.StartPhase(phases.CommanderAttachScanPhase, false, stateCache); err != nil {
+	if shouldStop, err := i.PhasedExecutionContext.StartPhase(ctx, phases.CommanderAttachScanPhase, false, stateCache); err != nil {
 		return nil, fmt.Errorf("unable to switch phase: %w", err)
 	} else if shouldStop {
 		return &AttachResult{}, nil
@@ -133,7 +133,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	}
 
 	if ptr.Deref(i.Params.ScanOnly, true) {
-		if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, PhaseData{
+		if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(ctx, stateCache, PhaseData{
 			ScanResult: scanResult,
 		}); err != nil {
 			return nil, fmt.Errorf("unable to complete phase: %w", err)
@@ -142,6 +142,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
+		ctx,
 		phases.CommanderAttachCapturePhase,
 		false,
 		stateCache,
@@ -158,6 +159,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 	}
 
 	if shouldStop, err := i.PhasedExecutionContext.SwitchPhase(
+		ctx,
 		phases.CommanderAttachCheckPhase,
 		false,
 		stateCache,
@@ -174,7 +176,7 @@ func (i *Attacher) Attach(ctx context.Context) (*AttachResult, error) {
 		log.WarnF("Can't check attached cluster: %s\n", err)
 	}
 
-	if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(stateCache, PhaseData{
+	if err = i.PhasedExecutionContext.CompletePhaseAndPipeline(ctx, stateCache, PhaseData{
 		CheckResult: checkResult,
 	}); err != nil {
 		return nil, fmt.Errorf("unable to complete phase: %w", err)
@@ -193,7 +195,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		metaConfig *config.MetaConfig
 	)
 
-	err := log.Process("attach", "Prepare cluster attach", func() error {
+	return kubeClient, metaConfig, log.ProcessCtx(ctx, "attach", "Prepare cluster attach", func(ctx context.Context) error {
 		var err error
 
 		kubeClient, err = kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(i.Params.SSHClient))
@@ -207,6 +209,7 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(i.Params.Logger),
 			),
+			nil,
 		)
 		if err != nil {
 			return fmt.Errorf("unable to parse cluster config: %w", err)
@@ -222,14 +225,12 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 		}
 
 		cachePath := metaConfig.CachePath()
-		if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
+		if err := cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: nil, ResetInitialState: true}); err != nil {
 			return fmt.Errorf("unable to init cache: %w", err)
 		}
 
 		return nil
 	})
-
-	return kubeClient, metaConfig, err
 }
 
 func (i *Attacher) scan(
@@ -239,7 +240,7 @@ func (i *Attacher) scan(
 ) (*ScanResult, error) {
 	var res *ScanResult
 
-	err := log.Process("commander/attach", "Scan cluster", func() error {
+	return res, log.ProcessCtx(ctx, "commander/attach", "Scan cluster", func(ctx context.Context) error {
 		var err error
 		stateCache := cache.Global()
 
@@ -254,7 +255,7 @@ func (i *Attacher) scan(
 			return fmt.Errorf("unable to get cluster uuid: %w", err)
 		}
 
-		if err = stateCache.Save("uuid", []byte(metaConfig.UUID)); err != nil {
+		if err = stateCache.Save(ctx, "uuid", []byte(metaConfig.UUID)); err != nil {
 			return fmt.Errorf("unable to save cluster uuid to cache: %w", err)
 		}
 
@@ -297,7 +298,7 @@ func (i *Attacher) scan(
 			return fmt.Errorf("unable get cluster tf state: %w", err)
 		}
 
-		if err = stateCache.Save("base-infrastructure.tfstate", clusterState); err != nil {
+		if err = stateCache.Save(ctx, "base-infrastructure.tfstate", clusterState); err != nil {
 			return fmt.Errorf("unable to save cluster tf state to cache: %w", err)
 		}
 
@@ -305,7 +306,7 @@ func (i *Attacher) scan(
 		for _, ngState := range nodesState {
 			for node, nState := range ngState.State {
 				key := fmt.Sprintf("%s.tfstate", node)
-				if err = stateCache.Save(key, nState); err != nil {
+				if err = stateCache.Save(ctx, key, nState); err != nil {
 					return fmt.Errorf("unable to save node tf state to cache: %w", err)
 				}
 
@@ -314,28 +315,27 @@ func (i *Attacher) scan(
 				if err != nil {
 					return fmt.Errorf("unable to parse master ssh hosts: %w", err)
 				}
+
 				if state.Outputs.MasterIPAddressForSSH.Value != "" {
 					hosts[node] = state.Outputs.MasterIPAddressForSSH.Value
 				}
 			}
 		}
 
-		err = stateCache.SaveStruct("cluster-hosts", hosts)
+		err = stateCache.SaveStruct(ctx, "cluster-hosts", hosts)
 		if err != nil {
 			return fmt.Errorf("unable to save master ssh hosts: %w", err)
 		}
 
 		return nil
 	})
-
-	return res, err
 }
 
 func (i *Attacher) capture(
 	ctx context.Context,
 	kubeClient *client.KubernetesClient,
 ) error {
-	return log.Process("commander/attach", "Capture cluster", func() error {
+	return log.ProcessCtx(ctx, "commander/attach", "Capture cluster", func(ctx context.Context) error {
 		attachResources, err := template.ParseResourcesContent(
 			i.Params.AttachResources.Template,
 			i.Params.AttachResources.Values,
@@ -365,7 +365,7 @@ func (i *Attacher) check(
 ) (*check.CheckResult, error) {
 	var res *check.CheckResult
 
-	err := log.Process("commander/attach", "Check cluster", func() error {
+	return res, log.ProcessCtx(ctx, "commander/attach", "Check cluster", func(ctx context.Context) error {
 		var err error
 
 		checker := check.NewChecker(&check.Params{
@@ -392,15 +392,13 @@ func (i *Attacher) check(
 		}
 
 		if i.Params.OnCheckResult != nil {
-			if err = i.Params.OnCheckResult(res); err != nil {
+			if err = i.Params.OnCheckResult(ctx, res); err != nil {
 				return fmt.Errorf("OnCheckResult error: %w", err)
 			}
 		}
 
 		return nil
 	})
-
-	return res, err
 }
 
 func extractSSHPublicKey(providerName string, providerConfig map[string]json.RawMessage) (string, error) {

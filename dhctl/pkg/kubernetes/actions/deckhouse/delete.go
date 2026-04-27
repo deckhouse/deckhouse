@@ -41,6 +41,27 @@ const (
 	deckhouseDeploymentName      = "deckhouse"
 )
 
+func DeleteValidatingWebhookConfigurations(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop("Delete validating webhook configurations", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
+		vwcs, err := kubeCl.AdmissionregistrationV1().ValidatingWebhookConfigurations().List(ctx, metav1.ListOptions{
+			LabelSelector: "heritage=deckhouse",
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, vwc := range vwcs.Items {
+			err := kubeCl.AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(ctx, vwc.Name, metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				return err
+			}
+			log.InfoF("ValidatingWebhookConfiguration/%s\n", vwc.Name)
+		}
+
+		return nil
+	})
+}
+
 func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
 		foregroundPolicy := metav1.DeletePropagationForeground

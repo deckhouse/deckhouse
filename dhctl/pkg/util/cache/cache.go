@@ -16,6 +16,7 @@ package cache
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"fmt"
 	"os"
@@ -88,7 +89,7 @@ func NewStateCacheWithInitialState(dir string, initialState map[string][]byte) (
 }
 
 // SaveStruct saves bytes to a file
-func (s *StateCache) Save(name string, content []byte) error {
+func (s *StateCache) Save(ctx context.Context, name string, content []byte) error {
 	path := s.GetPath(name)
 	if err := os.WriteFile(path, content, 0o600); err != nil {
 		return err
@@ -100,18 +101,18 @@ func (s *StateCache) Save(name string, content []byte) error {
 }
 
 // SaveStruct saves go struct into the cache as a blob
-func (s *StateCache) SaveStruct(name string, v interface{}) error {
+func (s *StateCache) SaveStruct(ctx context.Context, name string, v interface{}) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {
 		return err
 	}
 
-	return s.Save(name, b.Bytes())
+	return s.Save(ctx, name, b.Bytes())
 }
 
 // InCache checks is file in cache or not
-func (s *StateCache) InCache(name string) (bool, error) {
+func (s *StateCache) InCache(ctx context.Context, name string) (bool, error) {
 	info, err := os.Stat(s.GetPath(name))
 	if os.IsNotExist(err) {
 		return false, nil
@@ -119,7 +120,7 @@ func (s *StateCache) InCache(name string) (bool, error) {
 	return !info.IsDir(), nil
 }
 
-func (s *StateCache) Clean() {
+func (s *StateCache) Clean(ctx context.Context) {
 	_ = os.RemoveAll(s.dir)
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
 		log.ErrorF("Failed to recreate cache directory %s: %v\n", s.dir, err)
@@ -132,14 +133,14 @@ func (s *StateCache) Clean() {
 	}
 }
 
-func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
+func (s *StateCache) CleanWithExceptions(ctx context.Context, excludeKeys ...string) {
 	excludeKeysSet := map[string]struct{}{}
 	for _, k := range excludeKeys {
 		excludeKeysSet[k] = struct{}{}
 	}
 
 	keysToRemove := make([]string, 0)
-	err := s.Iterate(func(key string, i []byte) error {
+	err := s.Iterate(ctx, func(key string, i []byte) error {
 		if _, ok := excludeKeysSet[key]; ok {
 			return nil
 		}
@@ -158,13 +159,13 @@ func (s *StateCache) CleanWithExceptions(excludeKeys ...string) {
 	}
 
 	for _, key := range keysToRemove {
-		s.Delete(key)
+		s.Delete(ctx, key)
 	}
 }
 
-func (s *StateCache) Delete(name string) {
+func (s *StateCache) Delete(ctx context.Context, name string) {
 	path := s.GetPath(name)
-	ok, _ := s.InCache(name)
+	ok, _ := s.InCache(ctx, name)
 	if ok {
 		if err := os.Remove(path); err != nil {
 			log.ErrorF("Failed to delete cache file %s: %v\n", path, err)
@@ -172,13 +173,13 @@ func (s *StateCache) Delete(name string) {
 	}
 }
 
-func (s *StateCache) Load(name string) ([]byte, error) {
+func (s *StateCache) Load(ctx context.Context, name string) ([]byte, error) {
 	return os.ReadFile(s.GetPath(name))
 }
 
 // LoadStruct loads go struct from the cache
-func (s *StateCache) LoadStruct(name string, v interface{}) error {
-	d, err := s.Load(name)
+func (s *StateCache) LoadStruct(ctx context.Context, name string, v interface{}) error {
+	d, err := s.Load(ctx, name)
 	if err != nil {
 		return fmt.Errorf("can't load struct for key %s: %v", name, err)
 	}
@@ -193,7 +194,7 @@ func (s *StateCache) GetPath(name string) string {
 	return filepath.Join(s.dir, name)
 }
 
-func (s *StateCache) Iterate(iterFunc func(string, []byte) error) error {
+func (s *StateCache) Iterate(ctx context.Context, iterFunc func(string, []byte) error) error {
 	walkFunc := func(path string, info os.FileInfo, _ error) error {
 		if info == nil || info.IsDir() {
 			return nil
@@ -226,18 +227,18 @@ func (s *StateCache) Dir() string {
 // DummyCache is a cache implementation which saves nothing and nowhere
 type DummyCache struct{}
 
-func (d *DummyCache) Save(n string, c []byte) error            { return nil }
-func (d *DummyCache) InCache(n string) (bool, error)           { return false, nil }
-func (d *DummyCache) Clean()                                   {}
-func (d *DummyCache) CleanWithExceptions(e ...string)          {}
-func (d *DummyCache) Delete(n string)                          {}
-func (d *DummyCache) Load(n string) ([]byte, error)            { return nil, nil }
-func (d *DummyCache) LoadStruct(n string, v interface{}) error { return nil }
-func (d *DummyCache) SaveStruct(n string, v interface{}) error { return nil }
-func (d *DummyCache) GetPath(n string) string                  { return "" }
-func (d *DummyCache) Iterate(func(string, []byte) error) error { return nil }
-func (d *DummyCache) NeedIntermediateSave() bool               { return false }
-func (d *DummyCache) Dir() string                              { return "" }
+func (d *DummyCache) Save(ctx context.Context, n string, c []byte) error            { return nil }
+func (d *DummyCache) SaveStruct(ctx context.Context, n string, v interface{}) error { return nil }
+func (d *DummyCache) InCache(ctx context.Context, n string) (bool, error)           { return false, nil }
+func (d *DummyCache) Clean(ctx context.Context)                                     {}
+func (d *DummyCache) CleanWithExceptions(ctx context.Context, e ...string)          {}
+func (d *DummyCache) Delete(ctx context.Context, n string)                          {}
+func (d *DummyCache) Load(ctx context.Context, n string) ([]byte, error)            { return nil, nil }
+func (d *DummyCache) LoadStruct(ctx context.Context, n string, v interface{}) error { return nil }
+func (d *DummyCache) GetPath(n string) string                                       { return "" }
+func (d *DummyCache) Iterate(context.Context, func(string, []byte) error) error     { return nil }
+func (d *DummyCache) NeedIntermediateSave() bool                                    { return false }
+func (d *DummyCache) Dir() string                                                   { return "" }
 
 type TestCache struct {
 	Store map[string][]byte
@@ -249,21 +250,21 @@ func NewTestCache() *TestCache {
 	}
 }
 
-func (d *TestCache) Save(n string, c []byte) error {
+func (d *TestCache) Save(ctx context.Context, n string, c []byte) error {
 	d.Store[n] = c
 	return nil
 }
 
-func (d *TestCache) InCache(n string) (bool, error) {
+func (d *TestCache) InCache(ctx context.Context, n string) (bool, error) {
 	_, ok := d.Store[n]
 	return ok, nil
 }
 
-func (d *TestCache) Clean() {
+func (d *TestCache) Clean(ctx context.Context) {
 	d.Store = make(map[string][]byte)
 }
 
-func (d *TestCache) CleanWithExceptions(e ...string) {
+func (d *TestCache) CleanWithExceptions(ctx context.Context, e ...string) {
 	n := make(map[string][]byte, 0)
 
 	for _, v := range e {
@@ -273,16 +274,16 @@ func (d *TestCache) CleanWithExceptions(e ...string) {
 	d.Store = n
 }
 
-func (d *TestCache) Delete(n string) {
+func (d *TestCache) Delete(ctx context.Context, n string) {
 	delete(d.Store, n)
 }
 
-func (d *TestCache) Load(n string) ([]byte, error) {
+func (d *TestCache) Load(ctx context.Context, n string) ([]byte, error) {
 	return d.Store[n], nil
 }
 
-func (d *TestCache) LoadStruct(n string, v interface{}) error {
-	data, err := d.Load(n)
+func (d *TestCache) LoadStruct(ctx context.Context, n string, v interface{}) error {
+	data, err := d.Load(ctx, n)
 	if err != nil {
 		return fmt.Errorf("can't load struct for key %s: %v", n, err)
 	}
@@ -290,21 +291,21 @@ func (d *TestCache) LoadStruct(n string, v interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(v)
 }
 
-func (d *TestCache) SaveStruct(n string, v interface{}) error {
+func (d *TestCache) SaveStruct(ctx context.Context, n string, v interface{}) error {
 	b := new(bytes.Buffer)
 	err := gob.NewEncoder(b).Encode(v)
 	if err != nil {
 		return err
 	}
 
-	return d.Save(n, b.Bytes())
+	return d.Save(ctx, n, b.Bytes())
 }
 
 func (d *TestCache) GetPath(n string) string {
 	return n
 }
 
-func (d *TestCache) Iterate(action func(string, []byte) error) error {
+func (d *TestCache) Iterate(ctx context.Context, action func(string, []byte) error) error {
 	for k, v := range d.Store {
 		err := action(k, v)
 		if err != nil {

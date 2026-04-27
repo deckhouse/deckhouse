@@ -3067,6 +3067,8 @@ alerts:
         - A reserved `metadata.labels` object `node-role.deckhouse.io/`, which doesn't end with `(system|frontend|monitoring|_deckhouse_module_name_)`.
         - A reserved `spec.taints` object `dedicated.deckhouse.io`, with a value other than `(system|frontend|monitoring|_deckhouse_module_name_)`.
 
+        This alert may fire if the corresponding module is missing or disabled in the cluster. It can be safely ignored if you are preparing nodes to enable a module that is currently disabled.
+
         For instructions on how to resolve this issue, refer to the [node allocation guide](https://deckhouse.io/modules/node-manager/faq.html#how-do-i-allocate-nodes-to-specific-loads).
       summary: |
         Node {{ $labels.name }} is using a reserved label or taint.
@@ -5349,6 +5351,30 @@ alerts:
       summary: |
         ModuleConfig {{ $labels.name }} is outdated.
       severity: "4"
+      markupFormat: markdown
+    - name: ModuleDocumentationRenderError
+      sourceFile: modules/810-documentation/monitoring/prometheus-rules/docs-builder.yaml
+      moduleUrl: 810-documentation
+      module: documentation
+      edition: ce
+      description: |-
+        An error occurred while rendering documentation for the `{{ $labels.module }}` module.
+        The broken module was removed from the documentation site during Hugo build.
+
+        Check the `ModuleDocumentation` resource status for details:
+
+        ```bash
+        d8 k get moduledocumentations {{ $labels.module }} -o yaml
+        ```
+
+        Check docs-builder logs for more information:
+
+        ```bash
+        d8 k -n d8-system logs -l app=docs-builder | grep -i "removed broken module"
+        ```
+      summary: |
+        Documentation rendering failed for module {{ $labels.module }}.
+      severity: "6"
       markupFormat: markdown
     - name: ModuleHasDeprecatedUpdatePolicy
       sourceFile: modules/340-monitoring-deckhouse/monitoring/prometheus-rules/alerting.yaml

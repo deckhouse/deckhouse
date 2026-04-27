@@ -332,7 +332,7 @@ masterNodeGroup:
 }
 
 func testSchemaStore(t *testing.T) *SchemaStore {
-	schemaStore := newSchemaStore([]string{"/tmp"})
+	schemaStore := newSchemaStore(nil, []string{"/tmp"})
 
 	clusterConfigSchema := []byte(`
 kind: ClusterConfiguration

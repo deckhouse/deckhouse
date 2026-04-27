@@ -641,16 +641,22 @@ spec:
           The CSI Controller requires hostPath volumes for accessing host-level resources needed for storage management operations specific to the cloud provider implementation.
     hostPath:
       allowedValues:
-      {{- range $vol := $additionalControllerVolumes }}
-        {{- if $vol.hostPath }}
-        - path: {{ $vol.hostPath.path }}
-          readOnly: false
+    {{- range $volume := $additionalControllerVolumes }}
+      {{- if $volume.hostPath }}
+      {{- $readOnly := false }}
+        {{- range $volumeMount := $additionalControllerVolumeMounts }}
+          {{- if eq $volumeMount.name $volume.name }}
+            {{- $readOnly = (default false $volumeMount.readOnly) }}
+          {{- end }}
+        {{- end }}
+        - path: {{ $volume.hostPath.path }}
+          readOnly: {{ $readOnly }}
           metadata:
             description: |
-              Allow access to additional hostPath volume at {{ $vol.hostPath.path }}.
+              Allow access to additional hostPath volume at {{ $volume.hostPath.path }}.
               This hostPath volume is required by the CSI Controller for storage management operations specific to the cloud provider implementation.
-        {{- end }}
       {{- end }}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}

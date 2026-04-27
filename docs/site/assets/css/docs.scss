@@ -2,18 +2,98 @@
 ---
 
 @use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
 
+.hidden {
+  display: none;
+}
 
 .navigation__container {
-  position: sticky;
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+  opacity: 1;
   margin: 0 0 25px;
   z-index: 50;
-  height: 69px;
+  height: 100%;
   background-color: #fff;
   transition: top .15s ease-in-out;
+
+  &:has(div.breadcrumbs__left) {
+    margin: 25px 0;
+  }
+
+  @include breakpoints.min-w(l) {
+    position: sticky;
+  }
+
+  @include breakpoints.max-w(xs) {
+    flex-direction: column;
+    align-items: start;
+    margin: 0 0 45px;
+  }
+
+  &--left {
+    display: flex;
+    align-items: center;
+
+    @media screen and (max-width: 600px) {
+      flex-direction: column;
+      align-items: start;
+    }
+
+    .version {
+      display: flex;
+      justify-content: start;
+      margin-right: 60px;
+      padding-top: 20px;
+      padding-bottom: 25px;
+      gap: 25px;
+      min-width: 297px;
+
+      @include breakpoints.max-w(xl) {
+        min-width: 250px;
+        margin-right: 40px;
+        gap: 15px;
+      }
+
+      @include breakpoints.max-w(l) {
+        min-width: 220px;
+        padding-top: 15px;
+        padding-bottom: 20px;
+        margin-right: 30px;
+      }
+
+      @include breakpoints.max-w(m) {
+        gap: 10px;
+      }
+
+      strong {
+        @include breakpoints.max-w(m) {
+          font-size: 12px;
+        }
+      }
+
+      .channel-menu > a {
+        @include breakpoints.max-w(m) {
+          font-size: 12px;
+        }
+      }
+    }
+
+    .breadcrumbs {
+      @include breakpoints.max-w(m) {
+        font-size: 12px;
+        line-height: 1.5;
+      }
+    }
+  }
+
+  &.fixed-navigation {
+    position: sticky;
+  }
 
   &.hidden {
     top: 0 !important;
@@ -29,10 +109,39 @@
     padding-top: 20px;
     padding-bottom: 25px;
     gap: 25px;
+
+    @include breakpoints.max-w(xl) {
+      min-width: 250px;
+    }
+
+    @include breakpoints.max-w(l) {
+      min-width: 297px;
+      margin: 0;
+    }
+
+    @include breakpoints.max-w(s) {
+      min-width: 220px;
+      padding-bottom: 20px;
+      gap: 10px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      min-width: 100%;
+      gap: 25px;
+      justify-content: space-between;
+    }
   }
 
   .breadcrumbs__container {
-    min-width: calc(1000px - 150px - 260px - 40px);
+    min-width: 450px;
+
+    @include breakpoints.max-w(xl) {
+      min-width: 400px;
+    }
+
+    @include breakpoints.max-w(l) {
+      display: none;
+    }
   }
 
   .searchV3 {
@@ -40,6 +149,33 @@
     width: 297px;
     min-width: 297px;
     margin-right: 28px;
+
+    @include breakpoints.max-w(xl) {
+      width: 250px;
+      min-width: 250px;
+    }
+
+    @include breakpoints.max-w(l) {
+      margin-right: 0;
+      z-index: 20;
+    }
+
+    @include breakpoints.max-w(m) {
+      width: 215px;
+      min-width: 215px;
+    }
+
+    @include breakpoints.max-w(s) {
+      width: 180px;
+      min-width: 180px;
+      margin-left: 0;
+    }
+
+    @include breakpoints.max-w(xs) {
+      justify-content: space-between;
+      width: 100%;
+      min-width: 100%;
+    }
   }
 }
 
@@ -53,12 +189,19 @@
 }
 
 .breadcrumbs__left {
-    //width: 300px;
     width: 297px;
     margin-right: 64px;
 
-    @media screen and (width < 1500px) {
+    @include breakpoints.max-w(xxl) {
       margin-right: 54px;
+    }
+
+    @include breakpoints.max-w(xl) {
+      width: 250px;
+    }
+
+    @media screen and (width < 1100px) {
+      margin-right: 38px;
     }
 
     &--link {
@@ -85,6 +228,10 @@
 .breadcrumbs__right {
   flex: 1;
   margin-right: 64px;
+
+  @include breakpoints.max-w(l) {
+    display: none;
+  }
 }
 
 .breadcrumbs {
@@ -122,6 +269,10 @@
 .breadcrumbs__item:not(:last-child)::after {
     content: '/';
     margin: 0 15px;
+
+    @include breakpoints.max-w(xl) {
+      margin: 0 5px;
+    }
 }
 
 .breadcrumbs__item > a {
@@ -420,6 +571,20 @@
   position: relative;
   width: 297px;
   min-width: 297px;
+
+  @include breakpoints.max-w(xl) {
+    width: 250px;
+    min-width: 250px;
+  }
+}
+
+.layout-sidebar:has(div.docs) {
+  .layout-sidebar__sidebar,
+  .layout-sidebar__sidebar_right {
+    @include breakpoints.max-w(l) {
+      display: none;
+    }
+  }
 }
 
 .layout-sidebar__sidebar::after,
@@ -457,11 +622,135 @@
   overflow-x: hidden;
   overflow-y: auto;
   font-size: 16px;
+
+  @include breakpoints.max-w(xl) {
+    font-size: 14px;
+  }
 }
 
 .layout-sidebar__content {
-    min-width: calc(1000px - 150px - 260px - 40px);
-    flex: 1;
+  min-width: 250px;
+  flex: 1;
+
+  &--tile {
+    @media screen and (width < 1500px) {
+      max-width: 100%;
+    }
+
+    .tippy-box {
+      border: none !important;
+      box-shadow: none !important;
+      text-transform: none;
+    }
+
+    .tippy-content {
+      padding: 0;
+    }
+
+    .tippy-arrow {
+        bottom: 2px;
+        z-index: 99999;
+        background-color: #fff;
+
+        &::before {
+            color: #fff;
+        }
+    }
+
+    .stages-tooltip {
+        width: 100%;
+        max-width: 310px;
+        height: 100%;
+        padding: 8px 8px 16px;
+        color: #2B313B;
+        font-style: normal;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 4px 8px rgba(16, 24, 40, 0.1);
+
+        &__title {
+            margin: 8;
+            margin-bottom: 2px;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 24px;
+            letter-spacing: 0.3px;
+        }
+
+        &__descr {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 18px;
+        }
+    }
+
+    .selected__filters {
+      margin-bottom: 28px;
+
+      &--list {
+        display: flex;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 12px;
+
+        .selected__filter--container {
+          display: flex;
+          max-width: calc(100% - 80px);
+          padding: 6px 12px;
+          align-items: center;
+          gap: 8px;
+          border-radius: 14px;
+          border: 1px solid #B2B8D9;
+          background: #F5F5FB;
+          color: #2B313B;
+          font-size: 14px;
+          font-style: normal;
+          font-weight: 400;
+          line-height: 24px;
+          letter-spacing: 0.3px;
+
+          .selected__filter {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+          }
+
+          .remove__filter {
+            width: 16px;
+            height: 16px;
+            background-image: url(/images/close-selected-filter.svg);
+            background-position: center;
+            background-repeat: no-repeat;
+            cursor: pointer;
+          }
+        }
+      }
+
+      .full-reset {
+        display: flex;
+        box-sizing: border-box;
+        width: 38px;
+        height: 38px;
+        padding: 6px 12px;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        border-radius: 14px;
+        background: #0064FF;
+        background-image: url(/images/full-reset.svg);
+        background-position: center;
+        background-repeat: no-repeat;
+        cursor: pointer;
+      }
+    }
+
+    @include breakpoints.max-w(xl) {
+      min-width: 400px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      min-width: 300px;
+    }
 
     @media screen and (max-width: 1000px) {
         background: #fff;
@@ -472,114 +761,8 @@
       @media screen and (width < 1500px) {
         max-width: 100%;
       }
-
-      .tippy-box {
-          border: none !important;
-          box-shadow: none !important;
-          text-transform: none;
-      }
-
-      .tippy-content {
-          padding: 0;
-      }
-
-      .tippy-arrow {
-          bottom: 2px;
-          z-index: 99999;
-          background-color: #fff;
-
-          &::before {
-              color: #fff;
-          }
-      }
-
-      .stages-tooltip {
-          width: 100%;
-          max-width: 310px;
-          height: 100%;
-          padding: 8px 8px 16px;
-          color: #2B313B;
-          font-style: normal;
-          background-color: #fff;
-          box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 4px 8px rgba(16, 24, 40, 0.1);
-
-          &__title {
-              margin: 8;
-              margin-bottom: 2px;
-              font-size: 14px;
-              font-weight: 600;
-              line-height: 24px;
-              letter-spacing: 0.3px;
-          }
-
-          &__descr {
-              margin: 0;
-              font-size: 12px;
-              font-weight: 400;
-              line-height: 18px;
-          }
-      }
-
-      .selected__filters {
-        margin-bottom: 28px;
-
-        &--list {
-          display: flex;
-          align-items: flex-start;
-          flex-wrap: wrap;
-          gap: 12px;
-
-          .selected__filter--container {
-            display: flex;
-            max-width: calc(100% - 80px);
-            padding: 6px 12px;
-            align-items: center;
-            gap: 8px;
-            border-radius: 14px;
-            border: 1px solid #B2B8D9;
-            background: #F5F5FB;
-            color: #2B313B;
-            font-size: 14px;
-            font-style: normal;
-            font-weight: 400;
-            line-height: 24px;
-            letter-spacing: 0.3px;
-
-            .selected__filter {
-              overflow: hidden;
-              white-space: nowrap;
-              text-overflow: ellipsis;
-            }
-
-            .remove__filter {
-              width: 16px;
-              height: 16px;
-              background-image: url(/images/close-selected-filter.svg);
-              background-position: center;
-              background-repeat: no-repeat;
-              cursor: pointer;
-            }
-          }
-        }
-
-        .full-reset {
-          display: flex;
-          box-sizing: border-box;
-          width: 38px;
-          height: 38px;
-          padding: 6px 12px;
-          justify-content: center;
-          align-items: center;
-          gap: 8px;
-          border-radius: 14px;
-          background: #0064FF;
-          background-image: url(/images/full-reset.svg);
-          background-position: center;
-          background-repeat: no-repeat;
-          cursor: pointer;
-        }
-      }
     }
+  }
 }
 
 .sidebar {
@@ -596,8 +779,11 @@
 }
 
 .sidebar__item {
-    margin-bottom: 18px;
     position: relative;
+
+    &:not(:last-child) {
+        margin-bottom: 18px;
+    }
 }
 
 .sidebar__item > a {
@@ -758,8 +944,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .sidebar__submenu-item > a {
     position: relative;
     display: block;
-    //display: inline-flex;
-    //align-items: center;
     font-size: 14px;
     color: #00122C;
     letter-spacing: -0.26px;
@@ -927,10 +1111,33 @@ a.comparison-table__module-proprietaryOkmeter::after {
     //line-height: 1.5;
     line-height: 24px;
     letter-spacing: -0.3px;
+
+    @include breakpoints.max-w(xl) {
+      letter-spacing: 0.3px;
+    }
+
+    @include breakpoints.max-w(s) {
+      font-size: 13px;
+      letter-spacing: -0.3px;
+      line-height: 18px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      font-size: 12px;
+      letter-spacing: 0px;
+    }
 }
 
 .docs ul p, .docs ol p {
     font-size: 14px;
+
+    @include breakpoints.max-w(s) {
+      font-size: 13px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      font-size: 12px;
+    }
 }
 
 .docs ul, .docs ol {
@@ -939,6 +1146,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     letter-spacing: -0.3px;
     padding: 0;
     list-style-type: none;
+
+    @include breakpoints.max-w(s) {
+      font-size: 13px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      font-size: 12px;
+    }
 }
 
 .docs p font {
@@ -950,6 +1165,15 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding-bottom: 10px;
     margin-left: 30px;
     position: relative;
+
+    @include breakpoints.max-w(xl) {
+      margin-left: 20px;
+    }
+
+    @include breakpoints.max-w(s) {
+      padding-bottom: 6px;
+      margin-left: 15px;
+    }
 
     ul, ol {
       margin-top: 1em;
@@ -966,6 +1190,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
   position: absolute;
   left: -15px;
   top: 7px;
+
+  @include breakpoints.max-w(xs) {
+    width: 5px;
+    height: 5px;
+  }
 }
 
 .docs ul.resources li {
@@ -975,7 +1204,19 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 // For anchorjs-link offset
 .docs :target {
-  scroll-margin-top: 70px;
+  scroll-margin-top: 60px;
+
+  @include breakpoints.max-w(xxl) {
+    scroll-margin-top: 50px;
+  }
+
+  @include breakpoints.max-w(xl) {
+    scroll-margin-top: 55px;
+  }
+
+  @include breakpoints.max-w(l) {
+    scroll-margin-top: 50px;
+  }
 }
 
 .layout-sidebar__content--tile :target {
@@ -1026,6 +1267,27 @@ a.comparison-table__module-proprietaryOkmeter::after {
     }
 }
 
+/* Top-level CRD status block: use default expand/collapse visuals. */
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name {
+    cursor: pointer;
+}
+
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .plus-icon {
+    display: none;
+}
+
+.docs ul.resources > li.top-level-toggleable > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+    display: inline-block;
+}
+
+.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .plus-icon {
+    display: inline-block;
+}
+
+.docs ul.resources > li.top-level-toggleable.closed > .resources__prop_wrap > .resources__prop_name > .minus-icon {
+    display: none;
+}
+
 .docs ul.resources ul > li:not(.resources__prop_description li) {
     padding-top: variables.$text-spacing-l;
     padding-bottom: 16px;
@@ -1039,6 +1301,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs ol li {
     padding-bottom: 10px;
     margin-left: 30px;
+
+    @include breakpoints.max-w(xl) {
+      margin-left: 20px;
+    }
 
     ul, ol {
       margin-top: 1em;
@@ -1161,6 +1427,16 @@ a.comparison-table__module-proprietaryOkmeter::after {
 .docs:not(.docs--modules) h6 {
     margin-bottom: 30px;
     margin-top: 30px;
+
+    @include breakpoints.max-w(l) {
+        margin-bottom: 20px;
+        margin-top: 20px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      margin-bottom: 15px;
+      margin-top: 15px;
+    }
 }
 
 .docs h1 {
@@ -1171,6 +1447,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     line-height: normal;
     letter-spacing: normal;
     color: #00122c;
+
+    @include breakpoints.max-w(s) {
+      font-size: 30px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      font-size: 25px;
+    }
 }
 
 .docs .docs__wrap-title {
@@ -1178,6 +1462,18 @@ a.comparison-table__module-proprietaryOkmeter::after {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 40px;
+
+    @include breakpoints.max-w(s) {
+      margin-bottom: 20px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      margin-bottom: 30px;
+      font-size: 30px;
+      font-weight: 700;
+      line-height: 38px;
+      color: #222A5D;
+    }
 }
 
 .docs h1.docs__title {
@@ -1195,6 +1491,19 @@ a.comparison-table__module-proprietaryOkmeter::after {
   line-height: normal;
   letter-spacing: normal;
   color: #00122c;
+
+  @include breakpoints.max-w(l) {
+    font-size: 22px;
+    line-height: 20px;
+  }
+
+  @include breakpoints.max-w(s) {
+    font-size: 20px;
+  }
+
+  @include breakpoints.max-w(xs) {
+    font-size: 18px;
+  }
 }
 
 .docs h3 {
@@ -1208,6 +1517,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
   letter-spacing: -0.4px;
   //color: #0066FF;
   color: #00122c;
+
+  @include breakpoints.max-w(s) {
+    font-size: 18px;
+  }
+
+  @include breakpoints.max-w(s) {
+    font-size: 16px;
+  }
 }
 
 .docs h4 {
@@ -1314,14 +1631,32 @@ a.comparison-table__module-proprietaryOkmeter::after {
     background: #eef2ff;
     white-space: normal;
     border-radius: 4px;
+
+    @include breakpoints.max-w(s) {
+      font-size: 12px !important;
+      line-height: 16px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      font-size: 11px !important;
+    }
+
+    @include breakpoints.max-w(xxs) {
+      font-size: 10px !important;
+    }
 }
 
 .highlight {
     border-radius: 4px;
 
     .code__transfer {
+      scrollbar-color: #CFD2D8 #f1f1f1;
       padding-right: 70px;
-      padding-left: 48px;
+      margin-left: 37px;
+
+      @include breakpoints.max-w(xl) {
+        padding-right: 50px;
+      }
     }
 }
 
@@ -1341,6 +1676,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     word-break: break-all;
     word-wrap: break-word;
 
+    @include breakpoints.max-w(xl) {
+      font-size: 12px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      font-size: 11px;
+    }
+
     &::before {
         content: '';
         position: absolute;
@@ -1351,6 +1694,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         background-color: #F6F7F8;
         border-right: 1px solid #C4CAD4;
         color: #A7B0BE;
+
+        @include breakpoints.max-w(xl) {
+          width: 35px;
+        }
     }
 
     &:has(.language-tree) {
@@ -1376,6 +1723,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
             &:hover {
                 opacity: 1;
             }
+        }
+
+        @include breakpoints.max-w(xs) {
+          width: 16px;
+          height: 16px;
         }
     }
 }
@@ -1425,6 +1777,14 @@ a.comparison-table__module-proprietaryOkmeter::after {
     margin: 20px 0;
     padding: 5px 20px;
     border-left: 4px solid #0066FF;
+
+    @include breakpoints.max-w(xl) {
+      padding: 0 10px;
+    }
+
+    @include breakpoints.max-w(xs) {
+      border-left: 2px solid #0066FF;
+    }
 }
 
 .docs .anchorjs-link:hover {
@@ -1460,7 +1820,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
 }
 
 .docs .tippy-content ul li {
-    color: white;
+    color: #00122c;
 }
 
 .docs table {
@@ -1490,6 +1850,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
         table {
             th, td {
                 padding: 1em 1.2em;
+
+                @include breakpoints.max-w(s) {
+                    padding: 12px;
+                }
             }
         }
     }
@@ -2031,6 +2395,10 @@ select#contact-select {
     list-style-type: none;
     margin: 0;
     padding: 0;
+
+    @media screen and (width < 1500px) {
+      font-size: 14px;
+    }
 }
 
 #toc-sidebar ul li {
@@ -2109,7 +2477,10 @@ select#contact-select {
 // alertslist class
 .alertslist {
   .alertslist__name {
-    display: flex;
+    display: inline-block;
+    word-break: break-all;
+    max-width: 100%;
+    white-space: normal;
     align-items: center;
     font-size: 16px;
     font-weight: variables.$font-weight-bold;
@@ -2131,6 +2502,11 @@ select#contact-select {
     padding: 0 4px;
     border-radius: 4px;
     white-space: nowrap;
+    vertical-align: middle;
+
+    &> span {
+      vertical-align: middle;
+    }
   }
 
   .alertslist__badge_edition {
@@ -2234,6 +2610,14 @@ select#contact-select {
     text-align: start;
     padding: 24px 24px 32px;
     color: #00122C;
+
+    @include breakpoints.max-w(m) {
+      padding: 14px;
+    }
+
+    @include breakpoints.max-w(xxs) {
+      padding: 8px;
+    }
   }
 
   .tippy-content code {
@@ -2249,6 +2633,14 @@ select#contact-select {
 
     svg {
       transform: rotate(180deg);
+    }
+  }
+
+  &[data-placement^='bottom'] .tippy-svg-arrow {
+    top: -12px;
+
+    svg {
+      transform: rotate(-90deg);
     }
   }
 }
@@ -2271,7 +2663,6 @@ select#contact-select {
 
 .docs {
   .code__transfer {
-    overflow-x: auto;
     white-space: pre;
     overflow-x: auto;
     display: block;
@@ -2294,9 +2685,23 @@ select#contact-select {
       z-index: 2;
       transition: opacity .25s;
 
+      @include breakpoints.max-w(xs) {
+        right: 35px;
+      }
+
       .wrap__icon {
         width: 25px;
         height: 23px;
+
+        @include breakpoints.max-w(xl) {
+          width: 20px;
+          height: 20px;
+        }
+
+        @include breakpoints.max-w(xs) {
+          width: 16px;
+          height: 16px;
+        }
       }
 
       &.show {
@@ -2320,6 +2725,10 @@ select#contact-select {
       user-select: none;
       list-style-type: none;
       color: #9e9e9e;
+
+      @include breakpoints.max-w(s) {
+        line-height: 16px;
+      }
 
       li {
         padding: 0;

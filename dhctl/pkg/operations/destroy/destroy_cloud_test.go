@@ -493,7 +493,7 @@ func TestCloudDestroy(t *testing.T) {
 				before: setAllInCache,
 				assert: func(t *testing.T, tst *testCloudDestroyTest) {
 					require.False(t, govalue.IsNil(tst.d8State))
-					inCacheUUID, err := tst.d8State.CommanderUUID()
+					inCacheUUID, err := tst.d8State.CommanderUUID(t.Context())
 					require.NoError(t, err)
 					require.Equal(t, tst.params.commanderUUIDInCluster.String(), inCacheUUID, "in cache commander UUID should same in cluster")
 				},
@@ -598,7 +598,7 @@ type testCloudDestroyTest struct {
 func (ts *testCloudDestroyTest) saveInfraStateKeys(t *testing.T) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	err := ts.stateCache.Save(clusterStateKey, []byte(`{}`))
+	err := ts.stateCache.Save(t.Context(), clusterStateKey, []byte(`{}`))
 	require.NoError(t, err)
 
 	nodesState := map[string]state.NodeGroupInfrastructureState{
@@ -609,21 +609,21 @@ func (ts *testCloudDestroyTest) saveInfraStateKeys(t *testing.T) {
 		},
 	}
 
-	err = ts.stateCache.SaveStruct(nodesStateKey, nodesState)
+	err = ts.stateCache.SaveStruct(t.Context(), nodesStateKey, nodesState)
 	require.NoError(t, err)
 }
 
 func (ts *testCloudDestroyTest) setCommanderUUIDInCache(t *testing.T, uuid string) {
 	require.False(t, govalue.IsNil(ts.d8State))
 
-	err := ts.d8State.SetCommanderUUID(uuid)
+	err := ts.d8State.SetCommanderUUID(t.Context(), uuid)
 	require.NoError(t, err, "resources destroyed should save in cache")
 }
 
 func (ts *testCloudDestroyTest) assertInfraStateInCache(t *testing.T, inCache bool) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	clusterState, err := ts.stateCache.Load(clusterStateKey)
+	clusterState, err := ts.stateCache.Load(t.Context(), clusterStateKey)
 	require.NoError(t, err)
 	assert := require.Empty
 	if inCache {
@@ -633,7 +633,7 @@ func (ts *testCloudDestroyTest) assertInfraStateInCache(t *testing.T, inCache bo
 
 	var nodesState map[string]state.NodeGroupInfrastructureState
 
-	err = ts.stateCache.LoadStruct(nodesStateKey, &nodesState)
+	err = ts.stateCache.LoadStruct(t.Context(), nodesStateKey, &nodesState)
 
 	assertNodesState := require.Error
 	if inCache {
@@ -645,14 +645,14 @@ func (ts *testCloudDestroyTest) assertInfraStateInCache(t *testing.T, inCache bo
 func (ts *testCloudDestroyTest) setConvergeLock(t *testing.T) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	err := cloud.NewDestroyState(ts.stateCache).SetConvergeLocked()
+	err := cloud.NewDestroyState(ts.stateCache).SetConvergeLocked(t.Context())
 	require.NoError(t, err)
 }
 
 func (ts *testCloudDestroyTest) assertConvergeLockSetInCache(t *testing.T, locked bool) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	lockedInCache, err := cloud.NewDestroyState(ts.stateCache).IsConvergeLocked()
+	lockedInCache, err := cloud.NewDestroyState(ts.stateCache).IsConvergeLocked(t.Context())
 	require.NoError(t, err)
 
 	require.Equal(t, locked, lockedInCache, "should be converge locked or not")
@@ -801,7 +801,7 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 		testCreateClusterConfigSecret(t, kubeCl, cloudClusterGenericConfigYAML)
 		testCreateProviderClusterConfigSecret(t, kubeCl, providerConfigYAML)
 		testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
-		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider())
+		metaConfig, err = config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider(), nil)
 		require.NoError(t, err)
 	}
 

@@ -114,6 +114,7 @@ tags_filter_all_selected: Все теги
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_for_alert: У модуля есть [требования](/modules/%s/configuration.html#требования) для установки
 requirements_title: Требования
 requirements_deckhouse_title: К версии Deckhouse
 requirements_kubernetes_title: К версии Kubernetes
@@ -137,6 +138,7 @@ currency_sign: "₽"
 commercial: Доступно в некоторых коммерческих редакциях.
 notAvailableInThisEdition: Доступно в других коммерческих редакциях.
 default_value: по умолчанию
+default_empty_string_value: ‘’
 platform: платформа
 example: пример
 examples: примеры

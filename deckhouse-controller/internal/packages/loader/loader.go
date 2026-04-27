@@ -82,7 +82,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 		return nil, ErrPackageNotFound
 	}
 
-	def, err := loadPackageDefinition(appDir)
+	def, err := loadAppPackageDefinition(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", appDir, err)
@@ -109,7 +109,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
-	appDef, err := def.ToApplication()
+	appDef, err := def.Convert()
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("convert app definition: %w", err)
@@ -162,7 +162,7 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 	}
 
 	// Load package definition (package.yaml/module.yaml)
-	def, err := loadPackageDefinition(moduleDir)
+	def, err := loadModulePackageDefinition(moduleDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
@@ -182,7 +182,7 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
-	moduleDef, err := def.ToModule()
+	moduleDef, err := def.Convert()
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("convert module definition: %w", err)
@@ -257,7 +257,7 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, ErrPackageNotFound
 	}
 
-	def, err := loadPackageDefinition(moduleDir)
+	def, err := loadModulePackageDefinition(moduleDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
@@ -284,7 +284,7 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 		return nil, fmt.Errorf("load hooks: %w", err)
 	}
 
-	moduleDef, err := def.ToModule()
+	moduleDef, err := def.Convert()
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("convert module definition: %w", err)
@@ -355,26 +355,51 @@ func LoadGlobalConf(ctx context.Context, logger *log.Logger) (*global.Config, er
 	}, nil
 }
 
-// loadPackageDefinition reads the package definition from the given directory.
-// It first tries package.yaml (new format). If that file doesn't exist, it falls back
-// to module.yaml (legacy format) and converts it to a dto.Definition
-func loadPackageDefinition(packageDir string) (*dto.Definition, error) {
+// loadAppPackageDefinition loads ApplicationDefinition from package.yaml, validating type: Application.
+func loadAppPackageDefinition(packageDir string) (*dto.ApplicationDefinition, error) {
+	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
+
+	content, err := os.ReadFile(definitionPath)
+	if err != nil {
+		return nil, fmt.Errorf("read file '%s': %w", definitionPath, err)
+	}
+
+	def := new(dto.ApplicationDefinition)
+	if err = yaml.Unmarshal(content, def); err != nil {
+		return nil, fmt.Errorf("unmarshal application definition: %w", err)
+	}
+
+	if def.Type != dto.TypeApplication {
+		return nil, fmt.Errorf("expected type %q, got %q", dto.TypeApplication, def.Type)
+	}
+
+	return def, nil
+}
+
+// loadModulePackageDefinition loads ModuleDefinition from package.yaml, validating type: Module.
+// Falls back to legacy module.yaml if package.yaml doesn't exist.
+func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, error) {
 	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
 
 	content, err := os.ReadFile(definitionPath)
 	if err == nil {
-		def := new(dto.Definition)
+		def := new(dto.ModuleDefinition)
 		if err = yaml.Unmarshal(content, def); err != nil {
-			return nil, fmt.Errorf("unmarshal file '%s': %w", definitionPath, err)
+			return nil, fmt.Errorf("unmarshal module definition: %w", err)
+		}
+
+		if def.Type != "" && def.Type != dto.TypeModule {
+			return nil, fmt.Errorf("expected type %q, got %q", dto.TypeModule, def.Type)
 		}
 
 		return def, nil
 	}
 
-	if !os.IsNotExist(err) {
+	if !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("read file '%s': %w", definitionPath, err)
 	}
 
+	// fallback to module.yaml
 	def, err := loadModuleDefinition(packageDir)
 	if err != nil {
 		return nil, fmt.Errorf("load module definition: %w", err)
@@ -404,17 +429,16 @@ func loadPackageDefinition(packageDir string) (*dto.Definition, error) {
 		}
 	}
 
-	return &dto.Definition{
-		Name:           def.Name,
-		Type:           "Module",
-		Stage:          def.Stage,
-		Descriptions:   descriptions,
-		Requirements:   requirements,
-		DisableOptions: disableOpts,
-		Module: dto.DefinitionModule{
-			Weight:   int(def.Weight),
-			Critical: def.Critical,
+	return &dto.ModuleDefinition{
+		Definition: dto.Definition{
+			Name:           def.Name,
+			Stage:          def.Stage,
+			Descriptions:   descriptions,
+			Requirements:   requirements,
+			DisableOptions: disableOpts,
 		},
+		Weight:   int(def.Weight),
+		Critical: def.Critical,
 	}, nil
 }
 

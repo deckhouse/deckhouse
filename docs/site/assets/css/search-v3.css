@@ -1,7 +1,7 @@
 /* Search Container Styles */
 .searchV3 {
   position: relative;
-  z-index: 100;
+  z-index: 99;
 }
 
 .searchV3 .container {
@@ -435,15 +435,21 @@
 }
 
 /* Responsive Design */
+
+@media (max-width: 1024px) {
+  .searchV3 .input {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+}
+
 @media (max-width: 768px) {
   .searchV3 .results {
     padding: 1rem;
     flex-direction: column;
+    flex-wrap: nowrap;
     gap: 1rem;
-    width: 100%;
     right: 0;
-    left: 0;
-    max-width: calc(100vw - 20px);
   }
 
   .searchV3 .modules-row {
@@ -456,7 +462,6 @@
 
   .searchV3 .results > * {
     max-width: 100%;
-    max-height: 70vh;
   }
 
   .searchV3 .container {
@@ -464,8 +469,23 @@
   }
 
   .searchV3 .input {
-    padding: 10px 14px;
     font-size: 14px;
+  }
+}
+
+@media (max-width: 550px) {
+  .searchV3 .input {
+    padding: 5px 7px;
+  }
+}
+
+@media (max-width: 430px) {
+  .searchV3 .container {
+    padding: 0;
+  }
+
+  .searchV3 .input {
+    padding: 10px;
   }
 }
 
@@ -481,11 +501,6 @@
   right: 0;
   width: 300px;
   z-index: 100;
-}
-
-/* Adjust breadcrumb positioning to accommodate search */
-.breadcrumbs__right {
-  margin-right: 320px;
 }
 
 /* Subtle fade effect for page content when search is active */

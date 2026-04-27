@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
@@ -183,7 +184,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
 	if err != nil {
-		return fmt.Errorf("failed to get master node pipeline outputs: %v", err)
+		return fmt.Errorf("failed to get master node pipeline outputs: %w", err)
 	}
 
 	if !h.commanderMode {
@@ -202,18 +203,23 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	// we need to store the path to the Kubernetes data device to avoid deadlock.
 	err = h.saveKubernetesDataDevicePath(ctx, outputs.KubeDataDevicePath)
 	if err != nil {
-		return fmt.Errorf("failed to save kubernetes data device path: %v", err)
+		return fmt.Errorf("failed to save kubernetes data device path: %w", err)
+	}
+
+	err = entity.WaitForSingleNodeBecomeReady(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	if err != nil {
+		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}
 
 	err = waitEtcdHasMember(ctx, h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
 	if err != nil {
-		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %v", h.nodeToConverge, err)
+		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
 	}
 
-	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop(fmt.Sprintf("Check control-plane is ready on node '%s'", h.nodeToConverge), 45, 10*time.Second).RunContext(ctx, func() error {
 		ready, err := NewManagerReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
 		if err != nil {
-			return fmt.Errorf("failed to check the master node '%s' readiness: %v", h.nodeToConverge, err)
+			return fmt.Errorf("failed to check the master node '%s' readiness: %w", h.nodeToConverge, err)
 		}
 
 		if !ready {
@@ -222,11 +228,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (h *HookForUpdatePipeline) IsReady() error {
@@ -241,7 +242,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 	task := actions.ManifestTask{
 		Name:     `Secret "d8-masters-kubernetes-data-device-path"`,
 		Manifest: getDevicePathManifest,
-		CreateFunc: func(manifest interface{}) error {
+		CreateFunc: func(ctx context.Context, manifest interface{}) error {
 			_, err := h.kubeGetter.KubeClient().CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			if err != nil {
 				return err
@@ -249,7 +250,7 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 
 			return nil
 		},
-		UpdateFunc: func(manifest interface{}) error {
+		UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 			data, err := json.Marshal(manifest.(*apiv1.Secret))
 			if err != nil {
 				return err
@@ -272,11 +273,6 @@ func (h *HookForUpdatePipeline) saveKubernetesDataDevicePath(ctx context.Context
 
 	return retry.NewLoop(fmt.Sprintf("Save Kubernetes data device path for node '%s'", h.nodeToConverge), 45, 10*time.Second).
 		RunContext(ctx, func() error {
-			err := task.CreateOrUpdate()
-			if err != nil {
-				return err
-			}
-
-			return nil
+			return task.CreateOrUpdate(ctx)
 		})
 }
