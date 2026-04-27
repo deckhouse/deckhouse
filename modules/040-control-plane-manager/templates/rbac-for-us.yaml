@@ -212,6 +212,16 @@ rules:
   - podloggingconfigs
   - projects
   verbs: ["create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources:
+  - controlplanenodes
+  - controlplaneoperations
+  verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
+- apiGroups: ["control-plane.deckhouse.io"]
+  resources:
+  - controlplanenodes/status
+  - controlplaneoperations/status
+  verbs: ["get", "patch", "update"]
 - apiGroups: ["certificates.k8s.io"]
   resources: ["certificatesigningrequests"]
   verbs: ["get", "list", "watch", "create", "delete", "deletecollection", "patch", "update"]
