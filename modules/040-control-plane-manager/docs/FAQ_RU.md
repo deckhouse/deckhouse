@@ -749,7 +749,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 1
   enabled: true
   settings:
     rootKubeconfigSymlink: false
@@ -1398,7 +1398,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 1
      enabled: true
      settings:
        apiserver:

@@ -740,7 +740,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 2
+  version: 1
   enabled: true
   settings:
     rootKubeconfigSymlink: false
@@ -1385,7 +1385,7 @@ To enable field protection, do the following:
    metadata:
      name: control-plane-manager
    spec:
-     version: 2
+     version: 1
      enabled: true
      settings:
        apiserver:
