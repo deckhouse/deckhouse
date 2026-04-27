@@ -164,11 +164,6 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			continue
 		}
 
-		publicMetadata.AllianceRef = &eeCrd.PublicMetadataAllianceRef{
-			Kind: "IstioMulticluster",
-			Name: multiclusterInfo.Name,
-		}
-
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 0)
 		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "public", publicMetadata)
 		if err != nil {

@@ -187,10 +187,6 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
-		publicMetadata.AllianceRef = &eeCrd.PublicMetadataAllianceRef{
-			Kind: "IstioFederation",
-			Name: federationInfo.Name,
-		}
 
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "public", publicMetadata)
