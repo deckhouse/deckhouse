@@ -19,15 +19,15 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
@@ -56,6 +56,18 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
 
+		externalLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			return err
+		}
+
 		if !app.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
 			if !input.NewConfirmation().WithYesByDefault().WithMessage("Do you really want to DELETE all cluster resources?").Ask() {
@@ -63,14 +75,12 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			}
 		}
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlags(ctx)
+		sshClient, err := sshProvider.Client(ctx)
 		if err != nil {
 			return err
 		}
@@ -80,7 +90,8 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(ctx, &destroy.Params{
-			NodeInterface:   ssh.NewNodeInterfaceWrapper(sshClient),
+			SSHProvider:     sshProvider,
+			KubeProvider:    kubeProvider,
 			StateCache:      cache.Global(),
 			SkipResources:   app.SkipResources,
 			LoggerProvider:  log.SimpleLoggerProvider(logger),

@@ -36,7 +36,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -187,6 +186,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		if err != nil {
 			return err
 		}
+
+		b.KubeProvider = b.SSHProviderInitializer.GetKubeProvider(ctx)
+		// error is OK here in case of abort from cache w/o ssh hosts
+		sshProvider, _ := b.SSHProviderInitializer.GetSSHProvider(ctx)
+
 		log.DebugF("Abort from cache. tf-state-and-manifests-in-cluster=%v; Force abort %v\n", ok, forceAbortFromCache)
 		if !ok || forceAbortFromCache {
 			destroyer, err = destroy.GetAbortDestroyer(ctx, &destroy.GetAbortDestroyerParams{
@@ -195,7 +199,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				InfrastructureContext:  b.InfrastructureContext,
 				PhasedExecutionContext: b.PhasedExecutionContext,
 
-				SSHClientProvider: sshclient.NewDefaultSSHProviderWithFunc(staticSSHClientProvider).WithLoggerProvider(loggerProvider),
+				SSHClientProvider: sshProvider,
 				LoggerProvider:    loggerProvider,
 
 				TmpDir:        b.TmpDir,
@@ -225,12 +229,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 
 		destroyParams := &destroy.Params{
-			NodeInterface:          b.NodeInterface,
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
 			SkipResources:          app.SkipResources,
 			InfrastructureContext:  b.InfrastructureContext,
 			DirectoryConfig:        b.DirectoryConfig,
+			SSHProvider:            sshProvider,
+			KubeProvider:           b.KubeProvider,
 		}
 
 		if b.CommanderMode {
