@@ -719,7 +719,7 @@
           "infrastructure"
         ],
         "namespace": "d8-csi-vsphere",
-        "stage": "Deprecated",
+        "stage": "Preview",
         "descriptions": {
           "en": "Provides CSI for for VMware vSphere environments.",
           "ru": "Предоставляет CSI для сред VMware vSphere."
