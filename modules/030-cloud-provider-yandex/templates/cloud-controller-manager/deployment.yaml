@@ -1,12 +1,9 @@
 {{- define "yandex_ccm_args" -}}
-- --leader-elect=true
 - --cluster-cidr={{ .clusterCidr }}
 - --allocate-node-cidrs=true
 - --configure-cloud-routes=true
 - --cloud-provider=yandex
 - --cluster-name={{ .clusterName }}
-- --bind-address=127.0.0.1
-- --secure-port=10471
 - --v=2
 {{- end -}}
 

@@ -19,15 +19,7 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
   {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 2 }}
   image: {{ include "helm_lib_module_image" (list . "cloudMigrator") }}
   env:
-  - name: YC_FOLDER_ID
-    value: {{ .Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID }}
-  - name: YC_SA_KEY_JSON
-    valueFrom:
-      secretKeyRef:
-        name: cloud-controller-manager
-        key: service-acount-json
-  - name: CLUSTER_UUID
-    value: {{ .Values.global.discovery.clusterUUID | quote }}
+  {{- include "yandex_cdd_envs" . | nindent 2 }}
   resources:
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 6 }}
