@@ -32,8 +32,8 @@ import (
 
 type TunnelParams struct {
 	DirectoryConfig *directoryconfig.DirectoryConfig
-	SSHClient       node.SSHClient
 	LoggerProvider  log.LoggerProvider
+	SSHClient       node.SSHClient
 }
 
 func (params TunnelParams) Validate() error {
@@ -41,12 +41,12 @@ func (params TunnelParams) Validate() error {
 		return fmt.Errorf("directory config is required")
 	}
 
-	if params.SSHClient == nil {
-		return fmt.Errorf("ssh client is required")
-	}
-
 	if params.LoggerProvider == nil {
 		return fmt.Errorf("logger provider is required")
+	}
+
+	if params.SSHClient == nil {
+		return fmt.Errorf("ssh client is required")
 	}
 
 	return nil
@@ -61,8 +61,8 @@ func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 
 	tunnel := &Tunnel{
 		dc:             params.DirectoryConfig,
-		sshCl:          params.SSHClient,
 		loggerProvider: params.LoggerProvider,
+		sshCl:          params.SSHClient,
 
 		localPort:  constant.BundlePort,
 		remotePort: constant.BundlePort,

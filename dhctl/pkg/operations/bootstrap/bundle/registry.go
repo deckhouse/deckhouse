@@ -19,19 +19,26 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/deckhouse/lib-dhctl/pkg/log"
+
 	registry_bundle "github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/cmd"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 type RegistryParams struct {
-	BundlePath string
-	Logger     *slog.Logger
+	BundlePath     string
+	LoggerProvider log.LoggerProvider
 }
 
 func (params RegistryParams) Validate() error {
 	if params.BundlePath == "" {
 		return fmt.Errorf("bundle path is required")
 	}
+
+	if params.LoggerProvider == nil {
+		return fmt.Errorf("logger provider is required")
+	}
+
 	return nil
 }
 
@@ -42,10 +49,7 @@ func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, er
 		return nil, err
 	}
 
-	logger := params.Logger
-	if logger == nil {
-		logger = slog.New(slog.DiscardHandler)
-	}
+	logger := slog.New(slog.DiscardHandler)
 
 	config := registry_bundle.ServeConfig{
 		RepoPath:   constant.BundleRepoPath,

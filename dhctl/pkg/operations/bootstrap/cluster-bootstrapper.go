@@ -265,7 +265,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 
 		stop, err := bundle.StartRegistry(ctx, bundle.RegistryParams{
-			BundlePath: app.ImgBundlePath,
+			BundlePath:     app.ImgBundlePath,
+			LoggerProvider: b.loggerProvider,
 		})
 		if err != nil {
 			return fmt.Errorf("Start bundle registry: %w", err)
