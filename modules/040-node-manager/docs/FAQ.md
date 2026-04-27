@@ -647,6 +647,7 @@ When attempting to switch the CRI, the changes may not take effect. The most com
 The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at least one of the following conditions is true:
 
 - Kernel version lower than 5.8;
+- Kernel version is in the range 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS);
 - systemd version lower than 244
 - cgroup v2 is disabled
 - EROFS file system is unavailable.
