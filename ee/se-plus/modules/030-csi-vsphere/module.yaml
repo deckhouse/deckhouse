@@ -5,5 +5,5 @@ subsystems:
 namespace: d8-csi-vsphere
 stage: Deprecated
 descriptions:
-  en: Provides CSI for for VMware vSphere environments.
+  en: Provides CSI for VMware vSphere environments.
   ru: Предоставляет CSI для сред VMware vSphere.

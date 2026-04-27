@@ -80,7 +80,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 
 ## Создание и назначение роли
 
-{% alert level="info"%}
+{% alert level="info" %}
 Ввиду разнообразия подключаемых к `csi-vsphere` SSO-провайдеров шаги по созданию пользователя в данном разделе не рассматриваются.
 
 Предлагаемая ниже роль включает права, достаточные для всех компонентов DKP. Детальный перечень привилегий описан в документации модуля [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/environment.html#список-необходимых-привилегий).

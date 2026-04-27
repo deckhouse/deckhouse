@@ -7,7 +7,17 @@ The `csi-vsphere` module provides Container Storage Interface (CSI) support for 
 
 This module is specifically designed for **static Kubernetes clusters** (non-cloud) deployed on VMware vSphere and works independently from the [cloud-provider-vsphere](/modules/cloud-provider-vsphere/) module. It integrates with vSphere datastores to provide persistent storage capabilities through the vSphere CSI driver.
 
-> Use `csi-vsphere` module when the cluster cannot use the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module, but dynamic provisioning of volumes in the vSphere infrastructure is required, but you still need dynamic volume provisioning on vSphere.
+{% alert level="info" %}
+Use the `csi-vsphere` module when the cluster cannot use the [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) module but still requires dynamic volume provisioning on vSphere infrastructure.
+{% endalert %}
+
+## Main Features
+
+- Provides dynamic persistent volume provisioning for static Kubernetes clusters on VMware vSphere.
+- Automatically discovers vSphere datastores and creates StorageClass resources.
+- Supports topology-aware volume placement using vSphere region and zone tags.
+- Handles volume creation, deletion, attachment, detachment, and online resizing (Default mode).
+- Supports Legacy, Default, and Migration compatibility modes for smooth driver transitions.
 
 The module deploys the VMware vSphere CSI driver components that:
 
