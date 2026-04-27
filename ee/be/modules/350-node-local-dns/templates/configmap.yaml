@@ -38,6 +38,14 @@ data:
 {{- if .Values.nodeLocalDns.enableLogs }}
       log
 {{- end }}
+{{- if .Values.nodeLocalDns.disableIPv6 }}
+      template IN AAAA . {
+          rcode NOERROR
+      }
+      template IN PTR ip6.arpa {
+          rcode NXDOMAIN
+      }
+{{- end }}
 
 
 {{- if not (.Values.global.enabledModules | has "cni-cilium") }}
