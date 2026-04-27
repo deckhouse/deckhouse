@@ -163,7 +163,6 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
-
 		multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 0)
 		err = multiclusterInfo.PatchMetadataCache(input.PatchCollector, "public", publicMetadata)
 		if err != nil {

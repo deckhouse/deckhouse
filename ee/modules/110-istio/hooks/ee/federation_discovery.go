@@ -34,7 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// shared vars for both discoveries
+// shared metric name for both discoveries
 var (
 	deprecatedAllianceSubdomainMetricName = "d8_istio_alliance_metadata_endpoint_uses_deprecated_subdomain"
 )
@@ -187,7 +187,6 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			continue
 		}
-
 		federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 0)
 		err = federationInfo.PatchMetadataCache(input.PatchCollector, "public", publicMetadata)
 		if err != nil {
