@@ -80,10 +80,9 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, e
 
 	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
 	cmd := sshClient.Command(createOUtFileCmd)
-	cmd.Sudo(ctx)
 	cmd.WithStderrHandler(nil)
 	cmd.WithStdoutHandler(nil)
-	err = cmd.Run(ctx)
+	cmd.Sudo(ctx)
 
 	if err := cmd.Run(ctx); err != nil {
 		return "", fmt.Errorf("Cannot create output file for script: %v", err)
@@ -92,9 +91,9 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, e
 	defer func() {
 		// remove out file on server because it can contain non-safe information
 		cmd = sshClient.Command(fmt.Sprintf("rm %s", outputFile))
-		cmd.Sudo(ctx)
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)
+		cmd.Sudo(ctx)
 		err = cmd.Run(ctx)
 	}()
 
