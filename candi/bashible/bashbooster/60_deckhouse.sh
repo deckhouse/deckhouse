@@ -28,7 +28,7 @@ bb-deckhouse-get-disruptive-update-approval() {
     attempt=0
     until
         node_data="$(
-          bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq '
+          bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq '
           {
             "resourceVersion": .metadata.resourceVersion,
             "isDisruptionApproved": (.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")),
@@ -45,16 +45,16 @@ bb-deckhouse-get-disruptive-update-approval() {
         if bb-flag? rolling-update; then
           bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/rolling-update='."
           bb-log-info "The node will be deleted and a new one will be created."
-          bb-kubectl-exec \
-            --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-            annotate node $(bb-d8-node-name) update.node.deckhouse.io/rolling-update= || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
+          bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" \
+            "--resource-version=$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
+            "update.node.deckhouse.io/rolling-update=" || { bb-log-info "Retry setting update.node.deckhouse.io/rolling-update= annotation on Node in 10 sec..."; sleep 10; }
           exit 0
         else
           bb-log-info "Disruption required, asking for approval."
           bb-log-info "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
-          bb-kubectl-exec \
-            --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-            annotate node $(bb-d8-node-name) update.node.deckhouse.io/disruption-required= || { bb-log-info "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
+          bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" \
+            "--resource-version=$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
+            "update.node.deckhouse.io/disruption-required=" || { bb-log-info "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
         fi
     done
 
@@ -62,7 +62,7 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     attempt=0
     until
-      bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
+      bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
     do
         attempt=$(( attempt + 1 ))
