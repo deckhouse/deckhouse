@@ -924,7 +924,7 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
-        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been in `OperationInProgress` for more than 10 minutes.
+        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been running or retrying for more than 10 minutes.
 
         Check the corresponding `ControlPlaneOperation` and logs of `d8-control-plane-manager` pod on that node:
 
@@ -933,7 +933,7 @@ alerts:
         d8 k -n kube-system logs -l app=d8-control-plane-manager --field-selector spec.nodeName={{ $labels.node }}
         ```
       summary: |
-        Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs longer than 10 minutes.
+        Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
       severity: "4"
       markupFormat: markdown
     - name: D8CustomPrometheusRuleFoundInCluster
