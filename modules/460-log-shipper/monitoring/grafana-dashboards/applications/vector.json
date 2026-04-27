@@ -179,7 +179,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "none"
         },
         "overrides": []
       },
@@ -213,14 +213,27 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (component_id, component_kind) (rate(vector_utilization{node=~\"$node\", job=\"log-shipper-agent\"}[$__rate_interval])) > 0",
+          "expr": "sum by (short_name) (label_replace(rate(vector_component_received_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
           "instant": false,
           "interval": "",
-          "legendFormat": "{{ component_kind }} : {{ component_id }}",
+          "legendFormat": "source: {{ short_name }}",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (short_name) (label_replace(rate(vector_component_sent_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "sink: {{ short_name }}",
+          "refId": "B"
         }
       ],
-      "title": "Utilization",
+      "title": "Utilization (source/sink logs rate)",
       "transparent": true,
       "type": "timeseries"
     },
@@ -528,39 +541,14 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -575,9 +563,35 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "short_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Source"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Accepted logs"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -697,18 +711,16 @@
       },
       "id": 80,
       "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
           ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
+          "show": false
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "asc"
-        }
+        "showHeader": true
       },
       "targets": [
         {
@@ -717,15 +729,29 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_received_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__rate_interval])) > 0",
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
-          "range": true,
+          "expr": "sum by (short_name) (label_replace(increase(vector_component_received_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Events rate (IN)",
+      "title": "Sources: accepted logs",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "short_name",
+                "Value"
+              ]
+            }
+          }
+        }
+      ],
       "transparent": true,
-      "type": "timeseries"
+      "type": "table"
     },
     {
       "datasource": {
@@ -735,39 +761,14 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "inspect": false
           },
           "mappings": [],
           "thresholds": {
@@ -782,9 +783,35 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "short_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sink"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sent logs"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -794,18 +821,16 @@
       },
       "id": 176,
       "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
           ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
+          "show": false
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "asc"
-        }
+        "showHeader": true
       },
       "targets": [
         {
@@ -814,16 +839,29 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__rate_interval])) > 0",
-          "hide": false,
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
-          "range": true,
-          "refId": "B"
+          "expr": "sum by (short_name) (label_replace(increase(vector_component_sent_events_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__range]), \"short_name\", \"$1\", \"component_id\", \"([^/]+)$\")) > 0",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "",
+          "refId": "A"
         }
       ],
-      "title": "Events rate (OUT)",
+      "title": "Sinks: sent logs",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "short_name",
+                "Value"
+              ]
+            }
+          }
+        }
+      ],
       "transparent": true,
-      "type": "timeseries"
+      "type": "table"
     },
     {
       "datasource": {
@@ -1146,397 +1184,6 @@
       "id": 499,
       "panels": [],
       "title": "Component Errors",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 48
-      },
-      "id": 433,
-      "maxPerRow": 2,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "repeat": "component_with_errors",
-      "repeatDirection": "h",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum by (component_name, error_code, error_type) (rate(vector_component_errors_total{node=~\"$node\", job=\"log-shipper-agent\", component_name=~\"$component_with_errors\"}[$__rate_interval])) > 0",
-          "legendFormat": "{{ error_code }} / {{ error_type }}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Errors [$component_with_errors]",
-      "transparent": true,
-      "type": "timeseries"
-    },
-    {
-      "collapsed": true,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 57
-      },
-      "id": 2,
-      "panels": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "yellow",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 0,
-            "y": 44
-          },
-          "id": 25,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_received_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "Received Events",
-          "transparent": true,
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "green",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 6,
-            "y": 44
-          },
-          "id": 26,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_sent_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "Sent Events",
-          "transparent": true,
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "yellow",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 12,
-            "y": 44
-          },
-          "id": 23,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_received_event_bytes_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "Received Bytes",
-          "transparent": true,
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "green",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 18,
-            "y": 44
-          },
-          "id": 24,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_sent_event_bytes_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "Sent Bytes",
-          "transparent": true,
-          "type": "stat"
-        }
-      ],
-      "repeat": "component",
-      "title": "Input / Output [$component]",
       "type": "row"
     }
   ],
