@@ -64,10 +64,9 @@ func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 		loggerProvider: params.LoggerProvider,
 		sshCl:          params.SSHClient,
 
-		localPort:  constant.BundlePort,
-		remotePort: constant.BundlePort,
-		address:    constant.BundleAddress,
-		scheme:     constant.BundleScheme,
+		scheme:  constant.BundleScheme,
+		address: constant.BundleAddress,
+		port:    constant.BundlePort,
 	}
 
 	if err := tunnel.start(ctx); err != nil {
@@ -78,10 +77,9 @@ func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 }
 
 type Tunnel struct {
-	scheme     constant.SchemeType
-	localPort  string
-	remotePort string
-	address    string
+	scheme  constant.SchemeType
+	address string
+	port    string
 
 	dc             *directoryconfig.DirectoryConfig
 	sshCl          node.SSHClient
@@ -96,7 +94,7 @@ func (t *Tunnel) start(ctx context.Context) error {
 	preflightURL := fmt.Sprintf(
 		"%s://%s/healthz",
 		strings.ToLower(string(t.scheme)),
-		net.JoinHostPort(t.address, t.remotePort),
+		net.JoinHostPort(t.address, t.port),
 	)
 
 	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, t.dc)
@@ -104,7 +102,7 @@ func (t *Tunnel) start(ctx context.Context) error {
 		return fmt.Errorf("cannot render reverse tunnel checking script: %w", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(t.address, t.remotePort, t.dc)
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(t.address, t.port, t.dc)
 	if err != nil {
 		return fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}
@@ -112,7 +110,7 @@ func (t *Tunnel) start(ctx context.Context) error {
 	checker := ssh.NewRunScriptReverseTunnelChecker(t.sshCl, checkingScript)
 	killer := ssh.NewRunScriptReverseTunnelKiller(t.sshCl, killScript)
 
-	addr := fmt.Sprintf("%s:%s:%s:%s", t.address, t.localPort, t.address, t.remotePort)
+	addr := fmt.Sprintf("%s:%s:%s:%s", t.address, t.port, t.address, t.port)
 
 	tun := t.sshCl.ReverseTunnel(addr)
 	if err = tun.Up(); err != nil {
