@@ -143,7 +143,9 @@ memory: 10Mi
   {{- if hasKey $tpl_context.apiserver "certSANs" }}
 cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
   {{- end }}
+  {{- if $tpl_context.clusterConfiguration.encryptionAlgorithm }}
 encryption-algorithm: {{ $tpl_context.clusterConfiguration.encryptionAlgorithm | b64enc }}
+  {{- end }}
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
