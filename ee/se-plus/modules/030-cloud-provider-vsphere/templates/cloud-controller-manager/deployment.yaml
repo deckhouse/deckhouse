@@ -1,9 +1,6 @@
 {{- define "vsphere_ccm_args" -}}
-- --leader-elect=true
 - --cloud-config=/etc/cloud-controller-manager-config/cloud-config
 - --cloud-provider=vsphere
-- --bind-address=127.0.0.1
-- --secure-port=10471
 - --v=4
 {{- end -}}
 
