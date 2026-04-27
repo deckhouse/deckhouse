@@ -37,10 +37,15 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	"github.com/deckhouse/deckhouse/go_lib/module"
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
-const clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
+const (
+	clusterAdminsGroupAndClusterRoleBinding = "kubeadm:cluster-admins"
+	clusterAdminWildcardClusterRoleName     = "cluster-admin"
+	userAuthzClusterAdminClusterRoleName    = "user-authz:cluster-admin"
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -79,16 +84,6 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 		return fmt.Errorf("cannot init Kubernetes client: %v", err)
 	}
 
-	_, err = kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
-	// if kubeadm:cluster-admins ClusterRoleBinding exists
-	if err == nil {
-		return nil
-	}
-
-	if !apierrors.IsNotFound(err) {
-		return fmt.Errorf("error: %v", err)
-	}
-
 	secret, err := kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-cluster-configuration", metav1.GetOptions{})
 	// In managed clusters we do not have d8-cluster-configuration secret
 	if apierrors.IsNotFound(err) {
@@ -125,7 +120,12 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 		return nil
 	}
 
-	clusterRoleBinding := &rbac.ClusterRoleBinding{
+	desiredRoleName := clusterAdminWildcardClusterRoleName
+	if module.IsEnabled("user-authz", input) {
+		desiredRoleName = userAuthzClusterAdminClusterRoleName
+	}
+
+	desiredCRB := &rbac.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRoleBinding",
@@ -139,7 +139,7 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 		RoleRef: rbac.RoleRef{
 			APIGroup: rbac.GroupName,
 			Kind:     "ClusterRole",
-			Name:     "cluster-admin",
+			Name:     desiredRoleName,
 		},
 		Subjects: []rbac.Subject{
 			{
@@ -149,11 +149,35 @@ func k8sPostUpgrade(_ context.Context, input *go_hook.HookInput, dc dependency.C
 		},
 	}
 
-	input.Logger.Info("creating clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding))
-
-	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), clusterRoleBinding, metav1.CreateOptions{})
+	existing, err := kubeCl.RbacV1().ClusterRoleBindings().Get(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		input.Logger.Info("creating clusterrolebinding", slog.String("name", clusterAdminsGroupAndClusterRoleBinding), slog.String("roleRef", desiredRoleName))
+		_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), desiredCRB, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error create clusterrolebinding %s: %v", clusterAdminsGroupAndClusterRoleBinding, err)
+		}
+		return nil
+	}
 	if err != nil {
-		return fmt.Errorf("error create clusterrolebinding: %s: %v", clusterAdminsGroupAndClusterRoleBinding, err)
+		return fmt.Errorf("error get clusterrolebinding %s: %v", clusterAdminsGroupAndClusterRoleBinding, err)
+	}
+
+	// roleRef is immutable — if it points to the wrong role, delete and recreate
+	if existing.RoleRef.Name != desiredRoleName {
+		input.Logger.Info("rebinding clusterrolebinding",
+			slog.String("name", clusterAdminsGroupAndClusterRoleBinding),
+			slog.String("from", existing.RoleRef.Name),
+			slog.String("to", desiredRoleName))
+
+		err = kubeCl.RbacV1().ClusterRoleBindings().Delete(context.TODO(), clusterAdminsGroupAndClusterRoleBinding, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("error delete old clusterrolebinding %s: %v", clusterAdminsGroupAndClusterRoleBinding, err)
+		}
+
+		_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(context.TODO(), desiredCRB, metav1.CreateOptions{})
+		if err != nil {
+			return fmt.Errorf("error create clusterrolebinding %s: %v", clusterAdminsGroupAndClusterRoleBinding, err)
+		}
 	}
 
 	return nil

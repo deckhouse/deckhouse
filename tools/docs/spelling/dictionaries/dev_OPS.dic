@@ -34,6 +34,7 @@ AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowDeleteLogs
 allowVolumeExpansion
 amd
 AMD
@@ -472,6 +473,7 @@ enableMultiTenancy
 endofftopic
 enum
 env
+EnvoyFilter
 EOF
 erlier
 ESXi
@@ -666,6 +668,7 @@ ingressClass
 IngressClass
 IngressClassParameters
 ingressgateway
+IngressGateway
 ingressgateways
 IngressIstioController
 ingressNginxController
@@ -835,6 +838,7 @@ LowNodeUtilization
 LRS
 lsblk
 LTS
+Lua
 LUN
 lv
 LV
@@ -1502,6 +1506,7 @@ UUIDs
 uwsgi
 v1
 ValidationWebhook
+ValidatingAdmissionPolicy
 validator
 vApp
 vApps
@@ -2075,6 +2080,7 @@ ZvirtInstanceClass
 неймспейс
 неймспейсах
 неймспейсе
+неймспейсы
 некоммитнутые
 некоммитнутыми
 неконсистентному

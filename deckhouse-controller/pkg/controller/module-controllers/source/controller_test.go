@@ -330,11 +330,12 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
-	suite.Run("module source with existing module releases apply last patch without listing tags", func() {
+	suite.Run("module source with existing module releases apply last patch", func() {
 		dc := newMockedContainerWithData(suite.T(),
 			"v1.4.4",
 			[]string{"parca"},
-			[]string{})
+			[]string{"v1.4.1", "v1.4.2", "v1.4.3", "v1.4.4"},
+		)
 		suite.setupTestController(string(suite.parseTestdata("existing-module-releases-without-listing-registry.yaml")), withDependencyContainer(dc))
 		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource(suite.source))
 		require.NoError(suite.T(), err)

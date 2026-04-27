@@ -29,6 +29,7 @@ periodSeconds: 10
 {{- /* Includes Deployment, VerticalPodAutoscaler (optional) and PodDisruptionBudget (optional). */ -}}
 {{- /* Supported configuration parameters: */ -}}
 {{- /* + fullname (required) — resource base name used for Deployment, PDB, VPA, and by default for the main container name. */ -}}
+{{- /* + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. */ -}}
 {{- /* + image (required) — image for the main container. */ -}}
 {{- /* + capiProviderName (required) — value for the cluster.x-k8s.io/provider label in selectors and pod labels. */ -}}
 {{- /* + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. */ -}}
@@ -61,6 +62,7 @@ periodSeconds: 10
   {{- $config := index . 1 -}} {{- /* Configuration dict for the CAPI Controller Manager. */ -}}
 
   {{- $fullname := required "helm_lib_capi_controller_manager_manifests: fullname is required" $config.fullname -}}
+  {{- $namespace := dig "namespace" (printf "d8-%s" $context.Chart.Name) $config -}}
   {{- $image := required "helm_lib_capi_controller_manager_manifests: image is required" $config.image -}}
   {{- $capiProviderName := required "helm_lib_capi_controller_manager_manifests: $capiProviderName is required" $config.capiProviderName -}}
   {{- $resources := dig "resources" (include "capi_controller_manager_resources" $context | fromYaml) $config -}}
@@ -95,7 +97,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   targetRef:
@@ -119,7 +121,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   maxUnavailable: {{ $pdbMaxUnavailable }}
@@ -133,7 +135,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $context | nindent 2 }}

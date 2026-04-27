@@ -39,13 +39,18 @@ const (
 	approvedAnnotation        = `control-plane-manager.deckhouse.io/approved`
 	maxRetries                = 120
 	namespace                 = `kube-system`
-	kubernetesConfigPath      = `/etc/kubernetes`
-	manifestsPath             = kubernetesConfigPath + `/manifests`
-	deckhousePath             = kubernetesConfigPath + `/deckhouse`
 	configPath                = `/config`
 	pkiPath                   = `/pki`
-	kubernetesPkiPath         = kubernetesConfigPath + `/pki`
 	kubeadmPath               = "/kubeadm"
+)
+
+// kubernetesConfigPath is the path to Kubernetes configuration files.
+// This is a var (not const) to allow testing with temporary directories.
+var (
+	kubernetesConfigPath = `/etc/kubernetes`
+	manifestsPath        = kubernetesConfigPath + `/manifests`
+	deckhousePath        = kubernetesConfigPath + `/deckhouse`
+	kubernetesPkiPath    = kubernetesConfigPath + `/pki`
 )
 
 type Config struct {
@@ -60,6 +65,7 @@ type Config struct {
 	TmpPath                          string
 	AllowedKubernetesVersions        string
 	EtcdArbiter                      bool
+	NodeAdminKubeconfig              bool
 }
 
 var (
@@ -111,6 +117,12 @@ func (c *Config) readEnvs() error {
 	if _, ok := os.LookupEnv("ETCD_ARBITER"); ok {
 		c.EtcdArbiter = true
 		log.Info("ETCD_ARBITER mode enabled: running only etcd without control-plane components")
+	}
+
+	c.NodeAdminKubeconfig = true
+	if v, ok := os.LookupEnv("NODE_ADMIN_KUBECONFIG"); ok && v == "false" {
+		c.NodeAdminKubeconfig = false
+		log.Info("NODE_ADMIN_KUBECONFIG is disabled: /root/.kube/config symlink to admin.conf will be removed")
 	}
 
 	if err := c.checkKubernetesVersion(); err != nil {

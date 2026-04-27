@@ -265,13 +265,13 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
 			Manifest: func() interface{} { return nil },
-			CreateFunc: func(manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest interface{}) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 				content, err := docCopy.MarshalJSON()
 				if err != nil {
 					return err
@@ -284,12 +284,13 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 			},
 		}
 
-		err := manifestTask.CreateOrUpdateSilent()
+		err := manifestTask.CreateOrUpdateSilent(ctx)
 		if err != nil {
 			if strings.Contains(err.Error(), "the server could not find the requested resource") {
 				c.kubeCl.InvalidateDiscoveryCache()
 			}
 		}
+
 		return err
 	})
 }
@@ -321,7 +322,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 		}
 	}
 
-	_ = log.Process("Create Resources", "Resources to create", func() error {
+	_ = log.ProcessCtx(ctx, "Create Resources", "Resources to create", func(ctx context.Context) error {
 		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
 		return nil
 	})
@@ -349,7 +350,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 			if len(createdResources) > 0 {
 				msg["created"] = createdResources
 			}
-			logResources(msg)
+			logResources(ctx, msg)
 		}
 		if ready && err == nil {
 			return nil
@@ -358,7 +359,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 		select {
 		case <-endChannel:
 			if len(resources) > 0 {
-				_ = log.Process("Create Resources", "Failed to create", func() error {
+				_ = log.ProcessCtx(ctx, "Create Resources", "Failed to create", func(ctx context.Context) error {
 					log.WarnF("%s\n", strings.Join(remained, "\n"))
 					return nil
 				})
@@ -377,8 +378,8 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 	}
 }
 
-func logResources(res map[string][]string) {
-	_ = log.Process("Create Resources", "Resource readiness check", func() error {
+func logResources(ctx context.Context, res map[string][]string) {
+	_ = log.ProcessCtx(ctx, "Create Resources", "Resource readiness check", func(ctx context.Context) error {
 		remained, ok := res["remained"]
 		if ok {
 			for i, s := range remained {
@@ -386,11 +387,12 @@ func logResources(res map[string][]string) {
 					remained = slices.Delete(remained, i, i+1)
 				}
 			}
-			_ = log.Process("Create Resources", "Resource not ready", func() error {
+			_ = log.ProcessCtx(ctx, "Create Resources", "Resource not ready", func(ctx context.Context) error {
 				log.InfoF("%s\n", strings.Join(remained, "\n"))
 				return nil
 			})
 		}
+
 		created, ok := res["created"]
 		if ok {
 			for i, s := range created {
@@ -398,7 +400,7 @@ func logResources(res map[string][]string) {
 					created = slices.Delete(created, i, i+1)
 				}
 			}
-			_ = log.Process("Create Resources", "Resource ready", func() error {
+			_ = log.ProcessCtx(ctx, "Create Resources", "Resource ready", func(ctx context.Context) error {
 				log.InfoF("%s\n", strings.Join(created, "\n"))
 				return nil
 			})

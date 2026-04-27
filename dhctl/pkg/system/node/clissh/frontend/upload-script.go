@@ -289,7 +289,7 @@ func bundleOutputHandler(
 				}
 
 				processLogger.LogProcessFail()
-				stepName = fmt.Sprintf("%s, retry attempt #%d of 10\n", stepName, *failsCounter)
+				stepName = fmt.Sprintf("%s, retry attempt #%d of 10", stepName, *failsCounter)
 			} else if *lastStep != "" {
 				stepLogs = make([]string, 0)
 				processLogger.LogProcessEnd()

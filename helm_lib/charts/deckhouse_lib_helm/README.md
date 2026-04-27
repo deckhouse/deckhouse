@@ -38,6 +38,7 @@
 | [helm_lib_cloud_controller_manager_manifests](#helm_lib_cloud_controller_manager_manifests) |
 | **Cloud Data Discoverer** |
 | [helm_lib_cloud_data_discoverer_manifests](#helm_lib_cloud_data_discoverer_manifests) |
+| [helm_lib_cloud_data_discoverer_pod_monitor](#helm_lib_cloud_data_discoverer_pod_monitor) |
 | **Csi Controller** |
 | [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
 | **Dns Policy** |
@@ -489,6 +490,7 @@ list:
  Includes Deployment, VerticalPodAutoscaler (optional) and PodDisruptionBudget (optional). 
  Supported configuration parameters: 
  + fullname (required) — resource base name used for Deployment, PDB, VPA, and by default for the main container name. 
+ + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. 
  + image (required) — image for the main container. 
  + capiProviderName (required) — value for the cluster.x-k8s.io/provider label in selectors and pod labels. 
  + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. 
@@ -535,6 +537,7 @@ list:
  Includes Deployment, VerticalPodAutoscaler (optional), PodDisruptionBudget (optional), and SecurityPolicyException (optional). 
  Supported configuration parameters: 
  + fullname (optional, default: `"cloud-controller-manager"`) — resource base name used for Deployment, PDB, VPA, SecurityPolicyException, and the main container name by default. 
+ + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. 
  + image (required) — image for the main container. 
  + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. 
  + priorityClassName (optional, default: `"system-cluster-critical"`) — Pod priority class name. 
@@ -579,6 +582,7 @@ list:
  Includes Deployment, VerticalPodAutoscaler (optional) and PodDisruptionBudget (optional). 
  Supported configuration parameters: 
  + fullname (optional, default: `"cloud-data-discoverer"`) — resource base name used for Deployment, PDB, VPA, and the main container name by default. 
+ + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. 
  + image (required) — image for the main container. 
  + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. 
  + replicas (optional, default: `1`) — number of Deployment replicas. 
@@ -612,6 +616,20 @@ list:
 list:
 -  Template context with .Values, .Chart, etc. 
 -  Configuration dict for the Cloud Data Discoverer. 
+
+
+### helm_lib_cloud_data_discoverer_pod_monitor
+
+ Renders PodMonitor manifest for provider-specific Cloud Data Discoverers. 
+ Supported configuration parameters: 
+ + fullname (optional, default: `"cloud-data-discoverer"`) — PodMonitor base name. 
+ + targetNamespace (required) — target pod namespace for selector. 
+ + additionalRelabelings (optional, default: `[]`) — additional rules for labels rewriting. 
+
+#### Usage
+
+`{{ include "helm_lib_cloud_data_discoverer_pod_monitor" (list . $config) }} `
+
 
 ## Csi Controller
 

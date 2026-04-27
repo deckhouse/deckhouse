@@ -55,8 +55,8 @@ func NewInLockRunner(getter kubernetes.KubeClientProvider, identity string) *InL
 	}
 }
 
-func NewInLockLocalRunner(getter kubernetes.KubeClientProvider, identity string) *InLockRunner {
-	localIdentity := getLocalConvergeLockIdentity(identity)
+func NewInLockLocalRunner(ctx context.Context, getter kubernetes.KubeClientProvider, identity string) *InLockRunner {
+	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
 	return NewInLockRunner(getter, localIdentity)
 }
 
@@ -121,7 +121,7 @@ func (r *InLockRunner) Stop() {
 }
 
 func LockConverge(ctx context.Context, provider kubernetes.KubeClientProvider, identity string) (func(bool), error) {
-	localIdentity := getLocalConvergeLockIdentity(identity)
+	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
 	return LockConvergeWithConfig(ctx, provider, lockConfig)
 }
@@ -185,20 +185,20 @@ func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
 	}
 }
 
-func getLocalConvergeLockIdentity(pref string) string {
+func getLocalConvergeLockIdentity(ctx context.Context, pref string) string {
 	const cacheKey = "lock-identifier"
 
 	cache := statecache.Global()
 
-	if hasID, err := cache.InCache(cacheKey); err == nil && hasID {
-		id, err := cache.Load(cacheKey)
+	if hasID, err := cache.InCache(ctx, cacheKey); err == nil && hasID {
+		id, err := cache.Load(ctx, cacheKey)
 		if err == nil && len(id) > 0 {
 			return string(id)
 		}
 	}
 
 	id := fmt.Sprintf("%v-%v", pref, uuid.New().String())
-	if err := cache.Save(cacheKey, []byte(id)); err != nil {
+	if err := cache.Save(ctx, cacheKey, []byte(id)); err != nil {
 		panic(err)
 	}
 

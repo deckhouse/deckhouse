@@ -54,17 +54,40 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        function getScrollOffset() {
+            const header = document.querySelector('header');
+            const navigation = document.querySelector('.navigation__container');
+            const headerHeight = header ? header.offsetHeight : 0;
+            const navigationHeight = navigation && !navigation.classList.contains('hidden') ? navigation.offsetHeight : 0;
+
+            return headerHeight + navigationHeight + 10;
+        }
+
+        function alignTitleWithViewport() {
+            const scrollTop = title.getBoundingClientRect().top + window.scrollY - getScrollOffset();
+            window.scrollTo(0, Math.max(0, scrollTop));
+        }
+
         if (onlyTarget) {
-            sectionMap.forEach((content, title) => {
-                title.classList.toggle('hide');
-                content.classList.toggle('hidden');
+            sectionMap.forEach((contentItem, titleItem) => {
+                const isTarget = titleItem === title;
+
+                titleItem.classList.toggle('hide', !isTarget);
+                if (contentItem) {
+                    contentItem.classList.toggle('hidden', !isTarget);
+                }
             });
+            requestAnimationFrame(alignTitleWithViewport);
             return;
         }
 
         const content = sectionMap.get(title);
         title.classList.remove('hide');
-        content.classList.remove('hidden');
+        if (content) {
+            content.classList.remove('hidden');
+        }
+
+        requestAnimationFrame(alignTitleWithViewport);
     }
 
     faqTitle.forEach(title => {

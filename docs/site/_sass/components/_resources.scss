@@ -2,6 +2,11 @@
 @use "components/common/_mixins";
 
 .resources {
+
+  .resources__attrs {
+    padding-left: 1px;
+  }
+
   ul, ol, li {
     & p:not(.resources__attrs) {
       font-size: 14px;
@@ -26,6 +31,19 @@
         background: linear-gradient(180deg, #EFF3F9 0%, #FFF 100%) no-repeat;
         border-radius: 4px;
         background-size: auto 80px;
+      }
+
+      .resources__prop_description {
+        margin-left: 20px;
+        padding-top: 12px;
+
+        & ul {
+          padding: mixins.rem(5px);
+
+          & li {
+            margin: 0;
+          }
+        }
       }
     }
 
@@ -69,19 +87,6 @@
         text-transform: uppercase;
         margin-left: mixins.rem(10px);
         margin-top: 0;
-      }
-    }
-
-    &_description {
-      margin-left: 20px;
-      padding-top: 12px;
-
-      & ul {
-        padding: mixins.rem(5px);
-
-        & li {
-          margin: 0;
-        }
       }
     }
   }

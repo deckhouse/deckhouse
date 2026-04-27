@@ -1,21 +1,39 @@
 .github/                                                         @Nikolay1224 @himax1991
-000-common/                                                      @sprait
-**/000-common/images/alt-p11/                                    @name212 @090809
+000-common/                                                      @RomanenkoDenys
+**/000-common/images/alt-p11                                     @name212 @090809
+**/000-common/images/cni-**                                      @apolovov
+**/000-common/images/coredns                                     @apolovov
+**/000-common/images/crane                                       @sprait
+**/000-common/images/csi-**                                      @AleksZimin @duckhawk @szhem
+**/000-common/images/debug-container                             @apolovov
+**/000-common/images/iptables-wrapper                            @apolovov
+**/000-common/images/kube-rbac-proxy                             @AlwxSin
+**/000-common/images/kubernetes                                  @sprait
+**/000-common/images/pause                                       @sprait
+**/000-common/images/shell-operator                              @ldmonster
+**/000-common/images/vxlan-offloading-fixer                      @apolovov
 002-deckhouse/                                                   @ldmonster
-007-registrypackages/                                            @RomanenkoDenys @sprait
+007-registrypackages/                                            @RomanenkoDenys
+**/007-registrypackages/images/containerd                        @sprait
+**/007-registrypackages/images/crictl                            @sprait
+**/007-registrypackages/images/cryptsetup                        @sprait
 **/007-registrypackages/images/d8-ca-updater                     @name212 @090809
 **/007-registrypackages/images/d8-curl                           @name212 @090809
 **/007-registrypackages/images/e2fsprogs                         @name212 @090809
-**/007-registrypackages/images/erofs                             @name212 @090809
+**/007-registrypackages/images/erofs                             @name212 @090809 @sprait
 **/007-registrypackages/images/growpart                          @name212 @090809
 **/007-registrypackages/images/jq                                @name212 @090809
+**/007-registrypackages/images/kubeadm                           @sprait
+**/007-registrypackages/images/kubectl                           @sprait
+**/007-registrypackages/images/kubelet                           @sprait
 **/007-registrypackages/images/lsblk                             @name212 @090809
 **/007-registrypackages/images/netcat                            @name212 @090809
 **/007-registrypackages/images/nfs-mount                         @name212 @090809
 **/007-registrypackages/images/nvme-cli                          @name212 @090809
+**/007-registrypackages/images/pause                             @sprait
 **/007-registrypackages/images/socat                             @name212 @090809
 **/007-registrypackages/images/systemctl-power-commands-wrapper  @name212 @090809
-**/007-registrypackages/images/toml-merge                        @name212 @090809
+**/007-registrypackages/images/toml-merge                        @name212 @090809 @sprait
 **/007-registrypackages/images/virt-what                         @name212 @090809
 **/007-registrypackages/images/which                             @name212 @090809
 **/007-registrypackages/images/yq                                @name212 @090809
@@ -23,11 +41,11 @@
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/                                            @aleksey-su @pabateman
-031-local-path-provisioner/                                      @AleksZimin @duckhawk
+031-local-path-provisioner/                                      @AleksZimin @duckhawk @szhem
 035-cni-flannel/                                                 @AndreyPavlovFlant @apolovov
 035-cni-simple-bridge/                                           @AndreyPavlovFlant @apolovov
 036-kube-proxy/                                                  @AndreyPavlovFlant @apolovov
-038-registry/                                                    @RaveNoX
+038-registry/                                                    @nabokihms @vadimartynov
 039-registry-packages-proxy/                                     @name212 @090809
 040-control-plane-manager/                                       @sprait
 040-node-manager/                                                @name212 @090809
@@ -93,12 +111,12 @@ candi/version_map.yml                    @sprait
 candi/cloud-providers/                   @aleksey-su @pabateman
 candi/terraform_versions.yml             @aleksey-su @pabateman
 cloud-controller-manager/                @aleksey-su @pabateman
-csi/                                     @AleksZimin @duckhawk
+csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @name212 @090809
 docs/                                    @z9r5
 docs/documentation/pages/architecture/   @voitenkov
-helm_lib/                                @sprait
+helm_lib/                                @ldmonster
 crds/                                    @z9r5
 openapi/                                 @z9r5
 /pkg/                                    @ldmonster
@@ -106,4 +124,4 @@ testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
-go_lib/registry/                         @RaveNoX
+go_lib/registry/                         @nabokihms @vadimartynov

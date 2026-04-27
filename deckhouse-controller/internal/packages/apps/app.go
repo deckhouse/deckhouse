@@ -325,6 +325,12 @@ func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplyConfigValues(settings)
 }
 
+// GetSettings returns the effective settings: user config merged with
+// config-schema defaults. Same payload exposed to templates as .Application.Settings.
+func (a *Application) GetSettings() addonutils.Values {
+	return a.values.GetSettings()
+}
+
 // GetConstraints returns scheduler checks, their determine if an app should be enabled/disabled
 func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
@@ -377,7 +383,7 @@ func (a *Application) DisableHooks() {
 	kubeHooks := a.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeHooks {
 		if hook.GetHookController() != nil {
-			hook.GetHookController().StopMonitors()
+			hook.GetHookController().DisableKubernetesBindings()
 		}
 	}
 

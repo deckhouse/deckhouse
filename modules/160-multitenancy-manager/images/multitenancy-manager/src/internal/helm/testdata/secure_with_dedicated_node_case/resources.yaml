@@ -91,6 +91,12 @@ spec:
       podSelector:
         matchLabels:
           app: controller
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: d8-service-with-healthchecks
+      podSelector:
+        matchLabels:
+          app: agent
   podSelector:
     matchLabels: {}
   policyTypes:

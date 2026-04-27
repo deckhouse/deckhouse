@@ -41,8 +41,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		return err
 	}
 
-	err = terminal.AskBecomePassword()
-	if err != nil {
+	if err := terminal.AskBecomePassword(); err != nil {
 		return err
 	}
 	if err := terminal.AskBastionPassword(); err != nil {
@@ -58,7 +57,17 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
+	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
+		Node:           b.NodeInterface,
+		NodeIP:         app.InternalNodeIP,
+		DevicePath:     app.DevicePath,
+		MetaConfig:     metaConfig,
+		CommanderMode:  b.CommanderMode,
+		DirsConfig:     b.DirectoryConfig,
+		LoggerProvider: b.loggerProvider,
+	})
+
+	if err != nil {
 		return err
 	}
 

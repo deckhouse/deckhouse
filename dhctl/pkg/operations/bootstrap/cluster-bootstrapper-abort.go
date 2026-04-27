@@ -48,10 +48,12 @@ func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache boo
 		log.WarnLn(bootstrapAbortCheckMessage)
 	}
 
-	return log.Process("bootstrap", "Abort", func() error { return b.doRunBootstrapAbort(ctx, forceAbortFromCache) })
+	return log.ProcessCtx(ctx, "bootstrap", "Abort", func(ctx context.Context) error {
+		return b.doRunBootstrapAbort(ctx, forceAbortFromCache)
+	})
 }
 
-func (b *ClusterBootstrapper) initSSHClient() error {
+func (b *ClusterBootstrapper) initSSHClient(ctx context.Context) error {
 	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return nil // Local runs don't use ssh client.
@@ -67,7 +69,7 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 	sshClient := wrapper.Client()
 
 	if len(sshClient.Session().AvailableHosts()) == 0 {
-		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
+		mastersIPs, err := state.GetMasterHostsIPs(ctx, cache.Global())
 		if err != nil {
 			log.ErrorF("Can not load available ssh hosts: %v\n", err)
 			return err
@@ -77,7 +79,7 @@ func (b *ClusterBootstrapper) initSSHClient() error {
 		}
 	}
 
-	bastionHost, err := GetBastionHostFromCache()
+	bastionHost, err := GetBastionHostFromCache(ctx)
 	if err != nil {
 		log.ErrorF("Can not load bastion host: %v\n", err)
 		return fmt.Errorf("unable to load bastion host: %w", err)
@@ -118,19 +120,19 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 
 	cachePath := metaConfig.CachePath()
 	log.InfoF("State config for prefix %s:  %s\n", metaConfig.ClusterPrefix, cachePath)
-	if err = cache.InitWithOptions(cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}
 	stateCache := cache.Global()
 
-	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+	if err := b.PhasedExecutionContext.InitPipeline(ctx, stateCache); err != nil {
 		return err
 	}
 	defer func() {
-		_ = b.PhasedExecutionContext.Finalize(stateCache)
+		_ = b.PhasedExecutionContext.Finalize(ctx, stateCache)
 	}()
 
-	hasUUID, err := stateCache.InCache("uuid")
+	hasUUID, err := stateCache.InCache(ctx, "uuid")
 	if err != nil {
 		return fmt.Errorf("unable to check uuid: %w", err)
 	}
@@ -143,8 +145,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return fmt.Errorf("No UUID found in the cache. Perhaps, the cluster was already bootstrapped.")
 	}
 
-	err = log.Process("common", "Get cluster UUID from the cache", func() error {
-		uuid, err := stateCache.Load("uuid")
+	err = log.ProcessCtx(ctx, "common", "Get cluster UUID from the cache", func(ctx context.Context) error {
+		uuid, err := stateCache.Load(ctx, "uuid")
 		if err != nil {
 			return err
 		}
@@ -157,7 +159,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	// init ssh client is safe if master hosts not found (error in base infra)
-	if err := b.initSSHClient(); err != nil {
+	if err := b.initSSHClient(ctx); err != nil {
 		return err
 	}
 
@@ -180,8 +182,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 
 	bootstrapState := NewBootstrapState(stateCache)
 
-	err = log.Process("common", "Choice abort type", func() error {
-		ok, err := bootstrapState.IsManifestsCreated()
+	err = log.ProcessCtx(ctx, "common", "Choice abort type", func(ctx context.Context) error {
+		ok, err := bootstrapState.IsManifestsCreated(ctx)
 		if err != nil {
 			return err
 		}
@@ -216,7 +218,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 
 		if !b.CommanderMode {
 			if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-				if err = cache.InitWithOptions(wrapper.Client().Check().String(), cache.CacheOptions{}); err != nil {
+				if err = cache.InitWithOptions(ctx, wrapper.Client().Check().String(), cache.CacheOptions{}); err != nil {
 					return fmt.Errorf(bootstrapAbortInvalidCacheMessage, wrapper.Client().Check().String(), err)
 				}
 			}
@@ -297,15 +299,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err
 	}
-	if err := b.PhasedExecutionContext.CompletePipeline(stateCache); err != nil {
+	if err := b.PhasedExecutionContext.CompletePipeline(ctx, stateCache); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err
 	}
 	b.lastState = b.PhasedExecutionContext.GetLastState()
 
-	stateCache.Clean()
+	stateCache.Clean(ctx)
 	// Allow to reuse cache because cluster will be bootstrapped again (probably)
-	stateCache.Delete(state.TombstoneKey)
+	stateCache.Delete(ctx, state.TombstoneKey)
 
 	return nil
 }

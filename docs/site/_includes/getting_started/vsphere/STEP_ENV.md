@@ -25,7 +25,11 @@ To configure tags, datastore tagging, and the Deckhouse service role through the
 
 You'll need the vSphere CLI — [govc](https://github.com/vmware/govmomi/tree/master/govc#installation) — to proceed with the rest of the guide.
 
-After the installation is complete, set the environment variables required to work with vCenter:
+After the installation is complete, set the environment variables required to work with vCenter.
+
+{% alert level="warning" %}
+Make sure to specify the username together with the domain, for example: `username@domain.local`.
+{% endalert %}
 
 ```shell
 export GOVC_URL=example.com
@@ -128,7 +132,11 @@ govc role.create deckhouse \
   VirtualMachine.State.CreateSnapshot VirtualMachine.State.RemoveSnapshot VirtualMachine.State.RenameSnapshot
 ```
 
-Assign the role to a user on the `vCenter` object:
+Assign the role to a user on the `vCenter` object.
+
+{% alert level="warning" %}
+Make sure to specify the username together with the domain, for example: `username@domain.local`.
+{% endalert %}
 
 ```shell
 govc permissions.set -principal <username>@vsphere.local -role deckhouse /

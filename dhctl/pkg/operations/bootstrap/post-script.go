@@ -47,17 +47,14 @@ func (e *PostBootstrapScriptExecutor) WithTimeout(timeout time.Duration) *PostBo
 }
 
 func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
-	return log.Process("bootstrap", "Execute post-bootstrap script", func() error {
-		var err error
+	return log.ProcessCtx(ctx, "bootstrap", "Execute post-bootstrap script", func(ctx context.Context) error {
 		resultToSetState, err := e.run(ctx)
-
 		if err != nil {
 			msg := fmt.Sprintf("Post execution script was failed: %v", err)
 			return errors.New(msg)
 		}
 
-		err = e.state.SavePostBootstrapScriptResult(resultToSetState)
-		if err != nil {
+		if err := e.state.SavePostBootstrapScriptResult(ctx, resultToSetState); err != nil {
 			log.ErrorF("Post bootstrap script result was not saved: %v", err)
 		}
 
@@ -65,7 +62,7 @@ func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 	})
 }
 
-func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
+func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, err error) {
 	outputFile := fs.RandomNumberSuffix("/tmp/post-bootstrap-script-output")
 	envs := map[string]string{
 		"OUTPUT": outputFile,
@@ -76,9 +73,8 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	cmd.Sudo(ctx)
 	cmd.WithStderrHandler(nil)
 	cmd.WithStdoutHandler(nil)
-	err := cmd.Run(ctx)
 
-	if err != nil {
+	if err := cmd.Run(ctx); err != nil {
 		return "", fmt.Errorf("Cannot create output file for script: %v", err)
 	}
 
@@ -99,19 +95,13 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	script.WithEnvs(envs)
 	script.Sudo()
 
-	_, err = script.Execute(ctx)
-
-	if err != nil {
+	if _, err := script.Execute(ctx); err != nil {
 		return "", fmt.Errorf("Running %s done with error: %w", e.path, err)
 	}
 
 	content, err := e.sshClient.File().DownloadBytes(ctx, outputFile)
 	if err != nil {
 		return "", fmt.Errorf("Cannot get output from remote file %s: %w", e.path, err)
-	}
-
-	if err != nil {
-		log.WarnLn("Post bootstrap output file '%s' did not remove from server", outputFile)
 	}
 
 	return string(content), nil

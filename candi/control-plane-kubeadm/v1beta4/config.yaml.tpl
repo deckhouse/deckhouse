@@ -30,6 +30,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
+{{- if .apiserver.secretEncryptionKey }}
+  {{- $apiserverFeatureGates = append $apiserverFeatureGates "CRDSensitiveData=true" -}}
+{{- end }}
 {{- if hasKey . "allowedFeatureGates" -}}
   {{- range .allowedFeatureGates.apiserver -}}
     {{- $apiserverFeatureGates = append $apiserverFeatureGates (printf "%s=true" .) -}}
@@ -203,6 +206,8 @@ apiServer:
     {{- if .apiserver.secretEncryptionKey }}
     - name: encryption-provider-config
       value: /etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
+    - name: encryption-provider-config-automatic-reload
+      value: "true"
     {{- end }}
     - name: profiling
       value: "false"

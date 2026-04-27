@@ -380,6 +380,7 @@ spec:
 
 			capcdDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "capcd-controller-manager")
 			Expect(capcdDeployment.Exists()).To(BeTrue())
+			Expect(capcdDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
 			Expect(capcdDeployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 			Expect(capcdDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(capcdDeployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("capcd-controller-manager"))
@@ -514,7 +515,14 @@ spec:
 
 			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
 			Expect(icmDeployment.Exists()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.revisionHistoryLimit").Int()).To(BeEquivalentTo(2))
+			Expect(icmDeployment.Field("spec.template.spec.priorityClassName").String()).To(Equal("system-cluster-critical"))
+			Expect(icmDeployment.Field("spec.template.spec.nodeSelector").String()).To(MatchYAML(`
+node-role.deckhouse.io/control-plane: ""`))
 			Expect(icmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(icmDeployment.Field("spec.template.spec.automountServiceAccountToken").Bool()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.template.spec.imagePullSecrets").String()).To(MatchYAML(`
+- name: deckhouse-registry`))
 			Expect(icmDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 			Expect(icmDeployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("infra-controller-manager"))
 			Expect(icmDeployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("infra-controller-manager"))
@@ -522,6 +530,50 @@ spec:
 - --health-probe-bind-address=:9448
 - --leader-elect
 - --leader-election-namespace=d8-cloud-provider-vcd`))
+			Expect(icmDeployment.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(`
+- name: VCD_INSECURE
+  valueFrom:
+    secretKeyRef:
+      key: insecure
+      name: vcd-connection-info
+- name: VCD_HREF
+  valueFrom:
+    secretKeyRef:
+      key: host
+      name: vcd-connection-info
+- name: VCD_VDC
+  valueFrom:
+    secretKeyRef:
+      key: vdc
+      name: vcd-connection-info
+- name: VCD_ORG
+  valueFrom:
+    secretKeyRef:
+      key: org
+      name: vcd-connection-info
+- name: VCD_VAPP
+  valueFrom:
+    secretKeyRef:
+      key: vAppName
+      name: vcd-connection-info
+- name: VCD_USER
+  valueFrom:
+    secretKeyRef:
+      key: username
+      name: vcd-credentials
+      optional: true
+- name: VCD_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      key: password
+      name: vcd-credentials
+      optional: true
+- name: VCD_TOKEN
+  valueFrom:
+    secretKeyRef:
+      key: refreshToken
+      name: vcd-credentials
+      optional: true`))
 			Expect(icmDeployment.Field("spec.template.spec.containers.0.livenessProbe.httpGet.path").String()).To(Equal("/healthz"))
 			Expect(icmDeployment.Field("spec.template.spec.containers.0.livenessProbe.httpGet.port").String()).To(Equal("9448"))
 			Expect(icmDeployment.Field("spec.template.spec.containers.0.livenessProbe.httpGet.scheme").String()).To(Equal("HTTP"))
@@ -534,9 +586,18 @@ spec:
 
 			icmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-vcd", "infra-controller-manager")
 			Expect(icmVPA.Exists()).To(BeTrue())
+			Expect(icmVPA.Field("spec.targetRef.name").String()).To(Equal("infra-controller-manager"))
+			Expect(icmVPA.Field("spec.updatePolicy.updateMode").String()).To(Equal("InPlaceOrRecreate"))
+			Expect(icmVPA.Field("spec.resourcePolicy.containerPolicies.0.containerName").String()).To(Equal("infra-controller-manager"))
+			Expect(icmVPA.Field("spec.resourcePolicy.containerPolicies.0.minAllowed.cpu").String()).To(Equal("25m"))
+			Expect(icmVPA.Field("spec.resourcePolicy.containerPolicies.0.minAllowed.memory").String()).To(Equal("50Mi"))
+			Expect(icmVPA.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.cpu").String()).To(Equal("50m"))
+			Expect(icmVPA.Field("spec.resourcePolicy.containerPolicies.0.maxAllowed.memory").String()).To(Equal("50Mi"))
 
 			icmPDB := f.KubernetesResource("PodDisruptionBudget", "d8-cloud-provider-vcd", "infra-controller-manager")
 			Expect(icmPDB.Exists()).To(BeTrue())
+			Expect(icmPDB.Field("spec.maxUnavailable").Int()).To(BeEquivalentTo(1))
+			Expect(icmPDB.Field("spec.selector.matchLabels.app").String()).To(Equal("infra-controller-manager"))
 		})
 	})
 
@@ -681,6 +742,19 @@ spec:
 			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
 		})
 
+		It("must render SecurityPolicyException for capcd-controller-manager", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			capcdDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "capcd-controller-manager")
+			Expect(capcdDeployment.Exists()).To(BeTrue())
+			Expect(capcdDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").String()).To(Equal("capcd-controller-manager"))
+
+			securityPolicyException := f.KubernetesResource("SecurityPolicyException", "d8-cloud-provider-vcd", "capcd-controller-manager")
+			Expect(securityPolicyException.Exists()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(securityPolicyException.Field("spec.network.hostNetwork.metadata.description").String()).To(ContainSubstring("CAPCD"))
+		})
+
 		It("must render SecurityPolicyException for csi-controller", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
@@ -691,6 +765,15 @@ spec:
 			securityPolicyException := f.KubernetesResource("SecurityPolicyException", "d8-cloud-provider-vcd", "csi-controller")
 			Expect(securityPolicyException.Exists()).To(BeTrue())
 			Expect(securityPolicyException.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+		})
+
+		It("must not set security-policy-exception label on infra-controller-manager", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
+			Expect(icmDeployment.Exists()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.template.metadata.labels.security\\.deckhouse\\.io/security-policy-exception").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("SecurityPolicyException", "d8-cloud-provider-vcd", "infra-controller-manager").Exists()).To(BeFalse())
 		})
 
 		It("must render SecurityPolicyException for csi-node", func() {
@@ -729,6 +812,44 @@ spec:
 					),
 				),
 			)
+		})
+	})
+
+	Context("VCD :: infra-controller-manager RBAC", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderVcd", moduleValuesA)
+			f.HelmRender()
+		})
+
+		It("must render ServiceAccount and RBAC for infra-controller-manager", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			sa := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vcd", "infra-controller-manager")
+			Expect(sa.Exists()).To(BeTrue())
+			Expect(sa.Field("automountServiceAccountToken").Bool()).To(BeFalse())
+
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vcd:infra-controller-manager")
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(cr.Field("rules.0.resources.0").String()).To(Equal("vcdaffinityrules"))
+
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vcd:infra-controller-manager")
+			Expect(crb.Exists()).To(BeTrue())
+			Expect(crb.Field("subjects.0.kind").String()).To(Equal("ServiceAccount"))
+			Expect(crb.Field("subjects.0.name").String()).To(Equal("infra-controller-manager"))
+			Expect(crb.Field("subjects.0.namespace").String()).To(Equal("d8-cloud-provider-vcd"))
+			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
+			Expect(crb.Field("roleRef.name").String()).To(Equal("d8:cloud-provider-vcd:infra-controller-manager"))
+
+			role := f.KubernetesResource("Role", "d8-cloud-provider-vcd", "infra-controller-manager-leader-election")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules.0.resources.0").String()).To(Equal("leases"))
+
+			rb := f.KubernetesResource("RoleBinding", "d8-cloud-provider-vcd", "infra-controller-manager-leader-election")
+			Expect(rb.Exists()).To(BeTrue())
+			Expect(rb.Field("roleRef.name").String()).To(Equal("infra-controller-manager-leader-election"))
+			Expect(rb.Field("subjects.0.name").String()).To(Equal("infra-controller-manager"))
 		})
 	})
 

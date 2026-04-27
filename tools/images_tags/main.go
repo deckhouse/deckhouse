@@ -72,8 +72,13 @@ func main() {
 
 	digests := make(map[string]map[string]string)
 
-	// Run werf config render to get config file from which  we calculate images names
-	cmd := exec.Command("werf", "config", "render", "--dev", "--log-quiet")
+	// Run render command to get config file from which we calculate images names.
+	// Prefer d8 dk when available, fallback to werf.
+	cmdArgs := []string{"werf", "config", "render", "--dev", "--log-quiet"}
+	if _, lookPathErr := exec.LookPath("d8"); lookPathErr == nil {
+		cmdArgs = []string{"d8", "dk", "config", "render", "--dev", "--log-quiet"}
+	}
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env,
 		"CI_COMMIT_REF_NAME=",

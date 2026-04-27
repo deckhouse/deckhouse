@@ -303,6 +303,12 @@ func (m *Module) ApplySettings(settings addonutils.Values) error {
 	return m.values.ApplyConfigValues(settings)
 }
 
+// GetSettings returns the effective settings: user config merged with
+// config-schema defaults. Same payload exposed to templates as .Module.Settings.
+func (m *Module) GetSettings() addonutils.Values {
+	return m.values.GetSettings()
+}
+
 // GetConstraints returns scheduler checks, their determine if an module should be enabled/disabled
 func (m *Module) GetConstraints() schedule.Constraints {
 	return m.definition.Constraints()
@@ -351,7 +357,7 @@ func (m *Module) DisableHooks() {
 	kubeHooks := m.hooks.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeHooks {
 		if hook.GetHookController() != nil {
-			hook.GetHookController().StopMonitors()
+			hook.GetHookController().DisableKubernetesBindings()
 		}
 	}
 

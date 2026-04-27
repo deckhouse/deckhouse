@@ -1,3 +1,9 @@
 {{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-upmeter" "ingress-tls-smoke-mini") }}
 {{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-upmeter" "ingress-tls-status") }}
 {{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-upmeter" "ingress-tls-webui") }}
+{{ $moduleGateway := dict }}
+{{ include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{ if $moduleGateway }}
+{{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-upmeter" "httproute-tls-status") }}
+{{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-upmeter" "httproute-tls-webui") }}
+{{ end }}

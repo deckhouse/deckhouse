@@ -117,7 +117,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.StartPhase(phases.AllNodesPhase, true, r.cache); err != nil {
+		if shouldStop, err := r.PhasedExecutionContext.StartPhase(ctx, phases.AllNodesPhase, true, r.cache); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -138,7 +138,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.PhasedExecutionContext != nil {
-		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(phases.BaseInfraPhase, true, r.cache, nil); err != nil {
+		if shouldStop, err := r.PhasedExecutionContext.SwitchPhase(ctx, phases.BaseInfraPhase, true, r.cache, nil); err != nil {
 			return err
 		} else if shouldStop {
 			return nil
@@ -151,7 +151,7 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 	}
 
 	if r.PhasedExecutionContext != nil {
-		return r.PhasedExecutionContext.CompletePhase(r.cache, nil)
+		return r.PhasedExecutionContext.CompletePhase(ctx, r.cache, nil)
 	} else {
 		return nil
 	}

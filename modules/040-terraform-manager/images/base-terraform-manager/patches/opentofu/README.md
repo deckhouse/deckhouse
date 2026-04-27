@@ -23,3 +23,21 @@ resources for skip in data sources. Unfortunately we cannot get full diff of dat
 in place when we check deps. Opentofu produce diff change (and re-read) for data source if depended on
 resource has no operations (it called pending update). And now, we are doing our check
 when if we have only one pending dependencies, if has multiple - mark as pending update.
+
+Also, for dvp cloud provider we added skip changes for calculate pending data source deps.
+In this patch we skip changes in labels and annotations.
+We need it because changes in labels and annotations provide pending deps for data sources.
+When opentofu re-read data source, we got full re-read object
+```
+ + object      = (known after apply)
+```
+for ip for example.
+Because we get IP-address for virtual machine from data source, because address will available
+only after full creating (k8s controller set address for resource) and IP-address has in 
+destructive hash for virtual machines and IP data source not fully known before re-reading,
+we get destructive changes for virtual machine.
+Unfortunately, we cannot patch provider, because opentofu makes a decision about
+re-reading data source depends on resource change.
+Also, this changes have direct link to provider. We do not come up with generic solution.
+Generic solution can add some meta-attributes in opentofu data source resource, but it complex
+for implementation.

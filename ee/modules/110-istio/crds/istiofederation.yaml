@@ -58,7 +58,17 @@ spec:
                     - cse-pro
                   description: |
                     HTTPS endpoint with remote cluster metadata.
-                  pattern: '^https://[0-9a-zA-Z._/-]+$'
+                  x-kubernetes-validations:
+                    - rule: "isURL(self)"
+                      message: "must be a valid URL"
+                    - rule: "url(self).getScheme() == 'https'"
+                      message: "must use https"
+                    - rule: "url(self).getHost() != ''"
+                      message: "must include a host"
+                    - rule: "url(self).getQuery().size() == 0"
+                      message: "query parameters are not allowed"
+                    - rule: "!self.contains('#')"
+                      message: "fragments are not allowed"
                   x-doc-examples: ['https://istio.k8s.example.com/metadata/']
                 metadata:
                   type: object

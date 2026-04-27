@@ -89,6 +89,8 @@ const moduleValues = `
   storageClass:
     topologyEnabled: true
   ignoreVolumeMicroversion: false
+  csiDriver:
+    fsGroupPolicy: ReadWriteOnceWithFSType
   internal:
     storageClasses:
       - name: fastssd
@@ -326,8 +328,8 @@ ipv6-support-disabled = true
 [LoadBalancer]
 enabled = true
 create-monitor = "true"
-monitor-delay = "2s"
-monitor-timeout = "1s"
+monitor-delay = "5s"
+monitor-timeout = "3s"
 subnet-id = "my-subnet-id"
 floating-network-id = "my-floating-network-id"
 enable-ingress-hostname = %s

@@ -27,6 +27,7 @@ httpGet:
 {{- /* Includes Deployment, VerticalPodAutoscaler (optional) and PodDisruptionBudget (optional). */ -}}
 {{- /* Supported configuration parameters: */ -}}
 {{- /* + fullname (optional, default: `"cloud-data-discoverer"`) — resource base name used for Deployment, PDB, VPA, and the main container name by default. */ -}}
+{{- /* + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. */ -}}
 {{- /* + image (required) — image for the main container. */ -}}
 {{- /* + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. */ -}}
 {{- /* + replicas (optional, default: `1`) — number of Deployment replicas. */ -}}
@@ -55,6 +56,7 @@ httpGet:
   {{- $config := index . 1 -}} {{- /* Configuration dict for the Cloud Data Discoverer. */ -}}
   
   {{- $fullname := dig "fullname" "cloud-data-discoverer" $config -}}
+  {{- $namespace := dig "namespace" (printf "d8-%s" $context.Chart.Name) $config -}}
   {{- $image := required "helm_lib_cloud_data_discoverer_manifests: image is required" $config.image -}}
   {{- $resources := dig "resources" (include "cloud_data_discoverer_resources" $context | fromYaml) $config -}}
   {{- $replicas := dig "replicas" 1 $config -}}
@@ -85,7 +87,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   targetRef:
@@ -110,7 +112,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   maxUnavailable: {{ $pdbMaxUnavailable }}
@@ -124,7 +126,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   replicas: {{ $replicas }}
@@ -219,7 +221,7 @@ spec:
                 path: /
                 authorization:
                   resourceAttributes:
-                    namespace: d8-{{ $context.Chart.Name }}
+                    namespace: {{ $namespace }}
                     apiGroup: apps
                     apiVersion: v1
                     resource: deployments
@@ -249,6 +251,11 @@ spec:
 
 
 {{- /* Usage: {{ include "helm_lib_cloud_data_discoverer_pod_monitor" (list . $config) }} */ -}}
+{{- /* Renders PodMonitor manifest for provider-specific Cloud Data Discoverers. */ -}}
+{{- /* Supported configuration parameters: */ -}}
+{{- /* + fullname (optional, default: `"cloud-data-discoverer"`) — PodMonitor base name. */ -}}
+{{- /* + targetNamespace (required) — target pod namespace for selector. */ -}}
+{{- /* + additionalRelabelings (optional, default: `[]`) — additional rules for labels rewriting. */ -}}
 {{- define "helm_lib_cloud_data_discoverer_pod_monitor" -}}
   {{- $context := index . 0 -}}
   {{- $config := index . 1 -}}

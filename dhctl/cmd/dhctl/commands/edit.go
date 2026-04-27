@@ -15,13 +15,13 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
@@ -40,8 +40,9 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 	app.DefineEditorConfigFlags(cmd)
 	app.DefineSanityFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := context.Background()
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -59,12 +60,15 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
-		return operations.SecretEdit(kubeCl, name, "kube-system", secret, dataKey, map[string]string{
-			"name": name,
-		}, app.GetDirConfig())
+		return operations.SecretEdit(
+			ctx,
+			kubeCl,
+			name, "kube-system", secret, dataKey, map[string]string{
+				"name": name,
+			},
+			app.GetDirConfig(),
+		)
 	})
-
-	return cmd
 }
 
 func DefineEditCommands(parent *kingpin.CmdClause, wConnFlags bool) {

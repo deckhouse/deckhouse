@@ -15,6 +15,7 @@
 package actions
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -26,26 +27,26 @@ import (
 
 type ManifestTask struct {
 	Name       string
-	CreateFunc func(manifest interface{}) error
-	UpdateFunc func(manifest interface{}) error
+	CreateFunc func(ctx context.Context, manifest interface{}) error
+	UpdateFunc func(ctx context.Context, manifest interface{}) error
 	Manifest   func() interface{}
 	PatchData  func() interface{}
-	PatchFunc  func(patchData []byte) error
+	PatchFunc  func(ctx context.Context, patchData []byte) error
 }
 
 // CreateOrUpdate tries to create resource with the CreateFunc. If resource is already
 // exists, it updates the resource with the UpdateFunc.
-func (task *ManifestTask) CreateOrUpdate() error {
+func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
 	log.InfoF("Manifest for %s\n", task.Name)
 	manifest := task.Manifest()
 
-	err := task.CreateFunc(manifest)
+	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("create resource: %v", err)
 		}
 		log.InfoF("%s already exists. Trying to update ... ", task.Name)
-		err = task.UpdateFunc(manifest)
+		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			log.ErrorLn("ERROR!")
 			return fmt.Errorf("update resource: %v", err)
@@ -55,17 +56,17 @@ func (task *ManifestTask) CreateOrUpdate() error {
 	return nil
 }
 
-func (task *ManifestTask) CreateOrUpdateSilent() error {
+func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
 	log.DebugF("Manifest for %s\n", task.Name)
 	manifest := task.Manifest()
 
-	err := task.CreateFunc(manifest)
+	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
 			return fmt.Errorf("create resource: %v", err)
 		}
 		log.DebugF("%s already exists. Trying to update ... ", task.Name)
-		err = task.UpdateFunc(manifest)
+		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			log.ErrorLn("ERROR!")
 			return fmt.Errorf("update resource: %v", err)
@@ -75,7 +76,7 @@ func (task *ManifestTask) CreateOrUpdateSilent() error {
 	return nil
 }
 
-func (task *ManifestTask) Patch() error {
+func (task *ManifestTask) Patch(ctx context.Context) error {
 	log.DebugF("Patch for %s\n", task.Name)
 	patchData := task.PatchData()
 
@@ -84,7 +85,7 @@ func (task *ManifestTask) Patch() error {
 		return fmt.Errorf("marshal patch data: %v", err)
 	}
 
-	err = task.PatchFunc(patchBytes)
+	err = task.PatchFunc(ctx, patchBytes)
 	if err != nil {
 		return fmt.Errorf("Apply patch: %v", err)
 	}
@@ -92,7 +93,7 @@ func (task *ManifestTask) Patch() error {
 	return nil
 }
 
-func (task *ManifestTask) PatchOrCreate() error {
+func (task *ManifestTask) PatchOrCreate(ctx context.Context) error {
 	log.DebugF("Patch or create for %s\n", task.Name)
 	patchData := task.PatchData()
 
@@ -101,7 +102,7 @@ func (task *ManifestTask) PatchOrCreate() error {
 		return fmt.Errorf("marshal patch data: %v", err)
 	}
 
-	err = task.PatchFunc(patchBytes)
+	err = task.PatchFunc(ctx, patchBytes)
 	if err == nil {
 		return nil
 	}
@@ -112,7 +113,7 @@ func (task *ManifestTask) PatchOrCreate() error {
 
 	log.DebugF("%s is not found. Trying to create ... \n", task.Name)
 	manifest := task.Manifest()
-	err = task.CreateFunc(manifest)
+	err = task.CreateFunc(ctx, manifest)
 	if err != nil {
 		return fmt.Errorf("Create '%s': %v", task.Name, err)
 	}

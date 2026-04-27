@@ -234,7 +234,7 @@ func (c *NodeGroupController) deleteRedundantNodes(
 			continue
 		}
 
-		if err := infrastructurestate.DeleteNodeInfrastructureStateFromCache(nodeToDeleteInfo.name, ctx.StateCache()); err != nil {
+		if err := infrastructurestate.DeleteNodeInfrastructureStateFromCache(ctx.Ctx(), nodeToDeleteInfo.name, ctx.StateCache()); err != nil {
 			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to delete node %s infrastructure state from cache: %w", nodeToDeleteInfo.name, err))
 			continue
 		}

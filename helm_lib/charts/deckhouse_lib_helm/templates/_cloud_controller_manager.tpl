@@ -29,6 +29,7 @@ httpGet:
 {{- /* Includes Deployment, VerticalPodAutoscaler (optional), PodDisruptionBudget (optional), and SecurityPolicyException (optional). */ -}}
 {{- /* Supported configuration parameters: */ -}}
 {{- /* + fullname (optional, default: `"cloud-controller-manager"`) — resource base name used for Deployment, PDB, VPA, SecurityPolicyException, and the main container name by default. */ -}}
+{{- /* + namespace (optional, default: `d8-{{ $context.Chart.Name }}`) — resource base namespace. */ -}}
 {{- /* + image (required) — image for the main container. */ -}}
 {{- /* + resources (optional, default: `{cpu: 25m, memory: 50Mi}`) — main container resource requests used when VPA is disabled. */ -}}
 {{- /* + priorityClassName (optional, default: `"system-cluster-critical"`) — Pod priority class name. */ -}}
@@ -59,6 +60,7 @@ httpGet:
   {{- $config := index . 1 -}} {{- /* Configuration dict for the Cloud Controller Manager. */ -}}
 
   {{- $fullname := dig "fullname" "cloud-controller-manager" $config }}
+  {{- $namespace := dig "namespace" (printf "d8-%s" $context.Chart.Name) $config -}}
   {{- $image := $config.image | required "image is required" }}
   {{- $resources := dig "resources" (include "cloud_controller_manager_resources" $context | fromYaml) $config }}
   {{- $priorityClassName := dig "priorityClassName" "system-cluster-critical" $config }}
@@ -91,7 +93,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   targetRef:
@@ -115,7 +117,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
   {{- with $additionalPDBAnnotations }}
   annotations:
@@ -133,7 +135,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" $fullname)) | nindent 2 }}
 spec:
   {{- include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" $context | nindent 2 }}
@@ -225,7 +227,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
   name: {{ $fullname }}
-  namespace: d8-{{ $context.Chart.Name }}
+  namespace: {{ $namespace }}
 spec:
   {{- if $hostNetwork }}
   network:

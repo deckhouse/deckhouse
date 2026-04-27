@@ -65,7 +65,8 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
-	err := logger.LogProcess("default", name, func() error {
+
+	return cloudData, logger.LogProcessCtx(ctx, "default", name, func(ctx context.Context) error {
 		if showDeckhouseLogs {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -145,7 +146,6 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 		logger.LogInfoLn("Cloud configuration found!")
 		return nil
 	})
-	return cloudData, err
 }
 
 func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, logger log.Logger, data map[string]interface{}) error {
@@ -245,11 +245,17 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 				return err
 			}
 
-			for _, c := range node.Status.Conditions {
-				if c.Type == corev1.NodeReady {
-					if c.Status == corev1.ConditionTrue {
-						return nil
-					}
+			for _, cond := range node.Status.Conditions {
+				if cond.Type != corev1.NodeReady {
+					continue
+				}
+				if cond.Message != "" {
+					log.InfoF("Node %q Ready: %s (%s)\n", nodeName, cond.Status, cond.Message)
+				} else {
+					log.InfoF("Node %q Ready: %s\n", nodeName, cond.Status)
+				}
+				if cond.Status == corev1.ConditionTrue {
+					return nil
 				}
 			}
 

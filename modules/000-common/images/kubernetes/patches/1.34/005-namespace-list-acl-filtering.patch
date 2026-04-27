@@ -743,4 +743,3 @@ index 6c6c94ba718..f4fa75f00b4 100644
  		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
  		audit.AddAuditAnnotations(ctx,
  			decisionAnnotationKey, decisionForbid,
-
