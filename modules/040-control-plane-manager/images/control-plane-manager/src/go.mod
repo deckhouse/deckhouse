@@ -95,5 +95,3 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250910181357-589584f1c912 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 replace github.com/deckhouse/deckhouse/go_lib/controlplane => ../../../../../go_lib/controlplane
-
-replace github.com/deckhouse/deckhouse/pkg/metrics-storage => ../../../../../pkg/metrics-storage
