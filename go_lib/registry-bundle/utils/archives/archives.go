@@ -31,23 +31,20 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/utils/fswrap"
 )
 
-type Reader interface {
-	archives.ReaderAtSeeker
+type ReaderAtSeekerCloser interface {
+	io.Reader
+	io.ReaderAt
+	io.Seeker
 	io.Closer
 }
 
-type FS interface {
-	fs.ReadDirFS
-	fs.SubFS
-}
-
 type FSCloser interface {
-	FS
+	fs.FS
 	Close() error
 }
 
 type FSCloserImpl struct {
-	FS
+	fs.FS
 	close func() error
 }
 
@@ -98,9 +95,9 @@ func List(entries []os.DirEntry) []Info {
 	return ret
 }
 
-func Open(dir, baseName string, chunked bool) (Reader, error) {
+func Open(dir, baseName string, chunked bool) (ReaderAtSeekerCloser, error) {
 	var (
-		reader Reader
+		reader ReaderAtSeekerCloser
 		err    error
 	)
 
@@ -117,7 +114,7 @@ func Open(dir, baseName string, chunked bool) (Reader, error) {
 	return reader, nil
 }
 
-func MountReader(reader Reader) (FSCloser, error) {
+func MountReader(reader ReaderAtSeekerCloser) (FSCloser, error) {
 	ctx, ctxCancel := context.WithCancel(context.Background())
 
 	closeFS := func() error {
@@ -138,8 +135,24 @@ func MountReader(reader Reader) (FSCloser, error) {
 		return nil, withClose(fmt.Errorf("open filesystem: %w", err))
 	}
 
+	// https://github.com/mholt/archives/blob/71b922ebb93bac8ccc42832b17c6428ec738cdd2/fs.go#L606-L703
+	if err := fs.WalkDir(sysFS, ".", func(_ string, _ fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, withClose(fmt.Errorf("indexing filesystem: %w", err))
+	}
+
+	// https://github.com/mholt/archives/blob/71b922ebb93bac8ccc42832b17c6428ec738cdd2/fs.go#L736-L742
+	sysFS = fswrap.NewSubFS(sysFS)
+
 	return &FSCloserImpl{
-		FS:    fswrap.NewSubFS(sysFS), // https://github.com/mholt/archives/blob/71b922ebb93bac8ccc42832b17c6428ec738cdd2/fs.go#L736-L742
+		FS:    sysFS,
 		close: closeFS,
 	}, nil
 }
