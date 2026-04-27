@@ -17,6 +17,7 @@ limitations under the License.
 package requirements
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver/v3"
@@ -25,11 +26,13 @@ import (
 )
 
 const (
-	requirementIstioMinimalVersionKey = "istioMinimalVersion"
-	requirementDefaultK8sKey          = "k8s"
-	minVersionValuesKey               = "istio:minimalVersion"
-	isK8sVersionAutomaticKey          = "istio:isK8sVersionAutomatic"
-	istioToK8sCompatibilityMapKey     = "istio:istioToK8sCompatibilityMap"
+	requirementIstioMinimalVersionKey       = "istioMinimalVersion"
+	requirementDefaultK8sKey                = "k8s"
+	requirementPodsShouldNotRunAs1337UIDKey = "podsShouldNotRunAs1337UID"
+	minVersionValuesKey                     = "istio:minimalVersion"
+	isK8sVersionAutomaticKey                = "istio:isK8sVersionAutomatic"
+	istioToK8sCompatibilityMapKey           = "istio:istioToK8sCompatibilityMap"
+	reservedUIDUsageKey                     = "istio:listOfReservedUIDInUsage"
 )
 
 func init() {
@@ -100,6 +103,26 @@ func init() {
 		return false, fmt.Errorf("in coming release the default kubernetes version '%s' will be incompatible with Istio version '%s'", comingDefaultK8sVersion, currentMinIstioVersionStr)
 	}
 
+	checkReservedUIDInUsageFunc := func(_ string, getter requirements.ValueGetter) (bool, error) {
+		reservedUIDUsageRaw, exists := getter.Get(reservedUIDUsageKey)
+		if !exists {
+			return true, nil
+		}
+		usageLines, ok := reservedUIDUsageRaw.([]string)
+		if !ok {
+			return false, fmt.Errorf("%s: expected []string", reservedUIDUsageKey)
+		}
+		if len(usageLines) == 0 {
+			return true, nil
+		}
+		errs := make([]error, 0, len(usageLines))
+		for _, line := range usageLines {
+			errs = append(errs, errors.New(line))
+		}
+		return false, errors.Join(errs...)
+	}
+
 	requirements.RegisterCheck(requirementIstioMinimalVersionKey, checkMinimalIstioVersionFunc)
 	requirements.RegisterCheck(requirementDefaultK8sKey, checkIstioAndK8sVersionsCompatibilityFunc)
+	requirements.RegisterCheck(requirementPodsShouldNotRunAs1337UIDKey, checkReservedUIDInUsageFunc)
 }

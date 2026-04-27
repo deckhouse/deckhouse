@@ -31,10 +31,11 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 			f.RunHook()
 		})
 
-		It("Hook must execute successfully with no metrics", func() {
+		It("Hook must execute successfully; only expire metric group", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
+			Expect(m[0].Group).To(Equal("d8_istio_reserved_uid"))
 		})
 	})
 
@@ -63,7 +64,7 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 			f.RunHook()
 		})
 
-		It("Should not emit any metrics", func() {
+		It("Should not emit per-container metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -76,7 +77,7 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 			f.RunHook()
 		})
 
-		It("Should not emit any metrics since pod is not managed by Istio", func() {
+		It("Should not emit per-container metrics since pod is not managed by Istio", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))
@@ -108,7 +109,7 @@ var _ = Describe("Istio hooks :: reserved UID monitoring ::", func() {
 			f.RunHook()
 		})
 
-		It("Should not emit any metrics", func() {
+		It("Should not emit per-container metrics", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			m := f.MetricsCollector.CollectedMetrics()
 			Expect(m).To(HaveLen(1))

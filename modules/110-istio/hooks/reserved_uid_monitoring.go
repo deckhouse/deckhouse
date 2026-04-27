@@ -29,14 +29,17 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
 )
 
 const (
-	istioReservedUID        int64 = 1337
-	istioProxyContainerName       = "istio-proxy"
-	istioCanonicalNameLabel       = "service.istio.io/canonical-name"
-	reservedUIDMetricsGroup       = "d8_istio_reserved_uid"
+	istioReservedUID                  int64 = 1337
+	istioProxyContainerName                 = "istio-proxy"
+	istioCanonicalNameLabel                 = "service.istio.io/canonical-name"
+	reservedUIDMetricsGroup                 = "d8_istio_reserved_uid"
+	reservedUIDPodContainerMetricName       = "d8_istio_pod_container_reserved_uid"
+	reservedUIDUsageKey                     = "istio:listOfReservedUIDInUsage"
 )
 
 type podReservedUIDInfo struct {
@@ -115,23 +118,34 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleReservedUIDMonitoring(_ context.Context, input *go_hook.HookInput) error {
 	input.MetricsCollector.Expire(reservedUIDMetricsGroup)
 
-	for info, err := range sdkobjectpatch.SnapshotIter[podReservedUIDInfo](input.Snapshots.Get("pods")) {
+	podsSnap := input.Snapshots.Get("pods")
+	if len(podsSnap) == 0 {
+		requirements.RemoveValue(reservedUIDUsageKey)
+		return nil
+	}
+
+	var listOfPodsMessages []string
+	for podInfo, err := range sdkobjectpatch.SnapshotIter[podReservedUIDInfo](podsSnap) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over pod snapshots: %w", err)
 		}
-
-		for _, containerName := range info.ImproperContainerNames {
-			input.MetricsCollector.Set(
-				"d8_istio_pod_container_reserved_uid",
-				1,
-				map[string]string{
-					"namespace": info.Namespace,
-					"pod":       info.Pod,
-					"container": containerName,
-				},
-				metrics.WithGroup(reservedUIDMetricsGroup),
-			)
+		for _, container := range podInfo.ImproperContainerNames {
+			listOfPodsMessages = append(listOfPodsMessages, fmt.Sprintf(
+				"container `%s` in pod `%s` in namespace `%s` is running as UID `1337`",
+				container, podInfo.Pod, podInfo.Namespace,
+			))
+			input.MetricsCollector.Set(reservedUIDPodContainerMetricName, 1, map[string]string{
+				"namespace": podInfo.Namespace,
+				"pod":       podInfo.Pod,
+				"container": container,
+			}, metrics.WithGroup(reservedUIDMetricsGroup))
 		}
+	}
+
+	if len(listOfPodsMessages) > 0 {
+		requirements.SaveValue(reservedUIDUsageKey, listOfPodsMessages)
+	} else {
+		requirements.RemoveValue(reservedUIDUsageKey)
 	}
 
 	return nil
