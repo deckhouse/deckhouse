@@ -24,6 +24,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,8 +40,51 @@ const (
 	targetNS          = "kube-system"
 )
 
+type ModuleConfig struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ModuleConfigSpec   `json:"spec"`
+	Status ModuleConfigStatus `json:"status,omitempty"`
+}
+
+type ModuleConfigSpec struct {
+	Version  int            `json:"version,omitempty"`
+	Settings SettingsValues `json:"settings,omitempty"`
+	Enabled  bool           `json:"enabled,omitempty"`
+}
+
+type SettingsValues struct {
+	PublishAPI *struct{} `json:"publishAPI" yaml:"publishAPI"`
+}
+
+type ModuleConfigStatus struct {
+	Version string `json:"version"`
+	Message string `json:"message"`
+}
+
+func applyModuleConfigFilterForMigration(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	mc := &ModuleConfig{}
+	err := sdk.FromUnstructured(obj, mc)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert user-authn ModuleConfig: %v", err)
+	}
+	return mc, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnStartup: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "module_config_authn",
+			ApiVersion: "deckhouse.io/v1alpha1",
+			Kind:       "ModuleConfig",
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"user-authn"},
+			},
+			FilterFunc: applyModuleConfigFilterForMigration,
+		},
+	},
 }, dependency.WithExternalDependencies(publishAPIConfigMigration))
 
 func publishAPIConfigMigration(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
