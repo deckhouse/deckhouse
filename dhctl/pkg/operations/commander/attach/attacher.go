@@ -45,7 +45,7 @@ type Params struct {
 	CommanderUUID         uuid.UUID
 	SSHProvider           libcon.SSHProvider
 	KubeProvider          libcon.KubeProvider
-	OnCheckResult         func(*check.CheckResult) error
+	OnCheckResult         func(context.Context, *check.CheckResult) error
 	InfrastructureContext *infrastructure.Context
 	OnPhaseFunc           OnPhaseFunc
 	OnProgressFunc        phases.OnProgressFunc

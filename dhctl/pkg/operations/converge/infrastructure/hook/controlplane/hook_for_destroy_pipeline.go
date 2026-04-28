@@ -26,25 +26,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type HookForDestroyPipeline struct {
 	getter            kubernetes.KubeClientProviderWithCtx
+	sshProvider       libcon.SSHProvider
 	nodeToDestroy     string
 	oldMasterIPForSSH string
 	commanderMode     bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, sshProvider libcon.SSHProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
+		sshProvider:   sshProvider,
 		nodeToDestroy: nodeToDestroy,
 		commanderMode: commanderMode,
 	}
@@ -95,13 +99,8 @@ func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrast
 		return nil
 	}
 
-	kubeClient, err := h.getter.KubeClientCtx(ctx)
+	cl, err := h.sshProvider.Client(ctx)
 	if err != nil {
-		return fmt.Errorf("Could not get kube client: %w", err)
-	}
-
-	cl := kubeClient.NodeInterfaceAsSSHClient()
-	if cl == nil {
 		log.DebugLn("Node interface is not ssh")
 		return nil
 	}

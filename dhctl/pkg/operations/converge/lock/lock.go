@@ -55,8 +55,8 @@ func NewInLockRunner(getter kubernetes.KubeClientProviderWithCtx, identity strin
 	}
 }
 
-func NewInLockLocalRunner(getter kubernetes.KubeClientProviderWithCtx, identity string) *InLockRunner {
-	localIdentity := getLocalConvergeLockIdentity(identity)
+func NewInLockLocalRunner(ctx context.Context, getter kubernetes.KubeClientProviderWithCtx, identity string) *InLockRunner {
+	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
 	return NewInLockRunner(getter, localIdentity)
 }
 
@@ -121,7 +121,7 @@ func (r *InLockRunner) Stop() {
 }
 
 func LockConverge(ctx context.Context, provider kubernetes.KubeClientProviderWithCtx, identity string) (func(bool), error) {
-	localIdentity := getLocalConvergeLockIdentity(identity)
+	localIdentity := getLocalConvergeLockIdentity(ctx, identity)
 	lockConfig := GetLockLeaseConfig(localIdentity)
 	return LockConvergeWithConfig(ctx, provider, lockConfig)
 }

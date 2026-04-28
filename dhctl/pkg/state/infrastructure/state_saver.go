@@ -168,7 +168,10 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
 	log.DebugF("Intermediate save state for node %s in cluster...\n", s.nodeName)
-	err = retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(task.PatchOrCreate)
+	err = retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(func() error {
+		return task.PatchOrCreate(ctx)
+	})
+
 	msg := fmt.Sprintf("Intermediate state for node %s was saved in cluster\n", s.nodeName)
 	if err != nil {
 		msg = fmt.Sprintf("Intermediate state for node %s was not saved in cluster: %v\n", s.nodeName, err)

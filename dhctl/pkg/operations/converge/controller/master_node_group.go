@@ -523,8 +523,13 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			nodesToDelete = append(nodesToDelete, nodeInfo.name)
 		}
 
-		err := c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
-			return controlplane.NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
+		sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+		if err != nil {
+			return err
+		}
+
+		err = c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
+			return controlplane.NewHookForDestroyPipeline(ctx, sshProvider, nodeName, ctx.CommanderMode())
 		})
 
 		// If deletion was successful, update master hosts cache

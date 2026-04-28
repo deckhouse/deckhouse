@@ -52,7 +52,7 @@ func newInSecretStateStore() *inSecretStateStore {
 	return &inSecretStateStore{}
 }
 
-func (s *inSecretStateStore) GetState(convergeCtx *Context) (*State, error) {
+func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 	var state State
 	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
 	if err != nil {
@@ -67,7 +67,18 @@ func (s *inSecretStateStore) GetState(convergeCtx *Context) (*State, error) {
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
-			})
+			}
+
+			return fmt.Errorf("failed to get secret: %w", err)
+		}
+
+		err = json.Unmarshal(convergeStateSecret.Data["state.json"], &state)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal state: %w", err)
+		}
+
+		return nil
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get `%s` secret: %w", stateSecretName, err)
 	}
@@ -88,7 +99,13 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				return nil
-			})
+			}
+
+			return fmt.Errorf("failed to delete state secret: %w", err)
+		}
+
+		return nil
+	})
 }
 
 func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error {
@@ -97,7 +114,7 @@ func (s *inSecretStateStore) SetState(convergeCtx *Context, state *State) error 
 		return fmt.Errorf("failed to marshal state: %w", err)
 	}
 
-	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	kubeClient, err := convergeCtx.KubeClientCtx(convergeCtx.Ctx())
 	if err != nil {
 		return fmt.Errorf("Could not get kube client: %w", err)
 	}

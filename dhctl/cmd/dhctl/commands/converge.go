@@ -46,23 +46,9 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		logger := log.GetDefaultLogger()
 		isDebug := app.IsDebug
 
-		var externalLogger *log.ExternalLogger
-		if !app.DoNotWriteDebugLogFile {
-			teeLogger, ok := logger.(*log.TeeLogger)
-			if !ok {
-				return fmt.Errorf("cannot convert logger to TeeLogger")
-			}
-
-			externalLogger, ok = teeLogger.GetLogger().(*log.ExternalLogger)
-			if !ok {
-				return fmt.Errorf("cannot convert logger to ExternalLogger")
-			}
-		} else {
-			var ok bool
-			externalLogger, ok = logger.(*log.ExternalLogger)
-			if !ok {
-				return fmt.Errorf("cannot convert logger to ExternalLogger")
-			}
+		externalLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
@@ -151,7 +137,6 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		logger := log.GetDefaultLogger()
 		isDebug := app.IsDebug
 
-		var externalLogger *log.ExternalLogger
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
 			return fmt.Errorf("cannot convert logger to ExternalLogger")
@@ -193,8 +178,6 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			DirectoryConfig: app.GetDirConfig(),
 		})
 
-		converger.ApplyParams()
-
 		return converger.AutoConverge(ctx, app.AutoConvergeListenAddress, app.ApplyInterval)
 	})
 }
@@ -208,24 +191,10 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
-		var externalLogger *log.ExternalLogger
 
-		if !app.DoNotWriteDebugLogFile {
-			teeLogger, ok := logger.(*log.TeeLogger)
-			if !ok {
-				return fmt.Errorf("cannot convert logger to TeeLogger")
-			}
-
-			externalLogger, ok = teeLogger.GetLogger().(*log.ExternalLogger)
-			if !ok {
-				return fmt.Errorf("cannot convert logger to ExternalLogger")
-			}
-		} else {
-			var ok bool
-			externalLogger, ok = logger.(*log.ExternalLogger)
-			if !ok {
-				return fmt.Errorf("cannot convert logger to ExternalLogger")
-			}
+		externalLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())

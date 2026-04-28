@@ -209,7 +209,12 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to save kubernetes data device path: %w", err)
 	}
 
-	err = entity.WaitForSingleNodeBecomeReady(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	kubeCl, err := h.kubeGetter.KubeClientCtx(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = entity.WaitForSingleNodeBecomeReady(ctx, kubeCl, h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}

@@ -298,7 +298,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
 		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)

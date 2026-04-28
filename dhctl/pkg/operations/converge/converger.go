@@ -111,7 +111,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err := cache.InitWithOptions(c.CacheID, cache.CacheOptions{})
+		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{})
 		if err != nil {
 			return fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
@@ -212,7 +212,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err := cache.InitWithOptions(c.CacheID, cache.CacheOptions{})
+		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
@@ -394,7 +394,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}, nil
 }
 
-func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Duration) error {
+func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
 	if app.RunningNodeName == "" {
 		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
 	}

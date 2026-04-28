@@ -17,6 +17,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -30,6 +31,9 @@ import (
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
@@ -626,4 +630,128 @@ func currentHost(s *session.Session) session.Host {
 	}
 
 	return session.Host{}
+}
+
+type sshIPExtractorParams struct {
+	nodeName string
+	state    []byte
+	settings *session.Session
+}
+
+type sshIPExtractor struct {
+	switcher *KubeClientSwitcher
+	tmpDir   string
+	suffix   string
+}
+
+func newSSHIPExtractor(s *KubeClientSwitcher) (*sshIPExtractor, error) {
+	tmpDir, err := s.tmpDirForConverger()
+	if err != nil {
+		return nil, err
+	}
+
+	suff := rand.NewSource(time.Now().UnixNano()).Int63()
+
+	return &sshIPExtractor{
+		switcher: s,
+		tmpDir:   tmpDir,
+		suffix:   fmt.Sprintf("%d", suff),
+	}, nil
+}
+
+func (e *sshIPExtractor) getIPForSSH(ctx context.Context, params *sshIPExtractorParams) (string, error) {
+	executor, err := e.getExecutor(ctx, params)
+	if err != nil {
+		return "", err
+	}
+
+	// do not cleanup provider after getting output executor!
+
+	statePath, err := e.prepareState(params)
+	if err != nil {
+		return "", err
+	}
+
+	nodeName := params.nodeName
+
+	addresses, err := infrastructure.GetMasterIPAddressForSSH(ctx, statePath, executor)
+	if err != nil {
+		e.switcher.warn(
+			"Cannot extract ips for node '%s':\n%v\nSkip adding node to ssh client",
+			nodeName,
+			err,
+		)
+		return "", nil
+	}
+
+	sshIP := addresses.SSH
+	internal := addresses.Internal
+
+	if sshIP == "" && internal == "" {
+		e.switcher.warn("IPs for node '%s' not found. Skip adding node to ssh client", nodeName)
+		return "", nil
+	}
+
+	bastion := params.settings.BastionHost
+
+	if bastion != "" {
+		e.switcher.debug(
+			"Use node internal ip '%s' for node %s because bastion host '%s' was passed",
+			internal,
+			nodeName,
+			bastion,
+		)
+
+		return internal, nil
+	}
+
+	e.switcher.debug("Use direct ssh ip '%s' for node %s", sshIP, nodeName)
+
+	return sshIP, nil
+}
+
+func (e *sshIPExtractor) getExecutor(ctx context.Context, params *sshIPExtractorParams) (infrastructure.OutputExecutor, error) {
+	nodeName := params.nodeName
+
+	metaConfig, err := e.switcher.ctx.MetaConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get meta config for node %s: %w", nodeName, err)
+	}
+
+	logger := e.switcher.logger
+
+	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+		TmpDir:           e.tmpDir,
+		AdditionalParams: cloud.ProviderAdditionalParams{},
+		Logger:           logger,
+		IsDebug:          e.switcher.params.IsDebug,
+	})
+
+	// yes working dir for output is not required
+	provider, err := providerGetter(ctx, metaConfig)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to create executor for node %s: %w", nodeName, err)
+	}
+
+	executor, err := provider.OutputExecutor(ctx, logger)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot get output executor for node %s: %w", nodeName, err)
+	}
+
+	return executor, nil
+}
+
+func (e *sshIPExtractor) prepareState(params *sshIPExtractorParams) (string, error) {
+	nodeName := params.nodeName
+
+	statePath := filepath.Join(e.tmpDir, fmt.Sprintf("%s-%s.tfstate", nodeName, e.suffix))
+
+	e.switcher.debug("State path for extracting ip for node %s: %s", nodeName, statePath)
+
+	err := os.WriteFile(statePath, params.state, 0o644)
+	if err != nil {
+		return "", fmt.Errorf("Failed to write infrastructure state for %s in %s: %w", nodeName, statePath, err)
+	}
+
+	return statePath, nil
 }
