@@ -1,0 +1,105 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает одну операцию обновления компонента control plane на конкретном узле — например, перевыпуск сертификатов или применение нового манифеста.
+
+            Ресурс создаётся и обновляется модулем `control-plane-manager` автоматически. Создавать и редактировать его вручную не требуется.
+
+            Используется для диагностики: показывает, какая операция выполняется на узле, какой шаг сейчас активен и завершилась ли она успешно (см. колонки `Phase` и `CurrentStep` при `kubectl get cpo`).
+          properties:
+            spec:
+              description: |
+                Желаемое состояние операции.
+              properties:
+                approved:
+                  description: |
+                    Признак того, что операцию разрешено выполнять.
+
+                    Одновременно на одном узле может выполняться только одна подтверждённая операция. Подтверждение проставляется модулем автоматически с учётом текущей конфигурации control plane.
+                steps:
+                  description: |
+                    Упорядоченный список шагов, которые должны быть выполнены в рамках операции.
+
+                    Возможные значения:
+                    * `Backup` — резервное копирование текущей конфигурации компонента (static pod manifest, extra-files) перед изменениями в папку `/etc/kubernetes/deckhouse/backup`.
+                    * `SyncCA` — синхронизация CA-сертификатов (`ca.crt`, `ca.key`) с актуальной версией секрета `d8-pki`.
+                    * `RenewPKICerts` — перевыпуск сертификатов компонента (server, peer, client).
+                    * `RenewKubeconfigs` — перевыпуск kubeconfig-файлов, которыми компонент аутентифицируется в API.
+                    * `SyncManifests` — обновление static pod-манифеста и сопутствующих файлов (`/etc/kubernetes/manifests`, `extra-files`) а так же фиксация изменений сопутствующих файлов в папку `/etc/kubernetes/deckhouse/diffs`.
+                    * `JoinEtcdCluster` — присоединение нового члена к etcd-кластеру.
+                    * `WaitPodReady` — ожидание готовности static pod-а после рестарта.
+                    * `CertObserve` — снятие текущих сроков действия сертификатов компонента и публикация их в `status.observedState`.
+                  items:
+                    description: |
+                      Имя шага операции.
+                component:
+                  description: |
+                    Компонент control plane, к которому относится операция.
+
+                    Возможные значения:
+                    * `Etcd` — etcd.
+                    * `KubeAPIServer` — kube-apiserver.
+                    * `KubeControllerManager` — kube-controller-manager.
+                    * `KubeScheduler` — kube-scheduler.
+                nodeName:
+                  description: |
+                    Имя control plane-узла, на котором должна быть выполнена операция.
+                desiredConfigChecksum:
+                  description: |
+                    Ожидаемый отпечаток конфигурации компонента (static pod-манифест и сопутствующие файлы) после завершения операции.
+
+                    Используется для подтверждения того, что операция действительно применила нужную конфигурацию: после рестарта pod-а отпечаток в `ControlPlaneNode.status` должен совпасть с этим значением.
+                desiredPkiChecksum:
+                  description: |
+                    Ожидаемый отпечаток PKI-настроек компонента (`certSANs`, `encryption-algorithm`) после завершения операции.
+
+                    Заполняется только для шагов, изменяющих PKI (`RenewPKICerts` и связанные).
+                desiredCaChecksum:
+                  description: |
+                    Ожидаемый отпечаток CA-сертификатов после завершения операции.
+
+                    Заполняется только для шагов, обновляющих корневой CA (`SyncCA` и связанные).
+            status:
+              description: |
+                Наблюдаемое состояние операции.
+              properties:
+                conditions:
+                  description: |
+                    Список условий, отражающих ход выполнения операции.
+
+                    Главное условие — `Completed`. Его поле `reason` выводится в колонку `Phase` при `kubectl get cpo`:
+                    * `InProgress` — операция выполняется. Имя текущего шага можно увидеть в колонке `CurrentStep`.
+                    * `Succeeded` — операция успешно завершена.
+                    * `Failed` — операция завершилась с ошибкой; подробности — в `message`.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип условия. Помимо общего `Completed` для каждого выполненного шага создаётся отдельное условие с именем шага (например, `RenewPKICerts`, `SyncManifests`).
+                      status:
+                        description: |
+                          Статус условия: `True`, `False` или `Unknown`.
+                      reason:
+                        description: |
+                          Машиночитаемая причина текущего значения условия (например, `InProgress`, `Succeeded`, `Failed`).
+                      message:
+                        description: |
+                          Человекочитаемое описание текущего состояния. При ошибке здесь будет текст последней ошибки шага.
+                      lastTransitionTime:
+                        description: |
+                          Время последнего изменения статуса условия.
+                      observedGeneration:
+                        description: |
+                          Значение `.metadata.generation`, для которого было рассчитано условие.
+                observedState:
+                  description: |
+                    Состояние компонента, собранное шагом `CertObserve`. Заполняется только для статических подов компонентов (etcd, kube-apiserver, kube-controller-manager, kube-scheduler).
+                  properties:
+                    certificatesExpirationDate:
+                      description: |
+                        Сроки действия сертификатов компонента.
+
+                        Значение представляет собой соответствие «имя файла сертификата → время истечения (NotAfter)». Используется модулем для своевременного перевыпуска сертификатов и для алертов.

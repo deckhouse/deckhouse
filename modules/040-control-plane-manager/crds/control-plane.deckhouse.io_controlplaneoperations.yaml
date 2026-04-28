@@ -100,7 +100,6 @@ spec:
                 - KubeAPIServer
                 - KubeControllerManager
                 - KubeScheduler
-                - CertObserver
                 type: string
               desiredCaChecksum:
                 description: |-

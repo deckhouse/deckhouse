@@ -783,7 +783,7 @@ func (r *Reconciler) ensureObserveOperations(ctx context.Context, cpn *controlpl
 		}
 
 		lastObservedAt := compStatus.LastObservedAt
-		if !lastObservedAt.IsZero() && time.Since(lastObservedAt.Time) <= constants.CertObserverInterval {
+		if !lastObservedAt.IsZero() && time.Since(lastObservedAt.Time) <= constants.CertObserveInterval {
 			continue
 		}
 

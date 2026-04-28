@@ -36,7 +36,7 @@ const (
 )
 
 // OperationComponent identifies a control plane component targeted by the operation.
-// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler;CertObserver
+// +kubebuilder:validation:Enum=Etcd;KubeAPIServer;KubeControllerManager;KubeScheduler
 type OperationComponent string
 
 const (
@@ -44,7 +44,6 @@ const (
 	OperationComponentKubeAPIServer         OperationComponent = "KubeAPIServer"
 	OperationComponentKubeControllerManager OperationComponent = "KubeControllerManager"
 	OperationComponentKubeScheduler         OperationComponent = "KubeScheduler"
-	OperationComponentCertObserver          OperationComponent = "CertObserver"
 )
 
 var componentRegistry = map[OperationComponent]string{
@@ -65,7 +64,7 @@ func init() {
 }
 
 // PodComponentName returns the static pod component name used as pod label "component" in kube-system ns.
-// Returns "" for non-static-pod components (for example CertObserver).
+// Returns "" for unknown components.
 func (c OperationComponent) PodComponentName() string {
 	return componentRegistry[c]
 }
@@ -77,7 +76,7 @@ func ComponentRegistry() map[OperationComponent]string {
 }
 
 // SecretKey returns the main template key in d8-control-plane-manager-config secret.
-// Returns "" for non-static-pod components.
+// Returns "" for unknown components.
 func (c OperationComponent) SecretKey() string {
 	name := c.PodComponentName()
 	if name == "" {

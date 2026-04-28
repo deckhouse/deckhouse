@@ -75,8 +75,8 @@ const (
 	DiffBasePath         = DeckhousePath + "/diffs"
 	MaxDiffsPerComponent = 7
 
-	// CertObserverInterval - minimum duration between periodic CertObserver(all) operations.
-	CertObserverInterval = 7 * 24 * time.Hour
+	// CertObserveInterval is the minimum duration between periodic CertObserve steps for a component.
+	CertObserveInterval = 7 * 24 * time.Hour
 
 	// Cert renewal
 	CertRenewalIDAnnotationKey       = "control-plane.deckhouse.io/cert-renewal-id"

@@ -1,0 +1,231 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает желаемое и наблюдаемое состояние компонентов control plane на конкретном узле: etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
+
+            Ресурс создаётся и обновляется модулем `control-plane-manager` автоматически. Создавать и редактировать его вручную не требуется.
+
+            Используется для диагностики состояния control plane на узле:
+            * колонки `ETCD`, `APISERVER`, `CONTROLLERMANAGER`, `SCHEDULER` (`kubectl get cpn`) показывают готовность каждого компонента;
+            * колонка `CERTIFICATES` показывает общее состояние сертификатов;
+            * `spec.components` содержит ожидаемые отпечатки конфигурации, `status.components` — фактически применённые.
+          properties:
+            spec:
+              description: |
+                Желаемое состояние компонентов control plane на узле.
+              properties:
+                caChecksum:
+                  description: |
+                    Отпечаток секрета `d8-pki` (CA-сертификаты), который должен быть применён ко всем компонентам узла.
+                components:
+                  description: |
+                    Ожидаемые отпечатки конфигурации и PKI для каждого компонента control plane.
+
+                    Если значение в `spec.components.<component>.checksums` отличается от соответствующего значения в `status.components.<component>.checksums`, модуль запустит операцию `ControlPlaneOperation` для приведения компонента в желаемое состояние.
+                  properties:
+                    etcd:
+                      description: |
+                        Желаемое состояние компонента `etcd`.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Отпечаток static pod-манифеста и `extra-files` компонента.
+                            pki:
+                              description: |
+                                Отпечаток PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Отпечаток CA-сертификатов, применённых к компоненту.
+                    kube-apiserver:
+                      description: |
+                        Желаемое состояние компонента `kube-apiserver`.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Отпечаток static pod-манифеста и `extra-files` компонента.
+                            pki:
+                              description: |
+                                Отпечаток PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Отпечаток CA-сертификатов, применённых к компоненту.
+                    kube-controller-manager:
+                      description: |
+                        Желаемое состояние компонента `kube-controller-manager`.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Отпечаток static pod-манифеста и `extra-files` компонента.
+                            pki:
+                              description: |
+                                Отпечаток PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Отпечаток CA-сертификатов, применённых к компоненту.
+                    kube-scheduler:
+                      description: |
+                        Желаемое состояние компонента `kube-scheduler`.
+                      properties:
+                        checksums:
+                          description: |
+                            Ожидаемые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Отпечаток static pod-манифеста и `extra-files` компонента.
+                            pki:
+                              description: |
+                                Отпечаток PKI-настроек компонента (`certSANs`, `encryption-algorithm`).
+                            ca:
+                              description: |
+                                Отпечаток CA-сертификатов, применённых к компоненту.
+            status:
+              description: |
+                Наблюдаемое состояние компонентов control plane на узле.
+              properties:
+                caChecksum:
+                  description: |
+                    Фактически применённый отпечаток CA-сертификатов.
+                components:
+                  description: |
+                    Наблюдаемое состояние каждого компонента: применённые отпечатки и сроки действия сертификатов.
+                  properties:
+                    etcd:
+                      description: |
+                        Наблюдаемое состояние компонента `etcd`.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённый отпечаток static pod-манифеста и `extra-files`.
+                            pki:
+                              description: |
+                                Применённый отпечаток PKI-настроек.
+                            ca:
+                              description: |
+                                Применённый отпечаток CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Сроки действия сертификатов компонента: соответствие «имя файла сертификата → время истечения (NotAfter)». Заполняется при выполнении шага `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения шага `CertObserve` для компонента.
+                    kube-apiserver:
+                      description: |
+                        Наблюдаемое состояние компонента `kube-apiserver`.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённый отпечаток static pod-манифеста и `extra-files`.
+                            pki:
+                              description: |
+                                Применённый отпечаток PKI-настроек.
+                            ca:
+                              description: |
+                                Применённый отпечаток CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Сроки действия сертификатов компонента: соответствие «имя файла сертификата → время истечения (NotAfter)». Заполняется при выполнении шага `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения шага `CertObserve` для компонента.
+                    kube-controller-manager:
+                      description: |
+                        Наблюдаемое состояние компонента `kube-controller-manager`.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённый отпечаток static pod-манифеста и `extra-files`.
+                            pki:
+                              description: |
+                                Применённый отпечаток PKI-настроек.
+                            ca:
+                              description: |
+                                Применённый отпечаток CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Сроки действия сертификатов компонента: соответствие «имя файла сертификата → время истечения (NotAfter)». Заполняется при выполнении шага `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения шага `CertObserve` для компонента.
+                    kube-scheduler:
+                      description: |
+                        Наблюдаемое состояние компонента `kube-scheduler`.
+                      properties:
+                        checksums:
+                          description: |
+                            Применённые отпечатки компонента.
+                          properties:
+                            config:
+                              description: |
+                                Применённый отпечаток static pod-манифеста и `extra-files`.
+                            pki:
+                              description: |
+                                Применённый отпечаток PKI-настроек.
+                            ca:
+                              description: |
+                                Применённый отпечаток CA-сертификатов компонента.
+                        certificatesExpirationDate:
+                          description: |
+                            Сроки действия сертификатов компонента: соответствие «имя файла сертификата → время истечения (NotAfter)». Заполняется при выполнении шага `CertObserve`.
+                        lastObservedAt:
+                          description: |
+                            Время последнего успешного выполнения шага `CertObserve` для компонента.
+                conditions:
+                  description: |
+                    Список условий, отражающих готовность компонентов control plane на узле.
+
+                    Возможные типы условий:
+                    * `EtcdReady` — etcd на узле работает и принимает запросы (выводится в колонку `ETCD`).
+                    * `APIServerReady` — kube-apiserver работает и принимает запросы (колонка `APISERVER`).
+                    * `ControllerManagerReady` — kube-controller-manager работает (колонка `CONTROLLERMANAGER`).
+                    * `SchedulerReady` — kube-scheduler работает (колонка `SCHEDULER`).
+                    * `CertificatesHealthy` — все сертификаты компонентов узла действительны и до истечения остаётся достаточно времени (колонка `CERTIFICATES`).
+
+                    Если значение `status` равно `False`, причину неисправности можно посмотреть в полях `reason` и `message`.
+                  items:
+                    properties:
+                      type:
+                        description: |
+                          Тип условия.
+                      status:
+                        description: |
+                          Статус условия: `True`, `False` или `Unknown`.
+                      reason:
+                        description: |
+                          Машиночитаемая причина текущего значения условия.
+                      message:
+                        description: |
+                          Человекочитаемое описание текущего состояния условия.
+                      lastTransitionTime:
+                        description: |
+                          Время последнего изменения статуса условия.
+                      observedGeneration:
+                        description: |
+                          Значение `.metadata.generation`, для которого было рассчитано условие.

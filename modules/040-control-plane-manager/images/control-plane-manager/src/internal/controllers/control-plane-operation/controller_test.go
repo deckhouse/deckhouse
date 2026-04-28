@@ -134,25 +134,20 @@ func desiredChecksumsForComponent(component controlplanev1alpha1.OperationCompon
 	cpmSecretData := testCPMSecret().Data
 	pkiSecretData := testPKISecret().Data
 
-	switch component {
-	case controlplanev1alpha1.OperationComponentCertObserver:
-		return "", "", ""
-	default:
-		podName := component.PodComponentName()
-		configChecksum, err := checksum.ComponentChecksum(cpmSecretData, podName)
-		if err != nil {
-			panic(fmt.Sprintf("failed to compute config checksum in test helper: %v", err))
-		}
-		pkiChecksum, err := checksum.ComponentPKIChecksum(cpmSecretData, podName)
-		if err != nil {
-			panic(fmt.Sprintf("failed to compute pki checksum in test helper: %v", err))
-		}
-		caChecksum, err := checksum.PKIChecksum(pkiSecretData)
-		if err != nil {
-			panic(fmt.Sprintf("failed to compute ca checksum in test helper: %v", err))
-		}
-		return configChecksum, pkiChecksum, caChecksum
+	podName := component.PodComponentName()
+	configChecksum, err := checksum.ComponentChecksum(cpmSecretData, podName)
+	if err != nil {
+		panic(fmt.Sprintf("failed to compute config checksum in test helper: %v", err))
 	}
+	pkiChecksum, err := checksum.ComponentPKIChecksum(cpmSecretData, podName)
+	if err != nil {
+		panic(fmt.Sprintf("failed to compute pki checksum in test helper: %v", err))
+	}
+	caChecksum, err := checksum.PKIChecksum(pkiSecretData)
+	if err != nil {
+		panic(fmt.Sprintf("failed to compute ca checksum in test helper: %v", err))
+	}
+	return configChecksum, pkiChecksum, caChecksum
 }
 
 // buildTestCase builds a mock registry and a matching approved operation from the given mocks.

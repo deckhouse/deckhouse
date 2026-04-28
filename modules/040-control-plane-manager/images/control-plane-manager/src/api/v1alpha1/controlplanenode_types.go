@@ -89,7 +89,7 @@ type ComponentsStatus struct {
 }
 
 // Component returns a pointer to the ComponentSpec for the given component.
-// Returns nil for non-static-pod components (for example CertObserver).
+// Returns nil for unknown components.
 func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
 	switch comp {
 	case OperationComponentEtcd:
@@ -105,7 +105,7 @@ func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
 }
 
 // Component returns a pointer to the ComponentStatus for the given component.
-// Returns nil for non-static-pod components (for example CertObserver).
+// Returns nil for unknown components.
 func (c *ComponentsStatus) Component(comp OperationComponent) *ComponentStatus {
 	switch comp {
 	case OperationComponentEtcd:
