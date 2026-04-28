@@ -120,25 +120,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -306,25 +311,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -416,25 +426,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -487,25 +502,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -558,25 +578,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -630,25 +655,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -700,25 +730,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
@@ -773,25 +808,30 @@ installTypes:
         template: getting_started/global/STEP_INSTALL_SCHEMA.md
       step3:
         name:
+          en: Starting installer
+          ru: Запуск установщика
+        template: getting_started/global/partials/installer/STEP_START_INSTALLER.md
+      step4:
+        name:
           en: Preparing environment
           ru: Подготовка окружения
         template: getting_started/<INSTALL_CODE>/STEP_ENV.md
-      step4:
+      step5:
         name:
           en: Basic installation parameters
           ru: Базовые параметры установки
         template: getting_started/global/partials/installer/STEP_CLOUD_BASE_PARAMS.md
-      step5:
+      step6:
         name:
           en: Cluster parameters
           ru: Параметры кластера
         template: getting_started/global/partials/installer/STEP_CLOUD_CLUSTER.md
-      step6:
+      step7:
         name:
           en: Installation
           ru: Установка
         template: getting_started/global/partials/installer/STEP_INSTALL.md
-      step7:
+      step8:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
