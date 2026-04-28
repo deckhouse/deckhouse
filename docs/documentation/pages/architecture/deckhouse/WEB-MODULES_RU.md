@@ -40,7 +40,7 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
    * обнаружение версий Deckhouse и Kubernetes;
    * загрузка метрик и логов;
    * загрузка информации о доступности платформы;
-   * экспорт образов дисков в формате blob.
+   * скачивание дисков ВМ (при включенных модулях [`virtualization`](/modules/virtualization/) и [`storage-volume-data-manager`](/modules/storage-volume-data-manager/)).
 
 1. **Observability-gw** — состоит из одного контейнера **nginx** и выполняет проксирование запросов к Grafana для встраивания дашбордов в основной UI платформы, а также для работы с метриками и логами выбранного проекта.
 
@@ -62,7 +62,7 @@ description: Архитектура модулей Deckhouse Kubernetes Platform
 
 1. [**Observability**](/modules/observability/) — получение метрик и логов для выбранного проекта.
 
-1. [**Storage-volume-data-manager**](/modules/storage-volume-data-manager/) — экспорт образов дисков в формате blob.
+1. [**Storage-volume-data-manager**](/modules/storage-volume-data-manager/) — экспорт образов дисков ВМ.
 
 С модулем взаимодействуют следующие внешние компоненты:
 

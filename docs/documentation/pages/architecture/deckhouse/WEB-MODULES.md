@@ -39,7 +39,7 @@ The module consists of the following components:
    * detecting Deckhouse and Kubernetes versions;
    * loading metrics and logs;
    * loading platform availability information;
-   * exporting disk images in blob format.
+   * downloading VM disks (when the [`virtualization`](/modules/virtualization/) and [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) modules are enabled).
 
 1. **Observability-gw**: Consists of a single **nginx** container and proxies requests to Grafana to embed dashboards into the platform's main UI, as well as to work with metrics and logs for the selected project.
 
@@ -61,7 +61,7 @@ The module interacts with the following components:
 
 1. [**Observability**](/modules/observability/): Retrieves metrics and logs for the selected project.
 
-1. [**Storage-volume-data-manager**](/modules/storage-volume-data-manager/): Exports disk images in blob format.
+1. [**Storage-volume-data-manager**](/modules/storage-volume-data-manager/): Exports VM disk images.
 
 The following external component interacts with the module:
 
