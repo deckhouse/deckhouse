@@ -1,0 +1,719 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allowed-capabilities
+spec:
+  suiteName: d8-allowed-capabilities
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-baseline
+      gatorBlock: pss-baseline
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 012-allowed-no-add-capabilities
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-add-capabilities
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+        - name: 013-allowed-net-bind-service
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-net-bind-service
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_BIND_SERVICE
+                        drop:
+                          - ALL
+        - name: 008-disallowed-initcontainer-disallowed-capability
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-initcontainer-disallowed-capability
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+                initContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+        - name: 021-disallowed-ephemeralcontainer-disallowed-capability
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-ephemeralcontainer-disallowed-capability
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+                ephemeralContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - echo eph
+                    image: busybox
+                    name: eph
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+        - name: 009-disallowed-multiple-containers-one-disallowed
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-containers-one-disallowed
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+        - name: 010-disallowed-net-admin
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-net-admin
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+        - name: 011-disallowed-sys-admin
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-sys-admin
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - SYS_ADMIN
+                        drop:
+                          - ALL
+    - name: pss-restricted
+      gatorBlock: pss-restricted
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 019-disallowed-no-drop-capabilities
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.drop[]
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-drop-capabilities
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+        - name: 020-disallowed-not-dropping-all
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.drop[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-not-dropping-all
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - NET_RAW
+        - name: 018-disallowed-disallowed-capability
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.capabilities.add[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-disallowed-capability
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - SYS_ADMIN
+                        drop:
+                          - ALL
+    - name: pss-baseline-with-exception
+      gatorBlock: pss-baseline-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 024-030-disallowed-by-exception-capability-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-admin
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        add:
+                          - NET_ADMIN
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-admin
+                name: disallowed-by-exception-capability-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - SYS_ADMIN
+                        drop:
+                          - ALL
+        - name: 033-disallowed-no-exception-label
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+        - name: 024-032-disallowed-by-exception-multiple-containers-one-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-admin
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        add:
+                          - NET_ADMIN
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-admin
+                name: disallowed-by-exception-multiple-containers-one-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      capabilities:
+                        add:
+                          - SYS_ADMIN
+                        drop:
+                          - ALL
+        - name: 024-037-allowed-by-exception-net-admin
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-admin
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        add:
+                          - NET_ADMIN
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-admin
+                name: allowed-by-exception-net-admin
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+    - name: pss-baseline-spe-container
+      gatorBlock: pss-baseline-spe-container
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_baseline.yaml
+      cases:
+        - name: 036-037-allowed-by-container-exception-net-admin
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speContainerSpecific
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-admin-container
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        add:
+                          - NET_ADMIN
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception/nginx: allow-net-admin-container
+                name: allowed-by-container-exception-net-admin
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+        - name: 036-038-allowed-by-container-exception-nginx-only
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speContainerSpecific
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-admin-container
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        add:
+                          - NET_ADMIN
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception/nginx: allow-net-admin-container
+                name: allowed-by-container-exception-nginx-only
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+        - name: 037-040-allowed-by-container-exception-drop-all
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.drop
+              scenario: speContainerSpecific
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-drop-all-container
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        drop:
+                          - ALL
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception/nginx: allow-drop-all-container
+                name: allowed-by-container-exception-drop-all
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        drop:
+                          - ALL
+    - name: pss-restricted-with-exception
+      gatorBlock: pss-restricted-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 023-031-disallowed-by-exception-drop-mismatch
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.drop
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-admin-drop-all
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-admin-drop-all
+                name: disallowed-by-exception-drop-mismatch
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - NET_RAW
+        - name: 034-disallowed-by-add
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-add
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+        - name: 025-035-disallowed-by-exception-empty-spec
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.add
+              scenario: speAbsent
+            - path: spec.securityContext.capabilities.allowedValues.drop
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+        - name: 023-039-allowed-by-exception-drop-all
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.capabilities.allowedValues.drop
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-net-admin-drop-all
+                spec:
+                  securityContext:
+                    capabilities:
+                      allowedValues:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-net-admin-drop-all
+                name: allowed-by-exception-drop-all
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                        drop:
+                          - ALL

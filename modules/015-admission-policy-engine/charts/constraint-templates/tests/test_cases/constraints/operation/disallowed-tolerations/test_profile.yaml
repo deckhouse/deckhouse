@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: disallowed-tolerations
+spec:
+  testDirectory: disallowed-tolerations
+  suite:
+    expectedTestBlockNames:
+      - d8disallowedtolerations

@@ -1,0 +1,354 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: allow-privilege-escalation
+spec:
+  suiteName: d8-allow-privilege-escalation
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    securityPolicyException:
+      document:
+        apiVersion: deckhouse.io/v1alpha1
+        kind: SecurityPolicyException
+        metadata:
+          namespace: testns
+  namedExceptions: {}
+  blocks:
+    - name: pss-restricted
+      gatorBlock: pss-restricted
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 002-allowed-allowprivilegeescalation-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-allowprivilegeescalation-false
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: false
+        - name: 006-disallowed-no-securitycontext
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-securitycontext
+        - name: 003-disallowed-allowprivilegeescalation-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-allowprivilegeescalation-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: true
+        - name: 005-disallowed-multiple-containers-one-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-containers-one-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: true
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      allowPrivilegeEscalation: false
+        - name: 004-disallowed-initcontainer-allowprivilegeescalation-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-initcontainer-allowprivilegeescalation-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                initContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init
+                    securityContext:
+                      allowPrivilegeEscalation: true
+        - name: 007-allowed-initcontainer-allowprivilegeescalation-false
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-initcontainer-allowprivilegeescalation-false
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                initContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - echo init
+                    image: busybox
+                    name: init
+                    securityContext:
+                      allowPrivilegeEscalation: false
+        - name: 008-disallowed-ephemeralcontainer-allowprivilegeescalation-true
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].securityContext.allowPrivilegeEscalation
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-ephemeralcontainer-allowprivilegeescalation-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                ephemeralContainers:
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - echo eph
+                    image: busybox
+                    name: eph
+                    securityContext:
+                      allowPrivilegeEscalation: true
+    - name: pss-restricted-with-exception
+      gatorBlock: pss-restricted-with-exception
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 012-021-allowed-by-exception-allowprivilegeescalation-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speMatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-privilege-escalation-true
+                spec:
+                  securityContext:
+                    allowPrivilegeEscalation:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-privilege-escalation-true
+                name: allowed-by-exception-allowprivilegeescalation-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: true
+        - name: 009-018-disallowed-by-exception-allowprivilegeescalation-mismatch-false
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-privilege-escalation-false
+                spec:
+                  securityContext:
+                    allowPrivilegeEscalation:
+                      allowedValue: false
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-privilege-escalation-false
+                name: disallowed-by-exception-allowprivilegeescalation-mismatch-false
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: true
+        - name: 019-disallowed-no-exception-label
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speAbsent
+          exception: ""
+          exceptionRef: ""
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-no-exception-label
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: true
+        - name: 011-020-disallowed-by-exception-empty-spec
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speMismatch
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: empty-spec
+                spec:
+                  test: test
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: empty-spec
+                name: disallowed-by-exception-empty-spec
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: true
+    - name: pss-restricted-spe-container
+      gatorBlock: pss-restricted-spe-container
+      defaultObjectBase: ""
+      template: ../rendered/constraint-template.yaml
+      constraint: constraints/pss_restricted.yaml
+      cases:
+        - name: 013-022-allowed-by-container-specific-exception-allowprivilegeescalation-true
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+              scenario: speContainerSpecific
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: securityPolicyException
+              merge:
+                metadata:
+                  name: allow-privilege-escalation-true-container
+                spec:
+                  securityContext:
+                    allowPrivilegeEscalation:
+                      allowedValue: true
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception/nginx: allow-privilege-escalation-true-container
+                name: allowed-by-container-exception-allowprivilegeescalation-true
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    securityContext:
+                      allowPrivilegeEscalation: true
+                  - command:
+                      - /bin/sh
+                      - -c
+                      - sleep 3600
+                    image: busybox
+                    name: sidecar
+                    securityContext:
+                      allowPrivilegeEscalation: false

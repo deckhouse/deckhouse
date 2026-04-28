@@ -1,0 +1,36 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-seccomp
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.seccompProfile.type
+      level: container
+
+      description: Seccomp profile configured in container securityContext
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: metadata.annotations["container.seccomp.security.alpha.kubernetes.io/*"]
+      level: container
+
+      description: Seccomp profile configured via container annotation
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.securityContext.seccompProfile.type
+      level: pod
+
+      description: Seccomp profile configured in pod securityContext
+      requiredScenarios: [positive, negative, absent]
+    - path: metadata.annotations["seccomp.security.alpha.kubernetes.io/pod"]
+      level: pod
+
+      description: Seccomp profile configured via pod annotation
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.securityContext.seccompProfile.allowedValues
+      level: container
+      description: SPE override for allowed seccomp profiles
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

@@ -1,0 +1,21 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allow-privilege-escalation
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.allowPrivilegeEscalation
+      level: container
+
+      description: Controls whether a process can gain more privileges than its parent
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+  speFields:
+    - path: spec.securityContext.allowPrivilegeEscalation.allowedValue
+      level: container
+      description: SPE override for allowPrivilegeEscalation per container
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

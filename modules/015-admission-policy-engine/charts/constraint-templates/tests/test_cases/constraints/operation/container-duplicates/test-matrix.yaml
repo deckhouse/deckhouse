@@ -1,0 +1,194 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: container-duplicates
+spec:
+  suiteName: d8containerduplicates
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: operation-policy
+      gatorBlock: operation-policy
+      defaultObjectBase: ""
+      template: ../../templates/operation/container-duplicates.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].name
+              scenario: positive
+            - path: spec.containers[].env[].name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+                    env:
+                      - name: foo
+                        value: bar
+                      - name: gr
+                        value: fr
+                  - name: foo
+                    image: bar
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: 'Pod <disallowed> has duplicated container names: ''nginx'''
+          fields:
+            - path: spec.containers[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+                  - name: nginx
+                    image: bar
+        - name: example-allowed-envs-same-name-diff-containers
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].env[].name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+              spec:
+                containers:
+                  - name: nginx1
+                    image: nginx
+                    env:
+                      - name: key1
+                        value: val1
+                  - name: nginx2
+                    image: nginx
+                    env:
+                      - name: key1
+                        value: val2
+        - name: example-disallowed-envs-same-name-same-container
+          violations: "yes"
+          assertionMessage: 'Container <nginx> in pod <disallowed> has duplicated env variable names: ''key1'''
+          fields:
+            - path: spec.containers[].env[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx
+                    env:
+                      - name: key1
+                        value: val1
+                      - name: key1
+                        value: val2
+        - name: example-allowed-init-envs-same-name-diff-containers
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.initContainers[].name
+              scenario: positive
+            - path: spec.initContainers[].env[].name
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-init-envs-same-name-diff-containers
+              spec:
+                initContainers:
+                  - name: init-1
+                    image: nginx
+                    env:
+                      - name: key1
+                        value: val1
+                  - name: init-2
+                    image: nginx
+                    env:
+                      - name: key1
+                        value: val2
+        - name: example-disallowed-init-envs-same-name-same-container
+          violations: "yes"
+          assertionMessage: 'Container <init> in pod <disallowed-init-envs-same-name-same-container> has duplicated env variable names: ''key1'''
+          fields:
+            - path: spec.initContainers[].env[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-init-envs-same-name-same-container
+              spec:
+                initContainers:
+                  - name: init
+                    image: nginx
+                    env:
+                      - name: key1
+                        value: val1
+                      - name: key1
+                        value: val2
+        - name: example-disallowed-init-containers-same-name
+          violations: "yes"
+          assertionMessage: 'Pod <disallowed-init-containers-same-name> has duplicated container names: ''init'''
+          fields:
+            - path: spec.initContainers[].name
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-init-containers-same-name
+              spec:
+                initContainers:
+                  - name: init
+                    image: nginx
+                  - name: init
+                    image: nginx:1.27
