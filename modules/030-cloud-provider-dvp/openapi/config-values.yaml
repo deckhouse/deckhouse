@@ -1,5 +1,4 @@
 additionalProperties: false
-x-config-version: 2
 x-doc-search:
   - ModuleConfig
 description: |-
