@@ -87,6 +87,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-provider-vcd:infra-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-vsphere:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-vsphere:cloud-data-discoverer",
+	"system:serviceaccount:d8-cloud-provider-yandex:capyandex-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-yandex:cloud-controller-manager",
 	"system:serviceaccount:d8-cloud-provider-yandex:cloud-data-discoverer",
 	"system:serviceaccount:d8-cloud-provider-yandex:cloud-metrics-exporter",
