@@ -468,6 +468,10 @@ func ParseConfigFromData(
 	globalOptions *options.GlobalOptions,
 	opts ...ValidateOption,
 ) (*MetaConfig, error) {
+	var vopts validateOptions
+	for _, opt := range opts {
+		opt(&vopts)
+	}
 	schemaStore := NewSchemaStore(globalOptions)
 
 	bigFileTmp := strings.TrimSpace(configData)
@@ -516,10 +520,6 @@ deckhouse: {}
 		}
 	}
 
-	var vopts validateOptions
-	for _, opt := range opts {
-		opt(&vopts)
-	}
 	if vopts.operation != "" {
 		metaConfig.Operation = vopts.operation
 	}

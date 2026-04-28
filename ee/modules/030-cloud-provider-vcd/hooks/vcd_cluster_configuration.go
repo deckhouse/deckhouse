@@ -20,24 +20,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
 )
 
-func preparatorProvider(_, _ string) config.MetaConfigPreparator {
-	return vcd.NewMetaConfigPreparatorWithoutLogger(
-		vcd.MetaConfigPreparatorParams{
-			// todo it was bad idea patch metaconfig during installation
-			// we need to prepare meta config in dhctl during installation
-			// for checking vcd version
-			// we do not want to prepare metaconfig here because we already got prepared
-			// after installation during first deckhouse converge and legacy mode will get
-			// in legacy_mode.go hook with order 10, this hook has 20 order index
-			// after first converge we deploy vcd data discoverer and hook legacy_mode.go
-			// directory form data discoverer
-			PrepareMetaConfig: false,
-			// cluster prefix does not provide here
-			ValidateClusterPrefix: false,
-		},
-	)
-}
-
 var _ = cluster_configuration.RegisterHook(
 	func(
 		input *go_hook.HookInput, metaCfg *config.MetaConfig, providerDiscoveryData *unstructured.Unstructured,
@@ -91,7 +73,15 @@ var _ = cluster_configuration.RegisterHook(
 		input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", discoveryData)
 
 		return nil
-	}, cluster_configuration.NewConfig(preparatorProvider),
+	}, cluster_configuration.NewConfig(func(_, _ string) config.MetaConfigPreparator {
+		// PrepareMetaConfig and ValidateClusterPrefix are disabled: this hook runs after
+		// installation, when metaconfig is already prepared. VCD version check happens
+		// via the data discoverer (legacy_mode.go hook, order 10) which runs before this hook (order 20).
+		return vcd.NewMetaConfigPreparatorWithoutLogger(vcd.MetaConfigPreparatorParams{
+			PrepareMetaConfig:     false,
+			ValidateClusterPrefix: false,
+		})
+	}),
 )
 
 func convertJSONRawMessageToStruct(in map[string]json.RawMessage, out interface{}) error {

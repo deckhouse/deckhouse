@@ -154,9 +154,9 @@ resource "kubernetes_resource_ready_v1" "vm" {
   # and we skip this case for simplify code and developer of new resource
   # believes this case is valid for re-testing readiness
   api_version = kubernetes_manifest.vm.object.apiVersion
-  kind = kubernetes_manifest.vm.object.kind
-  name = kubernetes_manifest.vm.object.metadata.name
-  namespace = kubernetes_manifest.vm.object.metadata.namespace
+  kind        = kubernetes_manifest.vm.object.kind
+  name        = kubernetes_manifest.vm.object.metadata.name
+  namespace   = kubernetes_manifest.vm.object.metadata.namespace
 
   # all next fields can be changed without recreate kubernetes_resource_ready_v1
   # in this case readiness check will not start
@@ -173,19 +173,19 @@ resource "kubernetes_resource_ready_v1" "vm" {
   }
 
   fail_condition {
-    type = "BlockDevicesReady"
+    type   = "BlockDevicesReady"
     status = "False"
     reason = "^(BlockDeviceLimitExceeded)$"
   }
 
   fail_condition {
-    type = "VirtualMachineClassReady"
+    type   = "VirtualMachineClassReady"
     status = "False"
     reason = "^(VirtualMachineClassNotReady)$"
   }
 
   fail_condition {
-    type = "Running"
+    type   = "Running"
     status = "False"
     # do not use ^ and $ because message can be multiline
     message = format("(%s)", join("|", local.not_running_fail_re_messages))
