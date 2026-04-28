@@ -135,7 +135,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		return fmt.Errorf("failed to unmarshal 'discovery-data.json' from 'd8-cloud-provider-discovery-data' secret: %v", err)
 	}
 
-	input.Values.Set("cloudProviderVcd.internal.discoveryData", discoveryData)
+	input.Values.Set("cloudProviderVcd.internal.providerDiscoveryData", discoveryData)
 
 	handleDiscoveryDataVolumeTypes(input, discoveryData.StorageProfiles)
 
