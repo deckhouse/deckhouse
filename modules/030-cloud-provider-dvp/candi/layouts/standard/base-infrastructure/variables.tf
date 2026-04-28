@@ -13,7 +13,8 @@
 # limitations under the License.
 
 variable "providerClusterConfiguration" {
-  type = any
+  type    = any
+  default = null
 }
 
 variable "clusterConfiguration" {
@@ -24,10 +25,38 @@ variable "clusterUUID" {
   type = string
 }
 
-locals {
-  project_namespace = try(var.providerClusterConfiguration.provider.namespace, "")
+variable "nodeGroups" {
+  type    = any
+  default = {}
+}
 
-  network_policy_raw = try(var.providerClusterConfiguration.provider.networkPolicy, "Isolated")
+variable "instanceClasses" {
+  type    = any
+  default = {}
+}
+
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
+}
+
+module "migration" {
+  source                       = "../../../terraform-modules/migration"
+  providerClusterConfiguration = var.providerClusterConfiguration
+  nodeGroups                   = var.nodeGroups
+  instanceClasses              = var.instanceClasses
+  secrets                      = var.secrets
+  settings                     = var.settings
+}
+
+locals {
+  project_namespace  = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  network_policy_raw = try(module.migration.settings.spec.settings.provider.parameters.networkPolicy, "Isolated")
   network_policy_mode = (
     local.network_policy_raw == null || trimspace(tostring(local.network_policy_raw)) == ""
   ) ? "Isolated" : tostring(local.network_policy_raw)
@@ -121,9 +150,10 @@ locals {
 
 # Extract locals needed for validation module
 locals {
-  namespace         = var.providerClusterConfiguration.provider.namespace
-  master_node_group = var.providerClusterConfiguration.masterNodeGroup
-  instance_class    = local.master_node_group.instanceClass
+  namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  _master_ng     = module.migration.nodeGroups["master"]
+  _master_ic_name = try(local._master_ng.spec.cloudInstances.classReference.name, "")
+  instance_class = try(module.migration.instanceClasses[local._master_ic_name].spec, {})
 
   root_disk_image = {
     kind = local.instance_class.rootDisk.image.kind

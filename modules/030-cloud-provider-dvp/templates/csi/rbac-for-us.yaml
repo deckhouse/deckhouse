@@ -1,1 +1,3 @@
+{{- if .Values.cloudProviderDvp.storage.enabled }}
 {{- include "helm_lib_csi_controller_rbac" . }}
+{{- end }}

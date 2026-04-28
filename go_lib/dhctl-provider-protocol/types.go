@@ -79,7 +79,7 @@ type PrepareResult struct {
 // ValidateRequest is the JSON object written to stdin for the validate subcommand.
 type ValidateRequest struct {
 	// Version must equal ProtocolVersion. The binary rejects mismatched versions.
-	Version string `json:"version"`
+	Version string       `json:"version"`
 	Input   PrepareInput `json:"input"`
 }
 
@@ -92,7 +92,7 @@ type ValidateResponse struct {
 // PrepareRequest is the JSON object written to stdin for the prepare subcommand.
 type PrepareRequest struct {
 	// Version must equal ProtocolVersion. The binary rejects mismatched versions.
-	Version string `json:"version"`
+	Version string       `json:"version"`
 	Input   PrepareInput `json:"input"`
 }
 
