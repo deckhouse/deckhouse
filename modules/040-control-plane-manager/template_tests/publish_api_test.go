@@ -117,12 +117,19 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: publish ap
 		BeforeEach(func() {
 			hec.HelmRender()
 		})
-		It("Should deploy publish api and kubeconfig generator", func() {
+		It("Should deploy publish api and config export secret", func() {
 			certificate := hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned")
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("Issuer"))
 			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("kubernetes-api"))
 			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Service", "kube-system", "d8-control-plane-apiserver").Exists()).To(BeFalse())
+
+			Expect(hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config").Exists()).To(BeTrue())
+			secret := hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config")
+			Expect(secret.Field("data.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal("cHVibGlzaGVkYXBpY2E="))
+			Expect(secret.Field("data.addKubeconfigGeneratorEntry").String()).To(Equal("dHJ1ZQ=="))
+			Expect(secret.Field("data.httpsMode").String()).To(Equal("U2VsZlNpZ25lZA=="))
+
 		})
 	})
 
@@ -142,6 +149,7 @@ tls.key: KEYKEYKEY
 			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
 			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config").Field("data.httpsMode").String()).To(Equal("R2xvYmFs"))
 		})
 	})
 
@@ -191,6 +199,8 @@ tls.key: KEYKEYKEY
 			Expect(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api").Field(
 				"metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/whitelist-source-range").String()).To(
 				Equal("1.1.1.1,192.168.0.0/24"))
+			Expect(hec.KubernetesResource("Secret", "kube-system", "d8-publish-api-config").Field("data.whitelistSourceRanges").String()).To(Equal("WzEuMS4xLjEgMTkyLjE2OC4wLjAvMjRd"))
+
 		})
 	})
 
