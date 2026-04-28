@@ -46,7 +46,7 @@ The {{ page.title_main }} installation is not available in the Community Edition
 
 {% offtopic title="Дополнительные требования и сведения" %}
 - Для `ContainerdV2` на узлах кластера ОС на виртуальных машинах должна соответствовать требованиям:
-  - ядро Linux версии 5.8 и новее, и не входящее в диапазоны 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS);
+  - ядро Linux версии 5.8 и новее, за исключением диапазонов 6.12.0–6.12.28 или 6.14.0–6.14.6 (эти версии подвержены уязвимости CVE-2025-37999 в EROFS);
   - поддержка `CgroupsV2`;
   - systemd версии `244` и новее;
   - поддержка модуля ядра `erofs`.
@@ -88,7 +88,7 @@ Before installation, ensure the following:
 
 {% offtopic title="Additional requirements and notes" %}
 - For `ContainerdV2` on cluster nodes, the OS on virtual machines must meet the requirements:
-  - Linux kernel version 5.8 or newer, and not in the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS);
+  - Linux kernel version 5.8 or newer, except for the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS);
   - `CgroupsV2` support;
   - Systemd version `244` or newer;
   - `erofs` kernel module support.
