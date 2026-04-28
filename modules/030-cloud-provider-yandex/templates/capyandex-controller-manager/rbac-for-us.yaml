@@ -1,6 +1,3 @@
-{{- if hasKey .Values "nodeManager" }}
-{{- if hasKey .Values.nodeManager "internal" }}
-{{- if .Values.nodeManager.internal.capiControllerManagerEnabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -82,6 +79,3 @@ subjects:
 - kind: ServiceAccount
   name: capyandex-controller-manager
   namespace: d8-cloud-provider-yandex
-{{- end }}
-{{- end }}
-{{- end }}
