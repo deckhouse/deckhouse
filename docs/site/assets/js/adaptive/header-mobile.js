@@ -229,8 +229,22 @@ document.addEventListener('DOMContentLoaded', function () {
         if (window.innerWidth >= 1024 || burgerInited) return;
         burgerInited = true;
 
-        if (hamburgerCollapse && headerSidebar) {
+        if (hamburgerCollapse) {
             hamburgerCollapse.addEventListener('click', function () {
+                if (window.innerWidth < 1024) {
+                    const filterBlock = document.querySelector('.filter__block');
+                    if (filterBlock && filterBlock.classList.contains('show')) {
+                        filterBlock.classList.remove('show');
+                        hamburgerCollapse.classList.remove('show');
+                        if (body) body.classList.remove('sidebar-opened');
+                        const filterOverlay = document.querySelector('.filter__sidebar-overlay');
+                        if (filterOverlay && filterOverlay.parentNode) {
+                            filterOverlay.parentNode.removeChild(filterOverlay);
+                        }
+                        return;
+                    }
+                }
+                if (!headerSidebar) return;
                 if (headerSidebar.classList.contains('show')) {
                     closeBurgerSidebar();
                 } else {
