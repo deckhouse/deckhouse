@@ -51,7 +51,28 @@ During startup, the `alb` module controller checks the currently stored versions
 To manually verify version compatibility of the installed Gateway API objects in the cluster, use:
 
 ```bash
-declare -A want=([gatewayclasses.gateway.networking.k8s.io]=v1 [gateways.gateway.networking.k8s.io]=v1 [grpcroutes.gateway.networking.k8s.io]=v1 [httproutes.gateway.networking.k8s.io]=v1 [listenersets.gateway.networking.k8s.io]=v1 [referencegrants.gateway.networking.k8s.io]=v1beta1 [tcproutes.gateway.networking.k8s.io]=v1alpha2 [tlsroutes.gateway.networking.k8s.io]=v1 [backendtlspolicies.gateway.networking.k8s.io]=v1); for crd in "${!want[@]}"; do got="$(d8 k get crd "$crd" -o jsonpath='{.spec.versions[?(@.storage==true)].name}' 2>/dev/null || true)"; if [[ "$got" == "${want[$crd]}" ]]; then echo "$crd OK storage=$got"; else echo "$crd FAILED cluster=${got:-MISSING} expected=${want[$crd]}"; fi; done | sort
+declare -A want=(
+    [gatewayclasses.gateway.networking.k8s.io]=v1
+    [gateways.gateway.networking.k8s.io]=v1
+    [grpcroutes.gateway.networking.k8s.io]=v1
+    [httproutes.gateway.networking.k8s.io]=v1
+    [listenersets.gateway.networking.k8s.io]=v1
+    [referencegrants.gateway.networking.k8s.io]=v1beta1
+    [tcproutes.gateway.networking.k8s.io]=v1alpha2
+    [tlsroutes.gateway.networking.k8s.io]=v1
+    [backendtlspolicies.gateway.networking.k8s.io]=v1
+)
+
+for crd in "${!want[@]}"; do
+    got="$(
+        d8 k get crd "$crd" -o jsonpath='{.spec.versions[?(@.storage==true)].name}' 2>/dev/null || true
+    )"
+    if [[ "$got" == "${want[$crd]}" ]]; then
+        echo "$crd OK storage=$got"
+    else
+        echo "$crd FAILED cluster=${got:-MISSING} expected=${want[$crd]}"
+    fi
+done | sort
 ```
 
 Otherwise, the module only configures and manages Gateway objects associated with its designated GatewayClass, which minimizes the risk of conflicts when third-party Gateway API implementations are present.
