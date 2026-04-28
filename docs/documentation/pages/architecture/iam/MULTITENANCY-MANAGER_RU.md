@@ -39,7 +39,7 @@ description: Архитектура модуля multitenancy-manager в Deckhou
   - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано `.spec.settings.allowNamespacesWithoutProjects=false`;
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.
 
-   Кастомный ресурс ProjectTemplate позволяет определить шаблон в виде [go template](https://pkg.go.dev/text/template) для создания необходимых объектов Kubernetes, по аналогии с описанием шаблонов в [Helm](https://helm.sh/docs). При создании ресурса Project **multitenancy-manager** выполняет рендеринг go template на основе указанных в Project параметров и применяет полученный манифест в DKP.
+   Кастомный ресурс ProjectTemplate позволяет определить шаблон в формате [Helm template](https://helm.sh/docs/chart_template_guide/) для создания необходимых объектов Kubernetes. При создании или обновлении ресурса Project **multitenancy-manager** формирует Helm Chart на основе внутренних шаблонов модуля, передаёт в него шаблон ресурсов из ProjectTemplate и параметры из Project в виде Helm values, после чего выполняет установку или обновление полученного release в DKP.
 
 ## Взаимодействия модуля
 
