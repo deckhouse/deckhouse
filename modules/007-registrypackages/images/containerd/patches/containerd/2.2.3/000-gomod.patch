@@ -6,7 +6,7 @@ index 648cb3e43..7a1162a49 100644
  module github.com/containerd/containerd/v2
  
 -go 1.24.3
-+go 1.26.0
++go 1.25.8
  
  require (
  	dario.cat/mergo v1.0.2
