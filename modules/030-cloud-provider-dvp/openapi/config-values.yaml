@@ -1,35 +1,118 @@
-type: object
+additionalProperties: false
+x-config-version: 2
+x-doc-search:
+  - ModuleConfig
+description: |-
+  Describes the configuration of a cloud cluster in Deckhouse Virtualization Platform (DVP).
+
+  Used by the cloud provider if a cluster's control plane is hosted in the DVP cloud.
+
+  Run the following command to change the configuration in a running cluster:
+
+  ```shell
+  d8 k edit moduleconfig cloud-provider-dvp
+  ```
+
+  > Once you modify the node configuration, run `dhctl converge` for changes to take effect for permanent nodes.
 properties:
+  nodes:
+    additionalProperties: false
+    properties:
+      enabled:
+        default: true
+        type: boolean
+      parameters:
+        additionalProperties: false
+        properties:
+          layout:
+            description: |-
+              Layout name.
+
+              [Read more about possible provider layouts](/modules/cloud-provider-dvp/layouts.html).
+            enum:
+              - Standard
+            type: string
+          region:
+            description: |-
+              Region name.
+
+              To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
+              [Read more about topological labels](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
+
+              > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            type: string
+          sshPublicKey:
+            description: A public key for accessing nodes.
+            x-rules:
+              - sshPublicKey
+            type: string
+          zones:
+            description: |-
+              A set of zones in which nodes can be created.
+
+              To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
+              [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
+
+              > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+            items:
+              type: string
+            type: array
+            uniqueItems: true
+        required:
+          - layout
+          - sshPublicKey
+        type: object
+    required:
+      - parameters
+    type: object
   provider:
-    description: |
-      Contains settings to connect to the Deckhouse Kubernetes Platform API.
+    additionalProperties: false
+    properties:
+      parameters:
+        additionalProperties: false
+        description: Contains settings to connect to the Deckhouse Kubernetes Platform API.
+        properties:
+          namespace:
+            description: |-
+              Namespace in which DKP cluster resources will be created.
+
+              > If not explicitly specified, the default namespace for kubeconfig will be used.
+            type: string
+          networkPolicy:
+            description: |-
+              Control rules for network traffic to and from workloads running in the Project resource.
+
+              * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
+              * `None`: The cluster does not request any network policies. Existing project-level restrictions still apply.
+            enum:
+              - Isolated
+              - None
+            type: string
+        required:
+          - namespace
+        type: object
+    required:
+      - parameters
+    type: object
+  storage:
+    additionalProperties: false
+    properties:
+      enabled:
+        default: true
+        type: boolean
+      parameters:
+        additionalProperties: false
+        properties:
+          excludedStorageClasses:
+            items:
+              type: string
+            type: array
+        type: object
     type: object
     required:
-      - kubeconfigDataBase64
-      - namespace
-    properties:
-      kubeconfigDataBase64:
-        type: string
-        description: |
-          Kubeconfig to connect to Deckhouse Kubernetes Platform API base64 encoded.
-        x-examples:
-          - ZXhhbXBsZQo=
-      namespace:
-        type: string
-        description: |
-          Namespace in which DKP cluster resources will be created.
-          > Caution! If not explicitly specified, the default namespace for kubeconfig will be used.
-        x-examples:
-          - default
-
-  zones:
-    type: array
-    description: |
-      A set of zones in which nodes can be created.
-      To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
-      Read [more](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion) about topological labels.
-      > Caution! To set the required label for a DVP node, follow the NodeGroup [documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
-    items:
-      type: string
-    x-examples:
-      - [zone-a, zone-b]
+      - parameters
+required:
+  - nodes
+  - provider
+  - storage
+type: object
