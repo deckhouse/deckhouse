@@ -137,12 +137,12 @@ var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 			Expect(ccmDeployment.Exists()).To(BeTrue())
 			Expect(ccmDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
 - --leader-elect=true
+- --bind-address=127.0.0.1
+- --secure-port=10471
 - --cloud-provider=zvirt
 - --allow-untagged-cloud=true
 - --configure-cloud-routes=false
 - --controllers=cloud-node,cloud-node-lifecycle
-- --bind-address=127.0.0.1
-- --secure-port=10471
 - --v=4`))
 
 			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-zvirt", "csi-controller")
