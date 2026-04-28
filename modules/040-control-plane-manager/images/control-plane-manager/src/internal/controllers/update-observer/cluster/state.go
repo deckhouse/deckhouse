@@ -17,8 +17,8 @@ limitations under the License.
 package cluster
 
 import (
-	"update-observer/common"
-	"update-observer/pkg/version"
+	"control-plane-manager/internal/controllers/update-observer/common"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 type State struct {

@@ -282,7 +282,7 @@ func PrepareControlPlaneArtifacts(
 	})
 }
 
-func readRemoteFile(ctx context.Context, nodeInterface node.Interface, path string) (string, error) {
+func readRemoteFile(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
 	cmd := nodeInterface.Command("cat", path)
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
@@ -305,7 +305,7 @@ func readRemoteFile(ctx context.Context, nodeInterface node.Interface, path stri
 }
 
 // readRemoteFileWithRetry wraps readRemoteFile with a short retry loop
-func readRemoteFileWithRetry(ctx context.Context, nodeInterface node.Interface, path string) (string, error) {
+func readRemoteFileWithRetry(ctx context.Context, nodeInterface libcon.Interface, path string) (string, error) {
 	const (
 		attempts = 5
 		wait     = 3 * time.Second
