@@ -2,7 +2,7 @@
 title: Модуль cert-manager
 permalink: ru/architecture/security/cert-manager.html
 lang: ru
-search: cert-manager, сертификат, letsencrypt
+search: cert-manager, сертификат, letsencrypt, acme
 description: Архитектура модуля cert-manager в Deckhouse Kubernetes Platform.
 ---
 
