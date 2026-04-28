@@ -123,6 +123,10 @@ spec:
           value: /var/lib/hubble-ui/certs/client.crt
         - name: TLS_RELAY_CLIENT_KEY_FILE
           value: /var/lib/hubble-ui/certs/client.key
+        {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ciliumHubble.auth.externalAuthentication }}
+        - name: ENABLE_AUTH
+          value: "true"
+        {{- end }}
         ports:
         - name: grpc
           containerPort: 8090
