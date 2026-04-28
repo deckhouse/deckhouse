@@ -849,7 +849,7 @@ properties:
                       max:
                         description: |
                           The maximum value that the VPA can set for the CPU requests.
-                        default: 2
+                        default: 1
                         oneOf:
                         - type: string
                           pattern: "^[0-9]+m?$"
@@ -857,7 +857,7 @@ properties:
                       min:
                         description: |
                           The minimum value that the VPA can set for the CPU requests.
-                        default: '50m'
+                        default: '25m'
                         oneOf:
                         - type: string
                           pattern: "^[0-9]+m?$"
@@ -888,7 +888,7 @@ properties:
                       min:
                         description: |
                           The minimum memory requests the VPA can set.
-                        default: '256Mi'
+                        default: '64Mi'
                         oneOf:
                         - type: string
                           pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
