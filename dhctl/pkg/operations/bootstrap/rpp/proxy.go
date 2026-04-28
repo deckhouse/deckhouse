@@ -23,14 +23,14 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	tlsutils "github.com/deckhouse/deckhouse/dhctl/pkg/util/tls"
 )
@@ -51,7 +51,7 @@ type RegistryPackagesProxy struct {
 	loggerProvider log.LoggerProvider
 
 	proxy  *proxy.Proxy
-	tunnel node.ReverseTunnel
+	tunnel libcon.ReverseTunnel
 }
 
 func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger log.LoggerProvider) *RegistryPackagesProxy {
@@ -101,7 +101,7 @@ func (p *RegistryPackagesProxy) Start(ctx context.Context) error {
 	return nil
 }
 
-func (p *RegistryPackagesProxy) upTunnel(ctx context.Context, sshCl node.SSHClient) error {
+func (p *RegistryPackagesProxy) upTunnel(ctx context.Context, sshCl libcon.SSHClient) error {
 	if govalue.IsNil(sshCl) {
 		return upTunnelError(fmt.Errorf("internal error - ssh client is nil"))
 	}
@@ -197,7 +197,7 @@ func (p *RegistryPackagesProxy) startProxy() error {
 	return nil
 }
 
-func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl node.SSHClient) error {
+func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl libcon.SSHClient) error {
 	p.debug("Up registry packages proxy tunnel...")
 
 	listenAddress := localhost
@@ -214,8 +214,8 @@ func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl node.SSHC
 		return fmt.Errorf("cannot render kill reverse tunnel script: %v", err)
 	}
 
-	checker := ssh.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
-	killer := ssh.NewRunScriptReverseTunnelKiller(sshCl, killScript)
+	checker := utils.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
+	killer := utils.NewRunScriptReverseTunnelKiller(sshCl, killScript)
 
 	addr := fmt.Sprintf("%s:%s:%s:%s", listenAddress, p.localPort, listenAddress, p.remotePort)
 

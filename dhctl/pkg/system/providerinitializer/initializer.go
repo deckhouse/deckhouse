@@ -81,7 +81,7 @@ func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHPr
 		return i.provider, nil
 	}
 
-	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), fmt.Errorf("failed to get hosts from cache: %w", err)
+	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), fmt.Errorf("failed to get hosts from cache")
 }
 
 func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {
@@ -99,4 +99,27 @@ func (i *SSHProviderInitializer) GetKubeProvider(ctx context.Context) libcon.Kub
 		return nil
 	}
 	return provider.NewDefaultKubeProvider(i.baseProviderSettings, cfg, runnerInterface)
+}
+
+func (i *SSHProviderInitializer) GetSettings() *settings.BaseProviders {
+	return i.baseProviderSettings
+}
+
+func (i *SSHProviderInitializer) GetConfig() *sshconfig.ConnectionConfig {
+	return i.config
+}
+
+func (i *SSHProviderInitializer) CheckHosts() bool {
+	if len(i.config.Hosts) > 0 {
+		return true
+	}
+	lateHosts, err := i.hostsProvider()
+	if err != nil {
+		return false
+	}
+	if len(lateHosts) > 0 {
+		return true
+	}
+
+	return false
 }

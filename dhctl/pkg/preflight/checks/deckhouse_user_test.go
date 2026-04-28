@@ -72,7 +72,7 @@ func TestChecker_CheckDeckhouseUser(t *testing.T) {
 			mockScript := &mocks.MockScript{}
 			tt.setupMock(mockNode, mockScript)
 
-			check := DeckhouseUserCheck{Node: mockNode}
+			check := DeckhouseUserCheck{NodeInterface: mockNode}
 			err := check.Run(context.Background())
 
 			if tt.expectedError != "" {

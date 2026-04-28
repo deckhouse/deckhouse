@@ -22,13 +22,11 @@ import (
 	"strings"
 	"time"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 	retry "github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 )
 
 const (
@@ -49,11 +47,11 @@ type LoopsParams struct {
 
 type Runner struct {
 	loggerProvider log.LoggerProvider
-	nodeInterface  node.Interface
+	nodeInterface  libcon.Interface
 	loopsParams    LoopsParams
 }
 
-func NewRunner(nodeInterface node.Interface, loggerProvider log.LoggerProvider) *Runner {
+func NewRunner(nodeInterface libcon.Interface, loggerProvider log.LoggerProvider) *Runner {
 	return &Runner{
 		nodeInterface:  nodeInterface,
 		loggerProvider: loggerProvider,
@@ -118,7 +116,6 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 		)
 
 	return retry.NewLoopWithParams(loopParams).
-		BreakIf(bundleTimeoutBreakPredicate).
 		RunContext(ctx, func() error {
 			// we do not need to restart tunnel because we have HealthMonitor
 			logger := r.loggerProvider()
@@ -137,7 +134,6 @@ func (r *Runner) ExecuteBundle(ctx context.Context, params ExecuteBundleParams) 
 
 func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleParams) error {
 	bundleCmd := r.nodeInterface.UploadScript("bashible.sh", "--local")
-	bundleCmd.WithCommanderMode(params.CommanderMode)
 	bundleCmd.WithCleanupAfterExec(false)
 	bundleCmd.Sudo()
 	parentDir := params.BundleDir + "/var/lib"
@@ -148,14 +144,6 @@ func (r *Runner) attemptExecuteBundle(ctx context.Context, params ExecuteBundleP
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
 			return fmt.Errorf("bundle '%s' error: %v\nstderr: %s", bundleDir, err, string(ee.Stderr))
-		}
-
-		if errors.Is(err, frontend.ErrBashibleTimeout) {
-			return frontend.ErrBashibleTimeout
-		}
-
-		if errors.Is(err, gossh.ErrBashibleTimeout) {
-			return gossh.ErrBashibleTimeout
 		}
 
 		return fmt.Errorf("bundle '%s' error: %v", bundleDir, err)
@@ -230,7 +218,7 @@ func (r *Runner) killBashible(ctx context.Context, pids []string) error {
 	return r.runCmd(ctx, cmd, "kill"+strings.Join(pids, " "))
 }
 
-func (r *Runner) runCmd(ctx context.Context, cmd node.Command, desc string) error {
+func (r *Runner) runCmd(ctx context.Context, cmd libcon.Command, desc string) error {
 	logger := r.loggerProvider()
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
@@ -308,8 +296,4 @@ func (r *Runner) prepareLoopParams(target string) retry.Params {
 
 func withUmask(f string, args ...any) string {
 	return fmt.Sprintf("umask 0022 ; "+f, args...)
-}
-
-func bundleTimeoutBreakPredicate(err error) bool {
-	return errors.Is(err, frontend.ErrBashibleTimeout) || errors.Is(err, gossh.ErrBashibleTimeout)
 }
