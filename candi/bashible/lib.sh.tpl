@@ -56,71 +56,51 @@ bb-discover-node-name() {
 {{- $registryPackages := get $images "registrypackages" | default (dict) -}}
 {{- if and (ne .runType "Normal") .mingetB64 }}
 bb-minget-install() {
-  local minget_path="/opt/deckhouse/bin/minget"
+  local path="/opt/deckhouse/bin/minget"
 
-  if [[ -s "${minget_path}" && -x "${minget_path}" ]]; then
+  if [[ -s "$path" && -x "$path" ]]; then
     return 0
   fi
 
-  mkdir -p /opt/deckhouse/bin/
-  if ! echo -n '{{ .mingetB64 }}' | base64 -d > "${minget_path}"; then
-    rm -f "${minget_path}"
+  mkdir -p "${path%/*}"
+  if ! echo -n '{{ .mingetB64 }}' | base64 -d > "$path"; then
+    rm -f "$path"
     return 1
   fi
-  if [[ ! -s "${minget_path}" ]]; then
-    rm -f "${minget_path}"
+  if [[ ! -s "$path" ]]; then
+    rm -f "$path"
     return 1
   fi
-  chmod +x "${minget_path}"
+  chmod +x "$path"
 }
 {{- end }}
 
-bb-rpp-get-file-ready() {
-  local path="$1"
+bb-rpp-get-binary-ready() {
+  local version
 
-  [[ -s "${path}" && -x "${path}" ]]
-}
-
-bb-rpp-get-fetch-with-minget() {
-  local url="$1"
-
-  /opt/deckhouse/bin/minget "${url}"
-}
-
-bb-rpp-get-fetch-with-curl() {
-  local url="$1"
-
-  d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://${url}"
+  version="$("$1" version 2>/dev/null)" && [[ -n $version ]]
 }
 
 bb-rpp-get-fetch() {
-  local url="$1"
-
   if command -v d8-curl >/dev/null 2>&1; then
-    bb-rpp-get-fetch-with-curl "${url}"
-  else
-    bb-rpp-get-fetch-with-minget "${url}"
+    d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://$1"
+    return
   fi
+
+  /opt/deckhouse/bin/minget "$1"
 }
 
 bb-rpp-get-install() {
-  local rpp_client_path="/opt/deckhouse/bin/rpp-get"
-  local rpp_client_digest="{{ get $registryPackages "rppGet" }}"
-  local bootstrap_cluster_uuid="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}"
-  local bootstrap_path_prefix=""
-  local installed_store="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}"
-  local rpp_client_store="${installed_store}/rpp-get"
-  local digest_path="${rpp_client_store}/digest"
-  local max_attempts=30
-  local attempt=1
+  local bin="/opt/deckhouse/bin/rpp-get"
+  local digest="{{ get $registryPackages "rppGet" }}"
+  local digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/rpp-get/digest"
+  local tmp="${bin}.tmp"
+  local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
+  local max_attempts=30 attempt address
 
-  if [[ -n "${bootstrap_cluster_uuid}" ]]; then
-    bootstrap_path_prefix="/${bootstrap_cluster_uuid}"
-  fi
-
-  if bb-rpp-get-file-ready "${rpp_client_path}" &&
-     [[ -f "${digest_path}" ]] &&
-     [[ "$(<"${digest_path}")" == "${rpp_client_digest}" ]]; then
+  if [[ -f "$digest_file" &&
+        "$(<"$digest_file")" == "$digest" ]] &&
+     bb-rpp-get-binary-ready "$bin"; then
     return 0
   fi
 
@@ -129,33 +109,25 @@ bb-rpp-get-install() {
     return 1
   fi
 
-  mkdir -p "${rpp_client_path%/*}" "${rpp_client_store}"
+  mkdir -p "${bin%/*}" "${digest_file%/*}"
 
-  local tmp_path="${rpp_client_path}.tmp"
-  local address
-  local url
-
-  while [[ ${attempt} -le ${max_attempts} ]]; do
+  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
     for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
-      rm -f "${tmp_path}"
-      url="${address}${bootstrap_path_prefix}/rpp-get?digest=${rpp_client_digest}"
-      if bb-rpp-get-fetch "${url}" > "${tmp_path}" && [[ -s "${tmp_path}" ]]; then
-        chmod +x "${tmp_path}"
-        if "${tmp_path}" version >/dev/null 2>&1; then
-          mv -f "${tmp_path}" "${rpp_client_path}"
-          printf '%s\n' "${rpp_client_digest}" > "${digest_path}"
-          return 0
-        fi
-      fi
+      bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" || continue
+      chmod +x "$tmp"
+      bb-rpp-get-binary-ready "$tmp" || continue
+
+      mv -f "$tmp" "$bin"
+      echo "$digest" > "$digest_file"
+      return 0
     done
 
     >&2 echo "rpp-get-install failed (${attempt}/${max_attempts}), retrying in 5 seconds"
-    attempt=$(( attempt + 1 ))
     sleep 5
   done
 
   >&2 echo "rpp-get-install failed after ${max_attempts} attempts"
-  rm -f "${tmp_path}"
+  rm -f "$tmp"
   return 1
 }
 {{- end }}
@@ -238,19 +210,18 @@ bb-package-remove() {
 
 
 {{- define "get-phase2" -}}
-function fetch_bootstrap() {
-  local url="$1" token="$2" out="$3"
+fetch_bootstrap() {
+  local url="$1" token="$2" out="$3" code
 
-  local code
   code=$(/opt/deckhouse/bin/d8-curl -sSx "" \
     --connect-timeout 10 \
     "$url" \
     -H "Authorization: Bearer $token" \
-    --cacert /var/lib/bashible/ca.crt \
+    --cacert "$BOOTSTRAP_DIR/ca.crt" \
     -o "$out" -w '%{http_code}') || {
       >&2 echo "Error fetching bootstrap from ${url}"
       return 3
-    }
+  }
 
   case "$code" in
     200)
@@ -267,20 +238,17 @@ function fetch_bootstrap() {
   esac
 }
 
-function get_phase2() {
-  local bootstrap_ng_name="{{ .nodeGroup.name }}"
+get_phase2() {
   local token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   local out="${TMPDIR}/phase2-response.json"
+  local path="/apis/bashible.deckhouse.io/v1alpha1/bootstrap/{{ .nodeGroup.name }}"
+  local count_401=0
+  local rc server url
 
-  local http_401_count=0
-  local max_http_401_count=6
-  local rc=0
-
-  while true; do
+  while :; do
     for server in {{ .Values.nodeManager.internal.clusterMasterAddresses | join " " }}; do
-      if fetch_bootstrap \
-        "https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name}" \
-        "$token" "$out"; then
+      url="https://${server}${path}"
+      if fetch_bootstrap "$url" "$token" "$out"; then
         rm -f "$out"
         return 0
       else
@@ -289,13 +257,13 @@ function get_phase2() {
 
       rm -f "$out"
 
-      if [ "$rc" -eq 2 ]; then
-        ((http_401_count++))
-        if [ "$http_401_count" -ge "$max_http_401_count" ]; then
+      if (( rc == 2 )); then
+        ((count_401++))
+        if (( count_401 >= 6 )); then
           return 1
         fi
       else
-        >&2 echo "failed to get bootstrap ${bootstrap_ng_name} from https://${server}/apis/bashible.deckhouse.io/v1alpha1/bootstrap/${bootstrap_ng_name} (exit code $rc)"
+        >&2 echo "failed to get bootstrap from ${url} (exit code $rc)"
       fi
     done
 
