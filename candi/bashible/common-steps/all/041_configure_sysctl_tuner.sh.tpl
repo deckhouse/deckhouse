@@ -66,8 +66,37 @@ sysctl -w kernel.numa_balancing=0 # disable the overly smart NUMA node balancer 
 sysctl -w fs.inotify.max_user_watches=524288 # Increase inotify (https://github.com/guard/listen/wiki/Increasing-the-amount-of-inotify-watchers#the-technical-details)
 sysctl -w fs.inotify.max_user_instances=5120
 sysctl -w kernel.pid_max=2000000
-{{- if .nodeGroup.gpu }}
+{{- if and .nodeGroup.gpu (ne .deckhouse.edition "CSE") }}
 sysctl -w net.core.bpf_jit_harden=1 # https://github.com/NVIDIA/nvidia-container-toolkit/issues/117#issuecomment-1758781872
+{{- end }}
+{{- if eq .deckhouse.edition "CSE" }}
+# Adds kernel settings to meet FSTEC requirements
+set -e
+apply_sysctl() {
+    local param="$1"
+    local value="$2"
+    if sysctl "$param" &>/dev/null; then
+        sysctl -w "$param=$value"
+    fi
+}
+
+apply_sysctl kernel.dmesg_restrict 1
+apply_sysctl kernel.kptr_restrict 2
+apply_sysctl net.core.bpf_jit_harden 2
+apply_sysctl kernel.perf_event_paranoid 3
+apply_sysctl kernel.kexec_load_disabled 1
+apply_sysctl user.max_user_namespaces 0
+apply_sysctl kernel.unprivileged_bpf_disabled 1
+apply_sysctl vm.unprivileged_userfaultfd 0
+apply_sysctl dev.tty.ldisc_autoload 0
+apply_sysctl vm.mmap_min_addr 4096
+apply_sysctl kernel.randomize_va_space 2
+apply_sysctl kernel.yama.ptrace_scope 3
+apply_sysctl fs.protected_symlinks 1
+apply_sysctl fs.protected_hardlinks 1
+apply_sysctl fs.protected_fifos 2
+apply_sysctl fs.protected_regular 2
+apply_sysctl fs.suid_dumpable 0
 {{- end }}
 
 if [[ "$(sysctl -n fs.may_detach_mounts 2> /dev/null)"  ]]; then
