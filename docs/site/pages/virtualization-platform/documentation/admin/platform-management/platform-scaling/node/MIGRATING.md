@@ -40,7 +40,6 @@ During migration the directory `/var/lib/containerd` will be cleared, causing al
 Also note that updating is disruptive. [Disraptive update parameters](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) affects whether the update runs automatically. If `approvalMode: Manual` is set, you need to run the update on the respective nodes with the annotation: `d8 k annotate node <node-name> update.node.deckhouse.io/disruption-approved=Automatic`.
 {% endalert %}
 
-
 You can enable containerd v2 in two ways:
 
 1. **For the entire cluster**. Set the value `ContainerdV2` for the [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) parameter in the `ClusterConfiguration` resource. This value will apply to all [NodeGroup](/modules/node-manager/cr.html#nodegroup) objects where [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) is not explicitly defined.
