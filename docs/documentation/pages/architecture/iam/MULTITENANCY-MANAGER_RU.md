@@ -2,17 +2,15 @@
 title: Модуль multitenancy-manager
 permalink: ru/architecture/iam/multitenancy-manager.html
 lang: ru
-search: multitenancy, project
+search: multitenancy, project, мультитенантность, ProjectTemplate, изоляция проекта
 description: Архитектура модуля multitenancy-manager в Deckhouse Kubernetes Platform.
 ---
 
-Модуль `multitenancy-manager` реализует изолированные окружения для запуска приложений в Deckhouse Kubernetes Platform (DKP). Модуль работает со следующими [кастомными ресурсами](https://deckhouse.ru/modules/multitenancy-manager/cr.html):
-
-- ProjectTemplate — шаблон, на основе которого можно быстро создавать однотипные проекты. Позволяет автоматически применять заданные настройки ко всем создаваемым проектам;
-
-- Project — основной кастомный ресурс для декларирования изолированного окружения (проекта) в кластере. Позволяет передать параметры шаблону ProjectTemplate, который создаёт namespace, квоты, параметры доступа и другие ресурсы для работы приложений в рамках одного проекта.
+Модуль `multitenancy-manager` реализует мультитенантность и изолированные окружения для запуска приложений в Deckhouse Kubernetes Platform (DKP). Модуль работает с [кастомными ресурсами](https://deckhouse.ru/modules/multitenancy-manager/cr.html) ProjectTemplate и Project.
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [соответствующем разделе документации](/modules/multitenancy-manager/).
+
+Подробнее о мультитенантности и изоляции окружений в DKP можно ознакомиться в [соответствующем разделе документации](./multitenancy.html).
 
 ## Архитектура модуля
 
@@ -39,13 +37,11 @@ description: Архитектура модуля multitenancy-manager в Deckhou
   - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано `.spec.settings.allowNamespacesWithoutProjects=false`;
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.
 
-   Кастомный ресурс ProjectTemplate позволяет определить шаблон в формате [Helm template](https://helm.sh/docs/chart_template_guide/) для создания необходимых объектов Kubernetes. При создании или обновлении ресурса Project **multitenancy-manager** формирует Helm Chart на основе внутренних шаблонов модуля, передаёт в него шаблон ресурсов из ProjectTemplate и параметры из Project в виде Helm values, после чего выполняет установку или обновление полученного release в DKP.
-
 ## Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
 - **Kube-apiserver**:
   - управление кастомными ресурсами Project и ProjectTemplate;
-  - валидация кастомных ресурсов Project, ProjectTemplate и Namespace;
+  - валидация кастомных ресурсов Project, ProjectTemplate, а также стандартного ресурса Namespace;
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.

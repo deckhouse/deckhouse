@@ -1343,6 +1343,10 @@ entries:
                 ru: Мультитенантность
               url: /architecture/iam/multitenancy.html
             - title:
+                en: Multitenancy-manager module
+                ru: Модуль multitenancy-manager
+              url: /architecture/iam/multitenancy-manager.html
+            - title:
                 en: User-authn module
                 ru: Модуль user-authn
               url: /architecture/iam/user-authn.html
