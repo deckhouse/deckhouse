@@ -8,6 +8,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/go-logr/logr"
@@ -16,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -31,8 +31,6 @@ const (
 	controllerName             = "servicewithhealthchecks"
 )
 
-var gvk = schema.GroupVersionKind{Group: "network.deckhouse.io", Version: "v1alpha1", Kind: "ServiceWithHealthchecks"}
-
 // ServiceWithHealthchecksReconciler reconciles a ServiceWithHealthchecks object
 type ServiceWithHealthchecksReconciler struct {
 	client.Client
@@ -46,13 +44,6 @@ type ServiceWithHealthchecksReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ServiceWithHealthchecks object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.18.2/pkg/reconcile
 func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Logger.V(1).Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	serviceWithHC := &networkv1alpha1.ServiceWithHealthchecks{}
@@ -77,54 +68,61 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 
 	// create or update child service
 	var childService corev1.Service
-	if err == nil {
-		r.Logger.V(1).Info("updating existing child Service", "name", req.Name, "namespace", req.Namespace)
-		childService = *service.DeepCopy()
-	} else {
-		r.Logger.V(1).Info("creating child Service", "name", req.Name, "namespace", req.Namespace)
-		childService = corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      req.Name,
-				Namespace: req.Namespace,
-				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(serviceWithHC, gvk),
-				},
-			},
+	childService.Name = req.Name
+	childService.Namespace = req.Namespace
+
+	op, errUpdatingSvc := controllerutil.CreateOrUpdate(ctx, r.Client, &childService, func() error {
+		// Set owner reference if it's a new service
+		if childService.ObjectMeta.UID == "" {
+			if err := controllerutil.SetControllerReference(serviceWithHC, &childService, r.Scheme); err != nil {
+				return err
+			}
 		}
-	}
-	op, errUpdatingSvc := controllerutil.CreateOrUpdate(context.TODO(), r.Client, &childService, func() error {
-		childService.Spec = corev1.ServiceSpec{
-			Selector:                 map[string]string{},
-			PublishNotReadyAddresses: service.Spec.PublishNotReadyAddresses,
-			Ports:                    serviceWithHC.Spec.Ports,
-			Type:                     serviceWithHC.Spec.Type,
-			InternalTrafficPolicy:    serviceWithHC.Spec.InternalTrafficPolicy,
-			ExternalTrafficPolicy:    serviceWithHC.Spec.ExternalTrafficPolicy,
+
+		childService.Spec.Selector = map[string]string{}
+		childService.Spec.Ports = serviceWithHC.Spec.Ports
+		childService.Spec.Type = serviceWithHC.Spec.Type
+		childService.Spec.PublishNotReadyAddresses = serviceWithHC.Spec.PublishNotReadyAddresses
+		childService.Spec.InternalTrafficPolicy = serviceWithHC.Spec.InternalTrafficPolicy
+
+		// ExternalTrafficPolicy is only valid for LoadBalancer and NodePort.
+		if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer || serviceWithHC.Spec.Type == corev1.ServiceTypeNodePort {
+			childService.Spec.ExternalTrafficPolicy = serviceWithHC.Spec.ExternalTrafficPolicy
+		} else {
+			childService.Spec.ExternalTrafficPolicy = ""
 		}
 		return nil
 	})
+
 	if errUpdatingSvc != nil {
+		if errors.IsConflict(errUpdatingSvc) {
+			return ctrl.Result{Requeue: true}, nil
+		}
 		r.Logger.Error(errUpdatingSvc, "failed to create/update child Service for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
 	}
 	r.Logger.V(1).Info("child Service has been reconciled", "name", req.Name, "namespace", req.Namespace, "operation", op)
 
-	patch := client.MergeFrom(serviceWithHC.DeepCopy())
+	originalServiceWithHC := serviceWithHC.DeepCopy()
+	patch := client.MergeFrom(originalServiceWithHC)
 
 	// update ServiceWithHealthchecks Status
 	if serviceWithHC.Spec.Type == corev1.ServiceTypeLoadBalancer {
-		r.Logger.V(1).Info("update status for ServiceWithHealtchecks", "name", req.Name, "namespace", req.Namespace, "operation", op)
-		err := r.Get(ctx, req.NamespacedName, &service)
-		if err != nil {
-			r.Logger.Error(err, "failed to get child Service for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
-			return ctrl.Result{}, nil
-		}
+		r.Logger.V(1).Info("update status for ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace, "operation", op)
 		serviceWithHC.Status.LoadBalancer = childService.Status.LoadBalancer
 	}
 	newCondition := createStatusConditionForService(errUpdatingSvc, serviceWithHC.Name)
+	newCondition.ObservedGeneration = serviceWithHC.Generation
 	serviceWithHC.Status.Conditions = kubernetes.UpdateStatusWithCondition(serviceWithHC.Status.Conditions, newCondition)
-	if err := r.Status().Patch(ctx, serviceWithHC, patch); err != nil {
-		r.Logger.Error(err, "failed to update ServiceWithHealthchecks Status", "name", req.Name, "namespace", req.Namespace)
+
+	kubernetes.SortConditions(serviceWithHC.Status.Conditions)
+	kubernetes.SortConditions(originalServiceWithHC.Status.Conditions)
+
+	if reflect.DeepEqual(originalServiceWithHC.Status, serviceWithHC.Status) {
 		return ctrl.Result{}, nil
+	}
+
+	if err := r.Status().Patch(ctx, serviceWithHC, patch); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to update ServiceWithHealthchecks Status: %w", err)
 	}
 	return ctrl.Result{}, nil
 }
@@ -219,9 +217,9 @@ func (r *ServiceWithHealthchecksReconciler) clearNotUsedEPS(ctx context.Context,
 	return deletedCount
 }
 
-func genAllPossibleNames(swhs *networkv1alpha1.ServiceWithHealthchecksList, nodes *corev1.NodeList) map[string]struct{} {
+func genAllPossibleNames(swhc *networkv1alpha1.ServiceWithHealthchecksList, nodes *corev1.NodeList) map[string]struct{} {
 	result := make(map[string]struct{})
-	for _, swh := range swhs.Items {
+	for _, swh := range swhc.Items {
 		for _, node := range nodes.Items {
 			result[swh.Name+"-"+node.Name] = struct{}{}
 		}

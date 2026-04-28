@@ -5,3 +5,8 @@ properties:
     default: false
     description: |
       Option to instruct the logger to output stacktraces for warnings and errors.
+  verboseStatus:
+    type: boolean
+    default: false
+    description: |
+      If true, the agent will update the lastProbeTime field in the ServiceWithHealthchecks status on every health check (every periodSeconds). This can be useful for debugging but causes high API server load. If false, only state transitions are recorded.

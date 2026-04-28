@@ -7,6 +7,7 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -42,32 +43,34 @@ const (
 
 // ServiceWithHealthchecksReconciler reconciles a ServiceWithHealthchecks object
 type ServiceWithHealthchecksReconciler struct {
-	workersCount int
-	nodeName     string
-	mu           sync.RWMutex
+	workersCount  int
+	nodeName      string
+	verboseStatus bool
+	mu            sync.RWMutex
 	client.Client
-	Scheme                                     *runtime.Scheme
-	logger                                     logr.Logger
-	taskQueue                                  *TaskQueue
-	tasksResults                               chan ProbeResult
-	events                                     chan event.GenericEvent
-	cancelFunc                                 context.CancelFunc
-	servicesWithHealthchecks                   sync.Map
-	healthecksResultsByServiceWithHealthchecks map[types.NamespacedName][]HealthcheckTarget
-	secretController                           *PostgreSQLCredentialsReconciler
+	Scheme                                       *runtime.Scheme
+	logger                                       logr.Logger
+	taskQueue                                    *TaskQueue
+	tasksResults                                 chan ProbeResult
+	events                                       chan event.GenericEvent
+	cancelFunc                                   context.CancelFunc
+	servicesWithHealthchecks                     sync.Map
+	healthchecksResultsByServiceWithHealthchecks map[types.NamespacedName][]HealthcheckTarget
+	secretController                             *PostgreSQLCredentialsReconciler
 }
 
-func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int, nodeName string, scheme *runtime.Scheme, logger logr.Logger, secretController *PostgreSQLCredentialsReconciler) *ServiceWithHealthchecksReconciler {
+func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int, nodeName string, verboseStatus bool, scheme *runtime.Scheme, logger logr.Logger, secretController *PostgreSQLCredentialsReconciler) *ServiceWithHealthchecksReconciler {
 	return &ServiceWithHealthchecksReconciler{
-		workersCount: workersCount,
-		nodeName:     nodeName,
-		Client:       client,
-		Scheme:       scheme,
-		logger:       logger,
-		taskQueue:    NewTaskQueue(),
-		tasksResults: make(chan ProbeResult, workersCount*10),
-		events:       make(chan event.GenericEvent),
-		healthecksResultsByServiceWithHealthchecks: make(map[types.NamespacedName][]HealthcheckTarget),
+		workersCount:  workersCount,
+		nodeName:      nodeName,
+		verboseStatus: verboseStatus,
+		Client:        client,
+		Scheme:        scheme,
+		logger:        logger,
+		taskQueue:     NewTaskQueue(),
+		tasksResults:  make(chan ProbeResult, workersCount*10),
+		events:        make(chan event.GenericEvent),
+		healthchecksResultsByServiceWithHealthchecks: make(map[types.NamespacedName][]HealthcheckTarget),
 		secretController: secretController,
 	}
 }
@@ -78,13 +81,6 @@ func NewServiceWithHealthchecksReconciler(client client.Client, workersCount int
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the ServiceWithHealthchecks object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.18.2/pkg/reconcile
 func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var (
 		serviceWithHC networkv1alpha1.ServiceWithHealthchecks
@@ -92,10 +88,10 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 		err           error
 	)
 	r.logger.V(1).Info("reconciling ServiceWithHealthchecks", "name", req.Name, "namespace", req.Namespace)
-	if err := r.Get(ctx, req.NamespacedName, &serviceWithHC); err != nil {
+	if err = r.Get(ctx, req.NamespacedName, &serviceWithHC); err != nil {
 		r.logger.Error(err, "unable to fetch ServiceWithHealthchecks")
 		if errors.IsNotFound(err) {
-			r.deleteServiceWithHealthcheks(req.NamespacedName)
+			r.deleteServiceWithHealthchecks(req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -104,12 +100,12 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	// Delete helthchecks from internal map because ServiceWithHealthchecks was deleted
 	if serviceWithHC.DeletionTimestamp != nil {
 		r.logger.V(1).Info("ServiceWithHealthchecks is being deleted")
-		r.deleteServiceWithHealthcheks(req.NamespacedName)
+		r.deleteServiceWithHealthchecks(req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
 	// Select only pods in target namespace, with specified label and on current node
-	if err := r.List(ctx, &podList, client.InNamespace(serviceWithHC.GetNamespace()), client.MatchingLabels(serviceWithHC.Spec.Selector), client.MatchingFields{"spec.nodeName": r.nodeName}); err != nil {
+	if err = r.List(ctx, &podList, client.InNamespace(serviceWithHC.GetNamespace()), client.MatchingLabels(serviceWithHC.Spec.Selector), client.MatchingFields{"spec.nodeName": r.nodeName}); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -134,26 +130,25 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	// update status
 	updatedServiceWithHC := serviceWithHC.DeepCopy()
 	patch := client.MergeFrom(serviceWithHC.DeepCopy())
-	isNew := len(updatedServiceWithHC.Status.Conditions) == 0
 
 	newStatus := r.buildRenewedStatus(updatedServiceWithHC)
 	updatedServiceWithHC.Status.HealthcheckCondition = newStatus.HealthcheckCondition
 	updatedServiceWithHC.Status.EndpointStatuses = newStatus.EndpointStatuses
 	updatedServiceWithHC.Status.Conditions = kubernetes.UpdateStatusWithConditions(serviceWithHC.Status.Conditions, newStatus.Conditions)
 
-	if isNew {
-		r.logger.V(1).Info("updating status of ServiceWithHealthchecks with healthchecks probes results", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
-		updatedServiceWithHC.Status = *newStatus
-		err = r.Status().Update(ctx, updatedServiceWithHC)
-		if err != nil {
-			r.logger.Error(err, "unable to update status of ServiceWithHealthchecks", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
-			return ctrl.Result{}, err
-		}
+	sortEndpointStatuses(updatedServiceWithHC.Status.EndpointStatuses)
+	sortEndpointStatuses(serviceWithHC.Status.EndpointStatuses)
+
+	kubernetes.SortConditions(updatedServiceWithHC.Status.Conditions)
+	kubernetes.SortConditions(serviceWithHC.Status.Conditions)
+
+	if reflect.DeepEqual(serviceWithHC.Status, updatedServiceWithHC.Status) {
+		return ctrl.Result{}, nil
 	}
+
 	err = r.Status().Patch(ctx, updatedServiceWithHC, patch)
 	if err != nil {
-		r.logger.Error(err, "unable to patch status of ServiceWithHealthchecks", "name", updatedServiceWithHC.GetName(), "namespace", updatedServiceWithHC.GetNamespace())
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("unable to patch status of ServiceWithHealthchecks: %w", err)
 	}
 	return ctrl.Result{}, nil
 }
@@ -181,7 +176,15 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	// delete previous statuses for current node
+	// save old statuses to preserve LastTransitionTime
+	oldStatusesMap := make(map[string]networkv1alpha1.EndpointStatus)
+	for _, status := range svc.Status.EndpointStatuses {
+		if status.NodeName == r.nodeName {
+			oldStatusesMap[status.PodName] = status
+		}
+	}
+
+	// delete previous statuses for current node from current object
 	n := 0
 	for _, endpointStatus := range svc.Status.EndpointStatuses {
 		if endpointStatus.NodeName != r.nodeName {
@@ -192,7 +195,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 	endpointStatuses = svc.Status.EndpointStatuses[:n]
 
 	// add new healthchecks probes results
-	for _, result := range r.healthecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
+	for _, result := range r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
 		probesSuccessful := true
 		failedProbes := []string{}
 
@@ -202,13 +205,33 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 			failedProbes = result.FailedProbes()
 		}
 
+		lastTransitionTime := metav1.Now()
+		lastProbeTime := metav1.Time{}
+
+		if oldStatus, ok := oldStatusesMap[result.podName]; ok {
+			// If state didn't change, preserve old transition time
+			if oldStatus.ProbesSuccessful == probesSuccessful &&
+				reflect.DeepEqual(oldStatus.FailedProbes, failedProbes) {
+				lastTransitionTime = oldStatus.LastTransitionTime
+			}
+
+			if !r.verboseStatus {
+				lastProbeTime = oldStatus.LastProbeTime
+			}
+		}
+
+		if r.verboseStatus {
+			lastProbeTime = metav1.Time{Time: result.lastCheck}
+		}
+
 		endpointStatuses = append(endpointStatuses, networkv1alpha1.EndpointStatus{
-			PodName:          result.podName,
-			NodeName:         r.nodeName,
-			Ready:            false, //TODO: pod readiness
-			ProbesSuccessful: probesSuccessful,
-			FailedProbes:     failedProbes,
-			LastProbeTime:    metav1.Time{Time: result.lastCheck},
+			PodName:            result.podName,
+			NodeName:           r.nodeName,
+			Ready:              result.podReady,
+			ProbesSuccessful:   probesSuccessful,
+			FailedProbes:       failedProbes,
+			LastTransitionTime: lastTransitionTime,
+			LastProbeTime:      lastProbeTime,
 		})
 	}
 	return endpointStatuses
@@ -274,9 +297,9 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 		case <-ticker.C:
 			// write task to channel
 			r.mu.RLock()
-			for swhName := range r.healthecksResultsByServiceWithHealthchecks {
-				for i := range r.healthecksResultsByServiceWithHealthchecks[swhName] {
-					healthcheckTarget := r.healthecksResultsByServiceWithHealthchecks[swhName][i]
+			for swhName := range r.healthchecksResultsByServiceWithHealthchecks {
+				for i := range r.healthchecksResultsByServiceWithHealthchecks[swhName] {
+					healthcheckTarget := r.healthchecksResultsByServiceWithHealthchecks[swhName][i]
 					if !healthcheckTarget.podReady {
 						// skip pods which are not ready
 						continue
@@ -323,16 +346,16 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 	r.logger.Info("analyzing results")
 	for result := range r.tasksResults {
 		r.mu.Lock()
-		if _, exists := r.healthecksResultsByServiceWithHealthchecks[result.swhName]; !exists {
+		if _, exists := r.healthchecksResultsByServiceWithHealthchecks[result.swhName]; !exists {
 			r.logger.Info("Could not update probes result for ServiceWithHealthchecks - ServiceWithHealthchecks is not found", "name", result.swhName.String())
 			r.mu.Unlock()
 			continue
 		}
 
-		for i, target := range r.healthecksResultsByServiceWithHealthchecks[result.swhName] {
+		for i, target := range r.healthchecksResultsByServiceWithHealthchecks[result.swhName] {
 			if target.targetHost == result.host {
-				r.healthecksResultsByServiceWithHealthchecks[result.swhName][i].lastCheck = time.Now()
-				r.healthecksResultsByServiceWithHealthchecks[result.swhName][i].probeResultDetails = result.probeDetails
+				r.healthchecksResultsByServiceWithHealthchecks[result.swhName][i].lastCheck = time.Now()
+				r.healthchecksResultsByServiceWithHealthchecks[result.swhName][i].probeResultDetails = result.probeDetails
 				// generate event for watcher
 				r.events <- event.GenericEvent{Object: &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: result.swhName.Name, Namespace: result.swhName.Namespace}}}
 			}
@@ -405,46 +428,49 @@ func (r *ServiceWithHealthchecksReconciler) updateEPSForServiceWithHealthchecks(
 	r.logger.V(1).Info("updating endpoints for service", "swhName", svc.GetName(), "namespace", svc.GetNamespace())
 	desiredNameForEndpointSlice := svc.GetName() + "-" + r.nodeName
 
-	// discoveryv1.EndpointSlice
-	eps := r.BuildEndpointSlice(desiredNameForEndpointSlice, svc)
+	// Build the desired state
+	desiredEPS := r.BuildEndpointSlice(desiredNameForEndpointSlice, svc)
 
-	// if EPS enpoints are empty we need to delete existing one
-	if len(eps.Endpoints) == 0 {
-		err := r.Delete(ctx, &eps)
-		if err != nil {
-			r.logger.V(1).Info("could not delete EndpointSlice for ServiceWithHealthchecks and node", "swhName", svc.GetName(), "namespace", svc.GetNamespace(), "node", r.nodeName)
-			return nil
+	// If there are no endpoints, the slice should not exist on this node
+	if len(desiredEPS.Endpoints) == 0 {
+		epsToDelete := &discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      desiredNameForEndpointSlice,
+				Namespace: svc.GetNamespace(),
+			},
 		}
+		err := r.Delete(ctx, epsToDelete)
+		if err != nil && !errors.IsNotFound(err) {
+			r.logger.Error(err, "could not delete EndpointSlice", "name", desiredNameForEndpointSlice)
+			return err
+		}
+		return nil // CRITICAL: Exit here after deleting (or if already deleted), do not proceed to Get/Update.
 	}
 
-	err := r.Get(ctx, client.ObjectKey{Namespace: svc.GetNamespace(), Name: desiredNameForEndpointSlice}, &eps)
+	// Try to get the existing one to see if we need to update it.
+	// Use an empty struct to prevent ObjectMeta corruption from unmarshaling into a populated struct.
+	existingEPS := &discoveryv1.EndpointSlice{}
+	err := r.Get(ctx, client.ObjectKey{Namespace: svc.GetNamespace(), Name: desiredNameForEndpointSlice}, existingEPS)
+
 	if errors.IsNotFound(err) {
-		// need to create endpoint slice
-		r.logger.Info("could not found EndpointSlice for ServiceWithHealthchecks and node, will create one...", "swhName", svc.GetName(), "namespace", svc.GetNamespace(), "node", r.nodeName)
-		eps = r.BuildEndpointSlice(desiredNameForEndpointSlice, svc)
-
-		// if EPS enpoints are empty we don't need to create one
-		if len(eps.Endpoints) == 0 {
-			return nil
-		}
-
-		if err := r.Create(ctx, &eps); err != nil {
-			r.logger.Error(err, "couldn't create EndpointSlice for ServiceWithHealthchecks and node", "swhName", svc.GetName(), "namespace", svc.GetNamespace(), "node", r.nodeName)
+		r.logger.Info("creating new EndpointSlice", "name", desiredNameForEndpointSlice)
+		if err = r.Create(ctx, &desiredEPS); err != nil {
+			r.logger.Error(err, "couldn't create EndpointSlice", "name", desiredNameForEndpointSlice)
 			return err
 		}
 		return nil
 	}
 	if err != nil {
-		r.logger.Error(err, "couldn't get EndpointSlice for ServiceWithHealthchecks and node", "swhName", svc.GetName(), "namespace", svc.GetNamespace(), "node", r.nodeName)
+		r.logger.Error(err, "couldn't get EndpointSlice", "name", desiredNameForEndpointSlice)
 		return err
 	}
 
-	oldEnpoints := MakeSliceCopy(eps.Endpoints)
-	newEnpoints := r.buildEndpoints(svc)
-	if !endpointsAreEqual(oldEnpoints, newEnpoints) {
-		eps.Endpoints = newEnpoints
-		if err := r.Update(ctx, &eps); err != nil {
-			r.logger.Error(err, "couldn't update EndpointSlice for ServiceWithHealthchecks and node", "swhName", svc.GetName(), "namespace", svc.GetNamespace(), "node", r.nodeName)
+	// Use Patch instead of Update to avoid conflicts and ResourceVersion issues.
+	if !endpointsAreEqual(existingEPS.Endpoints, desiredEPS.Endpoints) {
+		patch := client.MergeFrom(existingEPS.DeepCopy())
+		existingEPS.Endpoints = desiredEPS.Endpoints
+		if err := r.Patch(ctx, existingEPS, patch); err != nil {
+			r.logger.Error(err, "couldn't patch EndpointSlice", "name", desiredNameForEndpointSlice)
 			return err
 		}
 	}
@@ -487,7 +513,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpoints(svc networkv1alpha1.S
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	for _, probeResult := range r.healthecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
+	for _, probeResult := range r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
 		if svc.Spec.PublishNotReadyAddresses || *areAllProbesSucceed(probeResult.probeResultDetails) {
 			isReady := probeResult.podReady && *areAllProbesSucceed(probeResult.probeResultDetails)
 			endpoint := discoveryv1.Endpoint{
@@ -496,7 +522,8 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpoints(svc networkv1alpha1.S
 				TargetRef: &corev1.ObjectReference{
 					Kind:      "Pod",
 					Name:      probeResult.podName,
-					Namespace: svc.GetNamespace(), UID: probeResult.podUID},
+					Namespace: svc.GetNamespace(), UID: probeResult.podUID,
+				},
 				Conditions: discoveryv1.EndpointConditions{
 					Ready: &isReady,
 				},
@@ -522,10 +549,10 @@ func getPodsReadinessMap(podList corev1.PodList) map[types.NamespacedName]bool {
 	return podsReadinessMap
 }
 
-func (r *ServiceWithHealthchecksReconciler) deleteServiceWithHealthcheks(swhName types.NamespacedName) {
+func (r *ServiceWithHealthchecksReconciler) deleteServiceWithHealthchecks(swhName types.NamespacedName) {
 	r.servicesWithHealthchecks.Delete(swhName)
 	r.mu.Lock()
-	delete(r.healthecksResultsByServiceWithHealthchecks, swhName)
+	delete(r.healthchecksResultsByServiceWithHealthchecks, swhName)
 	r.mu.Unlock()
 }
 
@@ -590,16 +617,16 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 	r.mu.Lock()
 	// clean unused pod IPs from result slice
 	n := 0
-	for _, target := range r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
+	for _, target := range r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
 		if _, exists := podsReadinessMap[types.NamespacedName{Namespace: hc.Namespace, Name: target.podName}]; exists {
-			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][n] = target
+			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][n] = target
 			n++
 		}
 	}
-	if len(r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey]) > 0 {
-		r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey] = r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][:n]
+	if len(r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey]) > 0 {
+		r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] = r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][:n]
 	} else {
-		r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey] = make([]HealthcheckTarget, 0, 4)
+		r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] = make([]HealthcheckTarget, 0, 4)
 	}
 
 	// add new pods IPs to targets slice
@@ -611,7 +638,7 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 		}
 		targetNotFound := true
 		var oldIndex int
-		for i, target := range r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
+		for i, target := range r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
 			if target.podName == pod.Name {
 				targetNotFound = false
 				oldIndex = i
@@ -622,7 +649,7 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 		if targetNotFound {
 			// append new target
 			r.logger.Info("append target pod for service", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
-			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey] = append(r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey], HealthcheckTarget{
+			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] = append(r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey], HealthcheckTarget{
 				targetHost:         pod.Status.PodIP,
 				creationTime:       pod.CreationTimestamp.Time,
 				probeResultDetails: []ProbeResultDetail{},
@@ -633,10 +660,10 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 			})
 		} else {
 			// or update existing one
-			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podUID = pod.GetUID()
-			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podReady = podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}]
-			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].targetHost = pod.Status.PodIP
-			r.healthecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].creationTime = pod.CreationTimestamp.Time
+			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podUID = pod.GetUID()
+			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podReady = podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}]
+			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].targetHost = pod.Status.PodIP
+			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].creationTime = pod.CreationTimestamp.Time
 			r.logger.V(1).Info("update target pod for service", "podName", pod.GetName(), "swhName", hc.Name, "namespace", hc.Namespace)
 		}
 	}
@@ -712,10 +739,18 @@ func endpointsAreEqual(old, new []discoveryv1.Endpoint) bool {
 	return true
 }
 
+func sortEndpointStatuses(statuses []networkv1alpha1.EndpointStatus) {
+	sort.Slice(statuses, func(i, j int) bool {
+		return statuses[i].PodName < statuses[j].PodName
+	})
+}
+
 func onlyReadyEndpoints(statuses []networkv1alpha1.EndpointStatus) int32 {
 	result := int32(0)
 	for _, status := range statuses {
-		if status.ProbesSuccessful {
+		// A pod is considered fully ready only if it passes both the standard Kubernetes readiness probes
+		// (handled by kubelet) AND our custom ServiceWithHealthchecks probes (handled by agent).
+		if status.Ready && status.ProbesSuccessful {
 			result++
 		}
 	}

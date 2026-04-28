@@ -34,6 +34,7 @@ debug: true
 `
 	desiredDaemonSetContainerSpecA = `
 - args:
+  - --verbose-status=false
   - --debugging=true
   env:
   - name: NODE_NAME

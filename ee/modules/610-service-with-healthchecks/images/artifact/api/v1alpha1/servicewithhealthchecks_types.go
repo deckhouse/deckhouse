@@ -138,6 +138,9 @@ type EndpointStatus struct {
 	FailedProbes     []string `json:"failedProbes,omitempty" protobuf:"bytes,5,rep,name=failedProbes"`
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Format=date-time
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" protobuf:"bytes,7,opt,name=lastTransitionTime"`
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
 	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty" protobuf:"bytes,6,opt,name=lastProbeTime"`
 }
 
