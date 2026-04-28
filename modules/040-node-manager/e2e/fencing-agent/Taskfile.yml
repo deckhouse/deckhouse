@@ -1,0 +1,6 @@
+version: "3"
+
+includes:
+  fencing-agent-deploy:
+    taskfile: ./tests/fencing-agent/Taskfile.yml
+    dir: ./tests/fencing-agent

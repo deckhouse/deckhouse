@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  fencing:
+    mode: Watchdog
+    watchdog:
+      timeout: 60s

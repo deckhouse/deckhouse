@@ -1,0 +1,70 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: fencing-agent
+spec:
+  description: |
+    Verifies that the fencing-agent DaemonSet deploys and runs when
+    spec.fencing is enabled on the worker NodeGroup. Reverts the patch
+    on completion (and on failure via the cleanup block).
+  concurrent: false
+  steps:
+    - name: enable-fencing
+      try:
+        - description: Patch worker NodeGroup with spec.fencing (Watchdog mode)
+          apply:
+            file: nodegroup-patch.yaml
+      cleanup:
+        - description: Always revert spec.fencing on the worker NodeGroup
+          script:
+            content: |
+              kubectl patch nodegroup worker --type=merge -p '{"spec":{"fencing":null}}'
+
+    - name: wait-for-daemonset
+      try:
+        - description: Wait until DaemonSet is fully rolled out
+          assert:
+            file: assert-daemonset-ready.yaml
+      catch:
+        - description: Collect events on failure
+          events:
+            namespace: d8-cloud-instance-manager
+        - description: Collect fencing-agent pod logs on failure
+          podLogs:
+            namespace: d8-cloud-instance-manager
+            selector: app=fencing-agent
+
+    - name: assert-pods-running
+      try:
+        - description: Assert at least one fencing-agent pod is Running and Ready
+          assert:
+            resource:
+              apiVersion: v1
+              kind: Pod
+              metadata:
+                namespace: d8-cloud-instance-manager
+                labels:
+                  app: fencing-agent
+                  node-group-name: worker
+              status:
+                phase: Running
+                (containerStatuses[?name == 'fencing-agent'] | [0].ready): true
+
+    - name: assert-node-labels
+      try:
+        - description: Assert worker node has fencing labels set by the agent
+          assert:
+            file: assert-node-labels.yaml
+
+    - name: revert-fencing
+      try:
+        - description: Revert spec.fencing on worker NodeGroup
+          script:
+            content: |
+              kubectl patch nodegroup worker --type=merge -p '{"spec":{"fencing":null}}'
+
+    - name: assert-daemonset-deleted
+      try:
+        - description: DaemonSet must be deleted after fencing is disabled
+          error:
+            file: assert-daemonset-gone.yaml
