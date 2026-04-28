@@ -19,7 +19,7 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  pull_request_target:
+  pull_request:
      types:
       - opened
       - synchronize
@@ -40,6 +40,7 @@ env:
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  WERF_VIRTUAL_MERGE: "0"
   GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
 
@@ -414,7 +415,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -706,7 +707,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -998,7 +999,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1290,7 +1291,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1582,7 +1583,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1874,7 +1875,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -2183,7 +2184,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2264,7 +2265,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2340,7 +2341,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2433,7 +2434,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2540,7 +2541,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       - name: Run python webhook tests
         run: |
@@ -2570,7 +2571,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       - name: DMT lint
         env:
@@ -2605,7 +2606,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2721,7 +2722,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2837,7 +2838,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2953,7 +2954,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
