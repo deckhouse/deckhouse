@@ -223,7 +223,7 @@ spec:
 
 1. Создайте cluster-scoped объект ClusterALBInstance с нужным типом инлета и [настройками](/modules/alb/cr.html#clusteralbinstance). Установите параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) для этого ClusterALBInstance.
 
-   Пример манифеста cluster-scoped объект ClusterALBInstance c параметром `spec.defaultDeckhouseGateway: true`:
+   Пример манифеста cluster-scoped-объекта ClusterALBInstance c параметром `spec.defaultDeckhouseGateway: true`:
 
    ```yaml
    kind: ClusterALBInstance

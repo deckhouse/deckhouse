@@ -213,7 +213,7 @@ To provide access to the DKP cluster’s service domains, specify a default gate
 
 1. Create a cluster-scoped ClusterALBInstance object with the desired inlet type and [configuration](/modules/alb/cr.html#clusteralbinstance). Set the [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) parameter for this ClusterALBInstance.
 
-   Пример манифеста объекта ClusterALBInstance с областью действия на уровне кластера и параметром `spec.defaultDeckhouseGateway: true`:
+   Example of a manifest for a cluster-scoped ClusterALBInstance object with a parameter `spec.defaultDeckhouseGateway: true`:
 
    ```yaml
    kind: ClusterALBInstance
