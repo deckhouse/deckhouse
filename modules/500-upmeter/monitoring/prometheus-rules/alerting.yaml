@@ -303,8 +303,8 @@
               namespace="d8-upmeter",
               label_heritage="upmeter",
               label_upmeter_probe="controller-manager"
-            }[30s]
-          )[10m:30s]
+            }[__SCRAPE_INTERVAL__]
+          )[10m:__SCRAPE_INTERVAL__]
         ) == 1
       labels:
         severity_level: "9"
