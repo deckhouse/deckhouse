@@ -59,9 +59,14 @@ spec:
     - name: revert-fencing
       try:
         - description: Revert spec.fencing on worker NodeGroup
-          script:
-            content: |
-              kubectl patch nodegroup worker --type=merge -p '{"spec":{"fencing":null}}'
+          patch:
+            resource:
+              apiVersion: deckhouse.io/v1
+              kind: NodeGroup
+              metadata:
+                name: worker
+              spec:
+                fencing: null
 
     - name: assert-daemonset-deleted
       try:
