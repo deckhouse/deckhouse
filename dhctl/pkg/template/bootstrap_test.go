@@ -49,7 +49,7 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	content := string(renderedBootstrap)
-	require.Contains(t, content, `echo -n '`+base64.StdEncoding.EncodeToString([]byte("test-minget"))+`' | base64 -d > "${minget_path}"`)
+	require.Contains(t, content, `echo -n '`+base64.StdEncoding.EncodeToString([]byte("test-minget"))+`' | base64 -d > "$path"`)
 	require.NotContains(t, content, `local minget_b64=`)
 	require.NotContains(t, content, `export MINGET_B64=`)
 	require.Contains(t, content, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID=""`)
