@@ -33,8 +33,10 @@ func defaultFetchedStore(tempDir string) string {
 }
 
 func parsePackageWithDigest(value string) (string, string, error) {
-	pkg, digest, ok := strings.Cut(value, ":")
-	if !ok || strings.TrimSpace(pkg) == "" || strings.TrimSpace(digest) == "" || !strings.Contains(digest, ":") {
+	pkg, digest, ok := strings.Cut(strings.TrimSpace(value), ":")
+	pkg = strings.TrimSpace(pkg)
+	digest = strings.TrimSpace(digest)
+	if !ok || pkg == "" || digest == "" || !strings.Contains(digest, ":") {
 		return "", "", fmt.Errorf("invalid PACKAGE_WITH_DIGEST %q, expected package:sha256:<digest>", value)
 	}
 

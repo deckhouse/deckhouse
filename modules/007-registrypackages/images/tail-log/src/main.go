@@ -150,7 +150,7 @@ func streamLog(ctx context.Context, w io.Writer, path string) {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: logtail <file>")
+		fmt.Fprintln(os.Stderr, "usage: tail-log <file>")
 		os.Exit(1)
 	}
 

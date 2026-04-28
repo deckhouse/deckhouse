@@ -38,8 +38,7 @@ func TestValidateDigest(t *testing.T) {
 		{name: "uppercase algorithm", digest: "SHA256:abc123", wantErr: true},
 		{name: "uppercase hash", digest: "sha256:ABC123", wantErr: true},
 		{name: "empty string", digest: "", wantErr: true},
-		// validateDigest trims whitespace before matching, so padded input is accepted.
-		{name: "whitespace around", digest: " sha256:abc123 ", wantErr: false},
+		{name: "whitespace around", digest: " sha256:abc123 ", wantErr: true},
 	}
 
 	for _, tt := range tests {

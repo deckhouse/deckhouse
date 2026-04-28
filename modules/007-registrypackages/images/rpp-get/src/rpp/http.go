@@ -125,7 +125,7 @@ func (c *httpClient) doGet(ctx context.Context, packageURL, token string) (*http
 }
 
 func validateDigest(digest string) error {
-	if !digestRegexp.MatchString(strings.TrimSpace(digest)) {
+	if !digestRegexp.MatchString(digest) {
 		return errInvalidDigest
 	}
 
