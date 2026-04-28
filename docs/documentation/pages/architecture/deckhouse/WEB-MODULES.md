@@ -50,7 +50,7 @@ The module consists of the following components:
 The module interacts with the following components:
 
 1. **Kube-apiserver**:
-   - organizing VM connections via VNC and TTY;
+   - organizing VM connections via console and VNC;
    - creating, deleting, modifying, and tracking DKP resources.
 
 1. [**Upmeter**](/modules/upmeter/): Retrieves DKP platform availability information.
@@ -97,7 +97,9 @@ The module consists of the following components:
 
     * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the main container. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-    * **builder**: Sidecar container that extends the documentation when new modules are installed in the platform. **Builder** creates and regularly updates a Lease object to announce the documentation generation handler.
+    * **builder**: Sidecar container that dynamically extends the documentation when new DKP modules are installed. The [Hugo](https://github.com/gohugoio/hugo) static site generator is used to render and generate the up-to-date site content.
+
+    The **builder** container automatically creates and updates a Kubernetes Lease resource, placing an endpoint for interaction in it. This endpoint is used by the [`deckhouse`](/modules/deckhouse/) module controller to initiate documentation updates, ensuring that changes are displayed promptly when modules are updated or installed.
 
 1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/authn) module. For more information about the `user-authn` module architecture, refer to [the corresponding documentation section](../iam/user-authn.html).
 
