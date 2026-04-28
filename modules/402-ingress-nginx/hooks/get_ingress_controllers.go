@@ -125,7 +125,7 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	vpamode, _, err := unstructured.NestedString(vpa, "mode")
 	if vpamode == "" {
-		err := unstructured.SetNestedField(vpa, "Init", "mode")
+		err := unstructured.SetNestedField(vpa, "Initial", "mode")
 		if err != nil {
 			return nil, fmt.Errorf("cannot set resourcesManagement.vpa.mode from ingress controller spec: %v", err)
 		}

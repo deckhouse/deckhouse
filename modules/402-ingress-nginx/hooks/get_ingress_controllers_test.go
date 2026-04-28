@@ -99,7 +99,7 @@ spec:
     "vpa": {
       "cpu": {},
       "memory": {},
-      "mode": "Init"
+      "mode": "Initial"
     }
   },
   "underscoresInHeaders": false,
@@ -221,7 +221,7 @@ spec:
   "vpa": {
     "cpu": {},
     "memory": {},
-    "mode": "Init"
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
@@ -309,7 +309,7 @@ spec:
   "vpa": {
     "cpu": {},
     "memory": {},
-    "mode": "Init"
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
