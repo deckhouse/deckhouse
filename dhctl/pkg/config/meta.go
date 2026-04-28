@@ -75,6 +75,7 @@ type imagesDigests map[string]map[string]interface{}
 
 type ClusterMasterEndpoint struct {
 	Address                string `json:"address" yaml:"address"`
+	KubeAPIPort            int    `json:"kubeApiPort,omitempty" yaml:"kubeApiPort,omitempty"`
 	RPPServerPort          int    `json:"rppServerPort,omitempty" yaml:"rppServerPort,omitempty"`
 	RPPBootstrapServerPort int    `json:"rppBootstrapServerPort,omitempty" yaml:"rppBootstrapServerPort,omitempty"`
 }
@@ -506,7 +507,11 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
-	configForBashibleBundleTemplate["clusterMasterEndpoints"] = m.clusterMasterEndpointsBashibleContext()
+	clusterMasterEndpoints := m.clusterMasterEndpointsBashibleContext()
+	configForBashibleBundleTemplate["clusterMasterEndpoints"] = clusterMasterEndpoints
+	configForBashibleBundleTemplate["clusterMasterKubeAPIEndpoints"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "kubeApiPort")
+	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppServerPort")
+	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
 	mingetBytes, err := minget.Bytes()
 	if err != nil {
@@ -632,6 +637,9 @@ func (m *MetaConfig) clusterMasterEndpointsBashibleContext() []map[string]interf
 			"address": endpoint.Address,
 		}
 
+		if endpoint.KubeAPIPort != 0 {
+			item["kubeApiPort"] = endpoint.KubeAPIPort
+		}
 		if endpoint.RPPServerPort != 0 {
 			item["rppServerPort"] = endpoint.RPPServerPort
 		}
@@ -643,6 +651,26 @@ func (m *MetaConfig) clusterMasterEndpointsBashibleContext() []map[string]interf
 	}
 
 	return endpoints
+}
+
+func clusterMasterEndpointAddresses(endpoints []map[string]interface{}, portName string) []string {
+	addresses := make([]string, 0, len(endpoints))
+
+	for _, endpoint := range endpoints {
+		address, ok := endpoint["address"].(string)
+		if !ok || address == "" {
+			continue
+		}
+
+		port, ok := endpoint[portName].(int)
+		if !ok || port == 0 {
+			continue
+		}
+
+		addresses = append(addresses, fmt.Sprintf("%s:%d", address, port))
+	}
+
+	return addresses
 }
 
 func (m *MetaConfig) effectiveClusterMasterEndpoints() []ClusterMasterEndpoint {

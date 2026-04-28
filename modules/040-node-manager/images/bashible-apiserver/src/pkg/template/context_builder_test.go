@@ -63,6 +63,32 @@ func TestClusterUUIDIsPreservedInTemplateContexts(t *testing.T) {
 	}
 }
 
+func TestClusterMasterEndpointAddresses(t *testing.T) {
+	kubeAPIEndpoints, rppAddresses, rppBootstrapAddresses := clusterMasterEndpointAddresses([]clusterMasterEndpoint{
+		{
+			Address:                "10.0.0.1",
+			KubeAPIPort:            6443,
+			RPPServerPort:          4219,
+			RPPBootstrapServerPort: 4300,
+		},
+		{
+			Address:                "10.0.0.2",
+			RPPServerPort:          4219,
+			RPPBootstrapServerPort: 4300,
+		},
+	})
+
+	if got, want := fmt.Sprint(kubeAPIEndpoints), "[10.0.0.1:6443]"; got != want {
+		t.Fatalf("kubeAPIEndpoints = %s, want %s", got, want)
+	}
+	if got, want := fmt.Sprint(rppAddresses), "[10.0.0.1:4219 10.0.0.2:4219]"; got != want {
+		t.Fatalf("rppAddresses = %s, want %s", got, want)
+	}
+	if got, want := fmt.Sprint(rppBootstrapAddresses), "[10.0.0.1:4300 10.0.0.2:4300]"; got != want {
+		t.Fatalf("rppBootstrapAddresses = %s, want %s", got, want)
+	}
+}
+
 func TestBashibleChecksum(t *testing.T) {
 	hash := func(t *testing.T, bc *bashibleContext) string {
 		h := sha256.New()

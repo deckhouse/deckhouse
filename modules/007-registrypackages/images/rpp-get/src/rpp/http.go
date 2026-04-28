@@ -84,6 +84,7 @@ func (c *httpClient) Get(ctx context.Context, digest string) (*http.Response, er
 	if err := validateDigest(digest); err != nil {
 		return nil, err
 	}
+	digest = strings.TrimSpace(digest)
 
 	if len(c.endpoints) == 0 {
 		return nil, errNoEndpoints

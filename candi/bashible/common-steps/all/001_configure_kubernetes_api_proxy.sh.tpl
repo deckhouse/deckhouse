@@ -16,15 +16,13 @@ mkdir -p /etc/kubernetes/kubernetes-api-proxy
 # Read previously discovered IP
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - << EOF
-{{- $list := list }}
 {{- if eq .runType "Normal" }}
-  {{- range $endpoint := .normal.clusterMasterEndpoints | default (list) }}
-    {{- $list = append $list (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) }}
-  {{- end }}
+{{ .clusterMasterKubeAPIEndpoints | toJson }}
 {{- else if eq .runType "ClusterBootstrap" }}
+{{- $list := list }}
   {{- $list = append $list "$(bb-d8-node-ip):6443" }}
-{{- end }}
 {{ toJson $list }}
+{{- end }}
 EOF
 
 {{ if eq .runType "Normal" }}

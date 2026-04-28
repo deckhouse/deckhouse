@@ -70,8 +70,7 @@ type rppBinaryHandler struct {
 }
 
 const (
-	rppBinaryName    = "rpp-get"
-	statusNoResponse = 444
+	rppBinaryName = "rpp-get"
 )
 
 var errEmptyRegistryConfig = errors.New("empty registry config")
@@ -332,29 +331,37 @@ func getRequestIP(r *http.Request) string {
 }
 
 func (h *rppBinaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestIP := getRequestIP(r)
+
 	if r.URL.Path != h.expectedPath {
-		w.WriteHeader(statusNoResponse)
+		h.logger.Warnf("rpp-get request from client %s for unexpected path %q, expected %q", requestIP, r.URL.Path, h.expectedPath)
+		http.NotFound(w, r)
 		return
 	}
 
 	if r.Method != http.MethodGet {
+		h.logger.Warnf("rpp-get request from client %s with method %s is not allowed", requestIP, r.Method)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	digest, ok := singleQueryValue(r.URL.Query(), "digest")
 	if !ok {
+		h.logger.Warnf("rpp-get request from client %s has invalid query %q", requestIP, r.URL.RawQuery)
 		http.Error(w, "missing digest", http.StatusBadRequest)
 		return
 	}
 
+	h.logger.Infof("Received rpp-get request with digest %q from client %s", digest, requestIP)
+
 	binary, err := h.fetchBinary(r.Context(), digest)
 	if err != nil {
-		h.writeFetchError(w, digest, err)
+		h.writeFetchError(w, digest, requestIP, err)
 		return
 	}
 
 	h.writeBinaryResponse(w, binary)
+	h.logger.Infof("rpp-get binary for digest %q sent successfully to client %s, size %d", digest, requestIP, len(binary))
 }
 
 func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]byte, error) {
@@ -381,13 +388,14 @@ func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]by
 	return binary, nil
 }
 
-func (h *rppBinaryHandler) writeFetchError(w http.ResponseWriter, digest string, err error) {
+func (h *rppBinaryHandler) writeFetchError(w http.ResponseWriter, digest, requestIP string, err error) {
 	if errors.Is(err, registry.ErrPackageNotFound) {
+		h.logger.Warnf("rpp-get package %q requested by client %s was not found", digest, requestIP)
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	h.logger.Errorf("fetch %s package %q: %v", h.binaryName, digest, err)
+	h.logger.Errorf("fetch %s package %q requested by client %s: %v", h.binaryName, digest, requestIP, err)
 	http.Error(w, "internal server error", http.StatusInternalServerError)
 }
 

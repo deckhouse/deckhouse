@@ -126,6 +126,7 @@ func streamLog(ctx context.Context, w io.Writer, path string) {
 		currentInfo, currentErr := f.Stat()
 		latestInfo, latestErr := os.Stat(path)
 		if currentErr != nil || latestErr != nil {
+			time.Sleep(2 * pollInterval)
 			continue
 		}
 
@@ -157,12 +158,13 @@ func main() {
 	addr := "0.0.0.0:8000"
 	fmt.Printf("Streaming %s on http://%s\n", logFile, addr)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		streamLog(r.Context(), w, logFile)
 	})
 
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

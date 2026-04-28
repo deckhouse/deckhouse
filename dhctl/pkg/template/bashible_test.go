@@ -31,23 +31,25 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 	require.NoError(t, err)
 
 	data := map[string]interface{}{
-		"runType": "Normal",
+		"runType":     "Normal",
+		"clusterUUID": "848c3b2c-eda6-11ec-9289-dff550c719eb",
 		"nodeGroup": map[string]interface{}{
 			"name":     "master",
 			"nodeType": "CloudPermanent",
 		},
-		"normal": map[string]interface{}{
-			"clusterMasterEndpoints": []map[string]interface{}{
-				{
-					"address":     "10.0.0.1",
-					"kubeApiPort": 6443,
-				},
-				{
-					"address":                "10.0.0.2",
-					"rppServerPort":          4219,
-					"rppBootstrapServerPort": 4300,
-				},
+		"clusterMasterEndpoints": []map[string]interface{}{
+			{
+				"address":     "10.0.0.1",
+				"kubeApiPort": 6443,
 			},
+			{
+				"address":                "10.0.0.2",
+				"rppServerPort":          4219,
+				"rppBootstrapServerPort": 4300,
+			},
+		},
+		"clusterMasterKubeAPIEndpoints": []string{
+			"10.0.0.1:6443",
 		},
 		"images": map[string]interface{}{
 			"registrypackages": map[string]interface{}{
@@ -64,7 +66,10 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 
 	content := rendered.Content.String()
 	require.Contains(t, content, `for server in 10.0.0.1:6443; do`)
+	require.Contains(t, content, `export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="848c3b2c-eda6-11ec-9289-dff550c719eb"`)
 	require.Contains(t, content, `export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="10.0.0.1:6443"`)
+	require.NotContains(t, content, `bb-minget-install`)
+	require.Contains(t, content, `bb-rpp-get-install`)
 	require.NotContains(t, content, `10.0.0.2:<no value>`)
 }
 
@@ -90,6 +95,8 @@ func TestRenderBashibleTemplateUsesClusterMasterRPPAddressesForBootstrap(t *test
 	require.NoError(t, err)
 
 	content := rendered.Content.String()
+	require.Contains(t, content, `unset PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID`)
 	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="127.0.0.1:5444"`)
 	require.Contains(t, content, `export PACKAGES_PROXY_TOKEN="passthrough"`)
+	require.Contains(t, content, `bb-minget-install`)
 }

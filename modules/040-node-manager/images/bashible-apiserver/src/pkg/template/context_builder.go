@@ -141,12 +141,16 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 	ngMap := make(map[string][]byte)
 	errorsMap := make(map[string]error)
 	hashMap := make(map[string]hash.Hash, len(cb.clusterInputData.NodeGroups))
+	clusterMasterKubeAPIEndpoints, clusterMasterRPPAddresses, clusterMasterRPPBootstrapAddresses := clusterMasterEndpointAddresses(cb.clusterInputData.ClusterMasterEndpoints)
 
 	commonContext := &tplContextCommon{
-		versionMapWrapper:      versionMapFromMap(cb.versionMap),
-		RunType:                "Normal",
-		ClusterUUID:            cb.clusterInputData.ClusterUUID,
-		ClusterMasterEndpoints: cb.clusterInputData.ClusterMasterEndpoints,
+		versionMapWrapper:                  versionMapFromMap(cb.versionMap),
+		RunType:                            "Normal",
+		ClusterUUID:                        cb.clusterInputData.ClusterUUID,
+		ClusterMasterEndpoints:             cb.clusterInputData.ClusterMasterEndpoints,
+		ClusterMasterKubeAPIEndpoints:      clusterMasterKubeAPIEndpoints,
+		ClusterMasterRPPAddresses:          clusterMasterRPPAddresses,
+		ClusterMasterRPPBootstrapAddresses: clusterMasterRPPBootstrapAddresses,
 		Normal: normal{
 			PodSubnetNodeCIDRPrefix: cb.clusterInputData.PodSubnetNodeCIDRPrefix,
 			ClusterDomain:           cb.clusterInputData.ClusterDomain,
@@ -201,9 +205,12 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 
 func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
 	bc := bashibleContext{
-		KubernetesVersion:      ng.KubernetesVersion(),
-		ClusterUUID:            cb.clusterInputData.ClusterUUID,
-		ClusterMasterEndpoints: cb.clusterInputData.ClusterMasterEndpoints,
+		KubernetesVersion:                  ng.KubernetesVersion(),
+		ClusterUUID:                        cb.clusterInputData.ClusterUUID,
+		ClusterMasterEndpoints:             cb.clusterInputData.ClusterMasterEndpoints,
+		ClusterMasterKubeAPIEndpoints:      bundleNgContext.tplContextCommon.ClusterMasterKubeAPIEndpoints,
+		ClusterMasterRPPAddresses:          bundleNgContext.tplContextCommon.ClusterMasterRPPAddresses,
+		ClusterMasterRPPBootstrapAddresses: bundleNgContext.tplContextCommon.ClusterMasterRPPBootstrapAddresses,
 		Normal: map[string]interface{}{
 			"apiserverEndpoints":     bundleNgContext.tplContextCommon.Normal.APIServerEndpoints,
 			"clusterMasterEndpoints": bundleNgContext.tplContextCommon.Normal.ClusterMasterEndpoints,
@@ -351,6 +358,26 @@ func versionMapFromMap(m map[string]interface{}) versionMapWrapper {
 	return res
 }
 
+func clusterMasterEndpointAddresses(endpoints []clusterMasterEndpoint) ([]string, []string, []string) {
+	kubeAPIEndpoints := make([]string, 0, len(endpoints))
+	rppAddresses := make([]string, 0, len(endpoints))
+	rppBootstrapAddresses := make([]string, 0, len(endpoints))
+
+	for _, endpoint := range endpoints {
+		if endpoint.KubeAPIPort != 0 {
+			kubeAPIEndpoints = append(kubeAPIEndpoints, fmt.Sprintf("%s:%d", endpoint.Address, endpoint.KubeAPIPort))
+		}
+		if endpoint.RPPServerPort != 0 {
+			rppAddresses = append(rppAddresses, fmt.Sprintf("%s:%d", endpoint.Address, endpoint.RPPServerPort))
+		}
+		if endpoint.RPPBootstrapServerPort != 0 {
+			rppBootstrapAddresses = append(rppBootstrapAddresses, fmt.Sprintf("%s:%d", endpoint.Address, endpoint.RPPBootstrapServerPort))
+		}
+	}
+
+	return kubeAPIEndpoints, rppAddresses, rppBootstrapAddresses
+}
+
 type nodeGroup map[string]interface{}
 
 func (ng nodeGroup) Name() string {
@@ -380,13 +407,16 @@ func (ng nodeGroup) CRIType() string {
 }
 
 type bashibleContext struct {
-	ConfigurationChecksum  string                  `json:"configurationChecksum" yaml:"configurationChecksum"`
-	KubernetesVersion      string                  `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-	ClusterUUID            string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
-	ClusterMasterEndpoints []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
-	Normal                 interface{}             `json:"normal" yaml:"normal"`
-	NodeGroup              nodeGroup               `json:"nodeGroup" yaml:"nodeGroup"`
-	RunType                string                  `json:"runType" yaml:"runType"` // Normal
+	ConfigurationChecksum              string                  `json:"configurationChecksum" yaml:"configurationChecksum"`
+	KubernetesVersion                  string                  `json:"kubernetesVersion" yaml:"kubernetesVersion"`
+	ClusterUUID                        string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
+	ClusterMasterEndpoints             []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
+	ClusterMasterKubeAPIEndpoints      []string                `json:"clusterMasterKubeAPIEndpoints,omitempty" yaml:"clusterMasterKubeAPIEndpoints,omitempty"`
+	ClusterMasterRPPAddresses          []string                `json:"clusterMasterRPPAddresses,omitempty" yaml:"clusterMasterRPPAddresses,omitempty"`
+	ClusterMasterRPPBootstrapAddresses []string                `json:"clusterMasterRPPBootstrapAddresses,omitempty" yaml:"clusterMasterRPPBootstrapAddresses,omitempty"`
+	Normal                             interface{}             `json:"normal" yaml:"normal"`
+	NodeGroup                          nodeGroup               `json:"nodeGroup" yaml:"nodeGroup"`
+	RunType                            string                  `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
 	Images                     map[string]map[string]string `json:"images" yaml:"images"`
@@ -434,10 +464,13 @@ type versionMapWrapper struct {
 type tplContextCommon struct {
 	versionMapWrapper
 
-	RunType                string                  `json:"runType" yaml:"runType"`
-	ClusterUUID            string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
-	ClusterMasterEndpoints []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
-	Normal                 normal                  `json:"normal" yaml:"normal"`
+	RunType                            string                  `json:"runType" yaml:"runType"`
+	ClusterUUID                        string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
+	ClusterMasterEndpoints             []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
+	ClusterMasterKubeAPIEndpoints      []string                `json:"clusterMasterKubeAPIEndpoints,omitempty" yaml:"clusterMasterKubeAPIEndpoints,omitempty"`
+	ClusterMasterRPPAddresses          []string                `json:"clusterMasterRPPAddresses,omitempty" yaml:"clusterMasterRPPAddresses,omitempty"`
+	ClusterMasterRPPBootstrapAddresses []string                `json:"clusterMasterRPPBootstrapAddresses,omitempty" yaml:"clusterMasterRPPBootstrapAddresses,omitempty"`
+	Normal                             normal                  `json:"normal" yaml:"normal"`
 
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry map[string]interface{}       `json:"registry" yaml:"registry"`

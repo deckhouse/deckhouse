@@ -54,17 +54,53 @@ bb-discover-node-name() {
 {{- define "bb-minget" -}}
 {{- $images := .images | default (dict) -}}
 {{- $registryPackages := get $images "registrypackages" | default (dict) -}}
+{{- if and (ne .runType "Normal") .mingetB64 }}
 bb-minget-install() {
   local minget_path="/opt/deckhouse/bin/minget"
-  local minget_b64='{{ .mingetB64 }}'
 
-  if [[ -f "${minget_path}" ]]; then
+  if [[ -s "${minget_path}" && -x "${minget_path}" ]]; then
     return 0
   fi
 
   mkdir -p /opt/deckhouse/bin/
-  printf '%s' "${minget_b64}" | base64 -d > "${minget_path}"
+  if ! echo -n '{{ .mingetB64 }}' | base64 -d > "${minget_path}"; then
+    rm -f "${minget_path}"
+    return 1
+  fi
+  if [[ ! -s "${minget_path}" ]]; then
+    rm -f "${minget_path}"
+    return 1
+  fi
   chmod +x "${minget_path}"
+}
+{{- end }}
+
+bb-rpp-get-file-ready() {
+  local path="$1"
+
+  [[ -s "${path}" && -x "${path}" ]]
+}
+
+bb-rpp-get-fetch-with-minget() {
+  local url="$1"
+
+  /opt/deckhouse/bin/minget "${url}"
+}
+
+bb-rpp-get-fetch-with-curl() {
+  local url="$1"
+
+  d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://${url}"
+}
+
+bb-rpp-get-fetch() {
+  local url="$1"
+
+  if command -v d8-curl >/dev/null 2>&1; then
+    bb-rpp-get-fetch-with-curl "${url}"
+  else
+    bb-rpp-get-fetch-with-minget "${url}"
+  fi
 }
 
 bb-rpp-get-install() {
@@ -75,12 +111,14 @@ bb-rpp-get-install() {
   local installed_store="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}"
   local rpp_client_store="${installed_store}/rpp-get"
   local digest_path="${rpp_client_store}/digest"
+  local max_attempts=30
+  local attempt=1
 
   if [[ -n "${bootstrap_cluster_uuid}" ]]; then
     bootstrap_path_prefix="/${bootstrap_cluster_uuid}"
   fi
 
-  if [[ -x "${rpp_client_path}" ]] &&
+  if bb-rpp-get-file-ready "${rpp_client_path}" &&
      [[ -f "${digest_path}" ]] &&
      [[ "$(<"${digest_path}")" == "${rpp_client_digest}" ]]; then
     return 0
@@ -95,11 +133,13 @@ bb-rpp-get-install() {
 
   local tmp_path="${rpp_client_path}.tmp"
   local address
+  local url
 
-  while true; do
+  while [[ ${attempt} -le ${max_attempts} ]]; do
     for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
       rm -f "${tmp_path}"
-      if /opt/deckhouse/bin/minget "${address}${bootstrap_path_prefix}/rpp-get?digest=${rpp_client_digest}" > "${tmp_path}"; then
+      url="${address}${bootstrap_path_prefix}/rpp-get?digest=${rpp_client_digest}"
+      if bb-rpp-get-fetch "${url}" > "${tmp_path}" && [[ -s "${tmp_path}" ]]; then
         chmod +x "${tmp_path}"
         if "${tmp_path}" version >/dev/null 2>&1; then
           mv -f "${tmp_path}" "${rpp_client_path}"
@@ -109,10 +149,12 @@ bb-rpp-get-install() {
       fi
     done
 
-    >&2 echo "rpp-get-install failed, retrying in 5 seconds"
+    >&2 echo "rpp-get-install failed (${attempt}/${max_attempts}), retrying in 5 seconds"
+    attempt=$(( attempt + 1 ))
     sleep 5
   done
 
+  >&2 echo "rpp-get-install failed after ${max_attempts} attempts"
   rm -f "${tmp_path}"
   return 1
 }
@@ -263,17 +305,13 @@ function get_phase2() {
 {{- end }}
 
 {{- define "bb-rpp-endpoints" -}}
-{{- $clusterMasterKubeAPIEndpoints := list -}}
-{{- range $endpoint := .normal.clusterMasterEndpoints -}}
-  {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) -}}
-{{- end -}}
 function get_pods() {
   local namespace=$1
   local labelSelector=$2
   local token=$3
 
   while true; do
-    for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
+    for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
       url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
       if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
       then

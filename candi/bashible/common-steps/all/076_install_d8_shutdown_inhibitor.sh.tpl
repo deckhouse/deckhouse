@@ -62,7 +62,7 @@ function _shutdown-inhibitor-cleanup() {
 function inhibitor::install:service() {
 {{- $noCordon := true }}
 {{- if and (eq .runType "Normal") (eq .nodeGroup.name "master") }}
-  {{- $clusterMasterEndpoints := dig "clusterMasterEndpoints" (list) .normal }}
+  {{- $clusterMasterEndpoints := .clusterMasterEndpoints | default (list) }}
   {{- if gt (len $clusterMasterEndpoints) 1 }}
     {{- $noCordon = false }}
   {{- end }}

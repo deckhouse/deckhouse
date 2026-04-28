@@ -20,21 +20,6 @@ set -Eeo pipefail
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
 {{- $ctx := . -}}
-{{- $clusterMasterKubeAPIEndpoints := list -}}
-{{- $clusterMasterRPPAddresses := list -}}
-{{- if eq .runType "Normal" -}}
-  {{- range $endpoint := .normal.clusterMasterEndpoints | default (list) -}}
-    {{- if hasKey $endpoint "kubeApiPort" -}}
-      {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) -}}
-    {{- end -}}
-  {{- end -}}
-{{- else -}}
-  {{- range $endpoint := .clusterMasterEndpoints | default (list) -}}
-    {{- if hasKey $endpoint "rppServerPort" -}}
-      {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $endpoint.address $endpoint.rppServerPort) -}}
-    {{- end -}}
-  {{- end -}}
-{{- end -}}
 {{- tpl (printf `
 %s
 
@@ -110,7 +95,7 @@ bb-curl-kube() {
       if bb-curl-kube-healthz "$kube_server"; then
         export BB_KUBE_APISERVER_URL="$kube_server"
       else
-        for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
+        for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
           if bb-curl-kube-healthz "https://$server"; then
             export BB_KUBE_APISERVER_URL="https://$server"
             break
@@ -302,7 +287,7 @@ function get_secret() {
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local token="$(</var/lib/bashible/bootstrap-token)"
     while true; do
-      for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
+      for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
         local url="https://$server/api/v1/namespaces/d8-cloud-instance-manager/secrets/$secret"
         if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
@@ -339,7 +324,7 @@ function get_bundle() {
   elif [ -f /var/lib/bashible/bootstrap-token ]; then
     local token="$(</var/lib/bashible/bootstrap-token)"
     while true; do
-      for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
+      for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
         local url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
         if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
         then
@@ -397,21 +382,31 @@ function main() {
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
   export BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages" # Deprecated, backward compatibility
+  export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ .clusterMasterRPPBootstrapAddresses | join " " }}"
 
   {{ if eq .runType "Normal" }}
   # autodiscover token and rpp endpoint from kube api
-  export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ $clusterMasterKubeAPIEndpoints | join "," }}"
+  export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
+  export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ .clusterMasterKubeAPIEndpoints | join "," }}"
   unset PACKAGES_PROXY_ADDRESSES
   unset PACKAGES_PROXY_TOKEN
   {{ end }}
 
   {{ if ne .runType "Normal" }}
   # static set of rpp endpoint and token
-  export PACKAGES_PROXY_ADDRESSES="{{ $clusterMasterRPPAddresses | join "," }}"
+  unset PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID
+  export PACKAGES_PROXY_ADDRESSES="{{ .clusterMasterRPPAddresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ get .packagesProxy "token" | default "passthrough" }}"
   {{ end }}
 
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
+
+  if [ -z "${is_local-}" ]; then
+  {{- if ne .runType "Normal" }}
+    bb-minget-install
+  {{- end }}
+    bb-rpp-get-install
+  fi
 
   if [ -f "$BOOTSTRAP_DIR/first_run" ] ; then
     FIRST_BASHIBLE_RUN="yes"

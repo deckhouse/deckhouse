@@ -10,7 +10,25 @@
   {{- $_ := set $tpl_context "Values" $context.Values }}
   {{- $_ := set $tpl_context "nodeGroup" $ng }}
   {{- $_ := set $tpl_context "apiserverEndpoints" $context.Values.nodeManager.internal.clusterMasterAddresses }}
-  {{- $_ := set $tpl_context "clusterMasterEndpoints" ($context.Values.nodeManager.internal.clusterMasterEndpoints | default (list)) }}
+  {{- $clusterMasterEndpoints := $context.Values.nodeManager.internal.clusterMasterEndpoints | default (list) }}
+  {{- $clusterMasterKubeAPIEndpoints := list }}
+  {{- $clusterMasterRPPAddresses := list }}
+  {{- $clusterMasterRPPBootstrapAddresses := list }}
+  {{- range $endpoint := $clusterMasterEndpoints }}
+    {{- if hasKey $endpoint "kubeApiPort" }}
+      {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) }}
+    {{- end }}
+    {{- if hasKey $endpoint "rppServerPort" }}
+      {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $endpoint.address $endpoint.rppServerPort) }}
+    {{- end }}
+    {{- if hasKey $endpoint "rppBootstrapServerPort" }}
+      {{- $clusterMasterRPPBootstrapAddresses = append $clusterMasterRPPBootstrapAddresses (printf "%s:%v" $endpoint.address $endpoint.rppBootstrapServerPort) }}
+    {{- end }}
+  {{- end }}
+  {{- $_ := set $tpl_context "clusterMasterEndpoints" $clusterMasterEndpoints }}
+  {{- $_ := set $tpl_context "clusterMasterKubeAPIEndpoints" $clusterMasterKubeAPIEndpoints }}
+  {{- $_ := set $tpl_context "clusterMasterRPPAddresses" $clusterMasterRPPAddresses }}
+  {{- $_ := set $tpl_context "clusterMasterRPPBootstrapAddresses" $clusterMasterRPPBootstrapAddresses }}
   {{- $_ := set $tpl_context "clusterUUID" ($context.Values.global.discovery.clusterUUID | default "") }}
   {{- $_ := set $tpl_context "images" $context.Values.global.modulesImages.digests }}
   {{- $packagesProxy := $context.Values.nodeManager.internal.packagesProxy | default (dict) }}

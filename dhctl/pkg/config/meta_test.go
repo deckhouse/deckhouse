@@ -375,6 +375,7 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 	cfg.ClusterMasterEndpoints = []ClusterMasterEndpoint{
 		{
 			Address:                "127.0.0.1",
+			KubeAPIPort:            6443,
 			RPPServerPort:          5444,
 			RPPBootstrapServerPort: 4300,
 		},
@@ -388,9 +389,13 @@ func TestConfigForBashibleBundleTemplateClusterMasterEndpoints(t *testing.T) {
 	require.Len(t, endpoints, 1)
 	require.Equal(t, map[string]interface{}{
 		"address":                "127.0.0.1",
+		"kubeApiPort":            6443,
 		"rppServerPort":          5444,
 		"rppBootstrapServerPort": 4300,
 	}, endpoints[0])
+	require.Equal(t, []string{"127.0.0.1:6443"}, data["clusterMasterKubeAPIEndpoints"])
+	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"127.0.0.1:4300"}, data["clusterMasterRPPBootstrapAddresses"])
 }
 
 func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing.T) {
@@ -411,6 +416,9 @@ func TestConfigForBashibleBundleTemplateDefaultClusterMasterEndpoints(t *testing
 		"rppServerPort":          5444,
 		"rppBootstrapServerPort": 4300,
 	}, endpoints[0])
+	require.Empty(t, data["clusterMasterKubeAPIEndpoints"])
+	require.Equal(t, []string{"127.0.0.1:5444"}, data["clusterMasterRPPAddresses"])
+	require.Equal(t, []string{"127.0.0.1:4300"}, data["clusterMasterRPPBootstrapAddresses"])
 
 	mingetB64, ok := data["mingetB64"].(string)
 	require.True(t, ok)

@@ -19,16 +19,6 @@ set -Eeo pipefail
 # candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl
 
 {{- $packagesProxy := .packagesProxy | default (dict) }}
-{{- $clusterMasterKubeAPIEndpoints := list }}
-{{- $clusterMasterRPPAddresses := list }}
-{{- $clusterMasterBootstrapRPPAddresses := list }}
-{{- range $endpoint := .clusterMasterEndpoints | default (list) }}
-  {{- if hasKey $endpoint "kubeApiPort" }}
-    {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) }}
-  {{- end }}
-  {{- $clusterMasterRPPAddresses = append $clusterMasterRPPAddresses (printf "%s:%v" $endpoint.address $endpoint.rppServerPort) }}
-  {{- $clusterMasterBootstrapRPPAddresses = append $clusterMasterBootstrapRPPAddresses (printf "%s:%v" $endpoint.address $endpoint.rppBootstrapServerPort) }}
-{{- end }}
 {{- $candi := "candi/bashible/lib.sh.tpl" -}}
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
@@ -41,15 +31,15 @@ set -Eeo pipefail
 ` $lib) $ctx }}
 
 export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
-export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ $clusterMasterBootstrapRPPAddresses | join " " }}"
+export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ .clusterMasterRPPBootstrapAddresses | join " " }}"
 
-{{ if gt (len $clusterMasterKubeAPIEndpoints) 0 }}
+{{ if gt (len .clusterMasterKubeAPIEndpoints) 0 }}
 # autodiscover token and rpp endpoint
-export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ $clusterMasterKubeAPIEndpoints | join "," }}"
+export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ .clusterMasterKubeAPIEndpoints | join "," }}"
 {{ else }}
 # static set of rpp endpoint and token
 export PACKAGES_PROXY_TOKEN="{{ get $packagesProxy "token" | default "passthrough" }}"
-export PACKAGES_PROXY_ADDRESSES="{{ $clusterMasterRPPAddresses | join "," }}"
+export PACKAGES_PROXY_ADDRESSES="{{ .clusterMasterRPPAddresses | join "," }}"
 {{ end }}
 
 # packages

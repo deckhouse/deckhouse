@@ -377,7 +377,7 @@ func (c *Client) isPackageFetched(ref packageRef) (bool, error) {
 		return false, nil
 	}
 
-	return !info.IsDir(), nil
+	return !info.IsDir() && info.Size() > 0, nil
 }
 
 func (c *Client) createWorkDir(ref packageRef) (string, error) {

@@ -45,10 +45,6 @@ bootstrap_log_init
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
 {{- $ctx := . -}}
-{{- $clusterMasterKubeAPIEndpoints := list -}}
-{{- range $endpoint := .normal.clusterMasterEndpoints -}}
-  {{- $clusterMasterKubeAPIEndpoints = append $clusterMasterKubeAPIEndpoints (printf "%s:%v" $endpoint.address $endpoint.kubeApiPort) -}}
-{{- end -}}
 {{- tpl (printf `
 %s
 
@@ -66,7 +62,7 @@ function get_bundle() {
   token="$(</var/lib/bashible/bootstrap-token)"
 
   while true; do
-    for server in {{ $clusterMasterKubeAPIEndpoints | join " " }}; do
+    for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
       url="https://$server/apis/bashible.deckhouse.io/v1alpha1/${resource}s/${name}"
       if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
       then
@@ -89,7 +85,7 @@ output_log_port=8000
 failure_count=0
 failure_limit=3
 while [ "$patch_pending" = true ] ; do
-  for server in {{ $clusterMasterKubeAPIEndpoints | join " " }} ; do
+  for server in {{ .clusterMasterKubeAPIEndpoints | join " " }} ; do
     server_addr=$(echo $server | cut -f1 -d":")
     until node_ip="$(ip ro get ${server_addr} | grep -Po '(?<=src )([0-9\.]+)')"; do
       echo "The network is not ready for connecting to apiserver yet, waiting..."
