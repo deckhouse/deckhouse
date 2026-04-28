@@ -1,3 +1,4 @@
+{{- if .Values.cloudProviderDvp.nodes.enabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -196,3 +197,4 @@ subjects:
 - kind: ServiceAccount
   name: capdvp-controller-manager
   namespace: d8-cloud-provider-dvp
+{{- end }}

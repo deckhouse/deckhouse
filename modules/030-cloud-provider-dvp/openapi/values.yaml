@@ -546,3 +546,17 @@ properties:
         type: string
         description: |
           The name of the default storage class discovered from the parent DVP cluster.
+      credentialSecrets:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          properties:
+            authScheme:
+              type: string
+            identity:
+              type: string
+            secret:
+              type: string
+          required: [authScheme, secret]

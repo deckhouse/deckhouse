@@ -1,6 +1,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
-from: {{ index $.Images "base/scratch" }}
+from: common/distroless
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /dhctl-provider-dvp
