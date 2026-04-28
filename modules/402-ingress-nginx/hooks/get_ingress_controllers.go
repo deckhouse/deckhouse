@@ -123,6 +123,14 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 	setDefaultEmptyObject("cpu", vpa)
 	setDefaultEmptyObject("memory", vpa)
 
+	vpamode, _, err := unstructured.NestedString(vpa, "mode")
+	if vpamode == "" {
+		err := unstructured.SetNestedField(vpa, "Init", "mode")
+		if err != nil {
+			return nil, fmt.Errorf("cannot set resourcesManagement.vpa.mode from ingress controller spec: %v", err)
+		}
+	}
+
 	err = unstructured.SetNestedMap(resourcesManagement, vpa, "vpa")
 	if err != nil {
 		return nil, fmt.Errorf("cannot set resourcesManagement.vpa from ingress controller spec: %v", err)

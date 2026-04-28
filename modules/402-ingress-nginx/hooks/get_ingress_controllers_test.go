@@ -98,7 +98,8 @@ spec:
     },
     "vpa": {
       "cpu": {},
-      "memory": {}
+      "memory": {},
+      "mode": "Init"
     }
   },
   "underscoresInHeaders": false,
@@ -219,7 +220,8 @@ spec:
   },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Init"
   }
 },
 "underscoresInHeaders": false,
@@ -259,6 +261,7 @@ spec:
     "requests": {}
   },
   "vpa": {
+    "mode": "InPlaceOrRecreate",
     "cpu": {
       "limitRatio": 1.5,
       "max": "100m",
@@ -305,7 +308,8 @@ spec:
   },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Init"
   }
 },
 "underscoresInHeaders": false,
