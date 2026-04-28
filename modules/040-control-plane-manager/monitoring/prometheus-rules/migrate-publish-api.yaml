@@ -1,7 +1,7 @@
 - name: d8.control-plane-manager.migration
   rules:
-    - alert: D8ObsoletePublishAPIInUserAuthn
-      for: 10m
+    - alert: D8ObsoletePublishAPIinUserAuthn
+      for: 5m
       expr: |
         d8_obsolete_publishapi_in_user_authn == 1
       labels:
@@ -25,7 +25,7 @@
           1. Review current settings for `publishAPI` in resource `moduleConfig user-authn`.
 
 
-          2. Update `moduleConfig control-plane-manager` spec to `spec.version: 3`, if said `moduleConfig` resource exists. This may require migrating `settings.apiserver.loadBalancer` to newer `settings.apiserver.publishAPI.loadBalancer` if it's set. If the `moduleConfig` does not exist, go to the next step.
+          2. If the `moduleConfig control-plane-manager` resource exists, update its spec to `spec.version: 3`. If `settings.apiserver.loadBalancer` is set, migrate it to `settings.apiserver.publishAPI.loadBalancer`. If the resource does not exist, proceed to step 3.
 
 
           3. If `moduleConfig control-plane-manager` does not exist, create it via `d8`: 
@@ -36,7 +36,7 @@
             ```
 
 
-            And patch in the version:
+            And set the settings version:
 
 
             ```
@@ -45,7 +45,7 @@
             ```
 
 
-          4. Patch settings into `moduleConfig control-plane-manager` from temporary configMap by executing the following script:
+          4. Apply the migrated settings into `moduleConfig control-plane-manager` from temporary configMap by executing the following script:
 
 
             ```bash
@@ -56,6 +56,5 @@
           EOF
           )"
             ```
-
-
-          5. Remove obsolete `spec.settings.publishAPI` from `moduleConfig user-authn`
+ 
+          5. Remove obsolete `spec.settings.publishAPI` section from `moduleConfig user-authn`
