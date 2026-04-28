@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# $1 annotation $2 additional params
+# $1 annotation
 function add_node_annotation() {
   local annotation="$1"
-  local params="$2"
   local failure_count=0
   local failure_limit=5
 
-  until bb-kubectl-exec --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) "${annotation}" "${params}"; do
+  until bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}"; do
     failure_count=$((failure_count + 1))
     if [[ $failure_count -eq $failure_limit ]]; then
       bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"
@@ -36,7 +35,7 @@ function remove_node_annotation() {
   local failure_count=0
   local failure_limit=5
 
-  until bb-kubectl-exec --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) "${annotation}"- --overwrite; do
+  until bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "${annotation}-"; do
     failure_count=$((failure_count + 1))
     if [[ $failure_count -eq $failure_limit ]]; then
       bb-log-error "ERROR: Failed to annotate node $(bb-d8-node-name)"
@@ -49,7 +48,7 @@ function remove_node_annotation() {
 
 {{- if hasKey .nodeGroup "staticInstances" }}
 if [[ -f /var/lib/bashible/node-spec-provider-id ]]; then
-  PROVIDER_ID="$( bb-kubectl-exec get no $(bb-d8-node-name) -o json | jq -r '.spec.providerID' )"
+  PROVIDER_ID="$( bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq -r '.spec.providerID' )"
 
   if [[ "${PROVIDER_ID}" == "static://" ]]; then
     add_node_annotation node.deckhouse.io/provider-id="$(cat /var/lib/bashible/node-spec-provider-id)"
@@ -61,11 +60,11 @@ fi
   This annotation is required by the registry module to track which 
   version of the registry configuration is currently applied on the node.
 */}}
-add_node_annotation registry.deckhouse.io/version={{ .registry.version | quote }} "--overwrite"
+add_node_annotation registry.deckhouse.io/version={{ .registry.version | quote }}
 
 # check if d8-dhctl-converger user exists and annotate node
 {{- if eq .nodeGroup.name "master" }} 
-converger_user_annotation="$(bb-kubectl-exec --kubeconfig=/etc/kubernetes/kubelet.conf get no "$D8_NODE_HOSTNAME" -o json | jq -r '.metadata.annotations."node.deckhouse.io/has-converger-nodeuser"')"
+converger_user_annotation="$(bb-curl-kube "/api/v1/nodes/$D8_NODE_HOSTNAME" | jq -r '.metadata.annotations."node.deckhouse.io/has-converger-nodeuser"')"
 if grep -qP "^d8-dhctl-converger" /etc/passwd; then
   converger_user_exists="1"
   else
@@ -75,7 +74,7 @@ fi
 if [[ "$converger_user_annotation" != "null" && "$converger_user_exists" == "0" ]]; then
   remove_node_annotation "node.deckhouse.io/has-converger-nodeuser"
 else if [[ "$converger_user_annotation" == "null" && "$converger_user_exists" == "1" ]]; then
-  add_node_annotation "node.deckhouse.io/has-converger-nodeuser=true" "--overwrite"
+  add_node_annotation "node.deckhouse.io/has-converger-nodeuser=true"
   fi
 fi
 {{- end }}

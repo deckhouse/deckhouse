@@ -17,12 +17,20 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+bootstrap_log_init() {
+  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
+    mkdir -p /var/log/d8/bashible
+    exec {bootstrap_stdout_fd}>&1
+    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
+    export BOOTSTRAP_LOG_INITIALIZED=1
+  fi
+}
+
 BOOTSTRAP_DIR="/var/lib/bashible"
 TMPDIR="/opt/deckhouse/tmp"
 mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
-  {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
-exec >"${TMPDIR}/bootstrap.log" 2>&1
-  {{- end }}
+
+bootstrap_log_init
 
 
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
@@ -33,7 +41,7 @@ function run_log_output() {
 {{- include "node_group_tail_log_py" . | nindent 0 }}
 PY
 
-  "${python_binary}" "${TMPDIR}/tail-log.py" "${TMPDIR}/bootstrap.log" &
+  "${python_binary}" "${TMPDIR}/tail-log.py" /var/log/d8/bashible/bootstrap.log &
   bootstrap_job_log_pid=$!
 }
   {{- end }}

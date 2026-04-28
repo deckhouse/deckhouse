@@ -69,24 +69,43 @@ chmod 600 /etc/kubernetes/pki/*.{crt,key} /etc/kubernetes/pki/etcd/*.{crt,key}
 # Restrict permissions on admin kubeconfig files for security
 chmod 600 /etc/kubernetes/admin.conf /etc/kubernetes/super-admin.conf 2>/dev/null || true
 
+# Force admin-cert auth for operations requiring elevated privileges
+export BB_KUBE_AUTH_TYPE="admin-cert"
+export BB_KUBE_APISERVER_URL=""
+bb-curl-helper-extract-admin-certs
+
 # This phase add 'node.kubernetes.io/exclude-from-external-load-balancers' label to node
 # with this label we cannot use target load balancers to control-plane nodes, so we manually remove them
-if ! bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf label node "$(hostname)" node.kubernetes.io/exclude-from-external-load-balancers-; then
+if ! bb-curl-helper-patch-node-metadata "$(hostname)" "labels" "node.kubernetes.io/exclude-from-external-load-balancers-"; then
   echo "Cannot remove node.kubernetes.io/exclude-from-external-load-balancers label from node" 1>&2
   exit 1
 fi
 
 # Upload pki for deckhouse
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system delete secret d8-pki || true
-bb-kubectl --kubeconfig=/etc/kubernetes/admin.conf -n kube-system create secret generic d8-pki \
-  --from-file=ca.crt=/etc/kubernetes/pki/ca.crt \
-  --from-file=ca.key=/etc/kubernetes/pki/ca.key \
-  --from-file=sa.pub=/etc/kubernetes/pki/sa.pub \
-  --from-file=sa.key=/etc/kubernetes/pki/sa.key \
-  --from-file=front-proxy-ca.crt=/etc/kubernetes/pki/front-proxy-ca.crt \
-  --from-file=front-proxy-ca.key=/etc/kubernetes/pki/front-proxy-ca.key \
-  --from-file=etcd-ca.crt=/etc/kubernetes/pki/etcd/ca.crt \
-  --from-file=etcd-ca.key=/etc/kubernetes/pki/etcd/ca.key
+bb-curl-kube "/api/v1/namespaces/kube-system/secrets/d8-pki" -X DELETE || true
+
+# Build secret JSON with base64-encoded PKI files
+pki_data="{}"
+for kv in \
+  "ca.crt=/etc/kubernetes/pki/ca.crt" \
+  "ca.key=/etc/kubernetes/pki/ca.key" \
+  "sa.pub=/etc/kubernetes/pki/sa.pub" \
+  "sa.key=/etc/kubernetes/pki/sa.key" \
+  "front-proxy-ca.crt=/etc/kubernetes/pki/front-proxy-ca.crt" \
+  "front-proxy-ca.key=/etc/kubernetes/pki/front-proxy-ca.key" \
+  "etcd-ca.crt=/etc/kubernetes/pki/etcd/ca.crt" \
+  "etcd-ca.key=/etc/kubernetes/pki/etcd/ca.key"; do
+  key="${kv%%=*}"
+  filepath="${kv#*=}"
+  encoded=$(base64 -w0 < "$filepath")
+  pki_data=$(jq --arg k "$key" --arg v "$encoded" '.[$k] = $v' <<< "$pki_data")
+done
+
+bb-curl-kube "/api/v1/namespaces/kube-system/secrets" \
+  -X POST \
+  -H "Content-Type: application/json" \
+  --data "$(jq -nc --argjson data "$pki_data" \
+    '{"apiVersion":"v1","kind":"Secret","metadata":{"name":"d8-pki","namespace":"kube-system"},"type":"Opaque","data":$data}')"
 
 # Setup kubectl for root user during bootstrap.
 # The control-plane-manager manages this symlink; when the user-authz module is enabled, see controlPlaneManager.rootKubeconfigSymlink.

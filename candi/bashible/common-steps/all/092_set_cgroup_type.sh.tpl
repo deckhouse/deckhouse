@@ -30,7 +30,7 @@ if [[ "$cgroup" != "cgroup2fs" && "$cgroup" != "tmpfs" ]]; then
 fi
 
 max_attempts=5
-until bb-kubectl --kubeconfig $kubeconfig label --overwrite=true node "$node" node.deckhouse.io/cgroup="$cgroup"; do
+until bb-curl-helper-patch-node-metadata "$node" "labels" "node.deckhouse.io/cgroup=$cgroup"; do
   attempt=$(( attempt + 1 ))
   if [ "$attempt" -gt "$max_attempts" ]; then
     bb-log-error "failed to label node $node after $max_attempts attempts"
