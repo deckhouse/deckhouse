@@ -716,7 +716,7 @@ spec:
                           type: string
                           description: |
                             VPA operating mode.
-                          enum: ['Initial', 'Auto']
+                          enum: ['Initial', 'InPlaceOrRecreate']
                           default: 'Initial'
                         cpu:
                           type: object
@@ -1677,7 +1677,7 @@ spec:
                           type: string
                           description: |
                             VPA usage mode.
-                          enum: ['Initial', 'Auto']
+                          enum: ['Initial', 'InPlaceOrRecreate']
                           default: 'Initial'
                         cpu:
                           type: object
