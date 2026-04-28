@@ -108,6 +108,7 @@ func ValidateOptionDownloadRootDir(dir string) ValidateOption {
 	}
 }
 
+
 func NewSchemaStore(globalOptions *options.GlobalOptions, paths ...string) *SchemaStore {
 	// fallback to default value
 	candiDir := options.DefaultCandiDir
@@ -253,6 +254,12 @@ func newSchemaStore(globalOptions *options.GlobalOptions, schemasDir []string) *
 		if err := loadConfigValuesSchema(p, moduleName); err != nil {
 			// We don't expect panic here our logger does not support log.Fatal
 			panic(err)
+		}
+		candiOpenAPIDir := filepath.Join(modulesDir, name, "candi", "openapi")
+		if _, err := os.Stat(candiOpenAPIDir); err == nil {
+			if err := filepath.Walk(candiOpenAPIDir, walkFunc); err != nil {
+				panic(err)
+			}
 		}
 	}
 
