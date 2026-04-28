@@ -1,6 +1,11 @@
 {% assign revision=include.revision %}
 
-Для установки **Deckhouse Kubernetes Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/<SSH_PRIVATE_KEY_FILE>`){% endif %}.
+{% if revision != "ce" %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+{% endif %}
+
+
+Для установки **Deckhouse Kubernetes Platform** используется Docker-образ, в который необходимо передать конфигурационные файлы{%- if page.platform_type != 'existing' %} и SSH-ключи доступа на **master-узел** (далее подразумевается что используется SSH-ключ `~/.ssh/"SSH_PRIVATE_KEY_FILE"`){% endif %}.
 {% if page.platform_code == 'bm-private' %}
 Авторизуйтесь на **персональном компьютере** в container image registry, который вы указали на предыдущем этапе.
 {%- endif %}
@@ -148,7 +153,8 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 Процесс установки может занять от 5 до 30 минут, в зависимости от качества соединения.
 {% if page.platform_type == "baremetal" %}
 Пример вывода при успешном окончании установки:
-```
+
+```shell
 ...
 │ │ No more converge tasks found in Deckhouse queue.
 │ │ Deckhouse pod is Ready!
@@ -162,7 +168,8 @@ dhctl bootstrap --ssh-user={% if page.platform_code == "azure" %}azureuser{%- el
 ```
 {% else  %}
 По окончании установки инсталлятор выведет IP-адрес **master-узла** (он вам потребуется далее). Пример вывода:
-```
+
+```shell
 ...
 ┌ 🎈 ~ Common: Kubernetes Master Node addresses for SSH
 │ cloud-demo-master-0 | ssh {% if page.platform_code == "azure" %}azureuser{% elsif page.platform_code == "gcp" or page.platform_code == "dynamix" %}user{% else %}ubuntu{% endif %}@1.2.3.4
@@ -204,7 +211,10 @@ kubectl -n d8-ingress-nginx get po
 {%- if page.platform_type == "existing" %}
 <h2 id="если-что-то-пошло-не-так">Если что-то пошло не так</h2>
 
-{%  include getting_started/existing/partials/TROUBLESHOOT_RU.liquid %}
+{% include getting_started/existing/partials/TROUBLESHOOT_RU.liquid %}
 
 {% endif %}
-<!--  //-->
+
+{% if revision != "ce" %}
+  </div>
+{% endif %}
