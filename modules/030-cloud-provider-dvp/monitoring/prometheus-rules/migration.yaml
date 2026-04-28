@@ -1,0 +1,27 @@
+- name: d8.cloud-provider-dvp.migration
+  rules:
+    - alert: D8CloudProviderDVPMigrationPending
+      expr: |
+        max(kube_configmap_info{namespace="d8-cloud-provider-dvp", configmap="d8-module-is-migrating"}) > 0
+      for: 1m
+      labels:
+        severity_level: "6"
+        tier: cluster
+        d8_module: cloud-provider-dvp
+      annotations:
+        plk_markup_format: markdown
+        plk_protocol_version: "1"
+        summary: The cloud-provider-dvp module is waiting for migration resources to be applied.
+        description: |-
+          The `cloud-provider-dvp` module has detected the legacy `DVPProviderClusterConfiguration` secret in the cluster
+          and is waiting for the new migration resources (ModuleConfig v2, CredentialSecret, NodeGroups, InstanceClasses)
+          to be applied before completing the migration.
+
+          To complete the migration, apply the resources from the `d8-migration-resources` Secret:
+
+          ```bash
+          d8 k -n d8-cloud-provider-dvp get secret d8-migration-resources -o jsonpath='{.data.resources\.yaml}' | base64 -d | d8 k apply -f -
+          ```
+
+          After applying the resources, the alert will disappear automatically once the module
+          detects that all required resources are in place.

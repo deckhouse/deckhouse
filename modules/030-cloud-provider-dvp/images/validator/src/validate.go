@@ -20,18 +20,16 @@ import (
 	"fmt"
 	"strings"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	authv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+
+	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 )
 
 func validate(ctx context.Context, input proto.PrepareInput) error {
-	if err := validateKubeconfig(ctx, input); err != nil {
-		return err
-	}
-	return validateCredentialsSecret(input)
+	return validateKubeconfig(ctx, input)
 }
 
 func prepare(_ context.Context, input proto.PrepareInput) (*proto.PrepareResult, error) {
@@ -118,18 +116,18 @@ func validateKubeconfig(ctx context.Context, input proto.PrepareInput) error {
 	return nil
 }
 
-func validateCredentialsSecret(input proto.PrepareInput) error {
-	cv, err := proto.ParseResourcesYAML(input.ResourcesYAML)
-	if err != nil {
-		return fmt.Errorf("parse resources: %w", err)
-	}
+// func validateCredentialsSecret(input proto.PrepareInput) error {
+// 	cv, err := proto.ParseResourcesYAML(input.ResourcesYAML)
+// 	if err != nil {
+// 		return fmt.Errorf("parse resources: %w", err)
+// 	}
 
-	if len(cv.Secrets) == 0 {
-		return fmt.Errorf(
-			"DVP cloud provider config validation error: no credential Secret found\n" +
-				"Hint: Check your config file: a Secret with provider credentials is required.",
-		)
-	}
+// 	if len(cv.Secrets) == 0 {
+// 		return fmt.Errorf(
+// 			"DVP cloud provider config validation error: no credential Secret found\n" +
+// 				"Hint: Check your config file: a Secret with provider credentials is required.",
+// 		)
+// 	}
 
-	return nil
-}
+// 	return nil
+// }

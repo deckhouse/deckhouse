@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
@@ -690,6 +691,9 @@ podSubnetNodeCIDRPrefix: "24"
 		testParams := testParseConfigFromClusterParams{
 			clusterConfig: clusterGenericConfig,
 			clusterType:   CloudClusterType,
+			extraGVRs: map[schema.GroupVersionResource]string{
+				{Group: instanceClassAPIGroup, Version: "v1", Resource: "yandexinstanceclasses"}: "YandexInstanceClassList",
+			},
 		}
 
 		createCloudConfigSecret := func(t *testing.T, tst *testParseConfigFromCluster, config *string) {
@@ -790,6 +794,7 @@ provider:
 type testParseConfigFromClusterParams struct {
 	clusterConfig string
 	clusterType   string
+	extraGVRs     map[schema.GroupVersionResource]string
 }
 
 type testParseConfigFromCluster struct {
@@ -800,7 +805,14 @@ type testParseConfigFromCluster struct {
 }
 
 func createTestParseConfigFromCluster(t *testing.T, p testParseConfigFromClusterParams) *testParseConfigFromCluster {
-	kubeCl := client.NewFakeKubernetesClient()
+	gvrs := map[schema.GroupVersionResource]string{
+		nodeGroupGVR:    "NodeGroupList",
+		ModuleConfigGVR: "ModuleConfigList",
+	}
+	for gvr, kind := range p.extraGVRs {
+		gvrs[gvr] = kind
+	}
+	kubeCl := client.NewFakeKubernetesClientWithListGVR(gvrs)
 
 	if p.clusterConfig != "" {
 		testCreateKubeSystemSecret(t, kubeCl, "d8-cluster-configuration", map[string][]byte{

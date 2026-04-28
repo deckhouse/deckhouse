@@ -68,6 +68,7 @@
 {{- define "csi_node_volume_mounts" }}
 {{- end }}
 
+{{- if .Values.cloudProviderDvp.storage.enabled }}
 {{- $csiImageName := "dvpCsiDriver" }}
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . $csiImageName) }}
 {{- if $csiControllerImage }}
@@ -98,4 +99,5 @@
   {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
+{{- end }}
 {{- end }}
