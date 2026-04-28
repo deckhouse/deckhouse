@@ -31,6 +31,7 @@ var componentChecksumDeps = map[string]componentFieldMap{
 			"kube-apiserver.yaml.tpl",
 			"extra-file-admission-control-config.yaml",
 			"extra-file-audit-policy.yaml",
+			"extra-file-audit-webhook-config.yaml",
 			"extra-file-authn-webhook-config.yaml",
 			"extra-file-authorization-config.yaml",
 			"extra-file-authentication-config.yaml",
