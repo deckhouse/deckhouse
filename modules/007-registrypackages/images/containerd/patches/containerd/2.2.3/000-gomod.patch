@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 648cb3e43..7a1162a49 100644
+index 648cb3e43..36a776f90 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -61,7 +61,7 @@ index 648cb3e43..7a1162a49 100644
  	k8s.io/cri-api v0.34.1
 -	k8s.io/klog/v2 v2.130.1
 +	k8s.io/klog/v2 v2.140.0
-+	k8s.io/mount-utils v0.36.0
++	k8s.io/mount-utils v0.35.3
  	tags.cncf.io/container-device-interface v1.1.0
  )
  
@@ -163,7 +163,7 @@ index 648cb3e43..7a1162a49 100644
  	sigs.k8s.io/randfill v1.0.0 // indirect
  	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 diff --git a/go.sum b/go.sum
-index 99c583994..7db0e5fe9 100644
+index 99c583994..08f2d5a33 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -14,14 +14,18 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUW
@@ -547,8 +547,8 @@ index 99c583994..7db0e5fe9 100644
  k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b/go.mod h1:UZ2yyWbFTpuhSbFhv24aGNOdoRdJZgsIObGBUaYVsts=
 -k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 h1:hwvWFiBzdWw1FhfY1FooPn3kzWuJ8tmbZBHi4zVsl1Y=
 -k8s.io/utils v0.0.0-20250604170112-4c0f3b243397/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
-+k8s.io/mount-utils v0.36.0 h1:ufsqGyCoPDh7p+6OIa1wv6oH9GqkQQ8XIfEOVfCV3g0=
-+k8s.io/mount-utils v0.36.0/go.mod h1:+I47UOG6FiUGVSy7VanjU/mQXLShMo3M7xBpGLzCub8=
++k8s.io/mount-utils v0.35.3 h1:/XcRtfxqIdUVOyTc68NnAGeE+Mdw3T1nlv3RWbdo/yE=
++k8s.io/mount-utils v0.35.3/go.mod h1:ppC4d+mUpfbAJr/V2E8vvxeCEckNM+S5b0kQBQjd3Pw=
 +k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2 h1:AZYQSJemyQB5eRxqcPky+/7EdBj0xi3g0ZcxxJ7vbWU=
 +k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2/go.mod h1:xDxuJ0whA3d0I4mf/C4ppKHxXynQ+fxnkmQH0vTHnuk=
  sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 h1:gBQPwqORJ8d8/YNZWEjoZs7npUVDpVXUUOFfW6CgAqE=
