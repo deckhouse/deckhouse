@@ -400,10 +400,14 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		BecomePass:     params.convergeState.NodeUserCredentials.Password,
 	})
 
-	var pkeys []session.AgentPrivateKey
-
+	pkeys := make([]session.AgentPrivateKey, 0)
 	appendPKey := params.appendPKey
-	pkeys = append(pkeys, *appendPKey)
+
+	if appendPKey != nil {
+		pkeys = append(pkeys, *appendPKey)
+	} else {
+		pkeys = sshCl.PrivateKeys()
+	}
 
 	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
 
