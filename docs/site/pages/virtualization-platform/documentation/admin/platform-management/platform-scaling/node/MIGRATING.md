@@ -34,6 +34,13 @@ ls -l /etc/containerd/conf.d
 
 ## How to enable containerd v2
 
+{% alert level="info" %}
+During migration the directory `/var/lib/containerd` will be cleared, causing all pod images to be re-pulled, and the node will reboot.
+
+Also note that updating is disruptive. [Disraptive update parameters](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) affects whether the update runs automatically. If `approvalMode: Manual` is set, you need to run the update on the respective nodes with the annotation: `d8 k annotate node <node-name> update.node.deckhouse.io/disruption-approved=Automatic`.
+{% endalert %}
+
+
 You can enable containerd v2 in two ways:
 
 1. **For the entire cluster**. Set the value `ContainerdV2` for the [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) parameter in the `ClusterConfiguration` resource. This value will apply to all [NodeGroup](/modules/node-manager/cr.html#nodegroup) objects where [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) is not explicitly defined.
@@ -47,7 +54,7 @@ You can enable containerd v2 in two ways:
    defaultCRI: ContainerdV2
    ```
 
-1. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object.
+2. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object.
 
    Example:
 
@@ -61,8 +68,4 @@ You can enable containerd v2 in two ways:
        type: ContainerdV2
    ```
 
-When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequentially updating the nodes. Updating a node results in the disruption of the workload hosted on it (disruptive update). The node update process is managed by the parameters for applying disruptive updates to the node group ([spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
-
-{% alert level="info" %}
-At migration process the folder `/var/lib/containerd` will be cleared, causing all pod images to be re-downloaded, and the node will reboot.
-{% endalert %}
+   When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequentially updating the nodes.
