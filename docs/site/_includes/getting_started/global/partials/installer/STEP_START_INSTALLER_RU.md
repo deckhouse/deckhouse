@@ -147,7 +147,7 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
 {{ command | markdownify }}
   </div>
 </li>
-<li>Откройте <a>http://localhost:8080</a></li>
+<li>Откройте <a href="http://localhost:8080">http://localhost:8080</a></li>
 </ol>
 </div>
 

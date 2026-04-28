@@ -31,4 +31,5 @@
   {% offtopic title="What the node settings panel looks like..." %}
 <img src="/images/gs/installer/cloud-settings.png" alt="What the node settings panel looks like...">
   {% endofftopic %}
+  </li>
 </ol>
