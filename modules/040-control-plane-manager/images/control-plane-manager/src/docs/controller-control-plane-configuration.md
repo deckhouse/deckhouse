@@ -38,7 +38,7 @@ All checksums are `SHA256` hex over concatenated secret values in deterministic 
 - source: `d8-control-plane-manager-config`
 - key set per component (missing keys are skipped):
 - `etcd`: `etcd.yaml.tpl`
-- `kube-apiserver`: `kube-apiserver.yaml.tpl`, `extra-file-admission-control-config.yaml`, `extra-file-audit-policy.yaml`, `extra-file-authentication-config.yaml`, `extra-file-authn-webhook-config.yaml`, `extra-file-authorization-config.yaml`, `extra-file-event-rate-limit-config.yaml`, `extra-file-oidc-ca.crt`, `extra-file-secret-encryption-config.yaml`, `extra-file-webhook-config.yaml`
+- `kube-apiserver`: `kube-apiserver.yaml.tpl`, `extra-file-admission-control-config.yaml`, `extra-file-audit-policy.yaml`, `extra-file-audit-webhook-config.yaml`, `extra-file-authentication-config.yaml`, `extra-file-authn-webhook-config.yaml`, `extra-file-authorization-config.yaml`, `extra-file-event-rate-limit-config.yaml`, `extra-file-oidc-ca.crt`, `extra-file-secret-encryption-config.yaml`, `extra-file-webhook-config.yaml`
 - `kube-controller-manager`: `kube-controller-manager.yaml.tpl`
 - `kube-scheduler`: `kube-scheduler.yaml.tpl`, `extra-file-scheduler-config.yaml`
 
