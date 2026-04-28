@@ -114,6 +114,11 @@ spec:
 
 
 {{- define "bashible_input_data" }}
+{{- $deckhouseValues := .Values.deckhouse | default dict }}
+    deckhouse:
+      channel: {{ get $deckhouseValues "releaseChannel" | default "unknown" | quote }}
+      version: {{ .Values.global.deckhouseVersion | quote }}
+      edition: {{ .Values.global.deckhouseEdition | quote }}
     podSubnetNodeCIDRPrefix: {{ $.Values.global.clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     clusterDomain: {{ $.Values.global.discovery.clusterDomain | toYaml }}
     clusterDNSAddress: {{ $.Values.global.discovery.clusterDNSAddress | toYaml }}

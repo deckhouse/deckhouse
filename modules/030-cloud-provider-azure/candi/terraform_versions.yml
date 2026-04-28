@@ -1,5 +1,4 @@
 terraform: 0.14.8
-
 azure:
   namespace: hashicorp
   cloudName: Azure

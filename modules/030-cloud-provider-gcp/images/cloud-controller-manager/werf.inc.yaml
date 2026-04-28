@@ -1,14 +1,14 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := toString $key }}
+{{- $version_map := include "get_oss_version_map_by_id_and_condition_key" (list "ccm-gcp" "k8s" $) | fromYaml }}
+{{- range $key, $value := $version_map }}
+  {{- $k8s_version := toString $key }}
   {{- $image_version := toString $key | replace "." "-" }}
-  {{- if $value.ccm.gcp }}
-    {{- $src_version := toString $value.ccm.gcp | replace "/" "-"}}
+  {{- $version := toString $value }}
+  {{- $src_version := toString $value | replace "/" "-"}}
+  {{- if $version }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
-    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-      {{- if contains $src_version $path }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/patches/%s/*.patch" $patches $src_version) }}
         {{- $patch = true }}
-      {{- end }}
     {{- end }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -38,7 +38,7 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $value.ccm.gcp }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-gcp.git /src
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-gcp.git /src
   - cd /src
   {{- if $patch}}
   - git apply /patches/*.patch --verbose
@@ -54,13 +54,13 @@ import:
   to: /src
   before: install
 mount:
-{{ include "mount points for golang builds" . }}
+{{ include "mount points for golang builds" $ }}
 secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
 shell:
   beforeInstall:
-  {{- include "alpine packages proxy" . | nindent 2 }}
+  {{- include "alpine packages proxy" $ | nindent 2 }}
   - apk add --no-cache make
   install:
   - cd /src

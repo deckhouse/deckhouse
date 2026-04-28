@@ -209,6 +209,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function openBurgerSidebar() {
         if (!headerSidebar) return;
+        closeNavModal();
         hamburgerCollapse.classList.add('show');
         headerSidebar.classList.add('show');
         burgerOverlay.classList.add('sidebar-overlay');
@@ -327,6 +328,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
+                closeBurgerSidebar();
                 headerNavList.classList.add('active');
                 navTrigger.classList.add('rotated');
                 body.classList.add('sidebar-opened');

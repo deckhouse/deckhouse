@@ -94,6 +94,7 @@ require (
 require k8s.io/klog v1.0.0 // indirect
 
 require (
+	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -101,8 +102,9 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7 // indirect
+	github.com/deckhouse/lib-connection v0.5.0 // indirect
 	github.com/deckhouse/lib-dhctl v0.17.0 // indirect
-	github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 // indirect
+	github.com/deckhouse/lib-gossh v0.3.0 // indirect
 	github.com/dop251/goja v0.0.0-20251121114222-56b1242a5f86 // indirect
 	github.com/dop251/goja_nodejs v0.0.0-20251015164255-5e94316bedaf // indirect
 	github.com/evanw/esbuild v0.27.0 // indirect
@@ -124,7 +126,7 @@ require (
 	github.com/hashicorp/vault/api v1.22.0 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/miekg/dns v1.1.61 // indirect
-	github.com/name212/govalue v1.0.2 // indirect
+	github.com/name212/govalue v1.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.5.3 // indirect
 	github.com/redis/go-redis/v9 v9.10.0 // indirect
@@ -166,7 +168,7 @@ require (
 	github.com/aymanbagabas/go-udiff v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/bramvdbogaerde/go-scp v1.5.0 // indirect
+	github.com/bramvdbogaerde/go-scp v1.6.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
@@ -302,7 +304,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/cobra v1.10.1 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tetratelabs/wazero v1.8.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

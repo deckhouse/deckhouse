@@ -1,4 +1,4 @@
-apiVersion: deckhouse.io/v1
+apiVersion: deckhouse.io/v2
 kind: IngressNginxController
 metadata:
   name: wait-lb-non-default

@@ -36,3 +36,7 @@ func DefineKubeFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("KUBE_CLIENT_FROM_CLUSTER")).
 		BoolVar(&KubeConfigInCluster)
 }
+
+func KubeFlagsDefined() bool {
+	return len(KubeConfig) > 0 || len(KubeConfigContext) > 0 || KubeConfigInCluster
+}

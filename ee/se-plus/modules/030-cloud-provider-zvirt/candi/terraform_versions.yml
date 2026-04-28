@@ -1,5 +1,4 @@
 opentofu: 1.9.4
-
 ovirt:
   namespace: terraform-provider-ovirt
   cloudName: Zvirt

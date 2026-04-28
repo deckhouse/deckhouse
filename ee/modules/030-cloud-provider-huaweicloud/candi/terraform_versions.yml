@@ -1,5 +1,4 @@
 terraform: 0.14.8
-
 huaweicloud:
   namespace: terraform-provider-huaweicloud
   cloudName: Huaweicloud

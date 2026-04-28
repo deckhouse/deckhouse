@@ -18,7 +18,7 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   attempt=0
   until
     node_data="$(
-      bb-kubectl-exec get node $(bb-d8-node-name) -o json | jq '
+      bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq '
       {
         "resourceVersion": .metadata.resourceVersion,
         "isApproved": (.metadata.annotations | has("update.node.deckhouse.io/approved")),
@@ -32,16 +32,16 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
       >&2 echo "ERROR: Can't set update.node.deckhouse.io/waiting-for-approval= annotation on our Node."
       exit 1
     fi
-    bb-kubectl-exec annotate node $(bb-d8-node-name) \
-      --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-      update.node.deckhouse.io/waiting-for-approval= node.deckhouse.io/configuration-checksum- \
+    bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" \
+      "--resource-version=$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
+      "update.node.deckhouse.io/waiting-for-approval=" "node.deckhouse.io/configuration-checksum-" \
       || { echo "Retry setting update.node.deckhouse.io/waiting-for-approval= annotation on our Node in 10sec..."; sleep 10; }
   done
 
   >&2 echo "Waiting for update.node.deckhouse.io/approved= annotation on our Node..."
   attempt=0
   until
-    bb-kubectl-exec get node $(bb-d8-node-name) -o json | \
+    bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | \
     jq -e '.metadata.annotations | has("update.node.deckhouse.io/approved")' >/dev/null
   do
     attempt=$(( attempt + 1 ))

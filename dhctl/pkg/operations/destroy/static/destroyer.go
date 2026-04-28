@@ -27,14 +27,14 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -47,7 +47,7 @@ type LoopsParams struct {
 }
 
 type DestroyerParams struct {
-	SSHClientProvider    sshclient.SSHProvider
+	SSHClientProvider    libcon.SSHProvider
 	KubeProvider         kube.ClientProviderWithCleanup
 	State                *State
 	LoggerProvider       log.LoggerProvider
@@ -156,7 +156,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 
 	logger := d.logger()
 
-	sshClient, err := d.params.SSHClientProvider.Client()
+	sshClient, err := d.params.SSHClientProvider.Client(ctx)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 				continue
 			}
 			settings.SetAvailableHosts([]session.Host{host})
-			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
+			sshClient, err = d.switchToNodeUser(ctx, d.params.SSHClientProvider, settings)
 			if err != nil {
 				return err
 			}
@@ -260,7 +260,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 			settings := userPassedSSHSetting.Copy()
 			settings.SetAvailableHosts([]session.Host{host})
 
-			sshClient, err = d.switchToNodeUser(ctx, sshClient, settings)
+			sshClient, err = d.switchToNodeUser(ctx, d.params.SSHClientProvider, settings)
 			if err != nil {
 				return err
 			}
@@ -275,7 +275,7 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 	return nil
 }
 
-func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
+func (d *Destroyer) processStaticHost(ctx context.Context, sshClient libcon.SSHClient, host session.Host, stdOutErrHandler func(l string), cmd string) error {
 	d.logger().LogDebugF("Starting cleanup process for host %s\n", host)
 
 	err := retry.NewLoopWithParams(d.destroyMasterLoopParams(host)).RunContext(ctx, func() error {
@@ -308,7 +308,7 @@ func (d *Destroyer) processStaticHost(ctx context.Context, sshClient node.SSHCli
 	return d.addHostAsProcessed(ctx, host)
 }
 
-func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHClient, settings *session.Session) (node.SSHClient, error) {
+func (d *Destroyer) switchToNodeUser(ctx context.Context, sshProvider libcon.SSHProvider, settings *session.Session) (libcon.SSHClient, error) {
 	if d.nodesWithCredentials == nil {
 		return nil, fmt.Errorf("Internal error. No nodes with credentials in destroyer. Probably Prepare did not call or try destroy when abort")
 	}
@@ -370,6 +370,11 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 
 	privateKeys := []session.AgentPrivateKey{convergerPrivateKey}
 
+	oldSSHClient, err := sshProvider.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	oldPrivateKeys := oldSSHClient.PrivateKeys()
 	for _, oldKey := range oldPrivateKeys {
 		// skip another temp keys for another hosts
@@ -379,7 +384,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 		}
 	}
 
-	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, privateKeys, oldSSHClient)
+	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, privateKeys)
 	if err != nil {
 		return nil, err
 	}

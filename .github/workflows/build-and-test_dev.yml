@@ -19,7 +19,7 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  pull_request_target:
+  pull_request:
      types:
       - opened
       - synchronize
@@ -43,6 +43,7 @@ env:
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  WERF_VIRTUAL_MERGE: "0"
   GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
 
@@ -433,7 +434,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -731,7 +732,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1028,7 +1029,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1325,7 +1326,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1622,7 +1623,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1919,7 +1920,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -2216,7 +2217,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -2522,7 +2523,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2608,7 +2609,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2689,7 +2690,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2787,7 +2788,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -2865,7 +2866,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:4aaf81659fa6ea3cbbb0f241d739dda485bce79ec98b0fd5014ef4f4210e1cd5"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:2fa0da12f239d1696f2f790ac8332ae4790f1b9db9d1e785778c4a64e2481544"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -2899,7 +2900,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       - name: Run python webhook tests
         run: |
@@ -2929,7 +2930,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       - name: DMT lint
         env:
@@ -2964,7 +2965,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -3085,7 +3086,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -3207,7 +3208,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -3328,7 +3329,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
@@ -3449,7 +3450,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name

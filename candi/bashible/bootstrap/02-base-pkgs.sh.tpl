@@ -16,6 +16,17 @@
 */}}
 set -Eeo pipefail
 
+bootstrap_log_init() {
+  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
+    mkdir -p /var/log/d8/bashible
+    exec {bootstrap_stdout_fd}>&1
+    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
+    export BOOTSTRAP_LOG_INITIALIZED=1
+  fi
+}
+
+bootstrap_log_init
+
 {{- /*
 # dhctl and node-manager renders have different helm root dir and .Files.Get should use different paths:
 # '/deckhouse/candi/bashible/...' - dhctl
@@ -31,3 +42,5 @@ set -Eeo pipefail
 {{ with .images.registrypackages }}
 bb-package-install "jq:{{ .jq171 }}" "curl:{{ .d8Curl891 }}" "netcat:{{ .netcat110501 }}"
 {{- end }}
+
+echo "Bootstrap: finished base packages installation"
