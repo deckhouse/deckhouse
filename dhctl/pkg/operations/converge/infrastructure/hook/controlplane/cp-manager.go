@@ -112,22 +112,21 @@ func checkControlPlaneNodesReady(ctx context.Context, kubeClient client.KubeClie
 
 		if isControlPlaneNodeReady(conditions) {
 			readyNodes++
-			continue
 		}
 
 		appendControlPlaneNodeReadinessMessage(&msg, node.Name, conditions, nil)
 	}
 
 	header := fmt.Sprintf("ControlPlaneNodes Ready %v of %v", readyNodes, len(nodes.Items))
+	if msg.Len() > 0 {
+		header = fmt.Sprintf("%s\n%s", header, msg.String())
+	}
+
 	if readyNodes >= len(nodes.Items) {
 		return header, nil
 	}
 
-	if msg.Len() == 0 {
-		return header, ErrControlPlaneIsNotReady
-	}
-
-	return fmt.Sprintf("%s\n%s", header, msg.String()), ErrControlPlaneIsNotReady
+	return header, ErrControlPlaneIsNotReady
 }
 
 // isControlPlaneNodeReady checks if all required ControlPlaneNode conditions are True.
@@ -184,7 +183,7 @@ func controlPlaneNodeConditions(cpn *unstructured.Unstructured) ([]metav1.Condit
 	return conditions, nil
 }
 
-// appendControlPlaneNodeReadinessMessage appends one diagnostic line for a not ready ControlPlaneNode.
+// appendControlPlaneNodeReadinessMessage appends one diagnostic line for a ControlPlaneNode.
 func appendControlPlaneNodeReadinessMessage(msg *strings.Builder, nodeName string, conditions []metav1.Condition, err error) {
 	if err != nil {
 		if msg.Len() > 0 {
