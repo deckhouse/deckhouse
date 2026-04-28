@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: disallowed-tolerations
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.tolerations[]
+      level: pod
+      description: Pod tolerations must not match disallowed toleration patterns.
+      requiredScenarios: [negative, absent]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false
