@@ -57,7 +57,7 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		return nil
 	}
 
-	return log.Process("bootstrap", "Create resources", func() error {
+	return log.ProcessCtx(ctx, "bootstrap", "Create resources", func(ctx context.Context) error {
 		kubeCl, err := b.KubeProvider.Client(ctx)
 		if err != nil {
 			return err

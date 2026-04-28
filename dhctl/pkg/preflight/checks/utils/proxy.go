@@ -33,7 +33,7 @@ var ErrBadProxyConfig = errors.New("bad proxy config")
 
 const ProxyTunnelPort = "22323"
 
-func SetupSSHTunnelToProxyAddr(sshCl libcon.SSHClient, proxyUrl *url.URL, ctx context.Context) (libcon.Tunnel, error) {
+func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, proxyUrl *url.URL) (libcon.Tunnel, error) {
 	port := proxyUrl.Port()
 	if port == "" {
 		switch proxyUrl.Scheme {

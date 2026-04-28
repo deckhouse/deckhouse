@@ -199,7 +199,7 @@ func parseSSHCredentials(sc *v1alpha2.SSHCredentials) (*v1alpha2.SSHCredentialsS
 }
 
 func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinitializer.SSHProviderInitializer, address string, cred *v1alpha2.SSHCredentialsSpec) error {
-	nodeInterface, err := helper.GetNodeInterface(sshProviderInitializer, ctx, sshProviderInitializer.GetSettings())
+	nodeInterface, err := helper.GetNodeInterface(ctx, sshProviderInitializer, sshProviderInitializer.GetSettings())
 	if err != nil {
 		return err
 	}

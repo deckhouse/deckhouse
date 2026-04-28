@@ -244,7 +244,7 @@ func (s *Service) bootstrap(ctx context.Context, p *bootstrapParams) *pb.Bootstr
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer
 	var kubeProvider libcon.KubeProvider
-	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
+	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
 		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		if err != nil {
 			return fmt.Errorf("preparing providers: %w", err)

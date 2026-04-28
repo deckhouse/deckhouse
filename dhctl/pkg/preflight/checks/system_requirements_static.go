@@ -49,7 +49,7 @@ func (StaticSystemRequirementsCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c StaticSystemRequirementsCheck) Run(ctx context.Context) error {
-	nodeInterface, err := helper.GetNodeInterface(c.SSHProviderInitializer, ctx, c.SSHProviderInitializer.GetSettings())
+	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
 	if err != nil {
 		return err
 	}

@@ -541,7 +541,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return nil
 	}
 
-	nodeInterface, err := helper.GetNodeInterface(b.SSHProviderInitializer, ctx, b.SSHProviderInitializer.GetSettings())
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
 	if err != nil {
 		return fmt.Errorf("Could not get NodeInterface: %w", err)
 	}

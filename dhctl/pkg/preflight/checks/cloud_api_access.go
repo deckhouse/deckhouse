@@ -85,7 +85,7 @@ func (c CloudAPICheck) Run(ctx context.Context) error {
 		proxyURL = nil
 	}
 
-	tun, err := utils.SetupSSHTunnelToProxyAddr(sshClient, targetURL, ctx)
+	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, sshClient, targetURL)
 	if err != nil {
 		return wrapTunnelErr(err)
 	}

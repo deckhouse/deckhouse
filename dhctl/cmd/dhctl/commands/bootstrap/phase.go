@@ -15,7 +15,6 @@
 package bootstrap
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -79,9 +78,9 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 	app.DefineBecomeFlags(cmd)
 	app.DefineBashibleBundleFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
+		ctx := kpcontext.ExtractContext(c)
 
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
@@ -107,8 +106,6 @@ func DefineBootstrapExecuteBashibleCommand(cmd *kingpin.CmdClause) *kingpin.CmdC
 		})
 		return bootstraper.ExecuteBashible(ctx)
 	})
-
-	return cmd
 }
 
 func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -118,9 +115,9 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineResourcesFlags(cmd, false)
 	app.DefineKubeFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
+		ctx := kpcontext.ExtractContext(c)
 
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
@@ -146,8 +143,6 @@ func DefineCreateResourcesCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		})
 		return bootstraper.CreateResources(ctx)
 	})
-
-	return cmd
 }
 
 func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -158,9 +153,9 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSanityFlags(cmd)
 	app.DefineAbortFlags(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
-		ctx := context.Background()
+		ctx := kpcontext.ExtractContext(c)
 
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
@@ -193,8 +188,6 @@ func DefineBootstrapAbortCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-
-	return cmd
 }
 
 func DefineBaseInfrastructureCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {

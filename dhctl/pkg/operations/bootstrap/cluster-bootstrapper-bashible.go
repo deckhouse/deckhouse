@@ -52,7 +52,7 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 	}
 
-	nodeInterface, err := helper.GetNodeInterface(b.SSHProviderInitializer, ctx, b.SSHProviderInitializer.GetSettings())
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
 	if err != nil {
 		return fmt.Errorf("Could not get NodeInterface: %w", err)
 	}

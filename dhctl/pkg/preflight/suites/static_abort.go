@@ -28,7 +28,7 @@ type StaticAbortDeps struct {
 }
 
 func NewStaticAbortSuite(deps StaticAbortDeps, ctx context.Context) (preflight.Suite, error) {
-	nodeInterface, err := helper.GetNodeInterface(deps.SSHProviderInitializer, ctx, deps.SSHProviderInitializer.GetSettings())
+	nodeInterface, err := helper.GetNodeInterface(ctx, deps.SSHProviderInitializer, deps.SSHProviderInitializer.GetSettings())
 	return preflight.NewSuite(
 		checks.SSHCredential(deps.SSHProviderInitializer),
 		checks.SudoAllowed(nodeInterface),

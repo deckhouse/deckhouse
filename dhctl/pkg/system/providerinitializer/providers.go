@@ -68,7 +68,8 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		return nil, nil, err
 	}
 
-	runnerInterface, err := provider.GetRunnerInterface(ctx,
+	runnerInterface, err := provider.GetRunnerInterface(
+		ctx,
 		cfg,
 		baseProviderSettings,
 		sshProviderInitializer,

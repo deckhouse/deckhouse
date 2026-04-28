@@ -25,7 +25,7 @@ import (
 )
 
 // get ssh node wrapper if hosts are not empty; otherwise, get local NodeInterface
-func GetNodeInterface(sshProviderinitializer provider.SSHProviderInitializer, ctx context.Context, settings *settings.BaseProviders) (libcon.Interface, error) {
+func GetNodeInterface(ctx context.Context, sshProviderinitializer provider.SSHProviderInitializer, settings *settings.BaseProviders) (libcon.Interface, error) {
 	sshProvider, err := sshProviderinitializer.GetSSHProvider(ctx)
 	if err != nil {
 		return local.NewNodeInterface(settings), nil

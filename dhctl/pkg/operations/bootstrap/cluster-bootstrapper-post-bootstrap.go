@@ -30,7 +30,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 	restore := b.applyParams()
 	defer restore()
 
-	nodeInterface, err := helper.GetNodeInterface(b.SSHProviderInitializer, ctx, b.SSHProviderInitializer.GetSettings())
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
 	if err != nil {
 		return err
 	}

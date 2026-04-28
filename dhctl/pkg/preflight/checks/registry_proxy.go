@@ -65,7 +65,7 @@ func (RegistryProxyCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c RegistryProxyCheck) Run(ctx context.Context) error {
-	nodeInterface, err := helper.GetNodeInterface(c.SSHProviderInitializer, ctx, c.SSHProviderInitializer.GetSettings())
+	nodeInterface, err := helper.GetNodeInterface(ctx, c.SSHProviderInitializer, c.SSHProviderInitializer.GetSettings())
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func (c RegistryProxyCheck) Run(ctx context.Context) error {
 		return nil
 	}
 
-	tun, err := utils.SetupSSHTunnelToProxyAddr(wrapper.Client(), proxyURL, ctx)
+	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL)
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
