@@ -2,14 +2,6 @@ diff --git a/go.mod b/go.mod
 index 648cb3e43..7a1162a49 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,6 +1,6 @@
- module github.com/containerd/containerd/v2
- 
--go 1.24.3
-+go 1.26.0
- 
- require (
- 	dario.cat/mergo v1.0.2
 @@ -31,7 +31,9 @@ require (
  	github.com/containernetworking/cni v1.3.0
  	github.com/containernetworking/plugins v1.9.0
