@@ -730,6 +730,28 @@ alerts:
         Cloud data discoverer cannot save data to a Kubernetes resource.
       severity: "6"
       markupFormat: markdown
+    - name: D8CloudProviderDVPMigrationPending
+      sourceFile: modules/030-cloud-provider-dvp/monitoring/prometheus-rules/migration.yaml
+      moduleUrl: 030-cloud-provider-dvp
+      module: cloud-provider-dvp
+      edition: ce
+      description: |-
+        The `cloud-provider-dvp` module has detected the legacy `DVPProviderClusterConfiguration` secret in the cluster
+        and is waiting for the new migration resources (ModuleConfig v2, CredentialSecret, NodeGroups, InstanceClasses)
+        to be applied before completing the migration.
+
+        To complete the migration, apply the resources from the `d8-migration-resources` Secret:
+
+        ```bash
+        d8 k -n d8-cloud-provider-dvp get secret d8-migration-resources -o jsonpath='{.data.resources\.yaml}' | base64 -d | d8 k apply -f -
+        ```
+
+        After applying the resources, the alert will disappear automatically once the module
+        detects that all required resources are in place.
+      summary: |
+        The cloud-provider-dvp module is waiting for migration resources to be applied.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ClusterAutoscalerManagerPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/cluster-autoscaler.tpl
       moduleUrl: 040-node-manager
@@ -7408,6 +7430,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-dvp
     - cloud-provider-huaweicloud
     - cloud-provider-yandex
     - cni-cilium

@@ -1,4 +1,4 @@
-# Copyright 2025 Flant JSC
+# Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "node_ip_address" {
-  value = data.kubernetes_resource.vm_data.object.status.ipAddress
+variable "providerClusterConfiguration" {
+  type    = any
+  default = null
 }
 
-output "name" {
-  value = local.vm_name
+variable "nodeGroups" {
+  type    = any
+  default = {}
 }
 
-output "uid" {
-  value = data.kubernetes_resource.vm_data.object.metadata["uid"]
+variable "instanceClasses" {
+  type    = any
+  default = {}
 }
 
-output "cloudinit_secret_name" {
-  value = local.cloudinit_secret_name
+variable "secrets" {
+  type    = any
+  default = {}
+}
+
+variable "settings" {
+  type    = any
+  default = null
 }

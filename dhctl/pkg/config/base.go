@@ -540,10 +540,6 @@ deckhouse: {}
 		}
 	}
 
-	var vopts validateOptions
-	for _, opt := range opts {
-		opt(&vopts)
-	}
 	if vopts.operation != "" {
 		metaConfig.Operation = vopts.operation
 	}

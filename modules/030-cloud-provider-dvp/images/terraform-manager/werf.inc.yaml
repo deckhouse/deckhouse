@@ -15,8 +15,8 @@ git:
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi
-  to: /candi/openapi
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi/
+  to: /candi/module-openapi/
 import:
 - image: terraform-provider-kubernetes
   add: /terraform-provider-kubernetes
@@ -26,9 +26,6 @@ import:
   add: /dhctl-provider-dvp
   to: /validator
   before: setup
-shell:
-  install:
-  - set -e
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
