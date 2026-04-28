@@ -21,4 +21,4 @@ Verifies that the fencing-agent **deploys** and **runs** when `spec.fencing` is 
 5. Reverts the NodeGroup patch via `kubectl patch nodegroup worker --type=merge -p '{"spec":{"fencing":null}}'`.
 6. Asserts the DaemonSet is deleted within 2 minutes.
 
-JUnit reports are written to `tests/fencing-agent/reports/`.
+JUnit reports are written to `tests/fencing-agent-deployment/reports/`.

@@ -13,7 +13,7 @@ spec:
       try:
         - description: Patch worker NodeGroup with spec.fencing (Watchdog mode)
           apply:
-            file: nodegroup-patch.yaml
+            file: manifests/nodegroup-patch.yaml
       cleanup:
         - description: Always revert spec.fencing on the worker NodeGroup
           script:
@@ -24,7 +24,7 @@ spec:
       try:
         - description: Wait until DaemonSet is fully rolled out
           assert:
-            file: assert-daemonset-ready.yaml
+            file: asserts/assert-daemonset-ready.yaml
       catch:
         - description: Collect events on failure
           events:
@@ -54,7 +54,7 @@ spec:
       try:
         - description: Assert worker node has fencing labels set by the agent
           assert:
-            file: assert-node-labels.yaml
+            file: asserts/assert-node-labels.yaml
 
     - name: revert-fencing
       try:
@@ -67,4 +67,4 @@ spec:
       try:
         - description: DaemonSet must be deleted after fencing is disabled
           error:
-            file: assert-daemonset-gone.yaml
+            file: asserts/assert-daemonset-gone.yaml

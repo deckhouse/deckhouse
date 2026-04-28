@@ -2,5 +2,5 @@ version: "3"
 
 includes:
   fencing-agent-deploy:
-    taskfile: ./tests/fencing-agent/Taskfile.yml
-    dir: ./tests/fencing-agent
+    taskfile: ./tests/fencing-agent-deployment/Taskfile.yml
+    dir: ./tests/fencing-agent-deployment
