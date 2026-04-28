@@ -558,7 +558,9 @@
           gap: 35px;
       }
 
-
+      @include breakpoints.max-w(l) {
+        flex-direction: column;
+      }
   }
 }
 
@@ -575,6 +577,13 @@
   @include breakpoints.max-w(xl) {
     width: 250px;
     min-width: 250px;
+  }
+
+  &--tile {
+    @include breakpoints.max-w(l) {
+      width: 320px;
+      min-width: 320px;
+    }
   }
 }
 

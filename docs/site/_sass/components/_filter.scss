@@ -57,8 +57,44 @@
         line-height: 32px;
         color: #00122C;
 
+        @include breakpoints.max-w(l) {
+            display: none;
+        }
+
         > a {
             display: none;
+        }
+    }
+
+    &__block {
+        @include breakpoints.max-w(l) {
+            display: none;
+            left: 0;
+            top: 0;
+            width: 320px;
+            min-width: 320px;
+            padding: 130px 32px 0;
+            background: #fff;
+            overflow: auto;
+            position: fixed;
+            transform: translateX(-100%);
+            z-index: 80;
+            transition: .2s;
+
+            &.show {
+                display: block;
+                transform: translateX(0);
+            }
+        }
+
+        @include breakpoints.max-w(xs) {
+            box-sizing: border-box;
+            overflow: auto;
+            position: fixed;
+            top: 51px;
+            min-width: 100%;
+            padding: 0 20px;
+            z-index: 100;
         }
     }
 
@@ -71,6 +107,10 @@
             font-weight: 600;
             line-height: 27px;
 
+            @include breakpoints.max-w(l) {
+                margin-top: 0;
+            }
+
             a {
                 display: none;
             }
@@ -78,22 +118,24 @@
             &.closing-title {
                 position: relative;
 
-                &::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background-image: url(/images/opening_filter.svg);
-                    background-position: calc(100% - 10px);
-                    background-repeat: no-repeat;
-                    transition: transform .3s ease-in-out, top .3s ease-in-out;
-                    cursor: pointer;
-                }
+                @include breakpoints.min-w(l) {
+                    &::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background-image: url(/images/opening_filter.svg);
+                        background-position: calc(100% - 10px);
+                        background-repeat: no-repeat;
+                        transition: transform .3s ease-in-out, top .3s ease-in-out;
+                        cursor: pointer;
+                    }
 
-                &.rotated::before {
-                    transform: rotateX(180deg);
+                    &.rotated::before {
+                        transform: rotateX(180deg);
+                    }
                 }
             }
 
@@ -122,11 +164,34 @@
         .filter__search {
             position: relative;
 
-            .filter__search--container {
+            @include breakpoints.max-w(l) {
+                display: flex;
+                justify-content: space-between;
+            }
+
+            &--container {
                 max-width: 1000px;
                 margin: 0 auto;
                 padding: 0;
                 position: relative;
+
+                @include breakpoints.max-w(l) {
+                    min-width: 268px;
+                    margin: 0;
+                }
+            }
+
+            &--filter {
+                display: none;
+                cursor: pointer;
+                width: 36px;
+                height: 36px;
+                background-image: url(/images/filter.svg);
+                background-repeat: no-repeat;
+
+                @include breakpoints.max-w(l) {
+                    display: block;
+                }
             }
 
             input {
