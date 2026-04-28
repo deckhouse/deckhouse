@@ -2,6 +2,9 @@ positive:
   configValues:
     - debug: true
     - debug: false
+    - verboseStatus: true
+    - verboseStatus: false
 negative:
   configValues:
     - debug: "bbb"
+    - verboseStatus: "yes"

@@ -131,7 +131,7 @@ func NewTaskQueue() *TaskQueue {
 	return q
 }
 
-// Put the item in the queue
+// Enqueue puts the item in the queue
 func (q *TaskQueue) Enqueue(task *ProbeTask) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
