@@ -1,6 +1,12 @@
 <p>Задайте название кластера и укажите параметры заказываемых машин для будущих узлов кластера.<br>
 Расширенные параметры будущего кластера, такие как схема размещения или настройка подсетей, доступны по нажатию на кнопку «Дополнительные настройки».</p>
-<img src="/images/gs/installer/cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера...">
+<div style="width: 70%; margin: 16px auto;">
+<img src="/images/gs/installer/cloud-extended.png" alt="Как выглядит окно доплнительных настроек кластера..." style="width: 100%;">
+</div>
 <p>Кнопка «Продвинутая конфигурация» в левой части экрана позволяет просмотреть и скачать сгенерированные YAML-файлы конфигурации. Это может понадобиться для того, чтобы вручную запустить <a href="../documentation/v1/installing/">dhctl</a> и использованием этих файлов.</p>
-<img src="/images/gs/installer/cloud-mega-setup.png" alt="Как выглядит окно продвинутой конфигурации...">
-<img src="/images/gs/installer/cloud-settings.png" alt="Как выглядит окно настройки узлов...">
+<div style="width: 70%; margin: 16px auto;">
+<img src="/images/gs/installer/cloud-mega-setup.png" alt="Как выглядит окно продвинутой конфигурации..." style="width: 100%;">
+</div>
+<div style="width: 70%; margin: 16px auto;">
+<img src="/images/gs/installer/cloud-settings.png" alt="Как выглядит окно настройки узлов..." style="width: 100%;">
+</div>
