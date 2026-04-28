@@ -22,6 +22,7 @@ import (
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	updateobserverv1 "control-plane-manager/internal/controllers/update-observer/pkg/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +34,7 @@ import (
 	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
 	controlplaneoperation "control-plane-manager/internal/controllers/control-plane-operation"
 	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
+	updateobserver "control-plane-manager/internal/controllers/update-observer/controller"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/klog/v2/textlogger"
@@ -58,6 +60,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(controlplanev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(updateobserverv1.AddToScheme(scheme))
 }
 
 type Manager struct {
@@ -100,6 +103,11 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						constants.KubeSystemNamespace: {},
 					},
 				},
+				&corev1.ConfigMap{}: {
+					Namespaces: map[string]cache.Config{
+						constants.KubeSystemNamespace: {},
+					},
+				},
 				&corev1.Node{}: {
 					Transform: func(in any) (any, error) {
 						node, ok := in.(*corev1.Node)
@@ -111,6 +119,25 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						stripped.ResourceVersion = node.ResourceVersion
 						stripped.UID = node.UID
 						stripped.Labels = node.Labels
+						stripped.Status = corev1.NodeStatus{
+							NodeInfo: corev1.NodeSystemInfo{
+								KubeletVersion: node.Status.NodeInfo.KubeletVersion,
+							},
+						}
+						return stripped, nil
+					},
+				},
+				&updateobserverv1.NodeGroup{}: {
+					Transform: func(in any) (any, error) {
+						ng, ok := in.(*updateobserverv1.NodeGroup)
+						if !ok {
+							return in, nil
+						}
+						stripped := &updateobserverv1.NodeGroup{}
+						stripped.Name = ng.Name
+						stripped.ResourceVersion = ng.ResourceVersion
+						stripped.UID = ng.UID
+						stripped.Status.Ready = ng.Status.Ready
 						return stripped, nil
 					},
 				},
@@ -143,6 +170,10 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 
 	if err = operationsapprover.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register operations-approver controller: %w", err)
+	}
+
+	if err = updateobserver.RegisterController(runtimeManager); err != nil {
+		return nil, fmt.Errorf("register update-observer controller: %w", err)
 	}
 
 	return &Manager{

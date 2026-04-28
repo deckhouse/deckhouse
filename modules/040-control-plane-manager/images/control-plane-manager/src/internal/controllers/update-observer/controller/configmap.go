@@ -28,9 +28,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"update-observer/cluster"
-	"update-observer/common"
-	"update-observer/pkg/version"
+	"control-plane-manager/internal/controllers/update-observer/cluster"
+	"control-plane-manager/internal/controllers/update-observer/common"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 type ConfigMapData struct {

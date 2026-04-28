@@ -23,12 +23,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"update-observer/cluster"
-	"update-observer/common"
-	podstatus "update-observer/pkg/pod-status"
+	"control-plane-manager/internal/controllers/update-observer/cluster"
+	"control-plane-manager/internal/controllers/update-observer/common"
+	podstatus "control-plane-manager/internal/controllers/update-observer/pkg/pod-status"
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, configmapLabels map[string]string, downgradeInProgress bool) (*cluster.State, error) {
@@ -129,7 +128,7 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 	var needRetry bool
 
 	if unhealthyPods > 0 {
-		klog.Warningf("Pod readiness check failed: %d instance(s) not ready", unhealthyPods)
+		logger.Warn("Pod readiness check failed", "unhealthyPods", unhealthyPods)
 		needRetry = true
 	}
 
@@ -141,12 +140,11 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 	// 3. Added complexity outweighs benefit for this self-correcting scenario
 	expectedPodsCount := len(nodes) * cluster.ControlPlaneComponentsCount
 	if len(podList.Items) == 0 || expectedPodsCount > len(podList.Items) {
-		klog.Warningf("Insufficient control plane pods found. Expected: %d, found: %d", expectedPodsCount, len(podList.Items))
+		logger.Warn("Insufficient control plane pods found", "expected", expectedPodsCount, "found", len(podList.Items))
 		needRetry = true
 	}
 
 	if needRetry {
-		klog.Warningf("Incomplete control plane pod data, retry after %v", retryDelay)
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()

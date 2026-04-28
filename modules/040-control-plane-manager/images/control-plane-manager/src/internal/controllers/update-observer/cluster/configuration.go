@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert/yaml"
 	corev1 "k8s.io/api/core/v1"
 
-	"update-observer/pkg/version"
+	"control-plane-manager/internal/controllers/update-observer/pkg/version"
 )
 
 type UpdateMode string
@@ -56,7 +56,7 @@ func GetConfiguration(secret *corev1.Secret) (*Configuration, error) {
 
 		rawDefault, ok := secret.Data[defaultKubernetesVersion]
 		if !ok {
-			return nil, fmt.Errorf("'%s' is not found", rawDefault)
+			return nil, fmt.Errorf("'%s' is not found", defaultKubernetesVersion)
 		}
 
 		desiredVersion := strings.TrimSpace(string(rawDefault))
