@@ -150,7 +150,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - `CgroupsV2` support
    - systemd version `244`
    - `erofs` kernel module support
-   - Linux kernel version not in the ranges `6.12.0`–`6.12.28` or `6.14.0`–`6.14.6` (affected by CVE-2025-37999 in EROFS)
+   - Linux kernel version not in the ranges 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS)
 
    Some distributions do not meet these requirements, and the OS on the nodes must be brought into compliance before installing Deckhouse Kubernetes Platform. For more information, see the [documentation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
    {% endalert %}
