@@ -49,7 +49,7 @@ const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 // TODO: remove fake crd modules
 const globalValues = `
   clusterIsBootstrapped: true
-  enabledModules: ["vertical-pod-autoscaler", "cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:

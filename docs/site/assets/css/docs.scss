@@ -779,11 +779,8 @@
 }
 
 .sidebar__item {
+    margin-bottom: 18px;
     position: relative;
-
-    &:not(:last-child) {
-        margin-bottom: 18px;
-    }
 }
 
 .sidebar__item > a {
@@ -1419,6 +1416,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     color: #00122C;
 }
 
+.docs .resources__prop_description code {
+    overflow-wrap: break-word;
+}
+
 .docs:not(.docs--modules) h1,
 .docs:not(.docs--modules) h2,
 .docs:not(.docs--modules) h3,
@@ -1795,6 +1796,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     .table-wrapper {
         position: relative;
         overflow: auto;
+        margin-bottom: 30px;
 
         &.table-wrapper__small,
         &.table-wrapper__versions {
@@ -2020,6 +2022,10 @@ a.comparison-table__module-proprietaryOkmeter::after {
     font-weight: normal;
     line-height: 1;
     padding-left: 0.375em;
+
+    &::after {
+      display: inline-block;
+    }
 }
 
 .docs .btn {
