@@ -1,8 +1,8 @@
 <div>
   <ol>
-<li>Запустите docker на вашем компьютере</li>
+<li>Start Docker on your computer</li>
 <li>
-  <p>Запустите установщик</p>
+  <p>Run the installer</p>
   <div class="tabs">
 <button id="tab-button-mac" class="tab-button active" onclick="openTab(event, 'tab-mac'); openMacTab(event, 'tab-mac-content-container'); openMacDefaultTab();">macOS</button>
 <button id="tab-button-linux" class="tab-button" onclick="openTab(event, 'tab-linux'); openLinuxTab(event, 'tab-linux-content-container'); openLinuxDefaultTab();">Linux</button>
@@ -10,14 +10,14 @@
   </div>
   <div id="tab-mac" class="tab-content active">
 <div class="tabs">
-  <button id="tab-buttons-mac-container" class="tab-button active" onclick="openMacTab(event, 'tab-mac-content-container')">Контейнером</button>
-  <button id="tab-buttons-mac-script" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-trdl')">С помощью trdl</button>
-  <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">Файлом</button>
+  <button id="tab-buttons-mac-container" class="tab-button active" onclick="openMacTab(event, 'tab-mac-content-container')">Container</button>
+  <button id="tab-buttons-mac-script" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-trdl')">Using trdl</button>
+  <button id="tab-buttons-mac-file" class="tab-button" onclick="openMacTab(event, 'tab-mac-content-file')">File</button>
 </div>
 <div id="tab-mac-content-container" class="tab-content active">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
-  <p>Выполните команду:</p>
-  <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a></b></p>
+  <p>Run the command:</p>
+  <p><b>If the installer container cannot access the network while VPN is enabled, follow this <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">instruction</a>.</b></p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
@@ -27,10 +27,10 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 </div>
 <div id="tab-mac-content-trdl" class="tab-content">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
-  <p>Начиная с версии 0.5.0 установщик можно установить на вашу машину с помощью <a href="https://ru.trdl.dev/">trdl</a>.</p>
+  <p>Starting from version 0.5.0, the installer can be installed on your machine using <a href="https://ru.trdl.dev/">trdl</a>.</p>
   <ol>
-<li>Установите <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">клиент trdl</a>.</li>
-<li><p>Добавьте trdl-репозиторий:</p>
+<li>Install the <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">trdl client</a>.</li>
+<li><p>Add the trdl repository:</p>
 {% capture command %}
 ```bash
 URL=https://deckhouse.ru/downloads/deckhouse-installer-trdl
@@ -43,24 +43,24 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 {{ command | markdownify }}
 </li>
 <li>
-  <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
+  <p>Install the latest installer release from the early-access channel and verify that it works:</p>
 {% capture command %}
 ```bash
 . $(trdl use -d d8-installer 1 ea) && d8install version
 ```
 {% endcapture %}
 {{ command | markdownify }}
-<p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 1 ea)</code> перед каждым использованием установщика, добавьте строку <code>source $(trdl use -d d8-installer 1 ea)</code> в RC-файл вашей командной оболочки.</p>
+<p>If you do not want to run <code>. $(trdl use -d d8-installer 1 ea)</code> before each installer usage, add the line <code>source $(trdl use -d d8-installer 1 ea)</code> to your shell RC file.</p>
 </li>
   </ol>
 </div>
 <div id="tab-mac-content-file" class="tab-content">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
-  <p>Скачайте установщик:
+  <p>Download the installer:
 <a href="/downloads/installer/latest/darwin-arm64/d8install" class="download-btn">darwin-arm64</a>
 <a href="/downloads/installer/latest/darwin-amd64/d8install" class="download-btn">darwin-amd64</a>
   </p>
-  <p>Запустите его, выполнив команды ниже:</p>
+  <p>Run it with the commands below:</p>
 {% capture command %}
 ```bash
 chmod +x d8install
@@ -73,13 +73,13 @@ xattr -c d8install
   </div>
   <div id="tab-linux" class="tab-content">
 <div class="tabs">
-  <button id="tab-buttons-linux-container" class="tab-button active" onclick="openLinuxTab(event, 'tab-linux-content-container')">Контейнером</button>
-  <button id="tab-buttons-linux-script" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-trdl')">С помощью trdl</button>
-  <button id="tab-buttons-linux-file" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-file')">Файлом</button>
+  <button id="tab-buttons-linux-container" class="tab-button active" onclick="openLinuxTab(event, 'tab-linux-content-container')">Container</button>
+  <button id="tab-buttons-linux-script" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-trdl')">Using trdl</button>
+  <button id="tab-buttons-linux-file" class="tab-button" onclick="openLinuxTab(event, 'tab-linux-content-file')">File</button>
 </div>
 <div id="tab-linux-content-container" class="tab-content active">
-  <p>Выполните команду:</p>
-  <p><b>Если при включенном VPN контейнер с установщиком не может получить доступ к сети, воспользуйтесь <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">инструкцией</a></b></p>
+  <p>Run the command:</p>
+  <p><b>If the installer container cannot access the network while VPN is enabled, follow this <a href="/products/kubernetes-platform/documentation/v1/faq.html#что-делать-если-при-включенном-vpn-контейнер-с-установщиком-не-м">instruction</a>.</b></p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r $HOME/.d8installer
@@ -88,10 +88,10 @@ docker run --rm --pull always -v $HOME/.d8installer:$HOME/.d8installer -v /var/r
 {{ command | markdownify }}
 </div>
 <div id="tab-linux-content-trdl" class="tab-content">
-  <p>Начиная с версии 0.5.0 установщик можно установить на вашу машину с помощью <a href="https://ru.trdl.dev/">trdl</a>.</p>
+  <p>Starting from version 0.5.0, the installer can be installed on your machine using <a href="https://ru.trdl.dev/">trdl</a>.</p>
   <ol>
-<li>Установите <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">клиент trdl</a>.</li>
-<li><p>Добавьте trdl-репозиторий:</p>
+<li>Install the <a href="https://ru.trdl.dev/quickstart.html#%D1%83%D1%81%D1%82%D0%B0%D0%BD%D0%BE%D0%B2%D0%BA%D0%B0-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D0%B0">trdl client</a>.</li>
+<li><p>Add the trdl repository:</p>
 {% capture command %}
 ```bash
 URL=https://deckhouse.ru/downloads/deckhouse-installer-trdl
@@ -104,20 +104,20 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 {{ command | markdownify }}
 </li>
 <li>
-  <p>Установите последний выпуск установщика с канала early-access и проверьте его работоспособность:</p>
+  <p>Install the latest installer release from the early-access channel and verify that it works:</p>
 {% capture command %}
 ```bash
 . $(trdl use -d d8-installer 1 ea) && d8install version
 ```
 {% endcapture %}
 {{ command | markdownify }}
-<p>Если вы не хотите вызывать <code>. $(trdl use -d d8-installer 1 ea)</code> перед каждым использованием установщика, добавьте строку <code>source $(trdl use -d d8-installer 1 ea)</code> в RC-файл вашей командной оболочки.</p>
+<p>If you do not want to run <code>. $(trdl use -d d8-installer 1 ea)</code> before each installer usage, add the line <code>source $(trdl use -d d8-installer 1 ea)</code> to your shell RC file.</p>
 </li>
   </ol>
 </div>
 <div id="tab-linux-content-file" class="tab-content">
-  <p>Скачайте установщик: <a href="/downloads/installer/latest/linux-amd64/d8install" class="download-btn">amd64</a></p>
-  <p>Запустите его, выполнив команды:</p>
+  <p>Download the installer: <a href="/downloads/installer/latest/linux-amd64/d8install" class="download-btn">amd64</a></p>
+  <p>Run it with the following commands:</p>
 {% capture command %}
 ```bash
 chmod +x d8install
@@ -129,16 +129,16 @@ chmod +x d8install
   </div>
   <div id="tab-windows" class="tab-content">
 {% alert level="info" %}
-Перед запуском контейнера убедитесь, что у вас установлен [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) и [включена подсистема WSL2](https://learn.microsoft.com/ru-ru/windows/wsl/install#install-wsl-command).
+Before starting the container, make sure [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) is installed and [WSL2 is enabled](https://learn.microsoft.com/ru-ru/windows/wsl/install#install-wsl-command).
 {% endalert %}
-<p>Выполните команду. Если вы работаете в командной строке:</p>
+<p>Run the command if you are using Command Prompt:</p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v /mnt/host/c/Users/%USERNAME%/.d8installer:/mnt/host/c/Users/%USERNAME%/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/%USERNAME%/.d8installer
 ```
 {% endcapture %}
 {{ command | markdownify }}
-<p>Если вы работаете в Power Shell:</p>
+<p>If you are using PowerShell:</p>
 {% capture command %}
 ```bash
 docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/mnt/host/c/Users/$env:USERNAME/.d8installer -v /var/run/docker.sock:/var/run/docker.sock -p 127.0.0.1:8080:8080 registry.deckhouse.ru/deckhouse/installer:latest -r /mnt/host/c/Users/$env:USERNAME/.d8installer
@@ -147,7 +147,7 @@ docker run --rm --pull always -v /mnt/host/c/Users/$env:USERNAME/.d8installer:/m
 {{ command | markdownify }}
   </div>
 </li>
-<li>Откройте <a>http://localhost:8080</a></li>
+<li>Open <a>http://localhost:8080</a></li>
 </ol>
 </div>
 

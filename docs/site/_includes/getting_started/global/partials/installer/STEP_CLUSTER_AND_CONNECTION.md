@@ -1,25 +1,25 @@
 <ol>
 <li>
-  <p>По умолчанию будет предложен вариант установки «Статический кластер на существующие серверы». Оставьте этот пункт без изменений.</p>
-  {% offtopic title="Как выглядит экран..." %}
-<img src="/images/gs/installer/select-infrastructure.png" alt="Как выглядит выпадающий список">
+  <p>By default, the installation option "Static cluster on existing servers" is selected. Leave this option unchanged.</p>
+  {% offtopic title="What this screen looks like..." %}
+<img src="/images/gs/installer/select-infrastructure.png" alt="What this drop-down list looks like">
   {% endofftopic %}
-  <p>Перейдите на следующий экран, нажав кнопку «Параметры кластера».</p>
+  <p>Go to the next screen by clicking the "Cluster parameters" button.</p>
 </li>
 <li>
-  <p>Задайте имя кластера и укажите IP-адреса машин для будущих узлов кластера.<br>
-  Удалить лишние узлы можно, нажав на красный значок корзины возле поля для ввода IP-адреса.<br>
-  Расширенные параметры будущего кластера, такие как прокси-сервер или настройка подсетей, доступны по нажатию на кнопку «Дополнительные настройки».</p>
-  {% offtopic title="Как выглядит окно расширенных настроек кластера..." %}
-<img src="/images/gs/installer/extended-settings.png" alt="Как выглядит окно расширенных настройки кластера...">
+  <p>Set the cluster name and specify the IP addresses of the machines for future cluster nodes.<br>
+  You can remove extra nodes by clicking the red trash icon next to the IP address input field.<br>
+  Advanced future cluster settings, such as proxy server configuration or subnet settings, are available after clicking the "Additional settings" button.</p>
+  {% offtopic title="What the advanced cluster settings panel looks like..." %}
+<img src="/images/gs/installer/extended-settings.png" alt="What the advanced cluster settings panel looks like...">
   {% endofftopic %}
-  <p>Ниже можно настроить параметры подключения по SSH к узлам кластера, выбрав уже существующий ключ, добавленный ранее, или создав новый на этом же экране ниже.</p>
+  <p>Below, you can configure SSH connection settings for cluster nodes by selecting an existing key added earlier or creating a new one on the same screen.</p>
   <ul>
-  <li>«Имя преднастроенного пользователя» — имя пользователя, под которым будет осуществляться вход по SSH на машины для будущих узлов кластера.</li>
-  <li>«Пароль преднастроенного пользователя» (для sudo) — пароль пользователя, если установлен. Будет использоваться для повышения привилегий через sudo. <i>Оставьте пустым, если для sudo не требуется пароль.</i></li>
-  <li>«SSH-ключ для доступа на узлы» — ключ, с помощью которого будет осуществляться подключение к машинам. Здесь можно выбрать ранее добавленный ключ, сгенерировать новый или ввести данные уже существующего ключа.
-{% offtopic title="Как узнать приватный ключ..." %}
-Приватный ключ лежит в файле `~/.ssh/<SSH_PRIVATE_KEY_FILE>`. Получить его можно командой `cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>`. Пример вывода (для ключа с ED25519-шифрованием):
+  <li>"Preconfigured username" — the username used for SSH login to machines for future cluster nodes.</li>
+  <li>"Preconfigured user password" (for sudo) — the user's password, if set. It is used to escalate privileges via sudo. <i>Leave empty if sudo does not require a password.</i></li>
+  <li>"SSH key for node access" — the key used to connect to machines. Here you can select a previously added key, generate a new one, or provide an existing key.
+{% offtopic title="How to get the private key..." %}
+The private key is stored in the `~/.ssh/<SSH_PRIVATE_KEY_FILE>` file. You can get it with the `cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>` command. Example output (for an ED25519-encrypted key):
 {% capture command %}
 ```bash
 $ cat ~/.ssh/id_ed25519
@@ -32,27 +32,27 @@ RTAeNZpi2e6dqGhsbK6cAAAAGHpoYmVydEB6aGJlcnQtMjB3bnMxeGowOQECAwQF
 ```
 {% endcapture %}
 {{ command | markdownify }}
-Полностью скопируйте полученный текст в поле на форме, включая строки `-----BEGIN OPENSSH PRIVATE KEY-----` и `-----END OPENSSH PRIVATE KEY-----`.
+Copy the full output text into the form field, including the `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END OPENSSH PRIVATE KEY-----` lines.
 {% endofftopic %}
   </li>
-  <li>«Порт SSH» — порт для SSH-подключения. <i>Оставьте значение по умолчанию, если на машине задан стандартный порт.</i></li>
-  <li>«Использовать SSH-бастион» — настройки SSH-бастиона. Если вы не используете промежуточный сервер для доступа к ресурсам в закрытой сети, не включайте этот ползунок. Если используете — включите и введите настройки в открывшейся секции.
+  <li>"SSH port" — the port used for SSH connection. <i>Leave the default value if the machine uses the standard port.</i></li>
+  <li>"Use SSH bastion" — SSH bastion settings. If you do not use an intermediate server to access resources in a private network, keep this toggle disabled. If you do, enable it and provide settings in the opened section.
   </li>
   </ul>
-  {% offtopic title="Как выглядит область настроек SSH-подключения..." %}
-<img src="/images/gs/installer/ssh-settings.png" alt="Окно настроек SSH">
+  {% offtopic title="What the SSH connection settings section looks like..." %}
+<img src="/images/gs/installer/ssh-settings.png" alt="SSH settings panel">
   {% endofftopic %}
-  При установке на bare metal вы можете задать параметры Ingress-контроллера и обработки входящего трафика прямо во время установки.
-  {% offtopic title="Как сконфигурировать Ingress и входящий трафик..." %}
-  Переключите флажок «Входящий трафик». В открывшейся секции укажите параметры создаваемого Ingress-контроллера, выбрав режим его работы и группу узлов, на которых он будет запущен.
-<img src="/images/gs/installer/set-up-ingress.png" alt="Как выглядит секция настроек Ingress-контроллера...">
-  Здесь также можно сконфигурировать шаблон доменных имён для веб-интерфейсов будущего кластера. Для для этого переключите флажок «Доступ к веб-интерфейсам модулей» и укажите там соответствующие настройки.
-<img src="/images/gs/installer/web-interfaces.png" alt="Как выглядит настройка доменных имён...">
-  Если необходимо создать пользователя для входа в веб-интерфейсы, переключите флажок «Создать пользователя» и укажите его имя и пароль (пароль можно сгенерировать автоматически).
+  When installing on bare metal, you can configure Ingress controller settings and incoming traffic handling during installation.
+  {% offtopic title="How to configure Ingress and incoming traffic..." %}
+  Enable the "Incoming traffic" checkbox. In the opened section, configure the Ingress controller to be created by selecting its operating mode and the node group where it will run.
+<img src="/images/gs/installer/set-up-ingress.png" alt="What the Ingress controller settings section looks like...">
+  You can also configure the domain name template for web interfaces of the future cluster. To do this, enable the "Access to module web interfaces" checkbox and specify the corresponding settings.
+<img src="/images/gs/installer/web-interfaces.png" alt="What the domain name settings look like...">
+  If you need to create a user for web interface login, enable the "Create user" checkbox and specify username and password (the password can be generated automatically).
   {% endofftopic %}
-  {% offtopic title="Для чего нужна продвинутая конфигурация..." %}
-  Кнопка «Продвинутая конфигурация» в левой части экрана позволяет просмотреть и скачать сгенерированные YAML-файлы конфигурации. Это может понадобиться для того, чтобы вручную запустить <a href="../documentation/v1/installing/">dhctl</a> с использованием этих файлов.
-<img src="/images/gs/installer/mega-settings.png" alt="Как выглядит окно расширенных продвинутой конфигурации...">
+  {% offtopic title="What advanced configuration is for..." %}
+  The "Advanced configuration" button on the left side of the screen lets you view and download generated YAML configuration files. This may be required to run <a href="../documentation/v1/installing/">dhctl</a> manually using these files.
+<img src="/images/gs/installer/mega-settings.png" alt="What the advanced configuration panel looks like...">
   {% endofftopic %}
 </li>
 </ol>
