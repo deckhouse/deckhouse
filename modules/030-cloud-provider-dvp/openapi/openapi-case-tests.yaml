@@ -1,6 +1,11 @@
 positive:
   configValues:
-  - {}
+  - storage:
+      parameters: {}
+    nodes:
+      parameters: {}
+    provider:
+      parameters: {}
   values:
   - { internal: {} }
 negative:
