@@ -1,0 +1,23 @@
+{% assign revision=include.revision %}
+{% assign lang=include.lang %}
+
+{% if revision != "ce" %}
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+{% endif %}
+
+
+{% if lang == 'ru' %}
+Создайте файл `resources.yml`.
+{% else %}
+Create the `resources.yml` file.
+{% endif %}
+
+{% snippetcut name="resources.yml" selector="resources-yml" %}
+{% include_file "_includes/getting_started/stronghold/{{ page.platform_code }}/partials/resources.yml.minimal.inc" syntax="yaml" %}
+{% endsnippetcut %}
+
+
+
+{% if revision != "ce" %}
+</div>
+{% endif %}
