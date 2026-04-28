@@ -7,6 +7,14 @@ region: {{ $context.Values.cloudProviderYandex.internal.providerDiscoveryData.re
 zones: {{ $context.Values.cloudProviderYandex.internal.providerDiscoveryData.zones | toJson | b64enc | quote }}
 instanceClassKind: {{ b64enc "YandexInstanceClass" | quote }}
 machineClassKind: {{ b64enc "YandexMachineClass" | quote }}
+capiClusterKind: {{ b64enc "YandexCluster" | quote }}
+capiClusterAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiClusterAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
+capiClusterName: {{ b64enc "yandex" | quote }}
+capiMachineTemplateKind: {{ b64enc "YandexMachineTemplate" | quote }}
+capiMachineTemplateAPIVersion: {{ b64enc "infrastructure.cluster.x-k8s.io/v1alpha1" | quote }}
+capiMachineTemplateAPIGroup: {{ b64enc "infrastructure.cluster.x-k8s.io" | quote }}
+sshPublicKey: {{ $context.Values.cloudProviderYandex.internal.providerClusterConfiguration.sshPublicKey | b64enc | quote }}
 
 # Yandex
 {{- $yandexValues := dict }}
