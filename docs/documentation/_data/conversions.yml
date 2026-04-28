@@ -2,6 +2,37 @@ cilium-hubble:
     - version: 2
       conversions:
         - del(.auth.password) | if .auth == {} then del(.auth) end
+cloud-provider-dvp:
+    - version: 2
+      description:
+        en: |
+            Migration to the new ModuleConfig schema for cloud-provider-dvp.
+            Fields `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` are replaced with `provider.parameters` / `nodes.parameters`.
+            `kubeconfigDataBase64` no longer lives in ModuleConfig (moved to a cloud-provider.deckhouse.io/credentials Secret).
+            `nodes.parameters.layout` gets a default value of "Standard" — update it manually if needed.
+            `nodes.parameters.sshPublicKey` gets a placeholder value — replace it with a real SSH public key.
+        ru: |
+            Переход на новую схему ModuleConfig для cloud-provider-dvp.
+            Структура `provider.kubeconfigDataBase64` / `provider.namespace` / `zones` заменена на `provider.parameters` / `nodes.parameters`.
+            Поле `kubeconfigDataBase64` больше нет в ModuleConfig (хранится в Secret типа cloud-provider.deckhouse.io/credentials).
+            Поле `nodes.parameters.layout` подставляется как "Standard" — заполните корректным значением вручную при необходимости.
+            Поле `nodes.parameters.sshPublicKey` получает placeholder значение — обязательно замените его реальным публичным ключом SSH.
+      conversions:
+        - if .provider == null then .provider = {} end
+        - if .provider.parameters == null then .provider.parameters = {} end
+        - if .provider.parameters.namespace == null then (if .provider.namespace != null then .provider.parameters.namespace = .provider.namespace else .provider.parameters.namespace = "default" end) end
+        - del(.provider.namespace)
+        - del(.provider.kubeconfigDataBase64)
+        - if .nodes == null then .nodes = {} end
+        - if .nodes.parameters == null then .nodes.parameters = {} end
+        - if .nodes.parameters.layout == null then .nodes.parameters.layout = "Standard" end
+        - if .nodes.parameters.sshPublicKey == null then .nodes.parameters.sshPublicKey = "ssh-rsa PLACEHOLDER_REPLACE_ME" end
+        - if .zones != null then .nodes.parameters.zones = .zones end
+        - del(.zones)
+        - if .nodes.enabled == null then .nodes.enabled = true end
+        - if .storage == null then .storage = {} end
+        - if .storage.enabled == null then .storage.enabled = true end
+        - if .storage.parameters == null then .storage.parameters = {} end
 cloud-provider-vsphere:
     - version: 2
       description:

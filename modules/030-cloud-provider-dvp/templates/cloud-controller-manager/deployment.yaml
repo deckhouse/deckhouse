@@ -32,7 +32,8 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
       key: namespace
 {{- end -}}
 
-{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle,service-lb-controller" -}}
+{{- if .Values.cloudProviderDvp.nodes.enabled }}
+{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle" -}}
 
 {{- $ccmConfig := dict -}}
 {{- $_ := set $ccmConfig "fullname" "cloud-controller-manager" -}}
@@ -46,3 +47,4 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
 {{- $_ := set $ccmConfig "securityPolicyExceptionEnabled" true -}}
 
 {{- include "helm_lib_cloud_controller_manager_manifests" (list . $ccmConfig) }}
+{{- end }}
