@@ -80,7 +80,7 @@ Adds refresh token support to the SAML connector. The SAML connector now impleme
 
 Added cache get parameter to main CSS file URL that gets opaque dex build identifier assigned to it. This prevents stale caches from breaking the login page.
 
-### 014-fix-cves.patch
+### 014-fix-cve.patch
 
 This patch fixes:
 
