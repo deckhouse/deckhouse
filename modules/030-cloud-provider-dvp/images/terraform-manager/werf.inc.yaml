@@ -12,7 +12,7 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
   to: /terraform-manager/terraform_versions.yml
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/openapi/*
   to: /candi/openapi
 import:
 - image: terraform-provider-kubernetes
