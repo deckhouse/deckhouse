@@ -11,7 +11,7 @@ The provider supports working with only one disk in the virtual machine template
 
 ## Creating a service account
 
-You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
+You need to create a service account with the editor role with the cloud provider so that Deckhouse Kubernetes Platform (DKP) can manage cloud resources. The detailed instructions for creating a service account with Yandex Cloud are available [in the provider's documentation](https://cloud.yandex.com/en/docs/resource-manager/operations/cloud/set-access-bindings). Below, we will provide a brief overview of the necessary actions:
 
 1. Create a user named `deckhouse`:
 
@@ -58,6 +58,26 @@ Recommended quotas for a new cluster:
 - The total amount of RAM of virtual machines: 256 GB.
 
 ## Yandex Cloud integration
+
+{% alert level="warning" %}
+Starting with DKP version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters.
+
+When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module in the `config.yml` file.
+
+{% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
+
+```yaml
+
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cni-simple-bridge
+spec:
+  enabled: true
+```
+
+{%- endofftopic %}
+{% endalert %}
 
 ### Configuring security groups
 
