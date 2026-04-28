@@ -549,7 +549,7 @@ spec:
 | `alb.network.deckhouse.io/whitelist-source-range` | Ожидает список подсетей в формате CIDR через запятую: фильтр по IP на уровне маршрута; переопределяет глобальный whitelist (например 10.1.1.10/32, 10.2.2.2/32) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON-объект дополнительных заголовков ответа (например {"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}). |
 | `alb.network.deckhouse.io/session-affinity` | JSON для cookie session affinity (`mode`, `path`, `cookieName`, `ttl` и др.); не все поля обязательны, (например {"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}). |
-| `alb.network.deckhouse.io/hash-key` | Например `source-ip`: консистентный хэш для backend’ов Service у объекта HTTPRoute. 
+| `alb.network.deckhouse.io/hash-key` | Например `source-ip`: консистентный хеш для backend’ов Service у объекта HTTPRoute. |
 | `alb.network.deckhouse.io/service-upstream` | `"true"`: трафик к upstream идёт через соответствующий сервис, а не напрямую к подам. |
 | `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` с данными htpasswd для HTTP Basic Auth на этом маршруте. |
 | `alb.network.deckhouse.io/satisfy` | `all` или `any`: определяет необходимость удовлетворения обеих проверок (whitelist и basic-auth) или какой-либо одной (по умолчанию `all`). |
