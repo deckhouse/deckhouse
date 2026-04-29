@@ -2,7 +2,7 @@
 {{- $versionInfo := get .Values.istio.internal.versionMap $version }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 
-{{- if and ($.Values.istio.internal.enableAmbientMode) ($supportsAmbient) }}
+{{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
