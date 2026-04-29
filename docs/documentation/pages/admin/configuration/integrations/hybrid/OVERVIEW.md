@@ -245,76 +245,47 @@ Before you begin, ensure the following conditions are met:
 
 ### Setup
 
-1. Create a configuration file `cloud-provider-vcd-token.yml` with the following content:
+1. Create a `cloud-provider-vcd-mc.yaml` file with the following content:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: VCDClusterConfiguration
-   layout: Standard
-   mainNetwork: <NETWORK_NAME>
-   internalNetworkCIDR: <NETWORK_CIDR>
-   organization: <ORGANIZATION>
-   virtualApplicationName: <VAPP_NAME>
-   virtualDataCenter: <VDC_NAME>
-   provider:
-     server: <API_URL>
-     apiToken: <PASSWORD>
-     username: <USER_NAME>
-     insecure: false
-   masterNodeGroup:
-     instanceClass:
-       etcdDiskSizeGb: 10
-       mainNetworkIPAddresses:
-       - 192.168.199.2
-       rootDiskSizeGb: 50
-       sizingPolicy: <SIZING_POLICY>
-       storageProfile: <STORAGE_PROFILE>
-       template: <VAPP_TEMPLATE>
-     replicas: 1
-   sshPublicKey: <SSH_PUBLIC_KEY>
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cloud-provider-vcd
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       mainNetwork: <NETWORK_NAME>
+       organization: <ORGANIZATION>
+       virtualDataCenter: <VDC_NAME>
+       virtualApplicationName: <VAPP_NAME>
+       sshPublicKey: <SSH_PUBLIC_KEY>
+       provider:
+         server: <API_URL>
+         username: <USER_NAME>
+         password: <PASSWORD>
+         apiToken: <API_TOKEN>
+         insecure: false
    ```
 
    Where:
    - `mainNetwork` — the name of the network where cloud nodes will be deployed in your VCD cluster.
-   - `internalNetworkCIDR` — the CIDR of the specified network.
    - `organization` — the name of your VCD organization.
-   - `virtualApplicationName` — the name of the vApp where nodes will be created (e.g., `dkp-vcd-app`).
    - `virtualDataCenter` — the name of the virtual data center.
-   - `template` — the VM template used to create nodes.
-   - `sizingPolicy` and `storageProfile` — corresponding policies configured in VCD.
+   - `virtualApplicationName` — the name of the vApp where nodes will be created (e.g., `dkp-vcd-app`).
+   - `sshPublicKey` — the SSH public key for node access.
    - `provider.server` — the API URL of your VCD instance.
-   - `provider.apiToken` — the access token (password) of a user with administrator privileges in VCD.
+   - `provider.apiToken` — the access token of a user with administrator privileges in VCD.
    - `provider.username` — the name of the static user that will be used to interact with VCD.
-   - `mainNetworkIPAddresses` — a list of IP addresses from the specified network that will be assigned to master nodes.
-   - `storageProfile` — the name of the storage profile defining where the VM disks will be placed.
+   - `provider.password` — the password of a user with administrator privileges in VCD.
+   - `provider.insecure` — set to `true` if VCD uses a self-signed TLS certificate.
 
-1. Encode the `cloud-provider-vcd-token.yml` file in Base64:
-
-   ```shell
-   base64 -i $PWD/cloud-provider-vcd-token.yml
-   ```
-
-1. Create a secret with the following content:
-
-   ```yaml
-   apiVersion: v1
-   data:
-     cloud-provider-cluster-configuration.yaml: <BASE64_STRING_OBTAINED_IN_THE_PREVIOUS_STEP>
-     cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
-   kind: Secret
-     metadata:
-       labels:
-         heritage: deckhouse
-         name: d8-provider-cluster-configuration
-       name: d8-provider-cluster-configuration
-       namespace: kube-system
-   type: Opaque
-   ```
-
-1. Enable the `cloud-provider-vcd` module:
+1. Apply the `ModuleConfig` with `d8 k`:
 
    ```shell
-   d8 system module enable cloud-provider-vcd
+   d8 k apply -f cloud-provider-vcd-mc.yaml
+   d8 k get mc cloud-provider-vcd
    ```
 
 1. Edit the `d8-cni-configuration` secret so that the `mode` parameter is determined from `mc cni-cilium` (change `.data.cilium` to `.data.necilium` if necessary).

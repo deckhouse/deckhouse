@@ -225,6 +225,8 @@ volumeBindingMode: WaitForFirstConsumer
 
 Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в VMware vCloud Director (VCD) с использованием Deckhouse Kubernetes Platform (DKP).
 
+### Предварительные требования
+
 Перед началом убедитесь, что выполнены следующие условия:
 
 - **Инфраструктура**:
@@ -240,76 +242,47 @@ volumeBindingMode: WaitForFirstConsumer
 
 ### Настройка
 
-1. Создайте файл конфигурации `cloud-provider-vcd-token.yml` со следующим содержимым:
+1. Создайте файл `cloud-provider-vcd-mc.yaml` со следующим содержимым:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: VCDClusterConfiguration
-   layout: Standard
-   mainNetwork: <NETWORK_NAME>
-   internalNetworkCIDR: <NETWORK_CIDR>
-   organization: <ORGANIZATION>
-   virtualApplicationName: <VAPP_NAME>
-   virtualDataCenter: <VDC_NAME>
-   provider:
-     server: <API_URL>
-     apiToken: <PASSWORD>
-     username: <USER_NAME>
-     insecure: false
-   masterNodeGroup:
-     instanceClass:
-       etcdDiskSizeGb: 10
-       mainNetworkIPAddresses:
-       - 192.168.199.2
-       rootDiskSizeGb: 50
-       sizingPolicy: <SIZING_POLICY>
-       storageProfile: <STORAGE_PROFILE>
-       template: <VAPP_TEMPLATE>
-     replicas: 1
-   sshPublicKey: <SSH_PUBLIC_KEY>
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cloud-provider-vcd
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       mainNetwork: <NETWORK_NAME>
+       organization: <ORGANIZATION>
+       virtualDataCenter: <VDC_NAME>
+       virtualApplicationName: <VAPP_NAME>
+       sshPublicKey: <SSH_PUBLIC_KEY>
+       provider:
+         server: <API_URL>
+         username: <USER_NAME>
+         password: <PASSWORD>
+         apiToken: <API_TOKEN>
+         insecure: false
    ```
 
    Где:
    - `mainNetwork` — имя сети, в которой будут размещаться облачные узлы в кластере VCD.
-   - `internalNetworkCIDR` — CIDR-адресация указанной сети.
    - `organization` — название вашей организации в VCD.
-   - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
    - `virtualDataCenter` — имя виртуального датацентра.
-   - `template` — шаблон ВМ для создания узлов.
-   - `sizingPolicy` и `storageProfile` — соответствующие политики в VCD.
+   - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
+   - `sshPublicKey` — публичный SSH-ключ для доступа к узлам.
    - `provider.server` — URL-адрес API вашего VCD.
-   - `provider.apiToken` — токен доступа (пароль) пользователя с правами администратора в VCD.
+   - `provider.apiToken` — токен доступа пользователя с правами администратора в VCD.
    - `provider.username` — имя статического пользователя, от имени которого будет происходить взаимодействие с VCD.
-   - `mainNetworkIPAddresses` — список IP-адресов из указанной сети, которые будут выделены для master-узлов.
-   - `storageProfile` — имя storage-профиля, определяющего хранилище для дисков создаваемых ВМ.
+   - `provider.password` — пароль пользователя с правами администратора в VCD.
+   - `provider.insecure` — установите значение `true`, если VCD использует самоподписанный TLS-сертификат.
 
-1. Закодируйте файл `cloud-provider-vcd-token.yml` в Base64:
-
-   ```shell
-   base64 -i $PWD/cloud-provider-vcd-token.yml
-   ```
-
-1. Создайте секрет со следующим содержимым:
-
-   ```yaml
-   apiVersion: v1
-   data:
-     cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
-     cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
-   kind: Secret
-     metadata:
-       labels:
-         heritage: deckhouse
-         name: d8-provider-cluster-configuration
-       name: d8-provider-cluster-configuration
-       namespace: kube-system
-   type: Opaque
-   ```
-
-1. Включите модуль `cloud-provider-vcd`:
+1. Примените `ModuleConfig` через `d8 k`:
 
    ```shell
-   d8 system module enable cloud-provider-vcd
+   d8 k apply -f cloud-provider-vcd-mc.yaml
+   d8 k get mc cloud-provider-vcd
    ```
 
 1. Отредактируйте секрет `d8-cni-configuration`, чтобы значение параметра `mode` определялось из `mc cni-cilium` (измените `.data.cilium` на `.data.necilium` при необходимости).
