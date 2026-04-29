@@ -57,7 +57,6 @@ type NodeGroupSpec struct {
 	Update Update `json:"update,omitempty"`
 
 	Kubelet Kubelet `json:"kubelet,omitempty"`
-
 }
 
 type GPU struct {
@@ -226,4 +225,3 @@ type KubeletMemorySwap struct {
 type KubeletLimitedSwap struct {
 	Size string `json:"size"`
 }
-
