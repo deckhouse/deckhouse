@@ -23,7 +23,7 @@
 <div style="width: 70%; margin: 16px auto;">
 <img src="/images/gs/installer/cloud-extended.png" alt="What the additional cluster settings panel looks like..." style="width: 100%;">
 </div>
-  The "Advanced configuration" button on the left side of the screen lets you view and download generated YAML configuration files. This may be required to run <a href="../documentation/v1/installing/">dhctl</a> manually using these files.
+  The "Advanced configuration" button on the left side of the screen lets you view and download generated YAML configuration files. This may be required to run <a href="../../../documentation/v1/installing/">dhctl</a> manually using these files.
 <div style="width: 70%; margin: 16px auto;">
 <img src="/images/gs/installer/cloud-mega-setup.png" alt="What the advanced configuration panel looks like..." style="width: 100%;">
 </div>
