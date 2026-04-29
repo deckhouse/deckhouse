@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  const uppercaseAcronyms = { 'ml': 'ML', 'ai': 'AI', 'ci': 'CI', 'cd': 'CD', 'api': 'API' , 'ssdcl': 'SSDLC' };
+  const uppercaseAcronyms = { 'ml': 'ML', 'ai': 'AI', 'ci': 'CI', 'cd': 'CD', 'api': 'API' , 'ssdlc': 'SSDLC' };
 
   function capitalizeWords(value) {
     return value.trim().split(/(\s+|(?=[/])|(?<=[/]))/).map(part => {
