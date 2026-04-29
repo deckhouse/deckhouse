@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	flantkubeclient "github.com/flant/kube-client/client"
 	"github.com/name212/govalue"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -219,7 +218,7 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 		return fmt.Errorf("failed to wait for the master node '%s' to become Ready: %w", h.nodeToConverge, err)
 	}
 
-	err = waitEtcdHasMember(ctx, kubeClient.KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
+	err = waitEtcdHasMember(ctx, kubeClient.KubeClient.(libcon.KubeClient), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %w", h.nodeToConverge, err)
 	}

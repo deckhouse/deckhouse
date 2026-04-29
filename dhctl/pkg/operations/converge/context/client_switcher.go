@@ -210,7 +210,7 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 	}
 
 	s.debug("SwitchClientsToAnotherNodeIfNeed sshClient: %v", sshClient)
-	currentHost := currentHost(sshClient.Session())
+	currentHost := session.CurrentHost(sshClient.Session())
 	if currentHost.Host == "" {
 		return fmt.Errorf("Got empty current host")
 	}
@@ -275,7 +275,7 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 	}
 
 	s.debug("SwitchWhenDecreaseMastersIfNeed sshClient: %v", sshClient)
-	currentHost := currentHost(sshClient.Session())
+	currentHost := session.CurrentHost(sshClient.Session())
 	if currentHost.Host == "" {
 		return fmt.Errorf("Got empty current host")
 	}
@@ -622,18 +622,6 @@ func (s *KubeClientSwitcher) warn(f string, args ...any) {
 
 func (s *KubeClientSwitcher) debugStartOperation(action string) {
 	s.debug("Starting %s", strings.ToLower(action))
-}
-
-func currentHost(s *session.Session) session.Host {
-	currentHost := s.Host()
-	availableHosts := s.AvailableHosts()
-	for _, h := range availableHosts {
-		if h.Host == currentHost {
-			return h
-		}
-	}
-
-	return session.Host{}
 }
 
 type sshIPExtractorParams struct {

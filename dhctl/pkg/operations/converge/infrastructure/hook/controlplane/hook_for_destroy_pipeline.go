@@ -21,7 +21,6 @@ import (
 	"strings"
 	"time"
 
-	flantkubeclient "github.com/flant/kube-client/client"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -126,7 +125,7 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 		return fmt.Errorf("failed to remove labels from node '%s': %v", nodeName, err)
 	}
 
-	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(*flantkubeclient.Client), nodeName)
+	err = waitEtcdHasNoMember(ctx, kubeCl.KubeClient.(libcon.KubeClient), nodeName)
 	if err != nil {
 		return fmt.Errorf("failed to check etcd has no member '%s': %v", nodeName, err)
 	}
