@@ -132,7 +132,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 	}
 
 	if r.psm != nil {
-		if err := r.checkPaginationSupport(ctx, packageRepository); err != nil {
+		if err := r.checkPaginationSupport(ctx, repo); err != nil {
 			logger.Warn("failed to check pagination support", log.Err(err))
 		}
 	}

@@ -49,4 +49,5 @@ status:
     reason: ScanFailed
     status: "False"
     type: LastScanSucceeded
+  partialScanAvailable: false
   syncTime: null
