@@ -464,37 +464,6 @@
           "color": {
             "mode": "palette-classic"
           },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -502,6 +471,14 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 83886080
+              },
+              {
+                "color": "red",
+                "value": 104857600
               }
             ]
           },
@@ -516,18 +493,18 @@
         "y": 30
       },
       "options": {
-        "legend": {
-          "calcs": ["max", "mean"],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "sortBy": "Max",
-          "sortDesc": true
+        "displayMode": "gradient",
+        "minVizWidth": 20,
+        "nameFieldLabel": "Hook",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "asc"
-        }
+        "showUnfilled": true,
+        "text": {},
+        "valueMode": "text"
       },
       "targets": [
         {
@@ -538,7 +515,7 @@
         }
       ],
       "title": "Hook memory — avg RSS (top 10)",
-      "type": "timeseries"
+      "type": "bargauge"
     },
     {
       "datasource": {
