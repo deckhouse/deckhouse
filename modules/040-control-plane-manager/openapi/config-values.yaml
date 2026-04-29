@@ -201,7 +201,7 @@ properties:
               enabled:
                 type: boolean
                 default: false
-                description: 'Setting it to `true` will create an Ingress resource in the `kube-system` namespace in the cluster (it exposes the Kubernetes API).'
+                description: 'Setting it to `true` will create an Ingress resource `kubernetes-api` in the `kube-system` namespace in the cluster (it exposes the Kubernetes API).'
               ingressClass:
                 type: string
                 pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -259,7 +259,7 @@ properties:
               enabled:
                 type: boolean
                 default: false
-                description: 'If set to `true``, a service kube-system/d8-control-plane-apiserver of the LoadBalancer type will be created.'
+                description: 'If set to `true`, service `kube-system/d8-control-plane-apiserver` of the LoadBalancer type will be created.'
               annotations:
                 type: object
                 additionalProperties:

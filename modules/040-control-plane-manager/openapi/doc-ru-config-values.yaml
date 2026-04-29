@@ -121,7 +121,7 @@ properties:
             description: 'Настройки для публикации API через Ingress.'
             properties:
               enabled:
-                description: 'Если указать `true`, в namespace `kube-system` кластера будет создан Ingress-ресурс, который откроет публичный доступ к API-серверу.'
+                description: 'Если указать `true`, в namespace `kube-system` кластера будет создан Ingress-ресурс `kubernetes-api`, который откроет публичный доступ к API-серверу.'
               ingressClass:
                 description: 'Ingress-класс, который будет использован для публикации API Kubernetes через Ingress.'
               whitelistSourceRanges:
@@ -149,12 +149,12 @@ properties:
 
                           Если вы используете в кластере сертификаты, выдаваемые c помощью модуля `cert-manager` и Let's Encrypt, следует в качестве значения установить пустую строку `""`.
 
-                          В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике повредит ранее сгенерированные файлы конфигурации kubectl.
+                          В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике сделает невалидными ранее сгенерированные файлы конфигурации kubectl.
           loadBalancer:
             description: 'Настройки для публикации API через service с типом LoadBalancer.'
             properties: 
               enabled:
-                description: 'Если указать `true`, будет создан сервис `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer'
+                description: 'Если указать `true`, будет создан сервис `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.'
               annotations:
                 description: |
                   Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
