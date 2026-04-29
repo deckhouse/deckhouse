@@ -20,20 +20,20 @@ import (
 	"net"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type TunnelParams struct {
 	DirectoryConfig *directoryconfig.DirectoryConfig
 	LoggerProvider  log.LoggerProvider
-	SSHClient       node.SSHClient
+	SSHClient       libcon.SSHClient
 }
 
 func (params TunnelParams) Validate() error {
@@ -74,7 +74,7 @@ func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	}, nil
 }
 
-func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl node.SSHClient) *Tunnel {
+func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl libcon.SSHClient) *Tunnel {
 	return &Tunnel{
 		dc:      dc,
 		sshCl:   sshCl,
@@ -86,12 +86,12 @@ func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl node.SSHClient) *Tunne
 
 type Tunnel struct {
 	dc      *directoryconfig.DirectoryConfig
-	sshCl   node.SSHClient
+	sshCl   libcon.SSHClient
 	scheme  constant.SchemeType
 	address string
 	port    string
 
-	tunnel node.ReverseTunnel
+	tunnel libcon.ReverseTunnel
 }
 
 func (t *Tunnel) start(ctx context.Context) error {
@@ -111,8 +111,8 @@ func (t *Tunnel) start(ctx context.Context) error {
 		return fmt.Errorf("cannot render kill reverse tunnel script: %w", err)
 	}
 
-	checker := ssh.NewRunScriptReverseTunnelChecker(t.sshCl, checkingScript)
-	killer := ssh.NewRunScriptReverseTunnelKiller(t.sshCl, killScript)
+	checker := utils.NewRunScriptReverseTunnelChecker(t.sshCl, checkingScript)
+	killer := utils.NewRunScriptReverseTunnelKiller(t.sshCl, killScript)
 
 	// SSH reverse tunnel format: remoteHost:remotePort:localHost:localPort
 	addr := fmt.Sprintf("%s:%s:%s:%s", t.address, t.port, t.address, t.port)
