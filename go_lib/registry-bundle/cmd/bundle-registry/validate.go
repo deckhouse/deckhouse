@@ -35,7 +35,7 @@ func newValidateCmd(logger log.Logger) *cobra.Command {
 			ctx := cmd.Context()
 
 			bundlePath := args[0]
-			bundle, err := bundle.New(
+			bndl, err := bundle.New(
 				ctx,
 				logger,
 				bundlePath,
@@ -45,7 +45,7 @@ func newValidateCmd(logger log.Logger) *cobra.Command {
 			}
 
 			defer func() {
-				if err := bundle.Close(); err != nil {
+				if err := bndl.Close(); err != nil {
 					logger.Errorf("close bundle error: %s", err.Error())
 				}
 			}()

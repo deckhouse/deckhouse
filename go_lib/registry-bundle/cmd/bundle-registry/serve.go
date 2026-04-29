@@ -27,8 +27,9 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/spf13/cobra"
 
-	pkgcmd "github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/cmd"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/bundle"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/serve"
 )
 
 var (
@@ -58,25 +59,32 @@ bundle-path is the directory containing OCI bundle archives (*.tar chunks or who
 				return fmt.Errorf("load TLS configuration: %w", err)
 			}
 
-			sCfg := pkgcmd.ServerConfig{
-				Bundle: pkgcmd.BundleConfig{
-					Logger:     logger,
-					BundlePath: args[0],
-				},
-				Registry: pkgcmd.RegistryConfig{
-					Logger:   logger,
-					RepoPath: cfg.rootRepo,
-					HTTP: pkgcmd.HTTPServerConfig{
-						Address: cfg.address,
-						TLS:     tlsCfg,
-					},
+			bundlePath := args[0]
+			bndl, err := bundle.New(ctx, logger, bundlePath)
+			if err != nil {
+				return fmt.Errorf("load bundle from %q: %w", bundlePath, err)
+			}
+
+			defer func() {
+				if err := bndl.Close(); err != nil {
+					logger.Errorf("close bundle error: %s", err.Error())
+				}
+			}()
+
+			reg, err := bundle.NewRegistry(cfg.rootRepo, bndl)
+			if err != nil {
+				err = fmt.Errorf("create bundle registry: %w", err)
+				return err
+			}
+
+			sCfg := serve.RegistryServerConfig{
+				HTTP: serve.HTTPServerConfig{
+					Address: cfg.address,
+					TLS:     tlsCfg,
 				},
 			}
 
-			server, err := pkgcmd.NewServer(
-				ctx,
-				sCfg,
-			)
+			server, err := serve.NewRegistryServer(ctx, logger, reg, sCfg)
 			if err != nil {
 				return err
 			}
@@ -84,9 +92,9 @@ bundle-path is the directory containing OCI bundle archives (*.tar chunks or who
 			<-ctx.Done()
 			reason := ctx.Err()
 			if errors.Is(reason, context.Canceled) {
-				logger.Infof("shutdown, reason signal")
+				logger.Infof("shutting down, reason signal")
 			} else {
-				logger.Infof("shutdown, reason %s", reason)
+				logger.Infof("shutting down, reason %s", reason)
 			}
 
 			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)

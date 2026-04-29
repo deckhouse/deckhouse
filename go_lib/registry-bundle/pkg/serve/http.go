@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
+package serve
 
 import (
 	"context"
@@ -34,7 +34,9 @@ var (
 	_ validation.Validatable = HTTPServerConfig{}
 )
 
-func newHTTPServer(logger log.Logger, config HTTPServerConfig, handler http.Handler) (*HTTPServer, error) {
+func NewHTTPServer(logger log.Logger, handler http.Handler, config HTTPServerConfig) (*HTTPServer, error) {
+	logger.Infof("starting http server")
+
 	config = NewHTTPServerConfig().Merge(config)
 
 	if err := config.Validate(); err != nil {
@@ -59,6 +61,8 @@ func newHTTPServer(logger log.Logger, config HTTPServerConfig, handler http.Hand
 		return nil, fmt.Errorf("listen on %s://%s: %w", scheme, config.Address, err)
 	}
 
+	handler = withStatusLogging(logger, handler)
+
 	srv := &http.Server{
 		ReadHeaderTimeout: config.ReadHeaderTimeout,
 		Handler:           handler,
@@ -74,7 +78,7 @@ func newHTTPServer(logger log.Logger, config HTTPServerConfig, handler http.Hand
 		s.serveDone <- srv.Serve(ln)
 	}()
 
-	s.logger.Infof("starting http server on %s", scheme+"://"+ln.Addr().String())
+	logger.Infof("http server listening on %s", scheme+"://"+ln.Addr().String())
 	return s, nil
 }
 
@@ -91,14 +95,16 @@ func (s *HTTPServer) Stop(ctx context.Context) error {
 	}
 
 	s.logger.Infof("shutting down http server")
-	errShutdown := s.srv.Shutdown(ctx)
-	errServe := <-s.serveDone
+
+	err := s.srv.Shutdown(ctx)
+	serveErr := <-s.serveDone
+
+	if !errors.Is(serveErr, http.ErrServerClosed) {
+		err = errors.Join(err, serveErr)
+	}
 
 	s.srv, s.serveDone = nil, nil
-	if errors.Is(errServe, http.ErrServerClosed) {
-		errServe = nil
-	}
-	return errors.Join(errShutdown, errServe)
+	return err
 }
 
 func NewHTTPServerConfig() HTTPServerConfig {

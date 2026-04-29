@@ -16,11 +16,13 @@ package bundle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/cmd"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/bundle"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/serve"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
@@ -49,27 +51,101 @@ func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, er
 	}
 
 	logger := params.LoggerProvider()
+	logger.DebugF("Up bundle registry...")
 
-	cfg := cmd.ServerConfig{
-		Bundle: cmd.BundleConfig{
-			Logger:     newLogger(logger, true),
-			BundlePath: params.BundlePath,
-		},
-		Registry: cmd.RegistryConfig{
-			Logger:   newLogger(logger, false),
-			RepoPath: constant.BundleRepoPath,
-			HTTP: cmd.HTTPServerConfig{
-				Address: constant.BundleAddressWithPort,
-			},
-		},
-	}
-
-	serv, err := cmd.NewServer(ctx, cfg)
-	if err != nil {
+	reg := newRegistry(params.BundlePath)
+	if err := reg.start(ctx, logger); err != nil {
 		return nil, err
 	}
 
 	return func() {
-		serv.Stop(context.Background())
+		logger.DebugF("Stopping bundle registry...")
+		if err := reg.stop(ctx); err != nil {
+			logger.ErrorF("Bundle registry: stopped with error: %s", err.Error())
+		} else {
+			logger.DebugF("Bundle registry: stopped")
+		}
 	}, nil
+}
+
+func newRegistry(bundlePath string) *Registry {
+	return &Registry{
+		repoPath:   constant.BundleRepoPath,
+		address:    constant.BundleAddressWithPort,
+		bundlePath: bundlePath,
+	}
+}
+
+type Registry struct {
+	repoPath   string
+	address    string
+	bundlePath string
+
+	bundle   *bundle.Bundle
+	regServe *serve.RegistryServer
+}
+
+func (r *Registry) start(ctx context.Context, logger log.Logger) error {
+	withStop := func(err error) error {
+		closeErr := r.stop(ctx)
+		if closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
+		return err
+	}
+
+	bndlLogger := newLogger(logger)
+	regSrvLogger := newLogger(logger).
+		WithInfoAsDebug().
+		WithPrefix("Bundle registry: ")
+
+	bndlLogger.Infof("Load bundle...")
+	bndl, err := bundle.New(ctx, bndlLogger, r.bundlePath)
+	if err != nil {
+		return withStop(
+			fmt.Errorf("load bundle: %w", err),
+		)
+	}
+	r.bundle = bndl
+
+	reg, err := bundle.NewRegistry(r.repoPath, bndl)
+	if err != nil {
+		return withStop(
+			fmt.Errorf("create bundle registry: %w", err),
+		)
+	}
+
+	serv, err := serve.NewRegistryServer(ctx, regSrvLogger, reg, serve.RegistryServerConfig{
+		HTTP: serve.HTTPServerConfig{Address: r.address},
+	})
+	if err != nil {
+		return withStop(
+			fmt.Errorf("start bundle registry: %w", err),
+		)
+	}
+	r.regServe = serv
+
+	if err := ctx.Err(); err != nil {
+		return withStop(
+			fmt.Errorf("start bundle registry: %w", err),
+		)
+	}
+	return nil
+}
+
+func (r *Registry) stop(ctx context.Context) error {
+	if r == nil {
+		return nil
+	}
+
+	var errs []error
+	if r.regServe != nil {
+		errs = append(errs, r.regServe.Stop(ctx))
+		r.regServe = nil
+	}
+	if r.bundle != nil {
+		errs = append(errs, r.bundle.Close())
+		r.bundle = nil
+	}
+	return errors.Join(errs...)
 }

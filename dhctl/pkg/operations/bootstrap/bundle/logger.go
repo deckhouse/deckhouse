@@ -18,33 +18,49 @@ import (
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
-type loggerWrapper struct {
-	logger log.Logger
-	info   bool
+type logger struct {
+	logger      log.Logger
+	prefix      string
+	infoAsDebug bool
 }
 
-func newLogger(logger log.Logger, info bool) *loggerWrapper {
-	return &loggerWrapper{
-		logger: logger,
-		info:   info,
+func newLogger(base log.Logger) *logger {
+	return &logger{logger: base}
+}
+
+func (l *logger) Infof(format string, args ...any) {
+	if l.infoAsDebug {
+		l.logger.DebugF(l.prefixed(format), args...)
+		return
 	}
+	l.logger.InfoF(l.prefixed(format), args...)
 }
 
-func (w *loggerWrapper) Infof(format string, args ...any) {
-	if !w.info {
-		w.Debugf(format, args...)
+func (l *logger) Warnf(format string, args ...any) {
+	l.logger.WarnF(l.prefixed(format), args...)
+}
+
+func (l *logger) Debugf(format string, args ...any) {
+	l.logger.DebugF(l.prefixed(format), args...)
+}
+
+func (l *logger) Errorf(format string, args ...any) {
+	l.logger.ErrorF(l.prefixed(format), args...)
+}
+
+func (l *logger) WithPrefix(prefix string) *logger {
+	l.prefix = prefix
+	return l
+}
+
+func (l *logger) WithInfoAsDebug() *logger {
+	l.infoAsDebug = true
+	return l
+}
+
+func (l *logger) prefixed(format string) string {
+	if l.prefix == "" {
+		return format
 	}
-	w.logger.InfoF(format, args...)
-}
-
-func (w *loggerWrapper) Warnf(format string, args ...any) {
-	w.logger.WarnF(format, args...)
-}
-
-func (w *loggerWrapper) Debugf(format string, args ...any) {
-	w.logger.DebugF(format, args...)
-}
-
-func (w *loggerWrapper) Errorf(format string, args ...any) {
-	w.logger.ErrorF(format, args...)
+	return l.prefix + format
 }

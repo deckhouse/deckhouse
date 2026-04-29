@@ -59,38 +59,42 @@ func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 		return nil, err
 	}
 
-	tunnel := &Tunnel{
-		dc:             params.DirectoryConfig,
-		loggerProvider: params.LoggerProvider,
-		sshCl:          params.SSHClient,
+	logger := params.LoggerProvider()
+	tunnel := newTunnel(params.DirectoryConfig, params.SSHClient)
 
-		scheme:  constant.BundleScheme,
-		address: constant.BundleAddress,
-		port:    constant.BundlePort,
-	}
-
+	logger.DebugF("Up bundle registry tunnel...")
 	if err := tunnel.start(ctx); err != nil {
 		return nil, err
 	}
 
-	return tunnel.Stop, nil
+	return func() {
+		logger.DebugF("Stopping bundle registry tunnel...")
+		tunnel.stop()
+		logger.DebugF("Bundle registry tunnel: stopped")
+	}, nil
+}
+
+func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl node.SSHClient) *Tunnel {
+	return &Tunnel{
+		dc:      dc,
+		sshCl:   sshCl,
+		scheme:  constant.BundleScheme,
+		address: constant.BundleAddress,
+		port:    constant.BundlePort,
+	}
 }
 
 type Tunnel struct {
+	dc      *directoryconfig.DirectoryConfig
+	sshCl   node.SSHClient
 	scheme  constant.SchemeType
 	address string
 	port    string
-
-	dc             *directoryconfig.DirectoryConfig
-	sshCl          node.SSHClient
-	loggerProvider log.LoggerProvider
 
 	tunnel node.ReverseTunnel
 }
 
 func (t *Tunnel) start(ctx context.Context) error {
-	t.debug("Up bundle registry tunnel...")
-
 	preflightURL := fmt.Sprintf(
 		"%s://%s/healthz",
 		strings.ToLower(string(t.scheme)),
@@ -110,6 +114,7 @@ func (t *Tunnel) start(ctx context.Context) error {
 	checker := ssh.NewRunScriptReverseTunnelChecker(t.sshCl, checkingScript)
 	killer := ssh.NewRunScriptReverseTunnelKiller(t.sshCl, killScript)
 
+	// SSH reverse tunnel format: remoteHost:remotePort:localHost:localPort
 	addr := fmt.Sprintf("%s:%s:%s:%s", t.address, t.port, t.address, t.port)
 
 	tun := t.sshCl.ReverseTunnel(addr)
@@ -122,18 +127,11 @@ func (t *Tunnel) start(ctx context.Context) error {
 	return nil
 }
 
-func (t *Tunnel) Stop() {
-	t.debug("Stopping bundle registry tunnel...")
+func (t *Tunnel) stop() {
 	if t.tunnel == nil {
-		t.debug("Bundle registry tunnel: skip stop because not initialized")
 		return
 	}
 
 	t.tunnel.Stop()
 	t.tunnel = nil
-	t.debug("Bundle registry tunnel: stopped")
-}
-
-func (t *Tunnel) debug(f string, args ...any) {
-	t.loggerProvider().DebugF(f, args...)
 }
