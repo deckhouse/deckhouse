@@ -44,4 +44,5 @@ shell:
   - cd /src/istio/ && git apply --verbose /patches/002-istio-gomod_gosum.patch
   - cd /src/istio/ && git apply --verbose /patches/003-istio-server_fmtText.patch
   - cd /src/istio/ && git apply --verbose /patches/004-istio-multicluster_regenerate_token_timeout.patch
+  - cd /src/istio/ && git apply --verbose /patches/005-istio-sidecar-to-deckhouse-user.patch
   - cd /src/kiali/ && git apply --verbose /patches/001-kiali-go-mod.patch

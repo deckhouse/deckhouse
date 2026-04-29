@@ -10,16 +10,20 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
   add: /src/kiali/out/kiali
   to: /opt/kiali/kiali
+  owner: 64535
+  group: 64535
   before: install
 - image: {{ .ModuleName }}/common-{{ $istioImageVersion }}-src-artifact
   add: /src/kial-frontend-assets/static
   to: /opt/kiali/console
+  owner: 64535
+  group: 64535
   before: install
 git:
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    user: "1000"
+    user: "64535:64535"
     workingDir: "/opt/kiali"
     entrypoint: ["/opt/kiali/kiali"]
 ---
