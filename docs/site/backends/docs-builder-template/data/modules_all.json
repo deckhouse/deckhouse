@@ -215,6 +215,17 @@
       "storage"
     ]
   },
+  "delivery-kit": {
+    "editions": [
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "",
+    "tags": [
+      "delivery"
+    ]
+  },
   "gpu": {
     "editions": [
       "ee"
