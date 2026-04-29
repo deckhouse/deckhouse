@@ -23,7 +23,6 @@ import (
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -34,7 +33,7 @@ import (
 )
 
 func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -77,7 +76,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 }
 
 func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 

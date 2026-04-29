@@ -142,6 +142,10 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 			return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
 		}
 
+		if parser == nil {
+			return nil
+		}
+
 		return parser.ParseConnectionConfigFromFile()
 	})
 

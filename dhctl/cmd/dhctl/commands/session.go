@@ -26,7 +26,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
@@ -38,7 +37,7 @@ const (
 )
 
 func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {

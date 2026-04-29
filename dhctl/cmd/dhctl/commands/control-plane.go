@@ -20,7 +20,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -31,7 +30,7 @@ import (
 )
 
 func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, false)
@@ -74,7 +73,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 }
 
 func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineControlPlaneFlags(cmd, true)

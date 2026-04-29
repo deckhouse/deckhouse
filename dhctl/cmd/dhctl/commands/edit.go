@@ -20,7 +20,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -29,7 +28,7 @@ import (
 
 func connectionFlags(parent *kingpin.CmdClause) {
 	app.DefineKubeFlags(parent)
-	app.DefineSSHFlags(parent, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(parent, nil)
 	app.DefineBecomeFlags(parent)
 }
 
