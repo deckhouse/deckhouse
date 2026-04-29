@@ -1,4 +1,12 @@
 {
+  "alb": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "network"
+    ]
+  },
   "code": {
     "editions": [
       "ee",
@@ -224,6 +232,28 @@
     "path": "",
     "tags": [
       "delivery"
+    ]
+  },
+  "dashboard": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "managing",
+      "observability",
+      "web ui"
+    ]
+  },
+  "development-platform": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "application"
     ]
   },
   "gpu": {
@@ -567,6 +597,18 @@
     "path": "/modules/storage-volume-data-manager/",
     "tags": [
       "storage"
+    ]
+  },
+  "state-snapshotter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "core"
     ]
   },
   "stronghold": {
