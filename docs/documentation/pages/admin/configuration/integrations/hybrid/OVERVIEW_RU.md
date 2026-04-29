@@ -269,7 +269,7 @@ volumeBindingMode: WaitForFirstConsumer
    Где:
    - `mainNetwork` — имя сети, в которой будут размещаться облачные узлы в кластере VCD.
    - `organization` — название вашей организации в VCD.
-   - `virtualDataCenter` — имя виртуального датацентра.
+   - `virtualDataCenter` — имя виртуального дата-центра.
    - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
    - `sshPublicKey` — публичный SSH-ключ для доступа к узлам.
    - `provider.server` — URL-адрес API вашего VCD.
