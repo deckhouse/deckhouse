@@ -12,7 +12,7 @@ The [`admission-policy-engine`](/modules/admission-policy-engine/) module enforc
 - SecurityPolicyException: Describes exceptions to the cluster security policy.
 
 {% alert level="info" %}
-The [deckhouse](/modules/deckhouse/) module processes the OperationPolicy and SecurityPolicy resources. The Deckhouse controller of the [deckhouse](/modules/deckhouse/) module uses [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) and [module hooks](../module-development/structure/#hooks) to create custom resources for [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) based on OperationPolicy and SecurityPolicy. Gatekeeper uses the resulting custom resources to validate newly created or updated Kubernetes resources.
+The [`deckhouse`](/modules/deckhouse/) module processes the OperationPolicy and SecurityPolicy resources. The Deckhouse controller of the `deckhouse` module uses [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) and [module hooks](../module-development/structure/#hooks) to create custom resources for [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) based on OperationPolicy and SecurityPolicy. Gatekeeper uses the resulting custom resources to validate newly created or updated Kubernetes resources.
 
 For details on the hooks concept, refer to the [addon-operator documentation](https://flant.github.io/addon-operator/OVERVIEW.html).
 {% endalert %}
@@ -39,9 +39,9 @@ The module consists of the following components:
 
 1. **Gatekeeper-controller-manager**: A [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/) controller that performs the following operations:
 
-   * manages [Gatekeeper custom resources](https://github.com/open-policy-agent/gatekeeper/tree/master/charts/gatekeeper/crds);
-   * validates Kubernetes resources specified in custom resources from the `constraints.gatekeeper.sh/*` API group;
-   * mutates Kubernetes resources specified in the [AssignMetadata](/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata), [Assign](/modules/admission-policy-engine/gatekeeper-cr.html#assign), [ModifySet](/modules/admission-policy-engine/gatekeeper-cr.html#modifyset), and [AssignImage](/modules/admission-policy-engine/gatekeeper-cr.html#assignimage) custom resources.
+   * Manages [Gatekeeper custom resources](https://github.com/open-policy-agent/gatekeeper/tree/master/charts/gatekeeper/crds).
+   * Validates Kubernetes resources specified in custom resources from the `constraints.gatekeeper.sh/*` API group.
+   * Mutates Kubernetes resources specified in the [AssignMetadata](/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata), [Assign](/modules/admission-policy-engine/gatekeeper-cr.html#assign), [ModifySet](/modules/admission-policy-engine/gatekeeper-cr.html#modifyset), and [AssignImage](/modules/admission-policy-engine/gatekeeper-cr.html#assignimage) custom resources.
 
    Security rules are defined using the ConstraintTemplate custom resource and custom resources from the `constraints.gatekeeper.sh/*` API group. A ConstraintTemplate defines new policy types, based on which specific security policies are created to validate resources.
 
@@ -58,7 +58,7 @@ The module consists of the following components:
    * **constraint-exporter**: Sidecar container that exposes additional metrics for the `constraints.gatekeeper.sh/*` and `mutations.gatekeeper.sh/*` custom resources.
    * **kube-rbac-proxy**: Sidecar container providing an RBAC-based authorization proxy for secure access to metrics from `manager` and `constraint-exporter`.
 
-1. **ratify**: An optional component consisting of a single [**ratify**](https://ratify.dev/docs/what-is-ratify) container. It provides a [Gatekeeper provider](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) implementation for validating metadata of used artifacts. In DKP, this provider is used to verify container image signatures and is available in the SE+, EE, CSE Lite, and CSE Pro editions.
+1. **Ratify**: An optional component consisting of a single [**ratify**](https://ratify.dev/docs/what-is-ratify) container. It provides a [Gatekeeper provider](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) implementation for validating metadata of used artifacts. In DKP, this provider is used to verify container image signatures and is available in the SE+, EE, CSE Lite, and CSE Pro editions.
 
 {% alert level="info" %}
    Gatekeeper uses the Provider custom resource to extend resource validation capabilities in Kubernetes. The Provider resource describes the service endpoint to which Gatekeeper sends requests during ValidationWebhook execution. Some DKP modules, such as [`operator-trivy`](/modules/operator-trivy), can create Provider custom resources and thereby extend the verification capabilities.

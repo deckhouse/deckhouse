@@ -13,7 +13,7 @@ description: Архитектура модуля admission-policy-engine в Deck
 - SecurityPolicyException — описывает исключения из политики безопасности кластера.
 
 {% alert level="info" %}
-Обработка ресурсов OperationPolicy и SecurityPolicy выполняется модулем [deckhouse](/modules/deckhouse/). Deckhouse-контроллер модуля [deckhouse](/modules/deckhouse/) с использованием [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) и [хуков модуля](../module-development/structure/#hooks) на основе OperationPolicy и SecurityPolicy создает кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/). Gatekeeper использует созданные кастомные ресурсы для валидации создаваемых или обновляемых ресурсов Kubernetes.
+Обработка ресурсов OperationPolicy и SecurityPolicy выполняется модулем [`deckhouse`](/modules/deckhouse/). Deckhouse-контроллер модуля `deckhouse` с использованием [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html) и [хуков модуля](../module-development/structure/#hooks) на основе OperationPolicy и SecurityPolicy создает кастомные ресурсы для [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/). Gatekeeper использует созданные кастомные ресурсы для валидации создаваемых или обновляемых ресурсов Kubernetes.
 
 Подробнее о концепции хуков можно узнать из документации [addon-operator](https://flant.github.io/addon-operator/OVERVIEW.html).
 {% endalert %}
@@ -46,7 +46,7 @@ description: Архитектура модуля admission-policy-engine в Deck
 
    * мутация ресурсов Kubernetes, указанных в кастомных ресурсах [AssignMetadata](/modules/admission-policy-engine/gatekeeper-cr.html#assignmetadata), [Assign](/modules/admission-policy-engine/gatekeeper-cr.html#assign), [ModifySet](/modules/admission-policy-engine/gatekeeper-cr.html#modifyset) и [AssignImage](/modules/admission-policy-engine/gatekeeper-cr.html#assignimage).
 
-   Правила безопасности задаются с помощью кастомных ресурсов ConstraintTemplate и кастомных ресурсов из `constraints.gatekeeper.sh/*` API-группы. ConstraintTemplate описывает новые типы политик, на основании которых создаются конкретные политики безопасности для проверки ресурсов.
+   Правила безопасности задаются с помощью кастомных ресурсов ConstraintTemplate и кастомных ресурсов из API-группы `constraints.gatekeeper.sh/*`. ConstraintTemplate описывает новые типы политик, на основании которых создаются конкретные политики безопасности для проверки ресурсов.
 
    Состоит из следующих контейнеров:
 
@@ -61,10 +61,10 @@ description: Архитектура модуля admission-policy-engine в Deck
    * **constraint-exporter** — сайдкар-контейнер, предоставляющий дополнительные метрики по кастомным ресурсам `constraints.gatekeeper.sh/*` и `mutations.gatekeeper.sh/*`;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам `manager` и `constraint-exporter`.
 
-1. **ratify** — опциональный компонент, состоящий из одного контейнера [**ratify**](https://ratify.dev/docs/what-is-ratify). Он представляет собой реализацию [провайдера Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) для проверки метаданных используемых артефактов. В DKP этот провайдер применяется для проверки подписи образов контейнеров и доступен в редакциях DKP SE+, EE, CSE Lite и CSE Pro.
+1. **Ratify** — опциональный компонент, состоящий из одного контейнера [**ratify**](https://ratify.dev/docs/what-is-ratify). Он представляет собой реализацию [провайдера Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/externaldata) для проверки метаданных используемых артефактов. В DKP этот провайдер применяется для проверки подписи образов контейнеров и доступен в редакциях DKP SE+, EE, CSE Lite и CSE Pro.
 
 {% alert level="info" %}
-   Gatekeeper использует кастомный ресурс Provider для расширения функционала по валидации ресурсов Kubernetes. Ресурс Provider описывает endpoint сервиса, на который Gatekeeper передает запрос при выполнении ValidationWebhook. Некоторые модули DKP, такие как [operator-trivy](/modules/operator-trivy), могут создавать кастомные ресурсы Provider и тем самым расширять функционал проверок.
+   Gatekeeper использует кастомный ресурс Provider для расширения функционала по валидации ресурсов Kubernetes. Ресурс Provider описывает эндпоинт сервиса, на который Gatekeeper передает запрос при выполнении ValidationWebhook. Некоторые модули DKP, такие как [`operator-trivy`](/modules/operator-trivy), могут создавать кастомные ресурсы Provider и тем самым расширять функционал проверок.
 {% endalert %}
 
 ## Взаимодействия модуля
@@ -73,8 +73,8 @@ description: Архитектура модуля admission-policy-engine в Deck
 
 * **Kube-apiserver**:
 
-  * мониторинг ресурсов Kubernetes, указанных в кастомных ресурсах из `constraints.gatekeeper.sh/*` и `mutations.gatekeeper.sh/*` API-групп;
-  * работа с кастомными ресурсами ConstraintTemplate, Assign, AssignImage, AssignMetadata, ModifySet, а также с ресурсами из `constraints.gatekeeper.sh/*` и `config.ratify.deislabs.io/*` API-групп.
+  * мониторинг ресурсов Kubernetes, указанных в кастомных ресурсах из API-групп `constraints.gatekeeper.sh/*` и `mutations.gatekeeper.sh/*`;
+  * работа с кастомными ресурсами ConstraintTemplate, Assign, AssignImage, AssignMetadata, ModifySet, а также с ресурсами из API-групп `constraints.gatekeeper.sh/*` и `config.ratify.deislabs.io/*`.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
