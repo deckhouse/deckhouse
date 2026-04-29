@@ -339,7 +339,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 22
       },
@@ -361,17 +361,97 @@
         {
           "expr": "topk(10, sum by (hook) (rate(webhook_handler_hook_run_user_cpu_seconds_sum[$__rate_interval])))",
           "interval": "",
-          "legendFormat": "{{ hook }} (user)",
+          "legendFormat": "{{ hook }}",
           "refId": "A"
+        }
+      ],
+      "title": "Hook user CPU (top 10)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
         },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "options": {
+        "legend": {
+          "calcs": ["max", "mean"],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "asc"
+        }
+      },
+      "targets": [
         {
           "expr": "topk(10, sum by (hook) (rate(webhook_handler_hook_run_sys_cpu_seconds_sum[$__rate_interval])))",
           "interval": "",
-          "legendFormat": "{{ hook }} (system)",
-          "refId": "B"
+          "legendFormat": "{{ hook }}",
+          "refId": "A"
         }
       ],
-      "title": "Hook CPU (top 10)",
+      "title": "Hook system CPU (top 10)",
       "type": "timeseries"
     },
     {
