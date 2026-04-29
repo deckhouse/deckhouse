@@ -88,6 +88,11 @@ properties:
                 annotationValidationEnabled:
                   type: boolean
                   default: false
+                validationIsolationMode:
+                  type: string
+                  enum: ["NoIsolation", "IsolatedFilesystem", "IsolatedProcess"]
+                  description: |
+                    Selects the validation isolation mode for controller version 1.14.
                 controllerPodsAdditionalAnnotations:
                   type: object
                   additionalProperties:

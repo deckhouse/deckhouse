@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: required-annotations
+spec:
+  testDirectory: required-annotations
+  suite:
+    expectedTestBlockNames:
+      - d8requiredannotations
