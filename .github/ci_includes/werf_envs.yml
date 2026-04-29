@@ -1,6 +1,6 @@
 {!{ define "werf_envs" }!}
 # <template: werf_envs>
-DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+DECKHOUSE_CLI_BUILD_VERSION: "v0.29.30"
 WERF_VERSION: "v2.63.1"
 WERF_ENV: "FE"
 WERF_TELEMETRY: "1"
