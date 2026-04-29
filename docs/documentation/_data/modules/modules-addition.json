@@ -14,6 +14,13 @@
       }
     }
   },
+  "alb": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/alb/"
+  },
   "cloud-provider-vsphere": {
     "editionFullyAvailable": [
       "se-plus",
@@ -63,6 +70,13 @@
     },
     "external": "true",
     "path": "/modules/code/stable/"
+  },
+  "development-platform": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/development-platform/"
   },
   "gpu": {
     "editions": [
@@ -510,6 +524,17 @@
     ],
     "external": "true",
     "path": "/modules/secrets-store-integration/stable/"
+  },
+  "state-snapshotter": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/state-snapshotter/"
   },
   "snapshot-controller": {
     "editions": [
