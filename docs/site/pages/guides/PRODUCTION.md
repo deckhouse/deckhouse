@@ -54,11 +54,11 @@ The following resource minimums are recommended for infrastructure nodes, depend
   - 8 CPU, 16 RAM, <a href="#storage">60 / 160*</a> GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
 - **Worker node** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
 
-{% alert %}
-* <span id="storage"></span>PVC disk space for system components: If the local disk space of the node will be used to store system PVCs (prometheus, upmeter modules, etc.), then it is necessary to additionally allocate >= 100 GB.
-* The parameters of worker nodes are largely dictated by the nature of the workload running on the node(s), here the minimum requirements. For system services (kubelet) and system pods on worker nodes, you need to allocate at least 1 CPU and 2 GB of memory.
-* Note that all nodes require high performance disks (400+ IOPS).
-{% endalert %}
+Additional recommendations:<span id="storage"></span>
+
+- If system PVCs (of the `prometheus`, `upmeter` modules and others) are stored on the node's local disk, additionally allocate at least 100 GB of free space.
+- For system services (kubelet) and system pods on each worker node, reserve at least 1 CPU and 2 GB of RAM.
+- For all nodes, use fast disks with performance of at least 400 IOPS.
 
 Estimates of the resources required for the clusters to run:
 - **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 26 CPUs and 52GB RAM** along with fast 400+ IOPS disks for the master nodes.
