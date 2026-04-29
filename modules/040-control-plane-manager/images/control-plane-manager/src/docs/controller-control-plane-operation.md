@@ -11,6 +11,11 @@ Execute approved operation pipelines on a specific control-plane node and persis
 
 This controller is node-local (`NODE_NAME` env) and watches only CPOs for this node.
 
+On controller startup, it applies node-local kubeconfig policy once:
+
+- hardens `admin.conf` and `super-admin.conf` permissions
+- aligns `/root/.kube/config` with the configured root kubeconfig symlink policy
+
 | Resource | Trigger | Mapping |
 |---|---|---|
 | `ControlPlaneOperation` | create (any), update `approved: false -> true` | self |
