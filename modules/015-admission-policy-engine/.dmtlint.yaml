@@ -4,6 +4,8 @@ linters-settings:
       wildcards:
         - kind: ClusterRole
           name: d8:admission-policy-engine:gatekeeper
+        - kind: ClusterRole
+          name: d8:admission-policy-engine:admin-kubeconfig
   openapi:
     exclude-rules:
       enum:
