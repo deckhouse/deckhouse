@@ -17,7 +17,7 @@ properties:
     description: |
       Set to 'true' to disable machine-controller-manager in case of potentially cluster-damaging changes.
 
-      > **Warning!** Use this flag only if you know why you are doing it and clearly understand the consequences.
+      > **Warning!** Use this flag only if you know what you are doing and clearly understand the consequences.
   capiEmergencyBrake:
     type: boolean
     default: false
@@ -26,4 +26,4 @@ properties:
     description: |
       Set to 'true' to disable CAPI in case of potentially cluster-damaging changes.
 
-      > **Warning.** Use this flag only if you know why you are doing it and clearly understand the consequences.
+      > **Warning!** Use this flag only if you know what you are doing and clearly understand the consequences.

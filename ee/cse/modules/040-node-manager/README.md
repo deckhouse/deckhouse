@@ -8,6 +8,7 @@
 1. mapped to an empty folder to remove the functionality
 
 ## openapi/config-values.yaml
+## openapi/doc-ru-config-values.yaml
  
 1. remove .earlyOomEnabled
 
