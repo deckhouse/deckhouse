@@ -105,10 +105,6 @@ type NodeGroupSpec struct {
 	// +optional
 	Update *UpdateSpec `json:"update,omitempty"`
 
-	// Fencing specifies fencing settings
-	// +optional
-	Fencing *FencingSpec `json:"fencing,omitempty"`
-
 	// GPU specifies GPU settings
 	// +optional
 	GPU *GPUSpec `json:"gpu,omitempty"`
@@ -424,13 +420,6 @@ type UpdateSpec struct {
 	// MaxConcurrent specifies maximum concurrent updates
 	// +optional
 	MaxConcurrent *intstr.IntOrString `json:"maxConcurrent,omitempty"`
-}
-
-// FencingSpec defines fencing settings
-type FencingSpec struct {
-	// Mode specifies the fencing mode
-	// +optional
-	Mode string `json:"mode,omitempty"`
 }
 
 // GPUSpec defines GPU settings

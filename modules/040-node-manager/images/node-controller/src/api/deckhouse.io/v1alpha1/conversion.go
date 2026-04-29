@@ -306,7 +306,6 @@ func autoConvertV1NodeGroupSpecToV1alpha1NodeGroupSpec(in *v1.NodeGroupSpec, out
 	// Note: v1 fields not in v1alpha1 are lost:
 	// - StaticInstances
 	// - Update
-	// - Fencing
 	// - GPU
 	// - NodeDrainTimeoutSecond
 	// - Kubelet.ResourceReservation

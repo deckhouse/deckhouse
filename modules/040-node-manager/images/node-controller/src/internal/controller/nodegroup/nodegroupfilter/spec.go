@@ -58,7 +58,6 @@ type NodeGroupSpec struct {
 
 	Kubelet Kubelet `json:"kubelet,omitempty"`
 
-	Fencing Fencing `json:"fencing,omitempty"`
 }
 
 type GPU struct {
@@ -228,6 +227,3 @@ type KubeletLimitedSwap struct {
 	Size string `json:"size"`
 }
 
-type Fencing struct {
-	Mode string `json:"mode,omitempty"`
-}
