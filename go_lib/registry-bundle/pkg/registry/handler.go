@@ -68,7 +68,7 @@ func NewRegistryHandler(logger *slog.Logger, registry Registry) http.Handler {
 
 	h.SetDefault(rh.defaultHandler)
 
-	return withLogging(logger, h)
+	return h
 }
 
 func (rh *registryHandlers) defaultHandler(w http.ResponseWriter, _ *http.Request) {
@@ -379,24 +379,6 @@ type listTags struct {
 type registryHandlers struct {
 	registry Registry
 	logger   *slog.Logger
-}
-
-type statusWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (sw *statusWriter) WriteHeader(status int) {
-	sw.status = status
-	sw.ResponseWriter.WriteHeader(status)
-}
-
-func withLogging(logger *slog.Logger, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		sw := &statusWriter{ResponseWriter: w}
-		next.ServeHTTP(sw, r)
-		logger.Info("request", "method", r.Method, "url", r.URL.String(), "status", sw.status)
-	})
 }
 
 func parseRange(rangeHeader string, size int64) (int64, int64, error) {

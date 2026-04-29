@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package registry
+package cmd
 
 import (
 	"context"
@@ -30,11 +30,11 @@ import (
 )
 
 var (
-	_ validation.Validatable = ServeConfig{}
+	_ validation.Validatable = HTTPServerConfig{}
 )
 
-func Serve(logger *slog.Logger, config ServeConfig, registry Registry) (*Server, error) {
-	config = NewServeConfig().Merge(config)
+func newHTTPServer(logger *slog.Logger, config HTTPServerConfig, handler http.Handler) (*HTTPServer, error) {
+	config = NewHTTPServerConfig().Merge(config)
 
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation: %w", err)
@@ -60,31 +60,31 @@ func Serve(logger *slog.Logger, config ServeConfig, registry Registry) (*Server,
 
 	srv := &http.Server{
 		ReadHeaderTimeout: config.ReadHeaderTimeout,
-		Handler:           NewRegistryHandler(logger, registry),
+		Handler:           handler,
 	}
 
-	serv := &Server{
+	s := &HTTPServer{
 		logger:    logger,
 		srv:       srv,
 		serveDone: make(chan error, 1),
 	}
 
 	go func() {
-		serv.serveDone <- srv.Serve(ln)
+		s.serveDone <- srv.Serve(ln)
 	}()
 
-	serv.logger.Info("serving registry", "address", scheme+"://"+ln.Addr().String())
-	return serv, nil
+	s.logger.Info("serving registry", "address", scheme+"://"+ln.Addr().String())
+	return s, nil
 }
 
-type Server struct {
+type HTTPServer struct {
 	srv       *http.Server
 	serveDone chan error
 
 	logger *slog.Logger
 }
 
-func (s *Server) Stop(ctx context.Context) error {
+func (s *HTTPServer) Stop(ctx context.Context) error {
 	if s == nil || s.srv == nil {
 		return nil
 	}
@@ -100,27 +100,27 @@ func (s *Server) Stop(ctx context.Context) error {
 	return errors.Join(errShutdown, errServe)
 }
 
-func NewServeConfig() ServeConfig {
-	return ServeConfig{
+func NewHTTPServerConfig() HTTPServerConfig {
+	return HTTPServerConfig{
 		Address:           "localhost:5001",
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }
 
-type ServeConfig struct {
+type HTTPServerConfig struct {
 	Address           string
 	TLS               *tls.Config // if provided, enables HTTPS
 	ReadHeaderTimeout time.Duration
 }
 
-func (c ServeConfig) Validate() error {
+func (c HTTPServerConfig) Validate() error {
 	return validation.ValidateStruct(&c,
 		validation.Field(&c.Address, validation.Required),
 		validation.Field(&c.ReadHeaderTimeout, validation.Required),
 	)
 }
 
-func (c ServeConfig) Merge(other ServeConfig) ServeConfig {
+func (c HTTPServerConfig) Merge(other HTTPServerConfig) HTTPServerConfig {
 	ret := c
 
 	if other.Address != "" {
@@ -136,4 +136,22 @@ func (c ServeConfig) Merge(other ServeConfig) ServeConfig {
 	}
 
 	return ret
+}
+
+type statusLogging struct {
+	http.ResponseWriter
+	status int
+}
+
+func (sw *statusLogging) WriteHeader(status int) {
+	sw.status = status
+	sw.ResponseWriter.WriteHeader(status)
+}
+
+func withStatusLogging(logger *slog.Logger, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sw := &statusLogging{ResponseWriter: w}
+		next.ServeHTTP(sw, r)
+		logger.Info("request", "method", r.Method, "url", r.URL.String(), "status", sw.status)
+	})
 }

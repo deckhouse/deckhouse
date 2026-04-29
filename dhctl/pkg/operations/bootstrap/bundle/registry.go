@@ -21,7 +21,7 @@ import (
 
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
-	registry_bundle "github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/cmd"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/cmd"
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
@@ -51,15 +51,21 @@ func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, er
 
 	logger := slog.New(slog.DiscardHandler)
 
-	config := registry_bundle.ServeConfig{
-		RepoPath:   constant.BundleRepoPath,
-		BundlePath: params.BundlePath,
-		Registry: registry_bundle.RegistryConfig{
-			Address: constant.BundleAddressWithPort,
+	cfg := cmd.ServerConfig{
+		Bundle: cmd.BundleConfig{
+			Logger:     logger,
+			BundlePath: params.BundlePath,
+		},
+		Registry: cmd.RegistryConfig{
+			Logger:   logger,
+			RepoPath: constant.BundleRepoPath,
+			HTTP: cmd.HTTPServerConfig{
+				Address: constant.BundleAddressWithPort,
+			},
 		},
 	}
 
-	serv, err := registry_bundle.Serve(ctx, logger, config)
+	serv, err := cmd.NewServer(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}

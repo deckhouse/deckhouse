@@ -58,19 +58,24 @@ bundle-path is the directory containing OCI bundle archives (*.tar chunks or who
 				return fmt.Errorf("load TLS configuration: %w", err)
 			}
 
-			serveCfg := pkgcmd.ServeConfig{
-				RepoPath:   cfg.rootRepo,
-				BundlePath: args[0],
+			sCfg := pkgcmd.ServerConfig{
+				Bundle: pkgcmd.BundleConfig{
+					Logger:     logger.WithGroup("bundle"),
+					BundlePath: args[0],
+				},
 				Registry: pkgcmd.RegistryConfig{
-					Address: cfg.address,
-					TLS:     tlsCfg,
+					Logger:   logger.WithGroup("serve"),
+					RepoPath: cfg.rootRepo,
+					HTTP: pkgcmd.HTTPServerConfig{
+						Address: cfg.address,
+						TLS:     tlsCfg,
+					},
 				},
 			}
 
-			server, err := pkgcmd.Serve(
+			server, err := pkgcmd.NewServer(
 				ctx,
-				logger,
-				serveCfg,
+				sCfg,
 			)
 			if err != nil {
 				return err
