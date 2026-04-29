@@ -318,6 +318,8 @@ import:
   add: /chroot
   to: /chroot
   before: setup
+  excludePaths:
+  - usr/lib64/locale
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /usr/bin/mount
   to: /usr/bin/mount
@@ -421,8 +423,6 @@ shell:
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/renovate.json
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/LICENSE
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/.[^.]*
-# takes ~1GB
-  - rm -rf /chroot/usr/lib64/locale
 imageSpec:
   config:
     workingDir: /
