@@ -14,9 +14,6 @@
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
-{{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
-{{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}

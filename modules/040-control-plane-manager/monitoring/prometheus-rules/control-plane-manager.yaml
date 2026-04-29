@@ -53,7 +53,7 @@
       summary: Maintenance mode is enabled for control-plane node `{{ $labels.node }}`.
       description: |-
         Control-plane node `{{ $labels.node }}` has maintenance mode enabled with label `control-plane-manager.deckhouse.io/maintenance`.
-        Operation planning is skipped while this label is present.
+        While this label is present, the control plane is not managed by `control-plane-manager`.
 
         If maintenance is complete, remove the label:
 

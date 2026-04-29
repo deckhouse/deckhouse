@@ -134,6 +134,10 @@ memory: 10Mi
 {{- end }}
 {{- $_ := set $tpl_context "Template" $.Template }}
 
+{{- /*
+Don't forget to also update checksum dependencies
+in modules/040-control-plane-manager/images/control-plane-manager/src/internal/checksum/checksum.go
+*/ -}}
 {{- define "control_plane_config" }}
   {{- $context := index . 0 }}
   {{- $tpl_context := index . 1 }}

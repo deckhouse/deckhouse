@@ -81,6 +81,9 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 	// Inject Reconciler-level deps into steps that need them.
 	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
 
+	// harden admin kubeconfig perms and align root kubeconfig symlink during controller startup.
+	r.enforceNodePolicy(r.log)
+
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
 			constants.ControlPlaneNodeNameLabelKey: node.Name,
@@ -121,9 +124,6 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
 	logger := r.log.With(slog.String("operation", req.Name))
-
-	// harden admin kubeconfig perms and align root kubeconfig symlink.
-	r.enforceNodePolicy(logger)
 
 	op := &controlplanev1alpha1.ControlPlaneOperation{}
 	if err := r.client.Get(ctx, req.NamespacedName, op); err != nil {
@@ -206,7 +206,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	return r.reconcilePipeline(ctx, state, secrets, logger)
 }
 
-// enforceNodePolicy applies node security policy on every reconcile:
+// enforceNodePolicy applies node security policy during controller startup:
 // keep admin kubeconfig perms at 0600 and align root kubeconfig symlink.
 func (r *Reconciler) enforceNodePolicy(logger *log.Logger) {
 	if err := hardenAdminKubeconfigs(r.node.KubeconfigDir); err != nil {
