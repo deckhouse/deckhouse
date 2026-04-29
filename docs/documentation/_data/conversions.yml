@@ -18,8 +18,8 @@ control-plane-manager:
         - del(.etcd.externalMembersNames) | if .etcd == {} then del(.etcd) end
     - version: 3
       description:
-        en: Replace `.apiserver.loadBalancer` with `.publishAPI.apiserver.loadBalancer`.
-        ru: Замените `.apiserver.loadBalancer` на `.publishAPI.apiserver.loadBalancer`.
+        en: Replace `.apiserver.loadBalancer` with `.apiserver.publishAPI.loadBalancer`.
+        ru: Замените `.apiserver.loadBalancer` на `.apiserver.publishAPI.loadBalancer`.
       conversions:
         - if .apiserver.loadBalancer != null then .apiserver.publishAPI.loadBalancer.enabled = true end
         - if .apiserver.loadBalancer.port != null then .apiserver.publishAPI.loadBalancer.port = .apiserver.loadBalancer.port | del(.apiserver.loadBalancer.port) end
