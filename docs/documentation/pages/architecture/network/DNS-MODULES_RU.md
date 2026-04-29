@@ -6,11 +6,11 @@ search: dns, coredns, доменные имена
 description: Архитектура модулей kube-dns и node-local-dns в Deckhouse Kubernetes Platform.
 ---
 
-Модуль [`kube-dns`](/modules/kube-dns/) обеспечивает работу сервиса разрешения доменных имён на базе [coredns](https://coredns.io/) в Deckhouse Kubernetes Platform (DKP).
+Модуль [`kube-dns`](/modules/kube-dns/) обеспечивает работу сервиса разрешения доменных имён на базе [CoreDNS](https://coredns.io/) в Deckhouse Kubernetes Platform (DKP).
 
-Модуль [`node-local-dns`](/modules/node-local-dns/) предоставляет кеширующий DNS-сервис на каждом узле кластера для уменьшения нагрузки на coredns.
+Модуль [`node-local-dns`](/modules/node-local-dns/) предоставляет кеширующий DNS-сервис на каждом узле кластера и снижает нагрузку на CoreDNS.
 
-Подробнее с настройками модулей и примерами их использования можно ознакомиться в соответствующих разделах документации: 
+Подробнее о настройках модулей и примерах их использования можно узнать в соответствующих разделах документации:
 - [`kube-dns`](/modules/kube-dns/configuration.html);
 - [`node-local-dns`](/modules/node-local-dns/configuration.html).
 
@@ -25,7 +25,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`kube-dns`](/modules/kube-dns/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`kube-dns`](/modules/kube-dns/) на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля kube-dns](../../../images/architecture/network/c4-l2-kube-dns.ru.png)
@@ -34,18 +34,18 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 Модуль `kube-dns` состоит из следующих компонентов:
 
-1. **D8-kube-dns** (Deployment) — основной компонент модуля. Реализует DNS-сервер в кластере Kubernetes.
+1. **D8-kube-dns** (Deployment) — основной компонент модуля, реализующий DNS-сервер в кластере Kubernetes.
 
-   Компонент **d8-kube-dns** отслеживает изменения стандартных ресурсов Service, Endpoint, EndpointSlice, Namespace, Pod и Node. На основе этих изменений он обновляет записи в локальной базе объектов.
+   Компонент **d8-kube-dns** отслеживает изменения стандартных ресурсов Service, EndpointSlice, Namespace, Pod, а так же периодически запрашивает Node. На основе этих изменений он обновляет записи в локальной базе объектов.
 
    Состоит из следующих контейнеров:
 
    * **coredns** — основной контейнер;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 1. **D8-kube-dns-sts-pods-hosts-appender-webhook** (Deployment) — опциональный компонент, состоящий из одного контейнера **webhook**.
 
-   Deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse/) создаёт этот компонент, если в параметрах ModuleConfig указано значение `.spec.settings.clusterDomainAliases`.
+   Deckhouse-контроллер модуля [`deckhouse`](/modules/deckhouse/) создаёт этот компонент, если в ModuleConfig задан параметр `.spec.settings.clusterDomainAliases`.
 
    Компонент реализует мутирующий webhook-сервер. Он добавляет init-контейнер **render-etc-hosts-with-cluster-domain-aliases** в Pod, созданный StatefulSet-контроллером, если в спецификации Pod указана опция `.spec.subdomain`.
 
@@ -62,12 +62,12 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Kube-apiserver** — изменение ресурсов Pod, созданных StatefulSet контроллером.
+1. **Kube-apiserver** — изменение ресурсов Pod, созданных StatefulSet-контроллером.
 1. **Prometheus-main** — собирает метрики модуля.
 
 ## Модуль `node-local-dns`
 
-Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) отличается в зависимости от используемого CNI плагина. Можно выделить основных два варианта - при использовании CNI Cilium и при использовании другого, поддерживаемого DKP, CNI плагина. 
+Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) зависит от используемого CNI-плагина. Есть два основных варианта: при использовании Cilium в качестве CNI-плагина и при использовании другого CNI-плагина, поддерживаемого DKP.
 
 ### Архитектура модуля (Cilium)
 
@@ -78,7 +78,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании CNI Cilium на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании Cilium в качестве CNI-плагина на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns.ru.png)
@@ -87,23 +87,23 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 Модуль `node-local-dns` состоит из следующих компонентов:
 
-1. **Node-local-dns** (DaemonSet) — основной компонент модуля. Реализует кеширующий DNS-сервер в кластере Kubernetes.
+1. **Node-local-dns** (DaemonSet) — основной компонент модуля, реализующий кеширующий DNS-сервер в кластере Kubernetes.
 
-   Компонент **node-local-dns** отслеживает изменения стандартных ресурсов EndpointSlice. На основе этих изменений он обновляет список forwarders для DNS-запросов.
+   Компонент **node-local-dns** отслеживает изменения стандартных ресурсов EndpointSlice и на их основе обновляет список DNS-серверов для перенаправления запросов.
 
    Состоит из следующих контейнеров:
 
    * **check-linux-kernel** — init-контейнер, выполняющий проверку версии ядра Linux;
    * **coredns** — основной контейнер;
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Stale-dns-connections-cleaner** (DaemonSet) — компонент, реализующий удаление оставшихся открытых соединений при рестарте **coredns**. Состоит из одного контейнера **stale-dns-connections-cleaner**.
+1. **Stale-dns-connections-cleaner** (DaemonSet) — компонент, который удаляет оставшиеся открытые соединения при рестарте **coredns**. Состоит из одного контейнера **stale-dns-connections-cleaner**.
 
-   > **Внимание.** У компонента есть привилегированный доступ к сетевой системе каждого узла. В Linux для этого требуется capability `CAP_NET_ADMIN`. Это необходимо для выполнения операций с сетевыми подключениями на уровне ядра ОС Linux.
+   > **Внимание.** Компонент имеет привилегированный доступ к сетевой системе каждого узла. В Linux для этого требуется capability `CAP_NET_ADMIN`. Такой доступ необходим для выполнения операций с сетевыми подключениями на уровне ядра ОС Linux.
 
 1. **Safe-updater** (Deployment) — компонент, обеспечивающий безопасный рестарт **node-local-dns** при изменении спецификации DaemonSet.
 
-   **Safe-updater** проверяет, что на этом на узле запущен и находится в корректном состоянии Cilium и только после этого отправляет команду на удаление пода с **node-local-dns**.
+   **Safe-updater** проверяет, что на узле запущен и находится в корректном состоянии Cilium, и только после этого отправляет команду на удаление пода с **node-local-dns**.
 
 ### Взаимодействия модуля (Cilium)
 
@@ -112,10 +112,11 @@ description: Архитектура модулей kube-dns и node-local-dns в
 1. **Kube-apiserver**:
 
    * наблюдение за стандартными ресурсами EndpointSlice, DaemonSet, ControllerRevision и Pod;
+   * периодическое получение ресурсов Node;
    * удаление Pod `node-local-dns` при устаревании конфигурации DaemonSet;
    * авторизация запросов на получение метрик.
 
-1. **D8-kube-dns** — выполнение DNS-запросов. 
+1. **D8-kube-dns** — выполнение DNS-запросов.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
@@ -130,7 +131,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании CNI отличного от Cilium на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) при использовании CNI-плагина, отличного от Cilium, на уровне 2 модели C4 и его взаимодействие с другими компонентами Deckhouse Kubernetes Platform (DKP) показаны на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns-without-cilium.ru.png)
@@ -139,16 +140,16 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 Модуль `node-local-dns` состоит из следующих компонентов:
 
-1. **Node-local-dns** (DaemonSet) — основной компонент модуля. Реализует кеширующий DNS-сервер в кластере Kubernetes.
+1. **Node-local-dns** (DaemonSet) — основной компонент модуля, реализующий кеширующий DNS-сервер в кластере Kubernetes.
 
-   Компонент **node-local-dns** отслеживает изменения стандартных ресурсов EndpointSlice. На основе этих изменений он обновляет список forwarders для DNS-запросов.
+   Компонент **node-local-dns** отслеживает изменения стандартных ресурсов EndpointSlice и на их основе обновляет список DNS-серверов для перенаправления запросов.
 
    Состоит из следующих контейнеров:
 
    * **iptables-wrapper** — init-контейнер, выполняющий подготовку необходимых для работы с iptables исполняемых файлов;
    * **coredns** — основной контейнер;
-   * **iptables-loop** —  сайдкар-контейнер, обеспечивающий обновление правил маршрутизации при изменении доступности контейнеров coredns модуля `kube-dns`.
-   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
+   * **iptables-loop** — сайдкар-контейнер, обеспечивающий синхронизацию iptables-правил с готовностью **node-local-dns**;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 ### Взаимодействия модуля (без Cilium)
 
@@ -159,7 +160,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
    * наблюдение за стандартными ресурсами EndpointSlice;
    * авторизация запросов на получение метрик.
 
-1. **D8-kube-dns** — выполнение DNS-запросов. 
+1. **D8-kube-dns** — выполнение DNS-запросов.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
