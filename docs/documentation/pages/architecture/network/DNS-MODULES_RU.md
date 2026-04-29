@@ -10,11 +10,13 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 Модуль [`node-local-dns`](/modules/node-local-dns/) предоставляет кеширующий DNS-сервис на каждом узле кластера и снижает нагрузку на CoreDNS.
 
+Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) зависит от используемого CNI-плагина. Есть два основных варианта: при использовании Cilium в качестве CNI-плагина и при использовании другого CNI-плагина, поддерживаемого DKP.
+
 Подробнее о настройках модулей и примерах их использования можно узнать в соответствующих разделах документации:
 - [`kube-dns`](/modules/kube-dns/configuration.html);
 - [`node-local-dns`](/modules/node-local-dns/configuration.html).
 
-## Модуль `kube-dns`
+## Модуль kube-dns
 
 ### Архитектура модуля
 
@@ -65,11 +67,9 @@ description: Архитектура модулей kube-dns и node-local-dns в
 1. **Kube-apiserver** — изменение ресурсов Pod, созданных StatefulSet-контроллером.
 1. **Prometheus-main** — собирает метрики модуля.
 
-## Модуль `node-local-dns`
+## Модуль node-local-dns (при использовании cni-cilium)
 
-Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) зависит от используемого CNI-плагина. Есть два основных варианта: при использовании Cilium в качестве CNI-плагина и при использовании другого CNI-плагина, поддерживаемого DKP.
-
-### Архитектура модуля (Cilium)
+### Архитектура модуля
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -83,7 +83,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns.ru.png)
 
-### Компоненты модуля (Cilium)
+### Компоненты модуля
 
 Модуль `node-local-dns` состоит из следующих компонентов:
 
@@ -105,7 +105,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
    **Safe-updater** проверяет, что на узле запущен и находится в корректном состоянии Cilium, и только после этого отправляет команду на удаление пода с **node-local-dns**.
 
-### Взаимодействия модуля (Cilium)
+### Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
@@ -122,7 +122,9 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 * **Prometheus-main** — собирает метрики модуля.
 
-### Архитектура модуля (без Cilium)
+## Модуль node-local-dns (без cni-cilium)
+
+### Архитектура модуля
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -136,7 +138,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns-without-cilium.ru.png)
 
-### Компоненты модуля (без Cilium)
+### Компоненты модуля
 
 Модуль `node-local-dns` состоит из следующих компонентов:
 
@@ -151,7 +153,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
    * **iptables-loop** — сайдкар-контейнер, обеспечивающий синхронизацию iptables-правил с готовностью **node-local-dns**;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-### Взаимодействия модуля (без Cilium)
+### Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
