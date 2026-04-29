@@ -15,7 +15,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -74,16 +73,17 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
 		if err != nil {
-			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
-				return err
-			}
+			return err
 		}
 		if kubeProvider == nil {
-			return fmt.Errorf("Not enough flags were passed to perform the operation.\n" +
-				"Use dhctl terraform check --help to get available flags.\n" +
-				"Ssh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
+			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)

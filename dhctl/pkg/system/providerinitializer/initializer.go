@@ -32,7 +32,13 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
 
-var ErrHostsFromCacheNotFound = errors.New("failed to get hosts from cache")
+var (
+	ErrHostsFromCacheNotFound = errors.New("failed to get hosts from cache")
+
+	ErrSSHHostRequiredForKubernetesConnection = errors.New(
+		"SSH connection parameters are not configured. Verify SSH connection settings, or use direct Kubernetes access via --kubeconfig or --kube-client-from-cluster",
+	)
+)
 
 type SSHProviderInitializer struct {
 	provider             libcon.SSHProvider

@@ -30,8 +30,9 @@ import (
 )
 
 type providerOptions struct {
-	connectionConfig string
-	kubeFlagsDefined bool
+	connectionConfig    string
+	kubeFlagsDefined    bool
+	requireKubeProvider bool
 }
 
 type ProviderOptions func(o *providerOptions)
@@ -48,6 +49,12 @@ func WithKubeFlagsDefined(b bool) ProviderOptions {
 	}
 }
 
+func WithRequiredKubeProvider() ProviderOptions {
+	return func(o *providerOptions) {
+		o.requireKubeProvider = true
+	}
+}
+
 func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
 	baseProviderSettings := settings.NewBaseProviders(params)
 	return getProviderInitializer(baseProviderSettings, opts...)
@@ -55,6 +62,7 @@ func GetSSHProviderInitializer(ctx context.Context, params settings.ProviderPara
 
 // func to initialize both SSHProviderInitializer and KubeProvider
 func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...ProviderOptions) (*SSHProviderInitializer, libcon.KubeProvider, error) {
+	options := newProviderOptions(opts...)
 	baseProviderSettings := settings.NewBaseProviders(params)
 
 	sshProviderInitializer, err := getProviderInitializer(baseProviderSettings, opts...)
@@ -73,6 +81,12 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 		return nil, nil, err
 	}
 
+	if options.requireKubeProvider && cfg.OverSSH() {
+		if sshProviderInitializer == nil || !sshProviderInitializer.CheckHosts() {
+			return sshProviderInitializer, nil, ErrSSHHostRequiredForKubernetesConnection
+		}
+	}
+
 	runnerInterface, err := provider.GetRunnerInterface(
 		ctx,
 		cfg,
@@ -88,10 +102,7 @@ func GetProviders(ctx context.Context, params settings.ProviderParams, opts ...P
 }
 
 func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts ...ProviderOptions) (*SSHProviderInitializer, error) {
-	options := &providerOptions{}
-	for _, o := range opts {
-		o(options)
-	}
+	options := newProviderOptions(opts...)
 
 	var config *libcon_config.ConnectionConfig
 	var err error
@@ -123,4 +134,12 @@ func getProviderInitializer(baseProviderSettings *settings.BaseProviders, opts .
 
 	sshProviderInitializer = NewSSHProviderInitializer(baseProviderSettings, config)
 	return sshProviderInitializer, nil
+}
+
+func newProviderOptions(opts ...ProviderOptions) *providerOptions {
+	options := &providerOptions{}
+	for _, o := range opts {
+		o(options)
+	}
+	return options
 }
