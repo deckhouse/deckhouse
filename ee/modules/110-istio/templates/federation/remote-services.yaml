@@ -17,7 +17,7 @@ spec:
     number: {{ $port.port }}
     protocol: {{ $port.protocol }}
   {{- end }}
-  resolution: STATIC
+  resolution: {{ $svc.resolution | default "STATIC" }}
   endpoints:
   {{- range $endpoint := $svc.endpoints }}
   - address: {{ $endpoint.address | quote }}
