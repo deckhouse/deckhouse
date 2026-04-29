@@ -37,7 +37,7 @@ ls -l /etc/containerd/conf.d
 {% alert level="info" %}
 В процессе миграции директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
 
-Также обратите внимание, что обновление узла приводит к прерыванию его работы (disruptive-обновлению). На то, будет ли обновление запущено автоматически, влияют параметры применения disruptive-обновлений для группы узлов ([spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)). При установленном значении `approvalMode: Manual` обновление нужно запустить вручную на соответствующих узлах с помощью аннотации: `d8 k annotate node <node-name> update.node.deckhouse.io/disruption-approved=Automatic`.
+Также обратите внимание, что обновление узла приводит к прерыванию его работы ([disruptive-обновлению](./node-management.html#обновления-требующие-прерывания-работы-узла)). При установленном значении `approvalMode: Manual` обновление нужно запустить вручную на соответствующих узлах с помощью аннотации: `d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=`.
 {% endalert %}
 
 Включение containerd v2 возможно двумя способами:
