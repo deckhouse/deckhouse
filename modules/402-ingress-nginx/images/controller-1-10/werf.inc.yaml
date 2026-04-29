@@ -320,6 +320,7 @@ import:
   before: setup
   excludePaths:
   - usr/lib64/locale
+  - usr/lib/locale
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /usr/bin/mount
   to: /usr/bin/mount
