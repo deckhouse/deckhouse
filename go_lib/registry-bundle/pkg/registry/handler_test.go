@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -33,6 +32,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/errs"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/registry/mocks"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/types"
 )
@@ -61,8 +61,10 @@ func positiveRepositoryPathScenarios() []string {
 }
 
 func newTestHandler(reg Registry) http.Handler {
-	logger := slog.New(slog.DiscardHandler)
-	return NewRegistryHandler(logger, reg)
+	return NewRegistryHandler(
+		log.NewNoop(),
+		reg,
+	)
 }
 
 func TestHandleHealth(t *testing.T) {

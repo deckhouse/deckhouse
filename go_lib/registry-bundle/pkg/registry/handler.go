@@ -20,13 +20,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"regexp"
 
 	"github.com/opencontainers/go-digest"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/errs"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 )
 
 var (
@@ -37,7 +37,7 @@ var (
 )
 
 // NewRegistryHandler returns an HTTP handler for the registry API
-func NewRegistryHandler(logger *slog.Logger, registry Registry) http.Handler {
+func NewRegistryHandler(logger log.Logger, registry Registry) http.Handler {
 	rh := &registryHandlers{logger: logger, registry: registry}
 
 	h := NewRegexpHandler()
@@ -228,7 +228,7 @@ func (rh *registryHandlers) handleManifestGetHead(w http.ResponseWriter, r *http
 
 	if r.Method == http.MethodGet {
 		if _, err := io.Copy(w, rc); err != nil {
-			rh.logger.Error("manifest write error", "error", err)
+			rh.logger.Errorf("manifest write error: %s", err.Error())
 		}
 	}
 }
@@ -327,7 +327,7 @@ func (rh *registryHandlers) handleBlobGet(w http.ResponseWriter, r *http.Request
 		w.Header().Set("Content-Length", fmt.Sprint(size))
 		w.WriteHeader(http.StatusOK)
 		if _, err := io.Copy(w, rc); err != nil {
-			rh.logger.Error("blob write error", "error", err)
+			rh.logger.Errorf("blob write error: %s", err.Error())
 		}
 		return
 	}
@@ -363,7 +363,7 @@ func (rh *registryHandlers) handleBlobGet(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Length", fmt.Sprint(contentLength))
 	w.WriteHeader(http.StatusPartialContent)
 	if _, err := io.Copy(w, rd); err != nil {
-		rh.logger.Error("blob partial write error", "error", err)
+		rh.logger.Errorf("blob partial write error: %s", err.Error())
 	}
 }
 
@@ -378,7 +378,7 @@ type listTags struct {
 
 type registryHandlers struct {
 	registry Registry
-	logger   *slog.Logger
+	logger   log.Logger
 }
 
 func parseRange(rangeHeader string, size int64) (int64, int64, error) {

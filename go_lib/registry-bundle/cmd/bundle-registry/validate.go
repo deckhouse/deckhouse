@@ -18,14 +18,14 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/spf13/cobra"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/bundle"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 )
 
-func newValidateCmd(logger *slog.Logger) *cobra.Command {
+func newValidateCmd(logger log.Logger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "validate <bundle-path>",
 		Short: "Validate bundle archives structure",
@@ -37,7 +37,7 @@ func newValidateCmd(logger *slog.Logger) *cobra.Command {
 			bundlePath := args[0]
 			bundle, err := bundle.New(
 				ctx,
-				logger.WithGroup("bundle"),
+				logger,
 				bundlePath,
 			)
 			if err != nil {
@@ -46,11 +46,11 @@ func newValidateCmd(logger *slog.Logger) *cobra.Command {
 
 			defer func() {
 				if err := bundle.Close(); err != nil {
-					logger.Error("close bundle", "error", err.Error())
+					logger.Errorf("close bundle error: %s", err.Error())
 				}
 			}()
 
-			logger.Info("no errors")
+			logger.Infof("no errors")
 			return nil
 		},
 	}

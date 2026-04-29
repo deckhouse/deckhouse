@@ -21,7 +21,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 	"time"
 
@@ -29,13 +28,14 @@ import (
 	"github.com/spf13/cobra"
 
 	pkgcmd "github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/cmd"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 )
 
 var (
 	_ validation.Validatable = serveConfig{}
 )
 
-func newServeCmd(logger *slog.Logger) *cobra.Command {
+func newServeCmd(logger log.Logger) *cobra.Command {
 	cfg := serveConfig{}
 
 	cmd := &cobra.Command{
@@ -60,11 +60,11 @@ bundle-path is the directory containing OCI bundle archives (*.tar chunks or who
 
 			sCfg := pkgcmd.ServerConfig{
 				Bundle: pkgcmd.BundleConfig{
-					Logger:     logger.WithGroup("bundle"),
+					Logger:     logger,
 					BundlePath: args[0],
 				},
 				Registry: pkgcmd.RegistryConfig{
-					Logger:   logger.WithGroup("serve"),
+					Logger:   logger,
 					RepoPath: cfg.rootRepo,
 					HTTP: pkgcmd.HTTPServerConfig{
 						Address: cfg.address,
@@ -84,9 +84,9 @@ bundle-path is the directory containing OCI bundle archives (*.tar chunks or who
 			<-ctx.Done()
 			reason := ctx.Err()
 			if errors.Is(reason, context.Canceled) {
-				logger.Info("shutdown", "reason", "signal")
+				logger.Infof("shutdown, reason signal")
 			} else {
-				logger.Info("shutdown", "reason", reason)
+				logger.Infof("shutdown, reason %s", reason)
 			}
 
 			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 2*time.Second)

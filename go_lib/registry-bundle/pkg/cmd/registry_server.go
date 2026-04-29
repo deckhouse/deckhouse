@@ -20,11 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/bundle"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/registry"
 )
 
@@ -157,7 +157,7 @@ func (c ServerConfig) Validate() error {
 }
 
 type RegistryConfig struct {
-	Logger   *slog.Logger
+	Logger   log.Logger
 	RepoPath string
 	HTTP     HTTPServerConfig
 }
@@ -186,7 +186,7 @@ func (c RegistryConfig) Validate() error {
 }
 
 type BundleConfig struct {
-	Logger     *slog.Logger
+	Logger     log.Logger
 	BundlePath string
 }
 

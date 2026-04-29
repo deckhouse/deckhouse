@@ -20,9 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"os"
 
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/store"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/utils/archives"
 )
@@ -32,7 +32,7 @@ type Bundle struct {
 	archives  []archives.FSCloser
 }
 
-func New(ctx context.Context, log *slog.Logger, dir string) (*Bundle, error) {
+func New(ctx context.Context, logger log.Logger, dir string) (*Bundle, error) {
 	bundle := &Bundle{
 		repoStore: make(repoStores),
 		archives:  make([]archives.FSCloser, 0),
@@ -46,7 +46,7 @@ func New(ctx context.Context, log *slog.Logger, dir string) (*Bundle, error) {
 		return err
 	}
 
-	if err := bundle.process(ctx, log, dir); err != nil {
+	if err := bundle.process(ctx, logger, dir); err != nil {
 		return nil, withClose(err)
 	}
 
@@ -79,7 +79,7 @@ func (b *Bundle) Close() error {
 	return err
 }
 
-func (b *Bundle) process(ctx context.Context, log *slog.Logger, dir string) error {
+func (b *Bundle) process(ctx context.Context, logger log.Logger, dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (b *Bundle) process(ctx context.Context, log *slog.Logger, dir string) erro
 	}
 
 	for _, arch := range archs {
-		log.Info("processing", "archive", arch.String())
+		logger.Infof("processing archive %s...", arch.String())
 		if err := b.processArch(ctx, dir, arch.BaseName, arch.Chunked); err != nil {
 			return fmt.Errorf("process %s: %w", arch.String(), err)
 		}

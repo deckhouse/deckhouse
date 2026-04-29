@@ -27,6 +27,8 @@ import (
 	"github.com/spf13/cobra"
 
 	dkplog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 )
 
 var (
@@ -42,18 +44,24 @@ func main() {
 }
 
 func newRootCmd() *cobra.Command {
-	dLog := dkplog.NewLogger(
+	logLevel := slog.Level(
+		dkplog.LogLevelFromStr(
+			os.Getenv("LOG_LEVEL"),
+		),
+	)
+
+	logHandler := dkplog.NewLogger(
+		dkplog.WithHandlerType(
+			dkplog.JSONHandlerType,
+		),
 		dkplog.WithLevel(
-			slog.Level(
-				dkplog.LogLevelFromStr(
-					os.Getenv("LOG_LEVEL"),
-				),
-			),
+			logLevel,
 		),
 	).
-		Named("registry")
+		Named("registry").
+		Handler()
 
-	logger := slog.New(dLog.Handler())
+	logger := log.NewSlog(logHandler)
 
 	cmd := &cobra.Command{
 		Use:           "registry",

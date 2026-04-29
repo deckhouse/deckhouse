@@ -17,7 +17,6 @@ package bundle
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
@@ -49,15 +48,15 @@ func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, er
 		return nil, err
 	}
 
-	logger := slog.New(slog.DiscardHandler)
+	logger := params.LoggerProvider()
 
 	cfg := cmd.ServerConfig{
 		Bundle: cmd.BundleConfig{
-			Logger:     logger,
+			Logger:     newLogger(logger, true),
 			BundlePath: params.BundlePath,
 		},
 		Registry: cmd.RegistryConfig{
-			Logger:   logger,
+			Logger:   newLogger(logger, false),
 			RepoPath: constant.BundleRepoPath,
 			HTTP: cmd.HTTPServerConfig{
 				Address: constant.BundleAddressWithPort,

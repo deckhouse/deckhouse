@@ -21,19 +21,20 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net"
 	"net/http"
 	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
 )
 
 var (
 	_ validation.Validatable = HTTPServerConfig{}
 )
 
-func newHTTPServer(logger *slog.Logger, config HTTPServerConfig, handler http.Handler) (*HTTPServer, error) {
+func newHTTPServer(logger log.Logger, config HTTPServerConfig, handler http.Handler) (*HTTPServer, error) {
 	config = NewHTTPServerConfig().Merge(config)
 
 	if err := config.Validate(); err != nil {
@@ -73,7 +74,7 @@ func newHTTPServer(logger *slog.Logger, config HTTPServerConfig, handler http.Ha
 		s.serveDone <- srv.Serve(ln)
 	}()
 
-	s.logger.Info("serving registry", "address", scheme+"://"+ln.Addr().String())
+	s.logger.Infof("starting http server on %s", scheme+"://"+ln.Addr().String())
 	return s, nil
 }
 
@@ -81,7 +82,7 @@ type HTTPServer struct {
 	srv       *http.Server
 	serveDone chan error
 
-	logger *slog.Logger
+	logger log.Logger
 }
 
 func (s *HTTPServer) Stop(ctx context.Context) error {
@@ -89,7 +90,7 @@ func (s *HTTPServer) Stop(ctx context.Context) error {
 		return nil
 	}
 
-	s.logger.Info("shutting down")
+	s.logger.Infof("shutting down http server")
 	errShutdown := s.srv.Shutdown(ctx)
 	errServe := <-s.serveDone
 
@@ -148,10 +149,10 @@ func (sw *statusLogging) WriteHeader(status int) {
 	sw.ResponseWriter.WriteHeader(status)
 }
 
-func withStatusLogging(logger *slog.Logger, next http.Handler) http.Handler {
+func withStatusLogging(logger log.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sw := &statusLogging{ResponseWriter: w}
 		next.ServeHTTP(sw, r)
-		logger.Info("request", "method", r.Method, "url", r.URL.String(), "status", sw.status)
+		logger.Infof("request method=%s url=%s status=%d", r.Method, r.URL.String(), sw.status)
 	})
 }
