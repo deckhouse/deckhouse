@@ -54,7 +54,7 @@ func NewManagerReadinessChecker(getter kubernetes.KubeClientProvider) *ManagerRe
 }
 
 func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
-	return retry.NewLoop("Control-plane node readiness", 50, 10*time.Second).RunContext(ctx, func() error {
+	return retry.NewLoop("Control-plane readiness", 50, 10*time.Second).RunContext(ctx, func() error {
 		msg, err := checkControlPlaneNodesReady(ctx, c.getter.KubeClient())
 
 		// all ControlPlaneNodes are ready
@@ -65,7 +65,7 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 
 		// some ControlPlaneNodes are not ready
 		if msg != "" {
-			return fmt.Errorf("%s\n%s", strings.TrimSuffix(ErrControlPlaneIsNotReady.Error(), "\n"), msg)
+			return fmt.Errorf("%s", msg)
 		}
 
 		// some other error occurred
@@ -84,7 +84,7 @@ func (c *ManagerReadinessChecker) IsReady(ctx context.Context, nodeName string) 
 }
 
 func (c *ManagerReadinessChecker) Name() string {
-	return "Control plane node readiness"
+	return "Control plane readiness"
 }
 
 // checkControlPlaneNodesReady verifies that every master node has a ready ControlPlaneNode.
@@ -200,21 +200,18 @@ func appendControlPlaneNodeReadinessMessage(msg *strings.Builder, nodeName strin
 	}
 
 	conditionsByType := controlPlaneNodeConditionsByType(conditions)
-	conditionStatuses := make([]string, 0, len(requiredControlPlaneNodeConditions))
+	readyConditionTypes := make([]string, 0, len(requiredControlPlaneNodeConditions))
 	for _, conditionType := range requiredControlPlaneNodeConditions {
 		condition, ok := conditionsByType[conditionType]
-		if !ok {
-			conditionStatuses = append(conditionStatuses, fmt.Sprintf("%s=Missing", conditionType))
-			continue
+		if ok && condition.Status == metav1.ConditionTrue {
+			readyConditionTypes = append(readyConditionTypes, condition.Type)
 		}
-
-		conditionStatuses = append(conditionStatuses, fmt.Sprintf("%s=%s", condition.Type, condition.Status))
 	}
 
 	if msg.Len() > 0 {
 		msg.WriteString("\n")
 	}
-	fmt.Fprintf(msg, "* %s: %s", nodeName, strings.Join(conditionStatuses, " "))
+	fmt.Fprintf(msg, "* %s: | %s", nodeName, strings.Join(readyConditionTypes, ", "))
 }
 
 func controlPlaneNodeConditionsByType(conditions []metav1.Condition) map[string]metav1.Condition {
