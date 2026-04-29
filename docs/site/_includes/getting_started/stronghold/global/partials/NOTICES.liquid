@@ -4,7 +4,15 @@
 Доступно начиная с версии 1.65 Deckhouse Kubernetes Platform.
 {% endalert %}
 {%- endif %}
+{%- if page.platform_code == "red" %}
+{%- alert level="info" %}
+Перед установкой Deckhouse Kubernetes Platform в среде РЕД виртуализации необходимо предварительно создать нужное количество виртуальных машин с требуемыми параметрами.
+{% endalert %}
+{%- endif %}
 {%- if page.platform_code == "dynamix" %}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/).
+{% endalert %}
 {%- alert level="warning" %}
 Доступно начиная с версии 1.66 Deckhouse Kubernetes Platform.
 {% endalert %}
@@ -16,9 +24,15 @@
 {%- endif %}
 {%- if page.platform_code == 'bm-private' %}
 {% alert level="warning" %}
-Доступно в редакциях SE, SE+, EE, CSE Lite, CSE Pro.
+Доступно в редакции Enterprise Edition.
 {% endalert %}
 {%- endif %}
+{% if page.ee_only == true and page.platform_code == 'vsphere'%}
+{% alert level="warning" %}
+Установка {{ page.title_main }} возможна только в Enterprise Edition. [Ознакомиться с условиями и ценами](../../pricing/) на коммерческие редакции.
+{% endalert %}
+{% endif %}
+
 {%- else %}
 {%- if page.platform_code == "azure" %}
 {% alert level="warning" %}
@@ -27,7 +41,12 @@ Only [regions](https://docs.microsoft.com/en-us/azure/availability-zones/az-regi
 {%- endif %}
 {%- if page.platform_code == 'bm-private' %}
 {% alert level="warning" %}
-This feature is available in Standard and Enterprise Edition only.
+This feature is available in Enterprise Edition only.
 {% endalert %}
 {%- endif %}
+{% if page.ee_only == true and page.platform_code == 'vsphere'%}
+{% alert level="warning" %}
+Installation of {{ page.title_main }} is only possible in the Enterprise Edition. [See information about commercial editions](/products/kubernetes-platform/).
+{% endalert %}
+{% endif %}
 {%- endif %}

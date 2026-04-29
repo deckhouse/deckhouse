@@ -148,7 +148,7 @@ installTypes:
         name:
           en: Installation information
           ru: Информация об установке
-        template: getting_started/stronghold/bm/STEP_INSTALL_SCHEMA.md
+        template: getting_started/stronghold/bm-private/STEP_INSTALL_SCHEMA.md
       step3:
         name:
           en: Preparing for installation
