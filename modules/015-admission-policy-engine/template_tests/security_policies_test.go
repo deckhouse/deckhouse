@@ -44,6 +44,7 @@ admissionPolicyEngine:
       - metadata:
           name: genpolicy
         spec:
+          enforcementAction: Warn
           policies:
             allowHostIPC: true
             allowHostNetwork: false
@@ -65,13 +66,12 @@ admissionPolicyEngine:
               - user/example
             allowedProcMount: default
             allowedVolumes:
-              volumes:
-                - csi
+              - csi
             requiredDropCapabilities:
               - ALL
             allowedAppArmor:
               - unconfined
-            readOnlyRootFilesystem: "true"
+            readOnlyRootFilesystem: true
             automountServiceAccountToken: false
             allowedClusterRoles:
               - "*"
@@ -106,6 +106,14 @@ admissionPolicyEngine:
             namespaceSelector:
               matchNames:
                 - default
+              excludeNames:
+                - kube-system
+              labelSelector:
+                matchLabels:
+                  security-policy.deckhouse.io/enabled: "true"
+            labelSelector:
+              matchLabels:
+                security-policy.deckhouse.io/enabled: "true"
       - metadata:
           name: minpolicy
         spec:
@@ -272,6 +280,61 @@ admissionPolicyEngine:
 					}
 					validateYAML(resourceMap, constraintKind)
 				}
+			}
+		})
+
+		It("Security policy constraints must use values for enforcementAction, match and parameters", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			expectedSelector := constraintSelectorExpectation{
+				namespaces:         mustParseYaml("- default"),
+				excludedNamespaces: mustParseYaml("- kube-system"),
+				namespaceSelector:  mustParseYaml("matchLabels:\n  security-policy.deckhouse.io/enabled: \"true\""),
+				labelSelector:      mustParseYaml("matchLabels:\n  security-policy.deckhouse.io/enabled: \"true\""),
+			}
+			expectedAction := "warn"
+
+			expectedParameters := map[string]interface{}{
+				"D8AllowedCapabilities":    mustParseYaml("requiredDropCapabilities:\n  - ALL"),
+				"D8AllowedFlexVolumes":     mustParseYaml("allowedFlexVolumes:\n  - driver: vmware"),
+				"D8AllowedHostPaths":       mustParseYaml("allowedHostPaths:\n  - pathPrefix: /dev\n    readOnly: true"),
+				"D8AllowedProcMount":       mustParseYaml("allowedProcMount: default"),
+				"D8AllowedSeccompProfiles": mustParseYaml("allowedProfiles:\n  - RuntimeDefault\n  - Localhost\nallowedLocalhostFiles:\n  - \"*\""),
+				"D8AllowedSysctls":         mustParseYaml("allowedSysctls:\n  - \"*\"\nforbiddenSysctls:\n  - user/example"),
+				"D8AllowedUsers":           mustParseYaml("runAsUser:\n  ranges:\n    - min: 300\n      max: 500\n  rule: MustRunAs\nsupplementalGroups:\n  ranges:\n    - min: 500\n      max: 1000\n  rule: MustRunAs"),
+				"D8AllowedVolumeTypes":     mustParseYaml("volumes:\n  - csi"),
+				"D8HostNetwork":            mustParseYaml("allowHostNetwork: false\nranges:\n  - min: 10\n    max: 100"),
+				"D8HostProcesses":          mustParseYaml("allowHostPID: false\nallowHostIPC: true"),
+				"D8AllowedClusterRoles":    mustParseYaml("allowedClusterRoles:\n  - \"*\""),
+				"D8SeLinux":                mustParseYaml("allowedSELinuxOptions:\n  - role: role\n    user: user\n  - level: level\n    type: type"),
+				"D8AppArmor":               mustParseYaml("allowedProfiles:\n  - unconfined"),
+				"D8VerifyImageSignatures":  mustParseYaml("references:\n  - \"^.*$\""),
+			}
+
+			constraintsWithoutParameters := []string{
+				"D8AllowPrivilegeEscalation",
+				"D8PrivilegedContainer",
+				"D8ReadOnlyRootFilesystem",
+				"D8AutomountServiceAccountTokenPod",
+				"D8AllowRbacWildcards",
+			}
+
+			for constraintKind, expected := range expectedParameters {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				Expect(constraint.Exists()).To(BeTrue())
+				spec := getConstraintSpecMap(constraint)
+				expectConstraintAction(spec, expectedAction)
+				expectConstraintSelector(spec, expectedSelector)
+				expectConstraintParameters(spec, expected)
+			}
+
+			for _, constraintKind := range constraintsWithoutParameters {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				Expect(constraint.Exists()).To(BeTrue())
+				spec := getConstraintSpecMap(constraint)
+				expectConstraintAction(spec, expectedAction)
+				expectConstraintSelector(spec, expectedSelector)
+				expectConstraintParameters(spec, nil)
 			}
 		})
 	})

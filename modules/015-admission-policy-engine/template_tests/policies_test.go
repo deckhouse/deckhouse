@@ -30,6 +30,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: pod security policies ::", func() {
@@ -458,4 +459,69 @@ func getOperationConstraintNames() []string {
 	}
 
 	return result
+}
+
+// constraintSelectorExpectation describes expected selector fields rendered by constraint_selector helper.
+type constraintSelectorExpectation struct {
+	namespaces         interface{}
+	excludedNamespaces interface{}
+	namespaceSelector  interface{}
+	labelSelector      interface{}
+}
+
+func mustParseYaml(input string) interface{} {
+	var result interface{}
+	err := yaml.Unmarshal([]byte(input), &result)
+	Expect(err).ShouldNot(HaveOccurred())
+	return result
+}
+
+func getConstraintSpecMap(constraint object_store.KubeObject) map[string]interface{} {
+	var resource map[string]interface{}
+	err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resource)
+	Expect(err).ShouldNot(HaveOccurred())
+	spec, ok := resource["spec"].(map[string]interface{})
+	Expect(ok).To(BeTrue())
+	return spec
+}
+
+func expectConstraintAction(spec map[string]interface{}, expectedAction string) {
+	Expect(spec).To(HaveKeyWithValue("enforcementAction", expectedAction))
+}
+
+func expectConstraintSelector(spec map[string]interface{}, expected constraintSelectorExpectation) {
+	match, ok := spec["match"].(map[string]interface{})
+	Expect(ok).To(BeTrue())
+
+	if expected.namespaces != nil {
+		Expect(match).To(HaveKeyWithValue("namespaces", expected.namespaces))
+	} else {
+		Expect(match).ToNot(HaveKey("namespaces"))
+	}
+
+	if expected.excludedNamespaces != nil {
+		Expect(match).To(HaveKeyWithValue("excludedNamespaces", expected.excludedNamespaces))
+	} else {
+		Expect(match).ToNot(HaveKey("excludedNamespaces"))
+	}
+
+	if expected.namespaceSelector != nil {
+		Expect(match).To(HaveKeyWithValue("namespaceSelector", expected.namespaceSelector))
+	} else {
+		Expect(match).ToNot(HaveKey("namespaceSelector"))
+	}
+
+	if expected.labelSelector != nil {
+		Expect(match).To(HaveKeyWithValue("labelSelector", expected.labelSelector))
+	} else {
+		Expect(match).ToNot(HaveKey("labelSelector"))
+	}
+}
+
+func expectConstraintParameters(spec map[string]interface{}, expected interface{}) {
+	if expected == nil {
+		Expect(spec).ToNot(HaveKey("parameters"))
+		return
+	}
+	Expect(spec).To(HaveKeyWithValue("parameters", expected))
 }
