@@ -18,43 +18,34 @@
         description: |-
           Publish API ingress settings are being migrated from `mc user-authn` to `mc control-plane-manager`.
 
-
           **To complete the migration, follow the steps below:**
-
 
           1. Review current settings for `publishAPI` in the resource `moduleconfig user-authn` resource.
 
-
           2. If the `moduleconfig control-plane-manager` resource exists, update its spec to `spec.version: 3`. If `settings.apiserver.loadBalancer` is set, migrate it to `settings.apiserver.publishAPI.loadBalancer`. If the resource does not exist, proceed to step 3.
 
+          3. If `moduleconfig control-plane-manager` does not exist, create it via `d8`:
 
-          3. If `moduleconfig control-plane-manager` does not exist, create it via `d8`: 
+             ```
+             d8 s module enable control-plane-manager
+             ```
 
+             And set the settings version:
 
-            ```
-            d8 s module enable control-plane-manager
-            ```
-
-
-            And set the settings version:
-
-
-            ```
-            d8 k patch moduleconfig control-plane-manager --type merge \
-            -p '{"spec":{"version":3}}'
-            ```
-
+             ```
+             d8 k patch moduleconfig control-plane-manager --type merge \
+             -p '{"spec":{"version":3}}'
+             ```
 
           4. Apply the migrated settings into `moduleconfig control-plane-manager` from temporary configMap by executing the following script:
 
-
-            ```bash
-            d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
-          {"spec": {"settings": {"apiserver": {"publishAPI": {"ingress": \
-          $(d8 k -n kube-system get cm d8-publishapi-config-migration -ojsonpath='{.data.config}')
+             ```bash
+             d8 k patch moduleconfig control-plane-manager --type merge -p "$(cat <<EOF
+             {"spec": {"settings": {"apiserver": {"publishAPI": {"ingress": \
+             $(d8 k -n kube-system get cm d8-publishapi-config-migration -ojsonpath='{.data.config}')
                 }}}}}
-          EOF
-          )"
-            ```
- 
+             EOF
+             )"
+             ```
+
           5. Remove obsolete `spec.settings.publishAPI` section from `moduleconfig user-authn`.
