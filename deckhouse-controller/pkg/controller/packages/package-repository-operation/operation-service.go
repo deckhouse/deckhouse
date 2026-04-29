@@ -304,6 +304,35 @@ func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageN
 	return latestVersionString(versions)
 }
 
+// inferPackageTypeFromExisting derives the package type from already-existing
+// APV/MPV resources for this (repository, package). Used when an incremental
+// scan finds no new tags — without it, the package would be appended to
+// op.Status.Packages.Processed with an empty Type and dropped by
+// UpdateRepositoryStatus, so the repository's status.packages would silently
+// shrink on every quiet rescan.
+func (s *OperationService) inferPackageTypeFromExisting(ctx context.Context, packageName string) packageType {
+	matchLabels := client.MatchingLabels{
+		v1alpha1.ApplicationPackageVersionLabelRepository: s.repo.Name,
+		v1alpha1.ApplicationPackageVersionLabelPackage:    packageName,
+	}
+
+	appList := &v1alpha1.ApplicationPackageVersionList{}
+	if err := s.client.List(ctx, appList, matchLabels); err != nil {
+		s.logger.Warn("failed to list application package versions for type inference", slog.String("package", packageName), log.Err(err))
+	} else if len(appList.Items) > 0 {
+		return packageTypeApplication
+	}
+
+	modList := &v1alpha1.ModulePackageVersionList{}
+	if err := s.client.List(ctx, modList, matchLabels); err != nil {
+		s.logger.Warn("failed to list module package versions for type inference", slog.String("package", packageName), log.Err(err))
+	} else if len(modList.Items) > 0 {
+		return packageTypeModule
+	}
+
+	return ""
+}
+
 func parseProcessedVersion(tag string, hasMetadata bool) *semver.Version {
 	if !hasMetadata {
 		return nil
@@ -349,7 +378,15 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 			)
 		}
 
-		return &PackageProcessResult{}, nil
+		// On an incremental rescan with no new versions we still need a
+		// PackageType so the package survives the rebuild of
+		// PackageRepository.status.packages — derive it from already-existing
+		// APV/MPV resources. Empty result is still possible (very first scan
+		// on an empty registry) and is handled by the safety guard in
+		// UpdateRepositoryStatus.
+		return &PackageProcessResult{
+			PackageType: s.inferPackageTypeFromExisting(ctx, packageName),
+		}, nil
 	}
 
 	// Sort tags to pick the latest version for label check (older versions may have outdated/missing labels)
