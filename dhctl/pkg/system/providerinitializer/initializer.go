@@ -16,6 +16,7 @@ package providerinitializer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -30,6 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
+
+var ErrHostsFromCacheNotFound = errors.New("failed to get hosts from cache")
 
 type SSHProviderInitializer struct {
 	provider             libcon.SSHProvider
@@ -81,7 +84,7 @@ func (i *SSHProviderInitializer) GetSSHProvider(_ context.Context) (libcon.SSHPr
 		return i.provider, nil
 	}
 
-	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), fmt.Errorf("failed to get hosts from cache")
+	return provider.NewDefaultSSHProvider(i.baseProviderSettings, i.config), ErrHostsFromCacheNotFound
 }
 
 func (i *SSHProviderInitializer) Cleanup(ctx context.Context) error {

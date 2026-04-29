@@ -54,7 +54,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		ctx := kpcontext.ExtractContext(c)
 		logger := log.GetDefaultLogger()
 
-		params, err := app.GetDefaultProviderParams()
+		params, err := defaultProviderParams()
 		if err != nil {
 			return err
 		}

@@ -91,13 +91,16 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.GetDefaultProviderParams()
+		params, err := defaultProviderParams()
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
 		if err != nil {
 			return err
+		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
@@ -106,7 +109,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		return log.ProcessCtx(ctx, "bootstrap", "Wait for Deckhouse to become Ready", func(ctx context.Context) error {
 			kube, err := kubeProvider.Client(ctx)
 			if err != nil {
-				return fmt.Errorf("open kubernetes connection: %v", err)
+				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
 			kubeCl := &client.KubernetesClient{KubeClient: kube}
 

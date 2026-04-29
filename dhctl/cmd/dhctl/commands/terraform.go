@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -69,15 +70,17 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
-		params, err := app.GetDefaultProviderParams()
+		params, err := defaultProviderParams()
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
 		if err != nil {
-			return err
+			if !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+				return err
+			}
 		}
-		if sshProviderInitializer == nil && !app.KubeConfigInCluster {
+		if kubeProvider == nil {
 			return fmt.Errorf("Not enough flags were passed to perform the operation.\n" +
 				"Use dhctl terraform check --help to get available flags.\n" +
 				"Ssh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")

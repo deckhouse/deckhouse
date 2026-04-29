@@ -43,7 +43,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.GetDefaultProviderParams()
+		params, err := defaultProviderParams()
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 		apiServerPort, err := sshCl.KubeProxy().Start(-1)
 		if err != nil {
-			return fmt.Errorf("open kubernetes connection: %v", err)
+			return fmt.Errorf("open kubernetes connection: %w", err)
 		}
 
 		apiServerURL := fmt.Sprintf("http://localhost:%s", apiServerPort)

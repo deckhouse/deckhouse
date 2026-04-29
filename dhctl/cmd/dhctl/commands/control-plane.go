@@ -38,13 +38,16 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.GetDefaultProviderParams()
+		params, err := defaultProviderParams()
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
 		if err != nil {
 			return err
+		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
@@ -52,7 +55,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
-			return fmt.Errorf("open kubernetes connection: %v", err)
+			return fmt.Errorf("open kubernetes connection: %w", err)
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
@@ -81,13 +84,16 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.GetDefaultProviderParams()
+		params, err := defaultProviderParams()
 		if err != nil {
 			return err
 		}
-		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
 		if err != nil {
 			return err
+		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
 		}
 		if sshProviderInitializer != nil {
 			defer sshProviderInitializer.Cleanup(ctx)
@@ -95,7 +101,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 
 		kube, err := kubeProvider.Client(ctx)
 		if err != nil {
-			return fmt.Errorf("open kubernetes connection: %v", err)
+			return fmt.Errorf("open kubernetes connection: %w", err)
 		}
 		kubeCl := &client.KubernetesClient{KubeClient: kube}
 

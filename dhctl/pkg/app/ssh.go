@@ -26,7 +26,6 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
@@ -220,17 +219,12 @@ func processConnectionConfigFlags() error {
 }
 
 func GetProviderParams(loggerProvider libdhctl_log.LoggerProvider) settings.ProviderParams {
-	return settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: IsDebug, NodeTmpPath: DeckhouseNodeTmpPath, NodeBinPath: DeckhouseNodeBinPath, TmpDir: GetDefaultTmpDir()}
-}
-
-type defaultLoggerProvider interface {
-	GetLoggerProvider() libdhctl_log.LoggerProvider
-}
-
-func GetDefaultProviderParams() (settings.ProviderParams, error) {
-	logger, ok := log.GetDefaultLogger().(defaultLoggerProvider)
-	if !ok {
-		return settings.ProviderParams{}, fmt.Errorf("unsupported logger type %T", log.GetDefaultLogger())
+	return settings.ProviderParams{
+		LoggerProvider: loggerProvider,
+		IsDebug:        IsDebug,
+		NodeTmpPath:    DeckhouseNodeTmpPath,
+		NodeBinPath:    DeckhouseNodeBinPath,
+		TmpDir:         GetDefaultTmpDir(),
+		EnvsPrefix:     "DHCTL_CLI",
 	}
-	return GetProviderParams(logger.GetLoggerProvider()), nil
 }
