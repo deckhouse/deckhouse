@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready\n")
+var ErrControlPlaneIsNotReady = errors.New("control plane is not ready")
 
 var requiredControlPlaneNodeConditions = []string{
 	"EtcdReady",
@@ -158,38 +158,29 @@ func getControlPlaneNodeConditions(ctx context.Context, kubeClient client.KubeCl
 
 // controlPlaneNodeConditions converts unstructured ControlPlaneNode status.conditions to metav1.Condition.
 func controlPlaneNodeConditions(cpn *unstructured.Unstructured) ([]metav1.Condition, error) {
-	conditionsRaw, ok, err := unstructured.NestedSlice(cpn.Object, "status", "conditions")
-	if err != nil {
-		return nil, fmt.Errorf("get status conditions: %w", err)
-	}
-	if !ok {
-		return nil, nil
+	type controlPlaneNodeStatus struct {
+		Conditions []metav1.Condition `json:"conditions"`
 	}
 
-	conditions := make([]metav1.Condition, 0, len(conditionsRaw))
-	for _, conditionRaw := range conditionsRaw {
-		conditionMap, ok := conditionRaw.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("convert status condition: unexpected condition type %T", conditionRaw)
-		}
-
-		condition := metav1.Condition{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(conditionMap, &condition); err != nil {
-			return nil, fmt.Errorf("convert status condition: %w", err)
-		}
-		conditions = append(conditions, condition)
+	type controlPlaneNode struct {
+		Status controlPlaneNodeStatus `json:"status"`
 	}
 
-	return conditions, nil
+	var obj controlPlaneNode
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(cpn.Object, &obj); err != nil {
+		return nil, fmt.Errorf("convert ControlPlaneNode status: %w", err)
+	}
+
+	return obj.Status.Conditions, nil
 }
 
 // appendControlPlaneNodeReadinessMessage appends one diagnostic line for a ControlPlaneNode.
 func appendControlPlaneNodeReadinessMessage(msg *strings.Builder, nodeName string, conditions []metav1.Condition, err error) {
-	if err != nil {
-		if msg.Len() > 0 {
-			msg.WriteString("\n")
-		}
+	if msg.Len() > 0 {
+		msg.WriteString("\n")
+	}
 
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			fmt.Fprintf(msg, "* %s: ControlPlaneNode not found", nodeName)
 			return
@@ -208,9 +199,6 @@ func appendControlPlaneNodeReadinessMessage(msg *strings.Builder, nodeName strin
 		}
 	}
 
-	if msg.Len() > 0 {
-		msg.WriteString("\n")
-	}
 	fmt.Fprintf(msg, "* %s: | %s", nodeName, strings.Join(readyConditionTypes, ", "))
 }
 
