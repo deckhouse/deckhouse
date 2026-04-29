@@ -6,7 +6,7 @@ index d6dedf50..1ce3629e 100644
  module github.com/hashicorp/terraform-provider-kubernetes
  
 -go 1.24.1
-+go 1.26.0
++go 1.25.9
  
  require (
  	github.com/Masterminds/semver v1.5.0
