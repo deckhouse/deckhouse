@@ -62,27 +62,32 @@ Key changes:
 
 Adds optional Kerberos (SPNEGO) SSO to the LDAP connector with an opt-in SPNEGOAware hook in the password handler. Server-side validation uses `gokrb5` and a keytab only (no `krb5.conf` required). Includes principal mapping strategies and preserves the existing LDAP identity building and groups logic. Backward compatible when disabled.
 
-### 010-fix-cves.patch
-
-This patch fixes:
-
-- CVE-2025-47914
-- CVE-2025-58181
-
-### 011-provide-custom-CA-to-gitlab-connector.patch
+### 010-provide-custom-CA-to-gitlab-connector.patch
 
 This patch allows Gitlab connector to use custom CA for HTTPS connections.
 
-### 012-forced-password-change.patch
+### 011-forced-password-change.patch
 
 This patch adds a forced password change flag (`requireResetHashOnNextSuccLogin`) for local users.
 The flag can be set externally (e.g. by a controller). After a successful login, the user is redirected to the password change page.
 The flag is reset on successful password change.
 
-### 013-saml-support.patch
+### 012-saml-support.patch
 
 Adds refresh token support to the SAML connector. The SAML connector now implements `RefreshConnector` by caching the user identity in `ConnectorData` during initial authentication and returning it on refresh. Also persists `ConnectorData` in `OfflineSessions` for proper session management. Includes comprehensive tests.
 
-### 014-build-id-cache-invalidation.patch
+### 013-build-id-cache-invalidation.patch
 
 Added cache get parameter to main CSS file URL that gets opaque dex build identifier assigned to it. This prevents stale caches from breaking the login page.
+
+### 014-fix-cve.patch
+
+This patch fixes:
+
+- CVE-2025-47914
+- CVE-2025-58181
+- CVE-2026-26958
+- CVE-2026-32952
+- CVE-2026-33487 
+- CVE-2026-34986
+- CVE-2026-33186
