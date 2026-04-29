@@ -4,7 +4,8 @@
       "ee"
     ],
     "tags": [
-      "network"
+      "network",
+      "ssdlc"
     ]
   },
   "code": {
@@ -55,7 +56,8 @@
     "tags": [
       "managing",
       "application",
-      "web ui"
+      "web ui",
+      "ssdlc"
     ]
   },
   "commander-agent": {
@@ -68,7 +70,8 @@
     ],
     "path": "/modules/commander-agent/",
     "tags": [
-      "helper"
+      "helper",
+      "ssdlc"
     ]
   },
   "console": {
@@ -96,7 +99,8 @@
     "tags": [
       "managing",
       "observability",
-      "web ui"
+      "web ui",
+      "ssdlc"
     ]
   },
   "csi-ceph": {
@@ -111,7 +115,8 @@
     "external": "true",
     "path": "/modules/csi-ceph/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "csi-hpe": {
@@ -131,7 +136,8 @@
     "external": "true",
     "path": "/modules/csi-hpe/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "csi-huawei": {
@@ -151,7 +157,8 @@
     "external": "true",
     "path": "/modules/csi-huawei/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "csi-netapp": {
@@ -171,7 +178,8 @@
     "external": "true",
     "path": "/modules/csi-netapp/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "csi-nfs": {
@@ -186,7 +194,8 @@
     "external": "true",
     "path": "/modules/csi-nfs/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "csi-s3": {
@@ -196,7 +205,8 @@
     "external": "true",
     "path": "/modules/csi-s3/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "csi-scsi-generic": {
@@ -208,7 +218,8 @@
     "external": "true",
     "path": "/modules/csi-scsi-generic/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "csi-yadro-tatlin-unified": {
@@ -220,7 +231,8 @@
     "external": "true",
     "path": "/modules/csi-yadro-tatlin-unified/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "delivery-kit": {
@@ -231,7 +243,8 @@
     "external": "true",
     "path": "",
     "tags": [
-      "delivery"
+      "delivery",
+      "ssdlc"
     ]
   },
   "dashboard": {
@@ -245,7 +258,8 @@
     "tags": [
       "managing",
       "observability",
-      "web ui"
+      "web ui",
+      "ssdlc"
     ]
   },
   "development-platform": {
@@ -253,7 +267,8 @@
       "ee"
     ],
     "tags": [
-      "application"
+      "application",
+      "ssdlc"
     ]
   },
   "gpu": {
@@ -273,7 +288,8 @@
     "external": "true",
     "path": "/modules/gpu/",
     "tags": [
-      "ml/ai"
+      "ml/ai",
+      "ssdlc"
     ]
   },
   "managed-cassandra": {
@@ -283,7 +299,8 @@
     "external": "true",
     "path": "/modules/managed-cassandra/",
     "tags": [
-      "managed services"
+      "managed services",
+      "ssdlc"
     ]
   },
   "managed-hive-metastore": {
@@ -293,7 +310,8 @@
     "external": "true",
     "path": "/modules/managed-hive-metastore/",
     "tags": [
-      "managed services"
+      "managed services",
+      "ssdlc"
     ]
   },
   "managed-kafka": {
@@ -303,7 +321,8 @@
     "external": "true",
     "path": "/modules/managed-kafka/",
     "tags": [
-      "managed services"
+      "managed services",
+      "ssdlc"
     ]
   },
   "managed-memcached": {
@@ -315,7 +334,8 @@
     "external": "true",
     "path": "/modules/managed-memcached/",
     "tags": [
-      "managed services"
+      "managed services",
+      "ssdlc"
     ]
   },
   "managed-postgres": {
@@ -327,7 +347,8 @@
     "external": "true",
     "path": "/modules/managed-postgres/",
     "tags": [
-      "managed services"
+      "managed services",
+      "ssdlc"
     ]
   },
   "managed-trino": {
@@ -337,7 +358,8 @@
     "external": "true",
     "path": "/modules/managed-trino/",
     "tags": [
-      "managed services"
+      "managed services",
+      "ssdlc"
     ]
   },
   "managed-valkey": {
@@ -349,7 +371,8 @@
     "external": "true",
     "path": "/modules/managed-valkey/",
     "tags": [
-      "managed services"
+      "managed services",
+      "ssdlc"
     ]
   },
   "neuvector": {
@@ -383,7 +406,8 @@
     ],
     "external": "true",
     "tags": [
-      "observability"
+      "observability",
+      "ssdlc"
     ]
   },
   "observability-platform": {
@@ -404,7 +428,8 @@
     "tags": [
       "observability",
       "web ui",
-      "application"
+      "application",
+      "ssdlc"
     ]
   },
   "operator-argo": {
@@ -424,7 +449,8 @@
     "external": "true",
     "path": "/modules/operator-argo/",
     "tags": [
-      "delivery"
+      "delivery",
+      "ssdlc"
     ]
   },
   "operator-trivy": {
@@ -436,7 +462,8 @@
     "external": "true",
     "path": "/modules/operator-trivy/",
     "tags": [
-      "security"
+      "security",
+      "ssdlc"
     ]
   },
   "payload-registry": {
@@ -446,7 +473,8 @@
     "external": "true",
     "path": "/modules/payload-registry/",
     "tags": [
-      "registry"
+      "registry",
+      "ssdlc"
     ]
   },
   "pod-reloader": {
@@ -460,7 +488,8 @@
     "external": "true",
     "path": "/modules/pod-reloader/",
     "tags": [
-      "core"
+      "core",
+      "ssdlc"
     ]
   },
   "runtime-audit-engine": {
@@ -472,7 +501,8 @@
     "external": "true",
     "path": "/modules/runtime-audit-engine/",
     "tags": [
-      "security"
+      "security",
+      "ssdlc"
     ]
   },
   "sdn": {
@@ -482,7 +512,8 @@
     "external": "true",
     "path": "/modules/sdn/",
     "tags": [
-      "network"
+      "network",
+      "ssdlc"
     ]
   },
   "sds-local-volume": {
@@ -506,7 +537,8 @@
     "external": "true",
     "path": "/modules/sds-local-volume/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "sds-node-configurator": {
@@ -521,7 +553,8 @@
     "external": "true",
     "path": "/modules/sds-node-configurator/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "sds-replicated-volume": {
@@ -544,7 +577,8 @@
     "external": "true",
     "path": "/modules/sds-replicated-volume/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "secrets-store-integration": {
@@ -560,7 +594,8 @@
     "external": "true",
     "path": "/modules/secrets-store-integration/",
     "tags": [
-      "security"
+      "security",
+      "ssdlc"
     ]
   },
   "snapshot-controller": {
@@ -576,7 +611,8 @@
     "external": "true",
     "path": "/modules/snapshot-controller/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "static-routing-manager": {
@@ -586,7 +622,8 @@
     "external": "true",
     "path": "/modules/static-routing-manager/",
     "tags": [
-      "network"
+      "network",
+      "ssdlc"
     ]
   },
   "storage-volume-data-manager": {
@@ -596,7 +633,8 @@
     "external": "true",
     "path": "/modules/storage-volume-data-manager/",
     "tags": [
-      "storage"
+      "storage",
+      "ssdlc"
     ]
   },
   "state-snapshotter": {
@@ -608,7 +646,8 @@
       "ee"
     ],
     "tags": [
-      "core"
+      "core",
+      "ssdlc"
     ]
   },
   "stronghold": {
@@ -634,7 +673,8 @@
     "path": "/modules/stronghold/",
     "tags": [
       "security",
-      "web ui"
+      "web ui",
+      "ssdlc"
     ]
   },
   "virtualization": {
@@ -650,7 +690,8 @@
     "external": "true",
     "path": "/modules/virtualization/",
     "tags": [
-      "virtualization"
+      "virtualization",
+      "ssdlc"
     ]
   }
 }
