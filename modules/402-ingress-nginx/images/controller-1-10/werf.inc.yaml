@@ -369,7 +369,7 @@ shell:
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - cp -R /src/rootfs/etc/* /chroot/etc
-  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
+  - cp -alf /usr/lib/locale/. /chroot/usr/lib/locale/
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
