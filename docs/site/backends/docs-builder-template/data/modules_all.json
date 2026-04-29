@@ -1,49 +1,4 @@
 {
-  "admission-policy-engine": {
-    "editionMinimumAvailable": "ce",
-    "editionsWithRestrictions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the ability to use signature verification policies for container images and the ability to prohibit the launch of containers with vulnerabilities",
-        "ru": "Ограничение на возможность использования политик проверки подписи образов контейнеров и возможность установки запрета на запуск контейнеров с уязвимостями"
-      }
-    }
-  },
-  "cloud-provider-vsphere": {
-    "editionFullyAvailable": [
-      "se-plus",
-      "ee"
-    ],
-    "editionMinimumAvailable": "ee",
-    "path": "modules/cloud-provider-vsphere/"
-  },
-  "cloud-provider-zvirt": {
-    "editionFullyAvailable": [
-      "se-plus",
-      "ee"
-    ],
-    "editionMinimumAvailable": "ee",
-    "path": "modules/cloud-provider-zvirt/"
-  },
-  "cni-cilium": {
-    "editionMinimumAvailable": "ce",
-    "editionsWithRestrictions": [
-      "ce",
-      "be",
-      "se"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the ability to configure fault tolerant Egress Gateways",
-        "ru": "Ограничение на возможность настройки отказоустойчивых выходных узлов (Egress Gateway)"
-      }
-    }
-  },
   "code": {
     "editions": [
       "ee",
@@ -61,94 +16,12 @@
         "ru": "Требуется отдельная лицензия"
       }
     },
-    "external": "true",
-    "path": "/modules/code/stable/"
-  },
-  "gpu": {
-    "editions": [
-      "ee"
-    ],
     "tags": [
-      "ml/ai"
+      "application",
+      "web ui"
     ],
     "external": "true",
-    "path": "/modules/gpu/"
-  },
-  "managed-cassandra": {
-    "editions": [
-      "ee"
-    ],
-    "tags": [
-      "managed services"
-    ],
-    "external": "true",
-    "path": "/modules/managed-cassandra/"
-  },
-  "managed-hive-metastore": {
-    "editions": [
-      "ee"
-    ],
-    "tags": [
-      "managed services"
-    ],
-    "external": "true",
-    "path": "/modules/managed-hive-metastore/"
-  },
-  "managed-kafka": {
-    "editions": [
-      "ee"
-    ],
-    "tags": [
-      "managed services"
-    ],
-    "external": "true",
-    "path": "/modules/managed-kafka/"
-  },
-  "managed-postgres": {
-    "editions": [
-      "ee",
-      "se",
-      "se-plus"
-    ],
-    "tags": [
-      "managed services"
-    ],
-    "external": "true",
-    "path": "/modules/managed-postgres/"
-  },
-  "managed-memcached": {
-    "editions": [
-      "ee",
-      "se",
-      "se-plus"
-    ],
-    "tags": [
-      "managed services"
-    ],
-    "external": "true",
-    "path": "/modules/managed-memcached/"
-  },
-  "managed-trino": {
-    "editions": [
-      "ee"
-    ],
-    "tags": [
-      "managed services"
-    ],
-    "external": "true",
-    "path": "/modules/managed-trino/"
-  },
-  "managed-valkey": {
-    "editions": [
-      "ee",
-      "se",
-      "se-plus"
-    ],
-    "tags": [
-      "managed services"
-    ],
-    "external": "true",
-    "path": "/modules/managed-valkey/"
+    "path": "/modules/code/"
   },
   "commander": {
     "editions": [
@@ -170,7 +43,12 @@
       }
     },
     "external": "true",
-    "path": "/modules/commander/stable/"
+    "path": "/modules/commander/",
+    "tags": [
+      "managing",
+      "application",
+      "web ui"
+    ]
   },
   "commander-agent": {
     "editions": [
@@ -180,7 +58,10 @@
       "se-plus",
       "ee"
     ],
-    "path": ""
+    "path": "/modules/commander-agent/",
+    "tags": [
+      "helper"
+    ]
   },
   "console": {
     "editions": [
@@ -188,7 +69,9 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce",
@@ -201,166 +84,252 @@
       }
     },
     "external": "true",
-    "path": "/modules/console/stable/"
+    "path": "/modules/console/",
+    "tags": [
+      "managing",
+      "observability",
+      "web ui"
+    ]
   },
   "csi-ceph": {
     "editions": [
       "ce",
-      "be",
       "se",
       "se-plus",
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/csi-ceph/stable/"
-  },
-  "csi-netapp": {
-    "editions": [
       "ee",
+      "cse-lite",
       "cse-pro"
     ],
-    "editionsWithRestrictions": [
-      "cse-pro"
-    ],
-    "editionsWithRestrictionsComments": {
-      "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
-      }
-    },
     "external": "true",
-    "path": "/modules/csi-netapp/stable/"
+    "path": "/modules/csi-ceph/",
+    "tags": [
+      "storage"
+    ]
   },
   "csi-hpe": {
     "editions": [
-      "ee",
-      "cse-pro"
+      "ee"
     ],
     "editionsWithRestrictions": [
+      "cse-lite",
       "cse-pro"
     ],
     "editionsWithRestrictionsComments": {
-      "cse-pro": {
+      "all": {
         "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
-    "path": "/modules/csi-hpe/stable/"
+    "path": "/modules/csi-hpe/",
+    "tags": [
+      "storage"
+    ]
   },
   "csi-huawei": {
     "editions": [
-      "ee",
-      "cse-pro"
+      "ee"
     ],
     "editionsWithRestrictions": [
+      "cse-lite",
       "cse-pro"
     ],
     "editionsWithRestrictionsComments": {
-      "cse-pro": {
+      "all": {
         "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
-    "path": "/modules/csi-huawei/stable/"
+    "path": "/modules/csi-huawei/",
+    "tags": [
+      "storage"
+    ]
+  },
+  "csi-netapp": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
+      }
+    },
+    "external": "true",
+    "path": "/modules/csi-netapp/",
+    "tags": [
+      "storage"
+    ]
   },
   "csi-nfs": {
     "editions": [
       "ce",
-      "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/csi-nfs/stable/"
+    "path": "/modules/csi-nfs/",
+    "tags": [
+      "storage"
+    ]
   },
   "csi-s3": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/csi-s3/stable/"
+    "path": "/modules/csi-s3/",
+    "tags": [
+      "storage"
+    ]
   },
   "csi-scsi-generic": {
     "editions": [
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/csi-scsi-generic/stable/"
-  },
-  "csi-yadro-tatlin-unified": {
-    "editions": [
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/csi-yadro-tatlin-unified/stable/"
-  },
-  "dashboard": {
-    "editions": [
-      "ce",
-      "be",
-      "ee"
-    ],
-    "external": "true",
-    "path": "/modules/dashboard/"
-  },
-  "delivery-kit": {
-    "editions": [
+      "ee",
       "cse-lite",
       "cse-pro"
     ],
     "external": "true",
-    "path": ""
+    "path": "/modules/csi-scsi-generic/",
+    "tags": [
+      "storage"
+    ]
   },
-  "istio": {
-    "editionMinimumAvailable": "ce",
-    "editionsWithRestrictions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
-      "cse-lite"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the use of federation and multicluster features",
-        "ru": "Ограничение на использование федерации и мультикластерной конфигурации"
-      }
-    }
-  },
-  "metallb": {
-    "editionMinimumAvailable": "se",
-    "editionsWithRestrictions": [
-      "se",
-      "se-plus",
-      "cse-lite"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the use of the BGP load balancer for services",
-        "ru": "Ограничение на использование BGP-балансировщика для сервисов"
-      }
-    },
-    "path": "modules/metallb/"
-  },
-  "neuvector": {
+  "csi-yadro-tatlin-unified": {
     "editions": [
       "ee",
+      "cse-lite",
       "cse-pro"
     ],
+    "external": "true",
+    "path": "/modules/csi-yadro-tatlin-unified/",
+    "tags": [
+      "storage"
+    ]
+  },
+  "gpu": {
+    "editions": [
+      "ee"
+    ],
     "editionsWithRestrictions": [
+      "cse-lite",
       "cse-pro"
     ],
     "editionsWithRestrictionsComments": {
-      "cse-pro": {
+      "all": {
         "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
-    "path": "/modules/neuvector/stable/"
+    "path": "/modules/gpu/",
+    "tags": [
+      "ml/ai"
+    ]
+  },
+  "managed-cassandra": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-cassandra/",
+    "tags": [
+      "managed services"
+    ]
+  },
+  "managed-hive-metastore": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-hive-metastore/",
+    "tags": [
+      "managed services"
+    ]
+  },
+  "managed-kafka": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-kafka/",
+    "tags": [
+      "managed services"
+    ]
+  },
+  "managed-memcached": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "external": "true",
+    "path": "/modules/managed-memcached/",
+    "tags": [
+      "managed services"
+    ]
+  },
+  "managed-postgres": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/",
+    "tags": [
+      "managed services"
+    ]
+  },
+  "managed-trino": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/managed-trino/",
+    "tags": [
+      "managed services"
+    ]
+  },
+  "managed-valkey": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "external": "true",
+    "path": "/modules/managed-valkey/",
+    "tags": [
+      "managed services"
+    ]
+  },
+  "neuvector": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
+      }
+    },
+    "external": "true",
+    "path": "/modules/neuvector/",
+    "tags": [
+      "security"
+    ]
   },
   "observability": {
     "editions": [
@@ -368,9 +337,13 @@
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
-    "external": "true"
+    "external": "true",
+    "tags": [
+      "observability"
+    ]
   },
   "observability-platform": {
     "editions": [
@@ -386,25 +359,32 @@
       }
     },
     "external": "true",
-    "path": "/modules/observability-platform/stable/"
+    "path": "/modules/observability-platform/",
+    "tags": [
+      "observability",
+      "web ui",
+      "application"
+    ]
   },
   "operator-argo": {
     "editions": [
-      "ee",
-      "se-plus",
-      "cse-pro"
+      "ee"
     ],
     "editionsWithRestrictions": [
+      "cse-lite",
       "cse-pro"
     ],
     "editionsWithRestrictionsComments": {
-      "cse-pro": {
+      "all": {
         "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
         "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
-    "path": "/modules/operator-argo/stable/"
+    "path": "/modules/operator-argo/",
+    "tags": [
+      "delivery"
+    ]
   },
   "operator-trivy": {
     "editions": [
@@ -413,14 +393,20 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/operator-trivy/"
+    "path": "/modules/operator-trivy/",
+    "tags": [
+      "security"
+    ]
   },
   "payload-registry": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/payload-registry/stable/"
+    "path": "/modules/payload-registry/",
+    "tags": [
+      "registry"
+    ]
   },
   "pod-reloader": {
     "editions": [
@@ -431,7 +417,10 @@
       "ee"
     ],
     "external": "true",
-    "path": "/modules/pod-reloader/stable/"
+    "path": "/modules/pod-reloader/",
+    "tags": [
+      "core"
+    ]
   },
   "runtime-audit-engine": {
     "editions": [
@@ -440,22 +429,29 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/runtime-audit-engine/stable/"
+    "path": "/modules/runtime-audit-engine/",
+    "tags": [
+      "security"
+    ]
   },
   "sdn": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/sdn/stable/"
+    "path": "/modules/sdn/",
+    "tags": [
+      "network"
+    ]
   },
   "sds-local-volume": {
     "editions": [
       "ce",
-      "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce"
@@ -467,18 +463,25 @@
       }
     },
     "external": "true",
-    "path": "/modules/sds-local-volume/stable/"
+    "path": "/modules/sds-local-volume/",
+    "tags": [
+      "storage"
+    ]
   },
   "sds-node-configurator": {
     "editions": [
       "ce",
-      "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/sds-node-configurator/stable/"
+    "path": "/modules/sds-node-configurator/",
+    "tags": [
+      "storage"
+    ]
   },
   "sds-replicated-volume": {
     "editions": [
@@ -498,18 +501,26 @@
       }
     },
     "external": "true",
-    "path": "/modules/sds-replicated-volume/stable/"
+    "path": "/modules/sds-replicated-volume/",
+    "tags": [
+      "storage"
+    ]
   },
   "secrets-store-integration": {
-    "editionFullyAvailable": [
+    "editions": [
       "ce",
       "be",
       "se",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-lite",
+      "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/secrets-store-integration/stable/"
+    "path": "/modules/secrets-store-integration/",
+    "tags": [
+      "security"
+    ]
   },
   "snapshot-controller": {
     "editions": [
@@ -522,44 +533,36 @@
       "cse-pro"
     ],
     "external": "true",
-    "path": "/modules/snapshot-controller/stable/"
+    "path": "/modules/snapshot-controller/",
+    "tags": [
+      "storage"
+    ]
   },
   "static-routing-manager": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/static-routing-manager/stable/"
+    "path": "/modules/static-routing-manager/",
+    "tags": [
+      "network"
+    ]
   },
   "storage-volume-data-manager": {
     "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/storage-volume-data-manager/stable/"
+    "path": "/modules/storage-volume-data-manager/",
+    "tags": [
+      "storage"
+    ]
   },
-  "stronghold (CE)": {
-    "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
-      "ee",
-      "cse-lite",
-      "cse-pro"
-    ],
-    "external": "true",
-    "path": "/products/stronghold/documentation/about/editions.html"
-  },
-  "stronghold (EE)": {
-    "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee",
-      "cse-lite",
-      "cse-pro"
-    ],
+  "stronghold": {
+    "commercialBadgeMessage": {
+      "en": "A separate license is required",
+      "ru": "Требуется отдельная лицензия"
+    },
     "editionsWithRestrictions": [
       "be",
       "se",
@@ -572,52 +575,29 @@
       "all": {
         "en": "A separate license is required",
         "ru": "Требуется отдельная лицензия"
-      },
-      "cse-lite": {
-        "en": "A separate license is required for Deckhouse Stronghold CSE. There are functionality limitations",
-        "ru": "Требуется отдельная лицензия на Deckhouse Stronghold CSE. Есть ограничения функциональности"
-      },
-      "cse-pro": {
-        "en": "A separate license is required for Deckhouse Stronghold CSE. There are functionality limitations",
-        "ru": "Требуется отдельная лицензия на Deckhouse Stronghold CSE. Есть ограничения функциональности"
       }
     },
     "external": "true",
-    "path": "/products/stronghold/documentation/about/editions.html"
-  },
-  "user-authz": {
-    "editionFullyAvailable": [
-      "be",
-      "se",
-      "se-plus"
-    ],
-    "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
-      "ee"
-    ],
-    "editionsWithRestrictions": [
-      "ce"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Restriction on the use of namespace filtering in the role-based access model",
-        "ru": "Ограничение на использование фильтрации по пространствам имен в ролевой модели доступа"
-      }
-    },
-    "path": "modules/user-authz/"
+    "path": "/modules/stronghold/",
+    "tags": [
+      "security",
+      "web ui"
+    ]
   },
   "virtualization": {
     "editions": [
+      "ce",
       "se-plus",
-      "ee"
+      "ee",
+      "cse-pro"
     ],
     "editionsWithRestrictions": [
       "ce"
     ],
     "external": "true",
-    "path": "/modules/virtualization/stable/"
+    "path": "/modules/virtualization/",
+    "tags": [
+      "virtualization"
+    ]
   }
 }
