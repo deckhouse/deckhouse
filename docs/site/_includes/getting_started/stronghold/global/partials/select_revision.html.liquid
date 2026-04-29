@@ -24,7 +24,6 @@
       {% if revision == 'ee' %}
         <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if revision == 'ee' %} active{% endif %}"
           onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
-          openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
           toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
           {{ site.data.i18n[revision] }}
         </a>
@@ -32,7 +31,6 @@
     {% else %}
       <a id='tab_layout_{{ revision }}' href="javascript:void(0)" class="tabs__btn tabs__btn_revision{% if forloop.first %} active{% endif %}"
         onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_revision', 'block_layout_{{ revision }}', 'dhctl-revision', '{{ revision }}');
-        openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_other', 'block_other_{{ revision }}');
         toggleDisabled('tab_layout_{{ revision }}', '[license-token-{{ revision }}]');" >
         {{ site.data.i18n[revision] }}
       </a>
