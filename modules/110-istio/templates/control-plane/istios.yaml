@@ -12,6 +12,7 @@
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
   {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
     {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -174,7 +175,7 @@ spec:
   {{- if $.Values.istio.enableHTTP10 }}
         PILOT_HTTP10: "1"
   {{- end }}
-  {{- if ($.Values.istio.internal.enableAmbientMode) }}
+  {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
         PILOT_ENABLE_AMBIENT: "true"
   {{- end }}
       autoscaleEnabled: false
