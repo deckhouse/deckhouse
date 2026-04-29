@@ -57,8 +57,8 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 * **Kube-apiserver**:
 
-   * наблюдение за стандартными ресурсами Service, Endpoint, EndpointSlice, Namespace, Pod и Node;
-   * авторизация запросов на получение метрик.
+  * наблюдение за стандартными ресурсами Service, Endpoint, EndpointSlice, Namespace, Pod и Node;
+  * авторизация запросов на получение метрик.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
