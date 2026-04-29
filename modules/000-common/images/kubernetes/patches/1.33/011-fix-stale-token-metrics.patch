@@ -111,7 +111,7 @@ index 2893599cf6c..d9c810922de 100644
  			validTokensTotal.WithContext(ctx).Inc()
  		}
 diff --git a/pkg/serviceaccount/metrics.go b/pkg/serviceaccount/metrics.go
-index 7dc2bf397e7..78996287bea 100644
+index 7dc2bf397e7..2a58e6dc9f5 100644
 --- a/pkg/serviceaccount/metrics.go
 +++ b/pkg/serviceaccount/metrics.go
 @@ -38,13 +38,14 @@ var (
@@ -126,7 +126,7 @@ index 7dc2bf397e7..78996287bea 100644
  			Help:           "Cumulative stale projected service account tokens used",
  			StabilityLevel: metrics.ALPHA,
  		},
-+		[]string{"namespace", "name"},
++		[]string{"token_namespace", "token_name"},
  	)
  
  	// mauallyCreatedTokensTotal is the number of manually created secret-based long lived tokens.

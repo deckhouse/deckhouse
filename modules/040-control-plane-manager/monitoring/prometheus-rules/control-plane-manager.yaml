@@ -54,15 +54,16 @@
         Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
   - alert: D8KubernetesStaleTokensDetected
     for: 10m
-    expr: sum(rate(serviceaccount_stale_tokens_total[10m])) by (instance) > 0
+    expr: sum(rate(serviceaccount_stale_tokens_total[10m])) by (instance, token_namespace, token_name) > 0
     labels:
       severity_level: "8"
       tier: cluster
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Stale service account tokens detected.
+      summary: Stale service account tokens detected for `{{ $labels.token_namespace }}/{{ $labels.token_name }}`.
       description: |-
+        Service account `{{ $labels.token_namespace }}/{{ $labels.token_name }}` is using a stale token.
         This issue may occur if an application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
 
         **Recommended actions:**
@@ -73,35 +74,11 @@
         Note that currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
 
         **For further investigation:**
-        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
-
+        You can find the problematic pods using the following command:
         ```bash
-        jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
+        d8 k get pods -A -o json | jq -r '.items[] | select(.spec.serviceAccountName=="{{ $labels.token_name }}" and .metadata.namespace=="{{ $labels.token_namespace }}") | .metadata.name'
         ```
 
-        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
-
-        ```yaml
-        - level: Metadata
-          omitStages:
-          - RequestReceived
-          userGroups:
-          - system:serviceaccounts
-        ```
-
-        Example of applying an additional audit policy:
-
-        ```bash
-        d8 k apply -f - <<EOF
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: audit-policy
-          namespace: kube-system
-        data:
-          audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogIC0gUmVxdWVzdFJlY2VpdmVkCiAgdXNlckdyb3VwczoKICAtIHN5c3RlbTpzZXJ2aWNlYWNjb3VudHM=
-        EOF
-        ```
 
   - alert: D8ProblematicFeatureGateInUse
     for: 5m
