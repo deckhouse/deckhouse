@@ -650,7 +650,7 @@ The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at l
 - Linux kernel version is in the range 6.12.0–6.12.28 or 6.14.0–6.14.6 (these versions are affected by CVE-2025-37999 in EROFS)
 - systemd version lower than 244
 - cgroup v2 is disabled
-- EROFS file system is unavailable.
+- EROFS file system is unavailable. On AWS, default Ubuntu AMIs do not ship the `erofs` module — it requires the `linux-modules-extra` package. Starting from Deckhouse v1.76, this package is installed automatically during node bootstrapping. On older versions, install it manually: `apt-get install -y linux-modules-extra-$(uname -r) && modprobe erofs`.
 
 The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
 

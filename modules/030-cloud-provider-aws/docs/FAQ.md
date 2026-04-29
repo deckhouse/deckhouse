@@ -136,3 +136,16 @@ The progress of the process can be observed in events using the command `d8 k de
 ## What to do if switching to nodes in lower-priority groups takes a long time?
 
 If switching to nodes in lower-priority groups takes a long time (for example, when node groups with spot instances are set to the highest priority and, if such instances are unavailable, switching to nodes from other groups takes a very long time), follow the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-to-do-if-it-takes-a-long-time-to-switch-to-custom-nodes-in).
+
+## Why might Ubuntu-based nodes fail to join the cluster when using ContainerdV2?
+
+Default Ubuntu AMIs provided by AWS do not include the `linux-modules-extra` package, so the `erofs` kernel module is not available on the node. The `erofs` module is required for containerd v2 support. Without it, the node receives the `node.deckhouse.io/containerd-v2-unsupported` label and cannot join the cluster.
+
+Starting from Deckhouse v1.76, this is handled automatically: a Bashible step installs `linux-modules-extra-$(uname -r)` on Ubuntu nodes during bootstrapping.
+
+If you encounter this issue on an older version of Deckhouse, install the package manually on the affected node:
+
+```shell
+apt-get install -y linux-modules-extra-$(uname -r)
+modprobe erofs
+```
