@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-pod-securitycontext-unconfined
+  namespace: testns
+spec:
+  securityContext:
+    appArmorProfile:
+      type: Unconfined
+  containers:
+    - name: nginx
+      image: nginx

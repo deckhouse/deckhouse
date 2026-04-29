@@ -29,37 +29,45 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.match" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.check_set" . | nindent 16 }}
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-          not input.review.operation == "DELETE"
-          input.review.object.kind == "RoleBinding"
-          input.review.object.roleRef.kind == "ClusterRole"
+              import data.lib.check_set.check_value_in_set_with_wildcards
 
-          allowedRoles := get_allowed_roles(input)
-          roleRefName := input.review.object.roleRef.name
-          not input_parameters_allowed_roles(allowedRoles, roleRefName)
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                input.review.object.kind == "RoleBinding"
+                input.review.object.roleRef.kind == "ClusterRole"
 
-          msg := sprintf("ClusterRole \"%v\" is not in list of allowed roles %v", [roleRefName, allowedRoles])
-        }
+                allowedRoles := get_allowed_roles(input)
+                roleRefName := input.review.object.roleRef.name
+                result := check_value_in_set_with_wildcards(roleRefName, allowedRoles, [], {})
+                not result.allowed
 
-        get_allowed_roles(arg) = out {
-          not arg.parameters
-          out = []
-        }
-        get_allowed_roles(arg) = out {
-          not arg.parameters.allowedClusterRoles
-          out = []
-        }
-        get_allowed_roles(arg) = out {
-          out = arg.parameters.allowedClusterRoles
-        }
+                msg := sprintf("ClusterRole \"%v\" is not in list of allowed roles %v", [roleRefName, allowedRoles])
+              }
 
-        input_parameters_allowed_roles(allowedRoles, roleRefName) {
-          # An empty list means all Roles are blocked
-          allowedRoles == []
-        }
-        input_parameters_allowed_roles(allowedRoles, roleRefName) {
-          allowedRoles[_] == roleRefName  
-        }
+              get_allowed_roles(arg) := out if {
+                not arg.parameters
+                out = []
+              }
+              get_allowed_roles(arg) := out if {
+                not arg.parameters.allowedClusterRoles
+                out = []
+              }
+              get_allowed_roles(arg) := out if {
+                out = arg.parameters.allowedClusterRoles
+              }

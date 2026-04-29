@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: replica-limits
+spec:
+  objectKind: Deployment
+  objectFields:
+    - path: spec.replicas
+      level: pod
+      description: Deployment replicas count must be within allowed ranges.
+      requiredScenarios: [positive, negative]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

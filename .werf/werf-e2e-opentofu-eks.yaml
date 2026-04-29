@@ -14,6 +14,11 @@ import:
     add: /opentofu/opentofu
     to: /image/bin/opentofu
     before: setup
+  {{- $tf := index $.TF "aws" }}
+  - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-aws/werf.inc.yaml
+    add: /{{ $tf.artifactBinary }}
+    to: /usr/local/share/opentofu/plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}//linux_amd64/{{ $tf.destinationBinary }}
+    before: setup
   - image: e2e-eks-terraform-plugins
     add: /terraform-provider-random
     to: /usr/local/share/opentofu/plugins/registry.opentofu.org/hashicorp/random/3.4.3/linux_amd64/terraform-provider-random_v3.4.3_x5

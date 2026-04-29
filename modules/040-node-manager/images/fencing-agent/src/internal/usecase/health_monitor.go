@@ -46,6 +46,8 @@ type NodeWatcher interface {
 
 type Decider interface {
 	ShouldFeed(memberNum int) bool
+	Quorum() int
+	TotalNodes() int
 }
 
 type FallbackDecider interface {
@@ -153,20 +155,25 @@ func (h *HealthMonitor) check(ctx context.Context) {
 
 	numMembers := h.membership.NumMembers()
 
+	quorum := h.decider.Quorum()
+	totalNodes := h.decider.TotalNodes()
+
 	if h.decider.ShouldFeed(numMembers) {
 		if feedErr := h.watchdog.Feed(); feedErr != nil {
 			h.logger.Error("unable to feed watchdog", sl.Err(feedErr))
 		}
-		h.logger.Info("quorum feeding")
+		h.logger.Info("quorum feeding", "members", numMembers, "quorum", quorum, "total_nodes", totalNodes)
 		return
 	}
 	if h.fallback.ShouldFeed(ctx) {
 		if feedErr := h.watchdog.Feed(); feedErr != nil {
 			h.logger.Error("unable to feed watchdog", sl.Err(feedErr))
 		}
-		h.logger.Info("fallback feeding")
+		h.logger.Warn("fallback(k8s api) feeding: quorum lost", "members", numMembers, "quorum", quorum, "total_nodes", totalNodes)
 		return
 	}
+
+	h.logger.Error("watchdog starvation: quorum lost and kubernetes API unreachable", "members", numMembers, "quorum", quorum, "total_nodes", totalNodes)
 }
 
 func (h *HealthMonitor) startWatchdogBackoff(ctx context.Context) error {

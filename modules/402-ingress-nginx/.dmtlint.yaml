@@ -19,3 +19,8 @@ linters-settings:
     exclude-rules:
       enum:
         - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.geoIP2.properties.maxmindEditionIDs.items"
+  rbac:
+    exclude-rules:
+      placement:
+        - kind: ServiceAccount
+          name: validator-full

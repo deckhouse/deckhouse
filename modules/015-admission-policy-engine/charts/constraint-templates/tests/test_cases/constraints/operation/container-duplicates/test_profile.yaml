@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: container-duplicates
+spec:
+  testDirectory: container-duplicates
+  suite:
+    expectedTestBlockNames:
+      - operation-policy

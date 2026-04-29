@@ -31,7 +31,9 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -51,10 +53,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
@@ -63,9 +63,7 @@ const (
 )
 
 type BashiblePipelineParams struct {
-	// Node
-	// do not use provider here, we need to run with one node!
-	Node           node.Interface
+	Node           libcon.Interface
 	NodeIP         string
 	MetaConfig     *config.MetaConfig
 	DevicePath     string
@@ -196,7 +194,7 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	})
 }
 
-func prepareMasterNode(ctx context.Context, nodeInterface node.Interface, controller *template.Controller) error {
+func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, controller *template.Controller) error {
 	upload := func(ctx context.Context, scriptPath string) error {
 		if _, err := os.Stat(scriptPath); err != nil {
 			if os.IsNotExist(err) {
@@ -256,7 +254,7 @@ func PrepareBashibleBundle(
 	})
 }
 
-func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient node.SSHClient) error {
+func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient libcon.SSHClient) error {
 	return log.ProcessCtx(ctx, "bootstrap", "Wait for SSH on Master become Ready", func(ctx context.Context) error {
 		availabilityCheck := sshClient.Check()
 		_ = log.ProcessCtx(ctx, "default", "Connection string", func(ctx context.Context) error {
@@ -264,7 +262,10 @@ func WaitForSSHConnectionOnMaster(ctx context.Context, sshClient node.SSHClient)
 			return nil
 		})
 
-		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx); err != nil {
+		if err := availabilityCheck.WithDelaySeconds(1).AwaitAvailability(ctx, retry.NewEmptyParams(
+			retry.WithWait(5*time.Second),
+			retry.WithAttempts(50),
+		)); err != nil {
 			return fmt.Errorf("await master to become available: %v", err)
 		}
 		return nil

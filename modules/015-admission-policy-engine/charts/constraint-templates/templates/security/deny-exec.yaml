@@ -36,16 +36,31 @@ spec:
       rego: |
         package d8.security_policies
 
-        import future.keywords.every
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          input.review.object.stdin == true
-          msg :=  "Interactive exec is not permitted."
+        import future.keywords.in
+
+        all_containers[c] {
+          c := object.get(input.review.object.spec, "containers", [])[_]
+        }
+
+        all_containers[c] {
+          c := object.get(input.review.object.spec, "initContainers", [])[_]
+        }
+
+        all_containers[c] {
+          c := object.get(input.review.object.spec, "ephemeralContainers", [])[_]
         }
 
         violation[{"msg": msg}] {
           not input.review.operation == "DELETE"
-          some command in input.review.object.command
-            not command in input.parameters.allowedCommands
-          msg := sprintf("Only %v commands are allowed.", [input.parameters.allowedCommands])
+          c := all_containers[_]
+          object.get(c, "stdin", false) == true
+          msg := "Interactive exec is not permitted."
+        }
+
+        violation[{"msg": msg}] {
+          not input.review.operation == "DELETE"
+          c := all_containers[_]
+          some command in object.get(c, "command", [])
+          not command in object.get(input.parameters, "allowedCommands", [])
+          msg := sprintf("Only %v commands are allowed.", [object.get(input.parameters, "allowedCommands", [])])
         }

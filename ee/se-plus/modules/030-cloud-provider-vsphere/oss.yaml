@@ -1,0 +1,53 @@
+- name: VMware vSphere Cloud provider
+  link: https://github.com/kubernetes/cloud-provider-vsphere
+  description: Cloud Controller Manager for VMware vSphere.
+  logo: /images/logos/vsphere.svg
+  license: Apache License 2.0
+  id: ccm-vsphere
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v1.31.1
+    - condition:
+        k8s: "1.32"
+      version: v1.32.3
+    - condition:
+        k8s: "1.33"
+      version: v1.33.1
+    - condition:
+        k8s: "1.34"
+      version: v1.34.0
+    - condition:
+        k8s: "1.35"
+      version: v1.35.0
+
+- name: VMware vSphere CSI driver
+  link: https://github.com/kubernetes-sigs/vsphere-csi-driver
+  description: CSI driver for VMware vSphere.
+  logo: /images/logos/vsphere.svg
+  license: Apache License 2.0
+  id: csi-vsphere
+  versions:
+    - condition:
+        k8s: "1.31"
+      version: v3.0.3
+    - condition:
+        k8s: "1.32"
+      version: v3.0.3
+    - condition:
+        k8s: "1.33"
+      version: v3.0.3
+    - condition:
+        k8s: "1.34"
+      version: v3.0.3
+    - condition:
+        k8s: "1.35"
+      version: v3.0.3
+
+- name: VMware vSphere Terraform provider
+  link: https://github.com/hashicorp/terraform-provider-vsphere
+  description: Terraform provider for VMware vSphere.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-vsphere
+  version: "2.0.2"

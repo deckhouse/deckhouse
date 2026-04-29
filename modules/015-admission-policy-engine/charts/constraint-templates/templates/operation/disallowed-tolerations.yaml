@@ -45,55 +45,84 @@ spec:
                       - NoExecute
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
 
-        is_pod { input.review.kind.kind == "Pod" }
+              import data.lib.common.has_field
 
-        # true if field exists on object
-        has_field(obj, field) { obj[field] }
+              is_pod if {
+                input.review.kind.kind == "Pod"
+              }
 
-        # k8s default NoExecute tolerations that get injected for all pods
-        is_default_noexecute(t) {
-          t.effect == "NoExecute"
-          t.key == "node.kubernetes.io/not-ready"
-        }
-        is_default_noexecute(t) {
-          t.effect == "NoExecute"
-          t.key == "node.kubernetes.io/unreachable"
-        }
+              # k8s default NoExecute tolerations that get injected for all pods
+              is_default_noexecute(t) if {
+                t.effect == "NoExecute"
+                t.key == "node.kubernetes.io/not-ready"
+              }
 
-        # Collect pod tolerations but skip the default NoExecute ones
-        pod_tolerations[t] {
-          t := input.review.object.spec.tolerations[_]
-          not is_default_noexecute(t)
-        }
+              is_default_noexecute(t) if {
+                t.effect == "NoExecute"
+                t.key == "node.kubernetes.io/unreachable"
+              }
 
-        # helpers: "absent in pattern OR equal" semantics
-        key_match(rt, pt) { not has_field(rt, "key") }
-        key_match(rt, pt) { rt.key == pt.key }
+              # Collect pod tolerations but skip the default NoExecute ones
+              pod_tolerations contains t if {
+                t := input.review.object.spec.tolerations[_]
+                not is_default_noexecute(t)
+              }
 
-        op_match(rt, pt)  { not has_field(rt, "operator") }
-        op_match(rt, pt)  { rt.operator == pt.operator }
+              # helpers: "absent in pattern OR equal" semantics
+              key_match(rt, _) if {
+                not has_field(rt, "key")
+              }
 
-        val_match(rt, pt) { not has_field(rt, "value") }
-        val_match(rt, pt) { rt.value == pt.value }
+              key_match(rt, pt) if {
+                rt.key == pt.key
+              }
 
-        eff_match(rt, pt) { not has_field(rt, "effect") }
-        eff_match(rt, pt) { rt.effect == pt.effect }
+              op_match(rt, _) if {
+                not has_field(rt, "operator")
+              }
 
-        tol_match(rt, pt) {
-          key_match(rt, pt)
-          op_match(rt, pt)
-          val_match(rt, pt)
-          eff_match(rt, pt)
-        }
+              op_match(rt, pt) if {
+                rt.operator == pt.operator
+              }
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          is_pod
-          rt := input.parameters.tolerations[_]
-          pt := pod_tolerations[_]
-          tol_match(rt, pt)
-          msg := sprintf("Pod <%v> has a disallowed toleration matching %v", [input.review.object.metadata.name, rt])
-        }
+              val_match(rt, _) if {
+                not has_field(rt, "value")
+              }
+
+              val_match(rt, pt) if {
+                rt.value == pt.value
+              }
+
+              eff_match(rt, _) if {
+                not has_field(rt, "effect")
+              }
+
+              eff_match(rt, pt) if {
+                rt.effect == pt.effect
+              }
+
+              tol_match(rt, pt) if {
+                key_match(rt, pt)
+                op_match(rt, pt)
+                val_match(rt, pt)
+                eff_match(rt, pt)
+              }
+
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                is_pod
+                rt := input.parameters.tolerations[_]
+                pt := pod_tolerations[_]
+                tol_match(rt, pt)
+                msg := sprintf("Pod <%v> has a disallowed toleration matching %v", [input.review.object.metadata.name, rt])
+              }

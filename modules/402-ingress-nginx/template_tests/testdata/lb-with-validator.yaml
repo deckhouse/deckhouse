@@ -10,7 +10,7 @@ spec:
   additionalLogFields:
     my-cookie: "$cookie_MY_COOKIE"
   validationEnabled: true
-  validationSandboxMode: Standard
+  validationIsolationMode: IsolatedFilesystem
   controllerVersion: "1.10"
   inlet: LoadBalancer
   hsts: true

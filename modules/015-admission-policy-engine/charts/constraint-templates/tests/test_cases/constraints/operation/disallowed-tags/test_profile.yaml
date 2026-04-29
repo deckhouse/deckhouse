@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: disallowed-tags
+spec:
+  testDirectory: disallowed-tags
+  suite:
+    expectedTestBlockNames:
+      - operation-policy

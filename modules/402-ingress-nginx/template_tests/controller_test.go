@@ -216,6 +216,97 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 		Expect(ports[1].Get("targetPort").Int()).To(Equal(int64(443)))
 		Expect(ports[1].Get("protocol").String()).To(Equal("TCP"))
 	})
+
+	It("renders validation sandbox modes for controller version 1.14", func() {
+		hec.ValuesSet("ingressNginx.defaultControllerVersion", "1.14")
+		hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS", `
+- controllerName: sandbox
+  ingressClass: nginx
+  data:
+    cert: teststring
+    key: teststring
+`)
+
+		render := func(specYAML string) map[string]string {
+			hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers", specYAML)
+
+			rendered := make(map[string]string)
+			hec.HelmRender(WithFilteredRenderOutput(rendered, []string{
+				"ingress-nginx/templates/controller/controller.yaml",
+				"ingress-nginx/templates/validator/deployment.yaml",
+				"ingress-nginx/templates/validator/rbac-for-us.yaml",
+			}))
+			Expect(hec.RenderError).ShouldNot(HaveOccurred())
+			return rendered
+		}
+
+		fullMode := render(`
+- name: sandbox
+  spec:
+    ingressClass: nginx
+    inlet: LoadBalancer
+    validationEnabled: true
+    annotationValidationEnabled: true
+    controllerVersion: "1.14"
+    validationIsolationMode: IsolatedProcess
+`)
+		Expect(fullMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(fullMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
+		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
+		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("serviceAccountName: validator-full"))
+		Expect(fullMode["ingress-nginx/templates/validator/deployment.yaml"]).NotTo(ContainSubstring("--watch-namespace=d8-ingress-nginx"))
+		Expect(fullMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).To(ContainSubstring("name: validator-full\n  namespace: d8-ingress-nginx"))
+		Expect(fullMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).To(ContainSubstring("name: d8:ingress-nginx:validator-full"))
+
+		standardMode := render(`
+- name: sandbox
+  spec:
+    ingressClass: nginx
+    inlet: LoadBalancer
+    validationEnabled: true
+    annotationValidationEnabled: true
+    controllerVersion: "1.14"
+    validationIsolationMode: IsolatedProcess
+`)
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /chroot/tmp"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/tmp"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/ingress-controller"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/etc/ingress-controller"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/nginx/ssl/"))
+		Expect(standardMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/etc/nginx/ssl/"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("value: IsolatedProcess"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /chroot/tmp"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/nginx/ssl/"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/nginx/webhook-ssl/"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/tmp"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /validation-chroot/etc/nginx/ssl/"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("mountPath: /chroot/etc/nginx/webhook-ssl/"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("serviceAccountName: validator-full"))
+		Expect(standardMode["ingress-nginx/templates/validator/deployment.yaml"]).NotTo(ContainSubstring("--watch-namespace=d8-ingress-nginx"))
+		Expect(standardMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).To(ContainSubstring("name: validator-full\n  namespace: d8-ingress-nginx"))
+		Expect(standardMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).To(ContainSubstring("name: d8:ingress-nginx:validator-full"))
+
+		disabledMode := render(`
+- name: sandbox
+  spec:
+    ingressClass: nginx
+    inlet: LoadBalancer
+    validationEnabled: true
+    annotationValidationEnabled: true
+    controllerVersion: "1.14"
+    validationIsolationMode: NoIsolation
+`)
+		Expect(disabledMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
+		Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("serviceAccountName: validator"))
+		Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("--watch-namespace=d8-ingress-nginx"))
+		Expect(disabledMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).NotTo(ContainSubstring("name: validator-full"))
+		Expect(disabledMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).NotTo(ContainSubstring("name: d8:ingress-nginx:validator-full"))
+	})
 })
 
 // ingressNginxController holds simplified structure to extract controller spec
