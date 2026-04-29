@@ -33,7 +33,7 @@ const (
 
 	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
 
-	PackageRepositoryConditionLastOperationScanFinished = "LastOperationScanFinished"
+	PackageRepositoryConditionLastScanSucceeded = "LastScanSucceeded"
 )
 
 var (
@@ -58,7 +58,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
 // +kubebuilder:printcolumn:name=Sync,type=date,JSONPath=.status.syncTime
-// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastOperationScanFinished')].message
+// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastScanSucceeded')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
 // PackageRepository is a source of packages for Deckhouse.

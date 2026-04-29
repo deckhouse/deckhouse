@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.18.0 // indirect
-	github.com/flant/addon-operator v1.20.3
+	github.com/flant/addon-operator v1.20.6
 	github.com/flant/kube-client v1.6.0
-	github.com/flant/shell-operator v1.15.3
+	github.com/flant/shell-operator v1.16.4
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -60,7 +60,7 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/pkg/log v0.2.0
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
-	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260407161812-f9afe0918c6e
+	github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa
 	github.com/deckhouse/module-sdk v0.10.4
 	github.com/ettle/strcase v0.2.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
@@ -94,6 +94,7 @@ require (
 require k8s.io/klog v1.0.0 // indirect
 
 require (
+	al.essio.dev/pkg/shellescape v1.6.0 // indirect
 	cel.dev/expr v0.25.1 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
@@ -101,11 +102,10 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy v0.0.0-20240626081445-38c0dcfd3af7 // indirect
-	github.com/deckhouse/lib-dhctl v0.13.0 // indirect
-	github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51 // indirect
-	github.com/dop251/goja v0.0.0-20251121114222-56b1242a5f86 // indirect
-	github.com/dop251/goja_nodejs v0.0.0-20251015164255-5e94316bedaf // indirect
-	github.com/evanw/esbuild v0.27.0 // indirect
+	github.com/deckhouse/lib-connection v0.5.0 // indirect
+	github.com/deckhouse/lib-dhctl v0.17.0 // indirect
+	github.com/deckhouse/lib-gossh v0.3.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-openapi/swag/conv v0.25.1 // indirect
 	github.com/go-openapi/swag/fileutils v0.25.1 // indirect
@@ -117,14 +117,14 @@ require (
 	github.com/go-openapi/swag/typeutils v0.25.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.1 // indirect
 	github.com/go-resty/resty/v2 v2.17.1 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
+	github.com/gosimple/slug v1.15.0 // indirect
+	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/hashicorp/vault/api v1.22.0 // indirect
 	github.com/itchyny/gojq v0.12.18 // indirect
 	github.com/miekg/dns v1.1.61 // indirect
-	github.com/name212/govalue v1.0.2 // indirect
+	github.com/name212/govalue v1.1.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.5.3 // indirect
 	github.com/redis/go-redis/v9 v9.10.0 // indirect
@@ -166,7 +166,7 @@ require (
 	github.com/aymanbagabas/go-udiff v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
-	github.com/bramvdbogaerde/go-scp v1.5.0 // indirect
+	github.com/bramvdbogaerde/go-scp v1.6.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
@@ -204,7 +204,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/analysis v0.24.0 // indirect
@@ -269,7 +269,7 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
-	github.com/moby/spdystream v0.5.0 // indirect
+	github.com/moby/spdystream v0.5.1 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -302,7 +302,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/spf13/cobra v1.10.1 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tetratelabs/wazero v1.8.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -317,7 +317,7 @@ require (
 	github.com/werf/kubedog v0.13.1-0.20260115171811-304218f24308 // indirect
 	github.com/werf/lockgate v0.1.1 // indirect
 	github.com/werf/logboek v0.6.1 // indirect
-	github.com/werf/nelm v1.23.1
+	github.com/werf/nelm v1.24.1-0.20260427093240-93080e63001a
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect

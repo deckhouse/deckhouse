@@ -108,6 +108,7 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 			hec.HelmRender(WithFilteredRenderOutput(rendered, []string{
 				"ingress-nginx/templates/controller/",
 				"ingress-nginx/templates/failover/",
+				"ingress-nginx/templates/validator/",
 			}))
 			Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
@@ -132,6 +133,9 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 						continue
 					}
 					renderedFile = filepath.Join("controller", filepath.Base(path))
+
+				case strings.HasPrefix(path, "ingress-nginx/templates/validator/"):
+					renderedFile = filepath.Join("validator", filepath.Base(path))
 
 				default:
 					continue

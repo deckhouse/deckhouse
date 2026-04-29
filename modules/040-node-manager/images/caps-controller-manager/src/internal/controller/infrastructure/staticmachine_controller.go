@@ -403,7 +403,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.Logger.V(1).Info("StaticInstance is adopting")
 
 		estimated := DefaultStaticInstanceAdoptTimeout -
-			time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+			time.Since(instanceScope.MachineScope.StaticMachine.CreationTimestamp.Time)
 
 		if estimated < (10 * time.Second) {
 			instanceScope.MachineScope.Fail("UpdateError",

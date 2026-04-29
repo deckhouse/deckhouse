@@ -14,7 +14,7 @@ extractedLinksMax: 0
 
 * [`admission-policy-engine`](/modules/admission-policy-engine/) — позволяет использовать в кластере политики безопасности согласно Kubernetes [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/). Для реализации политик модуль использует [Gatekeeper](https://open-policy-agent.github.io/gatekeeper/website/docs/);
 * [`runtime-audit-engine`](/modules/runtime-audit-engine/) — реализует внутреннюю систему обнаружения угроз;
-* [`operator-trivy`](modules/operator-trivy/) — позволяет периодически сканировать кластер DKP на наличие уязвимостей;
+* [`operator-trivy`](/modules/operator-trivy/) — позволяет периодически сканировать кластер DKP на наличие уязвимостей;
 * [`cert-manager`](/modules/cert-manager/) — управляет TLS-сертификатами в кластере;
 * [`secrets-store-integration`](/modules/secrets-store-integration/) — реализует доставку секретов в приложения Kubernetes-кластера путем подключения секретов, ключей и сертификатов из внешних хранилищ;
 * [`secret-copier`](/modules/secret-copier/) — автоматически копирует секреты в неймспейсы кластера.

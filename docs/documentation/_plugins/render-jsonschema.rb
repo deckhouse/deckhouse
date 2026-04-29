@@ -464,13 +464,26 @@ module JSONSchemaRenderer
         result
     end
 
+    # CSS classes on root <li> for CRD spec/status (aligned with Hugo openapi partials).
+    def crd_root_property_li_class(property_name)
+        case property_name
+        when 'spec'
+            'top-level-toggleable'
+        when 'status'
+            'closed top-level-toggleable'
+        else
+            ''
+        end
+    end
+
     # params:
     # 1 - parameter name to render (string)
     # 2 - parameter attributes (hash)
     # 3 - parent item data (hash)
     # 4 - object with primary language data
     # 5 - object with language data which use if there is no data in primary language
-    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '')
+    # 10 - optional li class for root CRD rows (spec/status collapse)
+    def format_schema(name, attributes, parent, primaryLanguage = nil, fallbackLanguage = nil, ancestors = [], resourceName = '', versionAPI = '', moduleName = '', li_class = '')
         # Checking for x-doc-skip
         if attributes.is_a?(Hash) and attributes.has_key?('x-doc-skip') and attributes['x-doc-skip'] == true
             # Parameter marked with x-doc-skip: true - skip rendering entirely
@@ -537,7 +550,11 @@ module JSONSchemaRenderer
 
         if parameterTitle != ''
             parameterTextContent = ''
-            result.push('<li>')
+            if li_class.to_s != ''
+                result.push(%Q(<li class="#{li_class}">))
+            else
+                result.push('<li>')
+            end
             result.push('<div class="resources__prop_wrap">')
             attributesType = ''
             if attributes.is_a?(Hash)
@@ -903,7 +920,7 @@ module JSONSchemaRenderer
                     if   input['i18n'][fallbackLanguageName] then
                         _fallbackLanguage = get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","properties",key)
                     end
-                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
+                        result.push(format_schema(key, value, input["spec"]["validation"]["openAPIV3Schema"], _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName, crd_root_property_li_class(key)))
                     end
                     result.push('</ul>')
                 end
@@ -1016,8 +1033,6 @@ module JSONSchemaRenderer
                         item['schema']['openAPIV3Schema']['properties'].each do |key, value|
                         _primaryLanguage = nil
                         _fallbackLanguage = nil
-                        # skip status object
-                        next if key == 'status'
 
                         # Checking for x-doc-skip for TOP-level properties
                         if value.is_a?(Hash) and value.has_key?('x-doc-skip') and value['x-doc-skip'] == true
@@ -1049,7 +1064,7 @@ module JSONSchemaRenderer
                         linkAnchor = sprintf(%q(%s-%s), input["spec"]["names"]["kind"].downcase, item['name'].downcase)
                         resourceName = input["spec"]["names"]["kind"]
 
-                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName))
+                        result.push(format_schema(key, value, item['schema']['openAPIV3Schema'] , _primaryLanguage, _fallbackLanguage, fullPath, resourceName, versionAPI, moduleName, crd_root_property_li_class(key)))
                         end
                         if header == '' then
                             result.push('</ul>')

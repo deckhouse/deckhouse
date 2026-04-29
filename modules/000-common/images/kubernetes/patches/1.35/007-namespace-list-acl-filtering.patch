@@ -683,7 +683,7 @@ index 9d82ca85633..a02d7078145 100644
  		return genericapiserver.APIGroupInfo{}, err
  	}
 diff --git a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
-index 6c6c94ba718..f4fa75f00b4 100644
+index 439696d07ab..6831f210f7e 100644
 --- a/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 +++ b/staging/src/k8s.io/apiserver/pkg/endpoints/filters/authorization.go
 @@ -47,6 +47,35 @@ const (
@@ -743,4 +743,3 @@ index 6c6c94ba718..f4fa75f00b4 100644
  		klog.V(4).InfoS("Forbidden", "URI", req.RequestURI, "reason", reason)
  		audit.AddAuditAnnotations(ctx,
  			decisionAnnotationKey, decisionForbid,
-

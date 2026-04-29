@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "5"
+  resourceVersion: "4"
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -24,14 +24,12 @@ spec:
 status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'Failed to list packages: failed to list packages: failed to list tags:
-      assert.AnError general error for testing'
-    reason: PackageListingFailed
-    status: "False"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'failed to list packages: failed to list tags: assert.AnError general
+      error for testing'
+    reason: ScanFailed
+    status: "True"
     type: Completed
-  phase: Processing
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -46,10 +44,9 @@ spec:
 status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'Failed to list packages: failed to list packages: failed to list tags:
-      assert.AnError general error for testing'
-    reason: PackageListingFailed
+    message: 'failed to list packages: failed to list tags: assert.AnError general
+      error for testing'
+    reason: ScanFailed
     status: "False"
-    type: LastOperationScanFinished
-  partialScanAvailable: false
+    type: LastScanSucceeded
   syncTime: null

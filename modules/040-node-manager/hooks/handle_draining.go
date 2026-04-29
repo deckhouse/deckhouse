@@ -49,6 +49,9 @@ const (
 	drainedAnnotationKey  = "update.node.deckhouse.io/drained"
 	nodeGroupLabel        = "node.deckhouse.io/group"
 	defaultDrainTimeout   = 10 * time.Minute
+	defaultDrainFailNote  = "Node draining failed"
+	maxEventNoteLength    = 1024
+	eventNoteSuffix       = "..."
 )
 
 var nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
@@ -314,11 +317,28 @@ func (dr drainedNodeRes) buildEvent() *eventsv1.Event {
 			APIVersion: "deckhouse.io/v1",
 		},
 		Reason:              "DrainFailed",
-		Note:                dr.Err.Error(),
+		Note:                buildDrainEventNote(dr.Err),
 		Type:                "Warning",
 		EventTime:           v1.MicroTime{Time: time.Now()},
 		Action:              "Binding",
 		ReportingInstance:   "deckhouse",
 		ReportingController: "deckhouse",
 	}
+}
+
+func buildDrainEventNote(err error) string {
+	if err == nil {
+		return defaultDrainFailNote
+	}
+
+	note := err.Error()
+	if note == "" {
+		return defaultDrainFailNote
+	}
+
+	if len(note) > maxEventNoteLength {
+		return note[:maxEventNoteLength-len(eventNoteSuffix)] + eventNoteSuffix
+	}
+
+	return note
 }

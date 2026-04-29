@@ -17,6 +17,10 @@ site_description:
   ru: "Deckhouse. Позволяет создавать идентичные Kubernetes-кластеры в любой инфраструктуре и полностью, «автомагически» управляет ими."
 github_repo_path: /deckhouse/deckhouse
 d8Revision: EE
+LTSChannel:
+  version: v1.73-cse
+  versionName: v1.73 (CSE)
+excerpt_separator: ""
 
 metrics:
   google: G-4X28CEP7W2
@@ -38,6 +42,10 @@ social_links:
     telegram: https://t.me/deckhouse
 
 output: web
+
+collections:
+  faq:
+    output: false
 
 exclude:
 - .idea/
@@ -142,6 +150,13 @@ defaults:
       searchBageEnabled: true
       sidebar: virtualization-platform
       sitemap_include: false
+  - scope:
+      path: "_faq/virtualization-platform"
+      type: faq
+    values:
+      searchable: true
+      product_code: virtualization-platform
+      sitemap_include: true
   - scope:
       path: "pages/virtualization-platform/guides"
       type: "pages"

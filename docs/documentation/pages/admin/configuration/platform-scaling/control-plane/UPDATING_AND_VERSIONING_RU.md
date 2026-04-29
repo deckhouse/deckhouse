@@ -57,7 +57,15 @@ lang: ru
 - **Статус компонентов** — версии компонентов control plane (kube-apiserver, kube-scheduler, kube-controller-manager) на каждом master-узле;
 - **Прогресс обновления узлов** — сколько узлов уже обновлено и сколько всего узлов должно быть обновлено;
 - **Целевая и текущая версии** — желаемая версия из конфигурации и фактическое состояние кластера во время обновления;
-- **Расхождение версий** — информация о компонентах, работающих не на целевой версии (в том числе на версии выше целевой).
+- **Расхождение версий** — информация о компонентах, работающих не на целевой версии (в том числе на версии выше целевой);
+- **Списки версий**:
+  - `supportedVersions` — минорные версии Kubernetes, поддерживаемые в текущем релизе DKP;
+  - `availableVersions` — версии, доступные для выбора при обновлении или понижении в *данном* кластере. Набор ограничен максимальной когда-либо установленной минорной версией и правилом одного минорного шага при откате;
+  - `automaticVersion` — минорная версия, которая будет использована при режиме обновления `Automatic`.
+
+В фазе `ControlPlaneUpdating` поле `status.progress` отражает общий прогресс обновления с учётом промежуточных минорных версий. При многошаговом обновлении (например, 1.33 → 1.35) процент растёт по мере завершения каждого шага, а не только когда все компоненты control plane достигнут финальной целевой версии.
+
+Минорные версии в ConfigMap (`spec`, `status`, а также метки `k8s-version` и `max-k8s-version`) задаются в том же формате, что и в ClusterConfiguration — без префикса `v` (например, `"1.33"`).
 
 Это позволяет в реальном времени видеть, какие компоненты обновляются, на каком этапе находится процесс, и не остановилось ли обновление на каком-либо узле или компоненте.
 
@@ -77,30 +85,42 @@ d8 k get configmap d8-cluster-kubernetes -n kube-system -o yaml
 apiVersion: v1
 data:
   spec: |
-    desiredVersion: v1.32
+    desiredVersion: "1.32"
     updateMode: Manual
   status: |
-    currentVersion: v1.32
+    currentVersion: "1.32"
+    supportedVersions:
+    - "1.30"
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    availableVersions:
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
-    - name: mazin-master-1
+    - name: master-1
       phase: UpToDate
       components:
-        kube-apiserver: v1.32
-        kube-controller-manager: v1.32
-        kube-scheduler: v1.32
-    - name: mazin-master-2
+        kube-apiserver: "1.32"
+        kube-controller-manager: "1.32"
+        kube-scheduler: "1.32"
+    - name: master-2
       phase: UpToDate
       components:
-        kube-apiserver: v1.32
-        kube-controller-manager: v1.32
-        kube-scheduler: v1.32
-    - name: mazin-master-0
+        kube-apiserver: "1.32"
+        kube-controller-manager: "1.32"
+        kube-scheduler: "1.32"
+    - name: master-0
       phase: UpToDate
       components:
-        kube-apiserver: v1.32
-        kube-controller-manager: v1.32
-        kube-scheduler: v1.32
+        kube-apiserver: "1.32"
+        kube-controller-manager: "1.32"
+        kube-scheduler: "1.32"
     nodes:
       desiredCount: 6
       upToDateCount: 6
@@ -113,8 +133,8 @@ metadata:
   creationTimestamp: "2026-01-16T16:48:45Z"
   labels:
     heritage: deckhouse
-    k8s-version: v1.32
-    max-k8s-version: v1.33
+    k8s-version: "1.32"
+    max-k8s-version: "1.33"
   name: d8-cluster-kubernetes
   namespace: kube-system
   resourceVersion: "20837731"
@@ -129,31 +149,42 @@ metadata:
 apiVersion: v1
 data:
   spec: |
-    desiredVersion: v1.32
+    desiredVersion: "1.32"
     updateMode: Manual
   status: |
-    currentVersion: v1.33
+    currentVersion: "1.33"
+    supportedVersions:
+    - "1.30"
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    availableVersions:
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 0%
     controlPlane:
-    - name: mazin-master-0
+    - name: master-0
       phase: Updating
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
-    - name: mazin-master-1
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
+    - name: master-1
       phase: Updating
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
-    - name: mazin-master-2
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
+    - name: master-2
       phase: Updating
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
     nodes:
       desiredCount: 6
       upToDateCount: 0
@@ -166,8 +197,8 @@ metadata:
   creationTimestamp: "2026-01-16T16:48:45Z"
   labels:
     heritage: deckhouse
-    k8s-version: v1.33
-    max-k8s-version: v1.33
+    k8s-version: "1.33"
+    max-k8s-version: "1.33"
   name: d8-cluster-kubernetes
   namespace: kube-system
   resourceVersion: "21379847"
@@ -182,31 +213,42 @@ metadata:
 apiVersion: v1
 data:
   spec: |
-    desiredVersion: v1.32
+    desiredVersion: "1.32"
     updateMode: Manual
   status: |
-    currentVersion: v1.33
+    currentVersion: "1.33"
+    supportedVersions:
+    - "1.30"
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    availableVersions:
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
-    - name: mazin-master-0
+    - name: master-0
       phase: Updating
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
-    - name: mazin-master-1
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
+    - name: master-1
       phase: Updating
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
-    - name: mazin-master-2
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
+    - name: master-2
       phase: UpToDate
       components:
-        kube-apiserver: v1.32
-        kube-controller-manager: v1.32
-        kube-scheduler: v1.32
+        kube-apiserver: "1.32"
+        kube-controller-manager: "1.32"
+        kube-scheduler: "1.32"
     nodes:
       desiredCount: 6
       upToDateCount: 6
@@ -216,14 +258,82 @@ metadata:
     cause: downgradeK8s
     lastReconciliationTime: "2026-02-02T11:41:55Z"
     lastUpToDateTime: "2026-02-02T11:09:59Z"
-    creationTimestamp: "2026-01-16T16:48:45Z"
+  creationTimestamp: "2026-01-16T16:48:45Z"
   labels:
     heritage: deckhouse
-    k8s-version: v1.33
-    max-k8s-version: v1.33
+    k8s-version: "1.33"
+    max-k8s-version: "1.33"
   name: d8-cluster-kubernetes
   namespace: kube-system
   resourceVersion: "21388343"
+  uid: ba981996-f737-469c-9ce1-53aa46135994
+```
+
+#### Промежуточный шаг многошагового обновления (например, 1.33 → 1.35)
+
+В конфигурации целевая версия Kubernetes может опережать текущую версию кластера на несколько минорных версий. В этом случае обновление выполняется поэтапно, через промежуточные минорные версии.
+
+Поле `status.currentVersion` отражает текущий шаг обновления (активную минорную версию, до которой в данный момент доводится кластер). При этом в рамках одного шага отдельные компоненты control plane могут временно работать на разных минорных версиях.
+
+Поле `progress` учитывает весь путь обновления, включая промежуточные версии. По этой причине его значение может быть существенно больше 0 % ещё до того, как все компоненты достигнут целевой версии.
+
+```yaml
+apiVersion: v1
+data:
+  spec: |
+    desiredVersion: "1.35"
+    updateMode: Manual
+  status: |
+    currentVersion: "1.34"
+    supportedVersions:
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    - "1.35"
+    availableVersions:
+    - "1.33"
+    - "1.34"
+    - "1.35"
+    automaticVersion: "1.33"
+    phase: ControlPlaneUpdating
+    progress: 60%
+    controlPlane:
+    - name: master-0
+      phase: Updating
+      components:
+        kube-apiserver: "1.35"
+        kube-controller-manager: "1.34"
+        kube-scheduler: "1.34"
+    - name: master-1
+      phase: Updating
+      components:
+        kube-apiserver: "1.34"
+        kube-controller-manager: "1.34"
+        kube-scheduler: "1.34"
+    - name: master-2
+      phase: Updating
+      components:
+        kube-apiserver: "1.34"
+        kube-controller-manager: "1.34"
+        kube-scheduler: "1.34"
+    nodes:
+      desiredCount: 6
+      upToDateCount: 0
+kind: ConfigMap
+metadata:
+  annotations:
+    cause: upgradeK8s
+    lastReconciliationTime: "2026-04-17T09:43:08Z"
+    lastUpToDateTime: "2026-04-15T13:43:59Z"
+  creationTimestamp: "2026-01-16T16:48:45Z"
+  labels:
+    heritage: deckhouse
+    k8s-version: "1.33"
+    max-k8s-version: "1.33"
+  name: d8-cluster-kubernetes
+  namespace: kube-system
+  resourceVersion: "1753458"
   uid: ba981996-f737-469c-9ce1-53aa46135994
 ```
 
@@ -233,24 +343,35 @@ metadata:
 apiVersion: v1
 data:
   spec: |
-    desiredVersion: v1.33
+    desiredVersion: "1.33"
     updateMode: Manual
   status: |
-    currentVersion: v1.33
+    currentVersion: "1.33"
+    supportedVersions:
+    - "1.30"
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    availableVersions:
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
-    - name: mazin-master-0
+    - name: master-0
       phase: UpToDate
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
-    - name: mazin-master-1
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
+    - name: master-1
       phase: UpToDate
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
     nodes:
       desiredCount: 6
       upToDateCount: 6
@@ -260,11 +381,11 @@ metadata:
     cause: upgradeK8s
     lastReconciliationTime: "2026-02-02T11:09:59Z"
     lastUpToDateTime: "2026-02-02T11:09:59Z"
-    creationTimestamp: "2026-01-16T16:48:45Z"
+  creationTimestamp: "2026-01-16T16:48:45Z"
   labels:
     heritage: deckhouse
-    k8s-version: v1.33
-    max-k8s-version: v1.33
+    k8s-version: "1.33"
+    max-k8s-version: "1.33"
   name: d8-cluster-kubernetes
   namespace: kube-system
   resourceVersion: "21357074"
@@ -279,31 +400,43 @@ metadata:
 apiVersion: v1
 data:
   spec: |
-    desiredVersion: v1.32
+    desiredVersion: "1.32"
     updateMode: Manual
   status: |
-    currentVersion: v1.32
+    currentVersion: "1.32"
+    supportedVersions:
+    - "1.30"
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    availableVersions:
+    - "1.31"
+    - "1.32"
+    - "1.33"
+    - "1.34"
+    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 73%
     controlPlane:
-    - name: mazin-master-1
+    - name: master-1
       phase: UpToDate
       components:
-        kube-apiserver: v1.32
-        kube-controller-manager: v1.32
-        kube-scheduler: v1.32
-    - name: mazin-master-2
+        kube-apiserver: "1.32"
+        kube-controller-manager: "1.32"
+        kube-scheduler: "1.32"
+    - name: master-2
       phase: Updating
       components:
-        kube-apiserver: v1.33
-        kube-controller-manager: v1.33
-        kube-scheduler: v1.33
-    - name: mazin-master-0
+        kube-apiserver: "1.33"
+        kube-controller-manager: "1.33"
+        kube-scheduler: "1.33"
+    - name: master-0
       phase: Failed
       components:
-        kube-apiserver: v1.32
-        kube-controller-manager: v1.32
-        kube-scheduler: v1.32
+        kube-apiserver: "1.32"
+        kube-controller-manager: "1.32"
+        kube-scheduler: "1.32"
     nodes:
       desiredCount: 6
       upToDateCount: 6

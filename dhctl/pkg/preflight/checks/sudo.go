@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"os/exec"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 )
 
 type SudoAllowedCheck struct {
-	Node node.Interface
+	NodeInterface libcon.Interface
 }
 
 const SudoAllowedCheckName preflight.CheckName = "sudo-allowed"
@@ -43,7 +44,7 @@ func (SudoAllowedCheck) RetryPolicy() preflight.RetryPolicy {
 }
 
 func (c SudoAllowedCheck) Run(ctx context.Context) error {
-	cmd := c.Node.Command("echo")
+	cmd := c.NodeInterface.Command("echo")
 	cmd.Sudo(ctx)
 
 	if err := cmd.Run(ctx); err != nil {
@@ -57,8 +58,8 @@ func (c SudoAllowedCheck) Run(ctx context.Context) error {
 	return nil
 }
 
-func SudoAllowed(nodeInterface node.Interface) preflight.Check {
-	check := SudoAllowedCheck{Node: nodeInterface}
+func SudoAllowed(nodeInterface libcon.Interface) preflight.Check {
+	check := SudoAllowedCheck{NodeInterface: nodeInterface}
 	return preflight.Check{
 		Name:        SudoAllowedCheckName,
 		Description: check.Description(),

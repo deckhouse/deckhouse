@@ -15,15 +15,19 @@
 package bootstrap
 
 import (
-	"context"
 	"fmt"
+	"strings"
 
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"gopkg.in/alecthomas/kingpin.v2"
+
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -40,16 +44,34 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefinePostBootstrapScriptFlags(cmd)
 	app.DefinePreflight(cmd)
 
-	cmd.Action(func(c *kingpin.ParseContext) error {
+	return cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := kpcontext.ExtractContext(c)
+
 		logger := log.GetDefaultLogger()
+		extLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("could not get external logger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(extLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params)
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
+
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
-			TmpDir:            app.TmpDirName,
-			Logger:            logger,
-			IsDebug:           app.IsDebug,
-			ResetInitialState: false,
-			DirectoryConfig:   app.GetDirConfig(),
+			TmpDir:                 app.TmpDirName,
+			Logger:                 logger,
+			IsDebug:                app.IsDebug,
+			ResetInitialState:      false,
+			DirectoryConfig:        app.GetDirConfig(),
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 		})
-		err := bootstraper.Bootstrap(context.Background())
+		err = bootstraper.Bootstrap(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("Bootstrap failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
@@ -58,6 +80,4 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		return nil
 	})
-
-	return cmd
 }

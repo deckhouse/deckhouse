@@ -518,6 +518,7 @@ list:
  + vpaEnabled (optional, default: `false`) — enables VerticalPodAutoscaler rendering. 
  + vpaUpdateMode (optional, default: `"InPlaceOrRecreate"`) — VPA update mode. 
  + vpaMaxAllowed (optional, default: `{cpu: 50m, memory: 50Mi}`) — maximum resource values used in VPA policy. 
+ + securityPolicyExceptionEnabled (optional, default: `false`) — enables SecurityPolicyException rendering and adds the related pod label. 
 
 #### Usage
 

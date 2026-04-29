@@ -22,7 +22,7 @@ relatedLinks:
 {% alert %}
 В разделе {% if site.mode == 'module' %}[«Быстрый старт»]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Быстрый старт](/products/kubernetes-platform/gs/){% endif %} доступны пошаговые инструкции по установке Deckhouse Kubernetes Platform.
 
-Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install)! <span class="beta-badge">Beta</span>
+Попробуйте также [графический установщик Deckhouse Kubernetes Platform]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/#gui-install).
 {% endalert %}
 
 На этой странице представлена обзорная информация по установке Deckhouse Kubernetes Platform (DKP).
@@ -1080,7 +1080,7 @@ echo "$MYRESULTSTRING"
 ### Использование прокси-сервера
 
 {% alert level="warning" %}
-Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+Доступно в следующих редакциях: BE, SE, SE+, EE, CSE Lite, CSE Pro.
 {% endalert %}
 
 {% offtopic title="Пример шагов по настройке прокси-сервера на базе Squid..." %}

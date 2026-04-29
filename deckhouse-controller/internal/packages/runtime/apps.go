@@ -74,7 +74,7 @@ func (r *Runtime) ValidateSettings(ctx context.Context, name string, settings ad
 //  1. NeedUpdate fast-path: skip if version and settings checksum are unchanged
 //  2. Store.Update: if version changed → new root context, enqueue full pipeline
 //     (Disable → Download → Install → Load); if only settings changed → nil context,
-//     trigger Reschedule so the scheduler re-runs ApplySettings → Startup → Run
+//     trigger Reschedule so the scheduler re-runs Configure → Startup → Run
 //  3. CheckConstraints: validate Kubernetes/Deckhouse version requirements before enqueuing
 //
 // Settings are applied lazily: the scheduler's schedulePackage reads pending settings

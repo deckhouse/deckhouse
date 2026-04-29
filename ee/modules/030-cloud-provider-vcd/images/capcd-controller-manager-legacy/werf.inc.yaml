@@ -1,4 +1,4 @@
-{{- $version := "v1.2.0"}}
+{{- $version := include "get_oss_version_by_id_and_condition" (list "capi-vcd" (dict "mode" "legacy") $) }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless

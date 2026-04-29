@@ -1,0 +1,24 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-host-paths
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.volumes[].hostPath.path
+      level: pod
+      description: HostPath path must be within allowed prefixes
+      requiredScenarios: [positive, negative, absent]
+    - path: spec.volumes[].hostPath.readOnly
+      level: pod
+      description: HostPath readOnly must match allowed path settings
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.volumes.hostPath.allowedValues
+      level: pod
+      description: SPE override for allowed HostPath paths
+      requiredScenarios: [speMatch, speMismatch, speAbsent]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: false

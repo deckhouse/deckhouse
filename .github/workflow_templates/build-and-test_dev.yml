@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "needs.pull_request_info.outputs.ref" -}!}
+{!{- $pullRequestContext := coll.Dict "pullRequestRefField" "github.event.pull_request.head.sha" -}!}
 {!{- $ctx := coll.Merge $pullRequestContext . }!}
 
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  pull_request_target:
+  pull_request:
      types:
       - opened
       - synchronize
@@ -62,7 +62,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "{!{$werfEnv}!}"
-{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!} 
+{!{ tmpl.Exec "build_template" (slice $ctx "dev") | strings.Indent 4 }!}
 {!{ end }!}
 
   analyze_deckhouse:
@@ -204,7 +204,7 @@ jobs:
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Set commit status after e2e run

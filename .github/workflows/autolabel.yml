@@ -25,7 +25,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     steps:
     - uses: actions/labeler@v4
       with:

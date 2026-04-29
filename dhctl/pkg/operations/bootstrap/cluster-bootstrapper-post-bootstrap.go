@@ -18,9 +18,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
@@ -28,7 +30,12 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 	restore := b.applyParams()
 	defer restore()
 
-	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return err
+	}
+
+	wrapper, ok := nodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {
 		return fmt.Errorf("post bootstrap executor is not supported for local execution contexts")
 	}
@@ -41,20 +48,20 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		return err
 	}
 
-	if err := cache.InitWithOptions(wrapper.Client().Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err := cache.InitWithOptions(ctx, wrapper.Client().Check().String(), cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
 		return fmt.Errorf("Can not init cache: %v", err)
 	}
 
 	bootstrapState := NewBootstrapState(cache.Global())
 
-	postScriptExecutor := NewPostBootstrapScriptExecutor(wrapper.Client(), app.PostBootstrapScriptPath, bootstrapState).
+	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, app.PostBootstrapScriptPath, bootstrapState).
 		WithTimeout(app.PostBootstrapScriptTimeout)
 
 	if err := postScriptExecutor.Execute(ctx); err != nil {
 		return err
 	}
 
-	out, err := bootstrapState.PostBootstrapScriptResult()
+	out, err := bootstrapState.PostBootstrapScriptResult(ctx)
 	if err != nil {
 		return err
 	}

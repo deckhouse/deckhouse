@@ -24,7 +24,7 @@ kubernetesValidating:
   group: main
   rules:
   - apiGroups:   ["deckhouse.io"]
-    apiVersions: ["v1"]
+    apiVersions: ["v2"]
     operations:  ["CREATE", "UPDATE"]
     resources:   ["ingressnginxcontrollers"]
     scope:       "Cluster"

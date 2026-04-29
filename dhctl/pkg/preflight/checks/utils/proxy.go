@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -22,8 +23,9 @@ import (
 	"net/url"
 	"strings"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
@@ -31,7 +33,7 @@ var ErrBadProxyConfig = errors.New("bad proxy config")
 
 const ProxyTunnelPort = "22323"
 
-func SetupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tunnel, error) {
+func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, proxyUrl *url.URL) (libcon.Tunnel, error) {
 	port := proxyUrl.Port()
 	if port == "" {
 		switch proxyUrl.Scheme {
@@ -50,7 +52,7 @@ func SetupSSHTunnelToProxyAddr(sshCl node.SSHClient, proxyUrl *url.URL) (node.Tu
 	}
 
 	tun := sshCl.Tunnel(tunnel)
-	if err := tun.Up(); err != nil {
+	if err := tun.Up(ctx); err != nil {
 		return nil, err
 	}
 	return tun, nil

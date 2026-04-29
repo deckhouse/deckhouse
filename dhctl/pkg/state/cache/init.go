@@ -15,6 +15,7 @@
 package cache
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -41,9 +42,10 @@ var (
 
 var globalCache state.Cache = &cache.DummyCache{}
 
-func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
+func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state.Cache, error) {
 	tmpDir := filepath.Join(app.GetCacheDir(), stringsutil.Sha256Encode(identity))
 	log.InfoF("State cache directory: %s\n", tmpDir)
+
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
@@ -75,12 +77,12 @@ func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 	k8sCache := client.NewK8sStateCache(kubeCl, app.CacheKubeNamespace, secretName, tmpDir).
 		WithLabels(app.CacheKubeLabels)
 
-	err = k8sCache.Init()
+	err = k8sCache.Init(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	hasTombstone, err := k8sCache.InCache(state.TombstoneKey)
+	hasTombstone, err := k8sCache.InCache(ctx, state.TombstoneKey)
 	if err != nil {
 		return nil, err
 	}
@@ -93,14 +95,14 @@ func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 	return k8sCache, nil
 }
 
-func initCache(identity string, opts CacheOptions) error {
+func initCache(ctx context.Context, identity string, opts CacheOptions) error {
 	var err error
 
 	if opts.ResetInitialState {
-		globalCache, err = choiceCache(identity, opts)
+		globalCache, err = choiceCache(ctx, identity, opts)
 	} else {
 		once.Do(func() {
-			globalCache, err = choiceCache(identity, opts)
+			globalCache, err = choiceCache(ctx, identity, opts)
 		})
 	}
 
@@ -112,12 +114,12 @@ type CacheOptions struct {
 	ResetInitialState bool
 }
 
-func Init(identity string) error {
-	return initCache(identity, CacheOptions{})
+func Init(ctx context.Context, identity string) error {
+	return initCache(ctx, identity, CacheOptions{})
 }
 
-func InitWithOptions(identity string, opts CacheOptions) error {
-	return initCache(identity, opts)
+func InitWithOptions(ctx context.Context, identity string, opts CacheOptions) error {
+	return initCache(ctx, identity, opts)
 }
 
 func Global() state.Cache {

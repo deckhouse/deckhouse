@@ -31,7 +31,7 @@ data:
 metadata:
   annotations:
     cause: downgradeK8s
-    lastReconciliationTime: "2000-01-01T04:00:30+04:00"
+    lastReconciliationTime: "2000-01-01T00:00:30Z"
     lastUpToDateTime: "2026-01-01T00:00:00Z"
   labels:
     heritage: deckhouse

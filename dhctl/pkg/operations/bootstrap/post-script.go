@@ -22,22 +22,22 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
 type PostBootstrapScriptExecutor struct {
-	path      string
-	timeout   time.Duration
-	sshClient node.SSHClient
-	state     *State
+	path                   string
+	timeout                time.Duration
+	sshProviderinitializer *providerinitializer.SSHProviderInitializer
+	state                  *State
 }
 
-func NewPostBootstrapScriptExecutor(sshClient node.SSHClient, path string, state *State) *PostBootstrapScriptExecutor {
+func NewPostBootstrapScriptExecutor(sshProviderinitializer *providerinitializer.SSHProviderInitializer, path string, state *State) *PostBootstrapScriptExecutor {
 	return &PostBootstrapScriptExecutor{
-		path:      path,
-		sshClient: sshClient,
-		state:     state,
+		path:                   path,
+		sshProviderinitializer: sshProviderinitializer,
+		state:                  state,
 	}
 }
 
@@ -47,17 +47,14 @@ func (e *PostBootstrapScriptExecutor) WithTimeout(timeout time.Duration) *PostBo
 }
 
 func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
-	return log.Process("bootstrap", "Execute post-bootstrap script", func() error {
-		var err error
+	return log.ProcessCtx(ctx, "bootstrap", "Execute post-bootstrap script", func(ctx context.Context) error {
 		resultToSetState, err := e.run(ctx)
-
 		if err != nil {
 			msg := fmt.Sprintf("Post execution script was failed: %v", err)
 			return errors.New(msg)
 		}
 
-		err = e.state.SavePostBootstrapScriptResult(resultToSetState)
-		if err != nil {
+		if err := e.state.SavePostBootstrapScriptResult(ctx, resultToSetState); err != nil {
 			log.ErrorF("Post bootstrap script result was not saved: %v", err)
 		}
 
@@ -65,33 +62,42 @@ func (e *PostBootstrapScriptExecutor) Execute(ctx context.Context) error {
 	})
 }
 
-func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
+func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, err error) {
 	outputFile := fs.RandomNumberSuffix("/tmp/post-bootstrap-script-output")
 	envs := map[string]string{
 		"OUTPUT": outputFile,
 	}
 
+	sshProvider, err := e.sshProviderinitializer.GetSSHProvider(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	sshClient, err := sshProvider.Client(ctx)
+	if err != nil {
+		return "", err
+	}
+
 	createOUtFileCmd := fmt.Sprintf("touch %s && chmod 644 %s", outputFile, outputFile)
-	cmd := e.sshClient.Command(createOUtFileCmd)
-	cmd.Sudo(ctx)
+	cmd := sshClient.Command(createOUtFileCmd)
 	cmd.WithStderrHandler(nil)
 	cmd.WithStdoutHandler(nil)
-	err := cmd.Run(ctx)
+	cmd.Sudo(ctx)
 
-	if err != nil {
+	if err := cmd.Run(ctx); err != nil {
 		return "", fmt.Errorf("Cannot create output file for script: %v", err)
 	}
 
 	defer func() {
 		// remove out file on server because it can contain non-safe information
-		cmd = e.sshClient.Command(fmt.Sprintf("rm %s", outputFile))
-		cmd.Sudo(ctx)
+		cmd = sshClient.Command(fmt.Sprintf("rm %s", outputFile))
 		cmd.WithStderrHandler(nil)
 		cmd.WithStdoutHandler(nil)
+		cmd.Sudo(ctx)
 		err = cmd.Run(ctx)
 	}()
 
-	script := e.sshClient.UploadScript(e.path)
+	script := sshClient.UploadScript(e.path)
 	script.WithTimeout(e.timeout)
 	script.WithStdoutHandler(func(s string) {
 		log.InfoLn(s)
@@ -99,19 +105,13 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (string, error) {
 	script.WithEnvs(envs)
 	script.Sudo()
 
-	_, err = script.Execute(ctx)
-
-	if err != nil {
+	if _, err := script.Execute(ctx); err != nil {
 		return "", fmt.Errorf("Running %s done with error: %w", e.path, err)
 	}
 
-	content, err := e.sshClient.File().DownloadBytes(ctx, outputFile)
+	content, err := sshClient.File().DownloadBytes(ctx, outputFile)
 	if err != nil {
 		return "", fmt.Errorf("Cannot get output from remote file %s: %w", e.path, err)
-	}
-
-	if err != nil {
-		log.WarnLn("Post bootstrap output file '%s' did not remove from server", outputFile)
 	}
 
 	return string(content), nil

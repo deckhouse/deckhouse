@@ -42,8 +42,6 @@ spec:
       enabled: true
       k8s:
         env:
-        - name: PILOT_SKIP_VALIDATE_TRUST_DOMAIN
-          value: "true"
         - name: ISTIO_MULTIROOT_MESH
           value: "true"
         - name: ENABLE_ENHANCED_RESOURCE_SCOPING
@@ -118,8 +116,17 @@ spec:
 
   {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
     caCertificates:
-    {{- range $metadata := $.Values.istio.internal.remotePublicMetadata }}
-    - pem: {{ $metadata.rootCA | quote }}
+    {{- range $federation := $.Values.istio.internal.federations }}
+    {{- with $federation.rootCA }}
+    - pem: {{ . | quote }}
+      trustDomains:
+        - {{ $federation.trustDomain }}
+    {{- end }}
+    {{- end }}
+    {{- range $multicluster := $.Values.istio.internal.multiclusters }}
+    {{- with $multicluster.rootCA }}
+    - pem: {{ . | quote }}
+    {{- end }}
     {{- end }}
   {{- end }}
 

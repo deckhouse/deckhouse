@@ -1,0 +1,14 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8VulnerableImages
+metadata:
+  name: vulnerable-images-policy
+spec:
+  enforcementAction: deny
+  parameters:
+    # For CI/Gator tests: use inventory ExternalDataInventory mock instead of runtime external_data call.
+    isTest: true
+  match:
+    kinds:
+    - apiGroups: ["" ]
+      kinds: ["Pod"]
+    scope: Namespaced

@@ -35,6 +35,8 @@ import (
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/testssh"
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
@@ -46,8 +48,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -1330,7 +1330,7 @@ type testStaticDestroyTest struct {
 func (ts *testStaticDestroyTest) setNodeUserExistsInCache(t *testing.T) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	err := static.NewDestroyState(ts.stateCache).SetNodeUserExists()
+	err := static.NewDestroyState(ts.stateCache).SetNodeUserExists(t.Context())
 	require.NoError(t, err, "node user exists flag should in cache")
 }
 
@@ -1368,7 +1368,7 @@ func (ts *testStaticDestroyTest) generateAndSaveNodeUserToCache(t *testing.T, pa
 		ProcessedIPS: params.processedIPs,
 	}
 
-	err := static.NewDestroyState(ts.stateCache).SaveNodeUser(credsToSave)
+	err := static.NewDestroyState(ts.stateCache).SaveNodeUser(t.Context(), credsToSave)
 	require.NoError(t, err, "creds should save in cache")
 
 	ts.nodeUserCreds = credsToSave
@@ -1386,7 +1386,7 @@ func (ts *testStaticDestroyTest) assertNodeUserIsNotUpdated(t *testing.T, checkI
 	require.False(t, govalue.IsNil(ts.stateCache))
 	require.False(t, govalue.IsNil(ts.nodeUserCreds))
 
-	nodeUserCreds, err := static.NewDestroyState(ts.stateCache).NodeUser()
+	nodeUserCreds, err := static.NewDestroyState(ts.stateCache).NodeUser(t.Context())
 	require.NoError(t, err, "node user should save in cache")
 	require.Equal(t, *ts.nodeUserCreds, *nodeUserCreds, "node user should not change")
 
@@ -1409,7 +1409,7 @@ func (ts *testStaticDestroyTest) assertNodeUserIsNotUpdated(t *testing.T, checkI
 func (ts *testStaticDestroyTest) assertNodeUserExistsSavedInCache(t *testing.T, saved bool) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
-	exists := static.NewDestroyState(ts.stateCache).IsNodeUserExists()
+	exists := static.NewDestroyState(ts.stateCache).IsNodeUserExists(t.Context())
 	require.Equal(t, saved, exists, "node user exists flag")
 }
 
@@ -1417,7 +1417,7 @@ func (ts *testStaticDestroyTest) assertNodeUserSavedInCache(t *testing.T, saved 
 	require.False(t, govalue.IsNil(ts.stateCache))
 
 	state := static.NewDestroyState(ts.stateCache)
-	nodeUser, err := state.NodeUser()
+	nodeUser, err := state.NodeUser(t.Context())
 	if !saved {
 		require.Error(t, err, "node user should not save in cache")
 		return nil

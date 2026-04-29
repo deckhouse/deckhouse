@@ -19,7 +19,7 @@
 # on every push to dev branches
 name: Build and test for dev branches
 on:
-  pull_request_target:
+  pull_request:
      types:
       - opened
       - synchronize
@@ -27,8 +27,10 @@ on:
 env:
 
   # <template: werf_envs>
-  WERF_VERSION: "v2.57.1"
+  DECKHOUSE_CLI_BUILD_VERSION: "v0.29.20"
+  WERF_VERSION: "v2.63.1"
   WERF_ENV: "FE"
+  WERF_TELEMETRY: "1"
   WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
@@ -41,6 +43,7 @@ env:
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  WERF_VIRTUAL_MERGE: "0"
   GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
 
@@ -59,7 +62,7 @@ jobs:
   # <template: pull_request_info>
   pull_request_info:
     name: Get pull request reference
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       ref: ${{ steps.pr_props.outputs.ref }}
       ref_slug: ${{ steps.pr_props.outputs.ref_slug }}
@@ -292,7 +295,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     outputs:
       ci_commit_tag: ${{ steps.git_info.outputs.ci_commit_tag }}
       ci_commit_branch: ${{ steps.git_info.outputs.ci_commit_branch }}
@@ -396,7 +399,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -426,7 +434,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -449,13 +457,21 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -590,8 +606,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -636,19 +652,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -694,7 +697,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -724,7 +732,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -747,13 +755,21 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -888,8 +904,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -934,19 +950,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -991,7 +994,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1021,7 +1029,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1044,13 +1052,21 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1185,8 +1201,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1231,19 +1247,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1288,7 +1291,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1318,7 +1326,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1341,13 +1349,21 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1482,8 +1498,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1528,19 +1544,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1585,7 +1588,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1615,7 +1623,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1638,13 +1646,21 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -1779,8 +1795,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -1825,19 +1841,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -1882,7 +1885,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -1912,7 +1920,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -1935,13 +1943,21 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -2076,8 +2092,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2122,19 +2138,6 @@ jobs:
           # Filter out data from build report
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
-
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
 
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
@@ -2179,7 +2182,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2209,7 +2217,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
 
       # <template: login_dev_registry_step>
@@ -2232,13 +2240,21 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
-
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
         with:
           version: ${{env.WERF_VERSION}}
       # </template: werf_install_step>
+
+      # <template: d8cli_install_step>
+      - name: Install d8 CLI
+        run: |
+          mkdir -p bin
+          INSTALL_DIR="$(pwd)/bin" VERSION=${DECKHOUSE_CLI_BUILD_VERSION} FORCE=yes bash -c "$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"
+          mv "$(pwd)/bin/d8" "$(pwd)/bin/d8-build"
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+      # </template: d8cli_install_step>
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
@@ -2373,8 +2389,8 @@ jobs:
           # Use it as image tag. Add suffix to not overlap with PRs in main repo.
           IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
 
-          type werf && source $(werf ci-env github --verbose --as-file)
-          werf build \
+          type d8-build && source $(d8-build dk ci-env github --verbose --as-file)
+          d8-build dk build \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
             --build-report-path images_tags_werf.json
@@ -2420,19 +2436,6 @@ jobs:
           egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
           mv images_tags_werf_filtered.json images_tags_werf.json
 
-      - name: Check DKP images manifests in public registry
-        if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-        id: check_images
-        env:
-          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-          DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-        run: |
-          EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-          ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-
-
       - name: Save build report
         if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}
         uses: actions/upload-artifact@v4.4.0
@@ -2460,7 +2463,12 @@ jobs:
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2515,14 +2523,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2596,14 +2609,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2672,14 +2690,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2765,14 +2788,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -2838,7 +2866,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:4aaf81659fa6ea3cbbb0f241d739dda485bce79ec98b0fd5014ef4f4210e1cd5"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:2fa0da12f239d1696f2f790ac8332ae4790f1b9db9d1e785778c4a64e2481544"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -2872,7 +2900,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       - name: Run python webhook tests
         run: |
@@ -2902,7 +2930,7 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       - name: DMT lint
         env:
@@ -2937,14 +2965,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3053,14 +3086,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3170,14 +3208,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3286,14 +3329,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3402,14 +3450,19 @@ jobs:
         uses: actions/checkout@v3.5.2
         with:
           fetch-depth: 0
-          ref: ${{ needs.pull_request_info.outputs.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
       # </template: checkout_full_step>
       # <template: import_secrets>
       - name: Split repository name
         id: split
         env:
           REPO: ${{ github.repository }}
-        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
       - name: Import secrets
         id: secrets
         uses: hashicorp/vault-action@v2
@@ -3490,7 +3543,7 @@ jobs:
           echo "⚓️ 📥 [$(date -u)] Pull 'tests' image..."
           docker pull ${TESTS_IMAGE_NAME}
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
-          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go test -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
+          docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
 
   set_e2e_requirement_status:
@@ -3513,7 +3566,7 @@ jobs:
       - golangci_lint
       - dhctl_tests
       - tests
-    runs-on: "regular"
+    runs-on: "ubuntu-latest"
     steps:
 
       # <template: checkout_step>

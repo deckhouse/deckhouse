@@ -21,7 +21,7 @@ spec:
     - jsonPath: .status.syncTime
       name: Sync
       type: date
-    - jsonPath: .status.conditions[?(@.type=='LastOperationScanFinished')].message
+    - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
       name: MSG
       type: string
     - jsonPath: .status.packagesCount

@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function applyHeaderOffsets() {
         const header = document.querySelector('header');
-        const headerHeight = header.offsetHeight;
+        const headerHeight = header.getBoundingClientRect().height;
         navigationContainer.style.top = `${headerHeight}px`;
         sidebarAndToc.forEach(e => {
             e.style.top = `${headerHeight}px`;
@@ -33,6 +33,23 @@ document.addEventListener('DOMContentLoaded', () => {
             e.classList.remove('top');
             e.style.removeProperty('--scroll-top');
         });
+    }
+
+    function hideNavigationOnAnchor() {
+        const hash = decodeURIComponent(window.location.hash.replace('#', ''));
+        if (!hash) {
+            return;
+        }
+
+        if (!document.getElementById(hash)) {
+            return;
+        }
+
+        isScroll = false;
+        hideNavigation();
+        setTimeout(() => {
+            isScroll = true;
+        }, 500);
     }
 
     function scrollHandler(newTopValue) {
@@ -63,7 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const tocLink = target.closest('.toc-sidebar__item-link');
-        if (!tocLink) {
+        const anchorLink = target.closest('.anchorjs-link');
+        if (!tocLink && !anchorLink) {
             return;
         }
 
@@ -87,7 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollHandler(newTop)
     });
 
+    window.addEventListener('hashchange', hideNavigationOnAnchor);
+    window.addEventListener('load', hideNavigationOnAnchor);
+
     if (window.scrollY > 0) {
         hideNavigation();
     }
+
+    hideNavigationOnAnchor();
 });

@@ -14,7 +14,7 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "5"
+  resourceVersion: "4"
 spec:
   packageRepositoryName: deckhouse
   type: Update
@@ -24,14 +24,12 @@ spec:
 status:
   completionTime: "2025-10-31T12:00:00Z"
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'PackageRepository not found: packagerepositories.deckhouse.io "deckhouse"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'get package repository: packagerepositories.deckhouse.io "deckhouse"
       not found'
-    reason: PackageRepositoryNotFound
-    status: "False"
+    reason: ScanFailed
+    status: "True"
     type: Completed
-  phase: Processing
   startTime: "2025-10-31T12:00:00Z"
 ---
 apiVersion: deckhouse.io/v1alpha1

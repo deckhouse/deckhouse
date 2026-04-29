@@ -65,7 +65,7 @@ func (s *Store) NeedUpdate(name, version, checksum string) bool {
 //
 // Returns nil when only settings changed (no new context needed — settings are
 // stored and will be picked up by the scheduler via GetPendingSettings on next
-// Reschedule, or by the next ApplySettings task in the schedule pipeline).
+// Reschedule, or by the next Configure task in the schedule pipeline).
 //
 // Callers should check for nil: a nil return with a settings-only change means
 // the caller should trigger Reschedule to re-apply settings through the scheduler.
@@ -118,7 +118,7 @@ func (s *Store) HandleEvent(event int, name string) context.Context {
 }
 
 // GetPendingSettings returns the latest settings stored for a package.
-// Called by schedulePackage to pass current settings into the ApplySettings task.
+// Called by schedulePackage to pass current settings into the Configure task.
 // This late-binding approach ensures settings changes that arrive between Update
 // and schedule are automatically picked up.
 func (s *Store) GetPendingSettings(name string) addonutils.Values {

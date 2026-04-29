@@ -34,6 +34,7 @@ AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
+allowDeleteLogs
 allowVolumeExpansion
 amd
 AMD
@@ -115,6 +116,7 @@ backends
 backet
 Backlink
 base64
+basename
 BaseDN
 bashbooster
 bashible
@@ -279,6 +281,9 @@ configVersion
 conntrack
 Conntrack
 Container
+ConstraintTemplate
+ConstraintTemplates
+Constraint
 containerd
 ContainerResourcePolicy
 contraire
@@ -472,6 +477,8 @@ enableMultiTenancy
 endofftopic
 enum
 env
+entrypoint
+EnvoyFilter
 EOF
 erlier
 ESXi
@@ -666,6 +673,7 @@ ingressClass
 IngressClass
 IngressClassParameters
 ingressgateway
+IngressGateway
 ingressgateways
 IngressIstioController
 ingressNginxController
@@ -835,6 +843,7 @@ LowNodeUtilization
 LRS
 lsblk
 LTS
+Lua
 LUN
 lv
 LV
@@ -1187,6 +1196,7 @@ Quickstart
 RabbitMQ
 RabbitMQ’s
 Rados
+Rego
 rb
 rbac
 RBAC
@@ -1229,6 +1239,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+repos
 reprovisioning
 repurposed
 RequestAuthentication
@@ -1273,6 +1284,7 @@ SchedulingDisabled
 schemas
 SCM
 SCP
+SPE
 ScrapeConfig
 scrapeInterval
 scrapeIntervals
@@ -1286,6 +1298,7 @@ SecretStore
 securityGroups
 SecurityGroups
 SecurityPolicy
+SecurityPolicyException
 sed
 selectel
 Selectel
@@ -1392,6 +1405,7 @@ struct
 Struct
 stylesheets
 subdomains
+subdomain
 Subfolder
 subGID
 subGIDs
@@ -1502,6 +1516,7 @@ UUIDs
 uwsgi
 v1
 ValidationWebhook
+ValidatingAdmissionPolicy
 validator
 vApp
 vApps
@@ -1754,6 +1769,8 @@ ZvirtInstanceClass
 валидирует
 валидируется
 валидируются
+валиден
+валидным
 вебхук
 вебхука
 вебхуки
@@ -1902,6 +1919,7 @@ ZvirtInstanceClass
 использов
 использовать
 ит
+итерации
 ится
 иться
 й
@@ -2026,6 +2044,8 @@ ZvirtInstanceClass
 менятьcя
 меняться
 мержит
+мержа
+мержатся
 Метадата
 метаинформацию
 мигрирована
@@ -2075,6 +2095,7 @@ ZvirtInstanceClass
 неймспейс
 неймспейсах
 неймспейсе
+неймспейсы
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2145,15 +2166,19 @@ ZvirtInstanceClass
 парсить
 паттерн
 паттерна
+паттерны
 паттернов
 паттерну
 патч
 патча
 патчем
+патчах
+патчей
 патчи
 патчится
 патчить
 Перебалансировке
+Перегенерируйте
 Перевыкат
 перевыписывает
 перевыпуск
@@ -2216,6 +2241,7 @@ ZvirtInstanceClass
 ПК
 плейсхолдер
 плейсхолдеров
+побайтово
 поддомен
 поддоменам
 поддоменами
@@ -2228,6 +2254,7 @@ ZvirtInstanceClass
 подселяться
 подсетей
 подсети
+Пошагово
 Подсети
 подсеть
 Подсеть
@@ -2291,6 +2318,7 @@ ZvirtInstanceClass
 ребут
 реверт
 Ревью
+ревьюеру
 регистри
 редиректить
 резолвинга
@@ -2368,6 +2396,7 @@ ZvirtInstanceClass
 сгенерировали
 сгенерирован
 сгенерированного
+сгенерированном
 сгенерированному
 сгенерированную
 сгенерированные
@@ -2438,6 +2467,7 @@ ZvirtInstanceClass
 сущностей
 сущностям
 сущностями
+сценарно
 СХД
 т
 таймаут
@@ -2490,6 +2520,7 @@ ZvirtInstanceClass
 фич
 фичах
 фичи
+фикстур
 Флант
 Фланта
 флаппинга

@@ -73,7 +73,7 @@ func TestPipelineWrapper(t *testing.T) {
 	)
 
 	writeTestState := func(state dstate.Cache) error {
-		return state.Save(testKey, []byte(testVal))
+		return state.Save(t.Context(), testKey, []byte(testVal))
 	}
 
 	getDhctlStateWithTest := func() DhctlState {
@@ -109,7 +109,7 @@ func TestPipelineWrapper(t *testing.T) {
 			actionProvider: func(t *testing.T, testName string, state dstate.Cache, pipeline pipelineType) actionType {
 				return func(switcher switcherType) error {
 					logger.LogInfoF("action run: %s\n", testName)
-					return pipeline.Run(actionWithTestState(testName, state, "pipeline already started"))
+					return pipeline.Run(t.Context(), actionWithTestState(testName, state, "pipeline already started"))
 				}
 			},
 			actionErr: ErrPipelineAlreadyStarted,
@@ -123,7 +123,7 @@ func TestPipelineWrapper(t *testing.T) {
 			afterRun: func(testName string, state dstate.Cache, pipeline pipelineType) beforeAfterTestType {
 				return func() error {
 					logger.LogInfoF("after run: %s\n", testName)
-					return pipeline.Run(actionWithTestState(testName, state, "double start"))
+					return pipeline.Run(t.Context(), actionWithTestState(testName, state, "double start"))
 				}
 			},
 			afterRunError: ErrPipelineAlreadyFinished,
@@ -196,7 +196,7 @@ func TestPipelineWrapper(t *testing.T) {
 						return err
 					}
 
-					if err := switcher(WaitStaticDestroyerNodeUserPhase, false, nil); err != nil {
+					if err := switcher(t.Context(), WaitStaticDestroyerNodeUserPhase, false, nil); err != nil {
 						return err
 					}
 
@@ -227,7 +227,7 @@ func TestPipelineWrapper(t *testing.T) {
 			pipeline := pipelineProvider()
 
 			action := tt.actionProvider(t, tt.name, state, pipeline)
-			err := pipeline.Run(action)
+			err := pipeline.Run(t.Context(), action)
 			assertTypedError(t, err, tt.actionErr, "action")
 
 			err = tt.afterRun(tt.name, state, pipeline)()
@@ -246,10 +246,10 @@ func TestPipelineWrapper(t *testing.T) {
 
 		notChanged := true
 
-		err := actionNotStart.Run(WaitStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+		err := actionNotStart.Run(t.Context(), WaitStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
 			logger.LogInfoLn("Start actionNotStart never printed")
 
-			err := state.Save("not saved", []byte("yes"))
+			err := state.Save(t.Context(), "not saved", []byte("yes"))
 			require.NoError(t, err)
 
 			notChanged = false
@@ -271,7 +271,7 @@ func TestPipelineWrapper(t *testing.T) {
 		notChanged := true
 		var switcherErr error
 
-		err := pipeline.Run(func(switcher switcherType) error {
+		err := pipeline.Run(t.Context(), func(switcher switcherType) error {
 			logger.LogInfoLn("Start pipeline phase switcher returns should stop")
 			if err := writeTestState(state); err != nil {
 				return err
@@ -280,16 +280,16 @@ func TestPipelineWrapper(t *testing.T) {
 			logger.LogInfoLn("Set should stop")
 			ctx.stopOperationCondition = true
 
-			if err := switcher(WaitStaticDestroyerNodeUserPhase, false, nil); err != nil {
+			if err := switcher(t.Context(), WaitStaticDestroyerNodeUserPhase, false, nil); err != nil {
 				switcherErr = err
 				return err
 			}
 
 			actionNotStart := pipeline.ActionInPipeline()
-			return actionNotStart.Run(DeleteResourcesPhase, false, func() (contextType, error) {
+			return actionNotStart.Run(t.Context(), DeleteResourcesPhase, false, func() (contextType, error) {
 				logger.LogInfoLn("Start actionNotStart never printed")
 				notChanged = false
-				return nil, state.Save("not saved", []byte("yes"))
+				return nil, state.Save(t.Context(), "not saved", []byte("yes"))
 			})
 		})
 
@@ -304,11 +304,11 @@ func TestPipelineWrapper(t *testing.T) {
 		pipelineProvider, ctx := getPipeline("should stop returns nil and not continue", state)
 		pipeline := pipelineProvider()
 
-		err := pipeline.Run(func(switcher switcherType) error {
+		err := pipeline.Run(t.Context(), func(switcher switcherType) error {
 			logger.LogInfoLn("Start pipeline should stop action")
 			actionWithState := pipeline.ActionInPipeline()
 
-			err := actionWithState.Run(CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+			err := actionWithState.Run(t.Context(), CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
 				logger.LogInfoLn("Start actionWithState")
 				return nil, writeTestState(state)
 			})
@@ -322,10 +322,10 @@ func TestPipelineWrapper(t *testing.T) {
 
 			notChanged := true
 
-			err = actionShouldStop.Run(WaitStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+			err = actionShouldStop.Run(t.Context(), WaitStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
 				logger.LogInfoLn("Start actionShouldStop never printed")
 
-				err := state.Save("not saved", []byte("yes"))
+				err := state.Save(t.Context(), "not saved", []byte("yes"))
 				require.NoError(t, err)
 
 				notChanged = false
@@ -350,11 +350,11 @@ func TestPipelineWrapper(t *testing.T) {
 		errorAction := pipeline.ActionInPipeline()
 
 		notChanged := true
-		err := errorAction.Run(CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+		err := errorAction.Run(t.Context(), CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
 			logger.LogInfoLn("Does not print")
 
 			notChanged = false
-			err := state.Save("not saved", []byte("yes"))
+			err := state.Save(t.Context(), "not saved", []byte("yes"))
 			require.NoError(t, err)
 
 			return nil, nil
@@ -363,25 +363,25 @@ func TestPipelineWrapper(t *testing.T) {
 		require.True(t, errors.Is(err, ErrPipelineDidNotStart), "dummy pipeline should follow interface")
 		require.True(t, notChanged)
 		require.Equal(t, DhctlState(nil), pipeline.GetLastState())
-		notSaved, err := state.InCache("not saved")
+		notSaved, err := state.InCache(t.Context(), "not saved")
 		require.NoError(t, err)
 		require.False(t, notSaved)
 
-		err = pipeline.Run(func(switcher switcherType) error {
+		err = pipeline.Run(t.Context(), func(switcher switcherType) error {
 			logger.LogInfoLn("Start dummy pipeline action")
 			actionWithState := pipeline.ActionInPipeline()
 
-			err := actionWithState.Run(CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
+			err := actionWithState.Run(t.Context(), CreateStaticDestroyerNodeUserPhase, false, func() (contextType, error) {
 				logger.LogInfoLn("Start actionWithState")
 				return nil, writeTestState(state)
 			})
 			require.NoError(t, err)
 			require.Equal(t, DhctlState(nil), pipeline.GetLastState())
-			inCacheState, err := ExtractDhctlState(state)
+			inCacheState, err := ExtractDhctlState(t.Context(), state)
 			require.NoError(t, err)
 			require.Equal(t, getDhctlStateWithTest(), inCacheState)
 
-			err = switcher(DeleteResourcesPhase, false, nil)
+			err = switcher(t.Context(), DeleteResourcesPhase, false, nil)
 			require.NoError(t, err, "dummy switcher does not panic")
 
 			return nil
@@ -390,7 +390,7 @@ func TestPipelineWrapper(t *testing.T) {
 		require.NoError(t, err)
 
 		notChanged = true
-		err = pipeline.Run(func(switcher switcherType) error {
+		err = pipeline.Run(t.Context(), func(switcher switcherType) error {
 			logger.LogInfoLn("Should not printed")
 			notChanged = false
 			return nil

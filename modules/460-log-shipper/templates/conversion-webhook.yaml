@@ -1,0 +1,51 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ConversionWebhook
+metadata:
+  name: clusterlogdestinations.deckhouse.io
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+conversions:
+  - from: v1alpha1
+    to: v1alpha2
+    handler:
+      python: |
+        def v1alpha1_to_v1alpha2(self, o: dict) -> typing.Tuple[str | None, dict]:
+            obj = DotMap(o)
+            obj.apiVersion = "deckhouse.io/v1alpha2"
+            spec = obj.spec
+            bo, bc = "{", "}"
+
+            for t in spec.get("transformations") or []:
+                if t.get("action") == "DropLabels":
+                    dl = t["dropLabels"]
+                    if dl.get("paths"):
+                        dl["labels"] = dl["paths"]
+                    else:
+                        dl["labels"] = [{"label": p} for p in dl.get("labels", [])]
+                if t.get("action") == "ParseMessage":
+                    pm = t["parseMessage"]
+                    if pm.get("sourceFormat") == "String":
+                        st = dict(pm["string"])
+                        if st.get("targetField"):
+                            tf = st.pop("targetField")
+                            st.clear()
+                            st["regex"] = r"^(?P<%s>.*)$" % tf
+                            st["setLabels"] = {tf: (bo * 2 + " %s " % tf + bc * 2)}
+                            pm["string"] = st
+            return None, obj.toDict()
+
+  - from: v1alpha2
+    to: v1alpha1
+    handler:
+      python: |
+        def v1alpha2_to_v1alpha1(self, o: dict) -> typing.Tuple[str | None, dict]:
+            obj = DotMap(o)
+            obj.apiVersion = "deckhouse.io/v1alpha1"
+            spec = obj.spec
+
+            for t in spec.get("transformations") or []:
+                if t.get("action") == "DropLabels":
+                    dl = t["dropLabels"]
+                    dl["paths"] = dl.get("labels", [])
+                    dl.pop("labels", None)
+            return None, obj.toDict()

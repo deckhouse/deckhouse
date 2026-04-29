@@ -171,7 +171,7 @@ func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrast
 }
 
 func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
-	if shouldStop, err := ctx.StarExecutionPhase(phases.AllNodesPhase, true); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -206,11 +206,11 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 		}
 	}
 
-	return ctx.CompleteExecutionPhase(nil)
+	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
 func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
-	if shouldStop, err := ctx.StarExecutionPhase(phases.AllNodesPhase, true); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -274,7 +274,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 		}
 	}
 
-	return ctx.CompleteExecutionPhase(nil)
+	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
 func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderUUID uuid.UUID) error {
@@ -283,7 +283,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 		return err
 	}
 
-	if shouldStop, err := ctx.StarExecutionPhase(phases.InstallDeckhousePhase, false); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.InstallDeckhousePhase, false); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -293,7 +293,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 		return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 	}
 
-	return ctx.CompleteExecutionPhase(nil)
+	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }
 
 func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateBeforeMigration bool) error {
@@ -464,7 +464,7 @@ func (r *runner) converge(ctx *context.Context) error {
 }
 
 func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.MetaConfig) error {
-	if shouldStop, err := ctx.StarExecutionPhase(phases.BaseInfraPhase, true); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(ctx.Ctx(), phases.BaseInfraPhase, true); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -511,5 +511,5 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 		return err
 	}
 
-	return ctx.CompleteExecutionPhase(nil)
+	return ctx.CompleteExecutionPhase(ctx.Ctx(), nil)
 }

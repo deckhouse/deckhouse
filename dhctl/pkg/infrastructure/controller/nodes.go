@@ -66,7 +66,7 @@ func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, 
 
 func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, name string, nodeState []byte, autoApprove bool) error {
 	stateName := fmt.Sprintf("%s.tfstate", name)
-	if err := saveInCacheIfNotExists(r.stateCache, stateName, nodeState); err != nil {
+	if err := saveInCacheIfNotExists(ctx, r.stateCache, stateName, nodeState); err != nil {
 		return err
 	}
 

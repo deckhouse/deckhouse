@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: required-probes
+spec:
+  testDirectory: required-probes
+  suite:
+    expectedTestBlockNames:
+      - operation-policy
