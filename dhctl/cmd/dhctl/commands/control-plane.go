@@ -38,7 +38,7 @@ func DefineTestControlPlaneManagerReadyCommand(cmd *kingpin.CmdClause) *kingpin.
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := defaultProviderParams()
+		params, err := app.DefaultProviderParams()
 		if err != nil {
 			return err
 		}
@@ -84,7 +84,7 @@ func DefineTestControlPlaneNodeReadyCommand(cmd *kingpin.CmdClause) *kingpin.Cmd
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := defaultProviderParams()
+		params, err := app.DefaultProviderParams()
 		if err != nil {
 			return err
 		}

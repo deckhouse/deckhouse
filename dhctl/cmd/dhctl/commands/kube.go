@@ -91,7 +91,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := defaultProviderParams()
+		params, err := app.DefaultProviderParams()
 		if err != nil {
 			return err
 		}

@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
@@ -225,6 +226,15 @@ func GetProviderParams(loggerProvider libdhctl_log.LoggerProvider) settings.Prov
 		NodeTmpPath:    DeckhouseNodeTmpPath,
 		NodeBinPath:    DeckhouseNodeBinPath,
 		TmpDir:         GetDefaultTmpDir(),
-		EnvsPrefix:     "DHCTL_CLI",
 	}
+}
+
+func DefaultProviderParams() (settings.ProviderParams, error) {
+	logger, ok := log.GetDefaultLogger().(*log.ExternalLogger)
+	if !ok {
+		return settings.ProviderParams{}, fmt.Errorf("cannot convert logger to ExternalLogger")
+	}
+
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.GetLogger())
+	return GetProviderParams(loggerProvider), nil
 }

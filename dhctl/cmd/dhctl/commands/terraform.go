@@ -70,7 +70,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
-		params, err := defaultProviderParams()
+		params, err := app.DefaultProviderParams()
 		if err != nil {
 			return err
 		}
