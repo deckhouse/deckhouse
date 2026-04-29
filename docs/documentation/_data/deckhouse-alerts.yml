@@ -3595,7 +3595,7 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        Pods from the `control-plane/controller-manager` probe have been present in the `d8-upmeter` namespace at every check over the last 10 minutes.
+        A Pod from the `control-plane/controller-manager` probe was created more than 5 minutes ago.
 
         `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe, and `kube-controller-manager` should remove the associated Pods within seconds.
 
