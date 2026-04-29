@@ -1,10 +1,10 @@
 ---
 title: "Cluster admin access model"
 permalink: en/admin/configuration/access/authorization/cluster-admin-access-model.html
-description: "Cluster admin access model for the Deckhouse Kubernetes Platform Cluster"
+description: "Admin access model for the Deckhouse Kubernetes Platform cluster"
 ---
 
-The Deckhouse Kubernetes Platform supports the presence of multiple kubeconfig files on master nodes (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
+Deckhouse Kubernetes Platform (DKP) supports the presence of multiple kubeconfig files on master nodes (this feature is implemented by the [`control-plane-manager`](/modules/control-plane-manager/) module). Understanding their purpose is important for secure cluster administration.
 
 ## Kubeconfig files on master nodes
 
@@ -21,13 +21,13 @@ The following kubeconfig files are located on the master nodes:
 
 Starting from Kubernetes 1.29, kubeadm generates `admin.conf` with the `kubeadm:cluster-admins` group instead of `system:masters`. This provides RBAC-controlled admin access that can be revoked by removing the `kubeadm:cluster-admins` ClusterRoleBinding(s).
 
-If the [`user-authz`](/modules/user-authz/) module is **disabled**, Deckhouse binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
+If the [`user-authz`](/modules/user-authz/) module is **disabled**, DKP binds the `kubeadm:cluster-admins` group to the built-in wildcard ClusterRole `cluster-admin` (same effective model as a plain kubeadm cluster without extra RBAC).
 
 If `user-authz`is **enabled**, the group is bound to `user-authz:cluster-admin`, and a second ClusterRoleBinding adds ClusterRole `d8:control-plane-manager:admin-kubeconfig-supplement` (rules beyond the high-level role, e.g. for certificates and cluster machinery). Together they replace a single wildcard `cluster-admin` for this identity. For full unrestricted access, use `super-admin.conf`.
 
 ## Recommended admin access
 
-If the [user-authn](/modules/user-authn/) module is enabled, use personalized OIDC-based kubeconfig obtained through the kubeconfig generator. This provides individual accountability and audit trail.
+If the [`user-authn`](/modules/user-authn/) module is enabled, use personalized OIDC-based kubeconfig obtained through the kubeconfig generator. This provides individual accountability and audit trail.
 
 If `user-authn` is disabled, administrators can explicitly use the admin kubeconfig on a master node:
 
@@ -39,7 +39,7 @@ d8 k --kubeconfig=/etc/kubernetes/admin.conf <command>
 
 By default, the [`control-plane-manager`](/modules/control-plane-manager/) module creates a symlink `/root/.kube/config` → `/etc/kubernetes/admin.conf` on master nodes, allowing root to run `d8 k` without specifying `--kubeconfig`.
 
-When the `user-authz` module is enabled, you can disable this symlink by setting [`rootKubeconfigSymlink: false`](modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) in the `control-plane-manager` module configuration:
+When the `user-authz` module is enabled, you can disable this symlink by setting [`rootKubeconfigSymlink: false`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) in the `control-plane-manager` module configuration:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -53,13 +53,13 @@ spec:
     rootKubeconfigSymlink: false
 ```
 
-If `user-authz` is disabled, CPM does not apply this setting and keeps the default symlink behavior.
+If `user-authz` is disabled, `control-plane-manager` does not apply this setting and keeps the default symlink behavior.
 
 When the symlink is disabled (and `user-authz` is enabled), the symlink is removed when it pointed to `admin.conf`. Use personalized credentials or pass `--kubeconfig` explicitly.
 
 ## Security hardening
 
-The CPM module automatically restricts file permissions on `admin.conf` and `super-admin.conf` to `0600` (owner read/write only) during every reconciliation cycle. This prevents unauthorized users from reading these sensitive credentials.
+The `control-plane-manager` module automatically restricts file permissions on `admin.conf` and `super-admin.conf` to `0600` (owner read/write only) during every reconciliation cycle. This prevents unauthorized users from reading these sensitive credentials.
 
 ## Break-glass access
 

@@ -5,7 +5,7 @@ description: "Модель административного доступа к 
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform поддерживает размещение нескольких файлов kubeconfig на master-узлах (поддержка реализуется модулем [`control-plane-manager`](/modules/control-plane-manager/)). Понимание их назначения важно для безопасного администрирования кластера.
+Deckhouse Kubernetes Platform (DKP) поддерживает размещение нескольких файлов kubeconfig на master-узлах (поддержка реализуется модулем [`control-plane-manager`](/modules/control-plane-manager/)). Понимание их назначения важно для безопасного администрирования кластера.
 
 ## Файлы kubeconfig на master-узлах
 
@@ -24,13 +24,13 @@ Deckhouse Kubernetes Platform поддерживает размещение не
 
 Если модуль [`user-authz`](/modules/user-authz/) **выключен**, DKP привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
 
-Если модуль `user-authz` **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
+Если модуль `user-authz` **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например, для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
 
 ## Рекомендуемый административный доступ
 
-Если модуль [`user-authn`](/modules/user-authn/) включён, используйте персонализированный kubeconfig на основе OIDC, получаемый через kubeconfig-генератор. Это обеспечивает индивидуальную ответственность и журнал аудита.
+Если модуль [`user-authn`](/modules/user-authn/) включён, используйте персонализированный kubeconfig на основе OIDC, получаемый через [kubeconfig-генератор](../../../../user/web/kubeconfig.html). Это обеспечивает индивидуальную ответственность и журнал аудита.
 
-Если `user-authn` отключён, администраторы могут явно использовать admin kubeconfig на master-узле:
+Если `user-authn` отключён, вы можете явно использовать административный kubeconfig на master-узле:
 
 ```bash
 d8 k --kubeconfig=/etc/kubernetes/admin.conf <команда>
@@ -40,7 +40,7 @@ d8 k --kubeconfig=/etc/kubernetes/admin.conf <команда>
 
 По умолчанию модуль [`control-plane-manager`](/modules/control-plane-manager/) создаёт символическую ссылку `/root/.kube/config` → `/etc/kubernetes/admin.conf` на master-узлах, что позволяет root-пользователю запускать `d8 k` без указания `--kubeconfig`.
 
-Если модуль `user-authz` включён, это поведение можно отключить, задав [`rootKubeconfigSymlink: false`](modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) в конфигурации модуля `control-plane-manager`:
+Если модуль `user-authz` включён, это поведение можно отключить, задав [`rootKubeconfigSymlink: false`](/modules/control-plane-manager/configuration.html#parameters-rootkubeconfigsymlink) в конфигурации модуля `control-plane-manager`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -54,9 +54,9 @@ spec:
     rootKubeconfigSymlink: false
 ```
 
-Если модуль `user-authz` выключен, `control-plane-manager` не использует параметр `rootKubeconfigSymlink` и сохраняет поведение по умолчанию (симлинк создаётся).
+Если модуль `user-authz` выключен, `control-plane-manager` не использует параметр `rootKubeconfigSymlink` и сохраняет поведение по умолчанию (символическая ссылка создаётся).
 
-При отключении симлинка (при включённом `user-authz`) ссылка удаляется, если она указывала на `admin.conf`. Используйте персонализированные учётные данные или явно указывайте `--kubeconfig`.
+При отключении символической ссылки (при включённом `user-authz`) ссылка удаляется, если она указывала на `admin.conf`. Используйте персонализированные учётные данные или явно указывайте `--kubeconfig`.
 
 ## Усиление безопасности
 
