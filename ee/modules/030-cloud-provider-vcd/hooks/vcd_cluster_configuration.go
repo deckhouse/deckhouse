@@ -9,14 +9,15 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	v1 "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks/internal/v1"
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/cluster_configuration"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
-	"github.com/flant/addon-operator/sdk"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func preparatorProvider(_ string) config.MetaConfigPreparator {
