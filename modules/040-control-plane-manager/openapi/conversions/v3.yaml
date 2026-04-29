@@ -6,5 +6,5 @@ conversions:
   - if .apiserver.loadBalancer.annotations != null then .apiserver.publishAPI.loadBalancer.annotations = .apiserver.loadBalancer.annotations | del(.apiserver.loadBalancer.annotations) end
   - del(.apiserver.loadBalancer)
 description:
-  ru: "Замените `.apiserver.loadBalancer` на `.publishAPI.apiserver.loadBalancer`."
-  en: "Replace `.apiserver.loadBalancer` with `.publishAPI.apiserver.loadBalancer`."
+  ru: "Замените `.apiserver.loadBalancer` на `.apiserver.publishAPI.loadBalancer`."
+  en: "Replace `.apiserver.loadBalancer` with `.apiserver.publishAPI.loadBalancer`."
