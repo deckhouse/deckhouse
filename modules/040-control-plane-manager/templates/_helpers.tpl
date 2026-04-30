@@ -15,7 +15,9 @@
       "not empty string"
       {{- end }}
     {{- else }}
+      {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
       "not empty string"
+      {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}

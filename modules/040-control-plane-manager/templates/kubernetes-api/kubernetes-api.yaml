@@ -30,15 +30,12 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   ingressClassName: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.ingressClass | default (include "helm_lib_module_ingress_class" . | quote ) }}
-{{- if or 
-    (and
+{{- if and
       (or 
         (.Values.global.enabledModules | has "cert-manager")
         (eq .Values.global.modules.https.mode "CustomCertificate")
       )
       (include "helm_lib_module_https_ingress_tls_enabled" .)
-    )
-    (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned")
 }}
   tls:
   - hosts:
