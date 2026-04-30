@@ -76,6 +76,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   applyDexUserExpireFilter,
 		},
+		{
+			Name:                         "groups",
+			ApiVersion:                   "deckhouse.io/v1alpha1",
+			Kind:                         "Group",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   applyDexGroupFilter,
+		},
 	},
 }, expireDexUsers)
 
@@ -89,7 +97,70 @@ func expireDexUsers(_ context.Context, input *go_hook.HookInput) error {
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {
 			input.PatchCollector.Delete("deckhouse.io/v1", "User", "", dexUserExpire.Name)
+
+			for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](input.Snapshots.Get("groups")) {
+				if err != nil {
+					return fmt.Errorf("cannot convert group: cannot iterate over 'groups' snapshot: %v", err)
+				}
+
+				if !groupContainsUser(group, dexUserExpire.Name) {
+					continue
+				}
+
+				expiredUserName := dexUserExpire.Name
+				input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+					_, err := removeUserFromGroupMembers(obj, expiredUserName)
+					if err != nil {
+						return nil, err
+					}
+					return obj, nil
+				}, "deckhouse.io/v1alpha1", "Group", "", group.Name)
+			}
 		}
 	}
 	return nil
+}
+
+func groupContainsUser(group DexGroup, username string) bool {
+	for _, member := range group.Spec.Members {
+		if member.Kind == "User" && member.Name == username {
+			return true
+		}
+	}
+	return false
+}
+
+func removeUserFromGroupMembers(groupObj *unstructured.Unstructured, username string) (bool, error) {
+	members, found, err := unstructured.NestedSlice(groupObj.Object, "spec", "members")
+	if err != nil || !found {
+		return false, err
+	}
+
+	newMembers := make([]interface{}, 0, len(members))
+	changed := false
+	for _, member := range members {
+		memberMap, ok := member.(map[string]interface{})
+		if !ok {
+			newMembers = append(newMembers, member)
+			continue
+		}
+
+		kind, _ := memberMap["kind"].(string)
+		name, _ := memberMap["name"].(string)
+		if kind == "User" && name == username {
+			changed = true
+			continue
+		}
+
+		newMembers = append(newMembers, member)
+	}
+
+	if !changed {
+		return false, nil
+	}
+
+	if err := unstructured.SetNestedSlice(groupObj.Object, newMembers, "spec", "members"); err != nil {
+		return false, err
+	}
+	return true, nil
 }
