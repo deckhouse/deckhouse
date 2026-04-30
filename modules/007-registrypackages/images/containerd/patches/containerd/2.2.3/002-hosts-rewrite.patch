@@ -1,5 +1,5 @@
 diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/hosts.go
-index 681d97e0b..40d451af0 100644
+index b63d32c8e..45c9a108a 100644
 --- a/core/remotes/docker/config/hosts.go
 +++ b/core/remotes/docker/config/hosts.go
 @@ -27,6 +27,7 @@ import (
@@ -58,7 +58,7 @@ index 681d97e0b..40d451af0 100644
  	// TODO: Credentials: helper? name? username? alternate domain? token?
  }
  
-@@ -541,6 +566,23 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
+@@ -543,6 +568,23 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
  		result.dialTimeout = &dialTimeout
  	}
  
@@ -83,7 +83,7 @@ index 681d97e0b..40d451af0 100644
  }
  
 diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/config/hosts_test.go
-index b314e7f8d..bfa1dde8c 100644
+index aaf011f8c..177755ca9 100644
 --- a/core/remotes/docker/config/hosts_test.go
 +++ b/core/remotes/docker/config/hosts_test.go
 @@ -24,6 +24,7 @@ import (
@@ -94,7 +94,7 @@ index b314e7f8d..bfa1dde8c 100644
  	"testing"
  	"time"
  
-@@ -232,6 +233,73 @@ ca = "/etc/path/default"
+@@ -246,6 +247,73 @@ ca = "/etc/path/default"
  	}
  }
  
@@ -168,7 +168,7 @@ index b314e7f8d..bfa1dde8c 100644
  func TestLoadCertFiles(t *testing.T) {
  	dir := t.TempDir()
  
-@@ -576,6 +644,18 @@ func compareHostConfig(j, k hostConfig) bool {
+@@ -590,6 +658,18 @@ func compareHostConfig(j, k hostConfig) bool {
  		return false
  	}
  
@@ -187,7 +187,7 @@ index b314e7f8d..bfa1dde8c 100644
  	return true
  }
  
-@@ -597,6 +677,10 @@ func printHostConfig(hc []hostConfig) string {
+@@ -611,6 +691,10 @@ func printHostConfig(hc []hostConfig) string {
  		if hc[i].dialTimeout != nil {
  			fmt.Fprintf(b, "\t\tdial-timeout: %v\n", hc[i].dialTimeout)
  		}
@@ -199,7 +199,7 @@ index b314e7f8d..bfa1dde8c 100644
  	return b.String()
  }
 diff --git a/core/remotes/docker/registry.go b/core/remotes/docker/registry.go
-index bbae768b1..574a5dc35 100644
+index 9b601cb24..38ee7e309 100644
 --- a/core/remotes/docker/registry.go
 +++ b/core/remotes/docker/registry.go
 @@ -21,6 +21,7 @@ import (
@@ -210,7 +210,7 @@ index bbae768b1..574a5dc35 100644
  	"time"
  )
  
-@@ -76,6 +77,12 @@ type RegistryHost struct {
+@@ -80,6 +81,12 @@ type RegistryHost struct {
  	Path         string
  	Capabilities HostCapabilities
  	Header       http.Header
@@ -224,7 +224,7 @@ index bbae768b1..574a5dc35 100644
  
  func (h RegistryHost) isProxy(refhost string) bool {
 diff --git a/core/remotes/docker/resolver.go b/core/remotes/docker/resolver.go
-index 05bebd36c..b3b62b1fd 100644
+index 74a5bd08c..647a36b6c 100644
 --- a/core/remotes/docker/resolver.go
 +++ b/core/remotes/docker/resolver.go
 @@ -526,7 +526,15 @@ func (r *dockerBase) request(host RegistryHost, method string, ps ...string) *re
