@@ -1,0 +1,33 @@
+diff --git a/pkg/serviceaccount/claims.go b/pkg/serviceaccount/claims.go
+index 64feaca7ed3..e3ff0f55889 100644
+--- a/pkg/serviceaccount/claims.go
++++ b/pkg/serviceaccount/claims.go
+@@ -268,7 +268,7 @@ func (v *validator) Validate(ctx context.Context, _ string, public *jwt.Claims,
+ 			secondsAfterWarn := nowTime.Unix() - warnafter.Time().Unix()
+ 			auditInfo := fmt.Sprintf("subject: %s, seconds after warning threshold: %d", public.Subject, secondsAfterWarn)
+ 			audit.AddAuditAnnotation(ctx, "authentication.k8s.io/stale-token", auditInfo)
+-			staleTokensTotal.WithContext(ctx).Inc()
++			staleTokensTotal.WithContext(ctx).WithLabelValues(private.Kubernetes.Namespace, private.Kubernetes.Svcacct.Name).Inc()
+ 		} else {
+ 			validTokensTotal.WithContext(ctx).Inc()
+ 		}
+diff --git a/pkg/serviceaccount/metrics.go b/pkg/serviceaccount/metrics.go
+index 7dc2bf397e7..2a58e6dc9f5 100644
+--- a/pkg/serviceaccount/metrics.go
++++ b/pkg/serviceaccount/metrics.go
+@@ -38,13 +38,14 @@ var (
+ 
+ 	// StaleTokensTotal is the number of stale projected tokens not refreshed on
+ 	// client side.
+-	staleTokensTotal = metrics.NewCounter(
++	staleTokensTotal = metrics.NewCounterVec(
+ 		&metrics.CounterOpts{
+ 			Subsystem:      kubeServiceAccountSubsystem,
+ 			Name:           "stale_tokens_total",
+ 			Help:           "Cumulative stale projected service account tokens used",
+ 			StabilityLevel: metrics.ALPHA,
+ 		},
++		[]string{"token_namespace", "token_name"},
+ 	)
+ 
+ 	// mauallyCreatedTokensTotal is the number of manually created secret-based long lived tokens.
