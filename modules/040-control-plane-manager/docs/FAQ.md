@@ -774,7 +774,7 @@ This credential bypasses all RBAC checks. Use it only as a last resort and restr
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 2
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -819,7 +819,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -838,7 +838,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -898,7 +898,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
