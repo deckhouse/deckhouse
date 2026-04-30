@@ -1485,6 +1485,31 @@ alerts:
         The ModuleConfig annotation for allowing module disabling is set.
       severity: "4"
       markupFormat: markdown
+    - name: D8HuaweiCloudMachineStuckInDeleting
+      sourceFile: ee/modules/030-cloud-provider-huaweicloud/monitoring/prometheus-rules/caphc-controller-manager.tpl
+      moduleUrl: 030-cloud-provider-huaweicloud
+      module: cloud-provider-huaweicloud
+      edition: ee
+      description: |
+        The HuaweiCloudMachine `{{ $labels.name }}` in namespace `{{ $labels.namespace }}` has been stuck in Deleting state for more than 24 hours.
+
+        This usually means the deletion job in HuaweiCloud is failing or the API is unavailable.
+
+        To inspect the machine status, run:
+
+        ```shell
+        d8 k get huaweicloudmachine -n {{ $labels.namespace }} {{ $labels.name }} -o yaml
+        ```
+
+        Check the controller logs for errors:
+
+        ```shell
+        d8 k logs -n d8-cloud-provider-huaweicloud -l app=caphc-controller-manager
+        ```
+      summary: |
+        HuaweiCloudMachine {{ $labels.name }} is stuck in Deleting for more than 24h.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ImageAvailabilityExporterMalfunctioning
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-availability-exporter-health.yaml
       moduleUrl: 340-extended-monitoring
@@ -7164,6 +7189,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-huaweicloud
     - cloud-provider-yandex
     - cni-cilium
     - control-plane-manager
