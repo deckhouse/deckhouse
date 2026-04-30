@@ -211,9 +211,13 @@ func HasNodeStateInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	}
 }
 
-func GetMasterNodesStateFromCluster(ctx context.Context, kubeCl *client.KubernetesClient) (map[string][]byte, error) {
+func GetMasterNodesStateFromCluster(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx) (map[string][]byte, error) {
 	ngSelector := getInfraStateSecretsSelectorForNodeGroup(global.MasterNodeGroupName)
-	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeCl, "all control-planes", ngSelector)
+	kubeClient, err := kubeProvider.KubeClientCtx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
+	secrets, err := GetNodesStateSecretsFromCluster(ctx, kubeClient, "all control-planes", ngSelector)
 	if err != nil {
 		return nil, err
 	}

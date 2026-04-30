@@ -16,9 +16,11 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/name212/govalue"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -28,8 +30,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -40,22 +42,23 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
-		if err != nil {
-			return err
-		}
-
 		tmpDir := app.TmpDirName
 		logger := log.GetDefaultLogger()
 		isDebug := app.IsDebug
+
+		externalLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
@@ -65,7 +68,8 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		})
 
 		converger := converge.NewConverger(&converge.Params{
-			SSHClient: sshClient,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				SkipChangesOnDeny: false,
 				AutomaticSettings: infrastructure.AutomaticSettings{
@@ -84,6 +88,31 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+		if sshProviderInitializer != nil {
+			if sshProviderInitializer.CheckHosts() {
+				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+				cacheIdentity = sshClient.Check().String()
+			}
+		}
+
+		if app.KubeConfig != "" {
+			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+		converger.CacheID = cacheIdentity
 		_, err = converger.Converge(ctx)
 
 		if err != nil {
@@ -104,10 +133,23 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-
 		tmpDir := app.TmpDirName
 		logger := log.GetDefaultLogger()
 		isDebug := app.IsDebug
+
+		externalLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
+		}
+
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
+		if err != nil {
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
+		}
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
@@ -117,6 +159,8 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		})
 
 		converger := converge.NewConverger(&converge.Params{
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				SkipChangesOnDeny: true,
 				AutomaticSettings: infrastructure.AutomaticSettings{
@@ -146,21 +190,20 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
+		logger := log.GetDefaultLogger()
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
+		externalLogger, ok := logger.(*log.ExternalLogger)
+		if !ok {
+			return fmt.Errorf("cannot convert logger to ExternalLogger")
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+		params := app.GetProviderParams(loggerProvider)
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()))
 		if err != nil {
-			return err
-		}
-
-		if govalue.IsNil(sshClient) {
-			sshClient = nil
+			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+				return err
+			}
 		}
 
 		tmpDir := app.TmpDirName
@@ -175,7 +218,8 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		})
 
 		converger := converge.NewConverger(&converge.Params{
-			SSHClient: sshClient,
+			SSHProviderInitializer: sshProviderInitializer,
+			KubeProvider:           kubeProvider,
 			ChangesSettings: infrastructure.ChangeActionSettings{
 				AutomaticSettings: infrastructure.AutomaticSettings{
 					AutoDismissDestructive: true,
@@ -193,6 +237,31 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			IsDebug:                               isDebug,
 			DirectoryConfig:                       app.GetDirConfig(),
 		})
+		cacheIdentity := ""
+		if app.KubeConfigInCluster {
+			cacheIdentity = "in-cluster"
+		}
+		if sshProviderInitializer != nil {
+			if sshProviderInitializer.CheckHosts() {
+				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+				if err != nil {
+					return err
+				}
+				sshClient, err := sshProvider.Client(ctx)
+				if err != nil {
+					return err
+				}
+				cacheIdentity = sshClient.Check().String()
+			}
+		}
+
+		if app.KubeConfig != "" {
+			cacheIdentity = statecache.GetCacheIdentityFromKubeconfig(
+				app.KubeConfig,
+				app.KubeConfigContext,
+			)
+		}
+		converger.CacheID = cacheIdentity
 
 		if err := converger.ConvergeMigration(ctx); err != nil {
 			msg := fmt.Sprintf("ConvergeMigration failed with error: %v", err)

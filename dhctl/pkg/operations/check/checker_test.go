@@ -602,7 +602,6 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 			StateCache:    cache.Global(),
 			CommanderMode: true,
 			IsDebug:       false,
-			KubeClient:    kubeCl,
 			CommanderUUID: commanderUUID,
 		}),
 	}
