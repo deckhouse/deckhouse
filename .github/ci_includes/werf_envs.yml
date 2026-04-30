@@ -16,7 +16,6 @@ WERF_FINAL_IMAGES_ONLY: true
 WERF_LOG_TERMINAL_WIDTH: "200"
 WERF_LOG_TIME: true
 WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
-WERF_VIRTUAL_MERGE: "0"
 GOPROXY: "${{vars.GOPROXY}}"
 # </template: werf_envs>
 {!{- end -}!}
