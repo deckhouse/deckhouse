@@ -8,13 +8,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 Модуль [`kube-dns`](/modules/kube-dns/) обеспечивает работу сервиса разрешения доменных имён на базе [CoreDNS](https://coredns.io/) в Deckhouse Kubernetes Platform (DKP).
 
-Модуль [`node-local-dns`](/modules/node-local-dns/) предоставляет кеширующий DNS-сервис на каждом узле кластера и снижает нагрузку на CoreDNS.
-
-Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) зависит от используемого CNI-плагина. Есть два основных варианта: при использовании Cilium в качестве CNI-плагина и при использовании другого CNI-плагина, поддерживаемого DKP.
-
-Подробнее о настройках модулей и примерах их использования можно узнать в соответствующих разделах документации:
-- [`kube-dns`](/modules/kube-dns/configuration.html);
-- [`node-local-dns`](/modules/node-local-dns/configuration.html).
+Подробнее о настройках модуля и примерах его использования можно узнать [в соответствующем разделе документации](/modules/kube-dns/configuration.html).
 
 ## Модуль kube-dns
 
@@ -67,9 +61,17 @@ description: Архитектура модулей kube-dns и node-local-dns в
 1. **Kube-apiserver** — изменение ресурсов Pod, созданных StatefulSet-контроллером.
 1. **Prometheus-main** — собирает метрики модуля.
 
-## Модуль node-local-dns (при использовании cni-cilium)
+## Модуль node-local-dns 
 
-### Архитектура модуля
+Модуль [`node-local-dns`](/modules/node-local-dns/) предоставляет кеширующий DNS-сервис на каждом узле кластера и снижает нагрузку на CoreDNS.
+
+Архитектура модуля [`node-local-dns`](/modules/node-local-dns/) зависит от используемого CNI-плагина. Есть два основных варианта: при использовании Cilium в качестве CNI-плагина и при использовании другого CNI-плагина, поддерживаемого DKP.
+
+Подробнее о настройках модуля и примерах его использования можно узнать [в соответствующем разделе документации](/modules/node-local-dns/configuration.html).
+
+### При использовании cni-cilium
+
+#### Архитектура модуля
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -83,11 +85,11 @@ description: Архитектура модулей kube-dns и node-local-dns в
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns.ru.png)
 
-### Компоненты модуля
+#### Компоненты модуля
 
 Модуль `node-local-dns` состоит из следующих компонентов:
 
-1. **Node-local-dns** (DaemonSet) — основной компонент модуля, реализующий кеширующий DNS-сервер в кластере Kubernetes.
+1. **Node-local-dns** (DaemonSet) — основной компонент модуля, реализующий [кеширующий DNS-сервер](./dns-caching.html) в кластере Kubernetes.
 
    Компонент **node-local-dns** отслеживает изменения стандартных ресурсов EndpointSlice и на их основе обновляет список DNS-серверов для перенаправления запросов.
 
@@ -105,7 +107,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
    **Safe-updater** проверяет, что на узле запущен и находится в корректном состоянии Cilium, и только после этого отправляет команду на удаление пода с **node-local-dns**.
 
-### Взаимодействия модуля
+#### Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
@@ -122,9 +124,9 @@ description: Архитектура модулей kube-dns и node-local-dns в
 
 * **Prometheus-main** — собирает метрики модуля.
 
-## Модуль node-local-dns (без cni-cilium)
+### При использовании другого CNI
 
-### Архитектура модуля
+#### Архитектура модуля
 
 {% alert level="info" %}
 Для упрощения схемы приняты следующие допущения:
@@ -138,11 +140,11 @@ description: Архитектура модулей kube-dns и node-local-dns в
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
 ![Архитектура модуля node-local-dns](../../../images/architecture/network/c4-l2-node-local-dns-without-cilium.ru.png)
 
-### Компоненты модуля
+#### Компоненты модуля
 
 Модуль `node-local-dns` состоит из следующих компонентов:
 
-1. **Node-local-dns** (DaemonSet) — основной компонент модуля, реализующий кеширующий DNS-сервер в кластере Kubernetes.
+1. **Node-local-dns** (DaemonSet) — основной компонент модуля, реализующий [кеширующий DNS-сервер](./dns-caching.html) в кластере Kubernetes.
 
    Компонент **node-local-dns** отслеживает изменения стандартных ресурсов EndpointSlice и на их основе обновляет список DNS-серверов для перенаправления запросов.
 
@@ -153,7 +155,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
    * **iptables-loop** — сайдкар-контейнер, обеспечивающий синхронизацию iptables-правил с готовностью **node-local-dns**;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **coredns**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-### Взаимодействия модуля
+#### Взаимодействия модуля
 
 Модуль взаимодействует со следующими компонентами:
 
