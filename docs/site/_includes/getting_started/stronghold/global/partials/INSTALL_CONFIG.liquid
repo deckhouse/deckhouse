@@ -20,9 +20,7 @@
 - We recommend that you read the section *[If something went wrong](#if-something-went-wrong)* first; perhaps, your ISP case is already addressed there. Refer to it if you have any problems during the installation process.
 {%- endif %}
 - Starting with Deckhouse Kubernetes Platform version 1.76, Yandex Cloud uses the `cilium` CNI by default for new clusters. When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module in the `config.yml` file.
-
     {% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
-
     ```yaml
     apiVersion: deckhouse.io/v1alpha1
     kind: ModuleConfig
@@ -31,9 +29,7 @@
     spec:
       enabled: true
     ```
-
     {%- endofftopic %}
-
 Create the `config.yml` file.
 {% capture includePath %}_includes/getting_started/stronghold/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}
