@@ -58,44 +58,44 @@ type SecurityPolicySpec struct {
 		AllowedHostPaths *[]struct {
 			PathPrefix string `json:"pathPrefix"`
 			ReadOnly   bool   `json:"readOnly"`
-		} `json:"allowedHostPaths,omitzero"`
+		} `json:"allowedHostPaths,omitempty"`
 		AllowHostIPC             *bool      `json:"allowHostIPC,omitempty"`
 		AllowHostPID             *bool      `json:"allowHostPID,omitempty"`
 		AllowPrivileged          *bool      `json:"allowPrivileged,omitempty"`
 		AllowPrivilegeEscalation *bool      `json:"allowPrivilegeEscalation,omitempty"`
 		AllowRbacWildcards       *bool      `json:"allowRbacWildcards,omitempty"`
 		AllowedProcMount         string     `json:"allowedProcMount,omitempty"`
-		AllowedCapabilities      *[]string  `json:"allowedCapabilities,omitzero"`
-		AllowedAppArmor          *[]string  `json:"allowedAppArmor,omitzero"`
-		RequiredDropCapabilities *[]string  `json:"requiredDropCapabilities,omitzero"`
+		AllowedCapabilities      *[]string  `json:"allowedCapabilities,omitempty"`
+		AllowedAppArmor          *[]string  `json:"allowedAppArmor,omitempty"`
+		RequiredDropCapabilities *[]string  `json:"requiredDropCapabilities,omitempty"`
 		AllowHostNetwork         *bool      `json:"allowHostNetwork,omitempty"`
-		AllowedHostPorts         *[]IDRange `json:"allowedHostPorts,omitzero"`
+		AllowedHostPorts         *[]IDRange `json:"allowedHostPorts,omitempty"`
 		AllowedFlexVolumes       *[]struct {
 			Driver string `json:"driver"`
-		} `json:"allowedFlexVolumes,omitzero"`
-		AllowedVolumes               *[]string          `json:"allowedVolumes,omitzero"`
-		AllowedServiceTypes          *[]string          `json:"allowedServiceTypes,omitzero"`
+		} `json:"allowedFlexVolumes,omitempty"`
+		AllowedVolumes               *[]string          `json:"allowedVolumes,omitempty"`
+		AllowedServiceTypes          *[]string          `json:"allowedServiceTypes,omitempty"`
 		BlockWildcardDomains         bool               `json:"blockWildcardDomains,omitempty"`
 		ReadOnlyRootFilesystem       bool               `json:"readOnlyRootFilesystem,omitempty"`
 		AutomountServiceAccountToken *bool              `json:"automountServiceAccountToken,omitempty"`
-		AllowedClusterRoles          *[]string          `json:"allowedClusterRoles,omitzero"`
+		AllowedClusterRoles          *[]string          `json:"allowedClusterRoles,omitempty"`
 		FsGroup                      *SelectUIDStrategy `json:"fsGroup,omitempty"`
 		RunAsUser                    *SelectUIDStrategy `json:"runAsUser,omitempty"`
 		RunAsGroup                   *SelectUIDStrategy `json:"runAsGroup,omitempty"`
 		SupplementalGroups           *SelectUIDStrategy `json:"supplementalGroups,omitempty"`
-		AllowedUnsafeSysctls         *[]string          `json:"allowedUnsafeSysctls,omitzero"`
-		ForbiddenSysctls             *[]string          `json:"forbiddenSysctls,omitzero"`
+		AllowedUnsafeSysctls         *[]string          `json:"allowedUnsafeSysctls,omitempty"`
+		ForbiddenSysctls             *[]string          `json:"forbiddenSysctls,omitempty"`
 		SeccompProfiles              *struct {
-			AllowedProfiles       *[]string `json:"allowedProfiles,omitzero"`
-			AllowedLocalhostFiles *[]string `json:"allowedLocalhostFiles,omitzero"`
-		} `json:"seccompProfiles,omitzero"`
+			AllowedProfiles       *[]string `json:"allowedProfiles,omitempty"`
+			AllowedLocalhostFiles *[]string `json:"allowedLocalhostFiles,omitempty"`
+		} `json:"seccompProfiles,omitempty"`
 		SeLinux *[]struct {
 			Level string `json:"level,omitempty"`
 			Role  string `json:"role,omitempty"`
 			Type  string `json:"type,omitempty"`
 			User  string `json:"user,omitempty"`
-		} `json:"seLinux,omitzero"`
-		VerifyImageSignatures *[]ImageReference `json:"verifyImageSignatures,omitzero"`
+		} `json:"seLinux,omitempty"`
+		VerifyImageSignatures *[]ImageReference `json:"verifyImageSignatures,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
