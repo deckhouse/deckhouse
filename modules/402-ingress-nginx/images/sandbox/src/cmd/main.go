@@ -38,11 +38,7 @@ func main() {
 func run(argv []string) int {
 	debug := isDebug()
 	debugCrashOnDeny := isDebugCrashOnDeny()
-	dnsPolicy, argv, err := parseSandboxArgs(argv)
-	if err != nil {
-		log.Print(err)
-		return 1
-	}
+	argv = normalizeSandboxArgs(argv)
 	if len(argv) == 0 {
 		log.Print("not enough arguments after --")
 		return 1
@@ -69,14 +65,13 @@ func run(argv []string) int {
 		traceHandler = withDebugHandler(handler, debugCrashOnDeny)
 	}
 	allow = append(allow, sandboxExtraAllowSyscalls...)
-	trace = append(trace, sandboxExtraTraceSyscalls(dnsPolicy)...)
 
 	limit := runner.Limit{
 		TimeLimit:   sandboxCPUTimeLimit,
 		MemoryLimit: sandboxMemoryLimit,
 	}
 
-	res, err := runWithPtrace(args, allow, trace, workDir, traceHandler, dnsPolicy, limit, debug)
+	res, err := runWithPtrace(args, allow, trace, workDir, traceHandler, limit, debug)
 	if err != nil {
 		log.Printf("seccomp build (ptrace): %v", err)
 		return 1
@@ -113,7 +108,6 @@ func runWithPtrace(
 	args, allow, trace []string,
 	workDir string,
 	handler sbptrace.Handler,
-	dnsPolicy *sandboxDNSPolicy,
 	limit runner.Limit,
 	debug bool,
 ) (runner.Result, error) {
@@ -133,7 +127,7 @@ func runWithPtrace(
 
 		UnshareCgroupAfterSync: os.Getuid() == 0,
 	}
-	traceHandler := newSandboxTraceHandler(handler, dnsPolicy, debug)
+	traceHandler := newSandboxTraceHandler(handler, debug)
 	tracer := ptracer.Tracer{
 		Handler: traceHandler,
 		Runner:  r,
@@ -154,6 +148,13 @@ func buildFilter(allow, trace []string) (seccomp.Filter, error) {
 		// before converting it into a hard failure in the ptrace handler.
 		Default: sbseccomp.ActionTrace,
 	}).Build()
+}
+
+func normalizeSandboxArgs(argv []string) []string {
+	if len(argv) > 0 && argv[0] == "--" {
+		return argv[1:]
+	}
+	return argv
 }
 
 // getNginxConfByArg return parametr args of nginx, as sample for `-c` flag return path config

@@ -94,7 +94,8 @@ var sandboxExtraReadBase = []string{
 	"/usr/local/lib/",
 	"/usr/local/modsecurity/lib/",
 	"/modules_mount/etc/nginx/modules/otel/",
-	"/chroot/*", // allow only top-level files in /chroot (not recursive into /chroot/<dir>/...) for modsecurity "/chroot/unicode.mapping", "/chroot/scanners-user-agents.data" etc ...
+	"/chroot/*",            // allow only top-level files in /chroot (not recursive into /chroot/<dir>/...) for modsecurity "/chroot/unicode.mapping", "/chroot/scanners-user-agents.data" etc ...
+	"/validation-chroot/*", // same as above but for IsolatedProcess mode which uses /validation-chroot as chroot
 	"/usr/local/nginx/sbin/nginx",
 }
 
