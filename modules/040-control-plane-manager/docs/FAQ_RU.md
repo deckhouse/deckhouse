@@ -783,7 +783,7 @@ d8 k --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 2
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -829,7 +829,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -848,7 +848,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -908,7 +908,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
