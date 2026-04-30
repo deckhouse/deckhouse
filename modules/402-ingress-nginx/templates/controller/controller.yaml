@@ -156,6 +156,12 @@ spec:
       dnsPolicy: ClusterFirst
       hostNetwork: false
   {{- end }}
+  {{- if eq $validationIsolationMode "IsolatedProcess" }}
+      securityContext:
+        sysctls:
+        - name: net.ipv4.ip_unprivileged_port_start
+          value: "0"
+  {{- end }}
       imagePullSecrets:
       - name: deckhouse-registry
       initContainers:
