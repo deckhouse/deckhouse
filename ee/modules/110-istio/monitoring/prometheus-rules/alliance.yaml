@@ -38,10 +38,10 @@
         description: |
           Remote {{$labels.alliance_kind}} `{{$labels.name}}` with uuid `{{$labels.remote_uuid}}` requests private metadata using domain name `{{$labels.requested_to_hostname}}` which has deprecated subdomain `istio`.
           
-          Remote cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `istio-metadata.<thisClusterPublicDomain>/metadata/`.
+          Remote cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
 
           Migration steps:
           
-          1. On remote cluster. Ensure DNS to resolve the target `istio-metadata.<thisClusterPublicDomain>` (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).
+          1. On remote cluster. Ensure DNS to resolve the new target `(<publicDomainTemplate> + istio-metadata)`.
           2. On remote cluster. Update `spec.metadataEndpoint` on remote cluster object to use new domain name; keep the path `/metadata/`.
           3. On remote cluster. Verify remote metadata fetch and alliance health after the change.

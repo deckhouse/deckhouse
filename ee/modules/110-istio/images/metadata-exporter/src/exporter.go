@@ -753,7 +753,7 @@ func (exp *Exporter) checkIfAccessedViaDeprecatedSubdomain(r *http.Request, acce
 	// Checking if the source cluster is known
 	PublicMetadata, ok := remotePublicMetadataMap[accessedWithUUID]
 	if !ok {
-		logger.Printf("Access with JWT is signed for unknown source cluster with uuid %s", accessedWithUUID)
+		logger.Printf("Request with JWT is signed for unknown source cluster with uuid %s", accessedWithUUID)
 		return
 	}
 
