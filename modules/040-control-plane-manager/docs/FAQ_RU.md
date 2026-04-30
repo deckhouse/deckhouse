@@ -716,7 +716,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 2
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -762,7 +762,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -781,7 +781,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -841,7 +841,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
