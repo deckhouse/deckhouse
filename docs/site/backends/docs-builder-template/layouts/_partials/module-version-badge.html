@@ -35,7 +35,7 @@
     {{- $channelName := .title }}
     {{- $channel := .code }}
     <li class="submenu-item">
-        <a data-proofer-ignore='' class='submenu-item-link' href='{{- if $urlTail }}{{ relLangURL (printf "modules/%s/%s/%s" $module $channel $urlTail) }}{{ else }}{{ relLangURL (printf "modules/%s/%s/" $module $channel) }}{{ end }}'>
+        <a data-proofer-ignore='' class='submenu-item-link' href='../{{ $channel }}/{{ replaceRE "^readme.html$" "" $urlFileName }}'>
             <span class="submenu-item-channel">{{ $channelName }}</span>
             <span class="submenu-item-dot {{ if eq $versionPrev $version }} submenu-item-dot_special{{ end }}"></span>
             <span class="submenu-item-release">{{ $version }}</span>
@@ -49,7 +49,7 @@
     <li class="submenu-caption">{{ T "embedded_in_dkp" }}</li>
     <li class="submenu-embedded-list">
     {{- range sort $embeddedModuleVersions "value" "desc" }}
-        <a data-proofer-ignore='' class='submenu-embedded-link' href='{{- if $urlTail }}{{ relLangURL (printf "modules/%s/%s/%s" $module . $urlTail) }}{{ else }}{{ relLangURL (printf "modules/%s/%s/" $module .) }}{{ end }}'>{{ . }}</a>
+        <a data-proofer-ignore='' class='submenu-embedded-link' href='../{{ . }}/{{ replaceRE "^readme.html$" "" $urlFileName }}'>{{ . }}</a>
     {{- end }}
     </li>
 {{- end }}
@@ -57,3 +57,14 @@
 </div>
 {{ "<!--/noindex-->" | safeHTML }}
 {{- end }}
+<script>
+  // Fix version menu item URLs for cases where the URL lacks a channel or product version (e.g., /modules/MODULE/).
+  const currentUrl = window.location.pathname;
+
+  if (!currentUrl.match(/\/modules\/[^\/]+\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//)
+      && currentUrl.includes('/modules/')) {
+    document.querySelectorAll('#doc-versions-menu a.submenu-item-link').forEach(link => {
+        link.href = link.href.replace(/.*\/(v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest)\//, `$1/`);
+    });
+  }
+</script>
