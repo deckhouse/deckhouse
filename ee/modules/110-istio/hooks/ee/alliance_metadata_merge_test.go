@@ -452,6 +452,7 @@ status:
 				{
 					"name": "bbb-687b4cd97",
 					"hostname": "bbb",
+					"resolution": "DNS",
 					"ports": [
 						{"name": "ppp", "port": 123, "protocol": "TCP"},
 						{"name": "https-xxx", "port": 555, "protocol": "TLS"},
@@ -462,36 +463,42 @@ status:
 				{
 					"name": "ccc-7bbfbb59bd",
 					"hostname": "ccc",
+					"resolution": "DNS",
 					"ports": [{"name": "ppp", "port": 123, "protocol": "TCP"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
 					"name": "ddd-7bbfbb59bd",
 					"hostname": "ddd",
+					"resolution": "DNS",
 					"ports": [{"name": "xxx", "port": 555, "protocol": "TCP"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
 					"name": "eee-7bbfbb59bd",
 					"hostname": "eee",
+					"resolution": "DNS",
 					"ports": [{"name": "http-xxx", "port": 555, "protocol": "HTTP"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
 					"name": "fff-7bbfbb59bd",
 					"hostname": "fff",
+					"resolution": "DNS",
 					"ports": [{"name": "https-xxx", "port": 555, "protocol": "TLS"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
 					"name": "ggg-7bbfbb59bd",
 					"hostname": "ggg",
+					"resolution": "DNS",
 					"ports": [{"name": "grpc-xxx", "port": 555, "protocol": "HTTP2"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				},
 				{
 					"name": "hhh-7bbfbb59bd",
 					"hostname": "hhh",
+					"resolution": "DNS",
 					"ports": [{"name": "tls-xxx", "port": 555, "protocol": "TLS"}],
 					"endpoints": [{"address": "ccc", "port": 222}]
 				}
@@ -622,6 +629,7 @@ status:
 				{
 					"name": "my-svc-my-ns-svc-cluster-local-9c8cbb5bc",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [
 						{
 							"name": "http",
@@ -677,6 +685,7 @@ status:
 				{
 					"name": "dup-svc-ns-svc-cluster-local-6475d67dcb",
 					"hostname": "dup-svc.ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [
 						{"name": "http", "port": 8080, "protocol": "HTTP"},
 						{"name": "grpc", "port": 9090, "protocol": "HTTP2"}
@@ -688,6 +697,7 @@ status:
 				{
 					"name": "unique-svc-ns-svc-cluster-local-6475d67dcb",
 					"hostname": "unique-svc.ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [{"name": "http", "port": 80, "protocol": "HTTP"}],
 					"endpoints": [
 						{"address": "3.3.3.3", "port": 15443}
@@ -752,6 +762,7 @@ status:
 				{
 					"name": "svc-ns-svc-cluster-local-64465b95f6",
 					"hostname": "svc.ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [{"name": "http", "port": 8080, "protocol": "HTTP"}],
 					"endpoints": [
 						{"address": "10.0.0.1", "port": 15443}
@@ -760,6 +771,7 @@ status:
 				{
 					"name": "svc-ns-svc-cluster-local-85bb6b6b89",
 					"hostname": "svc.ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [{"name": "grpc", "port": 9090, "protocol": "HTTP2"}],
 					"endpoints": [
 						{"address": "10.0.0.2", "port": 15443}
@@ -934,6 +946,7 @@ status:
 				{
 					"name": "my-svc-my-ns-svc-cluster-local-55b5c6469d",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [
 						{
 							"name": "websocket",
@@ -955,6 +968,7 @@ status:
 				{
 					"name": "my-svc-my-ns-svc-cluster-local-7f8594896",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [
 						{
 						  "name": "debug",
@@ -976,6 +990,7 @@ status:
 				{
 					"name": "my-svc-my-ns-svc-cluster-local-d797d8d68",
 					"hostname": "my-svc.my-ns.svc.cluster.local",
+					"resolution": "STATIC",
 					"ports": [
 						{
 							"name": "web",

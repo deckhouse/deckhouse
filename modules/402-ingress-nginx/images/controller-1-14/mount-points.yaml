@@ -1,7 +1,11 @@
 dirs:
 - /chroot/tmp
+- /validation-chroot/tmp
 - /chroot/var/lib/nginx
 - /chroot/var/log/nginx
 - /chroot/etc/nginx/ssl/
+- /validation-chroot/etc/nginx/ssl/
 - /chroot/etc/nginx/webhook-ssl
 - /chroot/etc/ingress-controller
+- /validation-chroot/etc/ingress-controller
+- /etc/ingress-controller

@@ -130,7 +130,10 @@ func (r *runner) RunConvergeMigration(ctx *context.Context, checkHasTerraformSta
 }
 
 func loadNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrastructureState, error) {
-	kubeCl := ctx.KubeClient()
+	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return nil, fmt.Errorf("Could not get kube client: %w", err)
+	}
 	// NOTE: Nodes state loaded from target kubernetes cluster in default dhctl-converge.
 	// NOTE: In the commander mode nodes state should exist in the local state cache.
 	if ctx.CommanderMode() {
@@ -252,9 +255,14 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 		bootstrapNewNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
 
+	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	if err := bootstrapNewNodeGroups(
 		ctx.Ctx(),
-		ctx.KubeClient(),
+		kubeCl,
 		metaConfig,
 		nodeGroupsWithoutStateInCluster,
 		ctx.InfrastructureContext(metaConfig),
@@ -289,7 +297,12 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 		return nil
 	}
 
-	if err := deckhouse.ConvergeDeckhouseConfigurationForCommander(ctx.Ctx(), ctx.KubeClient(), commanderUUID, metaConfig); err != nil {
+	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	if err := deckhouse.ConvergeDeckhouseConfigurationForCommander(ctx.Ctx(), kubeCl, commanderUUID, metaConfig); err != nil {
 		return fmt.Errorf("unable to update deckhouse configuration: %w", err)
 	}
 
@@ -320,8 +333,13 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		return nil
 	}
 
+	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	if checkHasTerraformStateBeforeMigration {
-		stats, hasTerraFormState, err := check.CheckState(ctx.Ctx(), ctx.KubeClient(), metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
+		stats, hasTerraFormState, err := check.CheckState(ctx.Ctx(), kubeCl, metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
 			CommanderMode: ctx.CommanderMode(),
 			StateCache:    ctx.StateCache(),
 		},
@@ -470,13 +488,18 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 		return nil
 	}
 
-	err := log.Process("converge", "Update Cluster infrastructure state", func() error {
+	kubeCl, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = log.Process("converge", "Update Cluster infrastructure state", func() error {
 		var clusterState []byte
 		var err error
 		// NOTE: Cluster state loaded from target kubernetes cluster in default dhctl-converge.
 		// NOTE: In the commander mode cluster state should exist in the local state cache.
 		if !ctx.CommanderMode() {
-			clusterState, err = infrastructurestate.GetClusterStateFromCluster(ctx.Ctx(), ctx.KubeClient())
+			clusterState, err = infrastructurestate.GetClusterStateFromCluster(ctx.Ctx(), kubeCl)
 			if err != nil {
 				return fmt.Errorf("infrastructure cluster state in Kubernetes cluster not found: %w", err)
 			}
@@ -504,7 +527,7 @@ func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.Met
 			return global.ErrConvergeInterrupted
 		}
 
-		return infrastructurestate.SaveClusterInfrastructureState(ctx.Ctx(), ctx.KubeClient(), outputs)
+		return infrastructurestate.SaveClusterInfrastructureState(ctx.Ctx(), kubeCl, outputs)
 	})
 
 	if err != nil {

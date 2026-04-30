@@ -135,24 +135,34 @@ func (v *metricPresenceVerifier) Request() *http.Request {
 	}
 */
 func (v *metricPresenceVerifier) Verify(body []byte) check.Error {
-	resultPath := "data.result"
-	result := gjson.Get(string(body), resultPath)
+	present, err := isMetricPresentInPrometheusResponse(body)
+	if err != nil {
+		return check.ErrFail("cannot parse prometheus response: %v", err)
+	}
+	if !present {
+		return check.ErrFail("no metrics in prometheus response")
+	}
+	return nil
+}
 
+func isMetricPresentInPrometheusResponse(body []byte) (bool, error) {
+	resultPath := "data.result"
+	result := gjson.GetBytes(body, resultPath)
 	if !result.IsArray() {
-		return check.ErrFail("cannot parse path %q in prometheus response %q", resultPath, body)
+		return false, fmt.Errorf("cannot parse path %q in Prometheus response", resultPath)
 	}
 
 	if len(result.Array()) == 0 {
-		return check.ErrFail("no metrics in prometheus response (did not count)")
+		return false, nil
 	}
 
 	countPath := "data.result.0.value.1"
-	count := gjson.Get(string(body), countPath)
-	if count.String() == "0" {
-		return check.ErrFail("no metrics in prometheus response (zero count)")
+	count := gjson.GetBytes(body, countPath)
+	if !count.Exists() {
+		return false, nil
 	}
 
-	return nil
+	return count.String() != "0", nil
 }
 
 func addMetricQuery(baseURL, metricName string) string {

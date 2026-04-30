@@ -39,6 +39,7 @@ const (
 	cgroupV2Value                    = "cgroup2fs"
 	cntrdV2GroupName                 = "nodes_cntrd_v2"
 	unsupportedContainerdV1ValuesKey = "nodeManager:unsupportedContainerdV1"
+	nodeGroupLabel                   = "node.deckhouse.io/group"
 )
 
 var (

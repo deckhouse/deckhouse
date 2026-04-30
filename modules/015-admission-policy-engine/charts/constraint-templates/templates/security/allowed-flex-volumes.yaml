@@ -39,26 +39,35 @@ spec:
                     type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.check_set" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.match" . | nindent 16 }}
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-            not input.review.operation == "DELETE"
-            volume := input_flexvolumes[_]
-            not input_flexvolumes_allowed(volume)
-            msg := sprintf("FlexVolume %v is not allowed, pod: %v. Allowed drivers: %v", [volume, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])
-        }
+              import data.lib.check_set.check_value_in_set_with_wildcards
+              import data.lib.common.has_field
 
-        input_flexvolumes_allowed(volume) {
-            input.parameters.allowedFlexVolumes[_].driver == volume.flexVolume.driver
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                volume := input_flexvolumes[_]
+                allowed := [v.driver | v := input.parameters.allowedFlexVolumes[_]]
+                result := check_value_in_set_with_wildcards(volume.flexVolume.driver, allowed, [], {})
+                not result.allowed
+                msg := sprintf("FlexVolume %v is not allowed, pod: %v. Allowed drivers: %v", [volume, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])
+              }
 
-        input_flexvolumes[v] {
-            v := input.review.object.spec.volumes[_]
-            has_field(v, "flexVolume")
-        }
-
-        # has_field returns whether an object has a field
-        has_field(object, field) = true {
-            object[field]
-        }
+              input_flexvolumes contains v if {
+                v := input.review.object.spec.volumes[_]
+                has_field(v, "flexVolume")
+              }

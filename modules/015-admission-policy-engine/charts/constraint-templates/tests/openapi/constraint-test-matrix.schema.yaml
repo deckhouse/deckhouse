@@ -1,0 +1,250 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+title: ConstraintTestMatrix
+description: Schema for test-matrix.yaml consumed by constraint_testgen generate.
+type: object
+required:
+  - apiVersion
+  - kind
+  - metadata
+  - spec
+properties:
+  apiVersion:
+    type: string
+    description: API version of the document.
+    minLength: 1
+  kind:
+    type: string
+    description: Document kind. Must be ConstraintTestMatrix.
+    const: ConstraintTestMatrix
+  metadata:
+    type: object
+    description: Standard Kubernetes-style metadata.
+    required:
+      - name
+    properties:
+      name:
+        type: string
+        description: Matrix name, usually equal to constraint directory name.
+        minLength: 1
+    additionalProperties: true
+  spec:
+    type: object
+    description: Matrix definition used to generate rendered suite and samples.
+    required:
+      - suiteName
+      - outputTestDirectory
+      - bases
+      - blocks
+    properties:
+      suiteName:
+        type: string
+        description: Name for rendered Suite metadata.name.
+        minLength: 1
+      outputTestDirectory:
+        type: string
+        description: Relative output directory (commonly rendered).
+        minLength: 1
+      defaultObjectBase:
+        type: string
+        description: Optional default base key for case.object when base is omitted.
+      defaultInventory:
+        type: array
+        description: Inventory entries prepended to each case inventory.
+        items:
+          $ref: "#/definitions/inventoryItem"
+      externalData:
+        type: object
+        description: Optional external data providers copied into each generated case.
+        properties:
+          providers:
+            type: array
+            description: Gator external data providers configuration.
+            items: {}
+        required:
+          - providers
+        additionalProperties: false
+      bases:
+        type: object
+        description: Reusable base documents keyed by base name.
+        minProperties: 1
+        additionalProperties:
+          type: object
+          required:
+            - document
+          properties:
+            document:
+              type: object
+              description: Base object document used for merge rendering.
+          additionalProperties: false
+      namedExceptions:
+        type: object
+        description: Reusable named exception fragments referenced by case.exception/exceptionRef.
+        additionalProperties:
+          type: object
+          properties:
+            base:
+              type: string
+              description: Optional base key (defaults in tool logic when omitted).
+            merge:
+              type: object
+              description: Merge patch for synthesized exception inventory object.
+          additionalProperties: false
+      blocks:
+        type: array
+        description: Test blocks mapped to suite tests[].
+        items:
+          $ref: "#/definitions/block"
+    additionalProperties: false
+additionalProperties: false
+definitions:
+  block:
+    type: object
+    description: A suite block with template/constraint pair and generated cases.
+    required:
+      - name
+      - template
+      - constraint
+      - cases
+    properties:
+      name:
+        type: string
+        description: Block name. Used as fallback gator test block name.
+        minLength: 1
+      gatorBlock:
+        type: string
+        description: Explicit gator block name (tests[].name) overriding name.
+      defaultObjectBase:
+        type: string
+        description: Optional per-block default for case.object.base.
+      template:
+        type: string
+        description: Path to ConstraintTemplate source/override.
+        minLength: 1
+      constraint:
+        type: string
+        description: Path to constraint manifest.
+        minLength: 1
+      cases:
+        type: array
+        description: Block test cases.
+        minItems: 1
+        items:
+          $ref: "#/definitions/case"
+    additionalProperties: false
+  case:
+    type: object
+    description: Single matrix case converted into Suite case entry.
+    required:
+      - name
+      - violations
+      - object
+    properties:
+      name:
+        type: string
+        description: Case name used in suite and generated sample naming.
+        minLength: 1
+      violations:
+        type: string
+        description: Expected violations result for assertions.
+        enum:
+          - "yes"
+          - "no"
+      assertionMessage:
+        type: string
+        description: Optional expected assertion message.
+      fields:
+        type: array
+        description: Optional explicit field/scenario coverage mapping for this case.
+        items:
+          type: object
+          required:
+            - path
+            - scenario
+          properties:
+            path:
+              type: string
+              description: Field path covered by this case.
+              minLength: 1
+            scenario:
+              type: string
+              description: Scenario covered by this case for the given field.
+              minLength: 1
+          additionalProperties: false
+      exception:
+        type: string
+        description: Named exception key to synthesize exception inventory.
+      exceptionRef:
+        type: string
+        description: Alternative alias for named exception key.
+      inventory:
+        type: array
+        description: Optional additional inventory entries for case.
+        items:
+          $ref: "#/definitions/inventoryItem"
+      externalData:
+        type: object
+        description: Optional per-case external data provider mocks (overrides spec.externalData).
+        properties:
+          providers:
+            type: array
+            description: External data providers map copied into generated inventory for this case.
+            items: {}
+        required:
+          - providers
+        additionalProperties: false
+      object:
+        description: Case object source (direct ref or inline base+merge form).
+        $ref: "#/definitions/objectRefOrInline"
+    additionalProperties: false
+  inventoryItem:
+    description: Inventory item format accepted by matrix generator.
+    oneOf:
+      - type: string
+        description: Direct path reference to an existing test_samples file.
+        minLength: 1
+      - $ref: "#/definitions/refOnly"
+      - $ref: "#/definitions/baseMergeItem"
+  objectRefOrInline:
+    description: Object item format accepted by matrix generator.
+    oneOf:
+      - $ref: "#/definitions/refOnly"
+      - $ref: "#/definitions/baseMergeItem"
+  refOnly:
+    type: object
+    description: Reference-only form.
+    required:
+      - ref
+    properties:
+      ref:
+        type: string
+        description: Relative reference path to object/inventory YAML file.
+        minLength: 1
+    additionalProperties: false
+  baseMergeItem:
+    type: object
+    description: Inline generation form using base document plus optional patches.
+    required:
+      - base
+    properties:
+      base:
+        type: string
+        description: Base key from spec.bases.
+        minLength: 1
+      path:
+        type: string
+        description: Optional explicit output path for generated sample.
+      merge:
+        type: object
+        description: Merge patch applied to base document.
+      containerMerges:
+        type: array
+        description: Optional named container patch list for spec.containers.
+        items: {}
+      initContainerMerges:
+        type: array
+        description: Optional named initContainer patch list for spec.initContainers.
+        items: {}
+      podName:
+        type: string
+        description: Optional Pod metadata.name override for generated Pod objects.
+    additionalProperties: false

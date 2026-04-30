@@ -63,12 +63,20 @@ type httpVerifier interface {
 
 // newGetRequest prepares request object for given URL with auth token
 func newGetRequest(endpoint, authToken, userAgent string) (*http.Request, check.Error) {
+	return newGetRequestWithHeaders(endpoint, authToken, userAgent, nil)
+}
+
+// newGetRequestWithHeaders prepares request object for given URL with auth token and custom headers
+func newGetRequestWithHeaders(endpoint, authToken, userAgent string, headers map[string]string) (*http.Request, check.Error) {
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, check.ErrUnknown("cannot create request: %s", err)
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", authToken))
 	req.Header.Set("User-Agent", userAgent)
+	for name, value := range headers {
+		req.Header.Set(name, value)
+	}
 
 	return req, nil
 }

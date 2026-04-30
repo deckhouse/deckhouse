@@ -63,6 +63,7 @@
 **/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu     @serg-su
 **/040-node-manager/templates/nvidia-gpu                         @serg-su
 **/040-node-manager/hooks/fencing**                              @yalosev @ergoz
+**/040-node-manager/e2e/fencing**                                @yalosev @ergoz
 040-terraform-manager/                                           @name212 @090809
 **/040-terraform-manager/images                                  @aleksey-su @pabateman
 **/040-terraform-manager/images/base-terraform-manager           @name212 @090809

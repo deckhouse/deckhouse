@@ -53,10 +53,10 @@ var (
 )
 
 type ClusterStateSaver struct {
-	getter kubernetes.KubeClientProvider
+	getter kubernetes.KubeClientProviderWithCtx
 }
 
-func NewClusterStateSaver(getter kubernetes.KubeClientProvider) *ClusterStateSaver {
+func NewClusterStateSaver(getter kubernetes.KubeClientProviderWithCtx) *ClusterStateSaver {
 	return &ClusterStateSaver{
 		getter: getter,
 	}
@@ -75,8 +75,13 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 		PatchFunc: func(ctx context.Context, patch []byte) error {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
+
+			kubeClient, err := s.getter.KubeClientCtx(ctx)
+			if err != nil {
+				return fmt.Errorf("Could not get kube client: %w", err)
+			}
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := s.getter.KubeClient().CoreV1().Secrets("d8-system").Patch(
+			_, err = kubeClient.CoreV1().Secrets("d8-system").Patch(
 				ctx,
 				manifests.InfrastructureClusterStateName,
 				types.MergePatchType,
@@ -103,13 +108,13 @@ func (s *ClusterStateSaver) SaveState(ctx context.Context, outputs *infrastructu
 }
 
 type NodeStateSaver struct {
-	getter            kubernetes.KubeClientProvider
+	getter            kubernetes.KubeClientProviderWithCtx
 	nodeName          string
 	nodeGroup         string
 	nodeGroupSettings []byte
 }
 
-func NewNodeStateSaver(getter kubernetes.KubeClientProvider, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
+func NewNodeStateSaver(getter kubernetes.KubeClientProviderWithCtx, nodeName, nodeGroup string, nodeGroupSettings []byte) *NodeStateSaver {
 	return &NodeStateSaver{
 		getter:            getter,
 		nodeName:          nodeName,
@@ -130,6 +135,11 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 		return nil
 	}
 
+	kubeClient, err := s.getter.KubeClientCtx(context.Background())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	task := actions.ManifestTask{
 		Name: fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, s.nodeName),
 		Manifest: func() interface{} {
@@ -138,11 +148,7 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 		CreateFunc: func(ctx context.Context, manifest interface{}) error {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
-
-			_, err := s.getter.KubeClient().
-				CoreV1().Secrets("d8-system").
-				Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
-
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 			return err
 		},
 		PatchData: func() interface{} {
@@ -155,18 +161,14 @@ func (s *NodeStateSaver) SaveState(ctx context.Context, outputs *infrastructure.
 			defer cancel()
 
 			// MergePatch is used because we need to replace one field in "data".
-			_, err := s.getter.KubeClient().
-				CoreV1().Secrets("d8-system").
-				Patch(ctx, secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
-
+			_, err := kubeClient.CoreV1().Secrets("d8-system").Patch(ctx, secretName, types.MergePatchType, patchData, metav1.PatchOptions{})
 			return err
 		},
 	}
 
 	taskName := fmt.Sprintf("Save intermediate infrastructure state for Node %q", s.nodeName)
 	log.DebugF("Intermediate save state for node %s in cluster...\n", s.nodeName)
-
-	err := retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(func() error {
+	err = retry.NewSilentLoop(taskName, 15, 3*time.Second).Run(func() error {
 		return task.PatchOrCreate(ctx)
 	})
 

@@ -1959,6 +1959,7 @@ alerts:
       module: control-plane-manager
       edition: ce
       description: |-
+        Service account `{{ $labels.token_namespace }}/{{ $labels.token_name }}` is using a stale token.
         This issue may occur if an application reads the token only at startup and does not reload it periodically. As a result, an outdated token might be used, leading to security breach and authentication failures.
 
         **Recommended actions:**
@@ -1969,37 +1970,12 @@ alerts:
         Note that currently these tokens are not blocked because the `--service-account-extend-token-expiration` flag is enabled by default (`Default: true`). With this flag enabled, admission-injected tokens are extended up to 1 year during token generation to facilitate a safe transition from legacy tokens to the bound service account token feature, ignoring the value of `service-account-max-token-expiration`.
 
         **For further investigation:**
-        Log into the server with label `instance={{ $labels.instance }}` and inspect the audit log using the following command:
-
+        You can find the problematic pods using the following command:
         ```bash
-        jq 'select(.annotations["authentication.k8s.io/stale-token"]) | {auditID, stageTimestamp, requestURI, verb, user: .user.username, stale_token: .annotations["authentication.k8s.io/stale-token"]}' /var/log/kube-audit/audit.log
-        ```
-
-        If you do not see the necessary logs, set `settings.apiserver.auditPolicyEnabled` in control-plane-manager ModuleConfig [according to the documentation](https://deckhouse.io/modules/control-plane-manager/faq.html#how-do-i-configure-additional-audit-policies) and add an additional audit policy to log actions of all service accounts.
-
-        ```yaml
-        - level: Metadata
-          omitStages:
-          - RequestReceived
-          userGroups:
-          - system:serviceaccounts
-        ```
-
-        Example of applying an additional audit policy:
-
-        ```bash
-        d8 k apply -f - <<EOF
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: audit-policy
-          namespace: kube-system
-        data:
-          audit-policy.yaml: YXBpVmVyc2lvbjogYXVkaXQuazhzLmlvL3YxCmtpbmQ6IFBvbGljeQpydWxlczoKLSBsZXZlbDogTWV0YWRhdGEKICBvbWl0U3RhZ2VzOgogIC0gUmVxdWVzdFJlY2VpdmVkCiAgdXNlckdyb3VwczoKICAtIHN5c3RlbTpzZXJ2aWNlYWNjb3VudHM=
-        EOF
+        d8 k get pods -A -o json | jq -r '.items[] | select(.spec.serviceAccountName=="{{ $labels.token_name }}" and .metadata.namespace=="{{ $labels.token_namespace }}") | .metadata.name'
         ```
       summary: |
-        Stale service account tokens detected.
+        Stale service account tokens detected for {{ $labels.token_namespace }}/{{ $labels.token_name }}.
       severity: "8"
       markupFormat: markdown
     - name: D8KubernetesVersionIsDeprecated
@@ -3595,11 +3571,9 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.
+        A Pod from the `control-plane/controller-manager` probe was created more than 5 minutes ago.
 
-        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe,
-        and `kube-controller-manager` should remove the associated Pods.
-        There should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and the Pods should be deleted within seconds.
+        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe, and `kube-controller-manager` should remove the associated Pods within seconds.
 
         This may indicate:
 

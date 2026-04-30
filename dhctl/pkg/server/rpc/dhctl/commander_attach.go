@@ -22,12 +22,12 @@ import (
 	"log/slog"
 
 	"github.com/google/uuid"
-	"github.com/name212/govalue"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander/attach"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
@@ -36,7 +36,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type attachParams struct {
@@ -181,32 +181,22 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
 
-	var sshClient node.SSHClient
-	err = loggerFor.LogProcessCtx(ctx, "default", "Preparing SSH client", func(ctx context.Context) error {
-		connectionConfig, err := config.ParseConnectionConfig(
-			p.request.ConnectionConfig,
-			s.params.SchemaStore,
-			config.ValidateOptionCommanderMode(p.request.Options.CommanderMode),
-			config.ValidateOptionStrictUnmarshal(p.request.Options.CommanderMode),
-			config.ValidateOptionValidateExtensions(p.request.Options.CommanderMode),
-		)
-		if err != nil {
-			return fmt.Errorf("parsing connection config: %w", err)
-		}
-
+	var sshProvider libcon.SSHProvider
+	var kubeProvider libcon.KubeProvider
+	err = loggerFor.LogProcess("default", "Preparing SSH client", func() error {
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
+		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, loggerFor, s.params.IsDebug, s.params.TmpDir)
 		cleanuper.Add(cleanup)
 		if err != nil {
-			return fmt.Errorf("preparing ssh client: %w", err)
+			return fmt.Errorf("creating provider: %w", err)
 		}
 
-		if !govalue.IsNil(sshClient) {
-			err = sshClient.Start()
-			if err != nil {
-				return fmt.Errorf("cannot start sshClient: %w", err)
-			}
+		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return fmt.Errorf("getting ssh provider: %w", err)
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -224,7 +214,8 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	attacher := attach.NewAttacher(&attach.Params{
 		CommanderMode:  p.request.Options.CommanderMode,
 		CommanderUUID:  commanderUUID,
-		SSHClient:      sshClient,
+		SSHProvider:    sshProvider,
+		KubeProvider:   kubeProvider,
 		OnCheckResult:  onCheckResult,
 		OnPhaseFunc:    p.switchPhase,
 		OnProgressFunc: p.sendProgress,

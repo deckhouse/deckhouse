@@ -1,0 +1,11 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allow-privilege-escalation
+spec:
+  testDirectory: allow-privilege-escalation
+  suite:
+    expectedTestBlockNames:
+      - pss-restricted
+      - pss-restricted-with-exception
+      - pss-restricted-spe-container
