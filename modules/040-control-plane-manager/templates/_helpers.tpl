@@ -14,8 +14,8 @@
       {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
       "not empty string"
       {{- end }}
-    {{- else }}
-      {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
+    {{- else if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned" }}
+      {{- if .Values.global.enabledModules | has "cert-manager" }}
       "not empty string"
       {{- end }}
     {{- end }}
