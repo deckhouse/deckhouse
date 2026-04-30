@@ -94,4 +94,19 @@ This patch fixes:
 
 ### 015-ratelimit-lock-unlock-users.patch
 
-Added ratelimit and lock/unlock logic for external users via passwordconnectors
+Adds per-IP rate limiting on Dex password endpoints (`/auth/{conn}/login`, `/token`)
+and extends the existing local-user account-lockout to all password connectors
+(`local`, `ldap`, `atlassian-crowd`).
+
+Key changes:
+
+- Token-bucket per-IP `IPRateLimiter` middleware, configurable via the new `rateLimit`
+  section in Dex config.
+- `OfflineSessions` is extended with `Email`, `IncorrectPasswordLoginAttempts`,
+  `LockedUntil` (across `storage`, `kubernetes`, `etcd`, `sql` migration, `ent`);
+  used as the per-user lockout store for non-local connectors.
+- `passwordPolicy.lockout.applyToConnectors` selects which connector types lockout
+  applies to.
+- LDAP and Atlassian Crowd `Login()` returns a partial `Identity{UserID, Email}` on
+  failed auth when the user exists, so the lockout counter can be indexed by a
+  stable handle.

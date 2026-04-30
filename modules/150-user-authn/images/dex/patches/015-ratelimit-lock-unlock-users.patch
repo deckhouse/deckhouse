@@ -1,3 +1,43 @@
+From 5d897d2a9720590cb5f5270c375c440be8dbad7e Mon Sep 17 00:00:00 2001
+From: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
+Date: Thu, 30 Apr 2026 14:07:16 +0300
+Subject: [PATCH] ratelimit-lock-unlock-users
+
+Signed-off-by: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
+---
+ cmd/dex/config.go                             |  46 ++-
+ cmd/dex/serve.go                              |  20 ++
+ connector/atlassiancrowd/atlassiancrowd.go    |   8 +
+ connector/ldap/ldap.go                        |  10 +
+ go.mod                                        |   1 +
+ scripts/manifests/crds/offlinesessionses.yaml |  29 ++
+ server/handlers.go                            | 139 +++++++++
+ server/lockout_test.go                        | 264 ++++++++++++++++
+ server/passwordpolicy.go                      |  58 ++++
+ server/ratelimit.go                           | 175 +++++++++++
+ server/ratelimit_test.go                      | 200 ++++++++++++
+ server/server.go                              |  26 +-
+ storage/ent/client/offlinesession.go          |  18 +-
+ storage/ent/client/types.go                   |  13 +-
+ storage/ent/db/migrate/schema.go              |   3 +
+ storage/ent/db/mutation.go                    | 286 +++++++++++++++++-
+ storage/ent/db/offlinesession.go              |  45 ++-
+ .../ent/db/offlinesession/offlinesession.go   |  28 ++
+ storage/ent/db/offlinesession/where.go        | 192 ++++++++++++
+ storage/ent/db/offlinesession_create.go       |  63 ++++
+ storage/ent/db/offlinesession_update.go       | 177 +++++++++++
+ storage/ent/db/runtime.go                     |   8 +
+ storage/ent/schema/offlinesession.go          |   7 +
+ storage/etcd/types.go                         |  45 +--
+ storage/kubernetes/types.go                   |  45 +--
+ storage/sql/crud.go                           |  21 +-
+ storage/sql/migrate.go                        |  10 +
+ storage/storage.go                            |  16 +
+ 28 files changed, 1878 insertions(+), 75 deletions(-)
+ create mode 100644 server/lockout_test.go
+ create mode 100644 server/ratelimit.go
+ create mode 100644 server/ratelimit_test.go
+
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
 index 0c4f7f55..7976877e 100644
 --- a/cmd/dex/config.go
@@ -174,6 +214,43 @@ index 550943af..6a39f141 100644
  	google.golang.org/api v0.248.0
  	google.golang.org/grpc v1.79.3
  	google.golang.org/protobuf v1.36.10
+diff --git a/scripts/manifests/crds/offlinesessionses.yaml b/scripts/manifests/crds/offlinesessionses.yaml
+index e8e5a783..e04ff083 100644
+--- a/scripts/manifests/crds/offlinesessionses.yaml
++++ b/scripts/manifests/crds/offlinesessionses.yaml
+@@ -18,3 +18,32 @@ spec:
+       openAPIV3Schema:
+         type: object
+         x-kubernetes-preserve-unknown-fields: true
++    additionalPrinterColumns:
++      - name: User
++        type: string
++        jsonPath: .userID
++        description: |
++          End-user identifier, as returned by the upstream connector.
++      - name: Email
++        type: string
++        jsonPath: .email
++        description: |
++          Mirror of identity.Email; used as a stable handle for administrative actions.
++      - name: Connector
++        type: string
++        jsonPath: .connID
++        description: |
++          ID of the connector through which the user logged in.
++      - name: Attempts
++        type: integer
++        jsonPath: .incorrectPasswordLoginAttempts
++        description: |
++          Consecutive failed password attempts since the last successful login.
++      - name: LockedUntil
++        type: date
++        jsonPath: .lockedUntil
++        description: |
++          Until when password logins are blocked. Empty when the user is not locked.
++      - name: Age
++        type: date
++        jsonPath: .metadata.creationTimestamp
 diff --git a/server/handlers.go b/server/handlers.go
 index 04c391e2..8b77f748 100644
 --- a/server/handlers.go
@@ -2579,4 +2656,6 @@ index c4fe7f26..1f331103 100644
  }
  
  // Password is an email to password mapping managed by the storage.
+-- 
+2.53.0
 
