@@ -149,6 +149,56 @@ properties:
             pattern: "^(?:(?:[1-9]|[1-9][0-9]+)d)?(?:(?:[1-9]|[1-9][0-9]+)h)?(?:(?:[1-9]|[1-9][0-9]+)m)?(?:(?:[1-9]|[1-9][0-9]+)s)?$"
             description: |
               Temporary lockout duration. Can be set in seconds, minutes, hours, or days: `10s`, `5m`, `1h`, `3d`.
+          applyToConnectors:
+            type: array
+            description: |
+              Authentication connector types the lockout applies to.
+
+              When omitted, the policy is enforced for the built-in `Local` connector only (the previous behavior).
+              For the listed external connectors, the failed-attempt counter and the lock state are tracked in the
+              `OfflineSessions` resource of the corresponding user (one object per `(user, connector)` pair).
+
+              Manually unlocking a user is supported by patching the `OfflineSessions` resource directly
+              (clearing `lockedUntil` and `incorrectPasswordLoginAttempts`).
+            uniqueItems: true
+            items:
+              type: string
+              enum: ["Local", "LDAP", "Crowd"]
+  rateLimit:
+    type: object
+    default: {}
+    description: |
+      Brute-force protection for the password endpoints of Dex.
+
+      When enabled, a per-IP token-bucket rate limiter is installed in front of `POST /token`
+      and `POST /auth/{connector}/login`. The client IP is taken from the `X-Real-IP` header
+      (set by the platform Ingress). Limits are tracked in memory in each Dex replica; in HA
+      setups the effective per-IP rate is multiplied by the number of replicas, which is fine
+      as a brute-force backstop and is complemented by the account-level lockout.
+    properties:
+      enabled:
+        type: boolean
+        default: false
+        description: |
+          Whether to enforce per-IP rate limiting on Dex password endpoints.
+      perIP:
+        type: object
+        default: {}
+        description: |
+          Per-source-IP token-bucket configuration.
+        properties:
+          requestsPerMinute:
+            type: integer
+            default: 30
+            minimum: 1
+            description: |
+              Sustainable steady-state rate per IP, in requests per minute.
+          burst:
+            type: integer
+            default: 10
+            minimum: 1
+            description: |
+              Maximum bucket size, i.e. how many requests an IP may make in a short burst before being throttled.
   staticUsers2FA:
     type: object
     default: {}

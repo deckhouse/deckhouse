@@ -52,3 +52,32 @@ Fix CVEs:
 - CVE-2026-26958 
 - GHSA-479m-364c-43vc
 - CVE-2026-34986
+
+### 009-ratelimit-lock-unlock-users.patch
+
+This patch adds two security features to Dex on top of the existing local-user
+password policy.
+
+1. **Per-IP rate limiter** in front of the password endpoints (`POST /token`
+   and `POST /auth/{connector}/login`). Implemented as an in-memory
+   token-bucket per source IP with periodic eviction of stale buckets.
+   Configurable via the `rateLimit` section of the dex config (forwarded from
+   the module's `userAuthn.rateLimit`); over-the-limit requests get HTTP 429
+   plus a `Retry-After` header. GETs and the discovery endpoints are not
+   rate-limited.
+
+2. **Account lockout for non-local connectors** (LDAP, Atlassian Crowd, ...),
+   reusing the existing `passwordPolicy.lockout` knobs. The opt-in is the new
+   `applyToConnectors` field; the failed-attempt counter and the `lockedUntil`
+   timestamp are stored in the per-user `OfflineSessions` resource (already
+   created by Dex on every login) under new fields `email`,
+   `incorrectPasswordLoginAttempts`, `lockedUntil`. The lockout is enforced as
+   a pre-check in `handlePasswordLogin` and applied by
+   `recordOfflineSessionFailedAttempt`; a successful login resets the state.
+   The `connector/ldap` and `connector/atlassiancrowd` `Login` implementations
+   were tweaked to return a partial `Identity` (UserID + Email) on a wrong
+   password when the user record was found, which lets the caller index the
+   counter even on a failed login.
+
+Manual unlock is performed by patching the user's `OfflineSessions` resource
+(clearing `lockedUntil` and `incorrectPasswordLoginAttempts`).

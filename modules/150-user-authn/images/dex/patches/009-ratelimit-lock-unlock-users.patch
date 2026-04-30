@@ -1,0 +1,2618 @@
+diff --git a/cmd/dex/config.go b/cmd/dex/config.go
+index 0c4f7f55..7976877e 100644
+--- a/cmd/dex/config.go
++++ b/cmd/dex/config.go
+@@ -35,6 +35,7 @@ type Config struct {
+ 	GRPC           GRPC            `json:"grpc"`
+ 	Expiry         Expiry          `json:"expiry"`
+ 	PasswordPolicy *PasswordPolicy `json:"passwordPolicy"`
++	RateLimit      *RateLimit      `json:"rateLimit,omitempty"`
+ 	Logger         Logger          `json:"logger"`
+ 
+ 	Frontend server.WebConfig `json:"frontend"`
+@@ -497,8 +498,9 @@ type PasswordPolicy struct {
+ 	ID              string  `json:"id"`
+ 	ComplexityLevel *string `json:"complexityLevel,omitempty"`
+ 	Lockout         *struct {
+-		MaxAttempts  uint64        `json:"maxAttempts"`
+-		LockDuration time.Duration `json:"lockDuration"`
++		MaxAttempts       uint64        `json:"maxAttempts"`
++		LockDuration      time.Duration `json:"lockDuration"`
++		ApplyToConnectors []string      `json:"applyToConnectors,omitempty"`
+ 	} `json:"lockout,omitempty"`
+ 	Rotation *struct {
+ 		Interval    time.Duration `json:"interval"`
+@@ -511,8 +513,9 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
+ 	type Alias PasswordPolicy
+ 	aux := &struct {
+ 		Lockout *struct {
+-			MaxAttempts uint64 `json:"maxAttempts"`
+-			DurationStr string `json:"lockDuration"`
++			MaxAttempts       uint64   `json:"maxAttempts"`
++			DurationStr       string   `json:"lockDuration"`
++			ApplyToConnectors []string `json:"applyToConnectors,omitempty"`
+ 		} `json:"lockout,omitempty"`
+ 		Rotation *struct {
+ 			IntervalStr string  `json:"interval"`
+@@ -535,12 +538,14 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
+ 		}
+ 		if p.Lockout == nil {
+ 			p.Lockout = &struct {
+-				MaxAttempts  uint64        `json:"maxAttempts"`
+-				LockDuration time.Duration `json:"lockDuration"`
++				MaxAttempts       uint64        `json:"maxAttempts"`
++				LockDuration      time.Duration `json:"lockDuration"`
++				ApplyToConnectors []string      `json:"applyToConnectors,omitempty"`
+ 			}{}
+ 		}
+ 		p.Lockout.MaxAttempts = aux.Lockout.MaxAttempts
+ 		p.Lockout.LockDuration = duration
++		p.Lockout.ApplyToConnectors = aux.Lockout.ApplyToConnectors
+ 	}
+ 
+ 	// Parse rotation interval
+@@ -561,3 +566,32 @@ func (p *PasswordPolicy) UnmarshalJSON(data []byte) error {
+ 
+ 	return nil
+ }
++
++// RateLimit configures the per-IP rate limiter that protects brute-force-prone
++// endpoints (POST /auth/{connector}/login and /token).
++//
++// Limits are enforced in-memory per Dex replica. In HA setups the effective
++// per-IP rate is multiplied by the replica count; this is acceptable as a
++// brute-force backstop when paired with account-level lockout.
++type RateLimit struct {
++	// Enabled toggles enforcement. When false the limiter is not constructed
++	// and the routing surface matches upstream Dex.
++	Enabled bool `json:"enabled"`
++
++	// PerIP is the per-source-IP token-bucket configuration. The IP is taken
++	// from the configured web.clientRemoteIP header (when set and the
++	// request comes from a trusted proxy) and otherwise from RemoteAddr.
++	PerIP RateLimitPerIP `json:"perIP"`
++}
++
++// RateLimitPerIP configures the per-IP token bucket.
++type RateLimitPerIP struct {
++	// RequestsPerMinute is the sustainable steady-state rate per IP.
++	// A non-positive value falls back to a safe default in the server.
++	RequestsPerMinute int `json:"requestsPerMinute"`
++
++	// Burst is the maximum bucket size, i.e. how many requests an IP may
++	// make in a short burst before being throttled. A non-positive value
++	// falls back to a safe default in the server.
++	Burst int `json:"burst"`
++}
+diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
+index 4e5d3cfb..9f4df1f3 100644
+--- a/cmd/dex/serve.go
++++ b/cmd/dex/serve.go
+@@ -363,6 +363,11 @@ func runServe(options serveOptions) error {
+ 			opts = append(opts, server.WithLockoutSettings(
+ 				c.PasswordPolicy.Lockout.MaxAttempts, c.PasswordPolicy.Lockout.LockDuration,
+ 			))
++			if len(c.PasswordPolicy.Lockout.ApplyToConnectors) > 0 {
++				opts = append(opts, server.WithLockoutApplyToConnectors(
++					c.PasswordPolicy.Lockout.ApplyToConnectors,
++				))
++			}
+ 		}
+ 		if c.PasswordPolicy.Rotation != nil {
+ 			opts = append(opts, server.WithRotationSettings(
+@@ -386,6 +391,21 @@ func runServe(options serveOptions) error {
+ 		return fmt.Errorf("failed to parse client remote IP settings: %v", err)
+ 	}
+ 
++	if c.RateLimit != nil && c.RateLimit.Enabled {
++		// 10 minute idle TTL is a pragmatic default: long enough to keep a
++		// state across a typical password retry sequence, short enough to
++		// keep memory bounded under botnet-scale unique IPs.
++		serverConfig.RateLimiter = server.NewIPRateLimiter(
++			c.RateLimit.PerIP.RequestsPerMinute,
++			c.RateLimit.PerIP.Burst,
++			10*time.Minute,
++		)
++		logger.Info("rate limit enabled for /token and /auth/{connector}/login",
++			"requestsPerMinute", c.RateLimit.PerIP.RequestsPerMinute,
++			"burst", c.RateLimit.PerIP.Burst,
++		)
++	}
++
+ 	serv, err := server.NewServer(context.Background(), serverConfig)
+ 	if err != nil {
+ 		return fmt.Errorf("failed to initialize server: %v", err)
+diff --git a/connector/atlassiancrowd/atlassiancrowd.go b/connector/atlassiancrowd/atlassiancrowd.go
+index d3683284..994a2223 100644
+--- a/connector/atlassiancrowd/atlassiancrowd.go
++++ b/connector/atlassiancrowd/atlassiancrowd.go
+@@ -119,6 +119,14 @@ func (c *crowdConnector) Login(ctx context.Context, s connector.Scopes, username
+ 	}
+ 
+ 	if incorrectPass {
++		// User authenticated unsuccessfully. Look up the user record so
++		// we can return a partial identity (UserID + Email) for caller-side
++		// lockout accounting. Failures here (user truly absent, transient
++		// API error) fall back to the empty-Identity behaviour of upstream.
++		if u, lookupErr := c.user(ctx, client, username); lookupErr == nil {
++			partial := c.identityFromCrowdUser(u)
++			return connector.Identity{UserID: partial.UserID, Email: partial.Email}, false, nil
++		}
+ 		return connector.Identity{}, false, nil
+ 	}
+ 
+diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
+index 9fe386c6..28625f6f 100644
+--- a/connector/ldap/ldap.go
++++ b/connector/ldap/ldap.go
+@@ -519,6 +519,16 @@ func (c *ldapConnector) Login(ctx context.Context, s connector.Scopes, username,
+ 		return connector.Identity{}, false, err
+ 	}
+ 	if incorrectPass {
++		// Return a partial identity (UserID + Email only) when the user
++		// exists but the password is wrong. The validPass=false return
++		// preserves the upstream contract for the caller, but lets it
++		// index per-user failed-attempt counters by a stable handle in
++		// the storage. When the user wasn't found at all (zero-value
++		// ldap.Entry), identityFromEntry returns an error and we fall
++		// back to an empty Identity, matching upstream behaviour.
++		if partial, idErr := c.identityFromEntry(user); idErr == nil {
++			return connector.Identity{UserID: partial.UserID, Email: partial.Email}, false, nil
++		}
+ 		return connector.Identity{}, false, nil
+ 	}
+ 
+diff --git a/go.mod b/go.mod
+index 77f74c86..d0c25e71 100644
+--- a/go.mod
++++ b/go.mod
+@@ -37,6 +37,7 @@ require (
+ 	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741
+ 	golang.org/x/net v0.48.0
+ 	golang.org/x/oauth2 v0.34.0
++	golang.org/x/time v0.12.0
+ 	google.golang.org/api v0.248.0
+ 	google.golang.org/grpc v1.79.3
+ 	google.golang.org/protobuf v1.36.10
+diff --git a/scripts/manifests/crds/offlinesessionses.yaml b/scripts/manifests/crds/offlinesessionses.yaml
+index e8e5a783..e04ff083 100644
+--- a/scripts/manifests/crds/offlinesessionses.yaml
++++ b/scripts/manifests/crds/offlinesessionses.yaml
+@@ -18,3 +18,32 @@ spec:
+       openAPIV3Schema:
+         type: object
+         x-kubernetes-preserve-unknown-fields: true
++    additionalPrinterColumns:
++      - name: User
++        type: string
++        jsonPath: .userID
++        description: |
++          End-user identifier, as returned by the upstream connector.
++      - name: Email
++        type: string
++        jsonPath: .email
++        description: |
++          Mirror of identity.Email; used as a stable handle for administrative actions.
++      - name: Connector
++        type: string
++        jsonPath: .connID
++        description: |
++          ID of the connector through which the user logged in.
++      - name: Attempts
++        type: integer
++        jsonPath: .incorrectPasswordLoginAttempts
++        description: |
++          Consecutive failed password attempts since the last successful login.
++      - name: LockedUntil
++        type: date
++        jsonPath: .lockedUntil
++        description: |
++          Until when password logins are blocked. Empty when the user is not locked.
++      - name: Age
++        type: date
++        jsonPath: .metadata.creationTimestamp
+diff --git a/server/handlers.go b/server/handlers.go
+index 3fd7f42d..3b21a1ba 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -380,6 +380,27 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			localConnector = true
+ 		}
+ 
++		// Determine whether OfflineSessions-based lockout is active for this
++		// connector (LDAP, Atlassian Crowd, ...). For the built-in local
++		// connector lockout state lives in the Password storage object and is
++		// handled below.
++		var (
++			nonLocalLockoutEnabled bool
++			connType               string
++		)
++		if !localConnector && s.passwordPolicy != nil {
++			storageConn, gErr := s.storage.GetConnector(ctx, authReq.ConnectorID)
++			if gErr != nil {
++				s.logger.ErrorContext(r.Context(),
++					"failed to load connector for lockout policy lookup",
++					"connector_id", authReq.ConnectorID, "err", gErr,
++				)
++			} else {
++				connType = storageConn.Type
++				nonLocalLockoutEnabled = s.passwordPolicy.AppliesToConnectorType(connType)
++			}
++		}
++
+ 		var p storage.Password
+ 		var passwordFound bool
+ 		// Fetch local password in case of local connector for the further password policies validation
+@@ -413,7 +434,53 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			s.renderError(r, w, http.StatusInternalServerError, fmt.Sprintf("Login error: %v", err))
+ 			return
+ 		}
++
++		// Lockout pre-check for non-local connectors. Performed regardless of
++		// the validPass result: a locked account must not authenticate even
++		// with the right password until the lock expires.
++		//
++		// We need identity.UserID to index OfflineSessions, which is supplied
++		// by the LDAP / Crowd connectors as a partial Identity even on
++		// validPass=false (see their Login implementations).
++		if nonLocalLockoutEnabled && identity.UserID != "" {
++			session, sErr := s.storage.GetOfflineSessions(ctx, identity.UserID, authReq.ConnectorID)
++			switch {
++			case sErr == nil:
++				if s.passwordPolicy.IsOfflineSessionLocked(session) {
++					s.logger.WarnContext(r.Context(),
++						"login attempt for locked account",
++						"username", username,
++						"connector_id", authReq.ConnectorID,
++						"locked_until", session.LockedUntil,
++					)
++					s.renderError(r, w, http.StatusTooManyRequests, "Account temporarily locked")
++					return
++				}
++			case errors.Is(sErr, storage.ErrNotFound):
++				// First contact for this user: no state to check yet.
++			default:
++				s.logger.ErrorContext(r.Context(), "failed to read offline session for lockout pre-check", "err", sErr)
++			}
++		}
++
+ 		if !ok {
++			// Non-local connectors: track the failed attempt against the
++			// OfflineSessions object, locking when the threshold is reached.
++			if nonLocalLockoutEnabled && identity.UserID != "" {
++				lockedNow, lockErr := s.recordOfflineSessionFailedAttempt(ctx, identity, authReq.ConnectorID)
++				if lockErr != nil {
++					s.logger.ErrorContext(r.Context(), "failed to record failed attempt in offline session", "err", lockErr)
++				} else if lockedNow {
++					s.logger.WarnContext(r.Context(),
++						"account locked due to too many failed attempts",
++						"username", username,
++						"connector_id", authReq.ConnectorID,
++					)
++					s.renderError(r, w, http.StatusTooManyRequests, "Account temporarily locked")
++					return
++				}
++			}
++
+ 			// Validate login incorrect attempts for local connector with configured password policy
+ 			// Only apply lockout logic for existing users (passwordFound == true)
+ 			if localConnector && s.passwordPolicy != nil && passwordFound && s.passwordPolicy.IsMaxLoginAttemptsExeeded(p.IncorrectPasswordLoginAttempts+1) {
+@@ -621,6 +688,70 @@ func (e *NotAllowedError) Error() string {
+ 	return "not allowed: " + e.Reason
+ }
+ 
++// recordOfflineSessionFailedAttempt increments the failed-attempt counter on
++// the OfflineSessions object for (identity.UserID, connID) and applies a
++// lockout when the configured threshold is reached.
++//
++// It returns lockedNow=true when this attempt caused the account to enter the
++// locked state, so the caller can render an HTTP 429 immediately.
++//
++// When no OfflineSessions object exists yet (the user has never logged in
++// successfully) a stub is created with the counter set to 1. This keeps the
++// counter monotonic across the very first failed attempt for fresh users.
++func (s *Server) recordOfflineSessionFailedAttempt(ctx context.Context, identity connector.Identity, connID string) (lockedNow bool, err error) {
++	if s.passwordPolicy == nil {
++		return false, nil
++	}
++	lockDuration := s.passwordPolicy.LockDuration()
++
++	current, getErr := s.storage.GetOfflineSessions(ctx, identity.UserID, connID)
++	if errors.Is(getErr, storage.ErrNotFound) {
++		stub := storage.OfflineSessions{
++			UserID:                         identity.UserID,
++			ConnID:                         connID,
++			Email:                          identity.Email,
++			Refresh:                        make(map[string]*storage.RefreshTokenRef),
++			IncorrectPasswordLoginAttempts: 1,
++		}
++		// First failed attempt for a never-logged-in user; lock immediately
++		// only if the threshold is 1 (treat the threshold as inclusive).
++		if s.passwordPolicy.IsMaxLoginAttemptsExeeded(1) {
++			until := time.Now().Add(lockDuration)
++			stub.LockedUntil = &until
++			stub.IncorrectPasswordLoginAttempts = 0
++			lockedNow = true
++		}
++		if cErr := s.storage.CreateOfflineSessions(ctx, stub); cErr != nil {
++			return false, cErr
++		}
++		return lockedNow, nil
++	}
++	if getErr != nil {
++		return false, getErr
++	}
++
++	nextAttempts := current.IncorrectPasswordLoginAttempts + 1
++	willLock := s.passwordPolicy.IsMaxLoginAttemptsExeeded(nextAttempts)
++
++	updater := func(o storage.OfflineSessions) (storage.OfflineSessions, error) {
++		if o.Email == "" && identity.Email != "" {
++			o.Email = identity.Email
++		}
++		if willLock {
++			until := time.Now().Add(lockDuration)
++			o.LockedUntil = &until
++			o.IncorrectPasswordLoginAttempts = 0
++		} else {
++			o.IncorrectPasswordLoginAttempts = nextAttempts
++		}
++		return o, nil
++	}
++	if uErr := s.storage.UpdateOfflineSessions(ctx, identity.UserID, connID, updater); uErr != nil {
++		return false, uErr
++	}
++	return willLock, nil
++}
++
+ // finalizeLogin associates the user's identity with the current AuthRequest, then returns
+ // the approval page's path.
+ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity, authReq storage.AuthRequest, conn connector.Connector) (string, bool, error) {
+@@ -688,6 +819,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+ 		offlineSessions := storage.OfflineSessions{
+ 			UserID:        identity.UserID,
+ 			ConnID:        authReq.ConnectorID,
++			Email:         identity.Email,
+ 			Refresh:       make(map[string]*storage.RefreshTokenRef),
+ 			ConnectorData: identity.ConnectorData,
+ 		}
+@@ -714,6 +846,13 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+ 		if len(identity.ConnectorData) > 0 {
+ 			old.ConnectorData = identity.ConnectorData
+ 		}
++		// Successful login resets any failed-attempt state. Email is also
++		// kept fresh in case the upstream connector changes it.
++		if identity.Email != "" {
++			old.Email = identity.Email
++		}
++		old.IncorrectPasswordLoginAttempts = 0
++		old.LockedUntil = nil
+ 		return old, nil
+ 	}); err != nil {
+ 		s.logger.ErrorContext(ctx, "failed to update offline session", "err", err)
+diff --git a/server/lockout_test.go b/server/lockout_test.go
+new file mode 100644
+index 00000000..37a42aeb
+--- /dev/null
++++ b/server/lockout_test.go
+@@ -0,0 +1,264 @@
++package server
++
++import (
++	"context"
++	"log/slog"
++	"testing"
++	"time"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/storage"
++	"github.com/dexidp/dex/storage/memory"
++)
++
++// newLockoutTestServer wires up the minimum *Server needed by
++// recordOfflineSessionFailedAttempt (storage + passwordPolicy).
++func newLockoutTestServer(t *testing.T, maxAttempts uint64, lockDuration time.Duration, applyTo ...string) (*Server, storage.Storage) {
++	t.Helper()
++	pp, err := NewPasswordPolicy("test")
++	if err != nil {
++		t.Fatalf("NewPasswordPolicy: %v", err)
++	}
++	if err := WithLockoutSettings(maxAttempts, lockDuration)(pp); err != nil {
++		t.Fatalf("WithLockoutSettings: %v", err)
++	}
++	if len(applyTo) > 0 {
++		if err := WithLockoutApplyToConnectors(applyTo)(pp); err != nil {
++			t.Fatalf("WithLockoutApplyToConnectors: %v", err)
++		}
++	}
++	stor := memory.New(slog.New(slog.DiscardHandler))
++	return &Server{
++		storage:        stor,
++		passwordPolicy: pp,
++		logger:         slog.New(slog.DiscardHandler),
++	}, stor
++}
++
++func TestAppliesToConnectorType(t *testing.T) {
++	t.Run("nil lockout", func(t *testing.T) {
++		pp, err := NewPasswordPolicy("test")
++		if err != nil {
++			t.Fatal(err)
++		}
++		if pp.AppliesToConnectorType("local") {
++			t.Fatal("expected false for nil lockout")
++		}
++	})
++
++	t.Run("empty applyTo defaults to local", func(t *testing.T) {
++		pp, err := NewPasswordPolicy("test", WithLockoutSettings(5, time.Minute))
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !pp.AppliesToConnectorType("local") {
++			t.Fatal("expected local to be covered by default")
++		}
++		if !pp.AppliesToConnectorType("LOCAL") {
++			t.Fatal("expected case-insensitive match")
++		}
++		if pp.AppliesToConnectorType("ldap") {
++			t.Fatal("expected ldap to be excluded by default")
++		}
++	})
++
++	t.Run("explicit list", func(t *testing.T) {
++		pp, err := NewPasswordPolicy("test",
++			WithLockoutSettings(5, time.Minute),
++			WithLockoutApplyToConnectors([]string{"LDAP", "atlassian-crowd"}),
++		)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if !pp.AppliesToConnectorType("ldap") {
++			t.Fatal("ldap must match")
++		}
++		if !pp.AppliesToConnectorType("Atlassian-Crowd") {
++			t.Fatal("crowd must match case-insensitively")
++		}
++		if pp.AppliesToConnectorType("local") {
++			t.Fatal("local must NOT match when not in explicit list")
++		}
++	})
++
++	t.Run("apply requires lockout configured first", func(t *testing.T) {
++		pp, err := NewPasswordPolicy("test", WithLockoutApplyToConnectors([]string{"ldap"}))
++		if err == nil {
++			t.Fatalf("expected error, got pp=%+v", pp)
++		}
++	})
++}
++
++func TestIsOfflineSessionLocked(t *testing.T) {
++	pp, _ := NewPasswordPolicy("test", WithLockoutSettings(5, time.Minute))
++	future := time.Now().Add(time.Minute)
++	past := time.Now().Add(-time.Minute)
++
++	if !pp.IsOfflineSessionLocked(storage.OfflineSessions{LockedUntil: &future}) {
++		t.Fatal("expected locked when LockedUntil is in the future")
++	}
++	if pp.IsOfflineSessionLocked(storage.OfflineSessions{LockedUntil: &past}) {
++		t.Fatal("expected unlocked when LockedUntil is in the past")
++	}
++	if pp.IsOfflineSessionLocked(storage.OfflineSessions{}) {
++		t.Fatal("expected unlocked when LockedUntil is nil")
++	}
++}
++
++func TestRecordOfflineSessionFailedAttempt_FirstFailureCreatesStub(t *testing.T) {
++	s, stor := newLockoutTestServer(t, 5, time.Minute, "ldap")
++	ctx := context.Background()
++	ident := connector.Identity{UserID: "user1", Email: "user1@example.org"}
++
++	locked, err := s.recordOfflineSessionFailedAttempt(ctx, ident, "ldap")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if locked {
++		t.Fatal("threshold not reached, expected lockedNow=false")
++	}
++
++	got, err := stor.GetOfflineSessions(ctx, "user1", "ldap")
++	if err != nil {
++		t.Fatalf("GetOfflineSessions: %v", err)
++	}
++	if got.IncorrectPasswordLoginAttempts != 1 {
++		t.Fatalf("got attempts=%d, want 1", got.IncorrectPasswordLoginAttempts)
++	}
++	if got.Email != "user1@example.org" {
++		t.Fatalf("got email=%q, want user1@example.org", got.Email)
++	}
++	if got.LockedUntil != nil {
++		t.Fatalf("expected LockedUntil=nil, got %v", got.LockedUntil)
++	}
++}
++
++func TestRecordOfflineSessionFailedAttempt_IncrementsExisting(t *testing.T) {
++	s, stor := newLockoutTestServer(t, 5, time.Minute, "ldap")
++	ctx := context.Background()
++
++	if err := stor.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:                         "user2",
++		ConnID:                         "ldap",
++		Email:                          "user2@example.org",
++		Refresh:                        map[string]*storage.RefreshTokenRef{},
++		IncorrectPasswordLoginAttempts: 2,
++	}); err != nil {
++		t.Fatalf("CreateOfflineSessions: %v", err)
++	}
++
++	locked, err := s.recordOfflineSessionFailedAttempt(ctx, connector.Identity{UserID: "user2", Email: "user2@example.org"}, "ldap")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if locked {
++		t.Fatal("expected lockedNow=false (3 < 5)")
++	}
++
++	got, _ := stor.GetOfflineSessions(ctx, "user2", "ldap")
++	if got.IncorrectPasswordLoginAttempts != 3 {
++		t.Fatalf("got attempts=%d, want 3", got.IncorrectPasswordLoginAttempts)
++	}
++}
++
++func TestRecordOfflineSessionFailedAttempt_LocksAtThreshold(t *testing.T) {
++	s, stor := newLockoutTestServer(t, 3, 5*time.Minute, "ldap")
++	ctx := context.Background()
++
++	if err := stor.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:                         "user3",
++		ConnID:                         "ldap",
++		Refresh:                        map[string]*storage.RefreshTokenRef{},
++		IncorrectPasswordLoginAttempts: 2,
++	}); err != nil {
++		t.Fatalf("CreateOfflineSessions: %v", err)
++	}
++
++	before := time.Now()
++	locked, err := s.recordOfflineSessionFailedAttempt(ctx, connector.Identity{UserID: "user3", Email: "user3@example.org"}, "ldap")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !locked {
++		t.Fatal("expected lockedNow=true at threshold (3 >= 3)")
++	}
++
++	got, _ := stor.GetOfflineSessions(ctx, "user3", "ldap")
++	if got.IncorrectPasswordLoginAttempts != 0 {
++		t.Fatalf("expected counter reset, got %d", got.IncorrectPasswordLoginAttempts)
++	}
++	if got.LockedUntil == nil {
++		t.Fatal("expected LockedUntil to be set")
++	}
++	if got.LockedUntil.Before(before.Add(4 * time.Minute)) {
++		t.Fatalf("LockedUntil too small: %v (before=%v)", got.LockedUntil, before)
++	}
++	if got.LockedUntil.After(before.Add(6 * time.Minute)) {
++		t.Fatalf("LockedUntil too big: %v", got.LockedUntil)
++	}
++	if got.Email != "user3@example.org" {
++		t.Fatalf("expected email backfill, got %q", got.Email)
++	}
++}
++
++func TestRecordOfflineSessionFailedAttempt_LocksImmediatelyWhenMaxIs1(t *testing.T) {
++	s, stor := newLockoutTestServer(t, 1, time.Minute, "ldap")
++	ctx := context.Background()
++
++	locked, err := s.recordOfflineSessionFailedAttempt(ctx, connector.Identity{UserID: "user4", Email: "u4@x"}, "ldap")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if !locked {
++		t.Fatal("expected immediate lock when threshold=1")
++	}
++	got, _ := stor.GetOfflineSessions(ctx, "user4", "ldap")
++	if got.LockedUntil == nil {
++		t.Fatal("expected LockedUntil set")
++	}
++	if got.IncorrectPasswordLoginAttempts != 0 {
++		t.Fatalf("expected attempts reset, got %d", got.IncorrectPasswordLoginAttempts)
++	}
++}
++
++func TestRecordOfflineSessionFailedAttempt_NoPolicyIsNoOp(t *testing.T) {
++	stor := memory.New(slog.New(slog.DiscardHandler))
++	s := &Server{
++		storage:        stor,
++		passwordPolicy: nil,
++		logger:         slog.New(slog.DiscardHandler),
++	}
++	locked, err := s.recordOfflineSessionFailedAttempt(context.Background(), connector.Identity{UserID: "x"}, "ldap")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if locked {
++		t.Fatal("expected lockedNow=false when policy is nil")
++	}
++	if _, err := stor.GetOfflineSessions(context.Background(), "x", "ldap"); err != storage.ErrNotFound {
++		t.Fatalf("expected ErrNotFound, got %v", err)
++	}
++}
++
++func TestRecordOfflineSessionFailedAttempt_PreservesEmailIfAlreadySet(t *testing.T) {
++	s, stor := newLockoutTestServer(t, 5, time.Minute, "ldap")
++	ctx := context.Background()
++
++	if err := stor.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:  "user5",
++		ConnID:  "ldap",
++		Email:   "original@example.org",
++		Refresh: map[string]*storage.RefreshTokenRef{},
++	}); err != nil {
++		t.Fatal(err)
++	}
++
++	if _, err := s.recordOfflineSessionFailedAttempt(ctx, connector.Identity{UserID: "user5", Email: "different@example.org"}, "ldap"); err != nil {
++		t.Fatal(err)
++	}
++
++	got, _ := stor.GetOfflineSessions(ctx, "user5", "ldap")
++	if got.Email != "original@example.org" {
++		t.Fatalf("Email got overwritten: %q", got.Email)
++	}
++}
+diff --git a/server/passwordpolicy.go b/server/passwordpolicy.go
+index ea87beb5..b007f2d2 100644
+--- a/server/passwordpolicy.go
++++ b/server/passwordpolicy.go
+@@ -244,6 +244,14 @@ func WithComplexityLevel(complexityLevel string) PasswordPolicyOption {
+ type LockoutSettings struct {
+ 	maxAttempts  uint64
+ 	lockDuration time.Duration
++
++	// applyToConnectors limits which connector types lockout enforcement is
++	// active for. An empty slice keeps the upstream-compatible behaviour: only
++	// the built-in local connector is affected (its state lives in the
++	// Password storage object). When entries are present, additional types
++	// are matched case-insensitively (for example "ldap", "atlassian-crowd").
++	// Non-local lockout is tracked in OfflineSessions instead of Password.
++	applyToConnectors []string
+ }
+ 
+ func WithLockoutSettings(maxAttempts uint64, lockDuration time.Duration) PasswordPolicyOption {
+@@ -256,6 +264,18 @@ func WithLockoutSettings(maxAttempts uint64, lockDuration time.Duration) Passwor
+ 	}
+ }
+ 
++// WithLockoutApplyToConnectors extends the lockout policy to the given
++// connector types. Must be applied after WithLockoutSettings.
++func WithLockoutApplyToConnectors(connectorTypes []string) PasswordPolicyOption {
++	return func(pp *PasswordPolicy) error {
++		if pp.lockout == nil {
++			return fmt.Errorf("lockout settings must be configured before applyToConnectors")
++		}
++		pp.lockout.applyToConnectors = append(pp.lockout.applyToConnectors, connectorTypes...)
++		return nil
++	}
++}
++
+ type RotationSettings struct {
+ 	passwordRotationInterval time.Duration
+ 	redirectURL              *string
+@@ -316,6 +336,16 @@ func (pp PasswordPolicy) IsPasswordLocked(p storage.Password) bool {
+ 	return false
+ }
+ 
++// IsOfflineSessionLocked reports whether the given OfflineSessions object is
++// currently within an active lockout window. Used for connector types where
++// the failed-attempt state is stored in OfflineSessions (LDAP, Crowd, ...).
++func (pp PasswordPolicy) IsOfflineSessionLocked(o storage.OfflineSessions) bool {
++	if pp.lockout != nil && o.LockedUntil != nil && o.LockedUntil.After(time.Now()) {
++		return true
++	}
++	return false
++}
++
+ func (pp PasswordPolicy) IsMaxLoginAttemptsExeeded(attempts uint64) bool {
+ 	if pp.lockout != nil && pp.lockout.maxAttempts <= attempts {
+ 		return true
+@@ -323,6 +353,34 @@ func (pp PasswordPolicy) IsMaxLoginAttemptsExeeded(attempts uint64) bool {
+ 	return false
+ }
+ 
++// AppliesToConnectorType reports whether lockout enforcement is active for the
++// given connector type. The match is case-insensitive. With no explicit list
++// configured, only the built-in "local" connector is affected, which preserves
++// the upstream behaviour.
++func (pp PasswordPolicy) AppliesToConnectorType(connectorType string) bool {
++	if pp.lockout == nil {
++		return false
++	}
++	if len(pp.lockout.applyToConnectors) == 0 {
++		return strings.EqualFold(connectorType, LocalConnector)
++	}
++	for _, t := range pp.lockout.applyToConnectors {
++		if strings.EqualFold(t, connectorType) {
++			return true
++		}
++	}
++	return false
++}
++
++// LockDuration returns the configured lock duration. Zero when lockout is not
++// configured.
++func (pp PasswordPolicy) LockDuration() time.Duration {
++	if pp.lockout == nil {
++		return 0
++	}
++	return pp.lockout.lockDuration
++}
++
+ func (pp PasswordPolicy) IsPasswordExpired(passwordUpdatedAt time.Time) bool {
+ 	if pp.rotation == nil {
+ 		return false
+diff --git a/server/ratelimit.go b/server/ratelimit.go
+new file mode 100644
+index 00000000..59fc37d1
+--- /dev/null
++++ b/server/ratelimit.go
+@@ -0,0 +1,175 @@
++package server
++
++import (
++	"net/http"
++	"strconv"
++	"strings"
++	"sync"
++	"time"
++
++	"golang.org/x/time/rate"
++)
++
++// IPRateLimiter is an in-memory token-bucket rate limiter keyed by client IP.
++//
++// It is intended for protecting brute-force-prone endpoints (password login
++// form, token endpoint). Buckets are evicted after a TTL of inactivity to
++// keep memory bounded in the face of botnet-scale unique IPs.
++//
++// In HA setups (multiple Dex replicas) each instance maintains its own
++// counters. The effective per-IP rate is therefore N times higher, where
++// N is the replica count. This is acceptable for a brute-force backstop
++// when paired with account-level lockout; for stricter guarantees use an
++// edge rate limiter (ingress) or a shared store (out of scope here).
++type IPRateLimiter struct {
++	limit rate.Limit
++	burst int
++	ttl   time.Duration
++
++	mu       sync.Mutex
++	limiters map[string]*ipBucket
++
++	stopOnce sync.Once
++	stopCh   chan struct{}
++}
++
++type ipBucket struct {
++	limiter  *rate.Limiter
++	lastSeen time.Time
++}
++
++// NewIPRateLimiter constructs a per-IP rate limiter.
++//
++// requestsPerMinute is the sustainable rate per IP. burst is the bucket size
++// (allowed traffic burst before throttling). ttl is how long to retain an
++// inactive bucket before evicting it. Non-positive values are replaced with
++// safe defaults.
++func NewIPRateLimiter(requestsPerMinute, burst int, ttl time.Duration) *IPRateLimiter {
++	if requestsPerMinute <= 0 {
++		requestsPerMinute = 30
++	}
++	if burst <= 0 {
++		burst = 10
++	}
++	if ttl <= 0 {
++		ttl = 10 * time.Minute
++	}
++	rl := &IPRateLimiter{
++		limit:    rate.Limit(float64(requestsPerMinute) / 60.0),
++		burst:    burst,
++		ttl:      ttl,
++		limiters: make(map[string]*ipBucket),
++		stopCh:   make(chan struct{}),
++	}
++	go rl.janitor()
++	return rl
++}
++
++// Stop terminates the eviction janitor. Safe to call multiple times.
++func (rl *IPRateLimiter) Stop() {
++	rl.stopOnce.Do(func() { close(rl.stopCh) })
++}
++
++// Allow reports whether a request from the given IP may proceed and consumes
++// a token if so. An empty IP is treated as a single shared bucket - this is
++// safer than letting unkeyed traffic bypass the limiter.
++func (rl *IPRateLimiter) Allow(ip string) bool {
++	if ip == "" {
++		ip = "unknown"
++	}
++	rl.mu.Lock()
++	defer rl.mu.Unlock()
++
++	b, ok := rl.limiters[ip]
++	if !ok {
++		b = &ipBucket{limiter: rate.NewLimiter(rl.limit, rl.burst)}
++		rl.limiters[ip] = b
++	}
++	b.lastSeen = time.Now()
++	return b.limiter.Allow()
++}
++
++// retryAfter returns how long to wait for the next available token for the
++// given IP, without consuming one. Returns zero if no bucket exists yet.
++func (rl *IPRateLimiter) retryAfter(ip string) time.Duration {
++	if ip == "" {
++		ip = "unknown"
++	}
++	rl.mu.Lock()
++	defer rl.mu.Unlock()
++	b, ok := rl.limiters[ip]
++	if !ok {
++		return 0
++	}
++	r := b.limiter.Reserve()
++	d := r.Delay()
++	r.Cancel()
++	return d
++}
++
++// Middleware enforces the per-IP rate limit on the wrapped handler. Requests
++// over the limit receive HTTP 429 and a Retry-After header.
++func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		ip := remoteIPFromRequest(r)
++		if !rl.Allow(ip) {
++			retry := rl.retryAfter(ip)
++			if retry < time.Second {
++				retry = time.Second
++			}
++			w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())))
++			http.Error(w, "Too many requests", http.StatusTooManyRequests)
++			return
++		}
++		next.ServeHTTP(w, r)
++	})
++}
++
++// remoteIPFromRequest prefers the IP that the request-context carries (set
++// by handlerWithHeaders from the configured RealIPHeader and trusted
++// proxies). It falls back to r.RemoteAddr with the port stripped.
++func remoteIPFromRequest(r *http.Request) string {
++	if v := r.Context().Value(RequestKeyRemoteIP); v != nil {
++		if s, ok := v.(string); ok && s != "" {
++			return s
++		}
++	}
++	addr := r.RemoteAddr
++	if addr == "" {
++		return ""
++	}
++	if i := strings.LastIndex(addr, ":"); i >= 0 {
++		host := addr[:i]
++		host = strings.TrimPrefix(host, "[")
++		host = strings.TrimSuffix(host, "]")
++		return host
++	}
++	return addr
++}
++
++func (rl *IPRateLimiter) janitor() {
++	interval := rl.ttl / 2
++	if interval <= 0 {
++		interval = time.Minute
++	}
++	ticker := time.NewTicker(interval)
++	defer ticker.Stop()
++	for {
++		select {
++		case <-rl.stopCh:
++			return
++		case <-ticker.C:
++			rl.evictStale(time.Now())
++		}
++	}
++}
++
++func (rl *IPRateLimiter) evictStale(now time.Time) {
++	rl.mu.Lock()
++	defer rl.mu.Unlock()
++	for ip, b := range rl.limiters {
++		if now.Sub(b.lastSeen) > rl.ttl {
++			delete(rl.limiters, ip)
++		}
++	}
++}
+diff --git a/server/ratelimit_test.go b/server/ratelimit_test.go
+new file mode 100644
+index 00000000..950b4ceb
+--- /dev/null
++++ b/server/ratelimit_test.go
+@@ -0,0 +1,200 @@
++package server
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"strconv"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++)
++
++func TestIPRateLimiter_BurstThenDeny(t *testing.T) {
++	rl := NewIPRateLimiter(60, 3, time.Minute)
++	defer rl.Stop()
++
++	// Burst of 3 must succeed, the 4th must be denied.
++	for i := 0; i < 3; i++ {
++		if !rl.Allow("1.2.3.4") {
++			t.Fatalf("call %d: expected Allow=true", i)
++		}
++	}
++	if rl.Allow("1.2.3.4") {
++		t.Fatal("expected 4th call to be denied")
++	}
++}
++
++func TestIPRateLimiter_PerIPIsolation(t *testing.T) {
++	rl := NewIPRateLimiter(60, 1, time.Minute)
++	defer rl.Stop()
++
++	if !rl.Allow("1.1.1.1") {
++		t.Fatal("first call from 1.1.1.1 should be allowed")
++	}
++	if !rl.Allow("2.2.2.2") {
++		t.Fatal("first call from 2.2.2.2 should be allowed independently")
++	}
++	if rl.Allow("1.1.1.1") {
++		t.Fatal("second call from 1.1.1.1 should be denied")
++	}
++}
++
++func TestIPRateLimiter_Refill(t *testing.T) {
++	// 600 rpm = 10 rps -> ~100ms per token.
++	rl := NewIPRateLimiter(600, 1, time.Minute)
++	defer rl.Stop()
++
++	if !rl.Allow("9.9.9.9") {
++		t.Fatal("first call should be allowed")
++	}
++	if rl.Allow("9.9.9.9") {
++		t.Fatal("immediate second call should be denied")
++	}
++	time.Sleep(150 * time.Millisecond)
++	if !rl.Allow("9.9.9.9") {
++		t.Fatal("call after refill window should be allowed")
++	}
++}
++
++func TestIPRateLimiter_Eviction(t *testing.T) {
++	rl := NewIPRateLimiter(60, 5, 50*time.Millisecond)
++	defer rl.Stop()
++
++	rl.Allow("evict-me")
++
++	rl.mu.Lock()
++	_, present := rl.limiters["evict-me"]
++	rl.mu.Unlock()
++	if !present {
++		t.Fatal("expected bucket to be present right after Allow")
++	}
++
++	// Wait long enough for the janitor (interval = ttl/2) to run at least once
++	// and for the bucket's lastSeen to exceed ttl.
++	time.Sleep(200 * time.Millisecond)
++
++	rl.mu.Lock()
++	_, present = rl.limiters["evict-me"]
++	rl.mu.Unlock()
++	if present {
++		t.Fatal("expected stale bucket to be evicted")
++	}
++}
++
++func TestIPRateLimiter_StopIsIdempotent(t *testing.T) {
++	rl := NewIPRateLimiter(60, 1, time.Minute)
++	rl.Stop()
++	rl.Stop()
++}
++
++func TestIPRateLimiter_MiddlewareReturns429(t *testing.T) {
++	rl := NewIPRateLimiter(60, 2, time.Minute)
++	defer rl.Stop()
++
++	var served int32
++	h := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		atomic.AddInt32(&served, 1)
++		w.WriteHeader(http.StatusOK)
++	}))
++
++	doCall := func() *httptest.ResponseRecorder {
++		r := httptest.NewRequest(http.MethodPost, "/auth/local/login", nil)
++		r.RemoteAddr = "10.0.0.1:55555"
++		w := httptest.NewRecorder()
++		h.ServeHTTP(w, r)
++		return w
++	}
++
++	for i := 0; i < 2; i++ {
++		if got := doCall().Code; got != http.StatusOK {
++			t.Fatalf("call %d: got %d, want 200", i, got)
++		}
++	}
++
++	w := doCall()
++	if w.Code != http.StatusTooManyRequests {
++		t.Fatalf("3rd call: got %d, want 429", w.Code)
++	}
++	if w.Header().Get("Retry-After") == "" {
++		t.Fatal("expected Retry-After header on 429")
++	}
++	if n, err := strconv.Atoi(w.Header().Get("Retry-After")); err != nil || n < 1 {
++		t.Fatalf("Retry-After = %q, want integer >= 1", w.Header().Get("Retry-After"))
++	}
++	if got := atomic.LoadInt32(&served); got != 2 {
++		t.Fatalf("downstream handler hit %d times, want 2", got)
++	}
++}
++
++func TestIPRateLimiter_MiddlewareUsesContextIP(t *testing.T) {
++	rl := NewIPRateLimiter(60, 1, time.Minute)
++	defer rl.Stop()
++
++	h := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.WriteHeader(http.StatusOK)
++	}))
++
++	// Two requests from different RemoteAddr but the same context IP must
++	// share a bucket - this is the X-Real-IP path.
++	makeReq := func(remote, ctxIP string) *http.Request {
++		r := httptest.NewRequest(http.MethodPost, "/token", nil)
++		r.RemoteAddr = remote
++		r = r.WithContext(WithRemoteIP(r.Context(), ctxIP))
++		return r
++	}
++
++	w1 := httptest.NewRecorder()
++	h.ServeHTTP(w1, makeReq("1.1.1.1:1", "203.0.113.7"))
++	if w1.Code != http.StatusOK {
++		t.Fatalf("first call: got %d, want 200", w1.Code)
++	}
++
++	w2 := httptest.NewRecorder()
++	h.ServeHTTP(w2, makeReq("2.2.2.2:2", "203.0.113.7"))
++	if w2.Code != http.StatusTooManyRequests {
++		t.Fatalf("second call from same context IP: got %d, want 429", w2.Code)
++	}
++}
++
++func TestIPRateLimiter_NilMiddlewareDisabledInServer(t *testing.T) {
++	// When Server.rateLimiter is nil the wrapper in newServer returns the
++	// handler unchanged. Reproduce that contract here so we don't accidentally
++	// break it.
++	var called bool
++	var s *Server
++	wrap := func(h http.HandlerFunc) http.HandlerFunc {
++		if s == nil || s.rateLimiter == nil {
++			return h
++		}
++		return s.rateLimiter.Middleware(h).ServeHTTP
++	}
++	wrapped := wrap(func(w http.ResponseWriter, r *http.Request) { called = true })
++	w := httptest.NewRecorder()
++	wrapped(w, httptest.NewRequest(http.MethodGet, "/", nil))
++	if !called {
++		t.Fatal("expected handler to run when rate limiter is nil")
++	}
++}
++
++func TestIPRateLimiter_Concurrent(t *testing.T) {
++	rl := NewIPRateLimiter(6000, 50, time.Minute)
++	defer rl.Stop()
++
++	var wg sync.WaitGroup
++	var allowed int64
++	for i := 0; i < 100; i++ {
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			if rl.Allow("burst") {
++				atomic.AddInt64(&allowed, 1)
++			}
++		}()
++	}
++	wg.Wait()
++
++	if got := atomic.LoadInt64(&allowed); got < 50 || got > 100 {
++		t.Fatalf("allowed=%d, want between 50 (burst) and 100 (total)", got)
++	}
++}
+diff --git a/server/server.go b/server/server.go
+index d463fd50..da62c409 100644
+--- a/server/server.go
++++ b/server/server.go
+@@ -107,6 +107,11 @@ type Config struct {
+ 	// Password policy settings
+ 	PasswordPolicy *PasswordPolicy
+ 
++	// Optional per-IP rate limiter applied to brute-force-prone endpoints
++	// (POST /auth/{connector}/login and /token). When nil, no rate limiting
++	// is enforced and behaviour matches upstream Dex.
++	RateLimiter *IPRateLimiter
++
+ 	// If set, the server will use this connector to handle password grants
+ 	PasswordConnector string
+ 
+@@ -206,6 +211,8 @@ type Server struct {
+ 	refreshTokenPolicy *RefreshTokenPolicy
+ 	passwordPolicy     *PasswordPolicy
+ 
++	rateLimiter *IPRateLimiter
++
+ 	logger *slog.Logger
+ 
+ 	totp *secondFactorAuthenticator
+@@ -320,6 +327,7 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+ 		deviceRequestsValidFor: value(c.DeviceRequestsValidFor, 5*time.Minute),
+ 		refreshTokenPolicy:     c.RefreshTokenPolicy,
+ 		passwordPolicy:         c.PasswordPolicy,
++		rateLimiter:            c.RateLimiter,
+ 		skipApproval:           c.SkipApprovalScreen,
+ 		alwaysShowLogin:        c.AlwaysShowLoginScreen,
+ 		now:                    now,
+@@ -483,14 +491,26 @@ func newServer(ctx context.Context, c Config, rotationStrategy rotationStrategy)
+ 		}
+ 	})
+ 
+-	// TODO(ericchiang): rate limit certain paths based on IP.
+-	handleWithCORS("/token", s.handleToken)
++	// withRateLimit wraps a handler with the configured per-IP rate limiter.
++	// When no limiter is configured the handler is returned unchanged, so
++	// the routing surface is identical to upstream Dex by default.
++	withRateLimit := func(h http.HandlerFunc) http.HandlerFunc {
++		if s.rateLimiter == nil {
++			return h
++		}
++		return s.rateLimiter.Middleware(h).ServeHTTP
++	}
++
++	// /token is brute-force-prone via the password grant; /auth/{connector}/login
++	// is the form POST target for every PasswordConnector (local, ldap, crowd,
++	// keystone). Both are wrapped behind the per-IP rate limiter.
++	handleWithCORS("/token", withRateLimit(s.handleToken))
+ 	handleWithCORS("/keys", s.handlePublicKeys)
+ 	handleWithCORS("/userinfo", s.handleUserInfo)
+ 	handleWithCORS("/token/introspect", s.handleIntrospect)
+ 	handleFunc("/auth", s.handleAuthorization)
+ 	handleFunc("/auth/{connector}", s.handleConnectorLogin)
+-	handleFunc("/auth/{connector}/login", s.handlePasswordLogin)
++	handleFunc("/auth/{connector}/login", withRateLimit(s.handlePasswordLogin))
+ 	handleFunc("/device", s.handleDeviceExchange)
+ 	handleFunc("/device/auth/verify_code", s.verifyUserCode)
+ 	handleFunc("/device/code", s.handleDeviceCode)
+diff --git a/storage/ent/client/offlinesession.go b/storage/ent/client/offlinesession.go
+index c4fb9ef6..61db9be3 100644
+--- a/storage/ent/client/offlinesession.go
++++ b/storage/ent/client/offlinesession.go
+@@ -20,10 +20,13 @@ func (d *Database) CreateOfflineSessions(ctx context.Context, session storage.Of
+ 		SetID(id).
+ 		SetUserID(session.UserID).
+ 		SetConnID(session.ConnID).
++		SetEmail(session.Email).
+ 		SetConnectorData(session.ConnectorData).
+ 		SetRefresh(encodedRefresh).
+ 		SetTotp(session.TOTP).
+ 		SetTotpConfirmed(session.TOTPConfirmed).
++		SetIncorrectPasswordLoginAttempts(session.IncorrectPasswordLoginAttempts).
++		SetNillableLockedUntil(session.LockedUntil).
+ 		Save(ctx)
+ 	if err != nil {
+ 		return convertDBError("create offline session: %w", err)
+@@ -77,14 +80,25 @@ func (d *Database) UpdateOfflineSessions(ctx context.Context, userID string, con
+ 		return rollback(tx, "encode refresh offline session: %w", err)
+ 	}
+ 
+-	_, err = tx.OfflineSession.UpdateOneID(id).
++	updateOp := tx.OfflineSession.UpdateOneID(id).
+ 		SetUserID(newOfflineSession.UserID).
+ 		SetConnID(newOfflineSession.ConnID).
++		SetEmail(newOfflineSession.Email).
+ 		SetConnectorData(newOfflineSession.ConnectorData).
+ 		SetRefresh(encodedRefresh).
+ 		SetTotp(newOfflineSession.TOTP).
+ 		SetTotpConfirmed(newOfflineSession.TOTPConfirmed).
+-		Save(ctx)
++		SetIncorrectPasswordLoginAttempts(newOfflineSession.IncorrectPasswordLoginAttempts)
++
++	// LockedUntil is nullable; ent's Set*Nillable doesn't clear, so handle
++	// the nil case explicitly to allow administrative unlock.
++	if newOfflineSession.LockedUntil != nil {
++		updateOp = updateOp.SetLockedUntil(*newOfflineSession.LockedUntil)
++	} else {
++		updateOp = updateOp.ClearLockedUntil()
++	}
++
++	_, err = updateOp.Save(ctx)
+ 	if err != nil {
+ 		return rollback(tx, "update offline session uploading: %w", err)
+ 	}
+diff --git a/storage/ent/client/types.go b/storage/ent/client/types.go
+index 81bca0ae..27dc3c29 100644
+--- a/storage/ent/client/types.go
++++ b/storage/ent/client/types.go
+@@ -98,11 +98,14 @@ func toStorageConnector(c *db.Connector) storage.Connector {
+ 
+ func toStorageOfflineSession(o *db.OfflineSession) storage.OfflineSessions {
+ 	s := storage.OfflineSessions{
+-		UserID:        o.UserID,
+-		ConnID:        o.ConnID,
+-		ConnectorData: *o.ConnectorData,
+-		TOTP:          o.Totp,
+-		TOTPConfirmed: o.TotpConfirmed,
++		UserID:                         o.UserID,
++		ConnID:                         o.ConnID,
++		Email:                          o.Email,
++		ConnectorData:                  *o.ConnectorData,
++		TOTP:                           o.Totp,
++		TOTPConfirmed:                  o.TotpConfirmed,
++		IncorrectPasswordLoginAttempts: o.IncorrectPasswordLoginAttempts,
++		LockedUntil:                    o.LockedUntil,
+ 	}
+ 
+ 	if o.Refresh != nil {
+diff --git a/storage/ent/db/migrate/schema.go b/storage/ent/db/migrate/schema.go
+index ac9a80f4..2e70b02c 100644
+--- a/storage/ent/db/migrate/schema.go
++++ b/storage/ent/db/migrate/schema.go
+@@ -151,6 +151,9 @@ var (
+ 		{Name: "connector_data", Type: field.TypeBytes, Nullable: true},
+ 		{Name: "totp", Type: field.TypeString, Nullable: true, Size: 2147483647},
+ 		{Name: "totp_confirmed", Type: field.TypeBool, Nullable: true, Default: false},
++		{Name: "email", Type: field.TypeString, Nullable: true, Size: 2147483647, Default: ""},
++		{Name: "incorrect_password_login_attempts", Type: field.TypeUint64, Nullable: true, Default: 0},
++		{Name: "locked_until", Type: field.TypeTime, Nullable: true},
+ 	}
+ 	// OfflineSessionsTable holds the schema information for the "offline_sessions" table.
+ 	OfflineSessionsTable = &schema.Table{
+diff --git a/storage/ent/db/mutation.go b/storage/ent/db/mutation.go
+index 549c94d3..79ae7f6e 100644
+--- a/storage/ent/db/mutation.go
++++ b/storage/ent/db/mutation.go
+@@ -5852,19 +5852,23 @@ func (m *OAuth2ClientMutation) ResetEdge(name string) error {
+ // OfflineSessionMutation represents an operation that mutates the OfflineSession nodes in the graph.
+ type OfflineSessionMutation struct {
+ 	config
+-	op             Op
+-	typ            string
+-	id             *string
+-	user_id        *string
+-	conn_id        *string
+-	refresh        *[]byte
+-	connector_data *[]byte
+-	totp           *string
+-	totp_confirmed *bool
+-	clearedFields  map[string]struct{}
+-	done           bool
+-	oldValue       func(context.Context) (*OfflineSession, error)
+-	predicates     []predicate.OfflineSession
++	op                                   Op
++	typ                                  string
++	id                                   *string
++	user_id                              *string
++	conn_id                              *string
++	refresh                              *[]byte
++	connector_data                       *[]byte
++	totp                                 *string
++	totp_confirmed                       *bool
++	email                                *string
++	incorrect_password_login_attempts    *uint64
++	addincorrect_password_login_attempts *int64
++	locked_until                         *time.Time
++	clearedFields                        map[string]struct{}
++	done                                 bool
++	oldValue                             func(context.Context) (*OfflineSession, error)
++	predicates                           []predicate.OfflineSession
+ }
+ 
+ var _ ent.Mutation = (*OfflineSessionMutation)(nil)
+@@ -6226,6 +6230,174 @@ func (m *OfflineSessionMutation) ResetTotpConfirmed() {
+ 	delete(m.clearedFields, offlinesession.FieldTotpConfirmed)
+ }
+ 
++// SetEmail sets the "email" field.
++func (m *OfflineSessionMutation) SetEmail(s string) {
++	m.email = &s
++}
++
++// Email returns the value of the "email" field in the mutation.
++func (m *OfflineSessionMutation) Email() (r string, exists bool) {
++	v := m.email
++	if v == nil {
++		return
++	}
++	return *v, true
++}
++
++// OldEmail returns the old "email" field's value of the OfflineSession entity.
++// If the OfflineSession object wasn't provided to the builder, the object is fetched from the database.
++// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
++func (m *OfflineSessionMutation) OldEmail(ctx context.Context) (v string, err error) {
++	if !m.op.Is(OpUpdateOne) {
++		return v, errors.New("OldEmail is only allowed on UpdateOne operations")
++	}
++	if m.id == nil || m.oldValue == nil {
++		return v, errors.New("OldEmail requires an ID field in the mutation")
++	}
++	oldValue, err := m.oldValue(ctx)
++	if err != nil {
++		return v, fmt.Errorf("querying old value for OldEmail: %w", err)
++	}
++	return oldValue.Email, nil
++}
++
++// ClearEmail clears the value of the "email" field.
++func (m *OfflineSessionMutation) ClearEmail() {
++	m.email = nil
++	m.clearedFields[offlinesession.FieldEmail] = struct{}{}
++}
++
++// EmailCleared returns if the "email" field was cleared in this mutation.
++func (m *OfflineSessionMutation) EmailCleared() bool {
++	_, ok := m.clearedFields[offlinesession.FieldEmail]
++	return ok
++}
++
++// ResetEmail resets all changes to the "email" field.
++func (m *OfflineSessionMutation) ResetEmail() {
++	m.email = nil
++	delete(m.clearedFields, offlinesession.FieldEmail)
++}
++
++// SetIncorrectPasswordLoginAttempts sets the "incorrect_password_login_attempts" field.
++func (m *OfflineSessionMutation) SetIncorrectPasswordLoginAttempts(u uint64) {
++	m.incorrect_password_login_attempts = &u
++	m.addincorrect_password_login_attempts = nil
++}
++
++// IncorrectPasswordLoginAttempts returns the value of the "incorrect_password_login_attempts" field in the mutation.
++func (m *OfflineSessionMutation) IncorrectPasswordLoginAttempts() (r uint64, exists bool) {
++	v := m.incorrect_password_login_attempts
++	if v == nil {
++		return
++	}
++	return *v, true
++}
++
++// OldIncorrectPasswordLoginAttempts returns the old "incorrect_password_login_attempts" field's value of the OfflineSession entity.
++// If the OfflineSession object wasn't provided to the builder, the object is fetched from the database.
++// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
++func (m *OfflineSessionMutation) OldIncorrectPasswordLoginAttempts(ctx context.Context) (v uint64, err error) {
++	if !m.op.Is(OpUpdateOne) {
++		return v, errors.New("OldIncorrectPasswordLoginAttempts is only allowed on UpdateOne operations")
++	}
++	if m.id == nil || m.oldValue == nil {
++		return v, errors.New("OldIncorrectPasswordLoginAttempts requires an ID field in the mutation")
++	}
++	oldValue, err := m.oldValue(ctx)
++	if err != nil {
++		return v, fmt.Errorf("querying old value for OldIncorrectPasswordLoginAttempts: %w", err)
++	}
++	return oldValue.IncorrectPasswordLoginAttempts, nil
++}
++
++// AddIncorrectPasswordLoginAttempts adds u to the "incorrect_password_login_attempts" field.
++func (m *OfflineSessionMutation) AddIncorrectPasswordLoginAttempts(u int64) {
++	if m.addincorrect_password_login_attempts != nil {
++		*m.addincorrect_password_login_attempts += u
++	} else {
++		m.addincorrect_password_login_attempts = &u
++	}
++}
++
++// AddedIncorrectPasswordLoginAttempts returns the value that was added to the "incorrect_password_login_attempts" field in this mutation.
++func (m *OfflineSessionMutation) AddedIncorrectPasswordLoginAttempts() (r int64, exists bool) {
++	v := m.addincorrect_password_login_attempts
++	if v == nil {
++		return
++	}
++	return *v, true
++}
++
++// ClearIncorrectPasswordLoginAttempts clears the value of the "incorrect_password_login_attempts" field.
++func (m *OfflineSessionMutation) ClearIncorrectPasswordLoginAttempts() {
++	m.incorrect_password_login_attempts = nil
++	m.addincorrect_password_login_attempts = nil
++	m.clearedFields[offlinesession.FieldIncorrectPasswordLoginAttempts] = struct{}{}
++}
++
++// IncorrectPasswordLoginAttemptsCleared returns if the "incorrect_password_login_attempts" field was cleared in this mutation.
++func (m *OfflineSessionMutation) IncorrectPasswordLoginAttemptsCleared() bool {
++	_, ok := m.clearedFields[offlinesession.FieldIncorrectPasswordLoginAttempts]
++	return ok
++}
++
++// ResetIncorrectPasswordLoginAttempts resets all changes to the "incorrect_password_login_attempts" field.
++func (m *OfflineSessionMutation) ResetIncorrectPasswordLoginAttempts() {
++	m.incorrect_password_login_attempts = nil
++	m.addincorrect_password_login_attempts = nil
++	delete(m.clearedFields, offlinesession.FieldIncorrectPasswordLoginAttempts)
++}
++
++// SetLockedUntil sets the "locked_until" field.
++func (m *OfflineSessionMutation) SetLockedUntil(t time.Time) {
++	m.locked_until = &t
++}
++
++// LockedUntil returns the value of the "locked_until" field in the mutation.
++func (m *OfflineSessionMutation) LockedUntil() (r time.Time, exists bool) {
++	v := m.locked_until
++	if v == nil {
++		return
++	}
++	return *v, true
++}
++
++// OldLockedUntil returns the old "locked_until" field's value of the OfflineSession entity.
++// If the OfflineSession object wasn't provided to the builder, the object is fetched from the database.
++// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
++func (m *OfflineSessionMutation) OldLockedUntil(ctx context.Context) (v *time.Time, err error) {
++	if !m.op.Is(OpUpdateOne) {
++		return v, errors.New("OldLockedUntil is only allowed on UpdateOne operations")
++	}
++	if m.id == nil || m.oldValue == nil {
++		return v, errors.New("OldLockedUntil requires an ID field in the mutation")
++	}
++	oldValue, err := m.oldValue(ctx)
++	if err != nil {
++		return v, fmt.Errorf("querying old value for OldLockedUntil: %w", err)
++	}
++	return oldValue.LockedUntil, nil
++}
++
++// ClearLockedUntil clears the value of the "locked_until" field.
++func (m *OfflineSessionMutation) ClearLockedUntil() {
++	m.locked_until = nil
++	m.clearedFields[offlinesession.FieldLockedUntil] = struct{}{}
++}
++
++// LockedUntilCleared returns if the "locked_until" field was cleared in this mutation.
++func (m *OfflineSessionMutation) LockedUntilCleared() bool {
++	_, ok := m.clearedFields[offlinesession.FieldLockedUntil]
++	return ok
++}
++
++// ResetLockedUntil resets all changes to the "locked_until" field.
++func (m *OfflineSessionMutation) ResetLockedUntil() {
++	m.locked_until = nil
++	delete(m.clearedFields, offlinesession.FieldLockedUntil)
++}
++
+ // Where appends a list predicates to the OfflineSessionMutation builder.
+ func (m *OfflineSessionMutation) Where(ps ...predicate.OfflineSession) {
+ 	m.predicates = append(m.predicates, ps...)
+@@ -6260,7 +6432,7 @@ func (m *OfflineSessionMutation) Type() string {
+ // order to get all numeric fields that were incremented/decremented, call
+ // AddedFields().
+ func (m *OfflineSessionMutation) Fields() []string {
+-	fields := make([]string, 0, 6)
++	fields := make([]string, 0, 9)
+ 	if m.user_id != nil {
+ 		fields = append(fields, offlinesession.FieldUserID)
+ 	}
+@@ -6279,6 +6451,15 @@ func (m *OfflineSessionMutation) Fields() []string {
+ 	if m.totp_confirmed != nil {
+ 		fields = append(fields, offlinesession.FieldTotpConfirmed)
+ 	}
++	if m.email != nil {
++		fields = append(fields, offlinesession.FieldEmail)
++	}
++	if m.incorrect_password_login_attempts != nil {
++		fields = append(fields, offlinesession.FieldIncorrectPasswordLoginAttempts)
++	}
++	if m.locked_until != nil {
++		fields = append(fields, offlinesession.FieldLockedUntil)
++	}
+ 	return fields
+ }
+ 
+@@ -6299,6 +6480,12 @@ func (m *OfflineSessionMutation) Field(name string) (ent.Value, bool) {
+ 		return m.Totp()
+ 	case offlinesession.FieldTotpConfirmed:
+ 		return m.TotpConfirmed()
++	case offlinesession.FieldEmail:
++		return m.Email()
++	case offlinesession.FieldIncorrectPasswordLoginAttempts:
++		return m.IncorrectPasswordLoginAttempts()
++	case offlinesession.FieldLockedUntil:
++		return m.LockedUntil()
+ 	}
+ 	return nil, false
+ }
+@@ -6320,6 +6507,12 @@ func (m *OfflineSessionMutation) OldField(ctx context.Context, name string) (ent
+ 		return m.OldTotp(ctx)
+ 	case offlinesession.FieldTotpConfirmed:
+ 		return m.OldTotpConfirmed(ctx)
++	case offlinesession.FieldEmail:
++		return m.OldEmail(ctx)
++	case offlinesession.FieldIncorrectPasswordLoginAttempts:
++		return m.OldIncorrectPasswordLoginAttempts(ctx)
++	case offlinesession.FieldLockedUntil:
++		return m.OldLockedUntil(ctx)
+ 	}
+ 	return nil, fmt.Errorf("unknown OfflineSession field %s", name)
+ }
+@@ -6371,6 +6564,27 @@ func (m *OfflineSessionMutation) SetField(name string, value ent.Value) error {
+ 		}
+ 		m.SetTotpConfirmed(v)
+ 		return nil
++	case offlinesession.FieldEmail:
++		v, ok := value.(string)
++		if !ok {
++			return fmt.Errorf("unexpected type %T for field %s", value, name)
++		}
++		m.SetEmail(v)
++		return nil
++	case offlinesession.FieldIncorrectPasswordLoginAttempts:
++		v, ok := value.(uint64)
++		if !ok {
++			return fmt.Errorf("unexpected type %T for field %s", value, name)
++		}
++		m.SetIncorrectPasswordLoginAttempts(v)
++		return nil
++	case offlinesession.FieldLockedUntil:
++		v, ok := value.(time.Time)
++		if !ok {
++			return fmt.Errorf("unexpected type %T for field %s", value, name)
++		}
++		m.SetLockedUntil(v)
++		return nil
+ 	}
+ 	return fmt.Errorf("unknown OfflineSession field %s", name)
+ }
+@@ -6378,13 +6592,21 @@ func (m *OfflineSessionMutation) SetField(name string, value ent.Value) error {
+ // AddedFields returns all numeric fields that were incremented/decremented during
+ // this mutation.
+ func (m *OfflineSessionMutation) AddedFields() []string {
+-	return nil
++	var fields []string
++	if m.addincorrect_password_login_attempts != nil {
++		fields = append(fields, offlinesession.FieldIncorrectPasswordLoginAttempts)
++	}
++	return fields
+ }
+ 
+ // AddedField returns the numeric value that was incremented/decremented on a field
+ // with the given name. The second boolean return value indicates that this field
+ // was not set, or was not defined in the schema.
+ func (m *OfflineSessionMutation) AddedField(name string) (ent.Value, bool) {
++	switch name {
++	case offlinesession.FieldIncorrectPasswordLoginAttempts:
++		return m.AddedIncorrectPasswordLoginAttempts()
++	}
+ 	return nil, false
+ }
+ 
+@@ -6393,6 +6615,13 @@ func (m *OfflineSessionMutation) AddedField(name string) (ent.Value, bool) {
+ // type.
+ func (m *OfflineSessionMutation) AddField(name string, value ent.Value) error {
+ 	switch name {
++	case offlinesession.FieldIncorrectPasswordLoginAttempts:
++		v, ok := value.(int64)
++		if !ok {
++			return fmt.Errorf("unexpected type %T for field %s", value, name)
++		}
++		m.AddIncorrectPasswordLoginAttempts(v)
++		return nil
+ 	}
+ 	return fmt.Errorf("unknown OfflineSession numeric field %s", name)
+ }
+@@ -6410,6 +6639,15 @@ func (m *OfflineSessionMutation) ClearedFields() []string {
+ 	if m.FieldCleared(offlinesession.FieldTotpConfirmed) {
+ 		fields = append(fields, offlinesession.FieldTotpConfirmed)
+ 	}
++	if m.FieldCleared(offlinesession.FieldEmail) {
++		fields = append(fields, offlinesession.FieldEmail)
++	}
++	if m.FieldCleared(offlinesession.FieldIncorrectPasswordLoginAttempts) {
++		fields = append(fields, offlinesession.FieldIncorrectPasswordLoginAttempts)
++	}
++	if m.FieldCleared(offlinesession.FieldLockedUntil) {
++		fields = append(fields, offlinesession.FieldLockedUntil)
++	}
+ 	return fields
+ }
+ 
+@@ -6433,6 +6671,15 @@ func (m *OfflineSessionMutation) ClearField(name string) error {
+ 	case offlinesession.FieldTotpConfirmed:
+ 		m.ClearTotpConfirmed()
+ 		return nil
++	case offlinesession.FieldEmail:
++		m.ClearEmail()
++		return nil
++	case offlinesession.FieldIncorrectPasswordLoginAttempts:
++		m.ClearIncorrectPasswordLoginAttempts()
++		return nil
++	case offlinesession.FieldLockedUntil:
++		m.ClearLockedUntil()
++		return nil
+ 	}
+ 	return fmt.Errorf("unknown OfflineSession nullable field %s", name)
+ }
+@@ -6459,6 +6706,15 @@ func (m *OfflineSessionMutation) ResetField(name string) error {
+ 	case offlinesession.FieldTotpConfirmed:
+ 		m.ResetTotpConfirmed()
+ 		return nil
++	case offlinesession.FieldEmail:
++		m.ResetEmail()
++		return nil
++	case offlinesession.FieldIncorrectPasswordLoginAttempts:
++		m.ResetIncorrectPasswordLoginAttempts()
++		return nil
++	case offlinesession.FieldLockedUntil:
++		m.ResetLockedUntil()
++		return nil
+ 	}
+ 	return fmt.Errorf("unknown OfflineSession field %s", name)
+ }
+diff --git a/storage/ent/db/offlinesession.go b/storage/ent/db/offlinesession.go
+index 37824267..11802582 100644
+--- a/storage/ent/db/offlinesession.go
++++ b/storage/ent/db/offlinesession.go
+@@ -5,6 +5,7 @@ package db
+ import (
+ 	"fmt"
+ 	"strings"
++	"time"
+ 
+ 	"entgo.io/ent"
+ 	"entgo.io/ent/dialect/sql"
+@@ -28,7 +29,13 @@ type OfflineSession struct {
+ 	Totp string `json:"totp,omitempty"`
+ 	// TotpConfirmed holds the value of the "totp_confirmed" field.
+ 	TotpConfirmed bool `json:"totp_confirmed,omitempty"`
+-	selectValues  sql.SelectValues
++	// Email holds the value of the "email" field.
++	Email string `json:"email,omitempty"`
++	// IncorrectPasswordLoginAttempts holds the value of the "incorrect_password_login_attempts" field.
++	IncorrectPasswordLoginAttempts uint64 `json:"incorrect_password_login_attempts,omitempty"`
++	// LockedUntil holds the value of the "locked_until" field.
++	LockedUntil  *time.Time `json:"locked_until,omitempty"`
++	selectValues sql.SelectValues
+ }
+ 
+ // scanValues returns the types for scanning values from sql.Rows.
+@@ -40,8 +47,12 @@ func (*OfflineSession) scanValues(columns []string) ([]any, error) {
+ 			values[i] = new([]byte)
+ 		case offlinesession.FieldTotpConfirmed:
+ 			values[i] = new(sql.NullBool)
+-		case offlinesession.FieldID, offlinesession.FieldUserID, offlinesession.FieldConnID, offlinesession.FieldTotp:
++		case offlinesession.FieldIncorrectPasswordLoginAttempts:
++			values[i] = new(sql.NullInt64)
++		case offlinesession.FieldID, offlinesession.FieldUserID, offlinesession.FieldConnID, offlinesession.FieldTotp, offlinesession.FieldEmail:
+ 			values[i] = new(sql.NullString)
++		case offlinesession.FieldLockedUntil:
++			values[i] = new(sql.NullTime)
+ 		default:
+ 			values[i] = new(sql.UnknownType)
+ 		}
+@@ -99,6 +110,25 @@ func (_m *OfflineSession) assignValues(columns []string, values []any) error {
+ 			} else if value.Valid {
+ 				_m.TotpConfirmed = value.Bool
+ 			}
++		case offlinesession.FieldEmail:
++			if value, ok := values[i].(*sql.NullString); !ok {
++				return fmt.Errorf("unexpected type %T for field email", values[i])
++			} else if value.Valid {
++				_m.Email = value.String
++			}
++		case offlinesession.FieldIncorrectPasswordLoginAttempts:
++			if value, ok := values[i].(*sql.NullInt64); !ok {
++				return fmt.Errorf("unexpected type %T for field incorrect_password_login_attempts", values[i])
++			} else if value.Valid {
++				_m.IncorrectPasswordLoginAttempts = uint64(value.Int64)
++			}
++		case offlinesession.FieldLockedUntil:
++			if value, ok := values[i].(*sql.NullTime); !ok {
++				return fmt.Errorf("unexpected type %T for field locked_until", values[i])
++			} else if value.Valid {
++				_m.LockedUntil = new(time.Time)
++				*_m.LockedUntil = value.Time
++			}
+ 		default:
+ 			_m.selectValues.Set(columns[i], values[i])
+ 		}
+@@ -154,6 +184,17 @@ func (_m *OfflineSession) String() string {
+ 	builder.WriteString(", ")
+ 	builder.WriteString("totp_confirmed=")
+ 	builder.WriteString(fmt.Sprintf("%v", _m.TotpConfirmed))
++	builder.WriteString(", ")
++	builder.WriteString("email=")
++	builder.WriteString(_m.Email)
++	builder.WriteString(", ")
++	builder.WriteString("incorrect_password_login_attempts=")
++	builder.WriteString(fmt.Sprintf("%v", _m.IncorrectPasswordLoginAttempts))
++	builder.WriteString(", ")
++	if v := _m.LockedUntil; v != nil {
++		builder.WriteString("locked_until=")
++		builder.WriteString(v.Format(time.ANSIC))
++	}
+ 	builder.WriteByte(')')
+ 	return builder.String()
+ }
+diff --git a/storage/ent/db/offlinesession/offlinesession.go b/storage/ent/db/offlinesession/offlinesession.go
+index fecf7cca..aa108f50 100644
+--- a/storage/ent/db/offlinesession/offlinesession.go
++++ b/storage/ent/db/offlinesession/offlinesession.go
+@@ -23,6 +23,12 @@ const (
+ 	FieldTotp = "totp"
+ 	// FieldTotpConfirmed holds the string denoting the totp_confirmed field in the database.
+ 	FieldTotpConfirmed = "totp_confirmed"
++	// FieldEmail holds the string denoting the email field in the database.
++	FieldEmail = "email"
++	// FieldIncorrectPasswordLoginAttempts holds the string denoting the incorrect_password_login_attempts field in the database.
++	FieldIncorrectPasswordLoginAttempts = "incorrect_password_login_attempts"
++	// FieldLockedUntil holds the string denoting the locked_until field in the database.
++	FieldLockedUntil = "locked_until"
+ 	// Table holds the table name of the offlinesession in the database.
+ 	Table = "offline_sessions"
+ )
+@@ -36,6 +42,9 @@ var Columns = []string{
+ 	FieldConnectorData,
+ 	FieldTotp,
+ 	FieldTotpConfirmed,
++	FieldEmail,
++	FieldIncorrectPasswordLoginAttempts,
++	FieldLockedUntil,
+ }
+ 
+ // ValidColumn reports if the column name is valid (part of the table columns).
+@@ -55,6 +64,10 @@ var (
+ 	ConnIDValidator func(string) error
+ 	// DefaultTotpConfirmed holds the default value on creation for the "totp_confirmed" field.
+ 	DefaultTotpConfirmed bool
++	// DefaultEmail holds the default value on creation for the "email" field.
++	DefaultEmail string
++	// DefaultIncorrectPasswordLoginAttempts holds the default value on creation for the "incorrect_password_login_attempts" field.
++	DefaultIncorrectPasswordLoginAttempts uint64
+ 	// IDValidator is a validator for the "id" field. It is called by the builders before save.
+ 	IDValidator func(string) error
+ )
+@@ -86,3 +99,18 @@ func ByTotp(opts ...sql.OrderTermOption) OrderOption {
+ func ByTotpConfirmed(opts ...sql.OrderTermOption) OrderOption {
+ 	return sql.OrderByField(FieldTotpConfirmed, opts...).ToFunc()
+ }
++
++// ByEmail orders the results by the email field.
++func ByEmail(opts ...sql.OrderTermOption) OrderOption {
++	return sql.OrderByField(FieldEmail, opts...).ToFunc()
++}
++
++// ByIncorrectPasswordLoginAttempts orders the results by the incorrect_password_login_attempts field.
++func ByIncorrectPasswordLoginAttempts(opts ...sql.OrderTermOption) OrderOption {
++	return sql.OrderByField(FieldIncorrectPasswordLoginAttempts, opts...).ToFunc()
++}
++
++// ByLockedUntil orders the results by the locked_until field.
++func ByLockedUntil(opts ...sql.OrderTermOption) OrderOption {
++	return sql.OrderByField(FieldLockedUntil, opts...).ToFunc()
++}
+diff --git a/storage/ent/db/offlinesession/where.go b/storage/ent/db/offlinesession/where.go
+index d30f0bbb..c9ae3c7c 100644
+--- a/storage/ent/db/offlinesession/where.go
++++ b/storage/ent/db/offlinesession/where.go
+@@ -3,6 +3,8 @@
+ package offlinesession
+ 
+ import (
++	"time"
++
+ 	"entgo.io/ent/dialect/sql"
+ 	"github.com/dexidp/dex/storage/ent/db/predicate"
+ )
+@@ -92,6 +94,21 @@ func TotpConfirmed(v bool) predicate.OfflineSession {
+ 	return predicate.OfflineSession(sql.FieldEQ(FieldTotpConfirmed, v))
+ }
+ 
++// Email applies equality check predicate on the "email" field. It's identical to EmailEQ.
++func Email(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldEQ(FieldEmail, v))
++}
++
++// IncorrectPasswordLoginAttempts applies equality check predicate on the "incorrect_password_login_attempts" field. It's identical to IncorrectPasswordLoginAttemptsEQ.
++func IncorrectPasswordLoginAttempts(v uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldEQ(FieldIncorrectPasswordLoginAttempts, v))
++}
++
++// LockedUntil applies equality check predicate on the "locked_until" field. It's identical to LockedUntilEQ.
++func LockedUntil(v time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldEQ(FieldLockedUntil, v))
++}
++
+ // UserIDEQ applies the EQ predicate on the "user_id" field.
+ func UserIDEQ(v string) predicate.OfflineSession {
+ 	return predicate.OfflineSession(sql.FieldEQ(FieldUserID, v))
+@@ -407,6 +424,181 @@ func TotpConfirmedNotNil() predicate.OfflineSession {
+ 	return predicate.OfflineSession(sql.FieldNotNull(FieldTotpConfirmed))
+ }
+ 
++// EmailEQ applies the EQ predicate on the "email" field.
++func EmailEQ(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldEQ(FieldEmail, v))
++}
++
++// EmailNEQ applies the NEQ predicate on the "email" field.
++func EmailNEQ(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNEQ(FieldEmail, v))
++}
++
++// EmailIn applies the In predicate on the "email" field.
++func EmailIn(vs ...string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldIn(FieldEmail, vs...))
++}
++
++// EmailNotIn applies the NotIn predicate on the "email" field.
++func EmailNotIn(vs ...string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNotIn(FieldEmail, vs...))
++}
++
++// EmailGT applies the GT predicate on the "email" field.
++func EmailGT(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldGT(FieldEmail, v))
++}
++
++// EmailGTE applies the GTE predicate on the "email" field.
++func EmailGTE(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldGTE(FieldEmail, v))
++}
++
++// EmailLT applies the LT predicate on the "email" field.
++func EmailLT(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldLT(FieldEmail, v))
++}
++
++// EmailLTE applies the LTE predicate on the "email" field.
++func EmailLTE(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldLTE(FieldEmail, v))
++}
++
++// EmailContains applies the Contains predicate on the "email" field.
++func EmailContains(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldContains(FieldEmail, v))
++}
++
++// EmailHasPrefix applies the HasPrefix predicate on the "email" field.
++func EmailHasPrefix(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldHasPrefix(FieldEmail, v))
++}
++
++// EmailHasSuffix applies the HasSuffix predicate on the "email" field.
++func EmailHasSuffix(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldHasSuffix(FieldEmail, v))
++}
++
++// EmailIsNil applies the IsNil predicate on the "email" field.
++func EmailIsNil() predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldIsNull(FieldEmail))
++}
++
++// EmailNotNil applies the NotNil predicate on the "email" field.
++func EmailNotNil() predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNotNull(FieldEmail))
++}
++
++// EmailEqualFold applies the EqualFold predicate on the "email" field.
++func EmailEqualFold(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldEqualFold(FieldEmail, v))
++}
++
++// EmailContainsFold applies the ContainsFold predicate on the "email" field.
++func EmailContainsFold(v string) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldContainsFold(FieldEmail, v))
++}
++
++// IncorrectPasswordLoginAttemptsEQ applies the EQ predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsEQ(v uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldEQ(FieldIncorrectPasswordLoginAttempts, v))
++}
++
++// IncorrectPasswordLoginAttemptsNEQ applies the NEQ predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsNEQ(v uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNEQ(FieldIncorrectPasswordLoginAttempts, v))
++}
++
++// IncorrectPasswordLoginAttemptsIn applies the In predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsIn(vs ...uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldIn(FieldIncorrectPasswordLoginAttempts, vs...))
++}
++
++// IncorrectPasswordLoginAttemptsNotIn applies the NotIn predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsNotIn(vs ...uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNotIn(FieldIncorrectPasswordLoginAttempts, vs...))
++}
++
++// IncorrectPasswordLoginAttemptsGT applies the GT predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsGT(v uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldGT(FieldIncorrectPasswordLoginAttempts, v))
++}
++
++// IncorrectPasswordLoginAttemptsGTE applies the GTE predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsGTE(v uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldGTE(FieldIncorrectPasswordLoginAttempts, v))
++}
++
++// IncorrectPasswordLoginAttemptsLT applies the LT predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsLT(v uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldLT(FieldIncorrectPasswordLoginAttempts, v))
++}
++
++// IncorrectPasswordLoginAttemptsLTE applies the LTE predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsLTE(v uint64) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldLTE(FieldIncorrectPasswordLoginAttempts, v))
++}
++
++// IncorrectPasswordLoginAttemptsIsNil applies the IsNil predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsIsNil() predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldIsNull(FieldIncorrectPasswordLoginAttempts))
++}
++
++// IncorrectPasswordLoginAttemptsNotNil applies the NotNil predicate on the "incorrect_password_login_attempts" field.
++func IncorrectPasswordLoginAttemptsNotNil() predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNotNull(FieldIncorrectPasswordLoginAttempts))
++}
++
++// LockedUntilEQ applies the EQ predicate on the "locked_until" field.
++func LockedUntilEQ(v time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldEQ(FieldLockedUntil, v))
++}
++
++// LockedUntilNEQ applies the NEQ predicate on the "locked_until" field.
++func LockedUntilNEQ(v time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNEQ(FieldLockedUntil, v))
++}
++
++// LockedUntilIn applies the In predicate on the "locked_until" field.
++func LockedUntilIn(vs ...time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldIn(FieldLockedUntil, vs...))
++}
++
++// LockedUntilNotIn applies the NotIn predicate on the "locked_until" field.
++func LockedUntilNotIn(vs ...time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNotIn(FieldLockedUntil, vs...))
++}
++
++// LockedUntilGT applies the GT predicate on the "locked_until" field.
++func LockedUntilGT(v time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldGT(FieldLockedUntil, v))
++}
++
++// LockedUntilGTE applies the GTE predicate on the "locked_until" field.
++func LockedUntilGTE(v time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldGTE(FieldLockedUntil, v))
++}
++
++// LockedUntilLT applies the LT predicate on the "locked_until" field.
++func LockedUntilLT(v time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldLT(FieldLockedUntil, v))
++}
++
++// LockedUntilLTE applies the LTE predicate on the "locked_until" field.
++func LockedUntilLTE(v time.Time) predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldLTE(FieldLockedUntil, v))
++}
++
++// LockedUntilIsNil applies the IsNil predicate on the "locked_until" field.
++func LockedUntilIsNil() predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldIsNull(FieldLockedUntil))
++}
++
++// LockedUntilNotNil applies the NotNil predicate on the "locked_until" field.
++func LockedUntilNotNil() predicate.OfflineSession {
++	return predicate.OfflineSession(sql.FieldNotNull(FieldLockedUntil))
++}
++
+ // And groups predicates with the AND operator between them.
+ func And(predicates ...predicate.OfflineSession) predicate.OfflineSession {
+ 	return predicate.OfflineSession(sql.AndPredicates(predicates...))
+diff --git a/storage/ent/db/offlinesession_create.go b/storage/ent/db/offlinesession_create.go
+index a15904fc..2c5f227b 100644
+--- a/storage/ent/db/offlinesession_create.go
++++ b/storage/ent/db/offlinesession_create.go
+@@ -6,6 +6,7 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"time"
+ 
+ 	"entgo.io/ent/dialect/sql/sqlgraph"
+ 	"entgo.io/ent/schema/field"
+@@ -71,6 +72,48 @@ func (_c *OfflineSessionCreate) SetNillableTotpConfirmed(v *bool) *OfflineSessio
+ 	return _c
+ }
+ 
++// SetEmail sets the "email" field.
++func (_c *OfflineSessionCreate) SetEmail(v string) *OfflineSessionCreate {
++	_c.mutation.SetEmail(v)
++	return _c
++}
++
++// SetNillableEmail sets the "email" field if the given value is not nil.
++func (_c *OfflineSessionCreate) SetNillableEmail(v *string) *OfflineSessionCreate {
++	if v != nil {
++		_c.SetEmail(*v)
++	}
++	return _c
++}
++
++// SetIncorrectPasswordLoginAttempts sets the "incorrect_password_login_attempts" field.
++func (_c *OfflineSessionCreate) SetIncorrectPasswordLoginAttempts(v uint64) *OfflineSessionCreate {
++	_c.mutation.SetIncorrectPasswordLoginAttempts(v)
++	return _c
++}
++
++// SetNillableIncorrectPasswordLoginAttempts sets the "incorrect_password_login_attempts" field if the given value is not nil.
++func (_c *OfflineSessionCreate) SetNillableIncorrectPasswordLoginAttempts(v *uint64) *OfflineSessionCreate {
++	if v != nil {
++		_c.SetIncorrectPasswordLoginAttempts(*v)
++	}
++	return _c
++}
++
++// SetLockedUntil sets the "locked_until" field.
++func (_c *OfflineSessionCreate) SetLockedUntil(v time.Time) *OfflineSessionCreate {
++	_c.mutation.SetLockedUntil(v)
++	return _c
++}
++
++// SetNillableLockedUntil sets the "locked_until" field if the given value is not nil.
++func (_c *OfflineSessionCreate) SetNillableLockedUntil(v *time.Time) *OfflineSessionCreate {
++	if v != nil {
++		_c.SetLockedUntil(*v)
++	}
++	return _c
++}
++
+ // SetID sets the "id" field.
+ func (_c *OfflineSessionCreate) SetID(v string) *OfflineSessionCreate {
+ 	_c.mutation.SetID(v)
+@@ -116,6 +159,14 @@ func (_c *OfflineSessionCreate) defaults() {
+ 		v := offlinesession.DefaultTotpConfirmed
+ 		_c.mutation.SetTotpConfirmed(v)
+ 	}
++	if _, ok := _c.mutation.Email(); !ok {
++		v := offlinesession.DefaultEmail
++		_c.mutation.SetEmail(v)
++	}
++	if _, ok := _c.mutation.IncorrectPasswordLoginAttempts(); !ok {
++		v := offlinesession.DefaultIncorrectPasswordLoginAttempts
++		_c.mutation.SetIncorrectPasswordLoginAttempts(v)
++	}
+ }
+ 
+ // check runs all checks and user-defined validators on the builder.
+@@ -203,6 +254,18 @@ func (_c *OfflineSessionCreate) createSpec() (*OfflineSession, *sqlgraph.CreateS
+ 		_spec.SetField(offlinesession.FieldTotpConfirmed, field.TypeBool, value)
+ 		_node.TotpConfirmed = value
+ 	}
++	if value, ok := _c.mutation.Email(); ok {
++		_spec.SetField(offlinesession.FieldEmail, field.TypeString, value)
++		_node.Email = value
++	}
++	if value, ok := _c.mutation.IncorrectPasswordLoginAttempts(); ok {
++		_spec.SetField(offlinesession.FieldIncorrectPasswordLoginAttempts, field.TypeUint64, value)
++		_node.IncorrectPasswordLoginAttempts = value
++	}
++	if value, ok := _c.mutation.LockedUntil(); ok {
++		_spec.SetField(offlinesession.FieldLockedUntil, field.TypeTime, value)
++		_node.LockedUntil = &value
++	}
+ 	return _node, _spec
+ }
+ 
+diff --git a/storage/ent/db/offlinesession_update.go b/storage/ent/db/offlinesession_update.go
+index 9710118c..7b8d0226 100644
+--- a/storage/ent/db/offlinesession_update.go
++++ b/storage/ent/db/offlinesession_update.go
+@@ -6,6 +6,7 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"time"
+ 
+ 	"entgo.io/ent/dialect/sql"
+ 	"entgo.io/ent/dialect/sql/sqlgraph"
+@@ -113,6 +114,73 @@ func (_u *OfflineSessionUpdate) ClearTotpConfirmed() *OfflineSessionUpdate {
+ 	return _u
+ }
+ 
++// SetEmail sets the "email" field.
++func (_u *OfflineSessionUpdate) SetEmail(v string) *OfflineSessionUpdate {
++	_u.mutation.SetEmail(v)
++	return _u
++}
++
++// SetNillableEmail sets the "email" field if the given value is not nil.
++func (_u *OfflineSessionUpdate) SetNillableEmail(v *string) *OfflineSessionUpdate {
++	if v != nil {
++		_u.SetEmail(*v)
++	}
++	return _u
++}
++
++// ClearEmail clears the value of the "email" field.
++func (_u *OfflineSessionUpdate) ClearEmail() *OfflineSessionUpdate {
++	_u.mutation.ClearEmail()
++	return _u
++}
++
++// SetIncorrectPasswordLoginAttempts sets the "incorrect_password_login_attempts" field.
++func (_u *OfflineSessionUpdate) SetIncorrectPasswordLoginAttempts(v uint64) *OfflineSessionUpdate {
++	_u.mutation.ResetIncorrectPasswordLoginAttempts()
++	_u.mutation.SetIncorrectPasswordLoginAttempts(v)
++	return _u
++}
++
++// SetNillableIncorrectPasswordLoginAttempts sets the "incorrect_password_login_attempts" field if the given value is not nil.
++func (_u *OfflineSessionUpdate) SetNillableIncorrectPasswordLoginAttempts(v *uint64) *OfflineSessionUpdate {
++	if v != nil {
++		_u.SetIncorrectPasswordLoginAttempts(*v)
++	}
++	return _u
++}
++
++// AddIncorrectPasswordLoginAttempts adds value to the "incorrect_password_login_attempts" field.
++func (_u *OfflineSessionUpdate) AddIncorrectPasswordLoginAttempts(v int64) *OfflineSessionUpdate {
++	_u.mutation.AddIncorrectPasswordLoginAttempts(v)
++	return _u
++}
++
++// ClearIncorrectPasswordLoginAttempts clears the value of the "incorrect_password_login_attempts" field.
++func (_u *OfflineSessionUpdate) ClearIncorrectPasswordLoginAttempts() *OfflineSessionUpdate {
++	_u.mutation.ClearIncorrectPasswordLoginAttempts()
++	return _u
++}
++
++// SetLockedUntil sets the "locked_until" field.
++func (_u *OfflineSessionUpdate) SetLockedUntil(v time.Time) *OfflineSessionUpdate {
++	_u.mutation.SetLockedUntil(v)
++	return _u
++}
++
++// SetNillableLockedUntil sets the "locked_until" field if the given value is not nil.
++func (_u *OfflineSessionUpdate) SetNillableLockedUntil(v *time.Time) *OfflineSessionUpdate {
++	if v != nil {
++		_u.SetLockedUntil(*v)
++	}
++	return _u
++}
++
++// ClearLockedUntil clears the value of the "locked_until" field.
++func (_u *OfflineSessionUpdate) ClearLockedUntil() *OfflineSessionUpdate {
++	_u.mutation.ClearLockedUntil()
++	return _u
++}
++
+ // Mutation returns the OfflineSessionMutation object of the builder.
+ func (_u *OfflineSessionUpdate) Mutation() *OfflineSessionMutation {
+ 	return _u.mutation
+@@ -199,6 +267,27 @@ func (_u *OfflineSessionUpdate) sqlSave(ctx context.Context) (_node int, err err
+ 	if _u.mutation.TotpConfirmedCleared() {
+ 		_spec.ClearField(offlinesession.FieldTotpConfirmed, field.TypeBool)
+ 	}
++	if value, ok := _u.mutation.Email(); ok {
++		_spec.SetField(offlinesession.FieldEmail, field.TypeString, value)
++	}
++	if _u.mutation.EmailCleared() {
++		_spec.ClearField(offlinesession.FieldEmail, field.TypeString)
++	}
++	if value, ok := _u.mutation.IncorrectPasswordLoginAttempts(); ok {
++		_spec.SetField(offlinesession.FieldIncorrectPasswordLoginAttempts, field.TypeUint64, value)
++	}
++	if value, ok := _u.mutation.AddedIncorrectPasswordLoginAttempts(); ok {
++		_spec.AddField(offlinesession.FieldIncorrectPasswordLoginAttempts, field.TypeUint64, value)
++	}
++	if _u.mutation.IncorrectPasswordLoginAttemptsCleared() {
++		_spec.ClearField(offlinesession.FieldIncorrectPasswordLoginAttempts, field.TypeUint64)
++	}
++	if value, ok := _u.mutation.LockedUntil(); ok {
++		_spec.SetField(offlinesession.FieldLockedUntil, field.TypeTime, value)
++	}
++	if _u.mutation.LockedUntilCleared() {
++		_spec.ClearField(offlinesession.FieldLockedUntil, field.TypeTime)
++	}
+ 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
+ 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
+ 			err = &NotFoundError{offlinesession.Label}
+@@ -305,6 +394,73 @@ func (_u *OfflineSessionUpdateOne) ClearTotpConfirmed() *OfflineSessionUpdateOne
+ 	return _u
+ }
+ 
++// SetEmail sets the "email" field.
++func (_u *OfflineSessionUpdateOne) SetEmail(v string) *OfflineSessionUpdateOne {
++	_u.mutation.SetEmail(v)
++	return _u
++}
++
++// SetNillableEmail sets the "email" field if the given value is not nil.
++func (_u *OfflineSessionUpdateOne) SetNillableEmail(v *string) *OfflineSessionUpdateOne {
++	if v != nil {
++		_u.SetEmail(*v)
++	}
++	return _u
++}
++
++// ClearEmail clears the value of the "email" field.
++func (_u *OfflineSessionUpdateOne) ClearEmail() *OfflineSessionUpdateOne {
++	_u.mutation.ClearEmail()
++	return _u
++}
++
++// SetIncorrectPasswordLoginAttempts sets the "incorrect_password_login_attempts" field.
++func (_u *OfflineSessionUpdateOne) SetIncorrectPasswordLoginAttempts(v uint64) *OfflineSessionUpdateOne {
++	_u.mutation.ResetIncorrectPasswordLoginAttempts()
++	_u.mutation.SetIncorrectPasswordLoginAttempts(v)
++	return _u
++}
++
++// SetNillableIncorrectPasswordLoginAttempts sets the "incorrect_password_login_attempts" field if the given value is not nil.
++func (_u *OfflineSessionUpdateOne) SetNillableIncorrectPasswordLoginAttempts(v *uint64) *OfflineSessionUpdateOne {
++	if v != nil {
++		_u.SetIncorrectPasswordLoginAttempts(*v)
++	}
++	return _u
++}
++
++// AddIncorrectPasswordLoginAttempts adds value to the "incorrect_password_login_attempts" field.
++func (_u *OfflineSessionUpdateOne) AddIncorrectPasswordLoginAttempts(v int64) *OfflineSessionUpdateOne {
++	_u.mutation.AddIncorrectPasswordLoginAttempts(v)
++	return _u
++}
++
++// ClearIncorrectPasswordLoginAttempts clears the value of the "incorrect_password_login_attempts" field.
++func (_u *OfflineSessionUpdateOne) ClearIncorrectPasswordLoginAttempts() *OfflineSessionUpdateOne {
++	_u.mutation.ClearIncorrectPasswordLoginAttempts()
++	return _u
++}
++
++// SetLockedUntil sets the "locked_until" field.
++func (_u *OfflineSessionUpdateOne) SetLockedUntil(v time.Time) *OfflineSessionUpdateOne {
++	_u.mutation.SetLockedUntil(v)
++	return _u
++}
++
++// SetNillableLockedUntil sets the "locked_until" field if the given value is not nil.
++func (_u *OfflineSessionUpdateOne) SetNillableLockedUntil(v *time.Time) *OfflineSessionUpdateOne {
++	if v != nil {
++		_u.SetLockedUntil(*v)
++	}
++	return _u
++}
++
++// ClearLockedUntil clears the value of the "locked_until" field.
++func (_u *OfflineSessionUpdateOne) ClearLockedUntil() *OfflineSessionUpdateOne {
++	_u.mutation.ClearLockedUntil()
++	return _u
++}
++
+ // Mutation returns the OfflineSessionMutation object of the builder.
+ func (_u *OfflineSessionUpdateOne) Mutation() *OfflineSessionMutation {
+ 	return _u.mutation
+@@ -421,6 +577,27 @@ func (_u *OfflineSessionUpdateOne) sqlSave(ctx context.Context) (_node *OfflineS
+ 	if _u.mutation.TotpConfirmedCleared() {
+ 		_spec.ClearField(offlinesession.FieldTotpConfirmed, field.TypeBool)
+ 	}
++	if value, ok := _u.mutation.Email(); ok {
++		_spec.SetField(offlinesession.FieldEmail, field.TypeString, value)
++	}
++	if _u.mutation.EmailCleared() {
++		_spec.ClearField(offlinesession.FieldEmail, field.TypeString)
++	}
++	if value, ok := _u.mutation.IncorrectPasswordLoginAttempts(); ok {
++		_spec.SetField(offlinesession.FieldIncorrectPasswordLoginAttempts, field.TypeUint64, value)
++	}
++	if value, ok := _u.mutation.AddedIncorrectPasswordLoginAttempts(); ok {
++		_spec.AddField(offlinesession.FieldIncorrectPasswordLoginAttempts, field.TypeUint64, value)
++	}
++	if _u.mutation.IncorrectPasswordLoginAttemptsCleared() {
++		_spec.ClearField(offlinesession.FieldIncorrectPasswordLoginAttempts, field.TypeUint64)
++	}
++	if value, ok := _u.mutation.LockedUntil(); ok {
++		_spec.SetField(offlinesession.FieldLockedUntil, field.TypeTime, value)
++	}
++	if _u.mutation.LockedUntilCleared() {
++		_spec.ClearField(offlinesession.FieldLockedUntil, field.TypeTime)
++	}
+ 	_node = &OfflineSession{config: _u.config}
+ 	_spec.Assign = _node.assignValues
+ 	_spec.ScanValues = _node.scanValues
+diff --git a/storage/ent/db/runtime.go b/storage/ent/db/runtime.go
+index d2720152..987ea9dd 100644
+--- a/storage/ent/db/runtime.go
++++ b/storage/ent/db/runtime.go
+@@ -206,6 +206,14 @@ func init() {
+ 	offlinesessionDescTotpConfirmed := offlinesessionFields[6].Descriptor()
+ 	// offlinesession.DefaultTotpConfirmed holds the default value on creation for the totp_confirmed field.
+ 	offlinesession.DefaultTotpConfirmed = offlinesessionDescTotpConfirmed.Default.(bool)
++	// offlinesessionDescEmail is the schema descriptor for email field.
++	offlinesessionDescEmail := offlinesessionFields[7].Descriptor()
++	// offlinesession.DefaultEmail holds the default value on creation for the email field.
++	offlinesession.DefaultEmail = offlinesessionDescEmail.Default.(string)
++	// offlinesessionDescIncorrectPasswordLoginAttempts is the schema descriptor for incorrect_password_login_attempts field.
++	offlinesessionDescIncorrectPasswordLoginAttempts := offlinesessionFields[8].Descriptor()
++	// offlinesession.DefaultIncorrectPasswordLoginAttempts holds the default value on creation for the incorrect_password_login_attempts field.
++	offlinesession.DefaultIncorrectPasswordLoginAttempts = offlinesessionDescIncorrectPasswordLoginAttempts.Default.(uint64)
+ 	// offlinesessionDescID is the schema descriptor for id field.
+ 	offlinesessionDescID := offlinesessionFields[0].Descriptor()
+ 	// offlinesession.IDValidator is a validator for the "id" field. It is called by the builders before save.
+diff --git a/storage/ent/schema/offlinesession.go b/storage/ent/schema/offlinesession.go
+index 433a7f01..36c17e5a 100644
+--- a/storage/ent/schema/offlinesession.go
++++ b/storage/ent/schema/offlinesession.go
+@@ -39,6 +39,13 @@ func (OfflineSession) Fields() []ent.Field {
+ 		field.Bytes("connector_data").Nillable().Optional(),
+ 		field.Text("totp").Optional(),
+ 		field.Bool("totp_confirmed").Default(false).Optional(),
++		// Email mirrors connector.Identity.Email so admins can lock / unlock
++		// non-local users by a stable, human-readable handle.
++		field.Text("email").Default("").Optional(),
++		// Incorrect password attempt counter for non-local connectors.
++		field.Uint64("incorrect_password_login_attempts").Default(0).Optional(),
++		// LockedUntil, when set and in the future, blocks password logins.
++		field.Time("locked_until").Nillable().Optional(),
+ 	}
+ }
+ 
+diff --git a/storage/etcd/types.go b/storage/etcd/types.go
+index acf1d6a7..00a238e1 100644
+--- a/storage/etcd/types.go
++++ b/storage/etcd/types.go
+@@ -231,33 +231,42 @@ type Keys struct {
+ 
+ // OfflineSessions is a mirrored struct from storage with JSON struct tags
+ type OfflineSessions struct {
+-	UserID        string                              `json:"user_id,omitempty"`
+-	ConnID        string                              `json:"conn_id,omitempty"`
+-	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
+-	ConnectorData []byte                              `json:"connectorData,omitempty"`
+-	TOTP          string                              `json:"totp,omitempty"`
+-	TOTPConfirmed bool                                `json:"totp_confirmed,omitempty"`
++	UserID                         string                              `json:"user_id,omitempty"`
++	ConnID                         string                              `json:"conn_id,omitempty"`
++	Email                          string                              `json:"email,omitempty"`
++	Refresh                        map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
++	ConnectorData                  []byte                              `json:"connectorData,omitempty"`
++	TOTP                           string                              `json:"totp,omitempty"`
++	TOTPConfirmed                  bool                                `json:"totp_confirmed,omitempty"`
++	IncorrectPasswordLoginAttempts uint64                              `json:"incorrect_password_login_attempts,omitempty"`
++	LockedUntil                    *time.Time                          `json:"locked_until,omitempty"`
+ }
+ 
+ func fromStorageOfflineSessions(o storage.OfflineSessions) OfflineSessions {
+ 	return OfflineSessions{
+-		UserID:        o.UserID,
+-		ConnID:        o.ConnID,
+-		Refresh:       o.Refresh,
+-		ConnectorData: o.ConnectorData,
+-		TOTP:          o.TOTP,
+-		TOTPConfirmed: o.TOTPConfirmed,
++		UserID:                         o.UserID,
++		ConnID:                         o.ConnID,
++		Email:                          o.Email,
++		Refresh:                        o.Refresh,
++		ConnectorData:                  o.ConnectorData,
++		TOTP:                           o.TOTP,
++		TOTPConfirmed:                  o.TOTPConfirmed,
++		IncorrectPasswordLoginAttempts: o.IncorrectPasswordLoginAttempts,
++		LockedUntil:                    o.LockedUntil,
+ 	}
+ }
+ 
+ func toStorageOfflineSessions(o OfflineSessions) storage.OfflineSessions {
+ 	s := storage.OfflineSessions{
+-		UserID:        o.UserID,
+-		ConnID:        o.ConnID,
+-		Refresh:       o.Refresh,
+-		ConnectorData: o.ConnectorData,
+-		TOTP:          o.TOTP,
+-		TOTPConfirmed: o.TOTPConfirmed,
++		UserID:                         o.UserID,
++		ConnID:                         o.ConnID,
++		Email:                          o.Email,
++		Refresh:                        o.Refresh,
++		ConnectorData:                  o.ConnectorData,
++		TOTP:                           o.TOTP,
++		TOTPConfirmed:                  o.TOTPConfirmed,
++		IncorrectPasswordLoginAttempts: o.IncorrectPasswordLoginAttempts,
++		LockedUntil:                    o.LockedUntil,
+ 	}
+ 	if s.Refresh == nil {
+ 		// Server code assumes this will be non-nil.
+diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
+index 7856996e..ee7f16fc 100644
+--- a/storage/kubernetes/types.go
++++ b/storage/kubernetes/types.go
+@@ -689,12 +689,15 @@ type OfflineSessions struct {
+ 	k8sapi.TypeMeta   `json:",inline"`
+ 	k8sapi.ObjectMeta `json:"metadata,omitempty"`
+ 
+-	UserID        string                              `json:"userID,omitempty"`
+-	ConnID        string                              `json:"connID,omitempty"`
+-	Refresh       map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
+-	ConnectorData []byte                              `json:"connectorData,omitempty"`
+-	TOTP          string                              `json:"totp,omitempty"`
+-	TOTPConfirmed bool                                `json:"totpConfirmed,omitempty"`
++	UserID                         string                              `json:"userID,omitempty"`
++	ConnID                         string                              `json:"connID,omitempty"`
++	Email                          string                              `json:"email,omitempty"`
++	Refresh                        map[string]*storage.RefreshTokenRef `json:"refresh,omitempty"`
++	ConnectorData                  []byte                              `json:"connectorData,omitempty"`
++	TOTP                           string                              `json:"totp,omitempty"`
++	TOTPConfirmed                  bool                                `json:"totpConfirmed,omitempty"`
++	IncorrectPasswordLoginAttempts uint64                              `json:"incorrectPasswordLoginAttempts,omitempty"`
++	LockedUntil                    *time.Time                          `json:"lockedUntil,omitempty"`
+ }
+ 
+ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) OfflineSessions {
+@@ -707,23 +710,29 @@ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) Offline
+ 			Name:      cli.offlineTokenName(o.UserID, o.ConnID),
+ 			Namespace: cli.namespace,
+ 		},
+-		UserID:        o.UserID,
+-		ConnID:        o.ConnID,
+-		Refresh:       o.Refresh,
+-		ConnectorData: o.ConnectorData,
+-		TOTP:          o.TOTP,
+-		TOTPConfirmed: o.TOTPConfirmed,
++		UserID:                         o.UserID,
++		ConnID:                         o.ConnID,
++		Email:                          o.Email,
++		Refresh:                        o.Refresh,
++		ConnectorData:                  o.ConnectorData,
++		TOTP:                           o.TOTP,
++		TOTPConfirmed:                  o.TOTPConfirmed,
++		IncorrectPasswordLoginAttempts: o.IncorrectPasswordLoginAttempts,
++		LockedUntil:                    o.LockedUntil,
+ 	}
+ }
+ 
+ func toStorageOfflineSessions(o OfflineSessions) storage.OfflineSessions {
+ 	s := storage.OfflineSessions{
+-		UserID:        o.UserID,
+-		ConnID:        o.ConnID,
+-		Refresh:       o.Refresh,
+-		ConnectorData: o.ConnectorData,
+-		TOTP:          o.TOTP,
+-		TOTPConfirmed: o.TOTPConfirmed,
++		UserID:                         o.UserID,
++		ConnID:                         o.ConnID,
++		Email:                          o.Email,
++		Refresh:                        o.Refresh,
++		ConnectorData:                  o.ConnectorData,
++		TOTP:                           o.TOTP,
++		TOTPConfirmed:                  o.TOTPConfirmed,
++		IncorrectPasswordLoginAttempts: o.IncorrectPasswordLoginAttempts,
++		LockedUntil:                    o.LockedUntil,
+ 	}
+ 	if s.Refresh == nil {
+ 		// Server code assumes this will be non-nil.
+diff --git a/storage/sql/crud.go b/storage/sql/crud.go
+index 84ace050..929e32fe 100644
+--- a/storage/sql/crud.go
++++ b/storage/sql/crud.go
+@@ -714,13 +714,15 @@ func scanPassword(s scanner) (p storage.Password, err error) {
+ func (c *conn) CreateOfflineSessions(ctx context.Context, s storage.OfflineSessions) error {
+ 	_, err := c.Exec(`
+ 		insert into offline_session (
+-			user_id, conn_id, refresh, connector_data, totp, totp_confirmed
++			user_id, conn_id, refresh, connector_data, totp, totp_confirmed,
++			email, incorrect_password_login_attempts, locked_until
+ 		)
+ 		values (
+-			$1, $2, $3, $4, $5, $6
++			$1, $2, $3, $4, $5, $6, $7, $8, $9
+ 		);
+ 	`,
+ 		s.UserID, s.ConnID, encoder(s.Refresh), s.ConnectorData, s.TOTP, s.TOTPConfirmed,
++		s.Email, s.IncorrectPasswordLoginAttempts, s.LockedUntil,
+ 	)
+ 	if err != nil {
+ 		if c.alreadyExistsCheck(err) {
+@@ -748,10 +750,15 @@ func (c *conn) UpdateOfflineSessions(ctx context.Context, userID string, connID
+ 				refresh = $1,
+ 				connector_data = $2,
+ 				totp = $3,
+-				totp_confirmed = $4
+-			where user_id = $5 AND conn_id = $6;
++				totp_confirmed = $4,
++				email = $5,
++				incorrect_password_login_attempts = $6,
++				locked_until = $7
++			where user_id = $8 AND conn_id = $9;
+ 		`,
+-			encoder(newSession.Refresh), newSession.ConnectorData, newSession.TOTP, newSession.TOTPConfirmed, s.UserID, s.ConnID,
++			encoder(newSession.Refresh), newSession.ConnectorData, newSession.TOTP, newSession.TOTPConfirmed,
++			newSession.Email, newSession.IncorrectPasswordLoginAttempts, newSession.LockedUntil,
++			s.UserID, s.ConnID,
+ 		)
+ 		if err != nil {
+ 			return fmt.Errorf("update offline session: %v", err)
+@@ -767,7 +774,8 @@ func (c *conn) GetOfflineSessions(ctx context.Context, userID string, connID str
+ func getOfflineSessions(ctx context.Context, q querier, userID string, connID string) (storage.OfflineSessions, error) {
+ 	return scanOfflineSessions(q.QueryRow(`
+ 		select
+-			user_id, conn_id, refresh, connector_data, totp, totp_confirmed
++			user_id, conn_id, refresh, connector_data, totp, totp_confirmed,
++			email, incorrect_password_login_attempts, locked_until
+ 		from offline_session
+ 		where user_id = $1 AND conn_id = $2;
+ 		`, userID, connID))
+@@ -776,6 +784,7 @@ func getOfflineSessions(ctx context.Context, q querier, userID string, connID st
+ func scanOfflineSessions(s scanner) (o storage.OfflineSessions, err error) {
+ 	err = s.Scan(
+ 		&o.UserID, &o.ConnID, decoder(&o.Refresh), &o.ConnectorData, &o.TOTP, &o.TOTPConfirmed,
++		&o.Email, &o.IncorrectPasswordLoginAttempts, &o.LockedUntil,
+ 	)
+ 	if err != nil {
+ 		if err == sql.ErrNoRows {
+diff --git a/storage/sql/migrate.go b/storage/sql/migrate.go
+index 5d8672bf..40141156 100644
+--- a/storage/sql/migrate.go
++++ b/storage/sql/migrate.go
+@@ -335,4 +335,14 @@ var migrations = []migration{
+ 				add column groups bytea`,
+ 		},
+ 	},
++	{
++		stmts: []string{
++			`alter table offline_session
++				add column email text default '' not null;`,
++			`alter table offline_session
++				add column incorrect_password_login_attempts bigint default 0 not null;`,
++			`alter table offline_session
++				add column locked_until timestamptz default null;`,
++		},
++	},
+ }
+diff --git a/storage/storage.go b/storage/storage.go
+index 5adce6f2..339e8303 100644
+--- a/storage/storage.go
++++ b/storage/storage.go
+@@ -330,6 +330,11 @@ type OfflineSessions struct {
+ 	// The ID of the connector used to login the user.
+ 	ConnID string
+ 
++	// Email of the user, mirrored from connector.Identity. Used as a stable,
++	// human-readable handle for administrative actions (lock / unlock) on
++	// non-local connectors where UserID may be opaque.
++	Email string
++
+ 	// Refresh is a hash table of refresh token reference objects
+ 	// indexed by the ClientID of the refresh token.
+ 	Refresh map[string]*RefreshTokenRef
+@@ -341,6 +346,17 @@ type OfflineSessions struct {
+ 	// The second factor is ignored if the field is empty.
+ 	TOTP          string
+ 	TOTPConfirmed bool
++
++	// IncorrectPasswordLoginAttempts is the number of consecutive failed
++	// password attempts for this (UserID, ConnID) pair. It is reset on a
++	// successful login and used by lockout enforcement for connectors that
++	// don't have native attempt tracking (LDAP, Atlassian Crowd, ...).
++	IncorrectPasswordLoginAttempts uint64
++
++	// LockedUntil, when set and in the future, blocks password logins for
++	// this (UserID, ConnID) pair until the timestamp elapses. Both the
++	// automatic lockout and the administrative lock/unlock API write here.
++	LockedUntil *time.Time
+ }
+ 
+ // Password is an email to password mapping managed by the storage.
