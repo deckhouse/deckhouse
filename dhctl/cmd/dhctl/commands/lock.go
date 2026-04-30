@@ -21,14 +21,11 @@ import (
 	v1 "k8s.io/api/coordination/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -42,30 +39,38 @@ Lock info:
 
 func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineSanityFlags(cmd)
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		params, err := app.DefaultProviderParams()
 		if err != nil {
 			return err
 		}
-
-		kubeCl := client.NewKubernetesClient().
-			WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
+		if err != nil {
 			return err
 		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
+		kube, err := kubeProvider.Client(ctx)
+		if err != nil {
+			return err
+		}
+		kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 		confirm := func(l *v1.Lease) error {
 			if app.SanityCheck {

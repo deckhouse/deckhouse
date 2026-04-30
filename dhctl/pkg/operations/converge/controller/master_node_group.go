@@ -20,6 +20,9 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -31,8 +34,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -64,7 +65,16 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	}
 
 	var userPassedHosts []session.Host
-	sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	if err != nil {
+		return err
+	}
+
+	sshCl, err := sshProvider.Client(ctx.Ctx())
+	if err != nil {
+		return err
+	}
+
 	if sshCl != nil {
 		userPassedHosts = append(make([]session.Host, 0), sshCl.Session().AvailableHosts()...)
 	}
@@ -74,7 +84,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := ssh.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
+	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
 		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
 			return true
 		}
@@ -225,13 +235,18 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		nodeInternalIPList []string
 	)
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	for c.desiredReplicas > count {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
 			output, err := operations.BootstrapAdditionalMasterNode(
 				ctx.Ctx(),
-				ctx.KubeClient(),
+				kubeClient,
 				metaConfig,
 				index,
 				c.cloudConfig,
@@ -251,7 +266,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		index++
 	}
 
-	err = entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
+	err = entity.WaitForNodesListBecomeReady(ctx.Ctx(), kubeClient, nodesToWait, controlplane.NewManagerReadinessChecker(ctx))
 	if err != nil {
 		return err
 	}
@@ -262,7 +277,7 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		}
 
 		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx.KubeClient(), c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
+		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), kubeClient, c.name, global.HideDeckhouseLogs, log.GetDefaultLogger(), nodeInternalIPList...)
 		if err != nil {
 			return err
 		}
@@ -290,8 +305,16 @@ func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, maste
 	if ctx.CommanderMode() {
 		return nil
 	}
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	if err != nil {
+		return err
+	}
 
-	sshCl := ctx.KubeClient().NodeInterfaceAsSSHClient()
+	sshCl, err := sshProvider.Client(ctx.Ctx())
+	if err != nil {
+		return err
+	}
+
 	if govalue.IsNil(sshCl) {
 		return fmt.Errorf("NodeInterface is not ssh")
 	}
@@ -404,7 +427,12 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return global.ErrConvergeInterrupted
 	}
 
-	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), kubeClient, nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
 	if err != nil {
 		return err
 	}
@@ -440,7 +468,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		log.WarnF("No SSH IP received for master node %s, cache not updated\n", nodeName)
 	}
 
-	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
+	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
 func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string, metaConfig *config.MetaConfig) infrastructure.InfraActionHook {
@@ -461,7 +489,12 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		}
 	}
 
-	return controlplane.NewHookForUpdatePipeline(ctx, nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+	if err != nil {
+		return nil
+	}
+
+	return controlplane.NewHookForUpdatePipeline(ctx, sshProvider, ctx.SSHProviderInitializer.GetSettings(), nodesToCheck, metaConfig.UUID, ctx.CommanderMode(), c.skipChecks).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
 		WithConfirm(confirm).
@@ -490,8 +523,13 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			nodesToDelete = append(nodesToDelete, nodeInfo.name)
 		}
 
-		err := c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
-			return controlplane.NewHookForDestroyPipeline(ctx, nodeName, ctx.CommanderMode())
+		sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
+		if err != nil {
+			return err
+		}
+
+		err = c.deleteRedundantNodes(ctx, c.state.Settings, nodesToDeleteInfo, func(nodeName string) infrastructure.InfraActionHook {
+			return controlplane.NewHookForDestroyPipeline(ctx, sshProvider, nodeName, ctx.CommanderMode())
 		})
 
 		// If deletion was successful, update master hosts cache

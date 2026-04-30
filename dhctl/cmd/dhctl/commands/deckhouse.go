@@ -28,38 +28,43 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
+		params, err := app.DefaultProviderParams()
 		if err != nil {
 			return err
 		}
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
+		if err != nil {
+			return err
+		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
 
 		return log.ProcessCtx(ctx, "default", "Remove Deckhouse️", func(ctx context.Context) error {
-			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-
-			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-				return fmt.Errorf("open kubernetes connection: %v", err)
+			kube, err := kubeProvider.Client(ctx)
+			if err != nil {
+				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
+			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 			return deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 		})
@@ -67,7 +72,7 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 }
 
 func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	app.DefineConfigFlags(cmd)
 	app.DefineKubeFlags(cmd)
@@ -79,6 +84,26 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
+		params, err := app.DefaultProviderParams()
+		if err != nil {
+			return err
+		}
+		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
+			ctx,
+			params,
+			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithRequiredKubeProvider(),
+		)
+		if err != nil {
+			return err
+		}
+		if kubeProvider == nil {
+			return fmt.Errorf("kubernetes provider is not initialized")
+		}
+		if sshProviderInitializer != nil {
+			defer sshProviderInitializer.Cleanup(ctx)
+		}
+
 		metaConfig, err := config.ParseConfig(
 			ctx,
 			app.ConfigPaths,
@@ -87,18 +112,6 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			),
 			app.GetDirConfig(),
 		)
-		if err != nil {
-			return err
-		}
-
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -120,14 +133,11 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		}
 
 		return log.ProcessCtx(ctx, "bootstrap", "Create Deckhouse Deployment", func(ctx context.Context) error {
-			kubeCl := client.NewKubernetesClient().
-				WithNodeInterface(
-					ssh.NewNodeInterfaceWrapper(sshClient),
-				)
-
-			if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
-				return fmt.Errorf("open kubernetes connection: %v", err)
+			kube, err := kubeProvider.Client(ctx)
+			if err != nil {
+				return fmt.Errorf("open kubernetes connection: %w", err)
 			}
+			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
 			if err := deckhouse.CreateDeckhouseDeployment(ctx, kubeCl, installConfig); err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)

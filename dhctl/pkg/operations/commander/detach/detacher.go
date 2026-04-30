@@ -18,13 +18,14 @@ import (
 	"context"
 	"fmt"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -41,7 +42,7 @@ type Detacher struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	AgentModuleName string
-	SSHClient       node.SSHClient
+	SSHProvider     libcon.SSHProvider
 	Checker         *check.Checker
 }
 
@@ -50,14 +51,14 @@ type DetachResources struct {
 	Values   map[string]any
 }
 
-func NewDetacher(checker *check.Checker, sshClient node.SSHClient, params *Params) *Detacher {
+func NewDetacher(checker *check.Checker, sshProvider libcon.SSHProvider, params *Params) *Detacher {
 	return &Detacher{
 		Params: params,
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationCommanderDetach, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		SSHClient: sshClient,
-		Checker:   checker,
+		SSHProvider: sshProvider,
+		Checker:     checker,
 	}
 }
 
