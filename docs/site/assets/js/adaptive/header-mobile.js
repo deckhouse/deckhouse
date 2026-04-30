@@ -225,24 +225,27 @@ document.addEventListener('DOMContentLoaded', function () {
         if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
     }
 
+    function closeFilter() {
+        const filterBlock = document.querySelector('.filter__block');
+        const filterOverlay = document.querySelector('.filter__sidebar-overlay');
+        const isOpen = filterBlock !== null && filterBlock.classList.contains('show');
+        if (filterBlock) filterBlock.classList.remove('show');
+        if (filterOverlay && filterOverlay.parentNode) {
+            filterOverlay.parentNode.removeChild(filterOverlay);
+        }
+        return isOpen;
+    }
+
     function initBurger() {
         if (window.innerWidth >= 1024 || burgerInited) return;
         burgerInited = true;
 
         if (hamburgerCollapse) {
             hamburgerCollapse.addEventListener('click', function () {
-                if (window.innerWidth < 1024) {
-                    const filterBlock = document.querySelector('.filter__block');
-                    if (filterBlock && filterBlock.classList.contains('show')) {
-                        filterBlock.classList.remove('show');
-                        hamburgerCollapse.classList.remove('show');
-                        if (body) body.classList.remove('sidebar-opened');
-                        const filterOverlay = document.querySelector('.filter__sidebar-overlay');
-                        if (filterOverlay && filterOverlay.parentNode) {
-                            filterOverlay.parentNode.removeChild(filterOverlay);
-                        }
-                        return;
-                    }
+                if (window.innerWidth < 1024 && closeFilter()) {
+                    hamburgerCollapse.classList.remove('show');
+                    if (body) body.classList.remove('sidebar-opened');
+                    return;
                 }
                 if (!headerSidebar) return;
                 if (headerSidebar.classList.contains('show')) {
@@ -374,6 +377,7 @@ document.addEventListener('DOMContentLoaded', function () {
         desktopActiveItem();
         closeBurgerSidebar();
         closeNavModal();
+        closeFilter();
     }
 
     syncHeaderDisplay();
