@@ -222,15 +222,10 @@ func testSSHConnection(ctx context.Context, sshProviderInitializer *providerinit
 		pkeys = sshClient.PrivateKeys()
 	}
 
-	becomePass, err := base64.StdEncoding.DecodeString(cred.SudoPasswordEncoded)
-	if err != nil {
-		return err
-	}
-
 	config := session.NewSession(session.Input{
 		User:       cred.User,
 		Port:       strconv.Itoa(cred.SSHPort),
-		BecomePass: string(becomePass),
+		BecomePass: cred.SudoPasswordEncoded,
 	})
 	config.AddAvailableHosts(session.Host{Host: address})
 
