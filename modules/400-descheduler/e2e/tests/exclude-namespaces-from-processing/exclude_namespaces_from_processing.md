@@ -42,9 +42,9 @@ The test needs to verify that pods in `d8-*` namespaces are protected from evict
 
 | File | Purpose |
 |------|---------|
-| `files/descheduler-cr.yaml` | Descheduler CR with LowNodeUtilization strategy and tuned thresholds |
-| `files/protected-deployment.yaml` | Deployment with 5 pause pod replicas in d8-descheduler namespace |
-| `files/regular-pods.yaml` | Template with 5 pause pods in the test namespace (uses `($targetNode)` binding) |
+| `manifests/descheduler-cr.yaml` | Descheduler CR with LowNodeUtilization strategy and tuned thresholds |
+| `manifests/protected-deployment.yaml` | Deployment with 5 pause pod replicas in d8-descheduler namespace |
+| `manifests/regular-pods.yaml` | Template with 5 pause pods in the test namespace (uses `($targetNode)` binding) |
 
 ## Policy Config
 

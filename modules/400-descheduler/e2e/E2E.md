@@ -96,16 +96,15 @@ e2e/
       assert-descheduler-ready.yaml  — Shared assertion: descheduler deployment is ready
     low-node-utilization/
       chainsaw-test.yaml             — Test definition
-      files/descheduler-cr.yaml      — Descheduler CR with LowNodeUtilization strategy
+      manifests/descheduler-cr.yaml      — Descheduler CR with LowNodeUtilization strategy
       low_node_utilization.md        — Test documentation
     high-node-utilization/
       chainsaw-test.yaml
-      files/descheduler-cr.yaml      — Descheduler CR with HighNodeUtilization strategy
+      manifests/descheduler-cr.yaml      — Descheduler CR with HighNodeUtilization strategy
       high_node_utilization.md
     exclude-namespaces-from-processing/
       chainsaw-test.yaml
-      files/descheduler-cr.yaml      — Descheduler CR with LowNodeUtilization strategy
-      files/protected-namespace.yaml — d8-chainsaw-test namespace definition
+      manifests/descheduler-cr.yaml      — Descheduler CR with LowNodeUtilization strategy
       exclude_namespaces_from_processing.md
 ```
 

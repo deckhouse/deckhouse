@@ -50,7 +50,7 @@ spec:
               ($error == null): true
         - description: Create pause Deployment (all pods land on the only schedulable node)
           create:
-            file: files/pause-deployment.yaml
+            file: manifests/pause-deployment.yaml
       catch:
         - description: Show pod status on failure
           get:
@@ -117,7 +117,7 @@ spec:
       try:
         - description: Apply the Descheduler CR manifest
           apply:
-            file: files/descheduler-cr.yaml
+            file: manifests/descheduler-cr.yaml
         - description: Assert the Descheduler CR exists
           assert:
             resource:

@@ -34,8 +34,8 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 | File | Purpose |
 |------|---------|
-| `files/descheduler-cr.yaml` | Descheduler CR with LowNodeUtilization strategy and tuned thresholds |
-| `files/pause-deployment.yaml` | Deployment with 10 pause pod replicas (100m CPU, 64Mi memory each) |
+| `manifests/descheduler-cr.yaml` | Descheduler CR with LowNodeUtilization strategy and tuned thresholds |
+| `manifests/pause-deployment.yaml` | Deployment with 10 pause pod replicas (100m CPU, 64Mi memory each) |
 
 ## Node Requirements
 
@@ -99,7 +99,7 @@ The most common cause is that no node qualifies as underutilized. Check current 
 kubectl logs -n d8-descheduler -l app=descheduler -c descheduler | grep -i "node has been classified"
 ```
 
-If all nodes show `usagePercentage` above the thresholds for any metric, raise the thresholds in `files/descheduler-cr.yaml`. Remember: a node is only underutilized when ALL metrics are below thresholds.
+If all nodes show `usagePercentage` above the thresholds for any metric, raise the thresholds in `manifests/descheduler-cr.yaml`. Remember: a node is only underutilized when ALL metrics are below thresholds.
 
 ### Nodes remain cordoned after test failure
 

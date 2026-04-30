@@ -34,7 +34,7 @@ spec:
       try:
         - description: Create spread Deployment with topology constraints
           create:
-            file: files/spread-deployment.yaml
+            file: manifests/spread-deployment.yaml
       catch:
         - description: Show pod status on failure
           get:
@@ -84,7 +84,7 @@ spec:
       try:
         - description: Apply the Descheduler CR manifest
           apply:
-            file: files/descheduler-cr.yaml
+            file: manifests/descheduler-cr.yaml
         - description: Assert the Descheduler CR exists
           assert:
             resource:

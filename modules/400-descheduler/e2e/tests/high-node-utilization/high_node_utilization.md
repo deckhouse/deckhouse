@@ -34,8 +34,8 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 
 | File | Purpose |
 |------|---------|
-| `files/descheduler-cr.yaml` | Descheduler CR with HighNodeUtilization strategy and tuned thresholds |
-| `files/spread-deployment.yaml` | Deployment with 3 pause pod replicas and topology spread constraints |
+| `manifests/descheduler-cr.yaml` | Descheduler CR with HighNodeUtilization strategy and tuned thresholds |
+| `manifests/spread-deployment.yaml` | Deployment with 3 pause pod replicas and topology spread constraints |
 
 ## Policy Config
 
@@ -83,7 +83,7 @@ No node is classified as underutilized. Check node classification:
 kubectl logs -n d8-descheduler -l app=descheduler -c descheduler | grep -i "node has been classified"
 ```
 
-If all nodes show `usagePercentage` above thresholds for any metric, raise the thresholds in `files/descheduler-cr.yaml`. A node is only underutilized when ALL metrics are below thresholds.
+If all nodes show `usagePercentage` above thresholds for any metric, raise the thresholds in `manifests/descheduler-cr.yaml`. A node is only underutilized when ALL metrics are below thresholds.
 
 ### Pods stuck in Pending
 

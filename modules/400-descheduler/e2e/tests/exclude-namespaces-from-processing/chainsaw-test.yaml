@@ -34,7 +34,7 @@ spec:
       try:
         - description: Create protected Deployment in d8-descheduler namespace
           create:
-            file: files/protected-deployment.yaml
+            file: manifests/protected-deployment.yaml
       catch:
         - description: Show protected pods on failure
           get:
@@ -97,7 +97,7 @@ spec:
               ($error == null): true
         - description: Create 5 regular pods in the test namespace
           create:
-            file: files/regular-pods.yaml
+            file: manifests/regular-pods.yaml
             template: true
       catch:
         - description: Show regular pods on failure
@@ -126,7 +126,7 @@ spec:
       try:
         - description: Apply the Descheduler CR manifest
           apply:
-            file: files/descheduler-cr.yaml
+            file: manifests/descheduler-cr.yaml
         - description: Assert the Descheduler CR exists
           assert:
             resource:
