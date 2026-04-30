@@ -211,7 +211,7 @@ func TestConfig_UseDefault(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var config Config
 
-			err := config.UseDefault(tt.input.criSupported)
+			err := config.useDefault(tt.input.criSupported)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.output.mode, config.Settings.Mode)
@@ -252,7 +252,7 @@ func TestConfig_UseInitConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var config Config
 
-			err := config.UseInitConfig(tt.input.initConfig)
+			err := config.useInitConfig(tt.input.initConfig)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.output.mode, config.Settings.Mode)
@@ -322,7 +322,7 @@ func TestConfig_UseDeckhouseSettings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var config Config
 
-			err := config.UseDeckhouseSettings(tt.input.deckhouse)
+			err := config.useDeckhouseSettings(tt.input.deckhouse)
 			require.NoError(t, err)
 
 			require.Equal(t, tt.input.deckhouse.Mode, config.Settings.Mode)

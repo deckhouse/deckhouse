@@ -99,7 +99,7 @@ func (r *Registry) start(ctx context.Context, logger log.Logger) error {
 		WithInfoAsDebug().
 		WithPrefix("Bundle registry: ")
 
-	bndlLogger.Infof("Load bundle...")
+	bndlLogger.Infof("Loading bundle...")
 	bndl, err := bundle.New(ctx, bndlLogger, r.bundlePath)
 	if err != nil {
 		return withStop(

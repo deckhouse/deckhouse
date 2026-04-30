@@ -22,18 +22,145 @@ import (
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
 )
 
+func errDuplicateConfig() error {
+	return fmt.Errorf("duplicate registry configuration detected: " +
+		"registry is configured in both 'initConfiguration.deckhouse' " +
+		"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
+		"Please specify registry settings in only one location.")
+}
+
+func errUnsupportedCRI(cri constant.CRIType) error {
+	return fmt.Errorf(
+		"registry module cannot be started with defaultCRI '%s'. "+
+			"Please either configure registry in 'initConfiguration.deckhouse', "+
+			"or use a supported defaultCRI type with the existing configuration in "+
+			"'moduleConfig/deckhouse.spec.settings.registry'. Supported CRI types: %v",
+		cri,
+		constant.SupportedCRI,
+	)
+}
+
+func errNonStaticClusterMode(mode constant.ModeType) error {
+	return fmt.Errorf(
+		"bootstrap with registry mode '%s' is supported only in static cluster. "+
+			"Please use one of the supported bootstrap modes for non-static cluster: %v",
+		mode,
+		[]constant.ModeType{
+			constant.ModeUnmanaged,
+			constant.ModeDirect,
+		},
+	)
+}
+
+// IsLocalBootstrapMode returns true when the bootstrap registry mode is Local.
+// It is used only for preliminary registry information retrieval.
+func IsLocalBootstrapMode(
+	initConfig *init_config.Config,
+	deckhouseSettings *module_config.DeckhouseSettings,
+) (bool, error) {
+	switch {
+	case initConfig != nil && deckhouseSettings != nil:
+		return false, errDuplicateConfig()
+
+	case deckhouseSettings != nil:
+		return deckhouseSettings.Mode == constant.ModeLocal, nil
+	}
+	return false, nil
+}
+
+// BootstrapRemoteData returns the remote registry Data derived from the provided configuration.
+// It is used only for preliminary registry information retrieval.
+func BootstrapRemoteData(
+	initConfig *init_config.Config,
+	deckhouseSettings *module_config.DeckhouseSettings,
+) (Data, error) {
+	var config Config
+
+	switch {
+	case initConfig != nil && deckhouseSettings != nil:
+		return Data{}, errDuplicateConfig()
+
+	case deckhouseSettings != nil:
+		if err := config.useDeckhouseSettings(*deckhouseSettings); err != nil {
+			return Data{}, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+		}
+
+	case initConfig != nil:
+		if err := config.useInitConfig(*initConfig); err != nil {
+			return Data{}, fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+		}
+
+	default:
+		// criSupported=false selects legacy Unmanaged mode with default registry parameters.
+		if err := config.useDefault(false); err != nil {
+			return Data{}, fmt.Errorf("get default registry settings: %w", err)
+		}
+	}
+	return config.Settings.RemoteData, nil
+}
+
+// BootstrapConfig builds a full registry Config from the provided configuration sources.
+func BootstrapConfig(
+	initConfig *init_config.Config,
+	deckhouseSettings *module_config.DeckhouseSettings,
+	defaultCRI constant.CRIType,
+	isStatic bool,
+) (Config, error) {
+	criSupported := constant.IsCRISupported(defaultCRI)
+
+	switch {
+	case initConfig != nil && deckhouseSettings != nil:
+		return Config{}, errDuplicateConfig()
+
+	case deckhouseSettings != nil:
+		if !criSupported {
+			return Config{}, errUnsupportedCRI(defaultCRI)
+		}
+
+		switch deckhouseSettings.Mode {
+		case constant.ModeProxy, constant.ModeLocal:
+			if !isStatic {
+				return Config{}, errNonStaticClusterMode(deckhouseSettings.Mode)
+			}
+		}
+
+		config := Config{}
+
+		if err := config.useDeckhouseSettings(*deckhouseSettings); err != nil {
+			return config, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+		}
+		return config, nil
+
+	case initConfig != nil:
+		config := Config{}
+
+		if err := config.useInitConfig(*initConfig); err != nil {
+			return config, fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+		}
+		return config, nil
+
+	default:
+		config := Config{}
+
+		if err := config.useDefault(criSupported); err != nil {
+			return config, fmt.Errorf("get default registry settings: %w", err)
+		}
+		return config, nil
+	}
+}
+
 type Config struct {
 	Settings          ModeSettings
 	DeckhouseSettings module_config.DeckhouseSettings
 	LegacyMode        bool
 }
 
-// UseDefault configures the registry with default CE settings.
+// useDefault configures the registry with default CE settings.
 // When no registry configuration is provided:
 // - If Direct mode is supported, uses Direct mode
 // - Otherwise, falls back to Unmanaged mode
 // - All parameters are populated with default values for the CE registry
-func (c *Config) UseDefault(criSupported bool) error {
+func (c *Config) useDefault(criSupported bool) error {
 	var settings module_config.DeckhouseSettings
 
 	if criSupported {
@@ -44,9 +171,9 @@ func (c *Config) UseDefault(criSupported bool) error {
 	return c.Process(settings, !criSupported)
 }
 
-// UseInitConfig configures registry using legacy initConfiguration.
+// useInitConfig configures registry using legacy initConfiguration.
 // Note: This method maintains backward compatibility and only supports Unmanaged legacy mode.
-func (c *Config) UseInitConfig(userConfig init_config.Config) error {
+func (c *Config) useInitConfig(userConfig init_config.Config) error {
 	// Prepare config
 	initConfig := init_config.
 		New().
@@ -67,9 +194,9 @@ func (c *Config) UseInitConfig(userConfig init_config.Config) error {
 	return c.Process(settings, true)
 }
 
-// UseDeckhouseSettings configures registry using deckhouse ModuleConfig settings.
+// useDeckhouseSettings configures registry using deckhouse ModuleConfig settings.
 // The operation mode (Direct/Unmanaged) is determined from the user configuration.
-func (c *Config) UseDeckhouseSettings(userSettings module_config.DeckhouseSettings) error {
+func (c *Config) useDeckhouseSettings(userSettings module_config.DeckhouseSettings) error {
 	settings := module_config.
 		New(userSettings.Mode).
 		Merge(&userSettings)

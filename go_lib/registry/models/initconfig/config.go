@@ -42,6 +42,17 @@ func New() Config {
 	}
 }
 
+func (c *Config) IsEmpty() bool {
+	if c == nil {
+		return true
+	}
+
+	return c.ImagesRepo == "" &&
+		c.RegistryCA == "" &&
+		c.RegistryDockerCfg == "" &&
+		c.RegistryScheme == ""
+}
+
 func (c Config) Merge(other *Config) Config {
 	out := c
 
