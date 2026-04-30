@@ -580,6 +580,13 @@ func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockF
 
 // unlockOfflineSession clears LockedUntil and the locked-by-administrator
 // annotation, allowing the user to authenticate again immediately.
+//
+// We use an explicit JSON merge patch with nulls because PatchWithMutatingFunc
+// computes a merge patch from the diff of mutated vs. source object: a removed
+// field there becomes "absent" rather than null, which JSON merge patch
+// semantics interpret as "leave unchanged" instead of "delete". Sending null
+// values explicitly is the only reliable way to delete fields and annotation
+// keys via merge patch.
 func unlockOfflineSession(input *go_hook.HookInput, operation UserOperation) error {
 	sess, err := findOfflineSessionByTarget(input, operation.Spec.Target)
 	if err != nil {
@@ -592,18 +599,17 @@ func unlockOfflineSession(input *go_hook.HookInput, operation UserOperation) err
 		"offlinesession", sess.Name,
 	)
 
-	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		unstructured.RemoveNestedField(obj.Object, "lockedUntil")
-		if err := unstructured.SetNestedField(obj.Object, int64(0), "incorrectPasswordLoginAttempts"); err != nil {
-			return nil, err
-		}
-		annotations := obj.GetAnnotations()
-		if annotations != nil {
-			delete(annotations, PasswordAnnotationLockedByAdministrator)
-			obj.SetAnnotations(annotations)
-		}
-		return obj, nil
-	}, "dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
+	patch := map[string]any{
+		"lockedUntil":                    nil,
+		"incorrectPasswordLoginAttempts": int64(0),
+		"metadata": map[string]any{
+			"annotations": map[string]any{
+				PasswordAnnotationLockedByAdministrator: nil,
+			},
+		},
+	}
+
+	input.PatchCollector.PatchWithMerge(patch, "dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
 
 	return nil
 }
