@@ -1,11 +1,11 @@
 diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
-index 489f1f3d4..f530421a2 100644
+index 8a4278ea8..f7b0c865c 100644
 --- a/internal/ingress/controller/controller.go
 +++ b/internal/ingress/controller/controller.go
-@@ -17,13 +17,14 @@ limitations under the License.
- package controller
+@@ -18,13 +18,14 @@ package controller
  
  import (
+ 	"context"
 +	"encoding/json"
  	"fmt"
  	"sort"
@@ -18,7 +18,7 @@ index 489f1f3d4..f530421a2 100644
  	apiv1 "k8s.io/api/core/v1"
  	networking "k8s.io/api/networking/v1"
  	apiequality "k8s.io/apimachinery/pkg/api/equality"
-@@ -44,6 +45,7 @@ import (
+@@ -47,6 +48,7 @@ import (
  	"k8s.io/ingress-nginx/internal/ingress/inspector"
  	"k8s.io/ingress-nginx/internal/ingress/metric/collectors"
  	"k8s.io/ingress-nginx/internal/k8s"
@@ -26,10 +26,11 @@ index 489f1f3d4..f530421a2 100644
  	"k8s.io/ingress-nginx/internal/nginx"
  	"k8s.io/ingress-nginx/pkg/apis/ingress"
  	utilingress "k8s.io/ingress-nginx/pkg/util/ingress"
-@@ -164,6 +166,245 @@ func (n *NGINXController) GetPublishService() *apiv1.Service {
- 	return s
- }
+@@ -62,6 +64,246 @@ const (
+ 	orphanMetricLabelNoEndpoint = "no-endpoint"
+ )
  
++
 +// deepCopyConfigurationForHash returns a full deep copy of the configuration with variable
 +// or per-pod data cleared (Backend.Endpoints, SSLCert.Certificate/CACertificate, L4Service.Endpoints)
 +// so the copy is suitable for deterministic hashing.
@@ -191,7 +192,7 @@ index 489f1f3d4..f530421a2 100644
 +		Hostname:               s.Hostname,
 +		SSLPassthrough:         s.SSLPassthrough,
 +		RedirectFromToWWW:      s.RedirectFromToWWW,
-+		CertificateAuth:        s.CertificateAuth,
++		CertificateAuth:       s.CertificateAuth,
 +		ProxySSL:               s.ProxySSL,
 +		ServerSnippet:          s.ServerSnippet,
 +		SSLCiphers:             s.SSLCiphers,
@@ -269,10 +270,10 @@ index 489f1f3d4..f530421a2 100644
 +	return xxhash.Sum64(data), nil
 +}
 +
- // syncIngress collects all the pieces required to assemble the NGINX
- // configuration file and passes the resulting data structures to the backend
- // (OnUpdate) when a reload is deemed necessary.
-@@ -180,9 +421,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
+ // Configuration contains all the settings required by an Ingress controller
+ type Configuration struct {
+ 	APIServerHost string
+@@ -195,9 +437,7 @@ func (n *NGINXController) syncIngress(interface{}) error {
  	n.metricCollector.SetSSLExpireTime(servers)
  	n.metricCollector.SetSSLInfo(servers)
  
@@ -284,7 +285,7 @@ index 489f1f3d4..f530421a2 100644
  		klog.Errorf("unexpected error hashing configuration: %v", err)
  	}
 diff --git a/internal/ingress/controller/template/configmap.go b/internal/ingress/controller/template/configmap.go
-index 9dc019bcc..a9e1d7fe4 100644
+index febf20be0..5ce2a02ba 100644
 --- a/internal/ingress/controller/template/configmap.go
 +++ b/internal/ingress/controller/template/configmap.go
 @@ -17,6 +17,7 @@ limitations under the License.
@@ -303,10 +304,11 @@ index 9dc019bcc..a9e1d7fe4 100644
  	"k8s.io/klog/v2"
  
  	"github.com/mitchellh/hashstructure/v2"
-@@ -376,13 +378,18 @@ func ReadConfig(src map[string]string) config.Configuration {
+@@ -397,13 +399,20 @@ func ReadConfig(src map[string]string) config.Configuration {
  		delete(conf, nginxStatusIpv6Whitelist)
  	}
  
++	// workerProcessesChecksum is used for BackendConfigChecksum only so per-node CPU count (auto) does not split pods.
 +	var workerProcessesChecksum string
  	if val, ok := conf[workerProcesses]; ok {
 -		to.WorkerProcesses = val
@@ -320,11 +322,12 @@ index 9dc019bcc..a9e1d7fe4 100644
 -
  		delete(conf, workerProcesses)
 +	} else {
++		// NewDefault() sets WorkerProcesses from NumCPU(); treat as auto for checksum.
 +		workerProcessesChecksum = "auto"
  	}
  
- 	if val, ok := conf[plugins]; ok {
-@@ -439,15 +446,23 @@ func ReadConfig(src map[string]string) config.Configuration {
+ 	if val, ok := conf[workerSerialReloads]; ok {
+@@ -467,14 +476,27 @@ func ReadConfig(src map[string]string) config.Configuration {
  		klog.Warningf("unexpected error merging defaults: %v", err)
  	}
  
@@ -333,14 +336,21 @@ index 9dc019bcc..a9e1d7fe4 100644
 -	})
 -	if err != nil {
 -		klog.Warningf("unexpected error obtaining hash: %v", err)
+-	}
++	// Deterministic checksum; omit per-node fields so all pods agree (IPv6 layout, CPU count).
 +	savedDisableIPv6DNS := to.DisableIpv6DNS
 +	savedWorkerProcesses := to.WorkerProcesses
 +	to.DisableIpv6DNS = false
 +	to.WorkerProcesses = workerProcessesChecksum
+ 
+-	to.Checksum = fmt.Sprintf("%v", hash)
 +	to.Checksum = ""
-+	data, jerr := json.Marshal(to)
++	var data []byte
++	var jerr error
++	data, jerr = json.Marshal(to)
 +	to.DisableIpv6DNS = savedDisableIPv6DNS
 +	to.WorkerProcesses = savedWorkerProcesses
++
 +	if jerr != nil {
 +		klog.Warningf("unexpected error obtaining checksum: %v", jerr)
 +		if h, herr := hashstructure.Hash(to, hashstructure.FormatV1, &hashstructure.HashOptions{TagName: "json"}); herr == nil {
@@ -348,10 +358,7 @@ index 9dc019bcc..a9e1d7fe4 100644
 +		}
 +	} else {
 +		to.Checksum = fmt.Sprintf("%v", xxhash.Sum64(data))
- 	}
++	}
  
--	to.Checksum = fmt.Sprintf("%v", hash)
--
  	return to
  }
- 

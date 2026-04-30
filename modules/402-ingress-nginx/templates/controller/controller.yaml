@@ -31,7 +31,8 @@ memory: 10Mi
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
 {{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
-{{- $validationIsolationEnabled := eq $controllerVersion "1.14" }}
+{{- $validationIsolationSupported := or (eq $controllerVersion "1.14") (eq $controllerVersion "1.15") }}
+{{- $validationIsolationEnabled := and $validationIsolationSupported (hasKey $crd.spec "validationIsolationMode") }}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -123,9 +124,6 @@ spec:
         name: {{ $name }}
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
-{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        container.apparmor.security.beta.kubernetes.io/controller: unconfined
-{{- end }}
       {{- if $crd.spec.enableIstioSidecar }}
         traffic.sidecar.istio.io/includeInboundPorts: ""
         traffic.sidecar.istio.io/includeOutboundIPRanges: {{ $context.Values.global.discovery.serviceSubnet | quote }}
@@ -205,25 +203,6 @@ spec:
       containers:
       - image: {{ include "helm_lib_module_image" (list $context (printf "controller%s" ($controllerVersion | replace "." ""))) }}
         name: controller
-        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        securityContext:
-          seccompProfile:
-            type: Unconfined
-          runAsNonRoot: false
-          runAsUser: 0
-          runAsGroup: 0
-          capabilities:
-            add:
-            - SETGID
-            - SETUID
-            - CHOWN
-            - DAC_OVERRIDE
-            - SYS_ADMIN
-            - SYS_CHROOT
-            - NET_BIND_SERVICE
-            drop:
-            - ALL
-        {{- else }}
         {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 8 }}
           seccompProfile:
             type: Unconfined
@@ -233,7 +212,6 @@ spec:
             - NET_BIND_SERVICE
             drop:
             - ALL
-        {{- end }}
           readOnlyRootFilesystem: true
         env:
         - name: POD_NAME
@@ -252,10 +230,6 @@ spec:
         {{- end }}
         {{- if $geoIP2 }}
         - name: LUA_USE_GEOIP2
-          value: "true"
-        {{- end }}
-        {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        - name: NGINX_PROFILING_ENABLED
           value: "true"
         {{- end }}
         livenessProbe:
@@ -434,12 +408,6 @@ spec:
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
-{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-        - name: valgrind
-          mountPath: /chroot/var/log/valgrind
-        - name: proc
-          mountPath: /chroot/proc
-{{- end }}
       - image: {{ include "helm_lib_module_image" (list $context "protobufExporter") }}
         name: protobuf-exporter
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
@@ -527,14 +495,6 @@ spec:
       - name: telemetry-config-file
         configMap:
           name: d8-ingress-telemetry-config
-{{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
-      - name: valgrind
-        hostPath:
-          path: /var/log/valgrind
-          type: DirectoryOrCreate
-      - name: proc
-        emptyDir: {}
-{{- end }}
 {{- end }}
 
 {{- $context := . }}

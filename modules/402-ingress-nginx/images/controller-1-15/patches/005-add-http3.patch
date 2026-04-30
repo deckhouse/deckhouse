@@ -1,32 +1,32 @@
 diff --git a/internal/ingress/controller/config/config.go b/internal/ingress/controller/config/config.go
-index 47f2120f1..10ddc5226 100644
+index afc56eb91..875c6b323 100644
 --- a/internal/ingress/controller/config/config.go
 +++ b/internal/ingress/controller/config/config.go
-@@ -457,6 +457,11 @@ type Configuration struct {
+@@ -450,6 +450,11 @@ type Configuration struct {
  	// Default: true
  	UseHTTP2 bool `json:"use-http2,omitempty"`
  
 +	// Enables or disables the HTTP/3 support in secure connections
-+	// https://nginx.org/ru/docs/http/ngx_http_v3_module.html
-+	// Default: true
++	// https://nginx.org/en/docs/http/ngx_http_v3_module.html
++	// Default: false
 +	UseHTTP3 bool `json:"use-http3,omitempty"`
 +
  	// Disables gzipping of responses for requests with "User-Agent" header fields matching any of
  	// the specified regular expressions.
- 	// http://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_disable
-@@ -855,6 +860,7 @@ func NewDefault() Configuration {
+ 	// https://nginx.org/en/docs/http/ngx_http_gzip_module.html#gzip_disable
+@@ -847,6 +852,7 @@ func NewDefault() Configuration {
  		VariablesHashBucketSize:          256,
  		VariablesHashMaxSize:             2048,
  		UseHTTP2:                         true,
 +		UseHTTP3:                         false,
  		DisableProxyInterceptErrors:      false,
+ 		RelativeRedirects:                false,
  		ProxyStreamTimeout:               "600s",
- 		ProxyStreamNextUpstream:          true,
 diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
-index 7cd6a0604..f6df09b8b 100644
+index 2a2cf6557..3c5f8ea96 100644
 --- a/internal/ingress/controller/template/template.go
 +++ b/internal/ingress/controller/template/template.go
-@@ -276,6 +276,7 @@ var funcMap = text_template.FuncMap{
+@@ -326,6 +326,7 @@ var funcMap = text_template.FuncMap{
  	"shouldLoadModSecurityModule":        shouldLoadModSecurityModule,
  	"buildHTTPListener":                  buildHTTPListener,
  	"buildHTTPSListener":                 buildHTTPSListener,
@@ -34,7 +34,7 @@ index 7cd6a0604..f6df09b8b 100644
  	"buildOpentelemetryForLocation":      buildOpentelemetryForLocation,
  	"shouldLoadOpentelemetryModule":      shouldLoadOpentelemetryModule,
  	"buildModSecurityForLocation":        buildModSecurityForLocation,
-@@ -1380,7 +1381,7 @@ func buildHTTPListener(t, s interface{}) string {
+@@ -1400,7 +1401,7 @@ func buildHTTPListener(t, s interface{}) string {
  		addrV4 = tc.Cfg.BindAddressIpv4
  	}
  
@@ -43,7 +43,7 @@ index 7cd6a0604..f6df09b8b 100644
  
  	out = append(out, httpListener(addrV4, co, &tc)...)
  
-@@ -1413,7 +1414,7 @@ func buildHTTPSListener(t, s interface{}) string {
+@@ -1433,7 +1434,7 @@ func buildHTTPSListener(t, s interface{}) string {
  		return ""
  	}
  
@@ -52,7 +52,7 @@ index 7cd6a0604..f6df09b8b 100644
  
  	addrV4 := []string{""}
  	if len(tc.Cfg.BindAddressIpv4) > 0 {
-@@ -1436,7 +1437,45 @@ func buildHTTPSListener(t, s interface{}) string {
+@@ -1456,7 +1457,45 @@ func buildHTTPSListener(t, s interface{}) string {
  	return strings.Join(out, "\n")
  }
  
@@ -99,20 +99,19 @@ index 7cd6a0604..f6df09b8b 100644
  	var out []string
  
  	if template.Cfg.UseProxyProtocol {
-@@ -1455,7 +1494,11 @@ func commonListenOptions(template *config.TemplateConfig, hostname string) strin
+@@ -1475,7 +1514,10 @@ func commonListenOptions(template *config.TemplateConfig, hostname string) strin
  		out = append(out, "reuseport")
  	}
  
 -	out = append(out, fmt.Sprintf("backlog=%v", template.BacklogSize))
-+	//filter backlog, due to unavailable to use with quic
-+	//https://mailman.nginx.org/pipermail/nginx-devel/2024-January/UM73PXAEESYS36KEQTYMA5HSC2GK2C4L.html
++	// backlog is not supported with QUIC listeners
 +	if !useHTTP3 {
 +		out = append(out, fmt.Sprintf("backlog=%v", template.BacklogSize))
 +	}
  
  	return strings.Join(out, " ")
  }
-@@ -1509,6 +1552,24 @@ func httpsListener(addresses []string, co string, tc *config.TemplateConfig) []s
+@@ -1529,6 +1571,24 @@ func httpsListener(addresses []string, co string, tc *config.TemplateConfig) []s
  	return out
  }
  
@@ -137,3 +136,37 @@ index 7cd6a0604..f6df09b8b 100644
  func buildOpentelemetryForLocation(isOTEnabled, isOTTrustSet bool, location *ingress.Location) string {
  	isOTEnabledInLoc := location.Opentelemetry.Enabled
  	isOTSetInLoc := location.Opentelemetry.Set
+diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+index 45d1ebf7c..dd4fd1cc9 100644
+--- a/rootfs/etc/nginx/template/nginx.tmpl
++++ b/rootfs/etc/nginx/template/nginx.tmpl
+@@ -593,6 +593,9 @@ http {
+ 
+         {{ buildHTTPListener  $all $redirect.From }}
+         {{ buildHTTPSListener $all $redirect.From }}
++        {{ if $cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $redirect.From }}
++        {{ end }}
+ 
+         ssl_certificate_by_lua_file /etc/nginx/lua/nginx/ngx_conf_certificate.lua;
+ 
+@@ -641,6 +644,9 @@ http {
+         {{ if $cfg.UseHTTP2 }}
+             http2 on;
+         {{ end }}
++        {{ if $cfg.UseHTTP3 }}
++            add_header Alt-Svc 'h3=":{{ $all.ListenPorts.HTTPS }}"; ma=86400';
++        {{ end }}
+ 
+         {{ if gt (len $cfg.BlockUserAgents) 0 }}
+         if ($block_ua) {
+@@ -909,6 +915,9 @@ stream {
+ 
+         {{ buildHTTPListener  $all $server.Hostname }}
+         {{ buildHTTPSListener $all $server.Hostname }}
++        {{ if $all.Cfg.UseHTTP3 }}
++        {{ buildHTTP3Listener $all $server.Hostname }}
++        {{ end }}
+ 
+         set $proxy_upstream_name "-";
+ 

@@ -55,8 +55,8 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 805484e6819e5a68d335e70f3f4a5c082e444f05faad0a41be128e3f2309931b
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
+    ingress-nginx-controller.deckhouse.io/checksum: ec379fe360aa5b98893e5b47f8ead26232fa99bd144bd112324c3d56d6d74f9e
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.15"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
     app: controller
@@ -115,7 +115,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller110
+        image: registry.example.com@imageHash-ingressNginx-controller115
         lifecycle:
           preStop:
             exec:
@@ -393,8 +393,8 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 805484e6819e5a68d335e70f3f4a5c082e444f05faad0a41be128e3f2309931b
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
+    ingress-nginx-controller.deckhouse.io/checksum: ec379fe360aa5b98893e5b47f8ead26232fa99bd144bd112324c3d56d6d74f9e
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.15"
     ingress-nginx-controller.deckhouse.io/inlet: HostWithFailover
   labels:
     app: controller
@@ -449,7 +449,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller110
+        image: registry.example.com@imageHash-ingressNginx-controller115
         lifecycle:
           preStop:
             exec:

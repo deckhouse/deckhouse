@@ -38,8 +38,8 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 15809cc09a1d17fa22c547906ca1df8847f6631e6ddb37595f450479a5bda1d8
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
+    ingress-nginx-controller.deckhouse.io/checksum: c038a9e68568a6de3fa86e5c686e9fe0d3c67355a5033a5afad2ff944c1ebdd1
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.15"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancerWithProxyProtocol
   labels:
     app: controller
@@ -93,7 +93,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller110
+        image: registry.example.com@imageHash-ingressNginx-controller115
         lifecycle:
           preStop:
             exec:

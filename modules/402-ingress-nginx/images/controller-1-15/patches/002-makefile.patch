@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index 8ff0f0ca0..bbed9acee 100644
+index 3f55f41d1..8ba9eb899 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -27,7 +27,7 @@ endif
@@ -25,17 +25,16 @@ index 8ff0f0ca0..bbed9acee 100644
  .PHONY: build
  build:  ## Build ingress controller, debug tool and pre-stop hook.
 +ifeq ($(USE_DOCKER), true)
- 	E2E_IMAGE=golang:$(GO_VERSION)-alpine3.20 USE_SHELL=/bin/sh build/run-in-docker.sh \
+ 	E2E_IMAGE=golang:$(GO_VERSION)-alpine3.23 USE_SHELL=/bin/sh build/run-in-docker.sh \
  		MAC_OS=$(MAC_OS) \
  		PKG=$(PKG) \
-@@ -118,7 +119,9 @@ build:  ## Build ingress controller, debug tool and pre-stop hook.
+@@ -118,6 +119,9 @@ build:  ## Build ingress controller, debug tool and pre-stop hook.
  		REPO_INFO=$(REPO_INFO) \
  		TAG=$(TAG) \
  		build/build.sh
--
 +else
 +	bash build/build.sh
 +endif
  
+ 
  .PHONY: clean
- clean: ## Remove .gocache directory.

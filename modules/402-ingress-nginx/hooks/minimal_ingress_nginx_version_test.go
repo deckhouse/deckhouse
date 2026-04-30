@@ -51,7 +51,7 @@ kind: IngressNginxController
 metadata:
   name: main
 spec:
-  controllerVersion: "1.10"
+  controllerVersion: "1.12"
   ingressClass: "nginx"
 `))
 			f.RunHook()
@@ -61,7 +61,7 @@ spec:
 			Expect(f).To(ExecuteSuccessfully())
 			value, exists := requirements.GetValue(minVersionValuesKey)
 			Expect(exists).To(BeTrue())
-			Expect(value).To(BeEquivalentTo("1.10.0"))
+			Expect(value).To(BeEquivalentTo("1.12.0"))
 			v, _ := requirements.GetValue(incompatibleVersionsKey)
 			Expect(v).To(BeFalse())
 		})
@@ -98,7 +98,7 @@ kind: IngressNginxController
 metadata:
   name: first
 spec:
-  controllerVersion: "1.10"
+  controllerVersion: "1.12"
   ingressClass: "test"
 ---
 apiVersion: deckhouse.io/v2
@@ -138,7 +138,7 @@ kind: IngressNginxController
 metadata:
   name: first
 spec:
-  controllerVersion: "1.10"
+  controllerVersion: "1.12"
   ingressClass: "test"
 ---
 apiVersion: deckhouse.io/v2

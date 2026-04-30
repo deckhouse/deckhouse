@@ -8,7 +8,8 @@
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
 {{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
-{{- $validationIsolationEnabled := eq $controllerVersion "1.14" }}
+{{- $validationIsolationSupported := or (eq $controllerVersion "1.14") (eq $controllerVersion "1.15") }}
+{{- $validationIsolationEnabled := and $validationIsolationSupported (hasKey $crd.spec "validationIsolationMode") }}
 {{- $fullValidation := and $validationIsolationEnabled (not (eq $validationIsolationMode "NoIsolation")) }}
 {{- $validatorServiceAccountName := "validator" }}
 {{- if $fullValidation }}

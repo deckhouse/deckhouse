@@ -217,23 +217,6 @@ func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
 			"controller_version": version,
 		})
 
-		nginxEnabledMemoryProfiling, npeFound, err := unstructured.NestedBool(controller.Spec, "nginxProfilingEnabled")
-
-		if err != nil {
-			input.Logger.Error(fmt.Sprintf("cannot get nginxProfilingEnabled from ingress controller spec: %v", err))
-			continue
-		}
-
-		if npeFound && nginxEnabledMemoryProfiling {
-			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 1, map[string]string{
-				"controller_name": controller.Name,
-			})
-		} else {
-			input.MetricsCollector.Set("d8_ingress_nginx_controller_profiling_enabled", 0, map[string]string{
-				"controller_name": controller.Name,
-			})
-		}
-
 		// fire alert if maxmindAccountID not set.
 		_, licFound, err := unstructured.NestedString(controller.Spec, "geoIP2", "maxmindLicenseKey")
 		if err != nil {
