@@ -266,7 +266,9 @@ var _ = Describe("Module :: cloud-provider-huaweicloud :: helm template ::", fun
 			Expect(caphcDeployment.Exists()).To(BeTrue())
 			Expect(caphcDeployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("caphc-controller-manager"))
 			Expect(caphcDeployment.Field("spec.template.spec.containers.0.args").String()).To(MatchYAML(`
-- --leader-elect`))
+- --leader-elect
+- --metrics-bind-address=:8080
+- --metrics-secure=false`))
 			Expect(caphcDeployment.Field("spec.template.spec.containers.0.env").String()).To(MatchYAML(`
 - name: HUAWEICLOUD_CLOUD
   valueFrom:
