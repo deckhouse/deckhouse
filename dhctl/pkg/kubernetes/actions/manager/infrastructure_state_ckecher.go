@@ -21,8 +21,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-func RestartStateExporter(ctx context.Context, kubeClProvider kubernetes.KubeClientProvider) error {
-	return log.ProcessCtx(ctx, "default", "Restart state exporter", func(ctx context.Context) error {
+func RestartStateExporter(ctx context.Context, kubeClProvider kubernetes.KubeClientProviderWithCtx) error {
+	return log.Process("default", "Restart state exporter", func() error {
 		return checkAndRestartDeployment(ctx, kubeClProvider, "terraform-state-exporter")
 	})
 }

@@ -50,6 +50,8 @@ rules:
   resources:
   - users
   - groups
+  - dexproviders
+  - useroperations
   verbs:
   - get
   - list

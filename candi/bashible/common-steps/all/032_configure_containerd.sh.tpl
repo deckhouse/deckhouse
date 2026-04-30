@@ -67,6 +67,7 @@ fi
 # generated using `containerd config migrate` by containerd version `containerd containerd.io 2.0.4 1a43cb6a1035441f9aca8f5666a9b3ef9e70ab20`
 bb-sync-file /etc/containerd/deckhouse.toml - << EOF
 version = 3
+imports = ['/etc/containerd/conf2.d/*.toml']
 root = "/var/lib/containerd"
 state = "/run/containerd"
 plugin_dir = ""
@@ -443,11 +444,8 @@ EOF
 
 additional_configs() {
   local conf_dir="$1"
-  local unusable_conf_dir="$2"
   local root_path="/etc/containerd"
   local full_conf_path="$root_path/$conf_dir"
-
-  rm -rf "$root_path/$unusable_conf_dir/"
 
   if ls "${full_conf_path}/"*.toml >/dev/null 2>/dev/null; then
     toml-merge "$root_path/deckhouse.toml" "${full_conf_path}/"*.toml -
@@ -478,18 +476,19 @@ check_additional_configs() {
   fi
 }
 
-# Check additional configs
+# Check additional configs and write final config
 {{- if eq .cri "ContainerdV2" }}
 check_additional_configs /etc/containerd/conf2.d "v2"
-containerd_toml=$(additional_configs conf2.d conf.d)
+rm -rf /etc/containerd/conf.d/
+bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed < /etc/containerd/deckhouse.toml
 {{- else if eq .cri "Containerd" }}
   {{- if .registry.registryModuleEnable }}
 check_additional_configs /etc/containerd/conf.d "v1"
   {{- end }}
-containerd_toml=$(additional_configs conf.d conf2.d)
-{{- end }}
-
+rm -rf /etc/containerd/conf2.d/
+containerd_toml=$(additional_configs conf.d)
 bb-sync-file /etc/containerd/config.toml - containerd-config-file-changed <<< "${containerd_toml}"
+{{- end }}
 
 bb-sync-file /etc/crictl.yaml - << "EOF"
 runtime-endpoint: unix:/var/run/containerd/containerd.sock

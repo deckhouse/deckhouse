@@ -26,21 +26,18 @@ import (
 
 	"github.com/name212/govalue"
 
+	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
-	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type KubeClientSwitcher struct {
@@ -207,14 +204,14 @@ func (s *KubeClientSwitcher) SwitchClientsToAnotherNodeIfNeed(ctx context.Contex
 		return nil
 	}
 
-	_, sshClient, err := s.extractClients(ctx)
+	sshClient, err := s.extractSSHClient(ctx)
 	if err != nil {
 		return err
 	}
 
 	s.debug("SwitchClientsToAnotherNodeIfNeed sshClient: %v", sshClient)
-	currentHost := sshClient.Session().CurrentHost()
-	if currentHost.IsEmpty() {
+	currentHost := session.CurrentHost(sshClient.Session())
+	if currentHost.Host == "" {
 		return fmt.Errorf("Got empty current host")
 	}
 
@@ -272,14 +269,14 @@ func (s *KubeClientSwitcher) SwitchWhenDecreaseMastersIfNeed(ctx context.Context
 		return nil
 	}
 
-	_, sshClient, err := s.extractClients(ctx)
+	sshClient, err := s.extractSSHClient(ctx)
 	if err != nil {
 		return err
 	}
 
 	s.debug("SwitchWhenDecreaseMastersIfNeed sshClient: %v", sshClient)
-	currentHost := sshClient.Session().CurrentHost()
-	if currentHost.IsEmpty() {
+	currentHost := session.CurrentHost(sshClient.Session())
+	if currentHost.Host == "" {
 		return fmt.Errorf("Got empty current host")
 	}
 
@@ -340,7 +337,12 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		return fmt.Errorf("Internal error. Empty converge state for replace client")
 	}
 
-	kubeCl, sshCl, err := s.extractClients(ctx)
+	sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
+	if err != nil {
+		return err
+	}
+
+	sshCl, err := sshProvider.Client(ctx)
 	if err != nil {
 		return err
 	}
@@ -385,13 +387,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	// also because we will use kube provider
 	// setting kube client not needed
 
-	kubeCl.KubeProxy.StopAll()
-
-	if sshclient.IsModernMode() {
-		s.debug("Stop old SSH Client: %-v\n", sshCl)
-		sshCl.Stop()
-	}
-
 	s.debug("Create new ssh client for replacing kube client")
 
 	sess := session.NewSession(session.Input{
@@ -405,23 +400,17 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 		BecomePass:     params.convergeState.NodeUserCredentials.Password,
 	})
 
-	var pkeys []session.AgentPrivateKey
-
+	pkeys := make([]session.AgentPrivateKey, 0)
 	appendPKey := params.appendPKey
 
 	if appendPKey != nil {
-		if sshclient.IsLegacyMode() {
-			pkeys = append(pkeys, *appendPKey)
-		} else {
-			pkeys = append(sshCl.PrivateKeys(), *appendPKey)
-		}
+		pkeys = append(pkeys, *appendPKey)
 	} else {
 		pkeys = sshCl.PrivateKeys()
 	}
 
-	newSSHClient := sshclient.NewClient(ctx, sess, pkeys)
+	newSSHClient, err := sshProvider.SwitchClient(ctx, sess, pkeys)
 
-	err = newSSHClient.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
@@ -433,15 +422,6 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, params repla
 	}
 
 	s.debug("Private keys refreshed for replacing kube client")
-
-	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(s.ctx.Ctx(), ssh.NewNodeInterfaceWrapper(newSSHClient))
-	if err != nil {
-		return fmt.Errorf("failed to connect to Kubernetes API: %w", err)
-	}
-
-	s.debug("connected to kube API for replacing kube client")
-
-	s.ctx.setKubeClient(newKubeClient)
 
 	if s.lockRunner != nil {
 		s.debugStartOperation("reset lock after replacing kube client")
@@ -492,7 +472,7 @@ func (s *KubeClientSwitcher) createNodeUser(ctx context.Context) (*State, error)
 	}
 
 	// check ssh client
-	_, _, err = s.extractClients(ctx)
+	_, err = s.extractSSHClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -547,12 +527,7 @@ type NodeState struct {
 func (s *KubeClientSwitcher) extractStatesFromCluster(ctx context.Context) (*NodeState, []*NodeState, error) {
 	const firstMasterSuffix = "-0"
 
-	kubeCl, _, err := s.extractClients(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	states, err := infrastructurestate.GetMasterNodesStateFromCluster(ctx, kubeCl)
+	states, err := infrastructurestate.GetMasterNodesStateFromCluster(ctx, s.ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Cannot extract control-plane node states: %w", err)
 	}
@@ -621,18 +596,18 @@ func (s *KubeClientSwitcher) isSkipOrLogStart(action string, strict bool) (bool,
 	return false, nil
 }
 
-func (s *KubeClientSwitcher) extractClients(ctx context.Context) (*kclient.KubernetesClient, node.SSHClient, error) {
-	kubeCl, err := s.ctx.KubeClientCtx(ctx)
+func (s *KubeClientSwitcher) extractSSHClient(ctx context.Context) (libcon.SSHClient, error) {
+	sshProvider, err := s.ctx.SSHProviderInitializer.GetSSHProvider(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Cannot get kube client: %w", err)
+		return nil, err
 	}
 
-	sshCl := kubeCl.NodeInterfaceAsSSHClient()
-	if govalue.IsNil(sshCl) {
-		return nil, nil, fmt.Errorf("Node interface is not ssh")
+	sshCl, err := sshProvider.Client(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	return kubeCl, sshCl, nil
+	return sshCl, nil
 }
 
 func (s *KubeClientSwitcher) debug(f string, args ...any) {

@@ -16,8 +16,8 @@ package helper
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
@@ -29,7 +29,24 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func CreateProviders(ctx context.Context, config string, logger log.Logger, isDebug bool, tmpDir string) (*providerinitializer.SSHProviderInitializer, libcon.KubeProvider, func() error, error) {
+type CreateProvidersOptions struct {
+	allowMissingHostsFromCache bool
+}
+
+type CreateProvidersOption func(*CreateProvidersOptions)
+
+func AllowMissingHostsFromCache() CreateProvidersOption {
+	return func(o *CreateProvidersOptions) {
+		o.allowMissingHostsFromCache = true
+	}
+}
+
+func CreateProviders(ctx context.Context, config string, logger log.Logger, isDebug bool, tmpDir string, opts ...CreateProvidersOption) (*providerinitializer.SSHProviderInitializer, libcon.KubeProvider, func() error, error) {
+	options := &CreateProvidersOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
 	cleanuper := callback.NewCallback()
 
 	externalLogger, ok := logger.(*log.ExternalLogger)
@@ -42,13 +59,15 @@ func CreateProviders(ctx context.Context, config string, logger log.Logger, isDe
 
 	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithConnectionConfig(config))
 	if err != nil {
-		if !strings.Contains(err.Error(), "failed to get hosts from cache") {
+		if !options.allowMissingHostsFromCache || !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
 			return nil, nil, nil, fmt.Errorf("initializing providers: %w", err)
 		}
 	}
-	cleanuper.Add(func() error {
-		return sshProviderInitializer.Cleanup(ctx)
-	})
+	if sshProviderInitializer != nil {
+		cleanuper.Add(func() error {
+			return sshProviderInitializer.Cleanup(ctx)
+		})
+	}
 
 	return sshProviderInitializer, kubeProvider, cleanuper.AsFunc(), nil
 }

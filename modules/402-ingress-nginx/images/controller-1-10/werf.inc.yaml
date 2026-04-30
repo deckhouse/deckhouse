@@ -318,6 +318,9 @@ import:
   add: /chroot
   to: /chroot
   before: setup
+  excludePaths:
+  - usr/lib64/locale
+  - usr/lib/locale
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /usr/bin/mount
   to: /usr/bin/mount
@@ -367,7 +370,7 @@ shell:
   - export LUA_PATH="/usr/local/share/luajit-2.1/?.lua;/usr/local/share/lua/5.1/?.lua;/usr/local/lib/lua/?.lua;;"
   - export LUA_CPATH="/usr/local/lib/lua/?/?.so;/usr/local/lib/lua/?.so;;"
   - cp -R /src/rootfs/etc/* /chroot/etc
-  - cp -a /usr/lib/locale/* /chroot/usr/lib/locale/
+  - mkdir -p /chroot/usr/lib/locale/C.utf8 && cp -alf /usr/lib/locale/C.utf8/. /chroot/usr/lib/locale/C.utf8/
   - rm -rf /src/rootfs/etc/
   - ln -s /usr/local/nginx/sbin/nginx /sbin/nginx
   - groupadd -g {{ $controllerUID }} {{ $controllerUser }}
@@ -420,8 +423,6 @@ shell:
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/renovate.json
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/LICENSE
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/.[^.]*
-# takes ~1GB
-  - rm -rf /chroot/usr/lib64/locale
 imageSpec:
   config:
     workingDir: /

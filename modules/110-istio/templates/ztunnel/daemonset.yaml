@@ -4,7 +4,7 @@
 {{- $revision := get $versionInfo "revision" }}
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 
-{{- if and ($.Values.istio.internal.enableAmbientMode) ($supportsAmbient) }}
+{{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
 {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1

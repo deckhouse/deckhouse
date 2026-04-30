@@ -24,12 +24,12 @@ import (
 )
 
 type HookForDestroyPipeline struct {
-	getter        kubernetes.KubeClientProvider
+	getter        kubernetes.KubeClientProviderWithCtx
 	nodeToDestroy string
 	commanderMode bool
 }
 
-func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
+func NewHookForDestroyPipeline(getter kubernetes.KubeClientProviderWithCtx, nodeToDestroy string, commanderMode bool) *HookForDestroyPipeline {
 	return &HookForDestroyPipeline{
 		getter:        getter,
 		nodeToDestroy: nodeToDestroy,
@@ -38,12 +38,16 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 }
 
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
-	err := infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
+	kubeClient, err := h.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+	err = infra_utils.TryToDrainNode(ctx, kubeClient, h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
 	if err != nil {
 		return false, err
 	}
 
-	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, kubeClient, h.nodeToDestroy)
 	if err != nil {
 		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}

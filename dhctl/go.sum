@@ -93,8 +93,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
-github.com/deckhouse/lib-connection v0.5.0 h1:8Touq02TWlBz7wmYXLWo+1wsrqzyo/mwjfpwb7fi2HU=
-github.com/deckhouse/lib-connection v0.5.0/go.mod h1:4Zhw3Jmc8L1FmeKWhqX7lzMgsa0wK1obA7hl2pTrMwQ=
+github.com/deckhouse/lib-connection v0.6.0 h1:W5piKBhHD2feRLUrj8BK00WoegRgn7s2/zJ8VQm/4Dc=
+github.com/deckhouse/lib-connection v0.6.0/go.mod h1:ajQ7a07qHeTM7eZ/0y/SlXVxmIiTADM1PpJRa85jYWE=
 github.com/deckhouse/lib-dhctl v0.17.0 h1:2bDR+kohYp3JI6pBq7T4XwEhIWuagnc39Y8Cmd186ck=
 github.com/deckhouse/lib-dhctl v0.17.0/go.mod h1:RCthjbhLf0CtgdltTmFHk+lRyjRai8BlAO7SocAYR+E=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=

@@ -322,6 +322,7 @@ func (i *actionIniter) initDirectories(dirs directoriesToInitialize) error {
 var skipTeeLoggerCommands = []string{"", grpcServerCmd, oneShotDhctlServerCmd}
 
 func (i *actionIniter) initLogger(c *kingpin.ParseContext, tmpDir string) (onShutdownFunc, error) {
+	log.SetDebugEnabled(app.IsDebug)
 	log.InitLogger(i.params.loggerType)
 	if i.params.doNotWriteDebugFile {
 		return doNothingOnShutdownFunc, nil
