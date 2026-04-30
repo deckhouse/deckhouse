@@ -1,5 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if .Values.global.enabledModules | has "cert-manager" }}
 {{- if include "publish_api_deploy_certificate" . }}
 ---
 apiVersion: cert-manager.io/v1
@@ -26,6 +27,7 @@ spec:
     {{ fail "cert-manager module must be enabled for publishAPI https SelfSigned mode" }}
     {{- end }}
   {{- end }}
+{{- end }}
 {{- end }}
 {{- if and $moduleGateway .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 ---

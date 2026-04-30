@@ -17,6 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -253,6 +255,94 @@ foo: bar
 
 			Expect(service.Field("metadata.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type").String()).To(Equal("nlb"))
 			Expect(service.Field("metadata.annotations.foo").String()).To(Equal("bar"))
+		})
+	})
+	Context("With cert-manager not (yet) enabled and SelfSigned (default)", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("global.enabledModules", []string{""})
+			hec.HelmRender()
+		})
+		It("Should deploy publish api and config export secret", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			ingress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api")
+			Expect(ingress.Field("spec.tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+	Context("With cert-manager not (yet) enabled and Global", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("global.enabledModules", []string{""})
+			hec.HelmRender()
+		})
+		It("Should deploy publish api and config export secret", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			ingress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api")
+			Expect(ingress.Field("spec.tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+	Context("With cert-manager disabled and CustomCertificate", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("global.enabledModules", []string{""})
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			hec.ValuesSetFromYaml("controlPlaneManager.internal.customCertificateData", `
+tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY
+`)
+			hec.HelmRender()
+		})
+		It("Should deploy publish api and config export secret", func() {
+			fmt.Println(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api"))
+
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			ingress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api")
+			Expect(ingress.Field("spec.tls").Exists()).To(BeTrue())
+			Expect(ingress.Field("spec.tls").Array()[0].Map()["secretName"].String()).To(Equal("kubernetes-tls-customcertificate"))
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeTrue())
+		})
+	})
+	Context("With global https Disabled", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("global.enabledModules", []string{""})
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("global.modules.https.mode", "Disabled")
+			hec.HelmRender()
+		})
+		It("Should deploy publish api and config export secret", func() {
+			fmt.Println(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api"))
+
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			ingress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api")
+			Expect(ingress.Field("spec.tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+	Context("With global https OnlyInURI", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("global.enabledModules", []string{""})
+			hec.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "Global")
+			hec.ValuesSet("global.modules.https.mode", "OnlyInURI")
+			hec.HelmRender()
+		})
+		It("Should deploy publish api and config export secret", func() {
+			fmt.Println(hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api"))
+
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+			ingress := hec.KubernetesResource("Ingress", "kube-system", "kubernetes-api")
+			Expect(ingress.Field("spec.tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Certificate", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 })
