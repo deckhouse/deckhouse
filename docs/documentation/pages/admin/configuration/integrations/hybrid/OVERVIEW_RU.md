@@ -14,11 +14,11 @@ lang: ru
 
 - [`Static`](../../../../architecture/cluster-and-infrastructure/node-management/static-nodes.html) — постоянно существующие узлы, которые создаются и обслуживаются пользователем;
 - [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) — узлы, которые DKP создаёт и удаляет автоматически через API провайдера;
-- [`CloudStatic`]((../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) — узлы, которые создаются вручную во внешней инфраструктуре и затем подключаются к кластеру.
+- [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) — узлы, которые создаются вручную во внешней инфраструктуре и затем подключаются к кластеру.
 
-В типовом сценарии сначала разворачивается кластер с `clusterType: Static`. В нём control-plane и базовые узлы размещаются на заранее подготовленных серверах или виртуальных машинах. Затем в кластере включается модуль соответствующего облачного провайдера. После этого DKP получает возможность создавать или подключать узлы во внешней инфраструктуре.
+В типовом сценарии сначала разворачивается кластер с [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype). В нём control plane и базовые узлы размещаются на заранее подготовленных серверах или виртуальных машинах. Затем в кластере включается модуль соответствующего облачного провайдера. После этого DKP получает возможность добавлять узлы из внешней инфраструктуры: создавать их автоматически через API провайдера или подключать заранее подготовленные виртуальные машины.
 
-Для автоматически создаваемых узлов используется тип `CloudEphemeral`. В этом случае параметры виртуальных машин описываются ресурсом `*InstanceClass`, а количество узлов и зоны размещения — ресурсом NodeGroup. После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
+Для автоматически создаваемых узлов параметры виртуальных машин описываются ресурсом `*InstanceClass`, а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup). После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
 
 В этом разделе описаны общие требования к гибридным кластерам, предварительная подготовка инфраструктуры и добавление узлов через поддерживаемых провайдеров.
 
@@ -42,13 +42,13 @@ lang: ru
 
 ## Гибридный кластер с Yandex Cloud
 
-Для создания гибридного кластера, объединяющего статические узлы и узлы в Yandex Cloud, выполните описанные далее шаги.
+Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в Yandex Cloud с использованием Deckhouse Kubernetes Platform (DKP).
 
 ### Предварительные требования для Yandex Cloud
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+- Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
 - Между сетью статических узлов и VPC Yandex Cloud настроена сетевая связность.
 - Узлы, создаваемые в Yandex Cloud, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
 - Выполнены требования из раздела [Авторизация в Yandex Cloud](../public/yandex/authorization.html):
@@ -243,7 +243,7 @@ lang: ru
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+- Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
 - Между сетью статических узлов и сетью виртуальных машин в VCD настроена сетевая связность.
 - Узлы, создаваемые в VCD, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
 - Выполнены требования из раздела [Подключение и авторизация в VMware vCloud Director](../virtualization/vcd/connection-and-authorization.html):
@@ -379,7 +379,7 @@ lang: ru
 
 ## Гибридный кластер с vSphere
 
-Для создания гибридного кластера, объединяющего статические узлы и узлы в VMware vSphere, выполните описанные далее шаги.
+Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в vSphere с использованием Deckhouse Kubernetes Platform (DKP).
 
 В этом сценарии исходный кластер DKP уже развёрнут как статический кластер. Control-plane остаётся на статических узлах, а новые worker-узлы создаются во vSphere через модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/).
 
@@ -389,7 +389,7 @@ lang: ru
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+- Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
 - Между сетью статических узлов и сетью виртуальных машин во vSphere настроена сетевая связность.
 - Узлы, создаваемые во vSphere, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
 - Выполнены требования из раздела [Подключение и авторизация в VMware vSphere](../virtualization/vsphere/authorization.html):
@@ -401,11 +401,11 @@ lang: ru
 
 ### Создание узлов в vSphere
 
-Для подключения уже работающего статического кластера к vCenter используйте ресурс [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-vsphere`.
+Для подключения уже работающего статического кластера к vCenter используйте ресурс [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-vsphere`]((/modules/cloud-provider-vsphere/).
 
 В параметре `spec.settings` укажите параметры доступа к vCenter, сетевые настройки, теги региона и зоны, а также SSH-ключи, которые будут добавлены на создаваемые виртуальные машины.
 
-Пример конфигурации и описание доступных параметров приведены в [примерах модуля](/modules/cloud-provider-vsphere/docs/examples.html) и в разделе [Конфигурация модуля `cloud-provider-vsphere`](/modules/cloud-provider-vsphere/configuration.html).
+Пример конфигурации и описание доступных параметров приведены в [примерах модуля](/modules/cloud-provider-vsphere/examples.html) и в разделе [Конфигурация модуля `cloud-provider-vsphere`](/modules/cloud-provider-vsphere/configuration.html).
 
 1. Создайте файл, например `vsphere-mc.yaml`, с ModuleConfig для модуля [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/):
 
@@ -454,7 +454,7 @@ lang: ru
 
 1. Дождитесь готовности модуля `cloud-provider-vsphere`:
 
-  ```shell
+   ```shell
    d8 k get moduleconfig cloud-provider-vsphere
    d8 k get pods -n d8-cloud-provider-vsphere -o wide
    ```
@@ -494,8 +494,8 @@ lang: ru
 
    Где:
 
-   - VsphereInstanceClass описывает параметры виртуальной машины, которая будет создана во vSphere;
-   - NodeGroup описывает группу узлов, которую DKP должен поддерживать в кластере;
+   - [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) описывает параметры виртуальной машины, которая будет создана во vSphere;
+   - [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает группу узлов, которую DKP должен поддерживать в кластере;
    - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через облачный провайдер;
    - `cloudInstances.classReference` указывает на VsphereInstanceClass;
    - `cloudInstances.zones` должен содержать зоны из списка `zones` в ModuleConfig.
