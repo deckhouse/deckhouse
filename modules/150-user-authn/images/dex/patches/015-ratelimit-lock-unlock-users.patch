@@ -1,43 +1,3 @@
-From 5d897d2a9720590cb5f5270c375c440be8dbad7e Mon Sep 17 00:00:00 2001
-From: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
-Date: Thu, 30 Apr 2026 14:07:16 +0300
-Subject: [PATCH] ratelimit-lock-unlock-users
-
-Signed-off-by: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
----
- cmd/dex/config.go                             |  46 ++-
- cmd/dex/serve.go                              |  20 ++
- connector/atlassiancrowd/atlassiancrowd.go    |   8 +
- connector/ldap/ldap.go                        |  10 +
- go.mod                                        |   1 +
- scripts/manifests/crds/offlinesessionses.yaml |  29 ++
- server/handlers.go                            | 139 +++++++++
- server/lockout_test.go                        | 264 ++++++++++++++++
- server/passwordpolicy.go                      |  58 ++++
- server/ratelimit.go                           | 175 +++++++++++
- server/ratelimit_test.go                      | 200 ++++++++++++
- server/server.go                              |  26 +-
- storage/ent/client/offlinesession.go          |  18 +-
- storage/ent/client/types.go                   |  13 +-
- storage/ent/db/migrate/schema.go              |   3 +
- storage/ent/db/mutation.go                    | 286 +++++++++++++++++-
- storage/ent/db/offlinesession.go              |  45 ++-
- .../ent/db/offlinesession/offlinesession.go   |  28 ++
- storage/ent/db/offlinesession/where.go        | 192 ++++++++++++
- storage/ent/db/offlinesession_create.go       |  63 ++++
- storage/ent/db/offlinesession_update.go       | 177 +++++++++++
- storage/ent/db/runtime.go                     |   8 +
- storage/ent/schema/offlinesession.go          |   7 +
- storage/etcd/types.go                         |  45 +--
- storage/kubernetes/types.go                   |  45 +--
- storage/sql/crud.go                           |  21 +-
- storage/sql/migrate.go                        |  10 +
- storage/storage.go                            |  16 +
- 28 files changed, 1878 insertions(+), 75 deletions(-)
- create mode 100644 server/lockout_test.go
- create mode 100644 server/ratelimit.go
- create mode 100644 server/ratelimit_test.go
-
 diff --git a/cmd/dex/config.go b/cmd/dex/config.go
 index 0c4f7f55..7976877e 100644
 --- a/cmd/dex/config.go
@@ -202,18 +162,6 @@ index 7788ce16..62cb2fe3 100644
  		return connector.Identity{}, false, nil
  	}
  
-diff --git a/go.mod b/go.mod
-index 550943af..6a39f141 100644
---- a/go.mod
-+++ b/go.mod
-@@ -39,6 +39,7 @@ require (
- 	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741
- 	golang.org/x/net v0.48.0
- 	golang.org/x/oauth2 v0.34.0
-+	golang.org/x/time v0.12.0
- 	google.golang.org/api v0.248.0
- 	google.golang.org/grpc v1.79.3
- 	google.golang.org/protobuf v1.36.10
 diff --git a/scripts/manifests/crds/offlinesessionses.yaml b/scripts/manifests/crds/offlinesessionses.yaml
 index e8e5a783..e04ff083 100644
 --- a/scripts/manifests/crds/offlinesessionses.yaml
@@ -792,10 +740,10 @@ index ea87beb5..b007f2d2 100644
  		return false
 diff --git a/server/ratelimit.go b/server/ratelimit.go
 new file mode 100644
-index 00000000..59fc37d1
+index 00000000..9534587d
 --- /dev/null
 +++ b/server/ratelimit.go
-@@ -0,0 +1,175 @@
+@@ -0,0 +1,288 @@
 +package server
 +
 +import (
@@ -804,15 +752,17 @@ index 00000000..59fc37d1
 +	"strings"
 +	"sync"
 +	"time"
-+
-+	"golang.org/x/time/rate"
 +)
 +
 +// IPRateLimiter is an in-memory token-bucket rate limiter keyed by client IP.
 +//
 +// It is intended for protecting brute-force-prone endpoints (password login
-+// form, token endpoint). Buckets are evicted after a TTL of inactivity to
-+// keep memory bounded in the face of botnet-scale unique IPs.
++// form, token endpoint). The Middleware applies the limit only to failed
++// authentication responses (HTTP 4xx/5xx): tokens reserved before invoking
++// the wrapped handler are released back to the bucket on success (2xx/3xx),
++// so legitimate traffic does not consume the per-IP budget. Buckets are
++// evicted after a TTL of inactivity to keep memory bounded in the face of
++// botnet-scale unique IPs.
 +//
 +// In HA setups (multiple Dex replicas) each instance maintains its own
 +// counters. The effective per-IP rate is therefore N times higher, where
@@ -820,9 +770,9 @@ index 00000000..59fc37d1
 +// when paired with account-level lockout; for stricter guarantees use an
 +// edge rate limiter (ingress) or a shared store (out of scope here).
 +type IPRateLimiter struct {
-+	limit rate.Limit
-+	burst int
-+	ttl   time.Duration
++	ratePerSec float64 // sustainable refill rate, tokens per second
++	burst      float64 // bucket capacity
++	ttl        time.Duration
 +
 +	mu       sync.Mutex
 +	limiters map[string]*ipBucket
@@ -831,20 +781,25 @@ index 00000000..59fc37d1
 +	stopCh   chan struct{}
 +}
 +
++// ipBucket holds a per-IP token-bucket state. tokens is a fractional balance
++// in [0, burst]; lastRefill is the wall-clock instant the bucket was last
++// updated. Access must be guarded by IPRateLimiter.mu.
 +type ipBucket struct {
-+	limiter  *rate.Limiter
-+	lastSeen time.Time
++	tokens     float64
++	lastRefill time.Time
++	lastSeen   time.Time
 +}
 +
 +// NewIPRateLimiter constructs a per-IP rate limiter.
 +//
-+// requestsPerMinute is the sustainable rate per IP. burst is the bucket size
-+// (allowed traffic burst before throttling). ttl is how long to retain an
-+// inactive bucket before evicting it. Non-positive values are replaced with
-+// safe defaults.
++// requestsPerMinute is the sustainable rate of failed authentication
++// responses tolerated per IP. burst is the bucket capacity (allowed burst
++// of failures before throttling). ttl is how long to retain an inactive
++// bucket before evicting it. Non-positive values are replaced with safe
++// defaults.
 +func NewIPRateLimiter(requestsPerMinute, burst int, ttl time.Duration) *IPRateLimiter {
 +	if requestsPerMinute <= 0 {
-+		requestsPerMinute = 30
++		requestsPerMinute = 10
 +	}
 +	if burst <= 0 {
 +		burst = 10
@@ -853,11 +808,11 @@ index 00000000..59fc37d1
 +		ttl = 10 * time.Minute
 +	}
 +	rl := &IPRateLimiter{
-+		limit:    rate.Limit(float64(requestsPerMinute) / 60.0),
-+		burst:    burst,
-+		ttl:      ttl,
-+		limiters: make(map[string]*ipBucket),
-+		stopCh:   make(chan struct{}),
++		ratePerSec: float64(requestsPerMinute) / 60.0,
++		burst:      float64(burst),
++		ttl:        ttl,
++		limiters:   make(map[string]*ipBucket),
++		stopCh:     make(chan struct{}),
 +	}
 +	go rl.janitor()
 +	return rl
@@ -868,9 +823,34 @@ index 00000000..59fc37d1
 +	rl.stopOnce.Do(func() { close(rl.stopCh) })
 +}
 +
-+// Allow reports whether a request from the given IP may proceed and consumes
-+// a token if so. An empty IP is treated as a single shared bucket - this is
-+// safer than letting unkeyed traffic bypass the limiter.
++// refillLocked brings the bucket's token balance up to the given instant.
++// rl.mu must be held by the caller.
++func (rl *IPRateLimiter) refillLocked(b *ipBucket, now time.Time) {
++	if elapsed := now.Sub(b.lastRefill).Seconds(); elapsed > 0 {
++		b.tokens += elapsed * rl.ratePerSec
++		if b.tokens > rl.burst {
++			b.tokens = rl.burst
++		}
++		b.lastRefill = now
++	}
++}
++
++// getOrCreateLocked returns the bucket for ip, creating a freshly filled one
++// on first contact. rl.mu must be held by the caller.
++func (rl *IPRateLimiter) getOrCreateLocked(ip string, now time.Time) *ipBucket {
++	b, ok := rl.limiters[ip]
++	if !ok {
++		b = &ipBucket{tokens: rl.burst, lastRefill: now}
++		rl.limiters[ip] = b
++	}
++	b.lastSeen = now
++	return b
++}
++
++// Allow consumes a single token from the IP's bucket and reports whether
++// one was available. It is exposed primarily for tests and diagnostics; the
++// HTTP middleware uses reserve()/releaseReservation() to enforce a
++// failure-only policy.
 +func (rl *IPRateLimiter) Allow(ip string) bool {
 +	if ip == "" {
 +		ip = "unknown"
@@ -878,40 +858,112 @@ index 00000000..59fc37d1
 +	rl.mu.Lock()
 +	defer rl.mu.Unlock()
 +
-+	b, ok := rl.limiters[ip]
-+	if !ok {
-+		b = &ipBucket{limiter: rate.NewLimiter(rl.limit, rl.burst)}
-+		rl.limiters[ip] = b
++	now := time.Now()
++	b := rl.getOrCreateLocked(ip, now)
++	rl.refillLocked(b, now)
++
++	if b.tokens >= 1.0 {
++		b.tokens -= 1.0
++		return true
 +	}
-+	b.lastSeen = time.Now()
-+	return b.limiter.Allow()
++	return false
 +}
 +
-+// retryAfter returns how long to wait for the next available token for the
-+// given IP, without consuming one. Returns zero if no bucket exists yet.
-+func (rl *IPRateLimiter) retryAfter(ip string) time.Duration {
++// reserve attempts to take a token from the bucket of the given IP.
++//
++// On success ok is true and the caller may later return the token to the
++// bucket via releaseReservation(ip) (used to refund successful HTTP
++// responses). On rejection ok is false and retry is the time until enough
++// tokens accumulate for one more request.
++//
++// An empty IP is mapped to a single shared bucket — this is safer than
++// letting unkeyed traffic bypass the limiter.
++func (rl *IPRateLimiter) reserve(ip string) (retry time.Duration, ok bool) {
 +	if ip == "" {
 +		ip = "unknown"
 +	}
 +	rl.mu.Lock()
 +	defer rl.mu.Unlock()
-+	b, ok := rl.limiters[ip]
-+	if !ok {
-+		return 0
++
++	now := time.Now()
++	b := rl.getOrCreateLocked(ip, now)
++	rl.refillLocked(b, now)
++
++	if b.tokens >= 1.0 {
++		b.tokens -= 1.0
++		return 0, true
 +	}
-+	r := b.limiter.Reserve()
-+	d := r.Delay()
-+	r.Cancel()
-+	return d
++	if rl.ratePerSec <= 0 {
++		return time.Hour, false
++	}
++	deficit := 1.0 - b.tokens
++	wait := time.Duration(deficit / rl.ratePerSec * float64(time.Second))
++	return wait, false
 +}
 +
-+// Middleware enforces the per-IP rate limit on the wrapped handler. Requests
-+// over the limit receive HTTP 429 and a Retry-After header.
++// releaseReservation returns one token to the IP's bucket. It is the
++// counterpart to a successful reserve() call. It is safe to call when the
++// bucket has since been evicted — the operation is then a no-op.
++func (rl *IPRateLimiter) releaseReservation(ip string) {
++	if ip == "" {
++		ip = "unknown"
++	}
++	rl.mu.Lock()
++	defer rl.mu.Unlock()
++
++	b, ok := rl.limiters[ip]
++	if !ok {
++		return
++	}
++	now := time.Now()
++	rl.refillLocked(b, now)
++	b.tokens += 1.0
++	if b.tokens > rl.burst {
++		b.tokens = rl.burst
++	}
++	b.lastSeen = now
++}
++
++// statusRecorder captures the HTTP status code written by a downstream
++// handler so the rate-limit middleware can decide whether to charge or
++// release a previously reserved token.
++type statusRecorder struct {
++	http.ResponseWriter
++	status int
++}
++
++// WriteHeader records the response status before delegating to the wrapped
++// ResponseWriter. The first call wins; subsequent calls are forwarded as-is.
++func (sr *statusRecorder) WriteHeader(code int) {
++	if sr.status == 0 {
++		sr.status = code
++	}
++	sr.ResponseWriter.WriteHeader(code)
++}
++
++// Write ensures we record a default 200 status if the handler writes the
++// body without an explicit WriteHeader call (matching net/http semantics).
++func (sr *statusRecorder) Write(b []byte) (int, error) {
++	if sr.status == 0 {
++		sr.status = http.StatusOK
++	}
++	return sr.ResponseWriter.Write(b)
++}
++
++// Middleware enforces a per-IP rate limit on failed authentication responses
++// produced by the wrapped handler. Tokens are reserved before invoking the
++// handler and released back to the bucket if the response status is < 400,
++// so successful logins, successful token issuance and other 2xx/3xx flows
++// never consume the per-IP budget.
++//
++// Over-limit requests receive HTTP 429 and a Retry-After header without
++// reaching the wrapped handler.
 +func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 +	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 +		ip := remoteIPFromRequest(r)
-+		if !rl.Allow(ip) {
-+			retry := rl.retryAfter(ip)
++
++		retry, allowed := rl.reserve(ip)
++		if !allowed {
 +			if retry < time.Second {
 +				retry = time.Second
 +			}
@@ -919,7 +971,16 @@ index 00000000..59fc37d1
 +			http.Error(w, "Too many requests", http.StatusTooManyRequests)
 +			return
 +		}
-+		next.ServeHTTP(w, r)
++
++		sr := &statusRecorder{ResponseWriter: w}
++		next.ServeHTTP(sr, r)
++
++		// 2xx/3xx — successful or in-flight auth flow (e.g. redirect to
++		// approval page); refund the reserved token so legitimate users
++		// do not exhaust their IP budget over time.
++		if sr.status == 0 || sr.status < 400 {
++			rl.releaseReservation(ip)
++		}
 +	})
 +}
 +
@@ -973,10 +1034,10 @@ index 00000000..59fc37d1
 +}
 diff --git a/server/ratelimit_test.go b/server/ratelimit_test.go
 new file mode 100644
-index 00000000..950b4ceb
+index 00000000..ed05a67c
 --- /dev/null
 +++ b/server/ratelimit_test.go
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,285 @@
 +package server
 +
 +import (
@@ -1067,7 +1128,10 @@ index 00000000..950b4ceb
 +	rl.Stop()
 +}
 +
-+func TestIPRateLimiter_MiddlewareReturns429(t *testing.T) {
++// TestIPRateLimiter_MiddlewareSuccessNeverExhausts ensures that 2xx/3xx
++// responses do NOT consume tokens — even an unbounded number of successful
++// requests must keep flowing through the middleware unhindered.
++func TestIPRateLimiter_MiddlewareSuccessNeverExhausts(t *testing.T) {
 +	rl := NewIPRateLimiter(60, 2, time.Minute)
 +	defer rl.Stop()
 +
@@ -1077,20 +1141,50 @@ index 00000000..950b4ceb
 +		w.WriteHeader(http.StatusOK)
 +	}))
 +
++	for i := 0; i < 50; i++ {
++		r := httptest.NewRequest(http.MethodPost, "/token", nil)
++		r.RemoteAddr = "10.0.0.1:55555"
++		w := httptest.NewRecorder()
++		h.ServeHTTP(w, r)
++		if w.Code != http.StatusOK {
++			t.Fatalf("successful call %d: got %d, want 200 (success must not exhaust the bucket)", i, w.Code)
++		}
++	}
++	if got := atomic.LoadInt32(&served); got != 50 {
++		t.Fatalf("downstream handler hit %d times, want 50", got)
++	}
++}
++
++// TestIPRateLimiter_MiddlewareFailureBudgetReturns429 ensures that only
++// failure responses (>= 400) charge tokens, and once the burst is exhausted
++// the next failure is rejected before reaching the handler with HTTP 429
++// and Retry-After set.
++func TestIPRateLimiter_MiddlewareFailureBudgetReturns429(t *testing.T) {
++	rl := NewIPRateLimiter(60, 2, time.Minute)
++	defer rl.Stop()
++
++	var served int32
++	h := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		atomic.AddInt32(&served, 1)
++		w.WriteHeader(http.StatusUnauthorized)
++	}))
++
 +	doCall := func() *httptest.ResponseRecorder {
 +		r := httptest.NewRequest(http.MethodPost, "/auth/local/login", nil)
-+		r.RemoteAddr = "10.0.0.1:55555"
++		r.RemoteAddr = "10.0.0.2:55555"
 +		w := httptest.NewRecorder()
 +		h.ServeHTTP(w, r)
 +		return w
 +	}
 +
++	// burst=2: first two failures pass through and consume tokens.
 +	for i := 0; i < 2; i++ {
-+		if got := doCall().Code; got != http.StatusOK {
-+			t.Fatalf("call %d: got %d, want 200", i, got)
++		if got := doCall().Code; got != http.StatusUnauthorized {
++			t.Fatalf("failure call %d: got %d, want 401", i, got)
 +		}
 +	}
 +
++	// Third failure is rejected by the middleware before reaching the handler.
 +	w := doCall()
 +	if w.Code != http.StatusTooManyRequests {
 +		t.Fatalf("3rd call: got %d, want 429", w.Code)
@@ -1102,7 +1196,57 @@ index 00000000..950b4ceb
 +		t.Fatalf("Retry-After = %q, want integer >= 1", w.Header().Get("Retry-After"))
 +	}
 +	if got := atomic.LoadInt32(&served); got != 2 {
-+		t.Fatalf("downstream handler hit %d times, want 2", got)
++		t.Fatalf("downstream handler hit %d times, want 2 (third call must be short-circuited)", got)
++	}
++}
++
++// TestIPRateLimiter_MiddlewareSuccessRefundsToken proves that a successful
++// response in between failures returns its reserved token to the bucket: a
++// success interleaved with failures lets the IP perform more total failures
++// than the static burst size allows.
++//
++// Note: the middleware short-circuits with 429 *before* the handler runs
++// when the bucket is empty, so a 200 cannot rescue an already-depleted
++// bucket. The interleaving below tests refund while the bucket still has
++// capacity, which is the realistic case.
++func TestIPRateLimiter_MiddlewareSuccessRefundsToken(t *testing.T) {
++	rl := NewIPRateLimiter(60, 2, time.Minute)
++	defer rl.Stop()
++
++	var status atomic.Int32
++
++	h := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.WriteHeader(int(status.Load()))
++	}))
++
++	doCall := func() int {
++		r := httptest.NewRequest(http.MethodPost, "/auth/local/login", nil)
++		r.RemoteAddr = "10.0.0.3:55555"
++		w := httptest.NewRecorder()
++		h.ServeHTTP(w, r)
++		return w.Code
++	}
++
++	// burst=2 → bucket starts at 2 tokens. We issue 5 successes first:
++	// without refund those alone would exhaust the bucket (only 2 tokens
++	// available), but with refund the bucket stays full. We then prove
++	// it stayed full by running 2 failures (consuming the full burst)
++	// followed by a third failure that must hit 429.
++	status.Store(http.StatusOK)
++	for i := 0; i < 5; i++ {
++		if got := doCall(); got != http.StatusOK {
++			t.Fatalf("success %d: got %d, want 200 (success must not consume the bucket)", i, got)
++		}
++	}
++
++	status.Store(http.StatusUnauthorized)
++	for i := 0; i < 2; i++ {
++		if got := doCall(); got != http.StatusUnauthorized {
++			t.Fatalf("failure %d after refunded successes: got %d, want 401", i, got)
++		}
++	}
++	if got := doCall(); got != http.StatusTooManyRequests {
++		t.Fatalf("post-exhaustion: got %d, want 429", got)
 +	}
 +}
 +
@@ -1110,8 +1254,10 @@ index 00000000..950b4ceb
 +	rl := NewIPRateLimiter(60, 1, time.Minute)
 +	defer rl.Stop()
 +
++	// Use a failing handler so the rate-limit budget is actually consumed —
++	// the middleware refunds tokens for 2xx/3xx responses.
 +	h := rl.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-+		w.WriteHeader(http.StatusOK)
++		w.WriteHeader(http.StatusUnauthorized)
 +	}))
 +
 +	// Two requests from different RemoteAddr but the same context IP must
@@ -1125,8 +1271,8 @@ index 00000000..950b4ceb
 +
 +	w1 := httptest.NewRecorder()
 +	h.ServeHTTP(w1, makeReq("1.1.1.1:1", "203.0.113.7"))
-+	if w1.Code != http.StatusOK {
-+		t.Fatalf("first call: got %d, want 200", w1.Code)
++	if w1.Code != http.StatusUnauthorized {
++		t.Fatalf("first call: got %d, want 401", w1.Code)
 +	}
 +
 +	w2 := httptest.NewRecorder()
@@ -2656,6 +2802,4 @@ index c4fe7f26..1f331103 100644
  }
  
  // Password is an email to password mapping managed by the storage.
--- 
-2.53.0
 

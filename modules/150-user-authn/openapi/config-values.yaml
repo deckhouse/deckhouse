@@ -152,9 +152,11 @@ properties:
           applyToConnectors:
             type: array
             description: |
-              Authentication connector types the lockout applies to.
+              External (non-local) connector types the lockout additionally applies to.
 
-              When omitted, the policy is enforced for the built-in `Local` connector only (the previous behavior).
+              The built-in `Local` connector is always covered by the lockout policy when this section is configured —
+              its state lives in the `Password` resource and does not need to be opted in here.
+
               For the listed external connectors, the failed-attempt counter and the lock state are tracked in the
               `OfflineSessions` resource of the corresponding user (one object per `(user, connector)` pair).
 
@@ -162,7 +164,7 @@ properties:
             uniqueItems: true
             items:
               type: string
-              enum: ["Local", "LDAP", "Crowd"]
+              enum: ["LDAP", "Crowd"]
   rateLimit:
     type: object
     default: {}
@@ -171,9 +173,16 @@ properties:
 
       When enabled, a per-IP token-bucket rate limiter is installed in front of `POST /token`
       and `POST /auth/{connector}/login`. The client IP is taken from the `X-Real-IP` header
-      (set by the platform Ingress). Limits are tracked in memory in each Dex replica; in HA
-      setups the effective per-IP rate is multiplied by the number of replicas, which is fine
-      as a brute-force backstop and is complemented by the account-level lockout.
+      (set by the platform Ingress).
+
+      The limit applies to **failed authentication attempts only**: tokens reserved before
+      the request reaches the Dex handler are returned to the bucket on a successful response
+      (HTTP 2xx/3xx), so successful logins and refresh-token exchanges do not consume the
+      per-IP budget.
+
+      Limits are tracked in memory in each Dex replica; in HA setups the effective per-IP
+      rate is multiplied by the number of replicas, which is fine as a brute-force backstop
+      and is complemented by the account-level lockout.
     properties:
       enabled:
         type: boolean
@@ -184,20 +193,24 @@ properties:
         type: object
         default: {}
         description: |
-          Per-source-IP token-bucket configuration.
+          Per-source-IP token-bucket configuration. Both `requestsPerMinute` and `burst`
+          count failed authentication responses only.
         properties:
           requestsPerMinute:
             type: integer
-            default: 30
+            default: 10
             minimum: 1
             description: |
-              Sustainable steady-state rate per IP, in requests per minute.
+              Sustainable steady-state rate of failed authentication responses tolerated
+              per IP, in failures per minute. Successful logins and refresh-token exchanges
+              do not consume the budget.
           burst:
             type: integer
             default: 10
             minimum: 1
             description: |
-              Maximum bucket size, i.e. how many requests an IP may make in a short burst before being throttled.
+              Maximum bucket size, i.e. how many failed authentication responses an IP may
+              produce in a short burst before being throttled.
   staticUsers2FA:
     type: object
     default: {}
