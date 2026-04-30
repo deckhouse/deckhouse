@@ -26,6 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -114,7 +116,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	operations := &controlplanev1alpha1.ControlPlaneOperationList{}
-	if err := r.client.List(ctx, operations); err != nil {
+	if err := r.client.List(ctx, operations, operationsMatchingReadyNodes(nodes)); err != nil {
 		return reconcile.Result{}, err
 	}
 	if len(operations.Items) == 0 {
@@ -141,19 +143,55 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 func (r *reconciler) getNodeCounts(ctx context.Context) (nodeCounts, error) {
-	var nodes nodeCounts
+	nodes := nodeCounts{
+		readyNodeNames: make(map[string]struct{}),
+	}
 
 	masterList := &corev1.NodeList{}
 	if err := r.client.List(ctx, masterList, client.MatchingLabels{constants.ControlPlaneNodeLabelKey: ""}); err != nil {
 		return nodeCounts{}, fmt.Errorf("failed to list master nodes: %w", err)
 	}
-	nodes.masters = len(masterList.Items)
+	for _, node := range masterList.Items {
+		if isNodeReady(node) {
+			nodes.masters++
+			nodes.readyNodeNames[node.Name] = struct{}{}
+		}
+	}
 
 	arbiterList := &corev1.NodeList{}
 	if err := r.client.List(ctx, arbiterList, client.MatchingLabels{constants.EtcdArbiterNodeLabelKey: ""}); err != nil {
 		return nodeCounts{}, fmt.Errorf("failed to list arbiter nodes: %w", err)
 	}
-	nodes.arbiters = len(arbiterList.Items)
+	for _, node := range arbiterList.Items {
+		if isNodeReady(node) {
+			nodes.arbiters++
+			nodes.readyNodeNames[node.Name] = struct{}{}
+		}
+	}
 
 	return nodes, nil
+}
+
+func operationsMatchingReadyNodes(nodes nodeCounts) client.ListOption {
+	nodeNames := make([]string, 0, len(nodes.readyNodeNames))
+	for nodeName := range nodes.readyNodeNames {
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	requirement, err := labels.NewRequirement(constants.ControlPlaneNodeNameLabelKey, selection.In, nodeNames)
+	if err != nil {
+		return client.MatchingLabels{}
+	}
+
+	return client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(*requirement)}
+}
+
+func isNodeReady(node corev1.Node) bool {
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+
+	return false
 }

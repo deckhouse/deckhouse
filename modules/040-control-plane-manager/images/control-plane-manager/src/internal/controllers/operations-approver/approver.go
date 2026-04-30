@@ -261,8 +261,9 @@ func (c *component) hasQueuedOnNode(nodeName string) bool {
 }
 
 type nodeCounts struct {
-	masters  int
-	arbiters int
+	masters        int
+	arbiters       int
+	readyNodeNames map[string]struct{} // for filtering operations for ready nodes only
 }
 
 func (c nodeCounts) isZero() bool {
