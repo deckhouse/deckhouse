@@ -1140,6 +1140,9 @@ apiserver:
 
 				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
 				Expect(supCR.Exists()).To(BeTrue())
+				Expect(supCR.Field("rules").String()).To(ContainSubstring("control-plane.deckhouse.io"))
+				Expect(supCR.Field("rules").String()).To(ContainSubstring("controlplanenodes"))
+				Expect(supCR.Field("rules").String()).To(ContainSubstring("controlplaneoperations"))
 			})
 		})
 	})

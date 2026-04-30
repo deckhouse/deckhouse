@@ -900,6 +900,42 @@ alerts:
         Controller pod isn't running on node {{ $labels.node }}.
       severity: "6"
       markupFormat: markdown
+    - name: D8ControlPlaneNodeMaintenanceModeEnabled
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane node `{{ $labels.node }}` has maintenance mode enabled with label `control-plane-manager.deckhouse.io/maintenance`.
+        While this label is present, the control plane is not managed by `control-plane-manager`.
+
+        If maintenance is complete, remove the label:
+
+        ```bash
+        d8 k label cpn {{ $labels.node }} control-plane-manager.deckhouse.io/maintenance-
+        ```
+      summary: |
+        Maintenance mode is enabled for control-plane node {{ $labels.node }}.
+      severity: "4"
+      markupFormat: markdown
+    - name: D8ControlPlaneOperationRunningTooLong
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been running or retrying for more than 10 minutes.
+
+        Check the corresponding `ControlPlaneOperation` and logs of `d8-control-plane-manager` pod on that node:
+
+        ```bash
+        d8 k get cpo {{ $labels.operation }} -o yaml
+        d8 k -n kube-system logs -l app=d8-control-plane-manager --field-selector spec.nodeName={{ $labels.node }}
+        ```
+      summary: |
+        Control-plane operation {{ $labels.operation }} for {{ $labels.component }} on node {{ $labels.node }} runs or retries longer than 10 minutes.
+      severity: "4"
+      markupFormat: markdown
     - name: D8CustomPrometheusRuleFoundInCluster
       sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
       moduleUrl: 340-monitoring-custom

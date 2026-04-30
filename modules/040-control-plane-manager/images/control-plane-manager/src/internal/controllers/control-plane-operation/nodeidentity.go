@@ -25,12 +25,13 @@ import (
 
 // NodeIdentity holds node-level env and configuration once at startup.
 type NodeIdentity struct {
-	Name              string
-	AdvertiseIP       string
-	ClusterDomain     string
-	ServiceSubnetCIDR string
-	HomeDir           string
-	KubeconfigDir     string
+	Name                string
+	AdvertiseIP         string
+	ClusterDomain       string
+	ServiceSubnetCIDR   string
+	HomeDir             string
+	KubeconfigDir       string
+	NodeAdminKubeconfig bool
 }
 
 func nodeIdentityFromEnv() (NodeIdentity, error) {
@@ -51,12 +52,18 @@ func nodeIdentityFromEnv() (NodeIdentity, error) {
 
 	homeDir, _ := os.LookupEnv("HOME")
 
+	nodeAdminKubeconfig := true
+	if v, ok := os.LookupEnv("NODE_ADMIN_KUBECONFIG"); ok && v == "false" {
+		nodeAdminKubeconfig = false
+	}
+
 	return NodeIdentity{
-		Name:              name,
-		AdvertiseIP:       ip,
-		ClusterDomain:     os.Getenv("CLUSTER_DOMAIN"),
-		ServiceSubnetCIDR: os.Getenv("SERVICE_SUBNET_CIDR"),
-		HomeDir:           homeDir,
-		KubeconfigDir:     kubeconfigDir,
+		Name:                name,
+		AdvertiseIP:         ip,
+		ClusterDomain:       os.Getenv("CLUSTER_DOMAIN"),
+		ServiceSubnetCIDR:   os.Getenv("SERVICE_SUBNET_CIDR"),
+		HomeDir:             homeDir,
+		KubeconfigDir:       kubeconfigDir,
+		NodeAdminKubeconfig: nodeAdminKubeconfig,
 	}, nil
 }

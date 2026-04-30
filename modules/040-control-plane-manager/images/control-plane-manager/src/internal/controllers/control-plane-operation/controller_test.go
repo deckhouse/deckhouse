@@ -49,40 +49,36 @@ func init() {
 // mocks
 
 type execCall struct {
-	name      controlplanev1alpha1.CommandName
+	name      controlplanev1alpha1.StepName
 	component controlplanev1alpha1.OperationComponent
 }
 
 type mockCommand struct {
-	name            controlplanev1alpha1.CommandName
-	result          reconcile.Result
-	err             error
-	completedResult string
-	calls           *[]execCall
+	name   controlplanev1alpha1.StepName
+	result StepResult
+	err    error
+	calls  *[]execCall
 }
 
-func (m *mockCommand) Execute(_ context.Context, env *CommandEnv, _ *log.Logger) (reconcile.Result, error) {
+func (m *mockCommand) Execute(_ context.Context, env *StepEnv, _ *log.Logger) (StepResult, error) {
 	*m.calls = append(*m.calls, execCall{name: m.name, component: env.State.Raw().Spec.Component})
-	if m.completedResult != "" {
-		env.State.MarkCommandCompletedWithMessage(m.name, m.completedResult)
-	}
 	return m.result, m.err
 }
 
-func newMockOK(calls *[]execCall, name controlplanev1alpha1.CommandName) Command {
-	return &mockCommand{name: name, calls: calls}
+func newMockOK(calls *[]execCall, name controlplanev1alpha1.StepName) Step {
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeCompleted}, calls: calls}
 }
 
-func newMockError(calls *[]execCall, name controlplanev1alpha1.CommandName, err error) Command {
+func newMockError(calls *[]execCall, name controlplanev1alpha1.StepName, err error) Step {
 	return &mockCommand{name: name, err: err, calls: calls}
 }
 
-func newMockRequeue(calls *[]execCall, name controlplanev1alpha1.CommandName, after time.Duration) Command {
-	return &mockCommand{name: name, result: reconcile.Result{RequeueAfter: after}, calls: calls}
+func newMockRequeue(calls *[]execCall, name controlplanev1alpha1.StepName, after time.Duration) Step {
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomePending, RequeueAfter: after}, calls: calls}
 }
 
-func newMockCompleteWithMessage(calls *[]execCall, name controlplanev1alpha1.CommandName, message string) Command {
-	return &mockCommand{name: name, completedResult: message, calls: calls}
+func newMockCompleteWithMessage(calls *[]execCall, name controlplanev1alpha1.StepName, message string) Step {
+	return &mockCommand{name: name, result: StepResult{Outcome: OutcomeCompleted, Message: message}, calls: calls}
 }
 
 // helpers
@@ -111,7 +107,7 @@ func testPKISecret() *corev1.Secret {
 	}
 }
 
-func testOperation(component controlplanev1alpha1.OperationComponent, commands []controlplanev1alpha1.CommandName, approved bool) *controlplanev1alpha1.ControlPlaneOperation {
+func testOperation(component controlplanev1alpha1.OperationComponent, steps []controlplanev1alpha1.StepName, approved bool) *controlplanev1alpha1.ControlPlaneOperation {
 	desiredConfigChecksum, desiredPKIChecksum, desiredCAChecksum := desiredChecksumsForComponent(component)
 
 	return &controlplanev1alpha1.ControlPlaneOperation{
@@ -119,13 +115,13 @@ func testOperation(component controlplanev1alpha1.OperationComponent, commands [
 			Name: "test-op",
 			Labels: map[string]string{
 				constants.ControlPlaneNodeNameLabelKey:  testNodeName,
-				constants.ControlPlaneComponentLabelKey: string(component),
+				constants.ControlPlaneComponentLabelKey: component.LabelValue(),
 			},
 		},
 		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
 			NodeName:              testNodeName,
 			Component:             component,
-			Commands:              commands,
+			Steps:                 steps,
 			DesiredConfigChecksum: desiredConfigChecksum,
 			DesiredPKIChecksum:    desiredPKIChecksum,
 			DesiredCAChecksum:     desiredCAChecksum,
@@ -138,35 +134,27 @@ func desiredChecksumsForComponent(component controlplanev1alpha1.OperationCompon
 	cpmSecretData := testCPMSecret().Data
 	pkiSecretData := testPKISecret().Data
 
-	switch component {
-	case controlplanev1alpha1.OperationComponentHotReload:
-		configChecksum := checksum.HotReloadChecksum(cpmSecretData)
-		return configChecksum, "", ""
-	case controlplanev1alpha1.OperationComponentCertObserver:
-		return "", "", ""
-	default:
-		podName := component.PodComponentName()
-		configChecksum, err := checksum.ComponentChecksum(cpmSecretData, podName)
-		if err != nil {
-			panic(fmt.Sprintf("failed to compute config checksum in test helper: %v", err))
-		}
-		pkiChecksum, err := checksum.ComponentPKIChecksum(cpmSecretData, podName)
-		if err != nil {
-			panic(fmt.Sprintf("failed to compute pki checksum in test helper: %v", err))
-		}
-		caChecksum, err := checksum.PKIChecksum(pkiSecretData)
-		if err != nil {
-			panic(fmt.Sprintf("failed to compute ca checksum in test helper: %v", err))
-		}
-		return configChecksum, pkiChecksum, caChecksum
+	podName := component.PodComponentName()
+	configChecksum, err := checksum.ComponentChecksum(cpmSecretData, podName)
+	if err != nil {
+		panic(fmt.Sprintf("failed to compute config checksum in test helper: %v", err))
 	}
+	pkiChecksum, err := checksum.ComponentPKIChecksum(cpmSecretData, podName)
+	if err != nil {
+		panic(fmt.Sprintf("failed to compute pki checksum in test helper: %v", err))
+	}
+	caChecksum, err := checksum.PKIChecksum(pkiSecretData)
+	if err != nil {
+		panic(fmt.Sprintf("failed to compute ca checksum in test helper: %v", err))
+	}
+	return configChecksum, pkiChecksum, caChecksum
 }
 
 // buildTestCase builds a mock registry and a matching approved operation from the given mocks.
-// Command names are derived from the mocks — no need to repeat them in both places.
-func buildTestCase(component controlplanev1alpha1.OperationComponent, mocks ...Command) (map[controlplanev1alpha1.CommandName]Command, *controlplanev1alpha1.ControlPlaneOperation) {
-	cmds := make(map[controlplanev1alpha1.CommandName]Command, len(mocks))
-	names := make([]controlplanev1alpha1.CommandName, 0, len(mocks))
+// Step names are derived from the mocks — no need to repeat them in both places.
+func buildTestCase(component controlplanev1alpha1.OperationComponent, mocks ...Step) (map[controlplanev1alpha1.StepName]Step, *controlplanev1alpha1.ControlPlaneOperation) {
+	cmds := make(map[controlplanev1alpha1.StepName]Step, len(mocks))
+	names := make([]controlplanev1alpha1.StepName, 0, len(mocks))
 	for _, m := range mocks {
 		name := m.(*mockCommand).name
 		cmds[name] = m
@@ -188,20 +176,20 @@ func (s *ControllerTestSuite) SetupSuite() {
 	s.ctx = context.Background()
 }
 
-func (s *ControllerTestSuite) newReconciler(cmds map[controlplanev1alpha1.CommandName]Command, objs ...client.Object) *Reconciler {
+func (s *ControllerTestSuite) newReconciler(cmds map[controlplanev1alpha1.StepName]Step, objs ...client.Object) *Reconciler {
 	c := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(objs...).
 		WithStatusSubresource(&controlplanev1alpha1.ControlPlaneOperation{}).
 		Build()
 	if cmds == nil {
-		cmds = defaultCommands()
+		cmds = defaultSteps()
 	}
 	return &Reconciler{
-		client:   c,
-		log:      log.NewNop(),
-		node:     NodeIdentity{Name: testNodeName},
-		commands: cmds,
+		client: c,
+		log:    log.NewNop(),
+		node:   NodeIdentity{Name: testNodeName},
+		steps:  cmds,
 	}
 }
 
@@ -215,27 +203,27 @@ func (s *ControllerTestSuite) getOp(r *Reconciler, name string) *controlplanev1a
 // Tests
 
 func (s *ControllerTestSuite) TestResolveCommands() {
-	registry := defaultCommands()
+	registry := defaultSteps()
 
-	s.Run("valid commands resolved", func() {
-		err := resolveCommands(registry, []controlplanev1alpha1.CommandName{
-			controlplanev1alpha1.CommandSyncCA,
-			controlplanev1alpha1.CommandSyncManifests,
+	s.Run("valid steps resolved", func() {
+		err := resolveSteps(registry, []controlplanev1alpha1.StepName{
+			controlplanev1alpha1.StepSyncCA,
+			controlplanev1alpha1.StepSyncManifests,
 		})
 		require.NoError(s.T(), err)
 	})
 
-	s.Run("unknown command returns error", func() {
-		err := resolveCommands(registry, []controlplanev1alpha1.CommandName{
-			controlplanev1alpha1.CommandSyncCA,
+	s.Run("unknown step returns error", func() {
+		err := resolveSteps(registry, []controlplanev1alpha1.StepName{
+			controlplanev1alpha1.StepSyncCA,
 			"BogusCommand",
 		})
 		require.Error(s.T(), err)
-		require.Contains(s.T(), err.Error(), "unknown command")
+		require.Contains(s.T(), err.Error(), "unknown step")
 	})
 
 	s.Run("empty list returns no error", func() {
-		err := resolveCommands(registry, []controlplanev1alpha1.CommandName{})
+		err := resolveSteps(registry, []controlplanev1alpha1.StepName{})
 		require.NoError(s.T(), err)
 	})
 }
@@ -243,7 +231,7 @@ func (s *ControllerTestSuite) TestResolveCommands() {
 func (s *ControllerTestSuite) TestReconcileNotApproved() {
 	s.Run("not approved operation is skipped", func() {
 		op := testOperation(controlplanev1alpha1.OperationComponentKubeScheduler,
-			[]controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncManifests}, false)
+			[]controlplanev1alpha1.StepName{controlplanev1alpha1.StepSyncManifests}, false)
 		r := s.newReconciler(nil, op, testCPMSecret(), testPKISecret())
 
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
@@ -251,7 +239,55 @@ func (s *ControllerTestSuite) TestReconcileNotApproved() {
 		require.Equal(s.T(), reconcile.Result{}, result)
 
 		got := s.getOp(r, "test-op")
-		require.Empty(s.T(), got.Status.Conditions, "no conditions should be set")
+		require.Len(s.T(), got.Status.Conditions, 2)
+
+		completedCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), completedCond)
+		require.Equal(s.T(), metav1.ConditionUnknown, completedCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationUnknown, completedCond.Reason)
+
+		commandCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionManifestsSynced)
+		require.NotNil(s.T(), commandCond)
+		require.Equal(s.T(), metav1.ConditionFalse, commandCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepUnknown, commandCond.Reason)
+	})
+}
+
+func (s *ControllerTestSuite) TestReconcileInitialConditionsPreserveExisting() {
+	s.Run("initialization keeps existing conditions unchanged", func() {
+		op := testOperation(controlplanev1alpha1.OperationComponentKubeScheduler,
+			[]controlplanev1alpha1.StepName{controlplanev1alpha1.StepSyncManifests}, false)
+		op.Status.Conditions = []metav1.Condition{
+			{
+				Type:   controlplanev1alpha1.CPOConditionCompleted,
+				Status: metav1.ConditionFalse,
+				Reason: controlplanev1alpha1.CPOReasonOperationInProgress,
+			},
+			{
+				Type:   controlplanev1alpha1.CPOConditionManifestsSynced,
+				Status: metav1.ConditionTrue,
+				Reason: controlplanev1alpha1.CPOReasonStepCompleted,
+			},
+		}
+
+		r := s.newReconciler(nil, op, testCPMSecret(), testPKISecret())
+
+		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
+		require.NoError(s.T(), err)
+		require.Equal(s.T(), reconcile.Result{}, result)
+
+		got := s.getOp(r, "test-op")
+		require.Len(s.T(), got.Status.Conditions, 2)
+
+		completedCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), completedCond)
+		require.Equal(s.T(), metav1.ConditionFalse, completedCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationInProgress, completedCond.Reason)
+
+		commandCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionManifestsSynced)
+		require.NotNil(s.T(), commandCond)
+		require.Equal(s.T(), metav1.ConditionTrue, commandCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepCompleted, commandCond.Reason)
 	})
 }
 
@@ -259,7 +295,7 @@ func (s *ControllerTestSuite) TestReconcileAlreadyCompleted() {
 	s.Run("completed operation is skipped", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
 		)
 		op.Status.Conditions = []metav1.Condition{
 			{Type: controlplanev1alpha1.CPOConditionCompleted, Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonOperationCompleted, LastTransitionTime: metav1.Now()},
@@ -269,15 +305,15 @@ func (s *ControllerTestSuite) TestReconcileAlreadyCompleted() {
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
 		require.Equal(s.T(), reconcile.Result{}, result)
-		require.Empty(s.T(), calls, "no commands should execute")
+		require.Empty(s.T(), calls, "no steps should execute")
 	})
 }
 
 func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
-	s.Run("failed operation is skipped", func() {
+	s.Run("failed operation is retried", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
 		)
 		op.Status.Conditions = []metav1.Condition{
 			{Type: controlplanev1alpha1.CPOConditionCompleted, Status: metav1.ConditionFalse, Reason: controlplanev1alpha1.CPOReasonOperationFailed, Message: "boom", LastTransitionTime: metav1.Now()},
@@ -287,14 +323,21 @@ func (s *ControllerTestSuite) TestReconcileAlreadyFailed() {
 		result, err := r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
 		require.NoError(s.T(), err)
 		require.Equal(s.T(), reconcile.Result{}, result)
-		require.Empty(s.T(), calls, "no commands should execute")
+		require.Len(s.T(), calls, 1)
+
+		got := s.getOp(r, "test-op")
+		require.NotEmpty(s.T(), got.Annotations[constants.OperationStartedAtAnnotationKey])
+		completedCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), completedCond)
+		require.Equal(s.T(), metav1.ConditionTrue, completedCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationCompleted, completedCond.Reason)
 	})
 }
 
 func (s *ControllerTestSuite) TestReconcileChecksumMismatch() {
-	s.Run("checksum mismatch cancels operation", func() {
+	s.Run("checksum mismatch abandons operation", func() {
 		op := testOperation(controlplanev1alpha1.OperationComponentKubeScheduler,
-			[]controlplanev1alpha1.CommandName{controlplanev1alpha1.CommandSyncManifests}, true)
+			[]controlplanev1alpha1.StepName{controlplanev1alpha1.StepSyncManifests}, true)
 		op.Spec.DesiredConfigChecksum = "stale-checksum"
 		r := s.newReconciler(nil, op, testCPMSecret(), testPKISecret())
 
@@ -306,7 +349,7 @@ func (s *ControllerTestSuite) TestReconcileChecksumMismatch() {
 		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationCancelled, readyCond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationAbandoned, readyCond.Reason)
 	})
 }
 
@@ -314,7 +357,7 @@ func (s *ControllerTestSuite) TestReconcileObserveOnlyNoSecrets() {
 	s.Run("observe-only operation runs CertObserve without reading secrets", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandCertObserve),
+			newMockOK(&calls, controlplanev1alpha1.StepCertObserve),
 		)
 		op.Spec.DesiredConfigChecksum = ""
 		op.Spec.DesiredPKIChecksum = ""
@@ -326,17 +369,17 @@ func (s *ControllerTestSuite) TestReconcileObserveOnlyNoSecrets() {
 		require.NoError(s.T(), err)
 		require.Equal(s.T(), reconcile.Result{}, result)
 		require.Len(s.T(), calls, 1)
-		require.Equal(s.T(), controlplanev1alpha1.CommandCertObserve, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepCertObserve, calls[0].name)
 	})
 }
 
 func (s *ControllerTestSuite) TestPipelineAllCommandsExecuteInOrder() {
-	s.Run("all commands execute sequentially", func() {
+	s.Run("all steps execute sequentially", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
-			newMockOK(&calls, controlplanev1alpha1.CommandWaitPodReady),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -345,9 +388,9 @@ func (s *ControllerTestSuite) TestPipelineAllCommandsExecuteInOrder() {
 		require.Equal(s.T(), reconcile.Result{}, result)
 
 		require.Len(s.T(), calls, 3)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncCA, calls[0].name)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncManifests, calls[1].name)
-		require.Equal(s.T(), controlplanev1alpha1.CommandWaitPodReady, calls[2].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepSyncCA, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepSyncManifests, calls[1].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepWaitPodReady, calls[2].name)
 
 		// Verify Ready condition
 		got := s.getOp(r, "test-op")
@@ -360,16 +403,16 @@ func (s *ControllerTestSuite) TestPipelineAllCommandsExecuteInOrder() {
 }
 
 func (s *ControllerTestSuite) TestPipelineSkipsCompletedCommands() {
-	s.Run("completed commands are skipped", func() {
+	s.Run("completed steps are skipped", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
-			newMockOK(&calls, controlplanev1alpha1.CommandWaitPodReady),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
 		// Mark first command as already completed
 		op.Status.Conditions = []metav1.Condition{
-			{Type: string(controlplanev1alpha1.CommandSyncCA), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonCommandCompleted, LastTransitionTime: metav1.Now()},
+			{Type: controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonStepCompleted, LastTransitionTime: metav1.Now()},
 		}
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -379,8 +422,8 @@ func (s *ControllerTestSuite) TestPipelineSkipsCompletedCommands() {
 
 		// SyncCA was skipped
 		require.Len(s.T(), calls, 2)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncManifests, calls[0].name)
-		require.Equal(s.T(), controlplanev1alpha1.CommandWaitPodReady, calls[1].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepSyncManifests, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepWaitPodReady, calls[1].name)
 	})
 }
 
@@ -388,13 +431,13 @@ func (s *ControllerTestSuite) TestPipelineSkipsMultipleCompletedCommands() {
 	s.Run("first two completed, only third executes", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
-			newMockOK(&calls, controlplanev1alpha1.CommandWaitPodReady),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
 		op.Status.Conditions = []metav1.Condition{
-			{Type: string(controlplanev1alpha1.CommandSyncCA), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonCommandCompleted, LastTransitionTime: metav1.Now()},
-			{Type: string(controlplanev1alpha1.CommandSyncManifests), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonCommandCompleted, LastTransitionTime: metav1.Now()},
+			{Type: controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonStepCompleted, LastTransitionTime: metav1.Now()},
+			{Type: controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncManifests), Status: metav1.ConditionTrue, Reason: controlplanev1alpha1.CPOReasonStepCompleted, LastTransitionTime: metav1.Now()},
 		}
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -403,7 +446,7 @@ func (s *ControllerTestSuite) TestPipelineSkipsMultipleCompletedCommands() {
 		require.Equal(s.T(), reconcile.Result{}, result)
 
 		require.Len(s.T(), calls, 1)
-		require.Equal(s.T(), controlplanev1alpha1.CommandWaitPodReady, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepWaitPodReady, calls[0].name)
 	})
 }
 
@@ -412,9 +455,9 @@ func (s *ControllerTestSuite) TestPipelineErrorStopsPipeline() {
 		var calls []execCall
 		cmdErr := fmt.Errorf("disk full")
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockError(&calls, controlplanev1alpha1.CommandSyncManifests, cmdErr),
-			newMockOK(&calls, controlplanev1alpha1.CommandWaitPodReady),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockError(&calls, controlplanev1alpha1.StepSyncManifests, cmdErr),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -424,15 +467,15 @@ func (s *ControllerTestSuite) TestPipelineErrorStopsPipeline() {
 
 		// cmd1 executed, cmd2 executed (and failed), cmd3 NOT executed
 		require.Len(s.T(), calls, 2)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncCA, calls[0].name)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncManifests, calls[1].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepSyncCA, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepSyncManifests, calls[1].name)
 
 		// Verify failed command condition
 		got := s.getOp(r, "test-op")
-		cmdCond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncManifests))
+		cmdCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncManifests))
 		require.NotNil(s.T(), cmdCond)
 		require.Equal(s.T(), metav1.ConditionFalse, cmdCond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandFailed, cmdCond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepFailed, cmdCond.Reason)
 		require.Contains(s.T(), cmdCond.Message, "disk full")
 
 		// Ready should reflect terminal operation failure
@@ -447,9 +490,9 @@ func (s *ControllerTestSuite) TestPipelineRequeueStopsPipeline() {
 	s.Run("command requeue stops pipeline without marking ready", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockRequeue(&calls, controlplanev1alpha1.CommandSyncManifests, 5*time.Second),
-			newMockOK(&calls, controlplanev1alpha1.CommandWaitPodReady),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockRequeue(&calls, controlplanev1alpha1.StepSyncManifests, 5*time.Second),
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -459,23 +502,23 @@ func (s *ControllerTestSuite) TestPipelineRequeueStopsPipeline() {
 
 		// cmd1 executed, cmd2 executed (returned requeue), cmd3 NOT executed
 		require.Len(s.T(), calls, 2)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncCA, calls[0].name)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncManifests, calls[1].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepSyncCA, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.StepSyncManifests, calls[1].name)
 
-		// Ready should NOT be true
+		// Ready should stay in progress
 		got := s.getOp(r, "test-op")
 		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
-		if readyCond != nil {
-			require.NotEqual(s.T(), metav1.ConditionTrue, readyCond.Status)
-		}
+		require.NotNil(s.T(), readyCond)
+		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationInProgress, readyCond.Reason)
 	})
 }
 
 func (s *ControllerTestSuite) TestPipelineSingleCommand() {
 	s.Run("single command pipeline completes successfully", func() {
 		var calls []execCall
-		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentHotReload,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncHotReload),
+		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
+			newMockOK(&calls, controlplanev1alpha1.StepWaitPodReady),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -484,8 +527,8 @@ func (s *ControllerTestSuite) TestPipelineSingleCommand() {
 		require.Equal(s.T(), reconcile.Result{}, result)
 
 		require.Len(s.T(), calls, 1)
-		require.Equal(s.T(), controlplanev1alpha1.CommandSyncHotReload, calls[0].name)
-		require.Equal(s.T(), controlplanev1alpha1.OperationComponentHotReload, calls[0].component)
+		require.Equal(s.T(), controlplanev1alpha1.StepWaitPodReady, calls[0].name)
+		require.Equal(s.T(), controlplanev1alpha1.OperationComponentKubeScheduler, calls[0].component)
 
 		got := s.getOp(r, "test-op")
 		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
@@ -498,8 +541,8 @@ func (s *ControllerTestSuite) TestConditionsAfterSuccessfulPipeline() {
 	s.Run("successful pipeline sets per-command conditions and Ready", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeAPIServer,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncManifests),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncManifests),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -509,15 +552,15 @@ func (s *ControllerTestSuite) TestConditionsAfterSuccessfulPipeline() {
 		got := s.getOp(r, "test-op")
 
 		// Each command condition = True
-		syncCACond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncCA))
+		syncCACond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA))
 		require.NotNil(s.T(), syncCACond)
 		require.Equal(s.T(), metav1.ConditionTrue, syncCACond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandCompleted, syncCACond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepCompleted, syncCACond.Reason)
 
-		syncManifestsCond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncManifests))
+		syncManifestsCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncManifests))
 		require.NotNil(s.T(), syncManifestsCond)
 		require.Equal(s.T(), metav1.ConditionTrue, syncManifestsCond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandCompleted, syncManifestsCond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepCompleted, syncManifestsCond.Reason)
 
 		// Ready = True
 		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
@@ -528,11 +571,11 @@ func (s *ControllerTestSuite) TestConditionsAfterSuccessfulPipeline() {
 }
 
 func (s *ControllerTestSuite) TestConditionsAfterError() {
-	s.Run("error sets first command completed, second command failed", func() {
+	s.Run("error sets first command completed, second step failed", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeAPIServer,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockError(&calls, controlplanev1alpha1.CommandSyncManifests, fmt.Errorf("write failed")),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockError(&calls, controlplanev1alpha1.StepSyncManifests, fmt.Errorf("write failed")),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -541,15 +584,15 @@ func (s *ControllerTestSuite) TestConditionsAfterError() {
 		got := s.getOp(r, "test-op")
 
 		// First command completed
-		syncCACond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncCA))
+		syncCACond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA))
 		require.NotNil(s.T(), syncCACond)
 		require.Equal(s.T(), metav1.ConditionTrue, syncCACond.Status)
 
-		// Second command failed
-		syncManifestsCond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncManifests))
+		// Second step failed
+		syncManifestsCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncManifests))
 		require.NotNil(s.T(), syncManifestsCond)
 		require.Equal(s.T(), metav1.ConditionFalse, syncManifestsCond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandFailed, syncManifestsCond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepFailed, syncManifestsCond.Reason)
 		require.Contains(s.T(), syncManifestsCond.Message, "write failed")
 
 		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
@@ -560,11 +603,11 @@ func (s *ControllerTestSuite) TestConditionsAfterError() {
 }
 
 func (s *ControllerTestSuite) TestConditionsAfterRequeue() {
-	s.Run("requeue sets command InProgress, Ready stays false", func() {
+	s.Run("requeue sets command InProgress, Ready stays in progress", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockOK(&calls, controlplanev1alpha1.CommandSyncCA),
-			newMockRequeue(&calls, controlplanev1alpha1.CommandWaitPodReady, 5*time.Second),
+			newMockOK(&calls, controlplanev1alpha1.StepSyncCA),
+			newMockRequeue(&calls, controlplanev1alpha1.StepWaitPodReady, 5*time.Second),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -573,21 +616,32 @@ func (s *ControllerTestSuite) TestConditionsAfterRequeue() {
 		got := s.getOp(r, "test-op")
 
 		// First command completed
-		syncCACond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncCA))
+		syncCACond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA))
 		require.NotNil(s.T(), syncCACond)
 		require.Equal(s.T(), metav1.ConditionTrue, syncCACond.Status)
 
 		// Second command still in progress
-		waitCond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandWaitPodReady))
+		waitCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepWaitPodReady))
 		require.NotNil(s.T(), waitCond)
 		require.Equal(s.T(), metav1.ConditionFalse, waitCond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandInProgress, waitCond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepInProgress, waitCond.Reason)
 
-		// Ready still false
+		// Ready still in progress
 		readyCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), readyCond)
 		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
 		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationInProgress, readyCond.Reason)
+		readyCondFirstTransition := readyCond.LastTransitionTime
+
+		// Requeue again: Completed condition should stay OperationInProgress with unchanged transition time.
+		_, _ = r.Reconcile(s.ctx, reconcile.Request{NamespacedName: client.ObjectKey{Name: "test-op"}})
+		got = s.getOp(r, "test-op")
+		readyCond = meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
+		require.NotNil(s.T(), readyCond)
+		require.Equal(s.T(), metav1.ConditionFalse, readyCond.Status)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationInProgress, readyCond.Reason)
+		require.True(s.T(), readyCond.LastTransitionTime.Equal(&readyCondFirstTransition),
+			"Completed transition time must not change on requeue when status/reason are unchanged")
 	})
 }
 
@@ -595,7 +649,7 @@ func (s *ControllerTestSuite) TestPipelineKeepsCommandCompletedMessage() {
 	s.Run("pipeline does not overwrite command completed message", func() {
 		var calls []execCall
 		cmds, op := buildTestCase(controlplanev1alpha1.OperationComponentKubeScheduler,
-			newMockCompleteWithMessage(&calls, controlplanev1alpha1.CommandSyncCA, controlplanev1alpha1.CPOCommandResultRenewed),
+			newMockCompleteWithMessage(&calls, controlplanev1alpha1.StepSyncCA, controlplanev1alpha1.CPOStepResultRenewed),
 		)
 		r := s.newReconciler(cmds, op, testCPMSecret(), testPKISecret())
 
@@ -603,10 +657,10 @@ func (s *ControllerTestSuite) TestPipelineKeepsCommandCompletedMessage() {
 		require.NoError(s.T(), err)
 
 		got := s.getOp(r, "test-op")
-		syncCACond := meta.FindStatusCondition(got.Status.Conditions, string(controlplanev1alpha1.CommandSyncCA))
+		syncCACond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.StepConditionType(controlplanev1alpha1.StepSyncCA))
 		require.NotNil(s.T(), syncCACond)
 		require.Equal(s.T(), metav1.ConditionTrue, syncCACond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonCommandCompleted, syncCACond.Reason)
-		require.Equal(s.T(), controlplanev1alpha1.CPOCommandResultRenewed, syncCACond.Message)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonStepCompleted, syncCACond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOStepResultRenewed, syncCACond.Message)
 	})
 }

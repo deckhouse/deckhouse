@@ -32,6 +32,7 @@ var approvePipeline = []pipelineStage{
 		components: []controlplanev1alpha1.OperationComponent{
 			controlplanev1alpha1.OperationComponentEtcd,
 		},
+		globalGate:         true,
 		concurrencyLimitFn: getConcurrencyLimit,
 	},
 	{
@@ -53,6 +54,7 @@ var approvePipeline = []pipelineStage{
 // This slice is the single source of truth for stage order, membership, and per-stage concurrency policy.
 type pipelineStage struct {
 	components         []controlplanev1alpha1.OperationComponent
+	globalGate         bool
 	concurrencyLimitFn func(nodes nodeCounts, c controlplanev1alpha1.OperationComponent) int
 }
 
@@ -74,6 +76,7 @@ type approver struct {
 
 type approveLink struct {
 	components map[controlplanev1alpha1.OperationComponent]*component
+	globalGate bool
 	nextLink   *approveLink
 }
 
@@ -81,6 +84,7 @@ type component struct {
 	concurrencyLimit          int
 	approvedOperationsTotal   int
 	approvedOperationsPerNode map[string]int
+	approvedOperationsQueue   []controlplanev1alpha1.ControlPlaneOperation
 }
 
 // newApprover builds an approver for one reconcile pass: partitions operations into
@@ -145,7 +149,10 @@ func buildApproveChain(nodes nodeCounts) *approveLink {
 			}
 		}
 
-		links[i] = &approveLink{components: components}
+		links[i] = &approveLink{
+			components: components,
+			globalGate: stage.globalGate,
+		}
 		if i > 0 {
 			links[i-1].nextLink = links[i]
 		}
@@ -186,7 +193,11 @@ func (link *approveLink) tryReserveApproval(unapprovedOperation controlplanev1al
 	}
 
 	if !link.containsComponent(unapprovedOperation.Spec.Component) {
-		if link.hasAnyApprovedOperation() {
+		if link.globalGate {
+			if link.hasAnyApprovedOperation() {
+				return false
+			}
+		} else if link.hasAnyActiveOperationOnNode(unapprovedOperation.Spec.NodeName) {
 			return false
 		}
 
@@ -196,6 +207,7 @@ func (link *approveLink) tryReserveApproval(unapprovedOperation controlplanev1al
 	component := link.components[unapprovedOperation.Spec.Component]
 
 	if component.approvedOperationsTotal >= component.concurrencyLimit {
+		component.approvedOperationsQueue = append(component.approvedOperationsQueue, unapprovedOperation)
 		return false
 	}
 
@@ -227,9 +239,31 @@ func (link *approveLink) hasAnyApprovedOperation() bool {
 	return false
 }
 
+// hasAnyActiveOperationOnNode returns true if there is any approved or queued operation on the node.
+func (link *approveLink) hasAnyActiveOperationOnNode(nodeName string) bool {
+	for _, component := range link.components {
+		if component.approvedOperationsPerNode[nodeName] > 0 || component.hasQueuedOnNode(nodeName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (c *component) hasQueuedOnNode(nodeName string) bool {
+	for _, op := range c.approvedOperationsQueue {
+		if op.Spec.NodeName == nodeName {
+			return true
+		}
+	}
+
+	return false
+}
+
 type nodeCounts struct {
-	masters  int
-	arbiters int
+	masters        int
+	arbiters       int
+	readyNodeNames map[string]struct{} // for filtering operations for ready nodes only
 }
 
 func (c nodeCounts) isZero() bool {

@@ -2,6 +2,17 @@
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
+{{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
+{{- end }}
+{{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
+{{- end }}
+{{- if semverCompare ">=1.32 <1.33" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
+{{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
@@ -159,6 +170,9 @@ spec:
     - --allow-privileged=true
 {{- if ne .runType "ClusterBootstrap" }}
     - --enable-admission-plugins={{ $admissionPlugins | sortAlpha | join "," }}
+{{- if .apiserver.disableAdmissionPlugins }}
+    - --disable-admission-plugins={{ .apiserver.disableAdmissionPlugins }}
+{{- end }}
     - --admission-control-config-file=/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml
     - --kubelet-certificate-authority=/etc/kubernetes/pki/ca.crt
 {{- end }}
@@ -204,6 +218,7 @@ spec:
 {{- end }}
 {{- if .apiserver.secretEncryptionKey }}
     - --encryption-provider-config=/etc/kubernetes/deckhouse/extra-files/secret-encryption-config.yaml
+    - --encryption-provider-config-automatic-reload=true
 {{- end }}
     - --profiling=false
     - --request-timeout=60s

@@ -177,6 +177,14 @@ func testControlPlaneNode(name string) *corev1.Node {
 			Name:   name,
 			Labels: map[string]string{constants.ControlPlaneNodeLabelKey: ""},
 		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{
+					Type:   corev1.NodeReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
 	}
 }
 
@@ -185,6 +193,14 @@ func testArbiterNode(name string) *corev1.Node {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: map[string]string{constants.EtcdArbiterNodeLabelKey: ""},
+		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{
+					Type:   corev1.NodeReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
 		},
 	}
 }

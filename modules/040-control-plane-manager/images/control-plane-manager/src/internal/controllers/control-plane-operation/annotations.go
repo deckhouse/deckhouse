@@ -64,22 +64,22 @@ func desiredChecksumAnnotations(spec checksumAnnotations) map[string]string {
 func buildSyncManifestAnnotations(op *controlplanev1alpha1.ControlPlaneOperation) checksumAnnotations {
 	annotations := checksumAnnotationsFromSpec(op.Spec)
 
-	if commandWasRenewed(op, controlplanev1alpha1.CommandRenewPKICerts) {
+	if stepWasRenewed(op, controlplanev1alpha1.StepRenewPKICerts) {
 		annotations.CertRenewalID = op.Name
 	}
-	if commandWasRenewed(op, controlplanev1alpha1.CommandRenewKubeconfigs) {
+	if stepWasRenewed(op, controlplanev1alpha1.StepRenewKubeconfigs) {
 		annotations.KubeconfigRenewalID = op.Name
 	}
 
 	return annotations
 }
 
-func commandWasRenewed(op *controlplanev1alpha1.ControlPlaneOperation, command controlplanev1alpha1.CommandName) bool {
-	cond := op.GetCondition(string(command))
+func stepWasRenewed(op *controlplanev1alpha1.ControlPlaneOperation, step controlplanev1alpha1.StepName) bool {
+	cond := op.GetCondition(controlplanev1alpha1.StepConditionType(step))
 	if cond == nil {
 		return false
 	}
 	return cond.Status == metav1.ConditionTrue &&
-		cond.Reason == controlplanev1alpha1.CPOReasonCommandCompleted &&
-		cond.Message == controlplanev1alpha1.CPOCommandResultRenewed
+		cond.Reason == controlplanev1alpha1.CPOReasonStepCompleted &&
+		cond.Message == controlplanev1alpha1.CPOStepResultRenewed
 }

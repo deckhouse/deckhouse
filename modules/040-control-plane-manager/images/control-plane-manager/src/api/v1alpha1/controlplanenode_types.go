@@ -20,76 +20,90 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Checksums holds config/pki/ca hashes for a single control plane component.
+// Checksums holds the component fingerprints used to compare desired vs. applied state.
 type Checksums struct {
-	// Config is the hash of the component static pod template and extra-files.
+	// Config is the fingerprint of the component static pod manifest and extra-files.
 	// +optional
 	Config string `json:"config,omitempty"`
 
-	// PKI is the hash of PKI-related config keys (certSANs, encryption-algorithm).
+	// PKI is the fingerprint of PKI-related settings of the component (certSANs, encryption-algorithm).
 	// +optional
 	PKI string `json:"pki,omitempty"`
 
-	// CA is the hash of CA certificates applied to this component.
-	// In spec absent (CA is global). In status set when the component's pod restarts with the new CA.
+	// CA is the fingerprint of CA certificates applied to the component.
+	// Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
 	// +optional
 	CA string `json:"ca,omitempty"`
 }
 
-// ComponentSpec holds the desired state of a single control plane component (used in CPN spec).
+// ComponentSpec is the desired state of a single control plane component (used under spec.components).
 type ComponentSpec struct {
+	// Checksums is the desired set of fingerprints for the component.
 	// +optional
 	Checksums Checksums `json:"checksums,omitempty"`
 }
 
-// ComponentStatus holds the observed state of a single control plane component (used in CPN status).
+// ComponentStatus is the observed state of a single control plane component (used under status.components).
 type ComponentStatus struct {
+	// Checksums is the set of fingerprints applied to the component.
 	// +optional
 	Checksums Checksums `json:"checksums,omitempty"`
 
-	// CertificatesExpirationDate maps cert file names to their NotAfter timestamps.
-	// Populated via CertObserve command.
+	// CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
+	// Populated by the CertObserve step.
 	// +optional
 	CertificatesExpirationDate map[string]metav1.Time `json:"certificatesExpirationDate,omitempty"`
 
-	// LastObservedAt is the timestamp of the last completed CertObserve for this component.
+	// LastObservedAt is the time of the last successful CertObserve step for the component.
 	// +optional
 	LastObservedAt metav1.Time `json:"lastObservedAt,omitempty"`
 }
 
-// ComponentsSpec holds spec checksums for all control plane components.
+// ComponentsSpec describes the desired fingerprints of every control plane component on the node.
+//
 // Zero values are allowed for etcd-arbiter nodes (etcd only).
+// If a value here differs from the matching value under status.components, the module starts a
+// ControlPlaneOperation to bring the component to the desired state.
 type ComponentsSpec struct {
+	// Etcd is the desired state of the etcd component.
 	// +optional
 	Etcd ComponentSpec `json:"etcd,omitempty"`
 
+	// KubeAPIServer is the desired state of the kube-apiserver component.
 	// +optional
 	KubeAPIServer ComponentSpec `json:"kube-apiserver,omitempty"`
 
+	// KubeControllerManager is the desired state of the kube-controller-manager component.
 	// +optional
 	KubeControllerManager ComponentSpec `json:"kube-controller-manager,omitempty"`
 
+	// KubeScheduler is the desired state of the kube-scheduler component.
 	// +optional
 	KubeScheduler ComponentSpec `json:"kube-scheduler,omitempty"`
 }
 
-// ComponentsStatus holds status checksums and observed state for all control plane components.
+// ComponentsStatus describes the observed state of every control plane component on the node:
+// applied fingerprints and certificate expirations.
 type ComponentsStatus struct {
+	// Etcd is the observed state of the etcd component.
 	// +optional
 	Etcd ComponentStatus `json:"etcd,omitempty"`
 
+	// KubeAPIServer is the observed state of the kube-apiserver component.
 	// +optional
 	KubeAPIServer ComponentStatus `json:"kube-apiserver,omitempty"`
 
+	// KubeControllerManager is the observed state of the kube-controller-manager component.
 	// +optional
 	KubeControllerManager ComponentStatus `json:"kube-controller-manager,omitempty"`
 
+	// KubeScheduler is the observed state of the kube-scheduler component.
 	// +optional
 	KubeScheduler ComponentStatus `json:"kube-scheduler,omitempty"`
 }
 
 // Component returns a pointer to the ComponentSpec for the given component.
-// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+// Returns nil for unknown components.
 func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
 	switch comp {
 	case OperationComponentEtcd:
@@ -105,7 +119,7 @@ func (c *ComponentsSpec) Component(comp OperationComponent) *ComponentSpec {
 }
 
 // Component returns a pointer to the ComponentStatus for the given component.
-// Returns nil for non-static-pod components (HotReload, CA, CertObserver).
+// Returns nil for unknown components.
 func (c *ComponentsStatus) Component(comp OperationComponent) *ComponentStatus {
 	switch comp {
 	case OperationComponentEtcd:
@@ -120,34 +134,40 @@ func (c *ComponentsStatus) Component(comp OperationComponent) *ComponentStatus {
 	return nil
 }
 
+// ControlPlaneNodeSpec describes the desired state of control plane components on the node.
 type ControlPlaneNodeSpec struct {
-	// CAChecksum is the hash of d8-pki secret (CA certificates).
+	// CAChecksum is the fingerprint of the d8-pki secret (CA certificates) that must be applied to all components on the node.
 	// +optional
 	CAChecksum string `json:"caChecksum,omitempty"`
 
-	// Checksums per component
+	// Components holds the desired configuration and PKI fingerprints for each control plane component.
+	//
+	// If a value here differs from the matching value under status.components, the module starts a
+	// ControlPlaneOperation to bring the component to the desired state.
 	// +optional
 	Components ComponentsSpec `json:"components,omitempty"`
-
-	// For reload mechanisms (e.g. in-place reload)
-	// +optional
-	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
 }
 
+// ControlPlaneNodeStatus describes the observed state of control plane components on the node.
 type ControlPlaneNodeStatus struct {
+	// CAChecksum is the actually applied fingerprint of CA certificates.
 	// +optional
 	CAChecksum string `json:"caChecksum,omitempty"`
 
+	// Components holds the observed state of each component: applied fingerprints and certificate expirations.
 	// +optional
 	Components ComponentsStatus `json:"components,omitempty"`
 
-	// +optional
-	HotReloadChecksum string `json:"hotReloadChecksum,omitempty"`
-
-	// LastObservedAt is the timestamp of the last completed Observe operation.
-	// +optional
-	LastObservedAt *metav1.Time `json:"lastObservedAt,omitempty"`
-
+	// Conditions reflects the readiness of control plane components on the node.
+	//
+	// Possible condition types:
+	//   - EtcdReady              — etcd is running and accepting requests (shown in the ETCD column).
+	//   - APIServerReady         — kube-apiserver is running and accepting requests (APISERVER column).
+	//   - ControllerManagerReady — kube-controller-manager is running (CONTROLLERMANAGER column).
+	//   - SchedulerReady         — kube-scheduler is running (SCHEDULER column).
+	//   - CertificatesHealthy    — all component certificates are valid and have enough lifetime left (CERTIFICATES column).
+	//
+	// When status is False, the cause is described in "reason" and "message".
 	// +optional
 	// +listMapKey=type
 	// +listType=map
@@ -159,9 +179,22 @@ type ControlPlaneNodeStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=cpn
-// +kubebuilder:printcolumn:name="APIReady",type="string",JSONPath=".status.conditions[?(@.type=='APIServerReady')].status",description="API server ready"
+// +kubebuilder:printcolumn:name="ETCD",type="string",JSONPath=".status.conditions[?(@.type=='EtcdReady')].status",description="Etcd ready"
+// +kubebuilder:printcolumn:name="APISERVER",type="string",JSONPath=".status.conditions[?(@.type=='APIServerReady')].status",description="API server ready"
+// +kubebuilder:printcolumn:name="CONTROLLERMANAGER",type="string",JSONPath=".status.conditions[?(@.type=='ControllerManagerReady')].status",description="Controller manager ready"
+// +kubebuilder:printcolumn:name="SCHEDULER",type="string",JSONPath=".status.conditions[?(@.type=='SchedulerReady')].status",description="Scheduler ready"
+// +kubebuilder:printcolumn:name="CERTIFICATES",type="string",JSONPath=".status.conditions[?(@.type=='CertificatesHealthy')].status",description="Certificates healthy"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
+// ControlPlaneNode describes the desired and observed state of control plane components on a single node:
+// etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
+//
+// The resource is created and updated by the control-plane-manager module automatically; users do not need to create or edit it.
+//
+// Useful for diagnosing the health of the control plane on the node:
+//   - the ETCD, APISERVER, CONTROLLERMANAGER and SCHEDULER columns of `kubectl get cpn` show component readiness;
+//   - the CERTIFICATES column shows overall certificate health;
+//   - spec.components contains desired fingerprints, status.components contains the actually applied ones.
 type ControlPlaneNode struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

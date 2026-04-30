@@ -82,9 +82,6 @@ var componentDepsRegistry = map[controlplanev1alpha1.OperationComponent]componen
 		KubeconfigFiles: []kubeconfig.File{kubeconfig.Scheduler},
 		ExtraFileKeys:   checksum.ExtraFileKeysForPodComponent(controlplanev1alpha1.OperationComponentKubeScheduler.PodComponentName()),
 	},
-	controlplanev1alpha1.OperationComponentHotReload: {
-		ExtraFileKeys: checksum.HotReloadChecksumDependsOn,
-	},
 }
 
 func componentDeps(component controlplanev1alpha1.OperationComponent) componentDependencies {

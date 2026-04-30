@@ -3,6 +3,14 @@
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
+{{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
+{{- end }}
+{{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
+{{- end }}
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}

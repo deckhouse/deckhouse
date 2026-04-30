@@ -32,8 +32,6 @@ import (
 	etcdclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -142,20 +140,20 @@ func ensureAdminKubeconfig(secretData map[string][]byte, pkiDir, kubeconfigDir, 
 }
 
 // reconcileEtcdJoin handles etcd join for a fresh or orphaned node.
-// Precondition: caller must ensure admin.conf exists - see execJoinEtcdCluster.
+// Precondition: caller must ensure admin.conf exists - see joinEtcdClusterStep.
 func reconcileEtcdJoin(
 	node NodeIdentity,
 	component controlplanev1alpha1.OperationComponent,
 	secretData map[string][]byte,
 	annotations checksumAnnotations,
 	logger *log.Logger,
-) (reconcile.Result, error) {
+) error {
 	// Cleanup stale etcd data dir if it exists (orphaned node case)
 	if _, err := os.Stat(etcdDataDir); err == nil {
 		logger.Info("etcd join: cleaning up stale etcd data dir")
 		if err := cleanupEtcdDataDir(); err != nil {
 			logger.Error("failed to cleanup etcd data dir", log.Err(err))
-			return reconcile.Result{}, fmt.Errorf("cleanup etcd data dir: %w", err)
+			return fmt.Errorf("cleanup etcd data dir: %w", err)
 		}
 	}
 
@@ -163,7 +161,7 @@ func reconcileEtcdJoin(
 	manifest, err := prepareManifestBytes(component, secretData, annotations)
 	if err != nil {
 		logger.Error("failed to prepare etcd manifest", log.Err(err))
-		return reconcile.Result{}, fmt.Errorf("prepare etcd manifest: %w", err)
+		return fmt.Errorf("prepare etcd manifest: %w", err)
 	}
 
 	logger.Info("etcd join: calling JoinCluster", slog.String("ip", node.AdvertiseIP))
@@ -172,8 +170,8 @@ func reconcileEtcdJoin(
 		etcd.WithCertificatesDir(constants.KubernetesPkiPath),
 	); err != nil {
 		logger.Error("etcd JoinCluster failed", log.Err(err))
-		return reconcile.Result{}, fmt.Errorf("etcd join cluster: %w", err)
+		return fmt.Errorf("etcd join cluster: %w", err)
 	}
 
-	return reconcile.Result{}, nil
+	return nil
 }

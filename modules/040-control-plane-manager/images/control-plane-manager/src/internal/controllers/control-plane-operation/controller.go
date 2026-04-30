@@ -18,12 +18,8 @@ package controlplaneoperation
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -32,8 +28,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/ptr"
@@ -55,26 +53,36 @@ const (
 )
 
 type Reconciler struct {
-	client   client.Client
-	log      *log.Logger
-	node     NodeIdentity
-	commands map[controlplanev1alpha1.CommandName]Command
+	client  client.Client
+	log     *log.Logger
+	node    NodeIdentity
+	steps   map[controlplanev1alpha1.StepName]Step
+	metrics *metrics
 }
 
-func Register(mgr manager.Manager) error {
+func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error {
 	node, err := nodeIdentityFromEnv()
 	if err != nil {
 		return fmt.Errorf("read node identity: %w", err)
 	}
 
-	r := &Reconciler{
-		client:   mgr.GetClient(),
-		log:      log.Default().With(slog.String("controller", constants.CpoControllerName)),
-		node:     node,
-		commands: defaultCommands(),
+	metricHandlers, err := newMetrics(metricsStorage)
+	if err != nil {
+		return fmt.Errorf("init metrics: %w", err)
 	}
-	// Inject Reconciler-level deps into commands that need them.
-	r.commands[controlplanev1alpha1.CommandWaitPodReady].(*waitPodReadyCommand).waitForPod = r.waitForPod
+
+	r := &Reconciler{
+		client:  mgr.GetClient(),
+		log:     log.Default().With(slog.String("controller", constants.CpoControllerName)),
+		node:    node,
+		steps:   defaultSteps(),
+		metrics: metricHandlers,
+	}
+	// Inject Reconciler-level deps into steps that need them.
+	r.steps[controlplanev1alpha1.StepWaitPodReady].(*waitPodReadyStep).waitForPod = r.waitForPod
+
+	// harden admin kubeconfig perms and align root kubeconfig symlink during controller startup.
+	r.enforceNodePolicy(r.log)
 
 	nodeLabelPredicate, err := predicate.LabelSelectorPredicate(metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -94,7 +102,7 @@ func Register(mgr manager.Manager) error {
 			CacheSyncTimeout:        cacheSyncTimeout,
 			NeedLeaderElection:      ptr.To(false),
 			RateLimiter: workqueue.NewTypedMaxOfRateLimiter(
-				workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 3*time.Second),
+				workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](5*time.Second, 30*time.Minute),
 				&workqueue.TypedBucketRateLimiter[reconcile.Request]{
 					Limiter: rate.NewLimiter(rate.Limit(1), 1),
 				},
@@ -119,18 +127,38 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 
 	op := &controlplanev1alpha1.ControlPlaneOperation{}
 	if err := r.client.Get(ctx, req.NamespacedName, op); err != nil {
-		return reconcile.Result{}, client.IgnoreNotFound(err)
+		if apierrors.IsNotFound(err) {
+			r.metrics.deleteOperationExecutionMetrics(req.Name)
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, err
+	}
+
+	defer func() {
+		r.metrics.syncOperationExecutionMetrics(op)
+	}()
+
+	state := controlplanev1alpha1.NewOperationState(op)
+
+	// Initialize default unknown conditions
+	if !op.IsTerminal() {
+		state.EnsureInitialConditions()
+		if err := r.patchStatus(ctx, state); err != nil {
+			return reconcile.Result{}, fmt.Errorf("initialize conditions: %w", err)
+		}
 	}
 
 	if !op.Spec.Approved || op.IsTerminal() {
 		return reconcile.Result{}, nil
 	}
 
-	state := controlplanev1alpha1.NewOperationState(op)
+	if err := r.ensureOperationStartedAt(ctx, op, time.Now()); err != nil {
+		return reconcile.Result{}, fmt.Errorf("set operation started timestamp: %w", err)
+	}
 
 	logger.Info("reconciling operation",
 		slog.String("component", string(op.Spec.Component)),
-		slog.Any("commands", op.Spec.Commands))
+		slog.Any("steps", op.Spec.Steps))
 	defer func() {
 		if err != nil {
 			logger.Error("reconcile failed", log.Err(err))
@@ -167,30 +195,46 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		if completionErr != nil {
 			return reconcile.Result{}, completionErr
 		} else if completion.Applied {
-			logger.Info("recovered in-progress commit-point command from disk state", slog.String("command", string(completion.Command)))
+			logger.Info("recovered in-progress commit-point step from disk state", slog.String("step", string(completion.Step)))
 		}
 
-		logger.Info("desired checksums stale, cancelling", slog.String("reason", reason))
-		state.MarkOperationCancelled(reason)
+		logger.Info("desired checksums stale, operation abandoned", slog.String("reason", reason))
+		state.MarkOperationAbandoned(reason)
 		return reconcile.Result{}, r.patchStatus(ctx, state)
 	}
 
 	return r.reconcilePipeline(ctx, state, secrets, logger)
 }
 
+// enforceNodePolicy applies node security policy during controller startup:
+// keep admin kubeconfig perms at 0600 and align root kubeconfig symlink.
+func (r *Reconciler) enforceNodePolicy(logger *log.Logger) {
+	if err := hardenAdminKubeconfigs(r.node.KubeconfigDir); err != nil {
+		logger.Warn("failed to harden admin kubeconfigs", log.Err(err))
+	}
+	if err := updateRootKubeconfig(r.node.KubeconfigDir, r.node.HomeDir, r.node.NodeAdminKubeconfig); err != nil {
+		logger.Warn("failed to enforce root kubeconfig symlink", log.Err(err))
+	}
+}
+
+func (r *Reconciler) ensureOperationStartedAt(ctx context.Context, op *controlplanev1alpha1.ControlPlaneOperation, now time.Time) error {
+	if op.Annotations != nil && op.Annotations[constants.OperationStartedAtAnnotationKey] != "" {
+		return nil
+	}
+
+	original := op.DeepCopy()
+	if op.Annotations == nil {
+		op.Annotations = make(map[string]string, 1)
+	}
+	op.Annotations[constants.OperationStartedAtAnnotationKey] = now.UTC().Format(time.RFC3339Nano)
+
+	return r.client.Patch(ctx, op, client.MergeFrom(original))
+}
+
 // isDesiredStale checks that secret content still matches with desired checksums in the operation spec.
 // Returns true with reason string if stale.
 func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets ClusterSecrets) (bool, string) {
 	component := op.Spec.Component
-
-	if component == controlplanev1alpha1.OperationComponentHotReload {
-		freshConfig := checksum.HotReloadChecksum(secrets.CPMData)
-		if op.Spec.DesiredConfigChecksum != freshConfig {
-			return true, fmt.Sprintf("hot-reload config checksum changed: desired %s, current %s",
-				op.Spec.DesiredConfigChecksum, freshConfig)
-		}
-		return false, ""
-	}
 
 	podName := component.PodComponentName()
 
@@ -225,50 +269,48 @@ func isDesiredStale(op *controlplanev1alpha1.ControlPlaneOperation, secrets Clus
 }
 
 type CommitPointCompletionResult struct {
-	Command controlplanev1alpha1.CommandName
+	Step    controlplanev1alpha1.StepName
 	Applied bool
 }
 
 func (r *Reconciler) markInProgressCommitPointCompletedIfApplied(ctx context.Context, state *controlplanev1alpha1.OperationState) (CommitPointCompletionResult, error) {
 	op := state.Raw()
-	cmd, ok := inProgressCommitPoint(op)
+	step, ok := inProgressCommitPoint(op)
 	if !ok {
 		return CommitPointCompletionResult{}, nil
 	}
 
-	matches, err := r.diskMatchesDesired(op, cmd)
+	matches, err := r.diskMatchesDesired(op, step)
 	if err != nil {
-		return CommitPointCompletionResult{}, fmt.Errorf("check disk state for %s: %w", cmd, err)
+		return CommitPointCompletionResult{}, fmt.Errorf("check disk state for %s: %w", step, err)
 	}
 	if !matches {
-		return CommitPointCompletionResult{Command: cmd, Applied: false}, nil
+		return CommitPointCompletionResult{Step: step, Applied: false}, nil
 	}
 
-	state.MarkCommandCompleted(cmd)
+	state.MarkStepCompleted(step)
 	if err := r.patchStatus(ctx, state); err != nil {
-		return CommitPointCompletionResult{}, fmt.Errorf("persist recovered command %s: %w", cmd, err)
+		return CommitPointCompletionResult{}, fmt.Errorf("persist recovered step %s: %w", step, err)
 	}
-	return CommitPointCompletionResult{Command: cmd, Applied: true}, nil
+	return CommitPointCompletionResult{Step: step, Applied: true}, nil
 }
 
-func inProgressCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) (controlplanev1alpha1.CommandName, bool) {
+func inProgressCommitPoint(op *controlplanev1alpha1.ControlPlaneOperation) (controlplanev1alpha1.StepName, bool) {
 	switch {
-	case op.IsCommandInProgress(controlplanev1alpha1.CommandSyncManifests):
-		return controlplanev1alpha1.CommandSyncManifests, true
-	case op.IsCommandInProgress(controlplanev1alpha1.CommandJoinEtcdCluster):
-		return controlplanev1alpha1.CommandJoinEtcdCluster, true
-	case op.IsCommandInProgress(controlplanev1alpha1.CommandSyncHotReload):
-		return controlplanev1alpha1.CommandSyncHotReload, true
+	case op.IsStepInProgress(controlplanev1alpha1.StepSyncManifests):
+		return controlplanev1alpha1.StepSyncManifests, true
+	case op.IsStepInProgress(controlplanev1alpha1.StepJoinEtcdCluster):
+		return controlplanev1alpha1.StepJoinEtcdCluster, true
 	default:
 		return "", false
 	}
 }
 
-func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOperation, cmd controlplanev1alpha1.CommandName) (bool, error) {
-	switch cmd {
-	case controlplanev1alpha1.CommandSyncManifests:
+func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOperation, step controlplanev1alpha1.StepName) (bool, error) {
+	switch step {
+	case controlplanev1alpha1.StepSyncManifests:
 		return manifestMatchesDesired(op)
-	case controlplanev1alpha1.CommandJoinEtcdCluster:
+	case controlplanev1alpha1.StepJoinEtcdCluster:
 		manifestMatches, err := manifestMatchesDesired(op)
 		if err != nil || !manifestMatches {
 			return manifestMatches, err
@@ -279,31 +321,7 @@ func (r *Reconciler) diskMatchesDesired(op *controlplanev1alpha1.ControlPlaneOpe
 			return false, err
 		}
 		return memberExists, nil
-	case controlplanev1alpha1.CommandSyncHotReload:
-		diskChecksum, err := hotReloadChecksumFromDisk(constants.ExtraFilesPath)
-		if err != nil {
-			return false, err
-		}
-		return diskChecksum == op.Spec.DesiredConfigChecksum, nil
 	default:
 		return false, nil
 	}
-}
-
-func hotReloadChecksumFromDisk(extraFilesDir string) (string, error) {
-	hash := sha256.New()
-	for _, key := range checksum.HotReloadChecksumDependsOn {
-		filePath := filepath.Join(extraFilesDir, strings.TrimPrefix(key, "extra-file-"))
-		content, err := os.ReadFile(filePath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return "", fmt.Errorf("read hot-reload file %s: %w", filePath, err)
-		}
-		if _, err := hash.Write(content); err != nil {
-			return "", fmt.Errorf("hash hot-reload file %s: %w", filePath, err)
-		}
-	}
-	return fmt.Sprintf("%x", hash.Sum(nil)), nil
 }

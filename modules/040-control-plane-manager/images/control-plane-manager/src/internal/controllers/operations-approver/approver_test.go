@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 func TestNewApprover_ConcurrencyLimits(t *testing.T) {
@@ -90,6 +91,13 @@ func TestApprover_TryApprove_StageOrdering(t *testing.T) {
 		require.False(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 	})
 
+	t.Run("blocks apiserver on another node while etcd stage has reservation", func(t *testing.T) {
+		t.Parallel()
+		a := newApprover(nodeCounts{masters: 3}, nil)
+		require.True(t, a.tryApprove(newOperation("e1", "n1", controlplanev1alpha1.OperationComponentEtcd, false)))
+		require.False(t, a.tryApprove(newOperation("a1", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+	})
+
 	t.Run("allows apiserver when etcd stage is empty", func(t *testing.T) {
 		t.Parallel()
 		a := newApprover(nodeCounts{masters: 3}, nil)
@@ -101,6 +109,27 @@ func TestApprover_TryApprove_StageOrdering(t *testing.T) {
 		a := newApprover(nodeCounts{masters: 3}, nil)
 		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
 		require.False(t, a.tryApprove(newOperation("k1", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
+	})
+
+	t.Run("allows kcm on another node while apiserver stage has reservation", func(t *testing.T) {
+		t.Parallel()
+		a := newApprover(nodeCounts{masters: 3}, nil)
+		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		require.True(t, a.tryApprove(newOperation("k1", "n2", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
+	})
+
+	t.Run("queued apiserver blocks kcm on same node but not on other nodes", func(t *testing.T) {
+		t.Parallel()
+		// 3 nodes -> apiserver concurrency limit 2
+		a := newApprover(nodeCounts{masters: 3}, nil)
+		require.True(t, a.tryApprove(newOperation("a1", "n1", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		require.True(t, a.tryApprove(newOperation("a2", "n2", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		// a3 hits concurrency limit -> goes to queue
+		require.False(t, a.tryApprove(newOperation("a3", "n3", controlplanev1alpha1.OperationComponentKubeAPIServer, false)))
+		// kcm on n3 must be blocked (apiserver queued on n3)
+		require.False(t, a.tryApprove(newOperation("k1", "n3", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
+		// kcm on n1 must be blocked (apiserver approved on n1)
+		require.False(t, a.tryApprove(newOperation("k2", "n1", controlplanev1alpha1.OperationComponentKubeControllerManager, false)))
 	})
 
 	t.Run("allows kcm and scheduler concurrently on same pipeline stage", func(t *testing.T) {
@@ -131,16 +160,6 @@ func TestApprover_TryApprove_WorkloadConcurrencyAndPerNode(t *testing.T) {
 	})
 }
 
-func TestApprover_TryApprove_OutOfChainComponents(t *testing.T) {
-	t.Parallel()
-
-	t.Run("HotReload is not approvable via default chain", func(t *testing.T) {
-		t.Parallel()
-		a := newApprover(nodeCounts{masters: 3}, nil)
-		require.False(t, a.tryApprove(newOperation("hr1", "n1", controlplanev1alpha1.OperationComponentHotReload, false)))
-	})
-}
-
 func TestNewApprover_PartitionAndOrder(t *testing.T) {
 	t.Parallel()
 
@@ -167,7 +186,7 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 		meta.SetStatusCondition(&op.Status.Conditions, metav1.Condition{
 			Type:               "Completed",
 			Status:             metav1.ConditionTrue,
-			Reason:             "Test",
+			Reason:             controlplanev1alpha1.CPOReasonOperationCompleted,
 			LastTransitionTime: metav1.Now(),
 		})
 		a := newApprover(nodeCounts{masters: 1}, []controlplanev1alpha1.ControlPlaneOperation{op})
@@ -189,7 +208,12 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 
 func newOperation(name, node string, component controlplanev1alpha1.OperationComponent, approved bool) controlplanev1alpha1.ControlPlaneOperation {
 	return controlplanev1alpha1.ControlPlaneOperation{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				constants.ControlPlaneNodeNameLabelKey: node,
+			},
+		},
 		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
 			NodeName:  node,
 			Component: component,

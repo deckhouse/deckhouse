@@ -32,11 +32,15 @@ const (
 	EtcdArbiterNodeLabelKey             = "node.deckhouse.io/etcd-arbiter"
 	ControlPlaneNodeNameLabelKey        = "control-plane.deckhouse.io/node"
 	ControlPlaneComponentLabelKey       = "control-plane.deckhouse.io/component"
+	HeritageLabelKey                    = "heritage"
+	HeritageLabelValue                  = "deckhouse"
 	MaintenanceModeLabelKey             = "control-plane-manager.deckhouse.io/maintenance"
 	ConfigChecksumAnnotationKey         = "control-plane-manager.deckhouse.io/config-checksum"
 	PKIChecksumAnnotationKey            = "control-plane-manager.deckhouse.io/pki-checksum"
 	CAChecksumAnnotationKey             = "control-plane-manager.deckhouse.io/ca-checksum"
+	OperationStartedAtAnnotationKey     = "control-plane-manager.deckhouse.io/operation-started-at"
 	NodeNameEnvVar                      = "NODE_NAME"
+	DaemonSetNameEnvVar                 = "DAEMONSET_NAME"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"
@@ -46,22 +50,6 @@ const (
 	ExtraFilesPath                      = DeckhousePath + "/extra-files"
 	ConfigPath                          = "/config" // Mounted secret for d8-control-plane-manager-config
 	PkiPath                             = "/pki"    // Mounted secret for d8-pki
-
-	// ControlPlaneNode Conditions
-	ConditionEtcdReady              = "EtcdReady"
-	ConditionAPIServerReady         = "APIServerReady"
-	ConditionControllerManagerReady = "ControllerManagerReady"
-	ConditionSchedulerReady         = "SchedulerReady"
-	ConditionCASynced               = "CASynced"
-	ConditionHotReloadSynced        = "HotReloadSynced"
-
-	ReasonSynced               = "Synced"
-	ReasonOutOfSync            = "OutOfSync"
-	ReasonUpdating             = "Updating"
-	ReasonPendingUpdate        = "PendingUpdate"
-	ReasonUpdateFailed         = "UpdateFailed"
-	ReasonWaitingForComponents = "WaitingForComponents"
-	ReasonUnknown              = "Unknown"
 
 	// Built-in k8s label on static pods with the component name
 	StaticPodComponentLabelKey = "component"
@@ -80,28 +68,20 @@ const (
 	LocalControlPlaneEndpoint = "127.0.0.1:6445"
 
 	// Backup config
-	BackupBasePath         = DeckhousePath + "/backups"
+	BackupBasePath         = DeckhousePath + "/backup"
 	MaxBackupsPerComponent = 7
 
 	// Diff config
 	DiffBasePath         = DeckhousePath + "/diffs"
 	MaxDiffsPerComponent = 7
 
-	// CertObserverInterval - minimum duration between periodic CertObserver(all) operations.
-	CertObserverInterval = 7 * 24 * time.Hour
+	// CertObserveInterval is the minimum duration between periodic CertObserve steps for a component.
+	CertObserveInterval = 7 * 24 * time.Hour
 
 	// Cert renewal
 	CertRenewalIDAnnotationKey       = "control-plane.deckhouse.io/cert-renewal-id"
 	KubeconfigRenewalIDAnnotationKey = "control-plane.deckhouse.io/kubeconfig-renewal-id"
 	CertRenewalThreshold             = 30 * 24 * time.Hour
-
-	// CertsRenewal - ControlPlaneNode condition
-	ConditionCertsRenewal = "CertsRenewal"
-	ReasonHealthy         = "Healthy"
-	ReasonCertExpiring    = "CertExpiring"
-	ReasonRenewing        = "Renewing"
-	ReasonRenewed         = "Renewed"
-	ReasonRenewalFailed   = "RenewalFailed"
 )
 
 // ToRelativePath returns path without leading slash for using in tmp directory sync

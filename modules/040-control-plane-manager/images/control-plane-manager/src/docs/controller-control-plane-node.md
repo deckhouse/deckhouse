@@ -37,10 +37,10 @@ This mode is useful for manual node maintenance or administrative operations wit
 - active (non-terminal) -> completed -> other terminal
 - apply checksums from latest terminal operation that is either:
 - `Completed`, or
-- has commit-point command completed (`SyncManifests` / `JoinEtcdCluster` / `SyncHotReload`)
-- apply cert dates from completed operations that include `CertObserve` command, in monotonic `observedAt` order
-- update per-component `status.components.<component>.lastObservedAt` (and keep root `status.lastObservedAt` as latest observed timestamp)
-- update component conditions, `CASynced`, `CertsRenewal`
+- has commit-point step completed (`SyncManifests` / `JoinEtcdCluster`)
+- apply cert dates from completed operations that include `CertObserve` step, in monotonic `observedAt` order
+- update per-component `status.components.<component>.lastObservedAt`
+- update component conditions and global `CertificatesHealthy`
 4. Check for maintenance mode (label `maintenance`); if present, exit reconciliation (operations remain unchanged).
 5. Create missing drift CPOs for components where `spec != status`.
 6. Ensure cert-renewal CPO exists for components expiring within threshold (30 days):
@@ -49,20 +49,21 @@ This mode is useful for manual node maintenance or administrative operations wit
 - renewal CPO is created with the same `DesiredConfig/PKI/CA` checksums tuple as current component state
 7. Ensure periodic observe-only CPO exists per deployed static-pod component (interval: 7 days):
 - `spec.component=<real component>`
-- `spec.commands=[CertObserve]`
+- `spec.steps=[CertObserve]`
 - `spec.approved=true`
 
 ## Operation Creation Rules
 
 - Regular drift operations are created only when no active operation with the same desired checksums tuple exists:
 - `DesiredConfigChecksum + DesiredPKIChecksum + DesiredCAChecksum`
+- `OperationFailed` is retryable and non-terminal, so a failed CPO with matching desired checksums prevents duplicate CPO creation while it is retried by the CPO controller.
 - Active-operation lookup is unified via shared predicate-based helper (used by regular, renewal, and observe-only creation paths).
 - For regular drift operations, if desired checksums changed while another operation is running, a new operation may be created for the same component.
 - Cert-renewal operations are expiry-triggered, but still use the same desired checksums tuple and normal stale/cancel flow in CPO controller.
 - CPO name uses `GenerateName` with deterministic prefix:
 - `<component>-<short desired checksums>-`
-- Commands are selected by component and changed dimensions (`config`, `pki`, `ca`).
-- Generated command list always starts with `Backup`.
+- Steps are selected by component and changed dimensions (`config`, `pki`, `ca`).
+- Generated step list always starts with `Backup`.
 - After creating a CPO, keep only latest 5 terminal CPOs per component (active CPOs are never deleted).
 
 ## Condition Logic (CPN)
@@ -70,8 +71,10 @@ This mode is useful for manual node maintenance or administrative operations wit
 - `Synced` when component checksums in status match desired and no operation is needed.
 - `PendingUpdate` when matching operation exists but not approved.
 - `Updating` when matching operation is approved and running.
-- `UpdateFailed` when matching operation failed.
-- `CASynced=True` only when all static pod components report target CA in status.
+- `UpdateFailed` when matching operation is in retryable `OperationFailed` state.
+- `CertificatesHealthy=True` when:
+- all static pod components report target CA in status, and
+- all observed component certificates are not expiring within renewal threshold.
 
 ## Logic Basis
 

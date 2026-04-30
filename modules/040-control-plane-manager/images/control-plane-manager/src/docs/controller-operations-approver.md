@@ -15,6 +15,7 @@ Set `spec.approved=true` for queued operations using stage ordering and concurre
 | `ControlPlaneOperation` | update when operation becomes terminal |
 
 The controller recomputes approvals for the full operation set on each trigger.
+`OperationFailed` is not terminal: failed approved operations remain in-flight and keep occupying their approval slots while the CPO controller retries them.
 
 ## Approval Model
 
@@ -32,7 +33,9 @@ Rules:
 - unapproved operations are sorted by:
 - stage order
 - then resource name (stable deterministic tie-break)
-- next stage cannot start while any earlier stage has approved in-flight operations
+- stage gate policy:
+- `Etcd` stage is global: next stage waits until there are no approved in-flight `Etcd` operations on any node
+- workload stages are per-node: for a node `N`, next stage waits only for approved in-flight operations of the previous stage on node `N`
 
 ## Reconciliation Logic
 
@@ -55,4 +58,3 @@ Rules:
 - **Safety first for etcd**: Strict single-flight to maintain quorum consensus safety.
 - **Control-plane workload rollout**: Allow `N-1` parallel updates (where N = master count), keep at least one node not updating in multi-node setups.
 - **Determinism**: Stable sort and explicit stage graph.
-

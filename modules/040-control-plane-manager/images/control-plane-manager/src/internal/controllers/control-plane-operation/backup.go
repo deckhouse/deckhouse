@@ -28,15 +28,14 @@ import (
 	"control-plane-manager/internal/constants"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// backupCommand creates a per-component backup of files.
+// backupStep creates a per-component backup of files.
 // Now it is always the first command in every pipeline.
 // Writes directly into per-operation final directory.
-type backupCommand struct{}
+type backupStep struct{}
 
-func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.Logger) (reconcile.Result, error) {
+func (c *backupStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger) (StepResult, error) {
 	component := env.State.Raw().Spec.Component
 	operationName := env.State.Raw().Name
 	files := backupFilesForComponent(component, env.Node.KubeconfigDir)
@@ -44,7 +43,7 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 	componentBackupDir := filepath.Join(constants.BackupBasePath, string(component))
 	finalDir := filepath.Join(componentBackupDir, operationName)
 	if err := os.RemoveAll(finalDir); err != nil {
-		return reconcile.Result{}, fmt.Errorf("clean previous backup dir on command re-execution: %w", err)
+		return StepResult{}, fmt.Errorf("clean previous backup dir on command re-execution: %w", err)
 	}
 
 	wasBackupped := false
@@ -54,34 +53,33 @@ func (c *backupCommand) Execute(_ context.Context, env *CommandEnv, logger *log.
 		}
 		rel, err := filepath.Rel(constants.KubernetesConfigPath, src)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("relative path for %s: %w", src, err)
+			return StepResult{}, fmt.Errorf("relative path for %s: %w", src, err)
 		}
 		dst := filepath.Join(finalDir, rel)
 
 		if err := os.MkdirAll(filepath.Dir(dst), 0o700); err != nil {
-			return reconcile.Result{}, fmt.Errorf("create backup dir: %w", err)
+			return StepResult{}, fmt.Errorf("create backup dir: %w", err)
 		}
 		if err := copyFile(src, dst); err != nil {
-			return reconcile.Result{}, fmt.Errorf("backup %s: %w", rel, err)
+			return StepResult{}, fmt.Errorf("backup %s: %w", rel, err)
 		}
-		// logger.Info("backup file", slog.String("file", rel))
 		wasBackupped = true
 	}
 
 	if !wasBackupped {
 		logger.Info("no files to back up for component", slog.String("component", string(component)))
-		return reconcile.Result{}, nil
+		return StepResult{Outcome: OutcomeCompleted}, nil
 	}
 
 	if err := rotateBackups(componentBackupDir, constants.MaxBackupsPerComponent); err != nil {
 		logger.Warn("failed to rotate backups", log.Err(err))
 	}
 
-	return reconcile.Result{}, nil
+	return StepResult{Outcome: OutcomeCompleted}, nil
 }
 
 // backupFilesForComponent returns the list of absolute file paths that should be backup.
-// Static pod manifest, leaf certs, CA, kubeconfigs, extra files, hot-reload files.
+// Static pod manifest, leaf certs, CA, kubeconfigs, extra files.
 func backupFilesForComponent(component controlplanev1alpha1.OperationComponent, kubeconfigDir string) []string {
 	deps := componentDeps(component)
 	var files []string
