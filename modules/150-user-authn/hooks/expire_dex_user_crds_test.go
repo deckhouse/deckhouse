@@ -26,6 +26,7 @@ import (
 var _ = Describe("User Authn hooks :: get dex user crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 	f.RegisterCRD("deckhouse.io", "v1", "User", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "Group", false)
 
 	Context("User expiration schedule", func() {
 		BeforeEach(func() {
@@ -68,15 +69,47 @@ spec:
   - Admins
   - Everyone
   password: password
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: Admins
+  members:
+  - kind: User
+    name: admin
+  - kind: User
+    name: future
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: everyone
+spec:
+  name: Everyone
+  members:
+  - kind: User
+    name: admin
+  - kind: Group
+    name: admins
 `)
 			f.BindingContexts.Set(f.GenerateScheduleContext("*/5 * * * *"))
 			f.RunHook()
 		})
 
 		When("User expired (.status.expireAt < time.Now())", func() {
-			It("Should delete user CR", func() {
+			It("Should delete user CR and remove user from groups", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				Expect(f.KubernetesGlobalResource("User", "admin").Exists()).Should(BeFalse())
+				Expect(f.KubernetesGlobalResource("Group", "admins").Field("spec.members").String()).To(MatchJSON(`
+[
+  {"kind":"User","name":"future"}
+]`))
+				Expect(f.KubernetesGlobalResource("Group", "everyone").Field("spec.members").String()).To(MatchJSON(`
+[
+  {"kind":"Group","name":"admins"}
+]`))
 			})
 		})
 
