@@ -14,7 +14,7 @@ The manager registers all of them in `internal/manager.go`.
 Runtime endpoints:
 
 - health and readiness probes: `127.0.0.1:8095` (`/healthz`, `/readyz`)
-- metrics: `:8096`
+- metrics: `:4296`
 
 The controller-runtime client reads `Pod` and `ConfigMap` objects directly from the API server instead of the cache. Pod watches are still scoped to `kube-system` for operation wakeups.
 

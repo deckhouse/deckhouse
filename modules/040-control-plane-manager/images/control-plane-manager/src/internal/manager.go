@@ -58,7 +58,7 @@ import (
 
 const (
 	healthProbeBindAddress   = "127.0.0.1:8095"
-	metricsserverBindAddress = ":8096"
+	metricsserverBindAddress = ":4296"
 
 	pprofBindAddress = ":8097" // not used
 )
