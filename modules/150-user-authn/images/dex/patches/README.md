@@ -111,6 +111,6 @@ Key changes:
   failed auth when the user exists, so the lockout counter can be indexed by a
   stable handle.
 
-  ### 016-fix-error-template-buildid
+  ### 016-fix-error-template-buildid.patch
 
   Fix error template
