@@ -84,7 +84,7 @@ func applyIstioFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, err
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        lib.Queue("discovery"),
+	Queue: lib.Queue("discovery"),
 	// Relies on hook discovery_versions_to_install.go (Order: 5) and must run before hooks deprecated_versions_monitoring.go and compatibility_version_istio_k8s_monitoring.go (Order: 10)
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 9},
 	Kubernetes: []go_hook.KubernetesConfig{
