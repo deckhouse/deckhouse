@@ -109,3 +109,8 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 Пример для `nodeAffinityType: preferredDuringSchedulingIgnoredDuringExecution`. Есть под, который был назначен на узел, т.к. на момент размещения отсутствовали другие узлы, удовлетворяющие правилу `preferredDuringSchedulingIgnoredDuringExecution` node affinity. Если со временем в кластере появится доступный узел, соответствующий этому правилу, стратегия вытеснит под с узла, на который он был изначально назначен.
 
 Стратегия включается параметром [strategies.removePodsViolatingNodeAffinity.enabled](cr.html#descheduler-v1alpha2-spec-strategies-removepodsviolatingnodeaffinity-enabled).
+
+### RemovePodsViolatingTopologySpreadConstraint
+
+Стратегия гарантирует, что поды, нарушающие [ограничения распределения по топологии](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов. Вытесняется минимальное количество подов, необходимое для приведения доменов топологии в соответствие с `maxSkew` каждого ограничения.
+Стратеги полезна для перебалансировки подов между зонами доступности после восстановления зоны из аварии.

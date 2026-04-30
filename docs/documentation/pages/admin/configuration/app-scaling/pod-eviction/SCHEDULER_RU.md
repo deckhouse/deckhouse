@@ -407,3 +407,17 @@ spec:
         - requiredDuringSchedulingIgnoredDuringExecution
         - preferredDuringSchedulingIgnoredDuringExecution
 ```
+
+**RemovePodsViolatingTopologySpreadConstraint** — гарантирует, что поды, нарушающие [ограничения распределения по топологии](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/), будут вытеснены с узлов. Вытесняется минимальное количество подов, необходимое для приведения доменов топологии в соответствие с `maxSkew` каждого ограничения.
+Стратеги полезна для перебалансировки подов между зонами доступности после восстановления зоны из аварии.
+
+Стратегия включается параметром `strategies.removePodsViolatingTopologySpreadConstraint.enabled`.
+
+Пример:
+
+```yaml
+spec:
+  strategies:
+    removePodsViolatingTopologySpreadConstraint:
+      enabled: true
+```

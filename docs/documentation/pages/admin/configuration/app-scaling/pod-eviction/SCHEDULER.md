@@ -413,3 +413,17 @@ spec:
         - requiredDuringSchedulingIgnoredDuringExecution
         - preferredDuringSchedulingIgnoredDuringExecution
 ```
+
+**RemovePodsViolatingTopologySpreadConstraint** — ensures that pods violating [topology spread constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes. It evicts the minimum number of pods required to balance topology domains to within each constraint's `maxSkew`.
+This is useful for rebalancing pods across zones after a zone outage recovery.
+
+Enable the strategy using the `strategies.removePodsViolatingTopologySpreadConstraint.enabled` parameter.
+
+Example:
+
+```yaml
+spec:
+  strategies:
+    removePodsViolatingTopologySpreadConstraint:
+      enabled: true
+```
