@@ -91,3 +91,7 @@ This patch fixes:
 - CVE-2026-33487 
 - CVE-2026-34986
 - CVE-2026-33186
+
+### 015-ratelimit-lock-unlock-users.patch
+
+Added ratelimit and lock/unlock logic for external users via passwordconnectors

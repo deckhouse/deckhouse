@@ -115,13 +115,43 @@ spec:
             spec:
               type: object
               required:
-                - user
                 - type
+              oneOf:
+                - required: [user]
+                - required: [target]
               properties:
                 user:
                   type: string
-                  description: "Name (username) of the target User resource."
+                  description: |
+                    Name (username) of the target local User resource.
+
+                    Mutually exclusive with `target`. Used for operations on users that are managed
+                    by Deckhouse itself via the `User` CRD (the built-in local connector).
                   x-doc-examples: ['jane.doe']
+                target:
+                  type: object
+                  description: |
+                    Identifier of an external (non-local) account managed by an external authentication
+                    provider (LDAP, Atlassian Crowd, ...). Mutually exclusive with `user`.
+
+                    Lock / Unlock operations against `target` are performed against the
+                    `OfflineSessions` object that holds the failed-attempt counter and lock state for
+                    the corresponding `(connectorID, email)` pair.
+                  required:
+                    - connectorID
+                    - email
+                  properties:
+                    connectorID:
+                      type: string
+                      description: |
+                        ID of the DexProvider / connector through which the user logs in.
+                      x-doc-examples: ['my-ldap', 'my-crowd']
+                    email:
+                      type: string
+                      description: |
+                        Email of the external user, as reported by the connector. Stored in
+                        `OfflineSessions.email` and used as a stable handle for administrative actions.
+                      x-doc-examples: ['jane.doe@example.org']
                 type:
                   type: string
                   description: |
