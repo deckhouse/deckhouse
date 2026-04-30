@@ -163,6 +163,23 @@ spec:
                   items:
                     type: string
                     pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
+                podMetadata:
+                  type: object
+                  description: |-
+                    Additional labels and annotations for `dex-authenticator` pods.
+                  properties:
+                    labels:
+                      type: object
+                      description: |-
+                        Additional labels for `dex-authenticator` pods.
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      description: |-
+                        Additional annotations for `dex-authenticator` pods.
+                      additionalProperties:
+                        type: string
                 nodeSelector:
                   additionalProperties:
                     type: string
@@ -433,6 +450,23 @@ spec:
                   x-doc-default: 'All groups are allowed.'
                   items:
                     type: string
+                podMetadata:
+                  type: object
+                  description: |-
+                    Additional labels and annotations for `dex-authenticator` pods.
+                  properties:
+                    labels:
+                      type: object
+                      description: |-
+                        Additional labels for `dex-authenticator` pods.
+                      additionalProperties:
+                        type: string
+                    annotations:
+                      type: object
+                      description: |-
+                        Additional annotations for `dex-authenticator` pods.
+                      additionalProperties:
+                        type: string
                 nodeSelector:
                   additionalProperties:
                     type: string
