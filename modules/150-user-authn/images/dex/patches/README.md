@@ -110,3 +110,7 @@ Key changes:
 - LDAP and Atlassian Crowd `Login()` returns a partial `Identity{UserID, Email}` on
   failed auth when the user exists, so the lockout counter can be indexed by a
   stable handle.
+
+  ### 016-fix-error-template-buildid
+
+  Fix error template
