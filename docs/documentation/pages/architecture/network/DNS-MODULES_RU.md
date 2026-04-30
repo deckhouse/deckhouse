@@ -61,7 +61,7 @@ description: Архитектура модулей kube-dns и node-local-dns в
 1. **Kube-apiserver** — изменение ресурсов Pod, созданных StatefulSet-контроллером.
 1. **Prometheus-main** — собирает метрики модуля.
 
-## Модуль node-local-dns 
+## Модуль node-local-dns
 
 Модуль [`node-local-dns`](/modules/node-local-dns/) предоставляет кеширующий DNS-сервис на каждом узле кластера и снижает нагрузку на CoreDNS.
 
