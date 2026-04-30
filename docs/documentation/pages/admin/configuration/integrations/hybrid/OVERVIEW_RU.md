@@ -401,7 +401,7 @@ lang: ru
 
 ### Создание CloudEphemeral узлов в vSphere
 
-Для подключения уже работающего статического кластера к vCenter используйте ресурс [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-vsphere`]((/modules/cloud-provider-vsphere/).
+Для подключения уже работающего статического кластера к vCenter используйте ресурс [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/).
 
 В параметре `spec.settings` укажите параметры доступа к vCenter, сетевые настройки, теги региона и зоны, а также SSH-ключи, которые будут добавлены на создаваемые виртуальные машины.
 
@@ -557,7 +557,7 @@ lang: ru
   ```
 
 - В vSphere создана виртуальная машина, которая будет подключена к кластеру.
-- Имя виртуальной машины в vSphere совпадает с hostname внутри операционной системы. Это необходимо, так как ресурс Node в Kubernetes формируется по hostname. Если имя ВМ в vSphere и hostname узла отличаются, компоненты vSphere, например CSI-контроллер, могут не сопоставить Kubernetes-узел с виртуальной машиной.
+- Имя виртуальной машины в vSphere совпадает с hostname внутри операционной системы.
 - В дополнительных параметрах ВМ в vSphere задано значение:
 
   ```text
@@ -565,7 +565,7 @@ lang: ru
   ```
 
 - Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
-- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите which и пакетный менеджер, если они отсутствуют.
+- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
 
 1. Создайте файл, например `cloud-static-nodegroup.yaml`, с ресурсом NodeGroup и типом узлов CloudStatic:
 
