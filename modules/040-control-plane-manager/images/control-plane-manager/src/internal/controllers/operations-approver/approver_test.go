@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 func TestNewApprover_ConcurrencyLimits(t *testing.T) {
@@ -207,7 +208,12 @@ func TestNewApprover_PartitionAndOrder(t *testing.T) {
 
 func newOperation(name, node string, component controlplanev1alpha1.OperationComponent, approved bool) controlplanev1alpha1.ControlPlaneOperation {
 	return controlplanev1alpha1.ControlPlaneOperation{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				constants.ControlPlaneNodeNameLabelKey: node,
+			},
+		},
 		Spec: controlplanev1alpha1.ControlPlaneOperationSpec{
 			NodeName:  node,
 			Component: component,

@@ -140,6 +140,7 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						stripped.UID = node.UID
 						stripped.Labels = node.Labels
 						stripped.Status = corev1.NodeStatus{
+							Conditions: node.Status.Conditions,
 							NodeInfo: corev1.NodeSystemInfo{
 								KubeletVersion: node.Status.NodeInfo.KubeletVersion,
 							},
