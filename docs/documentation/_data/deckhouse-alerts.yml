@@ -3571,11 +3571,9 @@ alerts:
       module: upmeter
       edition: ce
       description: |
-        The average number of probe Pods per `upmeter-agent` Pod is {{ $value }}.
+        A Pod from the `control-plane/controller-manager` probe was created more than 5 minutes ago.
 
-        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe,
-        and `kube-controller-manager` should remove the associated Pods.
-        There should not be more of these Pods than there are master nodes (since `upmeter-agent` runs as a DaemonSet with a master `nodeSelector`), and the Pods should be deleted within seconds.
+        `upmeter-agent` is expected to clean Deployments created by the `control-plane/controller-manager` probe, and `kube-controller-manager` should remove the associated Pods within seconds.
 
         This may indicate:
 
