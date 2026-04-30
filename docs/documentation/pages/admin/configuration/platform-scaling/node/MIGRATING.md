@@ -66,3 +66,7 @@ When migrating to containerd v2 Deckhouse Kubernetes Platform will begin sequent
 {% alert level="info" %}
 At migration process the folder `/var/lib/containerd` will be cleared, causing all pod images to be re-downloaded, and the node will reboot.
 {% endalert %}
+
+{% alert level="warning" %}
+On Astra Linux, when using EROFS images, the `du` command may show an inflated size for the `/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/` directory due to double-counting of mounted layers. To get the correct size, use the `-x` flag: `du -shx /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/`.
+{% endalert %}

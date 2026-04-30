@@ -68,3 +68,7 @@ ls -l /etc/containerd/conf.d
 {% alert level="info" %}
 В процессе миграции директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
 {% endalert %}
+
+{% alert level="warning" %}
+На Astra Linux при использовании EROFS-образов команда `du` может показывать завышенный размер директории `/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/` из-за двойного учета смонтированных слоев. Для корректного расчета используйте флаг `-x`: `du -shx /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/`.
+{% endalert %}
