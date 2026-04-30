@@ -204,7 +204,6 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 			cachePath,
 			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
 		)
-
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
 		}
@@ -235,6 +234,10 @@ func (s *Service) commanderDetach(ctx context.Context, p *detachParams) *pb.Comm
 	})
 	if err != nil {
 		return &pb.CommanderDetachResult{Err: err.Error()}
+	}
+
+	if kubeProvider == nil {
+		return &pb.CommanderDetachResult{Err: "kubernetes provider is not initialized"}
 	}
 
 	var commanderUUID uuid.UUID

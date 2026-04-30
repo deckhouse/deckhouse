@@ -26,6 +26,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
 
@@ -141,6 +142,10 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 			return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
 		}
 
+		if parser == nil {
+			return nil
+		}
+
 		return parser.ParseConnectionConfigFromFile()
 	})
 
@@ -215,5 +220,21 @@ func processConnectionConfigFlags() error {
 }
 
 func GetProviderParams(loggerProvider libdhctl_log.LoggerProvider) settings.ProviderParams {
-	return settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: IsDebug, NodeTmpPath: DeckhouseNodeTmpPath, NodeBinPath: DeckhouseNodeBinPath, TmpDir: GetDefaultTmpDir()}
+	return settings.ProviderParams{
+		LoggerProvider: loggerProvider,
+		IsDebug:        IsDebug,
+		NodeTmpPath:    DeckhouseNodeTmpPath,
+		NodeBinPath:    DeckhouseNodeBinPath,
+		TmpDir:         GetDefaultTmpDir(),
+	}
+}
+
+func DefaultProviderParams() (settings.ProviderParams, error) {
+	logger, ok := log.GetDefaultLogger().(*log.ExternalLogger)
+	if !ok {
+		return settings.ProviderParams{}, fmt.Errorf("cannot convert logger to ExternalLogger")
+	}
+
+	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger.GetLogger())
+	return GetProviderParams(loggerProvider), nil
 }
