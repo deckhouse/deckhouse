@@ -41,68 +41,98 @@ spec:
         - engine: Rego
           source:
             version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.check_bool" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
+              import data.lib.common.get_field
+              import data.lib.exception.path_value_resolved
+              import data.lib.exception.resolve_spe_from_labels
+              import data.lib.message.violation_message
+
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
-                fields := ["hostPID", "hostIPC"]
-                field := fields[_]
-                msg := check_violations(input.review.object, field)
+                obj := input.review.object
+                labels := object.get(obj.metadata, "labels", {})
+                namespace := object.get(obj.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
+                checks := [
+                  {
+                    "field_path": ["spec", "hostPID"],
+                    "field_name": "hostPID",
+                    "default_val": false,
+                    "spe_path": ["spec", "network", "hostPID", "allowedValue"],
+                    "param_field": "allowHostPID"
+                  },
+                  {
+                    "field_path": ["spec", "hostIPC"],
+                    "field_name": "hostIPC",
+                    "default_val": false,
+                    "spe_path": ["spec", "network", "hostIPC", "allowedValue"],
+                    "param_field": "allowHostIPC"
+                  }
+                ]
+                check := checks[_]
+                actual := get_field(obj, check.field_path, check.default_val)
+                param_allow := object.get(input.parameters, check.param_field, false)
+                spe_applied := path_value_resolved(spe, check.spe_path)
+                expected := object.get(spe, check.spe_path, false)
+                spe_applied
+                actual != expected
+                detail := {
+                  "field": check.field_name,
+                  "actual": actual,
+                  "policy_allowed": param_allow,
+                  "spe_applied": spe_applied,
+                  "spe_allowed": expected,
+                }
+                reason := sprintf("Sharing the %v namespace is not allowed", [check.field_name])
+                msg := violation_message(reason, obj.metadata.name, detail)
               }
 
-              check_violations(obj, field) := msg if {
-                not allowed_by_any(obj, field)
-                msg := sprintf("Sharing the %v namespace is not allowed: %v", [field, input.review.object.metadata.name])
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                obj := input.review.object
+                labels := object.get(obj.metadata, "labels", {})
+                namespace := object.get(obj.metadata, "namespace", "")
+                spe := resolve_spe_from_labels(labels, namespace)
+                checks := [
+                  {
+                    "field_path": ["spec", "hostPID"],
+                    "field_name": "hostPID",
+                    "default_val": false,
+                    "spe_path": ["spec", "network", "hostPID", "allowedValue"],
+                    "param_field": "allowHostPID"
+                  },
+                  {
+                    "field_path": ["spec", "hostIPC"],
+                    "field_name": "hostIPC",
+                    "default_val": false,
+                    "spe_path": ["spec", "network", "hostIPC", "allowedValue"],
+                    "param_field": "allowHostIPC"
+                  }
+                ]
+                check := checks[_]
+                actual := get_field(obj, check.field_path, check.default_val)
+                param_allow := object.get(input.parameters, check.param_field, false)
+                not path_value_resolved(spe, check.spe_path)
+                not param_allow
+                actual != false
+                detail := {
+                  "field": check.field_name,
+                  "actual": actual,
+                  "policy_allowed": false,
+                  "spe_applied": false,
+                }
+                reason := sprintf("Sharing the %v namespace is not allowed", [check.field_name])
+                msg := violation_message(reason, obj.metadata.name, detail)
               }
 
-              allowed_by_any(obj, field) if {
-                allowed_by_securitypolicyexeption(obj, field)
-              }
-
-              allowed_by_any(obj, field) if {
-                allowed_by_securitypolicy(obj, field)
-              }
-
-              allowed_by_securitypolicyexeption(obj, field) if {
-                label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
-                namespace := obj.metadata.namespace
-                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
-                has_field(exception.spec, "network")
-                has_field(exception.spec.network, field)
-                has_field(exception.spec.network[field], "allowedValue")
-                obj.spec[field] == exception.spec.network[field].allowedValue
-              }
-
-              allowed_by_securitypolicyexeption(obj, field) if {
-                not obj.spec[field]
-              }
-
-              allowed_by_securitypolicy(obj, "hostIPC") if {
-                not obj.spec.hostIPC
-                input.parameters.allowHostIPC
-              }
-
-              allowed_by_securitypolicy(obj, "hostIPC") if {
-                obj.spec.hostIPC
-                input.parameters.allowHostIPC
-              }
-
-              allowed_by_securitypolicy(obj, "hostPID") if {
-                not obj.spec.hostPID
-                input.parameters.allowHostPID
-              }
-
-              allowed_by_securitypolicy(obj, "hostPID") if {
-                obj.spec.hostPID
-                input.parameters.allowHostPID
-              }
-
-              # has_field returns whether an object has a field
-              has_field(object, field) if {
-                object[field]
-              }
-
-              has_field(object, field) := false if {
-                not object[field]
-              }

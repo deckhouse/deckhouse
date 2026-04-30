@@ -61,10 +61,6 @@ properties:
           root:
             type: string
             x-examples: ["---ROOT PEM---"]
-      enableAmbientMode:
-        type: boolean
-        default: false
-        x-examples: [true]
       federations:
         type: array
         default: []
@@ -74,7 +70,7 @@ properties:
         type: array
         default: []
         x-examples:
-        - [{"name": "zzz-xxx-ccc-a1b2c3d4", "hostname": "zzz.xxx.ccc", "ports": [{"name": "ddd", "port": 2345, "protocol": "TCP"}], "endpoints": [{"address": "1.2.3.4", "port": 15443}]}]
+        - [{"name": "zzz-xxx-ccc-a1b2c3d4", "hostname": "zzz.xxx.ccc", "resolution": "STATIC", "ports": [{"name": "ddd", "port": 2345, "protocol": "TCP"}], "endpoints": [{"address": "1.2.3.4", "port": 15443}]}]
       multiclusters:
         type: array
         default: []

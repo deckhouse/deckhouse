@@ -98,11 +98,13 @@ spec:
     },
     "vpa": {
       "cpu": {},
-      "memory": {}
+      "memory": {},
+      "mode": "Initial"
     }
   },
   "underscoresInHeaders": false,
-  "validationEnabled": true
+  "validationEnabled": true,
+  "validationIsolationMode": "NoIsolation"
 }
 }]`))
 			})
@@ -219,11 +221,13 @@ spec:
   },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
-"validationEnabled": true
+"validationEnabled": true,
+"validationIsolationMode": "NoIsolation"
 }`))
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.1.name").String()).To(Equal("test-2"))
@@ -259,6 +263,7 @@ spec:
     "requests": {}
   },
   "vpa": {
+    "mode": "InPlaceOrRecreate",
     "cpu": {
       "limitRatio": 1.5,
       "max": "100m",
@@ -274,6 +279,7 @@ spec:
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
+"validationIsolationMode": "NoIsolation",
 "controllerLogLevel": "Info"
 }`))
 
@@ -305,11 +311,13 @@ spec:
   },
   "vpa": {
     "cpu": {},
-    "memory": {}
+    "memory": {},
+    "mode": "Initial"
   }
 },
 "underscoresInHeaders": false,
 "validationEnabled": true,
+"validationIsolationMode": "NoIsolation",
 "controllerLogLevel": "Info"
 }`))
 		})

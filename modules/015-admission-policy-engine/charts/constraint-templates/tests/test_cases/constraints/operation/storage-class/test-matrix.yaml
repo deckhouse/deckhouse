@@ -1,0 +1,66 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: storage-class
+spec:
+  suiteName: d8storageclass
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8storageclass
+      gatorBlock: d8storageclass
+      defaultObjectBase: ""
+      template: ../../templates/operation/storage-class.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: example-allowed
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.storageClassName
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: allowed
+                namespace: default
+              spec:
+                storageClassName: foo
+        - name: example-disallowed
+          violations: "yes"
+          assertionMessage: 'PersistentVolumeClaim <disallowed> has invalid storage class: bar'
+          fields:
+            - path: spec.storageClassName
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: ""
+            merge:
+              apiVersion: v1
+              kind: PersistentVolumeClaim
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                storageClassName: bar

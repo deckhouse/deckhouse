@@ -1,14 +1,14 @@
-{{- range $key, $value := .CandiVersionMap.k8s }}
-  {{- $version := $key | toString }}
-  {{- $image_version := $version | replace "." "-" }}
-  {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
-  {{- $patch := false }}
-  {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-    {{- if contains $version $path }}
-      {{- $patch = true }}
+{{- $version_map := include "get_oss_version_map_by_id_and_condition_key" (list "ecr-credential-provider-aws" "k8s" $) | fromYaml }}
+{{- range $key, $value := $version_map }}
+  {{- $k8s_version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-" }}
+  {{- $version := toString $value }}
+  {{- if $version }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/patches/%s/*.patch" $patches $k8s_version) }}
+        {{- $patch = true }}
     {{- end }}
-  {{- end }}
-  {{- if $value.ccm.aws }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -20,7 +20,7 @@ git:
     install:
     - '**/*'
   {{- if $patch }}
-- add: {{ $patches }}/patches/{{ $version }}
+- add: {{ $patches }}/patches/{{ $k8s_version }}
   to: /patches
   stageDependencies:
     install:
@@ -32,7 +32,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - git clone --depth=1 --branch {{ $value.ccm.aws }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-aws.git
+  - git clone --depth=1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-aws.git
   - cd cloud-provider-aws
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
@@ -52,7 +52,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "ecr-credential-provider": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all", "ecr-credential-provider": "{{ $k8s_version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
@@ -68,7 +68,7 @@ import:
   to: /src
   before: install
 mount:
-{{ include "mount points for golang builds" . }}
+{{ include "mount points for golang builds" $ }}
 secrets:
 - id: GOPROXY
   value: {{ $.GOPROXY }}
@@ -82,7 +82,7 @@ shell:
     - export GOOS=linux
     - export GOARCH=amd64
     - cd /src/cloud-provider-aws
-    - export VERSION={{ $value.ccm.aws }}
+    - export VERSION={{ $version }}
     - make ecr-credential-provider
     - mv /src/scripts/* /
     - chown 64535:64535 ecr-credential-provider /install /uninstall

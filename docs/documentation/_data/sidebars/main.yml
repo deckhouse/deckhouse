@@ -95,6 +95,10 @@ entries:
                         ru: Экспериментальная модель авторизации
                       url: /admin/configuration/access/authorization/rbac-experimental.html
                     - title:
+                        en: Cluster admin access model
+                        ru: Модель административного доступа к кластеру
+                      url: /admin/configuration/access/authorization/cluster-admin-access-model.html
+                    - title:
                         en: Granting permissions to users and service accounts
                         ru: Выдача прав пользователям и сервисным аккаунтам
                       url: /admin/configuration/access/authorization/granting.html

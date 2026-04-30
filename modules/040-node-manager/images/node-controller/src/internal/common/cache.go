@@ -17,41 +17,88 @@ limitations under the License.
 package common
 
 import (
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CacheOptions returns cache and client options for the manager.
 func CacheOptions() (cache.Options, client.Options) {
-	configSecretsReq, _ := labels.NewRequirement("name", selection.In, []string{
+	stripManagedFields := cache.TransformStripManagedFields()
+
+	machineNS := cache.ByObject{
+		Namespaces: map[string]cache.Config{
+			MachineNamespace: {},
+		},
+	}
+
+	kubeSystemSecrets, _ := labels.NewRequirement("name", selection.In, []string{
+		"d8-node-manager-cloud-provider",
 		"d8-cluster-configuration",
 		"d8-provider-cluster-configuration",
 	})
 
 	cacheOpts := cache.Options{
-		DefaultTransform: cache.TransformStripManagedFields(),
+		DefaultTransform: func(obj interface{}) (interface{}, error) {
+			stripNodeHeavyFields(obj)
+			return stripManagedFields(obj)
+		},
 		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Secret{}: {
 				Namespaces: map[string]cache.Config{
+					MachineNamespace: {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"metadata.name": ConfigurationChecksumsSecretName,
+						}),
+					},
 					"kube-system": {
-						LabelSelector: labels.NewSelector().Add(*configSecretsReq),
+						LabelSelector: labels.NewSelector().Add(*kubeSystemSecrets),
 					},
 				},
 			},
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "Machine"):           machineNS,
+			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):               machineNS,
+			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):     machineNS,
 		},
 	}
 
 	clientOpts := client.Options{
 		Cache: &client.CacheOptions{
 			DisableFor: []client.Object{
-				&corev1.Node{},
-				&corev1.Endpoints{},
+				&corev1.Pod{},
+				&coordinationv1.Lease{},
 			},
 		},
 	}
 
 	return cacheOpts, clientOpts
+}
+
+func stripNodeHeavyFields(obj interface{}) {
+	node, ok := obj.(*corev1.Node)
+	if !ok {
+		return
+	}
+	node.Status.Images = nil
+	node.Status.NodeInfo = corev1.NodeSystemInfo{}
+	node.Status.Addresses = nil
+	node.Status.Capacity = nil
+	node.Status.Allocatable = nil
+	node.Status.DaemonEndpoints = corev1.NodeDaemonEndpoints{}
+	node.Status.VolumesAttached = nil
+	node.Status.VolumesInUse = nil
+	node.Spec.PodCIDR = ""
+	node.Spec.PodCIDRs = nil
+}
+
+func newUnstructured(group, version, kind string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(schema.GroupVersionKind{Group: group, Version: version, Kind: kind})
+	return u
 }

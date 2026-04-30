@@ -1,0 +1,77 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-users
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.runAsUser
+      level: container
+
+      description: Container runAsUser value must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.securityContext.runAsUser
+      level: pod
+
+      description: Pod runAsUser value must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent]
+    - path: spec.containers[].securityContext.runAsNonRoot
+      level: container
+
+      description: Container runAsNonRoot value must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.containers[].securityContext.runAsGroup
+      level: container
+
+      description: Container runAsGroup value must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.securityContext.runAsGroup
+      level: pod
+
+      description: Pod runAsGroup value must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent]
+    - path: spec.containers[].securityContext.supplementalGroups
+      level: container
+
+      description: Container supplementalGroups values must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.securityContext.supplementalGroups
+      level: pod
+
+      description: Pod supplementalGroups values must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent]
+    - path: spec.containers[].securityContext.fsGroup
+      level: container
+
+      description: Container fsGroup value must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+    - path: spec.securityContext.fsGroup
+      level: pod
+
+      description: Pod fsGroup value must satisfy constraint rule
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.securityContext.runAsUser.allowedValues
+      level: container
+      description: SPE override for allowed runAsUser values
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+    - path: spec.securityContext.runAsNonRoot.allowedValue
+      level: pod
+      description: SPE override for allowed runAsNonRoot value
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+    - path: spec.securityContext.runAsGroup.allowedValues
+      level: pod
+      description: SPE override for allowed runAsGroup values
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+    - path: spec.securityContext.supplementalGroups.allowedValues
+      level: pod
+      description: SPE override for allowed supplementalGroups values
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+    - path: spec.securityContext.fsGroup.allowedValues
+      level: pod
+      description: SPE override for allowed fsGroup values
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

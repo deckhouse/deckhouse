@@ -79,7 +79,7 @@ func TestChecker_CheckSudoIsAllowedForUser(t *testing.T) {
 			mockCmd := &mocks.MockCommand{}
 			tt.setupMock(mockNode, mockCmd)
 
-			check := SudoAllowedCheck{Node: mockNode}
+			check := SudoAllowedCheck{NodeInterface: mockNode}
 			err := check.Run(context.Background())
 
 			if tt.expectedError != "" {
@@ -153,7 +153,7 @@ func TestCallSudo(t *testing.T) {
 			mockCmd := &mocks.MockCommand{}
 			tt.setupMock(mockNode, mockCmd)
 
-			check := SudoAllowedCheck{Node: mockNode}
+			check := SudoAllowedCheck{NodeInterface: mockNode}
 			err := check.Run(context.Background())
 
 			if tt.expectedError != "" {

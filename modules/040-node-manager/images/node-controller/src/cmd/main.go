@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,7 +18,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -37,6 +40,8 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/register"
+	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
@@ -56,10 +61,14 @@ func init() {
 func main() {
 	var metricsAddr string
 	var probeAddr string
+	var disabledControllers string
+	var maxConcurrentReconcilesRaw string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
+	flag.StringVar(&disabledControllers, "disable-controllers", "", "Comma-separated list of controllers to disable")
+	flag.StringVar(&maxConcurrentReconcilesRaw, "max-concurrent-reconciles", "10", "Maximum number of concurrent reconciles per controller. Format: N or N,controller1=M,controller2=K")
 
 	logs.AddGoFlags(flag.CommandLine)
 
@@ -72,16 +81,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	cacheOpts, clientOpts := common.CacheOptions()
+	cfg := ctrl.GetConfigOrDie()
+	ctx := ctrl.SetupSignalHandler()
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	cacheOpts, clientOpts := common.CacheOptions()
+	clientOpts.Cache.DisableFor = append(clientOpts.Cache.DisableFor, webhook.DisableFor()...)
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
-		Metrics: metricsserver.Options{
-			BindAddress: metricsAddr,
-		},
 		WebhookServer: ctrlwebhook.NewServer(ctrlwebhook.Options{
 			Port: 9443,
 		}),
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
 		HealthProbeBindAddress: probeAddr,
 		Cache:                  cacheOpts,
 		Client:                 clientOpts,
@@ -92,11 +105,22 @@ func main() {
 	}
 
 	if err = webhook.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "NodeGroup")
+		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)
 	}
 
-	//+kubebuilder:scaffold:builder
+	defaultMaxConcurrent, perControllerMaxConcurrent, err := parseMaxConcurrentReconciles(maxConcurrentReconcilesRaw)
+	if err != nil {
+		setupLog.Error(err, "invalid --max-concurrent-reconciles value, falling back to defaults")
+		defaultMaxConcurrent = defaultMaxConcurrentReconciles
+		perControllerMaxConcurrent = nil
+	}
+	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
+
+	if err = register.SetupAll(mgr, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+		setupLog.Error(err, "unable to setup controllers")
+		os.Exit(1)
+	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
@@ -108,8 +132,52 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+const defaultMaxConcurrentReconciles = 10
+
+// parseMaxConcurrentReconciles parses the --max-concurrent-reconciles flag value.
+// Supported formats:
+//   - "N" — global default for all controllers (e.g. "10")
+//   - "controller1=N,controller2=M" — per-controller values, global default is 10
+//   - "N,controller1=M" — global default N with per-controller overrides
+func parseMaxConcurrentReconciles(raw string) (int, map[string]int, error) {
+	globalDefault := defaultMaxConcurrentReconciles
+	perController := make(map[string]int)
+
+	parts := strings.Split(raw, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		if k, v, ok := strings.Cut(part, "="); ok {
+			name := strings.TrimSpace(k)
+			valStr := strings.TrimSpace(v)
+			val, err := strconv.Atoi(valStr)
+			if err != nil {
+				return 0, nil, fmt.Errorf("invalid value for controller %q: %q", name, valStr)
+			}
+			if val < 1 {
+				return 0, nil, fmt.Errorf("max-concurrent-reconciles for controller %q must be >= 1, got %d", name, val)
+			}
+			perController[name] = val
+		} else {
+			val, err := strconv.Atoi(part)
+			if err != nil {
+				return 0, nil, fmt.Errorf("invalid max-concurrent-reconciles value: %q", part)
+			}
+			if val < 1 {
+				return 0, nil, fmt.Errorf("max-concurrent-reconciles must be >= 1, got %d", val)
+			}
+			globalDefault = val
+		}
+	}
+
+	return globalDefault, perController, nil
 }

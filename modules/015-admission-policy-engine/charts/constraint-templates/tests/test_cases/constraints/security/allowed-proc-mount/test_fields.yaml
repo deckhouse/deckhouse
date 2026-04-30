@@ -1,0 +1,21 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-proc-mount
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.procMount
+      level: container
+
+      description: ProcMount type for containers
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+  speFields:
+    - path: spec.securityContext.procMount.allowedValues
+      level: container
+      description: SPE override for allowed procMount values
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

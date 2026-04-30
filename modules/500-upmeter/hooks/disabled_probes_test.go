@@ -131,6 +131,73 @@ var _ = Describe("Modules :: upmeter :: hooks :: disabled_probes ::", func() {
 				Expect(disabledProbes).NotTo(ContainElement("extensions/prometheus-longterm"))
 			})
 		})
+
+		Context("with grafana-v10 deployment", func() {
+			f := HookExecutionConfigInit(initValues, `{}`)
+
+			It("extensions/grafana-v10 probe is disabled when deployment is absent", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("extensions/grafana-v10"))
+			})
+
+			It("extensions/grafana-v10 probe is enabled when deployment exists", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(
+					deploymentInMonitoring("grafana-v10"),
+					1,
+				))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("extensions/grafana-v10"))
+			})
+		})
+
+		Context("with observability module", func() {
+			f := HookExecutionConfigInit(initValues, `{}`)
+
+			It("observability probes are disabled when observability module is disabled", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Delete("observability").Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).To(ContainElement("extensions/alert-kube-api"))
+				Expect(disabledProbes).To(ContainElement("extensions/observability-controller"))
+				Expect(disabledProbes).To(ContainElement("extensions/grafana"))
+				Expect(disabledProbes).To(ContainElement("extensions/label-enforcer"))
+				Expect(disabledProbes).To(ContainElement("extensions/observability-webhook"))
+				Expect(disabledProbes).To(ContainElement("monitoring-and-autoscaling/alertmanager"))
+				Expect(disabledProbes).To(ContainElement("monitoring-and-autoscaling/observability-recording"))
+			})
+
+			It("observability probes are enabled when observability module is enabled", func() {
+				f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(``, 1))
+				f.ValuesSet("global.enabledModules", allModules().Slice())
+
+				f.RunHook()
+				Expect(f).To(ExecuteSuccessfully())
+
+				disabledProbes := f.ValuesGet("upmeter.internal.disabledProbes").AsStringSlice()
+				Expect(disabledProbes).NotTo(ContainElement("extensions/alert-kube-api"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/observability-controller"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/grafana"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/label-enforcer"))
+				Expect(disabledProbes).NotTo(ContainElement("extensions/observability-webhook"))
+				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/alertmanager"))
+				Expect(disabledProbes).NotTo(ContainElement("monitoring-and-autoscaling/observability-recording"))
+			})
+		})
 	})
 
 	Context("load-balancing probes depending on deployed apps", func() {
@@ -182,6 +249,18 @@ metadata:
 	return fmt.Sprintf(format, name)
 }
 
+func deploymentInMonitoring(name string) string {
+	const format = `
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: %s
+  namespace: d8-monitoring
+`
+	return fmt.Sprintf(format, name)
+}
+
 func deploymentInCloudInstanceManager(name string) string {
 	const format = `
 ---
@@ -212,6 +291,7 @@ func allModules() set.Set {
 		"metallb",
 		"monitoring-kubernetes",
 		"node-manager",
+		"observability",
 		"prometheus",
 		"prometheus-metrics-adapter",
 		"vertical-pod-autoscaler",
@@ -235,17 +315,35 @@ func Test_calcDisabledProbes(t *testing.T) {
 			name: "MAA group and Grafana probe are off without Prometheus",
 			expectDisabled: set.New(
 				"monitoring-and-autoscaling/",
-				"extensions/grafana",
+				"extensions/grafana-v10",
 			),
 		},
 		{
-			name: "MAA group and Grafana probe are on with Prometheus",
+			name: "MAA group is on with Prometheus",
 			args: args{
 				enabledModules: set.New("prometheus"),
 			},
 			expectNotDisabled: set.New(
 				"monitoring-and-autoscaling/",
-				"extensions/grafana",
+			),
+		},
+		{
+			name: "Grafana probe is off with Prometheus when Grafana deployment is absent",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New(
+				"extensions/grafana-v10",
+			),
+		},
+		{
+			name: "Grafana probe is on with Prometheus when Grafana deployment exists",
+			args: args{
+				presence:       appPresence{grafanaV10: true},
+				enabledModules: set.New("prometheus"),
+			},
+			expectNotDisabled: set.New(
+				"extensions/grafana-v10",
 			),
 		},
 
@@ -327,6 +425,26 @@ func Test_calcDisabledProbes(t *testing.T) {
 			expectNotDisabled: set.New(
 				"monitoring-and-autoscaling/metrics-sources",
 				"monitoring-and-autoscaling/key-metrics-present",
+			),
+		},
+		{
+			name: "MAA/alertmanager and observability-recording off",
+			args: args{
+				enabledModules: set.New("prometheus"),
+			},
+			expectDisabled: set.New(
+				"monitoring-and-autoscaling/alertmanager",
+				"monitoring-and-autoscaling/observability-recording",
+			),
+		},
+		{
+			name: "MAA/alertmanager and observability-recording on",
+			args: args{
+				enabledModules: set.New("prometheus", "observability"),
+			},
+			expectNotDisabled: set.New(
+				"monitoring-and-autoscaling/alertmanager",
+				"monitoring-and-autoscaling/observability-recording",
 			),
 		},
 		// Metallb -> load-balancing/metallb
@@ -466,6 +584,31 @@ func Test_calcDisabledProbes(t *testing.T) {
 				enabledModules: set.New("user-authn"),
 			},
 			expectNotDisabled: set.New("extensions/dex"),
+		},
+
+		// observability -> observability extension probes
+		{
+			name: "extensions/observability probes off",
+			expectDisabled: set.New(
+				"extensions/alert-kube-api",
+				"extensions/observability-controller",
+				"extensions/grafana",
+				"extensions/label-enforcer",
+				"extensions/observability-webhook",
+			),
+		},
+		{
+			name: "extensions/observability probes on",
+			args: args{
+				enabledModules: set.New("observability"),
+			},
+			expectNotDisabled: set.New(
+				"extensions/alert-kube-api",
+				"extensions/observability-controller",
+				"extensions/grafana",
+				"extensions/label-enforcer",
+				"extensions/observability-webhook",
+			),
 		},
 
 		// prometheus-longterm -> extensions/prometheus-longterm

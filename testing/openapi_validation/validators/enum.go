@@ -127,6 +127,17 @@ var (
 			// enforcement actions are discovered from label values and should be propagated further into the helm chart as is
 			"properties.internal.properties.podSecurityStandards.properties.enforcementActions.items",
 		},
+		"modules/015-admission-policy-engine/charts/constraint-templates/tests/openapi/constraint-test-fields.schema.yaml": {
+			// test generator schema uses lowercase scenario/level identifiers intentionally
+			"definitions.objectField.properties.level",
+			"definitions.objectField.properties.requiredScenarios.items",
+			"definitions.speField.properties.level",
+			"definitions.speField.properties.requiredScenarios.items",
+		},
+		"modules/015-admission-policy-engine/charts/constraint-templates/tests/openapi/constraint-test-matrix.schema.yaml": {
+			// test matrix schema uses lowercase yes/no values intentionally
+			"definitions.case.properties.violations",
+		},
 		"modules/030-cloud-provider-azure/openapi/config-values.yaml": {
 			// ignore Azure disk types
 			"properties.storageClass.properties.provision.items.properties.type",

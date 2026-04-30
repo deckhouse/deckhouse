@@ -30,6 +30,8 @@ memory: 10Mi
 {{- $defaultSSLCertificate := $crd.spec.defaultSSLCertificate | default dict }}
 {{- $defaultSSLCertificateSecretRef := $defaultSSLCertificate.secretRef | default dict }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
+{{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
+{{- $validationIsolationEnabled := eq $controllerVersion "1.14" }}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -167,10 +169,14 @@ spec:
           runAsGroup: 64535
           fsGroup: 64535
         volumeMounts:
-        - mountPath: /chroot/etc/ingress-controller
+        - mountPath: /etc/ingress-controller
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp
+        {{- if $validationIsolationEnabled }}
+        - mountPath: /validation-chroot/tmp
+          name: validation-tmp
+        {{- end }}
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
@@ -180,13 +186,16 @@ spec:
         - -ec
         - |
           mkdir -vp /chroot/var/lib/nginx/body /chroot/var/lib/nginx/fastcgi /chroot/var/lib/nginx/proxy \
-            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi /chroot/etc/ingress-controller/ssl \
-            /chroot/etc/ingress-controller/lua /chroot/etc/ingress-controller/nginx \
-            /chroot/etc/ingress-controller/resolv /chroot/etc/ingress-controller/geoip \
-            /chroot/etc/ingress-controller/auth /chroot/etc/ingress-controller/telemetry \
+            /chroot/var/lib/nginx/scgi /chroot/var/lib/nginx/uwsgi \
+            /etc/ingress-controller/ssl /etc/ingress-controller/lua /etc/ingress-controller/nginx \
+            /etc/ingress-controller/resolv /etc/ingress-controller/geoip \
+            /etc/ingress-controller/auth /etc/ingress-controller/telemetry \
+        {{- if $validationIsolationEnabled }}
+            /validation-chroot/tmp/nginx \
+        {{- end }}
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
-          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
+          echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /etc/ingress-controller/nginx/nginx.conf
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -237,6 +246,10 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
+        {{- if $validationIsolationEnabled }}
+        - name: VALIDATION_ISOLATION_MODE
+          value: {{ $validationIsolationMode | quote }}
+        {{- end }}
         {{- if $geoIP2 }}
         - name: LUA_USE_GEOIP2
           value: "true"
@@ -394,16 +407,33 @@ spec:
     {{- end }}
   {{- end }}
         volumeMounts:
+        {{- if $validationIsolationEnabled }}
+        - mountPath: /validation-chroot/tmp
+          name: validation-tmp
+        - mountPath: /validation-chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /validation-chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        {{- end }}
+        - mountPath: /chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - mountPath: /chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /etc/ingress-controller
+          name: etc-ingress-controller
+        - mountPath: /etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
+        - mountPath: /chroot/tmp
+          name: tmp
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
           name: var-log-nginx
-        - mountPath: /chroot/etc/nginx/ssl/
-          name: secret-nginx-auth-tls
-        - mountPath: /chroot/tmp
-          name: tmp
-        - mountPath: /chroot/etc/ingress-controller
-          name: etc-ingress-controller
 {{- if and (eq $controllerVersion "1.10") $crd.spec.nginxProfilingEnabled }}
         - name: valgrind
           mountPath: /chroot/var/log/valgrind
@@ -481,6 +511,10 @@ spec:
       volumes:
       - name: tmp
         emptyDir: {}
+      {{- if $validationIsolationEnabled }}
+      - name: validation-tmp
+        emptyDir: {}
+      {{- end }}
       - name: etc-ingress-controller
         emptyDir: {}
       - name: var-lib-nginx

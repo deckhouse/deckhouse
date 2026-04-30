@@ -10,7 +10,7 @@ shell:
   - /binary_replace.sh -i "{{ $binaries }}" -o /relocate
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
-from: {{ index $.Images "base/python" }}
+from: {{ index $.Images "base/python-3.12" }}
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/requirements.txt
@@ -54,4 +54,7 @@ import:
   - lib/ld-musl-x86_64*
   - usr/bin/python3*
   - usr/lib/python3*
-  - usr/lib/libc.so
+  - usr/lib/lib*.so*
+  excludePaths:
+  - usr/lib/python*/site-packages/pip-25.3*
+  - usr/lib/python*/test

@@ -1,0 +1,7 @@
+- name: Dynamix Terraform provider
+  link: https://repository.basistech.ru/BASIS/terraform-provider-decort
+  description: Terraform provider for Dynamix (DECORT).
+  logo: /images/logos/terraform.svg
+  license: Apache License 2.0
+  id: terraform-provider-decort
+  version: "4.7.3"
