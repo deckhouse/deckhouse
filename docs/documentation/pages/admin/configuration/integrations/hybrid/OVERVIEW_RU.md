@@ -399,7 +399,7 @@ lang: ru
   - настроены сети, Datastore, теги регионов и зон.
 - При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
-### Создание узлов в vSphere
+### Создание CloudEphemeral узлов в vSphere
 
 Для подключения уже работающего статического кластера к vCenter используйте ресурс [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-vsphere`]((/modules/cloud-provider-vsphere/).
 
@@ -533,4 +533,112 @@ lang: ru
 
    ```shell
    d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
+   ```
+
+### Создание CloudStatic узлов в vSphere
+
+В vSphere можно использовать не только автоматически создаваемые узлы `CloudEphemeral`, но и заранее подготовленные виртуальные машины. Такой сценарий используется, если виртуальные машины создаются вручную во внешней инфраструктуре, а затем подключаются к существующему кластеру DKP как узлы типа `CloudStatic`.
+
+В этом режиме DKP не создаёт виртуальные машины через API vSphere. Пользователь самостоятельно создаёт ВМ, настраивает для неё сеть, hostname и параметры vSphere, после чего подключает её к кластеру с помощью bootstrap-скрипта DKP.
+
+Перед началом убедитесь, что выполнены следующие условия:
+
+- Модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) включён и настроен.
+- Компоненты модуля `cloud-provider-vsphere` находятся в состоянии `Running`:
+
+  ```shell
+  d8 k -n d8-cloud-provider-vsphere get pods -o wide
+  ```
+
+- В кластере созданы StorageClass для vSphere:
+  
+  ```shell
+  d8 k get sc
+  ```
+
+- В vSphere создана виртуальная машина, которая будет подключена к кластеру.
+- Имя виртуальной машины в vSphere совпадает с hostname внутри операционной системы. Это необходимо, так как ресурс Node в Kubernetes формируется по hostname. Если имя ВМ в vSphere и hostname узла отличаются, компоненты vSphere, например CSI-контроллер, могут не сопоставить Kubernetes-узел с виртуальной машиной.
+- В дополнительных параметрах ВМ в vSphere задано значение:
+
+  ```text
+  disk.EnableUUID = TRUE
+  ```
+
+- Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
+- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите which и пакетный менеджер, если они отсутствуют.
+
+1. Создайте файл, например `cloud-static-nodegroup.yaml`, с ресурсом NodeGroup и типом узлов CloudStatic:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: cloud-static
+   spec:
+     nodeType: CloudStatic
+   ```
+
+1. Примените манифест:
+
+   ```shell
+   d8 k apply -f cloud-static-nodegroup.yaml
+   ```
+
+1. Убедитесь, что NodeGroup создана и синхронизирована:
+
+   ```shell
+   d8 k get nodegroup cloud-static
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME           TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
+   cloud-static   CloudStatic   0       0       0                                                               1m    True
+   ```
+
+1. Получите bootstrap-скрипт для созданной NodeGroup:
+
+   ```shell
+   NODE_GROUP=cloud-static
+
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} \
+     -o jsonpath='{.data.bootstrap\.sh}' > bootstrap.b64
+   ```
+
+1. Скопируйте bootstrap-скрипт на подключаемую виртуальную машину:
+
+   ```shell
+   scp bootstrap.b64 <USER>@<NODE_IP>:/tmp/bootstrap.b64
+   ```
+
+1. Подключитесь к виртуальной машине по SSH:
+
+   ```shell
+   ssh <USER>@<NODE_IP>
+   ```
+
+1. На виртуальной машине наначьте права и запустите bootstrap-скрипт:
+
+   ```shell
+   base64 -d /tmp/bootstrap.b64 > /tmp/bootstrap.sh
+   chmod +x /tmp/bootstrap.sh
+
+   sudo bash /tmp/bootstrap.sh
+   ```
+
+   После запуска bootstrap-скрипт установит необходимые компоненты, настроит container runtime, kubelet и подключит узел к кластеру.
+
+1. На master-узле проверьте появление нового узла:
+
+   ```shell
+   На master-узле проверьте появление нового узла:
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME                       STATUS   ROLES          AGE   VERSION    INTERNAL-IP
+   static-master-0            Ready    master         1h    v1.33.10   192.168.240.135
+   cloud-static-worker-0      Ready    cloud-static   5m    v1.33.10   192.168.240.152
    ```
