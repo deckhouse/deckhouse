@@ -3,6 +3,10 @@
 @use 'components/common/_breakpoints.scss';
 
 .filter {
+    @include breakpoints.max-w(l) {
+        margin-top: 24px;
+    }
+
     .tippy-box {
         border: none !important;
         box-shadow: none !important;
@@ -51,7 +55,7 @@
     }
 
     &--title {
-        margin-bottom: 28px;
+        margin: 24px 0 20px;
         font-weight: 700;
         font-size: 24px;
         line-height: 32px;
@@ -90,14 +94,30 @@
             }
         }
 
+        @include breakpoints.max-w(s) {
+            width: 320px;
+            min-width: 320px;
+        }
+
         @include breakpoints.max-w(xs) {
-            box-sizing: border-box;
-            overflow: auto;
             position: fixed;
             top: 51px;
             min-width: 100%;
-            padding: 0 20px;
+            padding: 20px 20px 0;
             z-index: 100;
+        }
+
+        &-module {
+            @include breakpoints.max-w(l) {
+
+                .filter__block--filters {
+                    margin-bottom: 65px;
+                }
+            }
+
+            @include breakpoints.max-w(xs) {
+                max-height: calc(100% - 51px);
+            }
         }
 
         &--filters {
@@ -107,10 +127,11 @@
         }
 
         &--apply {
+            display: none;
             position: sticky;
             bottom: 20px;
             background-color: #fff;
-            box-shadow: 0 0 30px 40px #fff;
+            box-shadow: 0 0 30px 30px #fff;
             cursor: pointer;
 
             .filter__container--apply {
@@ -134,6 +155,10 @@
                     cursor: pointer;
                 }
             }
+
+            @include breakpoints.max-w(l) {
+                display: block;
+            }
         }
     }
 
@@ -148,6 +173,7 @@
 
             @include breakpoints.max-w(l) {
                 margin-top: 0;
+                pointer-events: none;
             }
 
             a {
@@ -216,6 +242,7 @@
 
                 @include breakpoints.max-w(l) {
                     min-width: 268px;
+                    height: 0;
                     margin: 0;
                 }
             }
@@ -344,6 +371,15 @@
                 user-select: none;
                 font-size: 14.7px;
                 cursor: pointer;
+
+                @include breakpoints.max-w(xl) {
+                    gap: 10px;
+                }
+
+                @include breakpoints.max-w(s) {
+                    gap: 8px;
+                    font-size: 14px;
+                }
             }
 
             > input[type="checkbox"] {
@@ -365,6 +401,11 @@
                     background-repeat: no-repeat;
                     background-size: 12px 10px;
                     transition: border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+
+                    @include breakpoints.max-w(s) {
+                        height: 20px;
+                        width: 20px;
+                    }
                 }
 
                 &:checked + label::before {
@@ -419,6 +460,10 @@
 
             @include breakpoints.max-w(xl) {
                 background-position: calc(100% - 28px) center;
+            }
+
+            @include breakpoints.max-w(l) {
+                margin-bottom: 40px;
             }
 
             &__en {
