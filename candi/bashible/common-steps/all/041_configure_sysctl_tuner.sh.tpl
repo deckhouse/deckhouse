@@ -97,6 +97,7 @@ apply_sysctl fs.protected_hardlinks 1
 apply_sysctl fs.protected_fifos 2
 apply_sysctl fs.protected_regular 2
 apply_sysctl fs.suid_dumpable 0
+set +e
 {{- end }}
 
 if [[ "$(sysctl -n fs.may_detach_mounts 2> /dev/null)"  ]]; then
