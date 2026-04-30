@@ -4,65 +4,60 @@ permalink: ru/admin/integrations/hybrid/overview.html
 lang: ru
 ---
 
-Гибридный кластер — это кластер DKP, в котором одновременно используются узлы, размещённые в собственной инфраструктуре, и узлы, созданные во внешнем облаке или среде виртуализации.
+Гибридный кластер — это кластер DKP, в котором одновременно используются узлы из разных инфраструктурных сред. Например, часть узлов может быть размещена в собственной инфраструктуре, а часть — во внешнем облаке или среде виртуализации.
 
-Обычно постоянная часть нагрузки размещается на собственных серверах (bare-metal или виртуальных машинах), а дополнительные ресурсы подключаются по мере необходимости через облачного провайдера. Такой подход позволяет объединить локальную инфраструктуру и облачные ресурсы в рамках одного кластера Kubernetes.
+Такой подход позволяет использовать один Kubernetes-кластер для рабочих нагрузок, которые физически размещаются на разных площадках. При этом для приложений сохраняется единая плоскость управления Kubernetes: общие ресурсы, единый API, единые механизмы планирования, мониторинга и эксплуатации.
+
+Обычно постоянная часть нагрузки размещается на собственных серверах или заранее подготовленных виртуальных машинах. Такие узлы управляются как статические. Дополнительные ресурсы можно подключать из облака или среды виртуализации: например, чтобы временно увеличить вычислительные мощности, вынести часть нагрузки на другую площадку или постепенно мигрировать сервисы из собственного ЦОД.
 
 В DKP гибридная архитектура строится на сочетании разных типов групп узлов:
 
-- Static — постоянно существующие узлы, управляемые пользователем;
-- CloudEphemeral — узлы, создаваемые автоматически через API облачного провайдера.
+- [`Static`](../../../../architecture/cluster-and-infrastructure/node-management/static-nodes.html) — постоянно существующие узлы, которые создаются и обслуживаются пользователем;
+- [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) — узлы, которые DKP создаёт и удаляет автоматически через API провайдера;
+- [`CloudStatic`]((../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) — узлы, которые создаются вручную во внешней инфраструктуре и затем подключаются к кластеру.
 
-Гибридный кластер может использоваться для следующих сценариев:
+В типовом сценарии сначала разворачивается кластер с `clusterType: Static`. В нём control-plane и базовые узлы размещаются на заранее подготовленных серверах или виртуальных машинах. Затем в кластере включается модуль соответствующего облачного провайдера. После этого DKP получает возможность создавать или подключать узлы во внешней инфраструктуре.
 
-- масштабирование локальной инфраструктуры за счёт облачных ресурсов;
-- постепенная миграция сервисов из собственного ЦОД в облако;
-- временное увеличение вычислительных мощностей при пиковых нагрузках;
-- размещение различных типов рабочих нагрузок в подходящей среде.
+Для автоматически создаваемых узлов используется тип `CloudEphemeral`. В этом случае параметры виртуальных машин описываются ресурсом `*InstanceClass`, а количество узлов и зоны размещения — ресурсом NodeGroup. После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
 
-В этом разделе описаны общие требования к гибридным кластерам, особенности их архитектуры и настройка поддерживаемых провайдеров инфраструктуры.
+В этом разделе описаны общие требования к гибридным кластерам, предварительная подготовка инфраструктуры и добавление узлов через поддерживаемых провайдеров.
 
-## Общие требования
+## Общие требования к сети
 
-### Кластер и типы узлов
+Между статическими узлами кластера и узлами, создаваемыми во внешней инфраструктуре, должна быть настроена сетевая связность, достаточная для работы компонентов Kubernetes и DKP.
 
-Для большинства гибридных сценариев исходный кластер создаётся с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
-
-Облачные виртуальные машины описываются ресурсами `*InstanceClass` и [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом узлов `CloudEphemeral`.
-
-{% alert level="info" %}
-В некоторых примерах и устаревших версиях API вместо `CloudEphemeral` может использоваться прежнее обозначение `Cloud`.
-{% endalert %}
-
-### Сеть
-
-Между сетью статических узлов и сетью облачных виртуальных машин должна быть обеспечена связность на уровне L3. Также необходимо открыть сетевой доступ для компонентов DKP.
+Подключаемые узлы должны иметь доступ к Kubernetes API, DNS и необходимым адресам внешних сервисов, включая container registry и API используемого провайдера инфраструктуры.
 
 Полный перечень соединений приведён в разделе [Сетевое взаимодействие](../../../../reference/network_interaction.html), а рекомендации по ограничениям доступа — в разделе [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
 
 Дополнительно рекомендуется проверить:
 
+- маршрутизацию между сетями статических и подключаемых узлов;
 - одинаковое значение MTU на всём сетевом пути, особенно при использовании туннелей;
 - доступность DNS-серверов и разрешённых внешних адресов;
 - доступность Kubernetes API для подключаемых узлов;
 - параметры инкапсуляции трафика при использовании Cilium, включая [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), если между площадками применяется фильтрация трафика.
 
-Общая L2-сеть между статическими и облачными узлами не требуется. В большинстве случаев достаточно L3-маршрутизации, корректного MTU и открытых необходимых портов.
-
-Требования к подсетям, шаблонам виртуальных машин, учётным данным и дополнительным параметрам зависят от используемого провайдера инфраструктуры и приведены в разделе **«Предварительные требования»** для соответствующего провайдера ниже.
+Конкретные требования к сетям, подсетям, шаблонам виртуальных машин, учётным данным и дополнительным параметрам зависят от используемого провайдера инфраструктуры и приведены в разделе «Предварительные требования» для соответствующего провайдера ниже.
 
 ## Гибридный кластер с Yandex Cloud
 
 Для создания гибридного кластера, объединяющего статические узлы и узлы в Yandex Cloud, выполните описанные далее шаги.
 
-### Предварительные требования
+### Предварительные требования для Yandex Cloud
 
-- Кластер с `clusterType: Static`, соответствующий [общим требованиям](#общие-требования) к сети, DNS и подготовке узлов.
-- Сервисный аккаунт и каталог в Yandex Cloud, настроенные согласно разделу [Авторизация в Yandex Cloud](../public/yandex/authorization.html).
-- Для туннелирования трафика подов при использовании Cilium — режим **VXLAN**. Подробнее см. параметр [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
-- Сетевая связность между сетью статического кластера и VPC Yandex Cloud в соответствии с требованиями раздела [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
+Перед началом убедитесь, что выполнены следующие условия:
 
-### Шаги по настройке
+- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+- Между сетью статических узлов и VPC Yandex Cloud настроена сетевая связность.
+- Узлы, создаваемые в Yandex Cloud, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
+- Выполнены требования из раздела [Авторизация в Yandex Cloud](../public/yandex/authorization.html):
+  - подготовлен сервисный аккаунт;
+  - выбран каталог, в котором будут создаваться ресурсы;
+  - настроены необходимые роли и доступ к используемой VPC.
+- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
+
+### Создание узлов в Yandex Cloud
 
 1. Создайте Service Account в нужном каталоге Yandex Cloud:
 
@@ -77,7 +72,7 @@ lang: ru
    export SA_ID=$(yc iam service-account get --name dkp-hybrid --folder-id "$FOLDER_ID" --format json | jq -r .id)
    yc resource-manager folder add-access-binding "$FOLDER_ID" --role editor --subject "serviceAccount:${SA_ID}"
    yc vpc network list --folder-id "$FOLDER_ID"
-   yc ia
+   yc iam
    ```
 
    Подробнее в разделе [Авторизация в Yandex Cloud](../public/yandex/authorization.html)
@@ -244,22 +239,21 @@ lang: ru
 
 Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в VMware vCloud Director (VCD) с использованием Deckhouse Kubernetes Platform (DKP).
 
-### Предварительные требования
+### Предварительные требования для VCD
 
 Перед началом убедитесь, что выполнены следующие условия:
 
-- **Инфраструктура**:
-  - Установлен bare-metal кластер DKP.
-  - Настроен тенант в VCD [с выделенными ресурсами](../virtualization/vcd/connection-and-authorization.html).
-  - Настроена сетевая связанность между сетью узлов статического кластера и VCD (на уровне L2, либо на уровне L3 с доступами по портам согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html)).
-  - Настроена рабочая сеть в VCD с включённым DHCP-сервером.
-  - Создан пользователь со статичным паролем и правами администратора VCD.
+- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+- Между сетью статических узлов и сетью виртуальных машин в VCD настроена сетевая связность.
+- Узлы, создаваемые в VCD, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
+- Выполнены требования из раздела [Подключение и авторизация в VMware vCloud Director](../virtualization/vcd/connection-and-authorization.html):
+  - настроен тенант в VCD с выделенными ресурсами;
+  - подготовлена учётная запись VCD со статичным паролем и правами администратора;
+  - настроена рабочая сеть в VCD с включённым DHCP-сервером;
+  - подготовлены необходимые ресурсы VCD: VDC, vApp, шаблоны, политики и другие параметры.
+- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
-- **Настройки ПО**:
-  - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
-  - Подготовлен [список необходимых ресурсов VCD](../virtualization/vcd/connection-and-authorization.html) (VDC, VAPP, шаблоны, политики и т.д.).
-
-### Настройка
+### Создание узлов в VCD
 
 1. Создайте файл конфигурации `cloud-provider-vcd-token.yml` со следующим содержимым:
 
@@ -387,30 +381,33 @@ lang: ru
 
 Для создания гибридного кластера, объединяющего статические узлы и узлы в VMware vSphere, выполните описанные далее шаги.
 
-В таком сценарии исходный кластер DKP уже развёрнут как статический кластер, а новые worker-узлы создаются в vSphere через модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Параметры виртуальных машин задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом узлов [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
+В этом сценарии исходный кластер DKP уже развёрнут как статический кластер. Control-plane остаётся на статических узлах, а новые worker-узлы создаются во vSphere через модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/).
 
-### Предварительные требования
+Параметры виртуальных машин задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом узлов [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
 
-Перед началом создания убедитесь, что выполнены следующие условия:
+### Предварительные требования для vSphere
 
-- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) и соответствует [общим требованиям](#общие-требования): раздел [«Сеть»](#сеть), [Сетевое взаимодействие](../../../../reference/network_interaction.html), [настройка сетевых политик](../../network/policy/configuration.html), доступность Kubernetes API и DNS для новых узлов.
+Перед началом убедитесь, что выполнены следующие условия:
+
+- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
+- Между сетью статических узлов и сетью виртуальных машин во vSphere настроена сетевая связность.
+- Узлы, создаваемые во vSphere, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [Сетевое взаимодействие](../../../../reference/network_interaction.html) и [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
 - Выполнены требования из раздела [Подключение и авторизация в VMware vSphere](../virtualization/vsphere/authorization.html):
-  - доступ к vCenter из кластера, в первую очередь с master-узлов;
-  - подготовлен шаблон виртуальной машины (поле `template` в [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), см. [схемы размещения](../virtualization/vsphere/layout.html));
-  - настроены сети, datastore, теги регионов и зон (`mainNetwork`, `datastore` в [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass); `region`, `zones`, `regionTagCategory`, `zoneTagCategory` в [конфигурации модуля](/modules/cloud-provider-vsphere/configuration.html));
-  - подготовлена учётная запись vSphere с необходимыми привилегиями.
-- Инвентарь vSphere, теги регионов и зон, сети, datastore и путь к шаблону соответствуют выбранной схеме размещения. Подробнее — разделы [Схемы размещения и настройка VMware vSphere](../virtualization/vsphere/layout.html) и [Хранилище и балансировка нагрузки в VMware vSphere](../virtualization/vsphere/storage.html); интеграция со службами — [Интеграция со службами VMware vSphere](../virtualization/vsphere/services.html).
-- При использовании модуля [`cni-cilium`](/modules/cni-cilium/) с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), согласованный с [сетевой связностью между площадками](#сеть).
+  - настроен доступ к vCenter;
+  - подготовлена учётная запись vSphere с необходимыми привилегиями;
+  - подготовлен шаблон виртуальной машины;
+  - настроены сети, Datastore, теги регионов и зон.
+- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
-### Шаги по настройке
+### Создание узлов в vSphere
 
-Подключение к vCenter задают через [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) в `spec.settings` модуля `cloud-provider-vsphere` — так удобнее для уже работающего статического кластера. Пример и описание полей — в [примерах модуля](/modules/cloud-provider-vsphere/docs/examples.html) и в [конфигурации модуля](/modules/cloud-provider-vsphere/configuration.html).
+Для подключения уже работающего статического кластера к vCenter используйте ресурс [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-vsphere`.
 
-Альтернатива — секрет `kube-system/d8-provider-cluster-configuration` с `VsphereClusterConfiguration` и `VsphereCloudDiscoveryData` в Base64 (часто при установке через dhctl); см. подраздел **«Конфигурация через секрет»** в конце раздела.
+В параметре `spec.settings` укажите параметры доступа к vCenter, сетевые настройки, теги региона и зоны, а также SSH-ключи, которые будут добавлены на создаваемые виртуальные машины.
 
-Ниже — настройка через `ModuleConfig`.
+Пример конфигурации и описание доступных параметров приведены в [примерах модуля](/modules/cloud-provider-vsphere/docs/examples.html) и в разделе [Конфигурация модуля `cloud-provider-vsphere`](/modules/cloud-provider-vsphere/configuration.html).
 
-1. Создайте файл, например `vsphere-mc.yaml`, с `ModuleConfig` для модуля `cloud-provider-vsphere`. В `spec.version` укажите актуальную схему настроек модуля (значение `x-config-version` в OpenAPI настроек модуля).
+1. Создайте файл, например `vsphere-mc.yaml`, с ModuleConfig для модуля [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/):
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -438,26 +435,31 @@ lang: ru
    ```
 
    Значения параметров:
-   - `host`, `username`, `password`, `insecure` — доступ к API vCenter;
-   - `vmFolderPath` — папка для клонируемых ВМ (см. [схемы размещения](../virtualization/vsphere/layout.html));
-   - `regionTagCategory`, `zoneTagCategory`, `region`, `zones` — категории и теги региона/зоны в vSphere; в `NodeGroup` указывают те же имена зон, что в `zones`;
-   - `internalNetworkNames` — портовые группы для InternalIP узла; при необходимости публичных адресов — [`externalNetworkNames`](/modules/cloud-provider-vsphere/configuration.html);
-   - `sshKeys` — публичные SSH-ключи для создаваемых ВМ.
 
-   {% alert level="warning" %}
-   Учётные данные в `ModuleConfig` доступны при чтении объекта в API кластера; для постоянных сценариев используйте принятую у вас модель хранения секретов.
-   {% endalert %}
+   - `host` — адрес vCenter;
+   - `username`, `password` — учётные данные пользователя vSphere;
+   - `insecure` — отключение проверки TLS-сертификата vCenter;
+   - `vmFolderPath` — папка, в которой будут создаваться виртуальные машины;
+   - `regionTagCategory`, `zoneTagCategory` — категории тегов региона и зоны;
+   - `region` — тег региона;
+   - `zones` — список зон, в которых можно создавать узлы;
+   - `internalNetworkNames` — список сетей vSphere для подключения создаваемых узлов;
+   - `sshKeys` — публичные SSH-ключи, которые будут добавлены на создаваемые виртуальные машины.
 
-1. Примените манифест и дождитесь готовности модуля:
+1. Примените конфигурацию модуля:
 
    ```shell
    d8 k apply -f vsphere-mc.yaml
-   d8 system module enable cloud-provider-vsphere
+   ```
+
+1. Дождитесь готовности модуля `cloud-provider-vsphere`:
+
+  ```shell
    d8 k get moduleconfig cloud-provider-vsphere
    d8 k get pods -n d8-cloud-provider-vsphere -o wide
    ```
 
-1. Создайте [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup) с `nodeType: CloudEphemeral`, например в файле `vsphere-instance.yaml`:
+1. Создайте файл, например `vsphere-instance.yaml`, c ресурсами [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup) со значением `nodeType: CloudEphemeral`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -490,69 +492,45 @@ lang: ru
        approvalMode: Automatic
    ```
 
-   В `cloudInstances.zones` укажите зоны из списка `zones` в `ModuleConfig`. Режимы [`disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) — в справочнике NodeGroup.
+   Где:
+
+   - VsphereInstanceClass описывает параметры виртуальной машины, которая будет создана во vSphere;
+   - NodeGroup описывает группу узлов, которую DKP должен поддерживать в кластере;
+   - `nodeType: CloudEphemeral` означает, что узлы будут создаваться автоматически через облачный провайдер;
+   - `cloudInstances.classReference` указывает на VsphereInstanceClass;
+   - `cloudInstances.zones` должен содержать зоны из списка `zones` в ModuleConfig.
+
+1. Примените манифест:
 
    ```shell
    d8 k apply -f vsphere-instance.yaml
    ```
 
-1. Проверьте узлы и при сбоях заказа ВМ — объекты `Machine` / `MachineSet` в `d8-cloud-provider-vsphere` и логи `machine-controller-manager` в `d8-cloud-instance-manager`:
+   После применения манифеста DKP начнёт создавать виртуальную машину во vSphere. После загрузки ВМ kubelet подключится к Kubernetes API, и новый узел появится в кластере.
+
+1. Проверьте состояние узлов:
 
    ```shell
    d8 k get nodes -o wide
-   d8 k -n d8-cloud-provider-vsphere get machinesets,machines -o wide
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME                             STATUS   ROLES                  AGE   VERSION
+   static-master-0                  Ready    control-plane,master   1h    v1.33.10
+   ephemeral-1ca02a5b-7588b-k89dc   Ready    ephemeral              10m   v1.33.10
+   ```
+
+1. При сбоях создания ВМ проверьте объекты Machine, MachineSet и логи machine-controller-manager:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get machinesets,machines -o wide
    d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
 
-   При необходимости: `d8 k queue list`. Дополнительные параметры модуля — в [документации `cloud-provider-vsphere`](/modules/cloud-provider-vsphere/).
+   Также проверьте события в кластере:
 
-#### Конфигурация через секрет
-
-Если используется секрет `d8-provider-cluster-configuration`:
-
-1. Подготовьте `VsphereClusterConfiguration` (например, layout `Standard`) и `cloud-provider-discovery-data.json` с `VsphereCloudDiscoveryData` — см. [документацию модуля](/modules/cloud-provider-vsphere/).
-1. Закодируйте оба файла в Base64 и поместите в секрет `kube-system/d8-provider-cluster-configuration` в ключи `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json`.
-1. Примените секрет и `ModuleConfig` с `spec.enabled: true` и корректным `spec.version`.
-1. Создайте `VsphereInstanceClass` и `NodeGroup`, как в шаге 3.
-
-   Пример `VsphereClusterConfiguration` для `Standard`:
-
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: VsphereClusterConfiguration
-   sshPublicKey: "<SSH_PUBLIC_KEY>"
-   layout: Standard
-   vmFolderPath: folder/prefix
-   regionTagCategory: k8s-region
-   zoneTagCategory: k8s-zone
-   region: region2
-   zones:
-     - region2-a
-   externalNetworkNames:
-     - net3-k8s
-   internalNetworkNames:
-     - K8S_3
-   internalNetworkCIDR: 172.16.2.0/24
-   baseResourcePool: kubernetes/cloud
-   masterNodeGroup:
-     replicas: 1
-     instanceClass:
-       numCPUs: 4
-       memory: 8192
-       template: Templates/ubuntu-focal-20.04
-       mainNetwork: net3-k8s
-       additionalNetworks:
-         - K8S_3
-       datastore: lun10
-       rootDiskSize: 50
-       runtimeOptions:
-         nestedHardwareVirtualization: false
-   provider:
-     server: "<SERVER>"
-     username: "<USERNAME@DOMAIN.LOCAL>"
-     password: "<PASSWORD>"
-     insecure: true
+   ```shell
+   d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
    ```
-
-   Для `VsphereCloudDiscoveryData` минимально укажите `apiVersion`, `kind` и `vmFolderPath`, совпадающий с конфигурацией кластера.
-
