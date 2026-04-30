@@ -46,9 +46,12 @@ git:
         - '**/*'
 shell:
   install:
-    - bash /module_crds/pull_dex_crds.sh --check --dex-dir /src/scripts/manifests/crds
     - cd /src
     - git apply /patches/*.patch --verbose
+    # Check after patches are applied: our patches may legitimately update Dex
+    # source CRDs (e.g. additionalPrinterColumns for OfflineSessions); the
+    # snapshot in modules/.../crds/external must match the post-patch source.
+    - bash /module_crds/pull_dex_crds.sh --check --dex-dir /src/scripts/manifests/crds
     - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
