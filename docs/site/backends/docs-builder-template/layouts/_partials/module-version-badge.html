@@ -5,7 +5,6 @@
 {{- $embeddedModulesHistory := .ctx.Site.Data.embedded_modules_list }}
 {{- $channelsInfo := .ctx.Site.Data.channels.info }}
 {{- $urlFileName := replaceRE `^.*/` "" .ctx.Page.RelPermalink 1 }}
-{{- $urlTail := replaceRE "^readme.html$" "" $urlFileName }}
 {{- $embeddedModuleVersions := slice }}
 
 {{- range $productVersion, $modules := $embeddedModulesHistory }}
