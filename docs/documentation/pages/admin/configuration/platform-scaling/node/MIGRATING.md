@@ -68,5 +68,5 @@ At migration process the folder `/var/lib/containerd` will be cleared, causing a
 {% endalert %}
 
 {% alert level="warning" %}
-On Astra Linux, when using EROFS images, the `du` command may show an inflated size for the `/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/` directory due to double-counting of mounted layers. To get the correct size, use the `-x` flag: `du -shx /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/`.
+On Astra Linux, when using EROFS images, the `du` command may show an inflated size for the `/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/` directory due to double-counting of layers (as files and as mounted filesystems within the `fs/` subdirectory). To get the correct size, use the `-x` flag: `du -shx /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/`.
 {% endalert %}

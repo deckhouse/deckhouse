@@ -70,5 +70,5 @@ ls -l /etc/containerd/conf.d
 {% endalert %}
 
 {% alert level="warning" %}
-На Astra Linux при использовании EROFS-образов команда `du` может показывать завышенный размер директории `/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/` из-за двойного учета смонтированных слоев. Для корректного расчета используйте флаг `-x`: `du -shx /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/`.
+На Astra Linux при использовании EROFS-образов команда `du` может показывать завышенный размер директории `/var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/` из-за двойного учета слоев (как файлов и как смонтированных файловых систем внутри поддиректории `fs/`). Для корректного расчета используйте флаг `-x`: `du -shx /var/lib/containerd/io.containerd.snapshotter.v1.erofs/snapshots/`.
 {% endalert %}
