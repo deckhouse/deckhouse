@@ -387,26 +387,135 @@ lang: ru
 
 Для создания гибридного кластера, объединяющего статические узлы и узлы в VMware vSphere, выполните описанные далее шаги.
 
-В таком сценарии исходный кластер DKP уже развёрнут как статический кластер, а новые worker-узлы создаются в vSphere через модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Параметры виртуальных машин задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом узлов `CloudEphemeral`.
+В таком сценарии исходный кластер DKP уже развёрнут как статический кластер, а новые worker-узлы создаются в vSphere через модуль [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/). Параметры виртуальных машин задаются ресурсом [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с типом узлов [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html).
 
 ### Предварительные требования
 
 Перед началом создания убедитесь, что выполнены следующие условия:
 
-- Кластер создан с `clusterType: Static` и соответствует [общим требованиям](#общие-требования) к сети, DNS и доступности Kubernetes API для новых узлов.
+- Кластер создан с параметром `clusterType: Static` ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) и соответствует [общим требованиям](#общие-требования): раздел [«Сеть»](#сеть), [Сетевое взаимодействие](../../../../reference/network_interaction.html), [настройка сетевых политик](../../network/policy/configuration.html), доступность Kubernetes API и DNS для новых узлов.
 - Выполнены требования из раздела [Подключение и авторизация в VMware vSphere](../virtualization/vsphere/authorization.html):
   - доступ к vCenter из кластера, в первую очередь с master-узлов;
-  - подготовлен шаблон виртуальной машины;
-  - настроены сети, datastore, теги регионов и зон;
+  - подготовлен шаблон виртуальной машины (поле `template` в [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass), см. [схемы размещения](../virtualization/vsphere/layout.html));
+  - настроены сети, datastore, теги регионов и зон (`mainNetwork`, `datastore` в [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass); `region`, `zones`, `regionTagCategory`, `zoneTagCategory` в [конфигурации модуля](/modules/cloud-provider-vsphere/configuration.html));
   - подготовлена учётная запись vSphere с необходимыми привилегиями.
-- Инвентарь vSphere, теги регионов и зон, сети, datastore и путь к шаблону соответствуют выбранной схеме размещения. Подробнее см. раздел [Схемы размещения и настройка VMware vSphere](../virtualization/vsphere/layout.html).
-- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), согласованный с сетевой связностью между площадками.
+- Инвентарь vSphere, теги регионов и зон, сети, datastore и путь к шаблону соответствуют выбранной схеме размещения. Подробнее — разделы [Схемы размещения и настройка VMware vSphere](../virtualization/vsphere/layout.html) и [Хранилище и балансировка нагрузки в VMware vSphere](../virtualization/vsphere/storage.html); интеграция со службами — [Интеграция со службами VMware vSphere](../virtualization/vsphere/services.html).
+- При использовании модуля [`cni-cilium`](/modules/cni-cilium/) с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), согласованный с [сетевой связностью между площадками](#сеть).
 
 ### Шаги по настройке
 
-1. Подготовьте файл `vsphere-cluster-configuration.yaml` с ресурсом VsphereClusterConfiguration.
+Подключение к vCenter задают через [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) в `spec.settings` модуля `cloud-provider-vsphere` — так удобнее для уже работающего статического кластера. Пример и описание полей — в [примерах модуля](/modules/cloud-provider-vsphere/docs/examples.html) и в [конфигурации модуля](/modules/cloud-provider-vsphere/configuration.html).
 
-   Пример для схемы размещения `Standard`:
+Альтернатива — секрет `kube-system/d8-provider-cluster-configuration` с `VsphereClusterConfiguration` и `VsphereCloudDiscoveryData` в Base64 (часто при установке через dhctl); см. подраздел **«Конфигурация через секрет»** в конце раздела.
+
+Ниже — настройка через `ModuleConfig`.
+
+1. Создайте файл, например `vsphere-mc.yaml`, с `ModuleConfig` для модуля `cloud-provider-vsphere`. В `spec.version` укажите актуальную схему настроек модуля (значение `x-config-version` в OpenAPI настроек модуля).
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cloud-provider-vsphere
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       host: "<VCENTER_FQDN>"
+       username: "<USERNAME@DOMAIN.LOCAL>"
+       password: "<PASSWORD>"
+       insecure: true
+       vmFolderPath: "<FOLDER_PATH_UNDER_DATACENTER>"
+       regionTagCategory: "<TAG_CATEGORY_FOR_REGION>"
+       zoneTagCategory: "<TAG_CATEGORY_FOR_ZONE>"
+       region: "<REGION_TAG_NAME_ON_DATACENTER>"
+       zones:
+         - "<ZONE_TAG_NAME_ON_CLUSTER>"
+       internalNetworkNames:
+         - "<PORT_GROUP_NAME_FOR_INTERNAL_IP>"
+       sshKeys:
+         - "<SSH_PUBLIC_KEY_ONE_LINE>"
+   ```
+
+   Значения параметров:
+   - `host`, `username`, `password`, `insecure` — доступ к API vCenter;
+   - `vmFolderPath` — папка для клонируемых ВМ (см. [схемы размещения](../virtualization/vsphere/layout.html));
+   - `regionTagCategory`, `zoneTagCategory`, `region`, `zones` — категории и теги региона/зоны в vSphere; в `NodeGroup` указывают те же имена зон, что в `zones`;
+   - `internalNetworkNames` — портовые группы для InternalIP узла; при необходимости публичных адресов — [`externalNetworkNames`](/modules/cloud-provider-vsphere/configuration.html);
+   - `sshKeys` — публичные SSH-ключи для создаваемых ВМ.
+
+   {% alert level="warning" %}
+   Учётные данные в `ModuleConfig` доступны при чтении объекта в API кластера; для постоянных сценариев используйте принятую у вас модель хранения секретов.
+   {% endalert %}
+
+1. Примените манифест и дождитесь готовности модуля:
+
+   ```shell
+   d8 k apply -f vsphere-mc.yaml
+   d8 system module enable cloud-provider-vsphere
+   d8 k get moduleconfig cloud-provider-vsphere
+   d8 k get pods -n d8-cloud-provider-vsphere -o wide
+   ```
+
+1. Создайте [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup) с `nodeType: CloudEphemeral`, например в файле `vsphere-instance.yaml`:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: VsphereInstanceClass
+   metadata:
+     name: ephemeral
+   spec:
+     numCPUs: 2
+     memory: 4096
+     rootDiskSize: 40
+     template: "<PATH_TO_TEMPLATE_FROM_DATACENTER>"
+     mainNetwork: "<PORT_GROUP_NAME>"
+     datastore: "<DATASTORE_OR_FOLDER/DATASTORE>"
+   ---
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: ephemeral
+   spec:
+     nodeType: CloudEphemeral
+     cloudInstances:
+       classReference:
+         kind: VsphereInstanceClass
+         name: ephemeral
+       maxPerZone: 1
+       minPerZone: 1
+       zones:
+         - "<ZONE_TAG_NAME_ON_CLUSTER>"
+     disruptions:
+       approvalMode: Automatic
+   ```
+
+   В `cloudInstances.zones` укажите зоны из списка `zones` в `ModuleConfig`. Режимы [`disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) — в справочнике NodeGroup.
+
+   ```shell
+   d8 k apply -f vsphere-instance.yaml
+   ```
+
+1. Проверьте узлы и при сбоях заказа ВМ — объекты `Machine` / `MachineSet` в `d8-cloud-provider-vsphere` и логи `machine-controller-manager` в `d8-cloud-instance-manager`:
+
+   ```shell
+   d8 k get nodes -o wide
+   d8 k -n d8-cloud-provider-vsphere get machinesets,machines -o wide
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
+   ```
+
+   При необходимости: `d8 k queue list`. Дополнительные параметры модуля — в [документации `cloud-provider-vsphere`](/modules/cloud-provider-vsphere/).
+
+#### Конфигурация через секрет
+
+Если используется секрет `d8-provider-cluster-configuration`:
+
+1. Подготовьте `VsphereClusterConfiguration` (например, layout `Standard`) и `cloud-provider-discovery-data.json` с `VsphereCloudDiscoveryData` — см. [документацию модуля](/modules/cloud-provider-vsphere/).
+1. Закодируйте оба файла в Base64 и поместите в секрет `kube-system/d8-provider-cluster-configuration` в ключи `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json`.
+1. Примените секрет и `ModuleConfig` с `spec.enabled: true` и корректным `spec.version`.
+1. Создайте `VsphereInstanceClass` и `NodeGroup`, как в шаге 3.
+
+   Пример `VsphereClusterConfiguration` для `Standard`:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -443,96 +552,7 @@ lang: ru
      username: "<USERNAME@DOMAIN.LOCAL>"
      password: "<PASSWORD>"
      insecure: true
-   ```  
-
-1. Создайте файл `cloud-provider-discovery-data.json` с объектом VsphereCloudDiscoveryData. Для этого объекта обязательны поля `apiVersion`, `kind` и `vmFolderPath` (см. спецификацию в составе документации модуля `cloud-provider-vsphere`); значение `vmFolderPath` должно совпадать с путём в VsphereClusterConfiguration. Дополнительно можно передать, в частности, списки зон и datastore — см. описание полей в документации модуля. Пример:
-
-   ```json
-   {
-     "apiVersion": "deckhouse.io/v1",
-     "kind": "VsphereCloudDiscoveryData",
-     "vmFolderPath": "folder/prefix"
-   }
    ```
 
-1. Закодируйте оба файла в Base64 без переносов строк.
-
-1. Создайте секрет `d8-provider-cluster-configuration` в `kube-system` с ключами `cloud-provider-cluster-configuration.yaml` и `cloud-provider-discovery-data.json`, а также объект ModuleConfig для модуля `cloud-provider-vsphere`. В `spec.version` укажите номер версии схемы настроек модуля (для текущей схемы конфигурации модуля это значение `x-config-version` в OpenAPI настроек; при несовпадении версии применение ModuleConfig завершится ошибкой валидации). Пример:
-
-   ```yaml
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     labels:
-       heritage: deckhouse
-       name: d8-provider-cluster-configuration
-     name: d8-provider-cluster-configuration
-     namespace: kube-system
-   type: Opaque
-   data:
-     cloud-provider-cluster-configuration.yaml: <BASE64_ИЗ_vsphere-cluster-configuration.yaml>
-     cloud-provider-discovery-data.json: <BASE64_ИЗ_cloud-provider-discovery-data.json>
-   ---
-   apiVersion: deckhouse.io/v1alpha1
-   kind: ModuleConfig
-   metadata:
-     name: cloud-provider-vsphere
-   spec:
-     version: 2
-     enabled: true
-   ```
-
-1. Примените манифесты и проверьте модуль:
-
-   ```shell
-   d8 k apply -f vsphere-provider-hybrid.yaml
-   d8 system module enable cloud-provider-vsphere
-   d8 k get pods -n d8-cloud-provider-vsphere
-   ```
-
-1. Опишите класс ВМ и группу узлов. У [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) обязательны поля `spec.numCPUs` и `spec.memory`; `template`, `mainNetwork` и `datastore` при необходимости можно не дублировать и взять из описания master-узла в `VsphereClusterConfiguration` (см. описание полей в справочнике CR). В NodeGroup в `cloudInstances.zones` укажите зоны из списка `zones` ресурса VsphereClusterConfiguration.
-
-   ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: VsphereInstanceClass
-   metadata:
-     name: worker
-   spec:
-     numCPUs: 4
-     memory: 8192
-     rootDiskSize: 50
-     template: Templates/ubuntu-focal-20.04
-     mainNetwork: net3-k8s
-     datastore: lun10
-   ---
-   apiVersion: deckhouse.io/v1
-   kind: NodeGroup
-   metadata:
-     name: worker-vsphere
-   spec:
-     nodeType: CloudEphemeral
-     cloudInstances:
-       classReference:
-         kind: VsphereInstanceClass
-         name: worker
-       minPerZone: 1
-       maxPerZone: 3
-       zones:
-         - region2-a
-   ```
-
-   ```shell
-   d8 k apply -f vsphere-instanceclass-nodegroup.yaml
-   ```
-
-1. Проверьте узлы и при сбоях заказа ВМ — объекты `Machine` / `MachineSet` в `d8-cloud-provider-vsphere` и логи `machine-controller-manager` в `d8-cloud-instance-manager`:
-
-   ```shell
-   d8 k get nodes -o wide
-   d8 k -n d8-cloud-provider-vsphere get machine
-   d8 k -n d8-cloud-provider-vsphere get machineset
-   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager
-   ```
-
-   Классы хранения, балансировку (включая NSX-T при необходимости) и прочие параметры модуля настройте по [документации `cloud-provider-vsphere`](/modules/cloud-provider-vsphere/).
+   Для `VsphereCloudDiscoveryData` минимально укажите `apiVersion`, `kind` и `vmFolderPath`, совпадающий с конфигурацией кластера.
 
