@@ -35,11 +35,9 @@
       lockDuration: {{ .lockout.lockDuration | quote }}
       {{- if .lockout.applyToConnectors }}
       applyToConnectors:
-        {{- /* Map module-level pretty names to the connector type used inside Dex. */}}
+        {{- /* Map module-level pretty names to the connector type used inside Dex. The built-in Local connector is always covered by lockout (handled via the Password CRD), so it is not listed here. */}}
         {{- range $name := .lockout.applyToConnectors }}
-        {{- if eq $name "Local" }}
-        - local
-        {{- else if eq $name "LDAP" }}
+        {{- if eq $name "LDAP" }}
         - ldap
         {{- else if eq $name "Crowd" }}
         - atlassian-crowd

@@ -12,7 +12,7 @@ positive:
       lockout:
         maxAttempts: 5
         lockDuration: 10m
-        applyToConnectors: ["Local", "LDAP", "Crowd"]
+        applyToConnectors: ["LDAP", "Crowd"]
 negative:
   values:
   - kubeconfigGenerator:
@@ -28,3 +28,8 @@ negative:
         maxAttempts: 5
         lockDuration: 10m
         applyToConnectors: ["okta"]
+  - passwordPolicy:
+      lockout:
+        maxAttempts: 5
+        lockDuration: 10m
+        applyToConnectors: ["Local"]
