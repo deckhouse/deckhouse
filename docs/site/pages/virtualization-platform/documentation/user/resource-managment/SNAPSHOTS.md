@@ -511,6 +511,12 @@ USB device passthrough is available only in the **Enterprise Edition (EE)** of t
 
 DVP supports USB device passthrough to virtual machines using DRA (Dynamic Resource Allocation). This section describes how to use USB devices with virtual machines.
 
+USB device passthrough requires:
+
+- `containerd v2`: Detailed requirements for cluster nodes are described in the [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) parameter.
+- [Kubernetes](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#kubernetes) version 1.34 or higher.
+- [Deckhouse Kubernetes Platform (DKP)](https://releases.deckhouse.io/) version 1.75 or higher.
+
 ### Overview
 
 DVP provides two custom resources for managing USB devices:

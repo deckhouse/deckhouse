@@ -3,6 +3,94 @@ title: "Release notes"
 permalink: en/virtualization-platform/documentation/release-notes.html
 ---
 
+## v1.8.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: April 28, 2026.
+</span>
+
+### Fixes
+
+- [vd] Fixed a potential issue where a virtual disk could get stuck in the `Provisioning` state when using a StorageClass with `WaitForFirstConsumer` mode.
+- [module] Fixed incorrect resource calculations on the `Virtualization / Overview` dashboard that could occur during virtual machine migration.
+- [cdi] CDI metrics now use `d8_internal_virtualization_kubevirt_cdi_*` names, matching other internal virtualization metrics.
+- [module] Added missing RBAC permissions for virtualization resources, including virtual machine MAC addresses, snapshot operations, and node USB devices.
+- [observability] Fixed CPU usage calculation on the virtual machine dashboard in HA clusters, where duplicated controller metrics could affect the displayed value.
+
+## v1.8.0
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: April 22, 2026.
+</span>
+
+### New features
+
+- [vm] Added the `progress` field to the status of [VirtualMachineOperation](/modules/virtualization/cr.html#virtualmachineoperation) resources with the `Evict` and `Migrate` types to show operation progress. The corresponding `PROGRESS` column is displayed when running `d8 k get vmop`.
+- [vm] Added the ability to change the number of CPUs in a virtual machine without manually stopping it. The new value is applied via live migration. To enable this functionality, add `HotplugCPUWithLiveMigration` to `.spec.settings.featureGates` in the `ModuleConfig` of the `virtualization` module.
+- [vm] Added initial support for changing virtual machine memory without manually stopping the virtual machine. The new `.spec.memory` value is applied via live migration. To enable this functionality, add `HotplugMemoryWithLiveMigration` to `.spec.settings.featureGates` in the `ModuleConfig` of the `virtualization` module.
+
+### Fixes
+
+- [vm] Optimized virtual machine migration: it now uses `hostNetwork`, allowing the host MTU to be used instead of the pod MTU.
+- [vm] Fixed an issue with an unfrozen filesystem during virtual machine snapshot creation if the freeze occurred during migration.
+- [vm] Fixed removal of the `Main` network from a virtual machine: the virtual machine no longer uses an IP address from the virtualization CIDR after the network is removed.
+- [api] When uploading disks and images with the `Upload` type, the `WaitForUserUpload` phase no longer occurs prematurely while the resource is not yet ready for upload.
+- [usb] Added automatic cleanup of [NodeUSBDevice](/modules/virtualization/cr.html#nodeusbdevice) resources that are absent on the node and are not assigned to a namespace or project.
+- [vmsnapshot] Fixed snapshot creation for a virtual machine without the `Main` network.
+
+### Security
+
+- [module] Fixed vulnerabilities:
+  - CVE-2026-39883
+  - CVE-2026-32280
+  - CVE-2026-32281
+  - CVE-2026-32282
+  - CVE-2026-32283
+  - CVE-2026-32288
+  - CVE-2026-32289
+  - CVE-2026-34986
+  - CVE-2026-25679
+  - CVE-2026-27142
+  - CVE-2026-27139
+  - CVE-2026-33186
+  - CVE-2026-34040
+  - CVE-2026-33997
+
+## v1.7.1
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: April 21, 2026.
+</span>
+
+### Fixes
+
+- [vm] To update the firmware on virtual machines with a connected USB device, one of the following actions is required. A corresponding message will appear in the virtual machine status:
+
+  - Disconnect the USB device and migrate the virtual machine.
+  - Restart the virtual machine.
+
+  Until then, the virtual machine will continue running, but it will not be available for migration.
+  After either action is completed, the virtual machine will be updated to the current firmware version and will be available for migration again.
+
+### Security
+
+- [module] Fixed vulnerabilities:
+  - CVE-2026-32283
+  - CVE-2026-27139
+  - CVE-2026-32289
+  - CVE-2026-32288
+  - CVE-2026-32281
+  - CVE-2026-27142
+  - CVE-2026-33997
+  - CVE-2026-33726
+  - CVE-2026-32282
+  - CVE-2026-32280
+  - CVE-2026-25679
+  - CVE-2026-34040
+  - CVE-2026-34986
+  - CVE-2026-39883
+  - CVE-2026-33186
+
 ## v1.7.0
 
 <span style="opacity:0.6; font-style:italic; font-size:0.9em;">
@@ -11,7 +99,7 @@ Release date: March 31, 2026.
 
 ### New features
 
-- [vm] The order of additional network interfaces is now deterministic and does not change after virtual machine restarts.
+- [vm] The order of additional network interfaces is now deterministic and does not change after virtual machine restarts. For this to work for virtual machines created on earlier versions, they must be restarted.
 - [vm] Added a mechanism to prevent TCP connection drops during live migration of a virtual machine.
 - [vm] Reduced USB device downtime during virtual machine migration.
 - [vm] Added a garbage collector for completed and failed virtual machine pods:
@@ -31,6 +119,41 @@ Release date: March 31, 2026.
 - [vd,vi,cvi] Fixed the creation of block devices from VMDK files (especially for VMDKs in the `streamOptimized` format used in exports from VMware).
 - [usb] Stabilized USB device support for virtualization on Deckhouse Kubernetes Platform version `>=1.76` and Kubernetes version `>=1.33`.
 - [usb] Fixed USB device detection on the host: duplicate USB devices could previously appear.
+
+## v1.6.3
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: April 21, 2026.
+</span>
+
+### Security
+
+- [module] Fixed vulnerabilities:
+  - CVE-2026-32283
+  - CVE-2026-27139
+  - CVE-2026-32289
+  - CVE-2026-32288
+  - CVE-2026-32281
+  - CVE-2026-27142
+  - CVE-2026-33997
+  - CVE-2026-33726
+  - CVE-2026-32282
+  - CVE-2026-32280
+  - CVE-2026-25679
+  - CVE-2026-34040
+  - CVE-2026-34986
+  - CVE-2026-39883
+  - CVE-2026-33186
+
+## v1.6.2
+
+<span style="opacity:0.6; font-style:italic; font-size:0.9em;">
+Release date: March 23, 2026.
+</span>
+
+### Fixes
+
+- [module] The `virtualization` module requires Deckhouse Kubernetes Platform version 1.74.2 or later. This version includes a fix for quota validation when creating disks.
 
 ## v1.6.1
 
