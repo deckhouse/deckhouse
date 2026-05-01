@@ -36,7 +36,7 @@ ls -l /etc/containerd/conf.d
 {% alert level="info" %}
 During migration the directory `/var/lib/containerd` will be cleared, causing all pod images to be re-pulled, and the node will reboot.
 
-Also note that this is a [disruptive update](./node-management.html#disruptive-updates). If [`spec.disruptions.approvalMode: Manual`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) is set for a node group, run the update on the respective nodes with the annotation: `d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=`.
+Also note that this is a [disruptive update](./node-management.html#disruptive-updates). If [`spec.disruptions.approvalMode: Manual`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) is set for a node group, approve the update on the respective nodes with the annotation: `d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=`.
 {% endalert %}
 
 You can enable containerd v2 in two ways:
