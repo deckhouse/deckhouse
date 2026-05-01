@@ -26,6 +26,7 @@ import (
 	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -208,12 +209,20 @@ func testSSHConnection(ctx context.Context, nodeInterface node.Interface, addres
 		config.BastionHost = sess.BastionHost
 		config.BastionPort = sess.BastionPort
 		config.BastionUser = sess.BastionUser
-		config.BastionPassword = sess.BastionPassword
+		bastionPassword := sess.BastionPassword
+		if bastionPassword == "" {
+			bastionPassword = app.SSHBastionPass
+		}
+		config.BastionPassword = bastionPassword
 	} else {
 		config.BastionHost = sess.AvailableHosts()[0].Host
 		config.BastionPort = sess.Port
 		config.BastionUser = sess.User
-		config.BastionPassword = sess.BecomePass
+		bastionPassword := sess.BecomePass
+		if bastionPassword == "" {
+			bastionPassword = app.BecomePass
+		}
+		config.BastionPassword = bastionPassword
 	}
 
 	client, err := sshclient.NewClientFromConfig(ctx, address, config)
