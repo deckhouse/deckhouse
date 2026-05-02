@@ -40,6 +40,13 @@ module Jekyll
         @converter = site.find_converter_instance(::Jekyll::Converters::Markdown)
         rendered_content = collapse_inter_block_newlines(@converter.convert(content))
 
+        rendered_content = rendered_content.gsub(/(<pre\b[^>]*>)(.*?)(<\/pre>)/m) do
+          pre_open = $1
+          pre_body = $2
+          pre_close = $3
+          "#{pre_open}#{pre_body.gsub("\n", '&#10;')}#{pre_close}"
+        end
+
         %Q(<div markdown="0" class="details"><p class="details__lnk"><a href="javascript:void(0)" class="details__summary">#{@config[:title]}</a></p><div class="details__content"><div class="expand">#{rendered_content}</div></div></div>)
       end
     end
