@@ -13,18 +13,6 @@
 - <span class="mustChange">Так выделены параметры</span>, обязательные для самостоятельного заполнения.
 - <span class="mightChange">Так выделены параметры</span>, которые вы возможно захотите изменить.
 - Если вы запускаете инсталлятор под **Windows**, то убедитесь, что кодировка создаваемых YAML-файлов конфигурации UTF-8 (либо удалите примечания на русском языке).
-- Начиная с версии Deckhouse Kubernetes Platform 1.76, в Yandex Cloud для новых кластеров по умолчанию используется CNI `cilium`. При использовании CentOS 8 необходимо явно включить модуль `cni-simple-bridge` в файле `config.yml`.
-
-  {% offtopic title="Пример конфигурации CNI для CentOS 8 в Yandex Cloud..." %}
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: cni-simple-bridge
-  spec:
-    enabled: true
-  ```
-  {% endofftopic %}
 {%- if page.platform_type == 'baremetal' %}
 - Выполнять установку необходимо с **[персонального компьютера](step2.html#что-необходимо-для-установки)**, имеющего SSH-доступ до узла, который будет **master-узлом** будущего кластера.
 {%- endif %}
