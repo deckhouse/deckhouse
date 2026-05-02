@@ -67,7 +67,6 @@ description: "Настройка Yandex Cloud для работы облачно
 {% offtopic title="Пример конфигурации CNI для CentOS 8 в Yandex Cloud..." %}
 
 ```yaml
-
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -76,7 +75,7 @@ spec:
   enabled: true
 ```
 
-{%- endofftopic %}
+{% endofftopic %}
 {% endalert %}
 
 ### Настройка групп безопасности

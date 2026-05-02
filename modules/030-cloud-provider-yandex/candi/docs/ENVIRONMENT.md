@@ -67,7 +67,6 @@ When using CentOS 8, you must explicitly enable the `cni-simple-bridge` module i
 {% offtopic title="Example configuration for CentOS 8 in Yandex Cloud..." %}
 
 ```yaml
-
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -76,7 +75,7 @@ spec:
   enabled: true
 ```
 
-{%- endofftopic %}
+{% endofftopic %}
 {% endalert %}
 
 ### Configuring security groups
