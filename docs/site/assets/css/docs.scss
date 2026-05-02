@@ -1766,11 +1766,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
     transform: rotate(0deg);
 }
 
-.docs .details .details__content {
+.docs .details > .details__content {
     display: none;
 }
 
-.docs .details.active .details__content {
+.docs .details.active > .details__content {
     display: block;
 }
 
