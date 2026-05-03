@@ -105,6 +105,18 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+# [<en>] stronghold module settings.
+# [<en>] https://deckhouse.io/modules/stronghold/configuration.html
+# [<ru>] Настройки модуля stronghold.
+# [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  version: 1
+  enabled: true
+---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/modules/cloud-provider-yandex/cluster_configuration.html
 # [<ru>] Настройки облачного провайдера.
@@ -197,8 +209,8 @@ spec:
     # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
     # [<ru>] Возможно, захотите изменить.
     maxPerZone: 1
-    # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone or add more zones.
-    # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone или добавьте зоны.
+    # [<en>] The minimum number of instances for the group in each zone.
+    # [<ru>] Минимальное количество инстансов в каждой зоне.
     minPerZone: 1
     # [<en>] List of availability zones to create instances in.
     # [<ru>] Список зон, в которых создаются инстансы.
