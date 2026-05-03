@@ -26,6 +26,12 @@ metadata:
 spec:
   registry:
     repo: registry.example.com/test
+status:
+  packages:
+  - name: test-package
+    type: Application
+  packagesCount: 1
+  phase: Active
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion

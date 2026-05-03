@@ -376,7 +376,12 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				var repo v1alpha1.PackageRepository
 				err := yaml.Unmarshal([]byte(manifest), &repo)
 				require.NoError(t, err)
+				savedStatus := repo.Status
 				require.NoError(t, kubeClient.Create(context.TODO(), &repo))
+				if !reflect.DeepEqual(savedStatus, v1alpha1.PackageRepositoryStatus{}) {
+					repo.Status = savedStatus
+					require.NoError(t, kubeClient.Status().Update(context.TODO(), &repo))
+				}
 			case "ModulePackageVersion":
 				var mpv v1alpha1.ModulePackageVersion
 				err := yaml.Unmarshal([]byte(manifest), &mpv)
