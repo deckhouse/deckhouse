@@ -142,8 +142,8 @@ func prepareSchemas(settings, values []byte) (map[Type]*spec.Schema, error) {
 }
 
 // loadSchemaFromBytes returns spec.Schema object loaded from YAML bytes.
-func loadSchemaFromBytes(openApiContent []byte) (*spec.Schema, error) {
-	jsonDoc, err := yamlBytesToJSONDoc(openApiContent)
+func loadSchemaFromBytes(openAPIContent []byte) (*spec.Schema, error) {
+	jsonDoc, err := yamlBytesToJSONDoc(openAPIContent)
 	if err != nil {
 		return nil, err
 	}
