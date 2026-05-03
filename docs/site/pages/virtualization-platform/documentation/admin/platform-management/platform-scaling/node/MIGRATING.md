@@ -53,7 +53,7 @@ You can enable containerd v2 in two ways:
    defaultCRI: ContainerdV2
    ```
 
-2. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object.
+1. **For a specific node group**. Set `ContainerdV2` in the [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) parameter of the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object.
 
    Example:
 
