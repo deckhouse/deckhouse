@@ -1,4 +1,4 @@
-{%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
+{%- include getting_started/stronghold/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
 Для управления ресурсами в Yandex Cloud, необходимо создать сервисный аккаунт с правами на редактирование. Подробная инструкция по созданию сервисного аккаунта в Yandex Cloud доступна в [документации](/modules/cloud-provider-yandex/environment.html). Ниже краткая версия:
 

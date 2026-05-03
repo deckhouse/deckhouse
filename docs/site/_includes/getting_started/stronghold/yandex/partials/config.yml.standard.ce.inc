@@ -18,13 +18,23 @@ cloud:
 # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR.
 podSubnetCIDR: 10.111.0.0/16
 # [<en>] Address space of the cluster's services.
-# [<ru>] Адресное пространство для сервисов кластера.
+# [<ru>] Адресное пространство для service’ов кластера.
 # [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR.
 # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR.
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
+---
+# [<en>] Settings for the bootstrapping the Deckhouse cluster
+# [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
+# [<ru>] Настройки первичной инициализации кластера Deckhouse.
+# [<ru>] https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.ru/deckhouse/ce
+  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -94,6 +104,18 @@ spec:
         mode: Global
         global:
           kubeconfigGeneratorMasterCA: ""
+---
+# [<en>] stronghold module settings.
+# [<en>] https://deckhouse.io/modules/stronghold/configuration.html
+# [<ru>] Настройки модуля stronghold.
+# [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  version: 1
+  enabled: true
 ---
 # [<en>] Cloud provider settings.
 # [<en>] https://deckhouse.io/modules/cloud-provider-yandex/cluster_configuration.html
@@ -187,8 +209,8 @@ spec:
     # [<ru>] Максимальное количество инстансов в каждой зоне (используется при масштабировании).
     # [<ru>] Возможно, захотите изменить.
     maxPerZone: 1
-    # [<en>] The minimum number of instances for the group in each zone. To launch more nodes, increase maxPerZone or add more zones.
-    # [<ru>] Минимальное количество инстансов в каждой зоне. Чтобы запустить больше узлов, увеличьте maxPerZone или добавьте зоны.
+    # [<en>] The minimum number of instances for the group in each zone.
+    # [<ru>] Минимальное количество инстансов в каждой зоне.
     minPerZone: 1
     # [<en>] List of availability zones to create instances in.
     # [<ru>] Список зон, в которых создаются инстансы.

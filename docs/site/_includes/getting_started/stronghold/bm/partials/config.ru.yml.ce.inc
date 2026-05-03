@@ -102,6 +102,18 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+# [<en>] stronghold module settings.
+# [<en>] https://deckhouse.io/modules/stronghold/configuration.html
+# [<ru>] Настройки модуля stronghold.
+# [<ru>] https://deckhouse.ru/modules/stronghold/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: stronghold
+spec:
+  version: 1
+  enabled: true
+---
 # [<en>] cni-cilium module settings.
 # [<en>] https://deckhouse.io/modules/cni-cilium/configuration.html
 # [<ru>] Настройки модуля cni-cilium.
