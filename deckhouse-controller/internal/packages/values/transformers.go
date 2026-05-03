@@ -16,8 +16,9 @@ package values
 
 import (
 	addonvalues "github.com/flant/addon-operator/pkg/utils"
-	"github.com/flant/addon-operator/pkg/values/validation"
 	"github.com/go-openapi/spec"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema/defaults"
 )
 
 // transformer interface for applying transformations to values.
@@ -30,11 +31,10 @@ type transformer interface {
 // It reads default values from an OpenAPI schema and merges them into the values.
 //
 // Used in the values layering process to apply:
-//   - Config schema defaults (after static values, before user config)
+//   - Settings schema defaults (after static values, before user config)
 //   - Values schema defaults (after user config)
 type applyDefaults struct {
-	SchemaType validation.SchemaType                  // Which schema to use (config or values)
-	Schemas    map[validation.SchemaType]*spec.Schema // Available OpenAPI schemas
+	schema *spec.Schema // Available OpenAPI schemas
 }
 
 // Transform applies default values from the OpenAPI schema to the provided values.
@@ -49,13 +49,7 @@ type applyDefaults struct {
 // Returns a new values object with defaults applied (original values are not modified).
 func (a *applyDefaults) Transform(values addonvalues.Values) addonvalues.Values {
 	// Return unchanged if no schemas loaded
-	if a.Schemas == nil {
-		return values
-	}
-
-	// Get the schema for our type (config or values)
-	schema := a.Schemas[a.SchemaType]
-	if schema == nil {
+	if a.schema == nil {
 		return values
 	}
 
@@ -63,7 +57,7 @@ func (a *applyDefaults) Transform(values addonvalues.Values) addonvalues.Values 
 	res := values.Copy()
 
 	// Apply default values from the schema
-	validation.ApplyDefaults(res, schema)
+	defaults.Apply(res, a.schema)
 
 	return res
 }
