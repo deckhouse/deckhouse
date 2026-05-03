@@ -150,16 +150,10 @@ func (s *OperationService) DiscoverPackage(ctx context.Context) (*DiscoverResult
 }
 
 // UpdateRepositoryStatus updates the PackageRepository status with the processed packages.
-//
-// Package type (Application/Module) is a stable property — it lives in the
-// version image labels and never changes between scans. The previous
-// status.Packages therefore acts as a cache of already-resolved types: when an
-// incremental scan finds no new tags for a package it returns an empty Type,
-// and we recover it from the existing entry instead of dropping the package.
-// First-ever scan with no resolvable type is still skipped by the safety guard.
 func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages []v1alpha1.PackageRepositoryOperationStatusPackage) error {
 	original := s.repo.DeepCopy()
 
+	// Type is stable per package; recover it from the previous status when an incremental scan returned empty.
 	cachedTypes := make(map[string]string, len(s.repo.Status.Packages))
 	for _, p := range s.repo.Status.Packages {
 		cachedTypes[p.Name] = p.Type
@@ -173,7 +167,6 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 			pkgType = cachedTypes[pkg.Name]
 		}
 		if pkgType == "" {
-			// Safety guard: first scan ever, type is still unknown.
 			continue
 		}
 		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
