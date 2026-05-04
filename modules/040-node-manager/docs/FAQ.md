@@ -1822,8 +1822,6 @@ To add a GPU node to the cluster, perform the following steps:
    If the GPU node was prepared in advance, shipped with preinstalled NVIDIA drivers, or runs an OS with a graphical environment, make sure that the GPU is not being used by third-party processes.
 
    In the `nvidia-smi` output, the `Processes` section must not contain third-party processes using the GPU. On nodes with a graphical environment, these may include, for example, graphical session or display manager processes: `Xorg`, `gnome-shell`, `gdm`, `sddm`, `lightdm`, and others. Such processes can consume GPU memory and interfere with correct workload operation as well as MIG configuration.
-
-   For dedicated GPU nodes, it is recommended to use a server OS without a graphical environment or disable the graphical session/display manager using OS tools.
    {% endalert %}
 
    Expected proper output (example):
