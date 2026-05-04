@@ -149,8 +149,8 @@ github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa h
 github.com/deckhouse/deckhouse/pkg/registry v0.0.0-20260413174016-1d9c3adaaffa/go.mod h1:KDf44MqEif8jAKCehKJqOg0k4sJcnetKJKDGd0IFQjI=
 github.com/deckhouse/delivery-kit-sdk v1.1.0 h1:Uu1PoTrpe1pTYLxIEcpau2ONFXgckvET2dw9Ot22ZD4=
 github.com/deckhouse/delivery-kit-sdk v1.1.0/go.mod h1:HgPk8RNOxcy1FZ37pB9RMQRdYHa13pGYAmKnLJh0I9A=
-github.com/deckhouse/lib-connection v0.6.0 h1:W5piKBhHD2feRLUrj8BK00WoegRgn7s2/zJ8VQm/4Dc=
-github.com/deckhouse/lib-connection v0.6.0/go.mod h1:ajQ7a07qHeTM7eZ/0y/SlXVxmIiTADM1PpJRa85jYWE=
+github.com/deckhouse/lib-connection v0.7.0 h1:RcPiaQJwZ0yw8QkZhxtlpM2ht+e4MoX/6aHvAtTOUcg=
+github.com/deckhouse/lib-connection v0.7.0/go.mod h1:DF2LDhylaHMqJQaOH0Soqv2YDOo64m+uql4bdCBJq5s=
 github.com/deckhouse/lib-dhctl v0.17.0 h1:2bDR+kohYp3JI6pBq7T4XwEhIWuagnc39Y8Cmd186ck=
 github.com/deckhouse/lib-dhctl v0.17.0/go.mod h1:RCthjbhLf0CtgdltTmFHk+lRyjRai8BlAO7SocAYR+E=
 github.com/deckhouse/lib-gossh v0.3.0 h1:FUAlF8+fLnBCII9hXSNx+arZ4PH3H/6fzp5LBlnmlps=
