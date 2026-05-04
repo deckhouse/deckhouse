@@ -167,7 +167,6 @@ huaweicloud:
   destinationBinary: terraform-provider-huaweicloud
   vmResourceType: huaweicloud_compute_instance
   useOpentofu: true
-
 kubernetes:
   namespace: hashicorp
   cloudName: DVP
