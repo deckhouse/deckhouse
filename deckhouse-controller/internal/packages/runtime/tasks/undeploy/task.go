@@ -54,9 +54,7 @@ type task struct {
 // Sets keep=true to preserve downloaded images for potential reinstallation.
 func NewAppTask(name string, deployer deployerI, logger *log.Logger) queue.Task {
 	return &task{
-		name: name,
-		// TODO(ipaqsa): design app deletion
-		// downloaded: filepath.Join(appsDownloadedDir, repo.Name, name),
+		name:     name,
 		deployed: filepath.Join(appsDeployedDir, name),
 		keep:     true,
 		deployer: deployer,

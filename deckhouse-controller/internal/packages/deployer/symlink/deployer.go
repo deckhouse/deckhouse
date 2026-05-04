@@ -156,7 +156,7 @@ func cleanupTempDownloadDirs(downloaded, version string) error {
 			continue
 		}
 
-		if err := os.RemoveAll(filepath.Join(downloaded, entry.Name())); err != nil {
+		if err = os.RemoveAll(filepath.Join(downloaded, entry.Name())); err != nil {
 			return err
 		}
 	}

@@ -52,6 +52,9 @@ const (
 	magicVeritySalt = "dc0f616e4bf75776061d5ffb7a6f45e1313b7cc86f3aa49b68de4f6d187bad2b"
 
 	saltArg = "--salt=" + magicVeritySalt
+
+	// imageHashTimeout bounds veritysetup format because it can hang.
+	imageHashTimeout = time.Minute
 )
 
 var (
@@ -141,6 +144,9 @@ func CloseMapper(ctx context.Context, name string) error {
 // Equivalent shell command:
 // veritysetup format --data-block-size=4096 --hash-block-size=4096 --salt=<salt> <imagePath> <hashPath>
 func CreateImageHash(ctx context.Context, imagePath string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, imageHashTimeout)
+	defer cancel()
+
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "CreateImageHash")
 	defer span.End()
 

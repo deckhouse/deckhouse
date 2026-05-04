@@ -35,9 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-const (
-	tracerName = "deployer"
-)
+const tracerName = "deployer"
 
 // Deployer handles package lifecycle using erofs images with dm-verity integrity.
 // Operations are serialized via mutex to prevent concurrent mount/unmount conflicts.
