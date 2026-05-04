@@ -1,23 +1,23 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-istio-pilot-v1x21x6-cve-2026-35206",
+  "@id": "merged-vex-a39d1c37bbf68a4ba0ce2826c7918e0c386f3005378b34e8dd0df13b296d192c",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 1,
   "statements": [
     {
       "vulnerability": {
-        "name": "CVE-2026-35206"
+        "name": "CVE-2026-40179"
       },
       "products": [
         {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.14.2"
+          "@id": "pkg:golang/github.com/prometheus/prometheus@v0.48.1"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Helm pull с распаковкой chart (флаг --untar) из произвольного URL или имени из репозитория (CVE-2026-35206, GHSA-hr2v-4r36-88hr, CWE-22) в программном продукте helm версии 3.14.2 не используется в рамках эксплуатации pilot-discovery (istiod). Манифесты и chart-артефакты подготавливаются на этапе сборки образа и не подменяются из недоверенных источников во время работы в кластере, что исключает возможность эксплуатации данной уязвимости.",
-      "timestamp": "2026-03-30T10:17:01.000000000Z"
+      "impact_statement": "Уязвимость относится к веб-интерфейсу сервера Prometheus 3.x (stored XSS, CVE-2026-40179, GHSA-vffh-x6r8-xx99, CWE-79). Бинарник pilot-discovery не запускает сервер Prometheus и не открывает указанный UI; зависимость github.com/prometheus/prometheus v0.48.1 подтягивается как библиотека и не включает исполняемый путь уязвимого кода из advisory. Эксплуатация в контексте данного компонента недоступна.",
+      "timestamp": "2026-05-04T09:03:17.000000000Z"
     }
   ],
-  "timestamp": "2026-03-30T10:17:00Z"
+  "timestamp": "2026-05-04T09:03:17Z"
 }
