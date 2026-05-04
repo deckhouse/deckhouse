@@ -2,4 +2,3 @@ crds/mcm.yaml
 hooks/*
 monitoring/prometheus-rules/*
 templates/*
-openapi/config-values.yaml

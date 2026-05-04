@@ -907,11 +907,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/cse/modules/040-node-manager/openapi/config-values.yaml
-  to: /deckhouse/modules/040-node-manager/openapi/config-values.yaml
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/cse/modules/150-user-authn/templates/basic-auth-proxy
   to: /deckhouse/modules/150-user-authn/templates/basic-auth-proxy
   excludePaths:
