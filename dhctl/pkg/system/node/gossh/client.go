@@ -137,7 +137,7 @@ func (s *Client) Start() error {
 		var bastionPass string
 
 		if s.Settings.BastionPassword != "" {
-			bastionPass = s.Settings.BecomePass
+			bastionPass = s.Settings.BastionPassword
 		} else {
 			bastionPass = app.SSHBastionPass
 		}
