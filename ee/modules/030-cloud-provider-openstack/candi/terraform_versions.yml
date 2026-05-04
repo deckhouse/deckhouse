@@ -1,5 +1,4 @@
 opentofu: 1.9.4
-
 openstack:
   namespace: terraform-provider-openstack
   cloudName: OpenStack
