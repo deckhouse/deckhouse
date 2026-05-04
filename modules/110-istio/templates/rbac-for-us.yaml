@@ -24,14 +24,12 @@ rules:
   - networking.istio.io
   resources:
   - destinationrules
-  - envoyfilters
   - serviceentries
   - sidecars
   - gateways
   - workloadentries
   - workloadgroups
   - virtualservices
-  - proxyconfigs
   verbs:
   - get
   - list
@@ -64,6 +62,11 @@ rules:
   - get
   - list
   - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
 - apiGroups: 
   - install.istio.io
   resources: 
@@ -72,6 +75,11 @@ rules:
   - get
   - list
   - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
 - apiGroups: 
   - sailoperator.io
   resources: 
@@ -84,6 +92,11 @@ rules:
   - get
   - list
   - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
 - apiGroups:
   - extensions.istio.io
   resources:
@@ -92,6 +105,11 @@ rules:
   - get
   - list
   - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
