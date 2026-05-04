@@ -16,6 +16,8 @@ Adds DaemonSet scoped recommendations grouped by node label key from `spec.scope
 
 - Supports only DaemonSet targetRef with non-empty `spec.scope`.
 - Uses node label value as a recommendation group key for Prometheus-based flow.
-- Extends status with grouped recommendations and tagged per-container scope.
-- Updates admission-controller/updater selection to apply only matching scoped recommendation.
+- Uses `status.groups` as source-of-truth for scoped recommendations.
+- Stores grouped recommendations in compact form (target-focused payload).
+- Keeps `status.recommendation` as non-scoped summary to avoid duplication.
+- Uses map-based lookup in admission-controller/updater for scoped recommendation selection.
 
