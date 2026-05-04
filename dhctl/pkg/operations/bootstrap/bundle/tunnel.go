@@ -96,7 +96,7 @@ type Tunnel struct {
 
 func (t *Tunnel) start(ctx context.Context) error {
 	preflightURL := fmt.Sprintf(
-		"%s://%s/healthz",
+		"%s://%s/v2/",
 		strings.ToLower(string(t.scheme)),
 		net.JoinHostPort(t.address, t.port),
 	)
