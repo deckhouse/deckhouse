@@ -41,34 +41,34 @@ installTypes:
         name:
           en: Installation information
           ru: Информация об установке
-        template: getting_started/dvp/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
+        template: getting_started/dvp/STEP_INSTALL_SCHEMA.md
       step2:
         name:
           en: Cluster parameters
           ru: Параметры кластера
-        template: getting_started/dvp/global/step_cluster_setup.html
+        template: getting_started/dvp/step_cluster_setup.html
       step3:
         name:
           en: Pre-installation configuration
           ru: Предварительная конфигурация
-        template: getting_started/dvp/global/STEP_PREPARE.md
+        template: getting_started/dvp/STEP_PREPARE.md
       step4:
         name:
           en: Platform installation
           ru: Установка платформы
-        template: getting_started/dvp/global/STEP_INSTALL.md
+        template: getting_started/dvp/STEP_INSTALL.md
       step5:
         name:
           en: Platform configuration
           ru: Настройка платформы
-        template: getting_started/dvp/global/STEP_CONFIGURATION.md
+        template: getting_started/dvp/STEP_CONFIGURATION.md
       step6:
         name:
           en: Deploying a test application
           ru: Развёртывание тестового приложения
-        template: getting_started/dvp/global/STEP_TESTAPP.md
+        template: getting_started/dvp/STEP_TESTAPP.md
       step7:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
-        template: getting_started/dvp/global/STEP_FINISH.md
+        template: getting_started/dvp/STEP_FINISH.md

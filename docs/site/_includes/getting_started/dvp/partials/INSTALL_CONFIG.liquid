@@ -20,9 +20,10 @@
 {%- endif %}
 
 Create the `config.yml` file.
-{% capture includePath %}_includes/getting_started/dvp/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{{ revision }}.inc{% endcapture %}
 {% snippetcut name="config.yml" selector="config-yml" %}
-{% include_file "{{ includePath }}" syntax="yaml" %}
+```yaml
+{% include getting_started/dvp/partials/config-dvp.yml.inc.liquid revision=revision %}
+```
 {% endsnippetcut %}
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}

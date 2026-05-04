@@ -4,4 +4,4 @@
 
 {::options parse_block_html="false" /}
 
-{% include getting_started/dvp/global/partials/FINISH_CARDS_RU.md %}
+{% include getting_started/dvp/partials/FINISH_CARDS_RU.md %}

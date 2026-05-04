@@ -36,9 +36,9 @@
 {% assign layoutCode = '' | append: layout.code %}
 <div id='block_layout_{{ revision }}' class="tabs__content tabs__content_revision{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
     {% if page.lang == 'ru' %}
-    {% include getting_started/dvp/global/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
+    {% include getting_started/dvp/partials/INSTALL_CONFIG_RU.liquid revision=revision layout=layoutCode %}
     {% else %}
-    {% include getting_started/dvp/global/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
+    {% include getting_started/dvp/partials/INSTALL_CONFIG.liquid revision=revision layout=layoutCode %}
     {% endif %}
 </div>
 {%- endfor %}
@@ -71,9 +71,9 @@
 
 <div id='block_other_{{ revision }}' class="tabs__content tabs__content_other{% if revision == 'ce' or page.ee_only == true %} active{% endif %}" markdown="1">
 {% if page.lang == 'ru' %}
-{% include getting_started/dvp/global/partials/INSTALL_OTHER_RU.liquid revision=revision %}
+{% include getting_started/dvp/partials/INSTALL_OTHER_RU.liquid revision=revision %}
 {% else %}
-{% include getting_started/dvp/global/partials/INSTALL_OTHER.liquid revision=revision %}
+{% include getting_started/dvp/partials/INSTALL_OTHER.liquid revision=revision %}
 {% endif %}
 </div>
 {% if revision == 'ee' %}

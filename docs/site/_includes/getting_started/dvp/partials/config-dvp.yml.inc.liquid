@@ -2,8 +2,13 @@
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
+{% if include.revision == 'ee' %}
+  imagesRepo: registry.deckhouse.ru/deckhouse/ee
+  registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
+{% else %}
   imagesRepo: registry.deckhouse.ru/deckhouse/ce
   registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
+{% endif %}
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
@@ -23,7 +28,11 @@ spec:
   enabled: true
   settings:
     bundle: Default
+{% if include.revision == 'ee' %}
+    releaseChannel: Stable
+{% else %}
     releaseChannel: EarlyAccess
+{% endif %}
     logLevel: Info
 ---
 apiVersion: deckhouse.io/v1alpha1
