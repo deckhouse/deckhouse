@@ -83,6 +83,7 @@ spec:
         - "--listen-address=127.0.0.1:5080"
         - "--cache-directory=/cache"
         - "--cache-retention-size=1Gi"
+        - "--cluster-uuid={{ .Values.global.discovery.clusterUUID | default "" }}"
         env:
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         - name: GOGC
@@ -120,6 +121,9 @@ spec:
           - containerPort: 4219
             hostPort: 4219
             name: https
+          - containerPort: 4300
+            hostPort: 4300
+            name: bootstrap
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:

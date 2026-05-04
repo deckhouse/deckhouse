@@ -36,7 +36,11 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 )
 
-const apiserverPort = 6443
+const (
+	apiserverPort              = 6443
+	packagesProxyPort          = 4219
+	packagesProxyBootstrapPort = 4300
+)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager",
@@ -140,7 +144,28 @@ func handleAPIEndpoints(_ context.Context, input *go_hook.HookInput) error {
 		return errors.New("no kubernetes apiserver endpoints host:port specified")
 	}
 
+	clusterMasterEndpoints := make([]map[string]any, 0, len(endpointsList))
+	for _, endpoint := range endpointsList {
+		address, port, err := net.SplitHostPort(endpoint)
+		if err != nil {
+			return fmt.Errorf("cannot parse kubernetes apiserver endpoint %q: %w", endpoint, err)
+		}
+
+		kubeAPIPort, err := strconv.Atoi(port)
+		if err != nil {
+			return fmt.Errorf("cannot parse kubernetes apiserver port %q: %w", port, err)
+		}
+
+		clusterMasterEndpoints = append(clusterMasterEndpoints, map[string]any{
+			"address":                address,
+			"kubeApiPort":            kubeAPIPort,
+			"rppServerPort":          packagesProxyPort,
+			"rppBootstrapServerPort": packagesProxyBootstrapPort,
+		})
+	}
+
 	input.Values.Set("nodeManager.internal.clusterMasterAddresses", endpointsList)
+	input.Values.Set("nodeManager.internal.clusterMasterEndpoints", clusterMasterEndpoints)
 
 	return nil
 }

@@ -16,6 +16,7 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -35,6 +36,7 @@ import (
 	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
 )
 
 type MetaConfig struct {
@@ -57,19 +59,32 @@ type MetaConfig struct {
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
-	VersionMap                map[string]interface{} `json:"-"`
-	Images                    imagesDigests          `json:"-"`
-	Registry                  registry_config.Config `json:"-"`
-	UUID                      string                 `json:"clusterUUID,omitempty"`
-	InstallerVersion          string                 `json:"-"`
-	ResourcesYAML             string                 `json:"-"`
-	ResourceManagementTimeout string                 `json:"resourceManagementTimeout,omitempty"`
-
-	DownloadRootDir  string `json:"-"`
-	DownloadCacheDir string `json:"-"`
+	VersionMap                map[string]interface{}  `json:"-"`
+	Images                    imagesDigests           `json:"-"`
+	Registry                  registry_config.Config  `json:"-"`
+	UUID                      string                  `json:"clusterUUID,omitempty"`
+	InstallerVersion          string                  `json:"-"`
+	ResourcesYAML             string                  `json:"-"`
+	ResourceManagementTimeout string                  `json:"resourceManagementTimeout,omitempty"`
+	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
+	DownloadRootDir           string                  `json:"-"`
+	DownloadCacheDir          string                  `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
+
+type ClusterMasterEndpoint struct {
+	Address                string `json:"address" yaml:"address"`
+	KubeAPIPort            int    `json:"kubeApiPort,omitempty" yaml:"kubeApiPort,omitempty"`
+	RPPServerPort          int    `json:"rppServerPort,omitempty" yaml:"rppServerPort,omitempty"`
+	RPPBootstrapServerPort int    `json:"rppBootstrapServerPort,omitempty" yaml:"rppBootstrapServerPort,omitempty"`
+}
+
+const (
+	defaultClusterMasterAddress                = "127.0.0.1"
+	defaultClusterMasterRPPServerPort          = 5444
+	defaultClusterMasterRPPBootstrapServerPort = 4300
+)
 
 func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
 	preparator := preparatorProvider(m.ProviderName)
@@ -492,8 +507,18 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
+	clusterMasterEndpoints := m.clusterMasterEndpointsBashibleContext()
+	configForBashibleBundleTemplate["clusterMasterEndpoints"] = clusterMasterEndpoints
+	configForBashibleBundleTemplate["clusterMasterKubeAPIEndpoints"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "kubeApiPort")
+	configForBashibleBundleTemplate["clusterMasterRPPAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppServerPort")
+	configForBashibleBundleTemplate["clusterMasterRPPBootstrapAddresses"] = clusterMasterEndpointAddresses(clusterMasterEndpoints, "rppBootstrapServerPort")
 
-	configForBashibleBundleTemplate["packagesProxy"] = map[string]interface{}{"addresses": []string{"127.0.0.1:5444"}}
+	mingetBytes, err := minget.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("get minget bytes: %w", err)
+	}
+	configForBashibleBundleTemplate["mingetB64"] = base64.StdEncoding.EncodeToString(mingetBytes)
+
 	return configForBashibleBundleTemplate, nil
 }
 
@@ -595,7 +620,71 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.ClusterDomain = m.ClusterDomain
 	}
 
+	if m.ClusterMasterEndpoints != nil {
+		out.ClusterMasterEndpoints = make([]ClusterMasterEndpoint, len(m.ClusterMasterEndpoints))
+		copy(out.ClusterMasterEndpoints, m.ClusterMasterEndpoints)
+	}
+
 	return out
+}
+
+func (m *MetaConfig) clusterMasterEndpointsBashibleContext() []map[string]interface{} {
+	clusterMasterEndpoints := m.effectiveClusterMasterEndpoints()
+	endpoints := make([]map[string]interface{}, 0, len(clusterMasterEndpoints))
+
+	for _, endpoint := range clusterMasterEndpoints {
+		item := map[string]interface{}{
+			"address": endpoint.Address,
+		}
+
+		if endpoint.KubeAPIPort != 0 {
+			item["kubeApiPort"] = endpoint.KubeAPIPort
+		}
+		if endpoint.RPPServerPort != 0 {
+			item["rppServerPort"] = endpoint.RPPServerPort
+		}
+		if endpoint.RPPBootstrapServerPort != 0 {
+			item["rppBootstrapServerPort"] = endpoint.RPPBootstrapServerPort
+		}
+
+		endpoints = append(endpoints, item)
+	}
+
+	return endpoints
+}
+
+func clusterMasterEndpointAddresses(endpoints []map[string]interface{}, portName string) []string {
+	addresses := make([]string, 0, len(endpoints))
+
+	for _, endpoint := range endpoints {
+		address, ok := endpoint["address"].(string)
+		if !ok || address == "" {
+			continue
+		}
+
+		port, ok := endpoint[portName].(int)
+		if !ok || port == 0 {
+			continue
+		}
+
+		addresses = append(addresses, fmt.Sprintf("%s:%d", address, port))
+	}
+
+	return addresses
+}
+
+func (m *MetaConfig) effectiveClusterMasterEndpoints() []ClusterMasterEndpoint {
+	if len(m.ClusterMasterEndpoints) > 0 {
+		return m.ClusterMasterEndpoints
+	}
+
+	return []ClusterMasterEndpoint{
+		{
+			Address:                defaultClusterMasterAddress,
+			RPPServerPort:          defaultClusterMasterRPPServerPort,
+			RPPBootstrapServerPort: defaultClusterMasterRPPBootstrapServerPort,
+		},
+	}
 }
 
 func (m *MetaConfig) LoadVersionMap(filename string) error {

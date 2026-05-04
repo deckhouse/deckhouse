@@ -76,6 +76,11 @@ groups:
     description:
       en: "Proxy for registry packages `registry-packages-proxy`"
       ru: "Прокси для пакетов registry `registry-packages-proxy`"
+  - ports: "4300"
+    protocol: TCP
+    description:
+      en: "Bootstrap endpoint for downloading `rpp-get` from `registry-packages-proxy`"
+      ru: "Bootstrap endpoint для скачивания `rpp-get` из `registry-packages-proxy`"
   - ports: "4222"
     protocol: TCP
     description:
