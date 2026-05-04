@@ -27,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 )
@@ -207,11 +208,14 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templat
 		return fmt.Errorf("clusterConfiguration.clusterDomain is missing or empty")
 	}
 
+	encryptionAlgorithm, _ := clusterCfg["encryptionAlgorithm"].(string)
+
 	pkiDir := filepath.Join(artifactsDir, "pki")
 
 	if _, err := pki.CreatePKIBundle(nodeName, dnsDomain, ip, serviceCIDR,
 		pki.WithControlPlaneEndpoint(controlPlaneEndpoint),
 		pki.WithPKIDir(pkiDir),
+		pki.WithEncryptionAlgorithmType(constants.EncryptionAlgorithmType(encryptionAlgorithm)),
 	); err != nil {
 		return fmt.Errorf("create PKI bundle: %w", err)
 	}
@@ -229,6 +233,7 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, templat
 		kubeconfig.WithNodeName(nodeName),
 		kubeconfig.WithOutDir(filepath.Join(artifactsDir, "kubeconfig")),
 		kubeconfig.WithCertificatesDir(pkiDir),
+		kubeconfig.WithEncryptionAlgorithm(constants.EncryptionAlgorithmType(encryptionAlgorithm)),
 	); err != nil {
 		return fmt.Errorf("create kubeconfig files: %w", err)
 	}
