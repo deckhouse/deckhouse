@@ -26,26 +26,26 @@ properties:
       username:
         description: Имя пользователя с полными правами на проект.
       password:
-        description: Пароль пользователя.
+        description: Пароль пользователя в VCD.
       apiToken:
         description: |
-          Токен для аутентификации.
+          Токен для аутентификации в VCD.
 
-          > **Внимание!** При использовании `apiToken` необходимо оставить `username` и `password` пустыми.
+          > При использовании параметра `apiToken` параметры `username` и `password` должны быть пустыми.
       insecure:
-        description: Установите `true`, если VCD использует самоподписанный сертификат.
+        description: Установите значение `true`, если VCD использует самоподписанный сертификат.
   organization:
-    description: Имя Organization в VMware Cloud Director.
+    description: Имя Organization в VCD.
   virtualDataCenter:
-    description: Имя Virtual Data Center в VMware Cloud Director, принадлежащего указанной Organization.
+    description: Имя Virtual Data Center в VCD, принадлежащего указанной Organization.
   virtualApplicationName:
-    description: Имя Virtual Application в VMware Cloud Director, принадлежащего указанному Virtual Data Center.
+    description: Имя Virtual Application в VCD, принадлежащего указанному Virtual Data Center.
   mainNetwork:
-    description: Путь к сети, к которой будут подключены основные сетевые интерфейсы VirtualMachine.
+    description: Путь к сети, к которой будут подключены основные сетевые интерфейсы виртуальных машин.
   sshPublicKey:
     description: Публичный ключ для доступа к узлам.
   metadata:
     description: |
-      Пользовательские записи metadata, которые будут сохранены в объектах кластера, например в виртуальных машинах, дисках и сетях.
+      Пользовательские метаданные, которые будут сохранены в объектах кластера, например в виртуальных машинах, дисках и сетях.
 
-       > **Внимание!** Изменение метаданных приведет к пересозданию CloudEphemeral-узлов.
+      > Изменение метаданных приведет к пересозданию CloudEphemeral-узлов.

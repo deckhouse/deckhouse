@@ -37,47 +37,45 @@ properties:
     properties:
       server:
         type: string
-        description: The host or the IP address of the VCD server.
+        description: VCD server host or IP address.
       username:
         type: string
-        description: The login ID.
+        description: VCD user name with full permissions for the project.
       password:
         type: string
-        description: The user's password.
+        description: VCD user password.
       apiToken:
         type: string
         description: |
-          The token for authentication.
+          Token for authentication in VCD.
 
-          > **Caution!** When using `apiToken`, leave `username` and `password` empty.
+          > When using the `apiToken` parameter, the `username` and `password` parameters must be empty.
       insecure:
         type: boolean
         description: Set to `true` if VCD has a self-signed certificate.
         x-doc-default: false
   organization:
     type: string
-    description: VMware Cloud Director Organization name.
+    description: Name of the Organization in VCD.
   virtualDataCenter:
     type: string
-    description: VMware Cloud Director Virtual Data Center name (belongs to Organization).
+    description: Name of the Virtual Data Center in VCD that belongs to the specified Organization.
   virtualApplicationName:
     type: string
-      # cluster api getting app by VCDCluster name and we should create app with kubernetes resources name restrictions
-    # base on this answer https://stackoverflow.com/a/67387967
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
-    description: VMware Cloud Director Virtual Application name (belongs to Virtual Data Center).
+    description: Name of the Virtual Application in VCD that belongs to the specified Virtual Data Center.
   mainNetwork:
     type: string
-    description: Path to the network that VirtualMachines' primary NICs will connect to (default gateway).
+    description: Path to the network to which the primary network interfaces of virtual machines will be connected..
     example: internal
   sshPublicKey:
     type: string
-    description: A public key for accessing nodes.
+    description: Public SSH key for accessing the nodes.
   metadata:
     type: object
     description: |
-      Custom metadata entries to be stored in cluster objects such as virtual machines, disks and network.
+      Custom metadata entries that will be stored in cluster objects, such as virtual machines, disks, and networks.
 
-      > **Caution!** Changing the metadata will cause the recreation of CloudEphemeral nodes.
+      > Changing metadata will cause CloudEphemeral nodes to be recreated.
     additionalProperties:
       type: string

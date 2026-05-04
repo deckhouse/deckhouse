@@ -14,60 +14,17 @@ The Deckhouse Kubernetes Platform allows to set a prefix for the names of CloudE
 To do this, use the [`instancePrefix`](/modules/node-manager/configuration.html#parameters-instanceprefix) parameter of the `node-manager` module. The prefix specified in the parameter will be added to the name of all CloudEphemeral nodes added to the cluster. It is not possible to set a prefix for a specific NodeGroup.
 {% endalert %}
 
-## Hybrid cluster with OpenStack
-
-Follow these steps:
-
-1. Remove `flannel` from the `kube-system` namespace:
-
-   ```shell
-   kubectl -n kube-system delete ds flannel-ds
-   ```
-
-1. Configure the integration and set the required parameters.
-1. Create one or more [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) custom resources.
-1. Create one or more [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources to manage the number and provisioning of cloud-based VMs.
-
-{% alert level="warning" %}
-`Cloud-controller-manager` synchronizes state between OpenStack and Kubernetes,
-removing nodes from Kubernetes that are not present in OpenStack.
-In a hybrid cluster, this behavior is not always desirable.
-Therefore, any Kubernetes node not launched with the `--cloud-provider=external` flag will be automatically ignored.
-DKP automatically sets `static://` in the `.spec.providerID` field of such nodes, which `cloud-controller-manager` then ignores.
-{% endalert %}
-
-### Storage integration
-
-If you require PersistentVolumes on nodes connected to the cluster from OpenStack, you must create a StorageClass with the appropriate OpenStack volume type. You can get a list of available types using the following command:
-
-```shell
-openstack volume type list
-```
-
-Example for `ceph-ssd` volume type:
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: ceph-ssd
-provisioner: csi-cinderplugin # Leave this as shown here.
-parameters:
-  type: ceph-ssd
-volumeBindingMode: WaitForFirstConsumer
-```
-
 ## Hybrid cluster with Yandex Cloud
 
-To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, follow these steps.
+The following section describes how to create a hybrid cluster that combines static (bare-metal) nodes and cloud nodes in Yandex Cloud using Deckhouse Kubernetes Platform (DKP).
 
-### Prerequisites
+### Prerequisites for Yandex Cloud
 
 - A working cluster with the parameter `clusterType: Static`.
 - The CNI controller switched to VXLAN mode. For details, refer to the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) parameter.
 - Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/configuration.html)).
 
-### Setup steps
+### Adding automatically created nodes in Yandex Cloud
 
 1. Create a Service Account in the required Yandex Cloud folder:
 
@@ -230,6 +187,8 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 
 This section describes the process of creating a hybrid cluster that combines static (bare-metal) nodes and cloud nodes in VMware vCloud Director (VCD) using Deckhouse Kubernetes Platform (DKP).
 
+### Prerequisites for VCD
+
 Before you begin, ensure the following conditions are met:
 
 - **Infrastructure**:
@@ -243,7 +202,7 @@ Before you begin, ensure the following conditions are met:
   - The CNI controller is switched to VXLAN mode. More details — [`tunnelMode` configuration](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
   - A [list of required VCD resources](../virtualization/vcd/connection-and-authorization.html) is prepared (VDC, VAPP, templates, policies, etc.).
 
-### Setup
+### Adding automatically created nodes in VCD
 
 1. Create a `cloud-provider-vcd-mc.yaml` file with the following content:
 
@@ -281,7 +240,7 @@ Before you begin, ensure the following conditions are met:
    - `provider.password` — the password of a user with administrator privileges in VCD.
    - `provider.insecure` — set to `true` if VCD uses a self-signed TLS certificate.
 
-1. Apply the `ModuleConfig` with `d8 k`:
+1. Apply the ModuleConfig:
 
    ```shell
    d8 k apply -f cloud-provider-vcd-mc.yaml

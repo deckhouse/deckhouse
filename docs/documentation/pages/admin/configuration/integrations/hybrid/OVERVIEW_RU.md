@@ -13,56 +13,17 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
 Для этого используйте параметр [`instancePrefix`](/modules/node-manager/configuration.html#parameters-instanceprefix) модуля `node-manager`. Префикс, указанный в параметре, будет добавляться к имени всех добавляемых в кластер узлов типа CloudEphemeral. Задать префикс для определенной NodeGroup нельзя.
 {% endalert %}
 
-## Гибридный кластер с OpenStack
-
-Выполните следующие шаги:
-
-1. Удалите `flannel` из `kube-system`:
-
-   ```shell
-   d8 k -n kube-system delete ds flannel-ds
-   ```
-
-2. Настройте интеграцию и пропишите необходимые для работы параметры.
-3. Создайте один или несколько кастомных ресурсов [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
-4. Создайте один или несколько кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) для управления количеством и процессом заказа машин в облаке.
-
-{% alert level="warning" %}
-`Cloud-controller-manager` синхронизирует состояние между OpenStack и Kubernetes, удаляя из Kubernetes те узлы, которых нет в OpenStack. В гибридном кластере такое поведение не всегда соответствует потребности, поэтому, если узел Kubernetes запущен не с параметром `--cloud-provider=external`, он автоматически игнорируется (DKP прописывает `static://` на узлы в `.spec.providerID`, а `cloud-controller-manager` такие узлы игнорирует).
-{% endalert %}
-
-### Подключение storage
-
-Если вам требуются PersistentVolumes на узлах, подключаемых к кластеру из OpenStack, необходимо создать StorageClass с нужным OpenStack volume type. Получить список типов можно с помощью следующей команды:
-
-```shell
-openstack volume type list
-```
-
-Например, для volume type `ceph-ssd`:
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: ceph-ssd
-provisioner: csi-cinderplugin # Обязательно должно быть так.
-parameters:
-  type: ceph-ssd
-volumeBindingMode: WaitForFirstConsumer
-```
-
 ## Гибридный кластер с Yandex Cloud
 
-Для создания гибридного кластера, объединяющего статические узлы и узлы в Yandex Cloud, выполните описанные далее шаги.
+Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в Yandex Cloud с использованием Deckhouse Kubernetes Platform (DKP).
 
-### Предварительные требования
+### Предварительные требования для Yandex Cloud
 
 - Рабочий кластер с параметром `clusterType: Static`.
 - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
 - Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html).
 
-### Шаги по настройке
+### Добавление автоматически создаваемых узлов в Yandex Cloud
 
 1. Создайте Service Account в нужном каталоге Yandex Cloud:
 
@@ -225,7 +186,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 Далее описан процесс создания гибридного кластера, объединяющего статические (bare-metal) узлы и облачные узлы в VMware vCloud Director (VCD) с использованием Deckhouse Kubernetes Platform (DKP).
 
-### Предварительные требования
+### Предварительные требования для VCD
 
 Перед началом убедитесь, что выполнены следующие условия:
 
@@ -240,7 +201,7 @@ volumeBindingMode: WaitForFirstConsumer
   - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
   - Подготовлен [список необходимых ресурсов VCD](../virtualization/vcd/connection-and-authorization.html) (VDC, VAPP, шаблоны, политики и т.д.).
 
-### Настройка
+### Добавление автоматически создаваемых узлов в VCD
 
 1. Создайте файл `cloud-provider-vcd-mc.yaml` со следующим содержимым:
 
@@ -278,7 +239,7 @@ volumeBindingMode: WaitForFirstConsumer
    - `provider.password` — пароль пользователя с правами администратора в VCD.
    - `provider.insecure` — установите значение `true`, если VCD использует самоподписанный TLS-сертификат.
 
-1. Примените `ModuleConfig` через `d8 k`:
+1. Примените ModuleConfig:
 
    ```shell
    d8 k apply -f cloud-provider-vcd-mc.yaml
