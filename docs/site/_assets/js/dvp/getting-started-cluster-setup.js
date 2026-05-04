@@ -8,7 +8,6 @@ var DVP_STORAGE_KEYS = {
   vm: 'dvp-virtual-machine-cidrs',
   pod: 'dvp-pod-subnet-cidr',
   service: 'dvp-service-subnet-cidr',
-  workerCount: 'dvp-worker-count',
   worker: 'dvp-worker-node-ip',
   nfsShare: 'dvp-nfs-share',
   nfsHost: 'dvp-nfs-host',
@@ -134,18 +133,12 @@ function dvp_restore_data() {
   dvp_update_node('#virtualmachinecidrs', DVP_STORAGE_KEYS.vm);
   dvp_update_node('#podsubnetcidr', DVP_STORAGE_KEYS.pod);
   dvp_update_node('#servicesubnetcidr', DVP_STORAGE_KEYS.service);
-  if (!sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount) && sessionStorage.getItem(DVP_STORAGE_KEYS.worker)) {
-    sessionStorage.setItem(DVP_STORAGE_KEYS.workerCount, '1');
-    sessionStorage.setItem(dvp_worker_ip_storage_key(1), sessionStorage.getItem(DVP_STORAGE_KEYS.worker));
-  }
-  if ($('#workernodecount').length) {
-    var wcStored = sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount);
-    if (wcStored && /^[1-5]$/.test(wcStored)) {
-      $('#workernodecount').val(wcStored);
-    } else {
-      $('#workernodecount').val('1');
+  if ($('#workernodeip').length) {
+    var wLegacy = sessionStorage.getItem('dvp-worker-node-ip-1');
+    if (wLegacy && !sessionStorage.getItem(DVP_STORAGE_KEYS.worker)) {
+      sessionStorage.setItem(DVP_STORAGE_KEYS.worker, wLegacy);
     }
-    dvp_render_worker_ip_fields();
+    dvp_update_node('#workernodeip', DVP_STORAGE_KEYS.worker);
   }
   dvp_update_node('#clusterdomain', 'dhctl-domain');
   dvp_update_node('#nfsshare', DVP_STORAGE_KEYS.nfsShare);
@@ -248,13 +241,10 @@ function dvp_validate_cluster_form(options) {
     dvp_maybe_set_field_error($el, k, options);
   }
 
-  var ids = ['#internalnetworkcidrs', '#virtualmachinecidrs', '#podsubnetcidr', '#servicesubnetcidr', '#workernodecount', '#clusterdomain', '#nfsshare', '#nfshost', '#nfsstoragclassname', '#dvcrdisksize', '#projectname', '#capssshkey', '#adminusername', '#adminpassword'];
+  var ids = ['#internalnetworkcidrs', '#virtualmachinecidrs', '#podsubnetcidr', '#servicesubnetcidr', '#workernodeip', '#clusterdomain', '#nfsshare', '#nfshost', '#nfsstoragclassname', '#dvcrdisksize', '#projectname', '#capssshkey', '#adminusername', '#adminpassword'];
   ids.forEach(function (sel) {
     var $el = $(sel);
     if ($el.length) dvp_clear_field_errors($el);
-  });
-  $('#workernodeip-fields .dvp-workernode-ip').each(function () {
-    dvp_clear_field_errors($(this));
   });
   $('#dvp-overlap-banner').removeClass('active');
 
@@ -263,12 +253,7 @@ function dvp_validate_cluster_form(options) {
   var vm = ($('#virtualmachinecidrs').val() || '').trim();
   var podInput = ($('#podsubnetcidr').val() || '').trim();
   var svcInput = ($('#servicesubnetcidr').val() || '').trim();
-  var workerCount = $('#workernodecount').length ? dvp_clamp_worker_count(parseInt(($('#workernodecount').val() || '1'), 10)) : 1;
-  var workers = [];
-  var wi;
-  for (wi = 1; wi <= workerCount; wi++) {
-    workers.push(($('#workernodeip-' + wi).val() || '').trim());
-  }
+  var workerIp = ($('#workernodeip').val() || '').trim();
   var domain = dvp_effective_domain();
   var nfsPath = dvp_effective_nfs_share();
   var nfsHost = dvp_effective_nfs_host();
@@ -327,29 +312,18 @@ function dvp_validate_cluster_form(options) {
     svcValid = false;
   }
 
-  if ($('#workernodecount').length) {
-    var seenIp = {};
-    for (wi = 1; wi <= workerCount; wi++) {
-      var wIp = workers[wi - 1];
-      var $wEl = $('#workernodeip-' + wi);
-      if (!wIp) {
+  if ($('#workernodeip').length) {
+    var $wEl = $('#workernodeip');
+    if (!workerIp) {
+      maybeErr($wEl, 'main');
+      ok = false;
+    } else if (dvp_parse_ipv4(workerIp) === null) {
+      maybeErr($wEl, 'main');
+      ok = false;
+    } else if (internalValid && dvp_parse_ipv4_cidr(internal)) {
+      if (!dvp_ipv4_in_cidr(workerIp, internal)) {
         maybeErr($wEl, 'main');
         ok = false;
-      } else if (dvp_parse_ipv4(wIp) === null) {
-        maybeErr($wEl, 'main');
-        ok = false;
-      } else if (internalValid && dvp_parse_ipv4_cidr(internal)) {
-        if (!dvp_ipv4_in_cidr(wIp, internal)) {
-          maybeErr($wEl, 'main');
-          ok = false;
-        }
-      }
-      if (wIp && seenIp[wIp]) {
-        maybeErr($wEl, 'main');
-        ok = false;
-      }
-      if (wIp) {
-        seenIp[wIp] = true;
       }
     }
   }
@@ -447,18 +421,13 @@ function dvp_validate_cluster_form(options) {
     } else {
       sessionStorage.removeItem(DVP_STORAGE_KEYS.service);
     }
-    if ($('#workernodecount').length) {
-      sessionStorage.setItem(DVP_STORAGE_KEYS.workerCount, String(workerCount));
-      for (var pj = 1; pj <= 5; pj++) {
-        if (pj <= workerCount) {
-          sessionStorage.setItem(dvp_worker_ip_storage_key(pj), workers[pj - 1]);
-        } else {
-          sessionStorage.removeItem(dvp_worker_ip_storage_key(pj));
-        }
+    if ($('#workernodeip').length) {
+      sessionStorage.setItem(DVP_STORAGE_KEYS.worker, workerIp);
+      var pk;
+      for (pk = 1; pk <= 5; pk++) {
+        sessionStorage.removeItem('dvp-worker-node-ip-' + pk);
       }
-      if (workers[0]) {
-        sessionStorage.setItem(DVP_STORAGE_KEYS.worker, workers[0]);
-      }
+      sessionStorage.removeItem('dvp-worker-count');
     }
     sessionStorage.setItem('dhctl-domain', domain);
     sessionStorage.setItem(DVP_STORAGE_KEYS.nfsShare, ($('#nfsshare').val() || '').trim() || DVP_DEFAULTS.nfsShare);
@@ -514,6 +483,7 @@ function dvp_get_config_yml_raw_elements() {
       list.push(el);
     }
   }
+  /* DVP INSTALL uses `selector="config-yml"` on snippetcut → `config-yml` on `.snippetcut__raw`. */
   try {
     document.querySelectorAll('[config-yml]').forEach(add);
   } catch (e) {}
@@ -524,8 +494,7 @@ function dvp_get_config_yml_raw_elements() {
         (tx.indexOf('kind: ClusterConfiguration') !== -1 && (tx.indexOf('<POD_SUBNET_CIDR>') !== -1 || tx.indexOf('<USER_NAME>') !== -1)) ||
         (tx.indexOf('kind: InitConfiguration') !== -1 && tx.indexOf('<PUBLIC_DOMAIN_TEMPLATE>') !== -1) ||
         (tx.indexOf('kind: InitConfiguration') !== -1 && tx.indexOf('clusterType: Static') !== -1 && tx.indexOf('registry.deckhouse.ru/deckhouse') !== -1) ||
-        tx.indexOf('# DVP_QUICKSTART_WORKERS') !== -1 ||
-        tx.indexOf('<WORKER_COUNT>') !== -1 ||
+        tx.indexOf('<WORKER_NODE_IP>') !== -1 ||
         tx.indexOf('<DVCR_STORAGE_SIZE>') !== -1 ||
         tx.indexOf('<NFS_STORAGE_CLASS_NAME>') !== -1;
       if (looksLikeDvpConfig) {
@@ -565,144 +534,136 @@ function dvp_split_join_if_nonempty(t, token, val) {
   return t.split(token).join(s);
 }
 
-function dvp_clamp_worker_count(n) {
-  var x = parseInt(n, 10);
-  if (isNaN(x) || x < 1) return 1;
-  if (x > 5) return 5;
-  return x;
-}
-
-function dvp_worker_ip_storage_key(index1based) {
-  return 'dvp-worker-node-ip-' + index1based;
-}
-
-/** Matches comment line in config-dvp.yml.inc.liquid; replaced with N StaticInstance documents. */
-var DVP_QUICKSTART_WORKERS_MARKER = /\r?\n# DVP_QUICKSTART_WORKERS\r?\n/;
-
-function dvp_build_worker_static_instances_yaml(count) {
-  var n = dvp_clamp_worker_count(count);
-  var parts = [];
-  var k;
-  for (k = 1; k <= n; k++) {
-    var ip = (sessionStorage.getItem(dvp_worker_ip_storage_key(k)) || '').trim();
-    var addr = ip || ('<WORKER_NODE_IP_' + k + '>');
-    parts.push(
-      '---\n' +
-      'apiVersion: deckhouse.io/v1alpha1\n' +
-      'kind: StaticInstance\n' +
-      'metadata:\n' +
-      '  name: dvp-worker-' + k + '\n' +
-      '  labels:\n' +
-      '    role: worker\n' +
-      'spec:\n' +
-      '  address: ' + addr + '\n' +
-      '  credentialsRef:\n' +
-      '    kind: SSHCredentials\n' +
-      '    name: caps'
-    );
-  }
-  return parts.join('\n');
-}
-
-function dvp_render_worker_ip_fields() {
-  var $wrap = $('#workernodeip-fields');
-  if (!$wrap.length) return;
-  var n = dvp_clamp_worker_count(parseInt(($('#workernodecount').val() || sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount) || '1'), 10));
-  $('#workernodecount').val(String(n));
-  var langRu = ($wrap.attr('data-dvp-lang') || 'en') === 'ru';
-  var html = '';
-  var ph = '192.168.1.11';
-  for (var i = 1; i <= n; i++) {
-    var label = langRu ? ('IP-адрес worker-узла ' + i) : ('Worker node ' + i + ' IP address');
-    var hint = langRu
-      ? 'Укажите IPv4 worker-узла внутри подсети узлов кластера.'
-      : 'Enter the worker IPv4 address inside the cluster nodes subnet.';
-    html += '<div class="form__row dvp-workernode-row"><div style="flex: 1; min-width: 250px;">' +
-      '<label class="label" for="workernodeip-' + i + '">' + label + ' <span style="color: red;">*</span></label>' +
-      '<input class="textfield dvp-workernode-ip" type="text" id="workernodeip-' + i + '" name="workernodeip-' + i + '" placeholder="' + ph + '" autocomplete="off" />' +
-      '<span class="info invalid-message invalid-message-main">' + hint + '</span></div></div>';
-  }
-  $wrap.html(html);
-  for (var j = 1; j <= n; j++) {
-    var v = sessionStorage.getItem(dvp_worker_ip_storage_key(j));
-    if (v) {
-      $('#workernodeip-' + j).val(v);
-    }
-  }
-}
-
-/** Strip `# [<en>]` / `# [<ru>]` peer lines by site language (`pageLang` from select_revision). */
+/**
+ * Strip `# [<en>]` / `# [<ru>]` peer lines and `# [<lang>] ` prefix for the active language.
+ * Build output may already be single-language (Liquid); this keeps snapshots and old HTML consistent.
+ */
 function dvp_strip_peer_lang_marked_yaml_comments(text) {
   if (!text || typeof text !== 'string') return '';
-  var lang = typeof pageLang === 'string' && pageLang === 'ru' ? 'ru' : 'en';
+  var lang =
+    (typeof pageLang === 'string' && pageLang === 'ru') ||
+    (typeof document !== 'undefined' &&
+      document.documentElement &&
+      (document.documentElement.getAttribute('lang') || '').toLowerCase().indexOf('ru') === 0)
+      ? 'ru'
+      : 'en';
   var removeTag = lang === 'ru' ? 'en' : 'ru';
-  var re = new RegExp('^\\s*# \\[<' + removeTag + '>\\]\\s?.*\\r?\\n', 'gm');
-  var out = text.replace(re, '');
+  var out = text.replace(new RegExp('^\\s*# \\[<' + removeTag + '>\\][^\\r\\n]*(?:\\r\\n|\\n|\\r)', 'gm'), '');
+  out = out.replace(new RegExp('^\\s*# \\[<' + removeTag + '>\\][^\\r\\n]*$', 'gm'), '');
+  out = out.replace(new RegExp('^(\\s*)# \\[<' + lang + '>\\]\\s*', 'gm'), '$1# ');
   return out.replace(/\n{3,}/g, '\n\n');
 }
 
-function dvp_apply_placeholders_to_text(base) {
-  var t = dvp_strip_peer_lang_marked_yaml_comments(base);
-  var internal = sessionStorage.getItem(DVP_STORAGE_KEYS.internal) || '';
-  var vm = sessionStorage.getItem(DVP_STORAGE_KEYS.vm) || '';
-  var pod = sessionStorage.getItem(DVP_STORAGE_KEYS.pod) || DVP_DEFAULTS.pod;
-  var svc = sessionStorage.getItem(DVP_STORAGE_KEYS.service) || DVP_DEFAULTS.service;
-  var nfsH = sessionStorage.getItem(DVP_STORAGE_KEYS.nfsHost) || DVP_DEFAULTS.nfsHost;
-  var nfsS = sessionStorage.getItem(DVP_STORAGE_KEYS.nfsShare) || DVP_DEFAULTS.nfsShare;
-  var user = sessionStorage.getItem(DVP_STORAGE_KEYS.adminUser) || 'admin';
-  var hash = sessionStorage.getItem(DVP_STORAGE_KEYS.adminHash) || sessionStorage.getItem('dhctl-user-password-hash') || '';
-  var pubDomain = (sessionStorage.getItem('dhctl-domain') || '').trim() || DVP_DEFAULTS.domain;
-  var sshPub = sessionStorage.getItem(DVP_STORAGE_KEYS.ssh) || '';
-  var nfsScEff = (sessionStorage.getItem(DVP_STORAGE_KEYS.nfsScName) || '').trim() || DVP_DEFAULTS.nfsStorageClass;
-  var dvcrEff = (sessionStorage.getItem(DVP_STORAGE_KEYS.dvcrSize) || '').trim() || DVP_DEFAULTS.dvcrPvcSize;
-  var projEff = (sessionStorage.getItem(DVP_STORAGE_KEYS.projectName) || '').trim() || DVP_DEFAULTS.projectName;
-  t = t.split('<POD_SUBNET_CIDR>').join(pod);
-  t = t.split('<SERVICE_SUBNET_CIDR>').join(svc);
-  t = dvp_split_join_if_nonempty(t, '<INTERNAL_NETWORK_CIDRS>', internal);
-  var workerN = dvp_clamp_worker_count(parseInt(sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount) || '1', 10));
-  t = t.split('<WORKER_COUNT>').join(String(workerN));
-  if (DVP_QUICKSTART_WORKERS_MARKER.test(t)) {
-    t = t.replace(DVP_QUICKSTART_WORKERS_MARKER, '\n' + dvp_build_worker_static_instances_yaml(workerN) + '\n');
-  }
-  t = t.split('<NFS_HOST>').join(nfsH);
-  t = t.split('<NFS_SHARE>').join(nfsS);
-  t = dvp_split_join_if_nonempty(t, '<VIRTUAL_MACHINE_CIDRS>', vm);
-  t = t.split('<USER_NAME>').join(user);
-  t = t.split('<PUBLIC_DOMAIN_TEMPLATE>').join(pubDomain);
-  t = dvp_split_join_if_nonempty(t, '<SSH_PUBLIC_KEY>', sshPub);
-  t = t.split('<NFS_STORAGE_CLASS_NAME>').join(nfsScEff);
-  t = t.split('<DVCR_STORAGE_SIZE>').join(dvcrEff);
-  t = t.split('<DVP_PROJECT_NAME>').join(projEff);
-  if (hash) {
-    t = t.split('<GENERATED_PASSWORD_HASH>').join(hash);
-  }
+/** Session-derived values for scalar placeholders (same defaults as plain-text apply). */
+function dvp_scalar_session_values() {
+  return {
+    internal: sessionStorage.getItem(DVP_STORAGE_KEYS.internal) || '',
+    vm: sessionStorage.getItem(DVP_STORAGE_KEYS.vm) || '',
+    pod: sessionStorage.getItem(DVP_STORAGE_KEYS.pod) || DVP_DEFAULTS.pod,
+    svc: sessionStorage.getItem(DVP_STORAGE_KEYS.service) || DVP_DEFAULTS.service,
+    nfsH: sessionStorage.getItem(DVP_STORAGE_KEYS.nfsHost) || DVP_DEFAULTS.nfsHost,
+    nfsS: sessionStorage.getItem(DVP_STORAGE_KEYS.nfsShare) || DVP_DEFAULTS.nfsShare,
+    user: sessionStorage.getItem(DVP_STORAGE_KEYS.adminUser) || 'admin',
+    hash: sessionStorage.getItem(DVP_STORAGE_KEYS.adminHash) || sessionStorage.getItem('dhctl-user-password-hash') || '',
+    pubDomain: (sessionStorage.getItem('dhctl-domain') || '').trim() || DVP_DEFAULTS.domain,
+    sshPub: sessionStorage.getItem(DVP_STORAGE_KEYS.ssh) || '',
+    nfsScEff: (sessionStorage.getItem(DVP_STORAGE_KEYS.nfsScName) || '').trim() || DVP_DEFAULTS.nfsStorageClass,
+    dvcrEff: (sessionStorage.getItem(DVP_STORAGE_KEYS.dvcrSize) || '').trim() || DVP_DEFAULTS.dvcrPvcSize,
+    projEff: (sessionStorage.getItem(DVP_STORAGE_KEYS.projectName) || '').trim() || DVP_DEFAULTS.projectName,
+    workerIp: (sessionStorage.getItem(DVP_STORAGE_KEYS.worker) || '').trim(),
+  };
+}
+
+/**
+ * Single registry for scalar placeholder tokens (string replace + Rouge DOM).
+ * Add new tokens here only.
+ */
+function dvp_scalar_placeholder_rules(v) {
+  return [
+    { token: '<POD_SUBNET_CIDR>', getValue: function (x) { return x.pod; }, skipIfEmpty: false },
+    { token: '<SERVICE_SUBNET_CIDR>', getValue: function (x) { return x.svc; }, skipIfEmpty: false },
+    { token: '<INTERNAL_NETWORK_CIDRS>', getValue: function (x) { return x.internal; }, skipIfEmpty: true },
+    { token: '<WORKER_NODE_IP>', getValue: function (x) { return x.workerIp; }, skipIfEmpty: true },
+    { token: '<NFS_HOST>', getValue: function (x) { return x.nfsH; }, skipIfEmpty: false },
+    { token: '<NFS_SHARE>', getValue: function (x) { return x.nfsS; }, skipIfEmpty: false },
+    { token: '<VIRTUAL_MACHINE_CIDRS>', getValue: function (x) { return x.vm; }, skipIfEmpty: true },
+    { token: '<USER_NAME>', getValue: function (x) { return x.user; }, skipIfEmpty: false },
+    { token: '<PUBLIC_DOMAIN_TEMPLATE>', getValue: function (x) { return x.pubDomain; }, skipIfEmpty: false },
+    { token: '<SSH_PUBLIC_KEY>', getValue: function (x) { return x.sshPub; }, skipIfEmpty: true },
+    { token: '<NFS_STORAGE_CLASS_NAME>', getValue: function (x) { return x.nfsScEff; }, skipIfEmpty: false },
+    { token: '<DVCR_STORAGE_SIZE>', getValue: function (x) { return x.dvcrEff; }, skipIfEmpty: false },
+    { token: '<DVP_PROJECT_NAME>', getValue: function (x) { return x.projEff; }, skipIfEmpty: false },
+    { token: '<GENERATED_PASSWORD_HASH>', getValue: function (x) { return x.hash; }, skipIfEmpty: true, omitWhenFalsy: true },
+  ];
+}
+
+function dvp_apply_scalar_placeholders_to_text(t) {
+  t = dvp_strip_peer_lang_marked_yaml_comments(t);
+  var v = dvp_scalar_session_values();
+  dvp_scalar_placeholder_rules(v).forEach(function (rule) {
+    var val = rule.getValue(v);
+    if (rule.omitWhenFalsy && !val) return;
+    if (rule.skipIfEmpty) {
+      t = dvp_split_join_if_nonempty(t, rule.token, val);
+    } else {
+      t = t.split(rule.token).join(String(val));
+    }
+  });
   return t;
 }
 
-/** Snippetcut renders syntax highlighting in `.highlight code` and plain text in `[config-yml].snippetcut__raw`; keep both in sync. */
-function dvp_sync_highlight_for_config_yml_raw(rawEl) {
-  var plain = rawEl.textContent;
-  var root = rawEl.closest('[data-snippetcut]');
-  if (!root) return;
-  var hi = root.querySelector(':scope > .highlight');
-  if (!hi) return;
-  var codeEl = hi.querySelector('code');
-  if (codeEl) {
-    codeEl.textContent = plain;
-    return;
-  }
-  hi.textContent = '';
-  var pre = document.createElement('pre');
-  pre.className = 'highlight';
-  var code = document.createElement('code');
-  code.className = 'language-yaml';
-  code.textContent = plain;
-  pre.appendChild(code);
-  hi.appendChild(pre);
+function dvp_apply_placeholders_to_text(base) {
+  return dvp_apply_scalar_placeholders_to_text(base);
 }
 
-function dvp_sync_all_config_yml_highlights() {
-  dvp_get_config_yml_raw_elements().forEach(dvp_sync_highlight_for_config_yml_raw);
+function dvp_for_each_text_node(root, fn) {
+  if (!root) return;
+  var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  var n;
+  while ((n = w.nextNode())) {
+    fn(n);
+  }
+}
+
+/** Replace token under `code` without touching Rouge spans (only TEXT_NODE data). */
+function dvp_replace_token_in_tree(codeEl, token, val, skipIfEmpty) {
+  if (!codeEl || val === null || val === undefined) return;
+  var s = String(val);
+  if (skipIfEmpty && s === '') return;
+  dvp_for_each_text_node(codeEl, function (node) {
+    if (node.data.indexOf(token) === -1) return;
+    node.data = node.data.split(token).join(s);
+  });
+}
+
+/** Same scalar substitutions as `dvp_apply_scalar_placeholders_to_text`, preserving syntax-highlight DOM (main / Rouge). */
+function dvp_apply_scalar_tokens_to_highlight_dom(codeEl) {
+  if (!codeEl) return;
+  var v = dvp_scalar_session_values();
+  dvp_scalar_placeholder_rules(v).forEach(function (rule) {
+    var val = rule.getValue(v);
+    if (rule.omitWhenFalsy && !val) return;
+    dvp_replace_token_in_tree(codeEl, rule.token, val, rule.skipIfEmpty);
+  });
+}
+
+/**
+ * Visible `.highlight code` keeps Jekyll Rouge + codeblock line numbers: reset from baseline, then scalar tokens only.
+ */
+function dvp_refresh_config_highlight_from_baseline(codeEl) {
+  if (!codeEl) return;
+  if (!codeEl._dvpRougeBaselineHtml) {
+    codeEl._dvpRougeBaselineHtml = codeEl.innerHTML;
+  } else {
+    codeEl.innerHTML = codeEl._dvpRougeBaselineHtml;
+  }
+  dvp_apply_scalar_tokens_to_highlight_dom(codeEl);
+}
+
+function dvp_refresh_all_config_highlights_from_baseline() {
+  dvp_get_config_yml_raw_elements().forEach(function (rawEl) {
+    dvp_refresh_config_highlight_from_baseline(dvp_resolve_highlight_code_for_config_artifact(rawEl));
+  });
 }
 
 /** `<code>` that shows the config (either the node we edit or the highlighted copy next to snippetcut raw). */
@@ -713,40 +674,6 @@ function dvp_resolve_highlight_code_for_config_artifact(el) {
   if (!root) return null;
   var hi = root.querySelector(':scope > .highlight');
   return hi ? hi.querySelector('code') : null;
-}
-
-/** Re-apply YAML colouring (Prism) and line gutters after live edits (Rouge markup is replaced on update). */
-function dvp_prism_highlight_and_line_numbers(codeEl) {
-  if (!codeEl || codeEl.tagName !== 'CODE') return;
-  var plain = typeof extractCopyText === 'function' ? extractCopyText(codeEl) : (codeEl.textContent || '');
-  if (typeof Prism !== 'undefined' && Prism.languages && Prism.languages.yaml && typeof Prism.highlight === 'function') {
-    try {
-      codeEl.innerHTML = Prism.highlight(plain, Prism.languages.yaml, 'yaml');
-    } catch (e) {
-      codeEl.textContent = plain;
-    }
-  } else {
-    codeEl.textContent = plain;
-  }
-  if (typeof ensureLineNumbers === 'function') {
-    ensureLineNumbers(codeEl);
-  }
-  codeEl.querySelectorAll('.cl, span.token').forEach(function (node) {
-    var tx = node.textContent || '';
-    if (tx.indexOf('!CHANGE_') !== -1) {
-      node.classList.add('mustChange');
-    }
-    if (/You might consider changing|Возможно, захотите изменить/i.test(tx)) {
-      node.classList.add('mightChange');
-    }
-  });
-}
-
-function dvp_restore_codeblock_line_numbers() {
-  dvp_get_config_yml_raw_elements().forEach(function (el) {
-    var codeEl = dvp_resolve_highlight_code_for_config_artifact(el);
-    dvp_prism_highlight_and_line_numbers(codeEl);
-  });
 }
 
 function dvp_update_cluster_parameters() {
@@ -764,10 +691,8 @@ function dvp_update_cluster_parameters() {
 function dvp_apply_install_command_placeholders() {
   var sshFile = sessionStorage.getItem('dvp-ssh-private-key-filename') || 'id_ed25519';
   var sshUser = sessionStorage.getItem('dvp-bootstrap-ssh-user') || 'ubuntu';
-  var masterIp = sessionStorage.getItem('dvp-master-node-ip') ||
-    sessionStorage.getItem(dvp_worker_ip_storage_key(1)) ||
-    sessionStorage.getItem(DVP_STORAGE_KEYS.worker) ||
-    '';
+  var masterIp =
+    sessionStorage.getItem('dvp-master-node-ip') || sessionStorage.getItem(DVP_STORAGE_KEYS.worker) || '';
 
   var installSelectors = '.post-content pre code, .post-content li code, .post-content p code, .post-content td code, .post-content .highlight code, .docs pre code, .docs li code, .docs p code, .docs td code, .docs .highlight code, .layout-sidebar pre code, .layout-sidebar li code, .layout-sidebar p code, .layout-sidebar .highlight code';
   document.querySelectorAll(installSelectors).forEach(function (el) {
@@ -790,9 +715,8 @@ function dvp_apply_install_command_placeholders() {
 
 /** Видимые блоки (подсветка + dhctl) после любых правок `snippetcut__raw`. */
 function dvp_refresh_visible_snippets() {
-  dvp_sync_all_config_yml_highlights();
+  dvp_refresh_all_config_highlights_from_baseline();
   dvp_apply_install_command_placeholders();
-  dvp_restore_codeblock_line_numbers();
   if (typeof config_highlight === 'function') {
     config_highlight();
   }
@@ -834,7 +758,7 @@ var dvp_run_validation_debounced = dvp_debounce(function () {
 }, 180);
 
 function dvp_bind_form_events() {
-  var sel = '#internalnetworkcidrs, #virtualmachinecidrs, #podsubnetcidr, #servicesubnetcidr, #workernodecount, #workernodeip-fields .dvp-workernode-ip, #clusterdomain, #nfsshare, #nfshost, #nfsstoragclassname, #dvcrdisksize, #projectname, #capssshkey, #adminusername';
+  var sel = '#internalnetworkcidrs, #virtualmachinecidrs, #podsubnetcidr, #servicesubnetcidr, #workernodeip, #clusterdomain, #nfsshare, #nfshost, #nfsstoragclassname, #dvcrdisksize, #projectname, #capssshkey, #adminusername';
   $(document).on('input', sel + ', #adminpassword', function () {
     $(this).data('dvpTouched', true);
     dvp_run_validation_debounced();
@@ -845,11 +769,6 @@ function dvp_bind_form_events() {
       $f.data('dvpTouched', true);
     }
     dvp_validate_cluster_form({ strictCidr: true });
-  });
-  $(document).on('change', '#workernodecount', function () {
-    $(this).data('dvpTouched', true);
-    dvp_render_worker_ip_fields();
-    dvp_run_validation_debounced();
   });
 }
 

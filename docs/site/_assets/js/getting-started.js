@@ -17,7 +17,6 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function config_highlight() {
-  let matchMustChange = '!CHANGE_';
   let matchMightChangeEN = /# [Yy]ou might consider changing this\.?/;
   let matchMightChangeRU = /# [Вв]озможно, захотите изменить\.?/;
 
@@ -42,7 +41,6 @@ function config_highlight() {
       if ($third.length && $third.text() === '-') {
         nextCodeSpan($third).addClass('mightChange');
       } else if ($third.length && $third.text().trim() === ':') {
-        // key: value — highlight the value span, not the colon (after ":" there may be a space span)
         let $afterColon = nextCodeSpan($third);
         if ($afterColon.length && $afterColon.text().trim() === '' && nextCodeSpan($afterColon).length) {
           nextCodeSpan($afterColon).addClass('mightChange');
@@ -50,16 +48,13 @@ function config_highlight() {
           $afterColon.addClass('mightChange');
         }
       } else if ($colon && nextCodeSpan($colon).length && /[\n]/.test(nextCodeSpan($colon).text())) {
-        // key: \n    nested-key: value — highlight only the value (after colon); colon may be in same span as key (e.g. "key:")
         let $cursor = nextCodeSpan($colon);
         while ($cursor.length && /^[\s\n]*$/.test($cursor.text())) {
           $cursor = nextCodeSpan($cursor);
         }
-        // Advance until we find a span that contains ":" (either ":" alone or "key:" in one span)
         while ($cursor.length && $cursor.text().indexOf(':') === -1 && $cursor.text().indexOf('\n') === -1) {
           $cursor = nextCodeSpan($cursor);
         }
-        // Value is always in the next span(s) after the one that contains ":"
         if ($cursor.length && $cursor.text().indexOf(':') !== -1) {
           $cursor = nextCodeSpan($cursor);
           while ($cursor.length && /^\s*$/.test($cursor.text()) && $cursor.text().indexOf('\n') === -1 && !isLineNumberSpan($cursor[0])) {
@@ -79,7 +74,7 @@ function config_highlight() {
   });
 
   $('.language-yaml code span').filter(function () {
-    result = this.innerText.match("!CHANGE_") ? this.innerText.match("!CHANGE_").length > 0 : false;
+    let result = this.innerText.match('!CHANGE_') ? this.innerText.match('!CHANGE_').length > 0 : false;
     return result;
   }).each(function (index) {
     $(this).prev().addClass('mustChange');

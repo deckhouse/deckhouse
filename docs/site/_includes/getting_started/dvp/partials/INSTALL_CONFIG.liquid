@@ -1,4 +1,10 @@
 {% assign revision=include.revision %}
+{% capture dvp_cfg_yaml %}
+{% include getting_started/dvp/partials/config-dvp.yml.inc.liquid revision=revision %}
+{% endcapture %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^\s*# \[<ru>\][^\r\n]*(?:\r\n|\n|\r)', '' %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^\s*# \[<ru>\][^\r\n]*\z', '' %}
+{% assign dvp_cfg_yaml = dvp_cfg_yaml | regex_replace: '(?m)^(\s*)# \[<en>\]\s*', '\1# ' %}
 
 {% if revision == 'ee' %}
 {% include getting_started/global/EE_ACCESS.md revision=revision %}
@@ -22,7 +28,7 @@
 Create the `config.yml` file.
 {% snippetcut name="config.yml" selector="config-yml" %}
 ```yaml
-{% include getting_started/dvp/partials/config-dvp.yml.inc.liquid revision=revision %}
+{{ dvp_cfg_yaml }}
 ```
 {% endsnippetcut %}
 {%- if page.platform_type == 'existing' %}

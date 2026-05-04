@@ -179,9 +179,9 @@ metadata:
 spec:
   nodeType: Static
   staticInstances:
-    # [<en>] Number of worker StaticInstance objects (filled on the “Cluster parameters” step).
-    # [<ru>] Количество worker StaticInstance (заполняется на шаге «Параметры кластера»).
-    count: <WORKER_COUNT>
+    # [<en>] Single worker StaticInstance in this quick start.
+    # [<ru>] Один worker StaticInstance в этом быстром старте.
+    count: 1
     labelSelector:
       matchLabels:
         role: worker
@@ -197,7 +197,20 @@ metadata:
 spec:
   user: caps
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
-# DVP_QUICKSTART_WORKERS
+---
+# [<en>] Worker machine for this quick start (address from the “Cluster parameters” step).
+# [<ru>] Worker-узел для этого быстрого старта (адрес с шага «Параметры кластера»).
+apiVersion: deckhouse.io/v1alpha1
+kind: StaticInstance
+metadata:
+  name: dvp-worker-1
+  labels:
+    role: worker
+spec:
+  address: <WORKER_NODE_IP>
+  credentialsRef:
+    kind: SSHCredentials
+    name: caps
 ---
 # [<en>] csi-nfs module settings.
 # [<en>] https://deckhouse.io/modules/csi-nfs/configuration.html
