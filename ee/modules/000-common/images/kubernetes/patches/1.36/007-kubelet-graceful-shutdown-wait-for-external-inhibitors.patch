@@ -1,0 +1,12 @@
+diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
+index 5bf378bab58..01b456a1686 100644
+--- a/pkg/kubelet/kubelet.go
++++ b/pkg/kubelet/kubelet.go
+@@ -1140,6 +1140,7 @@ func NewMainKubelet(ctx context.Context,
+                klet.heartbeatClient,
+                string(klet.nodeName),
+                kubeCfg.NodeLeaseDurationSeconds,
++				// To do fix the patch
+                klet.onRepeatedHeartbeatFailure,
+                renewInterval,
+                string(klet.nodeName),
