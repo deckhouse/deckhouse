@@ -71,4 +71,91 @@ spec:
   policyName: {{ $policyName }}
   validationActions:
   - Deny
+---
+{{- $policyName := "control-plane-resources-system-only.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["control-plane.deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "DELETE"]
+      resources:   ["controlplanenodes"]
+    - apiGroups:   ["control-plane.deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE", "DELETE"]
+      resources:   ["controlplaneoperations"]
+  validations:
+  - expression: |
+      request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
+      || request.userInfo.username == "system:serviceaccount:kube-system:d8-control-plane-manager"
+    reason: Forbidden
+    messageExpression: |
+      "ControlPlaneNode/ControlPlaneOperation are managed by control-plane-manager; direct " + request.operation + " by " + request.userInfo.username + " is forbidden"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions:
+  - Deny
+---
+{{- $policyName := "control-plane-node-maintenance-label-only.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  variables:
+  - name: maintenanceKey
+    expression: '"control-plane-manager.deckhouse.io/maintenance"'
+  - name: oldLabels
+    expression: 'has(oldObject.metadata.labels) ? oldObject.metadata.labels : {}'
+  - name: newLabels
+    expression: 'has(object.metadata.labels) ? object.metadata.labels : {}'
+  - name: oldAnnotations
+    expression: 'has(oldObject.metadata.annotations) ? oldObject.metadata.annotations : {}'
+  - name: newAnnotations
+    expression: 'has(object.metadata.annotations) ? object.metadata.annotations : {}'
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["control-plane.deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["UPDATE"]
+      resources:   ["controlplanenodes"]
+  validations:
+  - expression: |
+      request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
+      || request.userInfo.username == "system:serviceaccount:kube-system:d8-control-plane-manager"
+      || (
+        object.spec == oldObject.spec
+        && variables.oldAnnotations == variables.newAnnotations
+        && variables.oldLabels.all(k, k == variables.maintenanceKey
+            || (k in variables.newLabels && variables.newLabels[k] == variables.oldLabels[k]))
+        && variables.newLabels.all(k, k == variables.maintenanceKey
+            || (k in variables.oldLabels && variables.oldLabels[k] == variables.newLabels[k]))
+      )
+    reason: Forbidden
+    messageExpression: |
+      "ControlPlaneNode is managed by control-plane-manager; user " + request.userInfo.username + " may only add or remove the '" + variables.maintenanceKey + "' label"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions:
+  - Deny
 {{- end }}
