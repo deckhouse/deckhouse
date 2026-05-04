@@ -8,6 +8,7 @@ var DVP_STORAGE_KEYS = {
   vm: 'dvp-virtual-machine-cidrs',
   pod: 'dvp-pod-subnet-cidr',
   service: 'dvp-service-subnet-cidr',
+  workerCount: 'dvp-worker-count',
   worker: 'dvp-worker-node-ip',
   nfsShare: 'dvp-nfs-share',
   nfsHost: 'dvp-nfs-host',
@@ -133,7 +134,19 @@ function dvp_restore_data() {
   dvp_update_node('#virtualmachinecidrs', DVP_STORAGE_KEYS.vm);
   dvp_update_node('#podsubnetcidr', DVP_STORAGE_KEYS.pod);
   dvp_update_node('#servicesubnetcidr', DVP_STORAGE_KEYS.service);
-  dvp_update_node('#workernodeip', DVP_STORAGE_KEYS.worker);
+  if (!sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount) && sessionStorage.getItem(DVP_STORAGE_KEYS.worker)) {
+    sessionStorage.setItem(DVP_STORAGE_KEYS.workerCount, '1');
+    sessionStorage.setItem(dvp_worker_ip_storage_key(1), sessionStorage.getItem(DVP_STORAGE_KEYS.worker));
+  }
+  if ($('#workernodecount').length) {
+    var wcStored = sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount);
+    if (wcStored && /^[1-5]$/.test(wcStored)) {
+      $('#workernodecount').val(wcStored);
+    } else {
+      $('#workernodecount').val('1');
+    }
+    dvp_render_worker_ip_fields();
+  }
   dvp_update_node('#clusterdomain', 'dhctl-domain');
   dvp_update_node('#nfsshare', DVP_STORAGE_KEYS.nfsShare);
   dvp_update_node('#nfshost', DVP_STORAGE_KEYS.nfsHost);
@@ -235,10 +248,13 @@ function dvp_validate_cluster_form(options) {
     dvp_maybe_set_field_error($el, k, options);
   }
 
-  var ids = ['#internalnetworkcidrs', '#virtualmachinecidrs', '#podsubnetcidr', '#servicesubnetcidr', '#workernodeip', '#clusterdomain', '#nfsshare', '#nfshost', '#nfsstoragclassname', '#dvcrdisksize', '#projectname', '#capssshkey', '#adminusername', '#adminpassword'];
+  var ids = ['#internalnetworkcidrs', '#virtualmachinecidrs', '#podsubnetcidr', '#servicesubnetcidr', '#workernodecount', '#clusterdomain', '#nfsshare', '#nfshost', '#nfsstoragclassname', '#dvcrdisksize', '#projectname', '#capssshkey', '#adminusername', '#adminpassword'];
   ids.forEach(function (sel) {
     var $el = $(sel);
     if ($el.length) dvp_clear_field_errors($el);
+  });
+  $('#workernodeip-fields .dvp-workernode-ip').each(function () {
+    dvp_clear_field_errors($(this));
   });
   $('#dvp-overlap-banner').removeClass('active');
 
@@ -247,7 +263,12 @@ function dvp_validate_cluster_form(options) {
   var vm = ($('#virtualmachinecidrs').val() || '').trim();
   var podInput = ($('#podsubnetcidr').val() || '').trim();
   var svcInput = ($('#servicesubnetcidr').val() || '').trim();
-  var worker = ($('#workernodeip').val() || '').trim();
+  var workerCount = $('#workernodecount').length ? dvp_clamp_worker_count(parseInt(($('#workernodecount').val() || '1'), 10)) : 1;
+  var workers = [];
+  var wi;
+  for (wi = 1; wi <= workerCount; wi++) {
+    workers.push(($('#workernodeip-' + wi).val() || '').trim());
+  }
   var domain = dvp_effective_domain();
   var nfsPath = dvp_effective_nfs_share();
   var nfsHost = dvp_effective_nfs_host();
@@ -306,16 +327,30 @@ function dvp_validate_cluster_form(options) {
     svcValid = false;
   }
 
-  if (!worker) {
-    maybeErr($('#workernodeip'), 'main');
-    ok = false;
-  } else if (dvp_parse_ipv4(worker) === null) {
-    maybeErr($('#workernodeip'), 'main');
-    ok = false;
-  } else if (internalValid && dvp_parse_ipv4_cidr(internal)) {
-    if (!dvp_ipv4_in_cidr(worker, internal)) {
-      maybeErr($('#workernodeip'), 'main');
-      ok = false;
+  if ($('#workernodecount').length) {
+    var seenIp = {};
+    for (wi = 1; wi <= workerCount; wi++) {
+      var wIp = workers[wi - 1];
+      var $wEl = $('#workernodeip-' + wi);
+      if (!wIp) {
+        maybeErr($wEl, 'main');
+        ok = false;
+      } else if (dvp_parse_ipv4(wIp) === null) {
+        maybeErr($wEl, 'main');
+        ok = false;
+      } else if (internalValid && dvp_parse_ipv4_cidr(internal)) {
+        if (!dvp_ipv4_in_cidr(wIp, internal)) {
+          maybeErr($wEl, 'main');
+          ok = false;
+        }
+      }
+      if (wIp && seenIp[wIp]) {
+        maybeErr($wEl, 'main');
+        ok = false;
+      }
+      if (wIp) {
+        seenIp[wIp] = true;
+      }
     }
   }
 
@@ -412,7 +447,19 @@ function dvp_validate_cluster_form(options) {
     } else {
       sessionStorage.removeItem(DVP_STORAGE_KEYS.service);
     }
-    sessionStorage.setItem(DVP_STORAGE_KEYS.worker, worker);
+    if ($('#workernodecount').length) {
+      sessionStorage.setItem(DVP_STORAGE_KEYS.workerCount, String(workerCount));
+      for (var pj = 1; pj <= 5; pj++) {
+        if (pj <= workerCount) {
+          sessionStorage.setItem(dvp_worker_ip_storage_key(pj), workers[pj - 1]);
+        } else {
+          sessionStorage.removeItem(dvp_worker_ip_storage_key(pj));
+        }
+      }
+      if (workers[0]) {
+        sessionStorage.setItem(DVP_STORAGE_KEYS.worker, workers[0]);
+      }
+    }
     sessionStorage.setItem('dhctl-domain', domain);
     sessionStorage.setItem(DVP_STORAGE_KEYS.nfsShare, ($('#nfsshare').val() || '').trim() || DVP_DEFAULTS.nfsShare);
     sessionStorage.setItem(DVP_STORAGE_KEYS.nfsHost, ($('#nfshost').val() || '').trim() || DVP_DEFAULTS.nfsHost);
@@ -477,6 +524,8 @@ function dvp_get_config_yml_raw_elements() {
         (tx.indexOf('kind: ClusterConfiguration') !== -1 && (tx.indexOf('<POD_SUBNET_CIDR>') !== -1 || tx.indexOf('<USER_NAME>') !== -1)) ||
         (tx.indexOf('kind: InitConfiguration') !== -1 && tx.indexOf('<PUBLIC_DOMAIN_TEMPLATE>') !== -1) ||
         (tx.indexOf('kind: InitConfiguration') !== -1 && tx.indexOf('clusterType: Static') !== -1 && tx.indexOf('registry.deckhouse.ru/deckhouse') !== -1) ||
+        tx.indexOf('# DVP_QUICKSTART_WORKERS') !== -1 ||
+        tx.indexOf('<WORKER_COUNT>') !== -1 ||
         tx.indexOf('<DVCR_STORAGE_SIZE>') !== -1 ||
         tx.indexOf('<NFS_STORAGE_CLASS_NAME>') !== -1;
       if (looksLikeDvpConfig) {
@@ -507,12 +556,77 @@ function dvp_split_join_if_nonempty(t, token, val) {
   return t.split(token).join(s);
 }
 
+function dvp_clamp_worker_count(n) {
+  var x = parseInt(n, 10);
+  if (isNaN(x) || x < 1) return 1;
+  if (x > 5) return 5;
+  return x;
+}
+
+function dvp_worker_ip_storage_key(index1based) {
+  return 'dvp-worker-node-ip-' + index1based;
+}
+
+/** Matches comment line in config-dvp.yml.inc.liquid; replaced with N StaticInstance documents. */
+var DVP_QUICKSTART_WORKERS_MARKER = /\r?\n# DVP_QUICKSTART_WORKERS\r?\n/;
+
+function dvp_build_worker_static_instances_yaml(count) {
+  var n = dvp_clamp_worker_count(count);
+  var parts = [];
+  var k;
+  for (k = 1; k <= n; k++) {
+    var ip = (sessionStorage.getItem(dvp_worker_ip_storage_key(k)) || '').trim();
+    var addr = ip || ('<WORKER_NODE_IP_' + k + '>');
+    parts.push(
+      '---\n' +
+      'apiVersion: deckhouse.io/v1alpha1\n' +
+      'kind: StaticInstance\n' +
+      'metadata:\n' +
+      '  name: dvp-worker-' + k + '\n' +
+      '  labels:\n' +
+      '    role: worker\n' +
+      'spec:\n' +
+      '  address: ' + addr + '\n' +
+      '  credentialsRef:\n' +
+      '    kind: SSHCredentials\n' +
+      '    name: caps'
+    );
+  }
+  return parts.join('\n');
+}
+
+function dvp_render_worker_ip_fields() {
+  var $wrap = $('#workernodeip-fields');
+  if (!$wrap.length) return;
+  var n = dvp_clamp_worker_count(parseInt(($('#workernodecount').val() || sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount) || '1'), 10));
+  $('#workernodecount').val(String(n));
+  var langRu = ($wrap.attr('data-dvp-lang') || 'en') === 'ru';
+  var html = '';
+  var ph = '192.168.1.11';
+  for (var i = 1; i <= n; i++) {
+    var label = langRu ? ('IP-адрес worker-узла ' + i) : ('Worker node ' + i + ' IP address');
+    var hint = langRu
+      ? 'Укажите IPv4 worker-узла внутри подсети узлов кластера.'
+      : 'Enter the worker IPv4 address inside the cluster nodes subnet.';
+    html += '<div class="form__row dvp-workernode-row"><div style="flex: 1; min-width: 250px;">' +
+      '<label class="label" for="workernodeip-' + i + '">' + label + ' <span style="color: red;">*</span></label>' +
+      '<input class="textfield dvp-workernode-ip" type="text" id="workernodeip-' + i + '" name="workernodeip-' + i + '" placeholder="' + ph + '" autocomplete="off" />' +
+      '<span class="info invalid-message invalid-message-main">' + hint + '</span></div></div>';
+  }
+  $wrap.html(html);
+  for (var j = 1; j <= n; j++) {
+    var v = sessionStorage.getItem(dvp_worker_ip_storage_key(j));
+    if (v) {
+      $('#workernodeip-' + j).val(v);
+    }
+  }
+}
+
 function dvp_apply_placeholders_to_text(base) {
   var internal = sessionStorage.getItem(DVP_STORAGE_KEYS.internal) || '';
   var vm = sessionStorage.getItem(DVP_STORAGE_KEYS.vm) || '';
   var pod = sessionStorage.getItem(DVP_STORAGE_KEYS.pod) || DVP_DEFAULTS.pod;
   var svc = sessionStorage.getItem(DVP_STORAGE_KEYS.service) || DVP_DEFAULTS.service;
-  var worker = sessionStorage.getItem(DVP_STORAGE_KEYS.worker) || '';
   var nfsH = sessionStorage.getItem(DVP_STORAGE_KEYS.nfsHost) || DVP_DEFAULTS.nfsHost;
   var nfsS = sessionStorage.getItem(DVP_STORAGE_KEYS.nfsShare) || DVP_DEFAULTS.nfsShare;
   var user = sessionStorage.getItem(DVP_STORAGE_KEYS.adminUser) || 'admin';
@@ -526,7 +640,11 @@ function dvp_apply_placeholders_to_text(base) {
   t = t.split('<POD_SUBNET_CIDR>').join(pod);
   t = t.split('<SERVICE_SUBNET_CIDR>').join(svc);
   t = dvp_split_join_if_nonempty(t, '<INTERNAL_NETWORK_CIDRS>', internal);
-  t = dvp_split_join_if_nonempty(t, '<WORKER_NODE_IP>', worker);
+  var workerN = dvp_clamp_worker_count(parseInt(sessionStorage.getItem(DVP_STORAGE_KEYS.workerCount) || '1', 10));
+  t = t.split('<WORKER_COUNT>').join(String(workerN));
+  if (DVP_QUICKSTART_WORKERS_MARKER.test(t)) {
+    t = t.replace(DVP_QUICKSTART_WORKERS_MARKER, '\n' + dvp_build_worker_static_instances_yaml(workerN) + '\n');
+  }
   t = t.split('<NFS_HOST>').join(nfsH);
   t = t.split('<NFS_SHARE>').join(nfsS);
   t = dvp_split_join_if_nonempty(t, '<VIRTUAL_MACHINE_CIDRS>', vm);
@@ -583,7 +701,10 @@ function dvp_update_cluster_parameters() {
 function dvp_apply_install_command_placeholders() {
   var sshFile = sessionStorage.getItem('dvp-ssh-private-key-filename') || 'id_ed25519';
   var sshUser = sessionStorage.getItem('dvp-bootstrap-ssh-user') || 'ubuntu';
-  var masterIp = sessionStorage.getItem('dvp-master-node-ip') || sessionStorage.getItem(DVP_STORAGE_KEYS.worker) || '';
+  var masterIp = sessionStorage.getItem('dvp-master-node-ip') ||
+    sessionStorage.getItem(dvp_worker_ip_storage_key(1)) ||
+    sessionStorage.getItem(DVP_STORAGE_KEYS.worker) ||
+    '';
 
   var installSelectors = '.post-content pre code, .post-content li code, .post-content p code, .post-content td code, .post-content .highlight code, .docs pre code, .docs li code, .docs p code, .docs td code, .docs .highlight code, .layout-sidebar pre code, .layout-sidebar li code, .layout-sidebar p code, .layout-sidebar .highlight code';
   document.querySelectorAll(installSelectors).forEach(function (el) {
@@ -646,7 +767,7 @@ var dvp_run_validation_debounced = dvp_debounce(function () {
 }, 180);
 
 function dvp_bind_form_events() {
-  var sel = '#internalnetworkcidrs, #virtualmachinecidrs, #podsubnetcidr, #servicesubnetcidr, #workernodeip, #clusterdomain, #nfsshare, #nfshost, #nfsstoragclassname, #dvcrdisksize, #projectname, #capssshkey, #adminusername';
+  var sel = '#internalnetworkcidrs, #virtualmachinecidrs, #podsubnetcidr, #servicesubnetcidr, #workernodecount, #workernodeip-fields .dvp-workernode-ip, #clusterdomain, #nfsshare, #nfshost, #nfsstoragclassname, #dvcrdisksize, #projectname, #capssshkey, #adminusername';
   $(document).on('input', sel + ', #adminpassword', function () {
     $(this).data('dvpTouched', true);
     dvp_run_validation_debounced();
@@ -657,6 +778,11 @@ function dvp_bind_form_events() {
       $f.data('dvpTouched', true);
     }
     dvp_validate_cluster_form({ strictCidr: true });
+  });
+  $(document).on('change', '#workernodecount', function () {
+    $(this).data('dvpTouched', true);
+    dvp_render_worker_ip_fields();
+    dvp_run_validation_debounced();
   });
 }
 

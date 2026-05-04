@@ -51,13 +51,21 @@
     </div>
   </div>
 
+  <h3>{% if page.lang == 'ru' %}Worker-узлы{% else %}Worker nodes{% endif %}</h3>
   <div class="form__row">
-    <div style="flex: 1; min-width: 250px;">
-      <label class="label">{% if page.lang == 'ru' %}IP-адрес worker-узла{% else %}Worker node IP address{% endif %} <span style="color: red;">*</span></label>
-      <input class="textfield" type="text" id="workernodeip" name="workernodeip" placeholder="192.168.1.11" autocomplete="off" />
-      <span class="info invalid-message invalid-message-main">{% if page.lang == 'ru' %}Укажите IPv4 worker-узла внутри подсети узлов кластера.{% else %}Enter the worker IPv4 address inside the cluster nodes subnet.{% endif %}</span>
+    <div style="flex: 1; min-width: 220px;">
+      <label class="label" for="workernodecount">{% if page.lang == 'ru' %}Количество worker-узлов{% else %}Number of worker nodes{% endif %} <span style="color: red;">*</span></label>
+      <select class="textfield" id="workernodecount" name="workernodecount" autocomplete="off">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+      <span class="info">{% if page.lang == 'ru' %}Максимум пять узлов в этом быстром старте. Узлы <code>master</code> вы добавляете в конфигурацию самостоятельно.{% else %}Up to five nodes in this quick start. Add <code>master</code> nodes to the configuration yourself.{% endif %}</span>
     </div>
   </div>
+  <div class="form__row" id="workernodeip-fields" data-dvp-lang="{{ page.lang }}"></div>
 
   <h3>{% if page.lang == 'ru' %}Настройки DNS{% else %}DNS settings{% endif %}</h3>
   <div class="form__row">

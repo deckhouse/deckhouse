@@ -101,7 +101,7 @@ metadata:
 spec:
   nodeType: Static
   staticInstances:
-    count: 1
+    count: <WORKER_COUNT>
     labelSelector:
       matchLabels:
         role: worker
@@ -114,17 +114,7 @@ spec:
   user: caps
   privateSSHKey: "`cat /dev/shm/caps-id | base64 -w0`"
 ---
-apiVersion: deckhouse.io/v1alpha1
-kind: StaticInstance
-metadata:
-  name: dvp-worker
-  labels:
-    role: worker
-spec:
-  address: <WORKER_NODE_IP>
-  credentialsRef:
-    kind: SSHCredentials
-    name: caps
+# DVP_QUICKSTART_WORKERS
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
