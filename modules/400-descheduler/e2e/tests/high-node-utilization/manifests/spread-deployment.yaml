@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spread-deployment
+  labels:
+    e2e-test: high-node-utilization
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      e2e-test: high-node-utilization
+  template:
+    metadata:
+      labels:
+        e2e-test: high-node-utilization
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              e2e-test: high-node-utilization
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi

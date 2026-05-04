@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: regular-pod-1
+  labels:
+    e2e-test: exclude-namespaces-regular
+spec:
+  nodeName: ($targetNode)
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.9
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: regular-pod-2
+  labels:
+    e2e-test: exclude-namespaces-regular
+spec:
+  nodeName: ($targetNode)
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.9
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: regular-pod-3
+  labels:
+    e2e-test: exclude-namespaces-regular
+spec:
+  nodeName: ($targetNode)
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.9
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: regular-pod-4
+  labels:
+    e2e-test: exclude-namespaces-regular
+spec:
+  nodeName: ($targetNode)
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.9
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: regular-pod-5
+  labels:
+    e2e-test: exclude-namespaces-regular
+spec:
+  nodeName: ($targetNode)
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.9
