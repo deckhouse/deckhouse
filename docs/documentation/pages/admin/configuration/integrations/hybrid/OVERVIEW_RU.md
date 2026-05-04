@@ -203,7 +203,7 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
 
 ### Добавление автоматически создаваемых узлов в VCD
 
-1. Создайте файл `cloud-provider-vcd-mc.yaml` со следующим содержимым:
+1. Создайте файл, например, `cloud-provider-vcd-mc.yaml` с ресурсом ModuleConfig:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -223,7 +223,6 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
          server: <API_URL>
          username: <USER_NAME>
          password: <PASSWORD>
-         apiToken: <API_TOKEN>
          insecure: false
    ```
 
@@ -234,10 +233,20 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
    - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
    - `sshPublicKey` — публичный SSH-ключ для доступа к узлам.
    - `provider.server` — URL-адрес API вашего VCD.
-   - `provider.apiToken` — токен доступа пользователя с правами администратора в VCD.
    - `provider.username` — имя статического пользователя, от имени которого будет происходить взаимодействие с VCD.
    - `provider.password` — пароль пользователя с правами администратора в VCD.
    - `provider.insecure` — установите значение `true`, если VCD использует самоподписанный TLS-сертификат.
+
+   Если для аутентификации используется токен, вместо `username` и `password` укажите `apiToken`:
+
+   ```yaml
+   provider:
+     server: <API_URL>
+     apiToken: <API_TOKEN>
+     username: ""
+     password: ""
+     insecure: false
+   ```
 
 1. Примените ModuleConfig:
 
@@ -246,17 +255,19 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
    d8 k get mc cloud-provider-vcd
    ```
 
-1. Отредактируйте секрет `d8-cni-configuration`, чтобы значение параметра `mode` определялось из `mc cni-cilium` (измените `.data.cilium` на `.data.necilium` при необходимости).
-
 1. Убедитесь, что все поды в пространстве имён `d8-cloud-provider-vcd` находятся в состоянии `Running`:
 
    ```shell
    d8 k get pods -n d8-cloud-provider-vcd
    ```
 
-1. Перезагрузите master-узел и дождитесь завершения инициализации.
+1. Убедитесь, что в кластере созданы StorageClass для VCD:
 
-1. Создайте классы инстансов в VCD:
+   ```shell
+   d8 k get sc
+   ```
+
+1. Создайте файл, например, `vcd-instanceclass-nodegroup.yaml` с ресурсами [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup):
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -268,16 +279,13 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
      sizingPolicy: <SIZING_POLICY>
      storageProfile: <STORAGE_PROFILE>
      template: <VAPP_TEMPLATE>
-   ```  
-
-1. Создайте ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup):
-
-   ```yaml
+   ---
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
      name: worker
    spec:
+     nodeType: CloudEphemeral
      cloudInstances:
        classReference:
          kind: VCDInstanceClass
@@ -287,11 +295,25 @@ Deckhouse Kubernetes Platform (DKP) имеет возможность испол
      nodeTemplate:
        labels:
          node-role/worker: ""
-     nodeType: CloudEphemeral
    ```
+
+1. Примените манифест:
+
+   ```shell
+   d8 k apply -f vcd-instanceclass-nodegroup.yaml
+   ```
+
+   После применения манифеста DKP начнёт создавать виртуальные машины в VCD, управляемые модулем `node-manager`.
 
 1. Убедитесь, что в кластере появилось требуемое количество узлов:
 
    ```shell
    d8 k get nodes -o wide
+   ```
+
+1. При сбоях создания ВМ проверьте объекты Machine, MachineSet и логи machine-controller-manager:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get machinesets,machines -o wide
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```

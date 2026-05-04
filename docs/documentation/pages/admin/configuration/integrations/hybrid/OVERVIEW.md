@@ -204,7 +204,7 @@ Before you begin, ensure the following conditions are met:
 
 ### Adding automatically created nodes in VCD
 
-1. Create a `cloud-provider-vcd-mc.yaml` file with the following content:
+1. 1. Create a file, for example `cloud-provider-vcd-mc.yaml`, with a ModuleConfig resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -235,10 +235,20 @@ Before you begin, ensure the following conditions are met:
    - `virtualApplicationName` — the name of the vApp where nodes will be created (e.g., `dkp-vcd-app`).
    - `sshPublicKey` — the SSH public key for node access.
    - `provider.server` — the API URL of your VCD instance.
-   - `provider.apiToken` — the access token of a user with administrator privileges in VCD.
    - `provider.username` — the name of the static user that will be used to interact with VCD.
    - `provider.password` — the password of a user with administrator privileges in VCD.
    - `provider.insecure` — set to `true` if VCD uses a self-signed TLS certificate.
+
+   If a token is used for authentication, specify `apiToken` instead of `username` and `password`:
+
+   ```yaml
+   provider:
+     server: <API_URL>
+     apiToken: <API_TOKEN>
+     username: ""
+     password: ""
+     insecure: false
+   ```
 
 1. Apply the ModuleConfig:
 
@@ -247,17 +257,19 @@ Before you begin, ensure the following conditions are met:
    d8 k get mc cloud-provider-vcd
    ```
 
-1. Edit the `d8-cni-configuration` secret so that the `mode` parameter is determined from `mc cni-cilium` (change `.data.cilium` to `.data.necilium` if necessary).
-
-1. Verify that all pods in the `d8-cloud-provider-vcd` namespace are in the `Running` state:
+1. Make sure all pods in the `d8-cloud-provider-vcd` namespace are in the `Running` state:
 
    ```shell
    d8 k get pods -n d8-cloud-provider-vcd
    ```
 
-1. Reboot the master node and wait for initialization to complete.
+1. Make sure StorageClasses for VCD have been created in the cluster:
 
-1. Create instance classes in VCD:
+   ```shell
+   d8 k get sc
+   ```
+
+1. Create a file, for example `vcd-instanceclass-nodegroup.yaml` with the [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) and [NodeGroup](/modules/node-manager/cr.html#nodegroup) resources:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -269,16 +281,13 @@ Before you begin, ensure the following conditions are met:
      sizingPolicy: <SIZING_POLICY>
      storageProfile: <STORAGE_PROFILE>
      template: <VAPP_TEMPLATE>
-   ```  
-
-1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource:
-
-   ```yaml
+   ---
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
      name: worker
    spec:
+     nodeType: CloudEphemeral
      cloudInstances:
        classReference:
          kind: VCDInstanceClass
@@ -288,11 +297,25 @@ Before you begin, ensure the following conditions are met:
      nodeTemplate:
        labels:
          node-role/worker: ""
-     nodeType: CloudEphemeral
    ```
 
-1. Verify that the required number of nodes has appeared in the cluster:
+1. Apply the manifest:
+
+   ```shell
+   d8 k apply -f vcd-instanceclass-nodegroup.yaml
+   ```
+
+   After the manifest is applied, DKP will start creating virtual machines in VCD managed by the `node-manager` module.
+
+1. Make sure the required number of nodes has appeared in the cluster:
 
    ```shell
    d8 k get nodes -o wide
+   ```
+
+1. If VM creation fails, check the Machine and MachineSet objects and the machine-controller-manager logs:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get machinesets,machines -o wide
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
    ```
