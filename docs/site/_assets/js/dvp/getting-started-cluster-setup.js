@@ -631,7 +631,18 @@ function dvp_render_worker_ip_fields() {
   }
 }
 
+/** Strip `# [<en>]` / `# [<ru>]` peer lines by site language (`pageLang` from select_revision). */
+function dvp_strip_peer_lang_marked_yaml_comments(text) {
+  if (!text || typeof text !== 'string') return '';
+  var lang = typeof pageLang === 'string' && pageLang === 'ru' ? 'ru' : 'en';
+  var removeTag = lang === 'ru' ? 'en' : 'ru';
+  var re = new RegExp('^\\s*# \\[<' + removeTag + '>\\]\\s?.*\\r?\\n', 'gm');
+  var out = text.replace(re, '');
+  return out.replace(/\n{3,}/g, '\n\n');
+}
+
 function dvp_apply_placeholders_to_text(base) {
+  var t = dvp_strip_peer_lang_marked_yaml_comments(base);
   var internal = sessionStorage.getItem(DVP_STORAGE_KEYS.internal) || '';
   var vm = sessionStorage.getItem(DVP_STORAGE_KEYS.vm) || '';
   var pod = sessionStorage.getItem(DVP_STORAGE_KEYS.pod) || DVP_DEFAULTS.pod;
@@ -645,7 +656,6 @@ function dvp_apply_placeholders_to_text(base) {
   var nfsScEff = (sessionStorage.getItem(DVP_STORAGE_KEYS.nfsScName) || '').trim() || DVP_DEFAULTS.nfsStorageClass;
   var dvcrEff = (sessionStorage.getItem(DVP_STORAGE_KEYS.dvcrSize) || '').trim() || DVP_DEFAULTS.dvcrPvcSize;
   var projEff = (sessionStorage.getItem(DVP_STORAGE_KEYS.projectName) || '').trim() || DVP_DEFAULTS.projectName;
-  var t = base;
   t = t.split('<POD_SUBNET_CIDR>').join(pod);
   t = t.split('<SERVICE_SUBNET_CIDR>').join(svc);
   t = dvp_split_join_if_nonempty(t, '<INTERNAL_NETWORK_CIDRS>', internal);
@@ -705,14 +715,37 @@ function dvp_resolve_highlight_code_for_config_artifact(el) {
   return hi ? hi.querySelector('code') : null;
 }
 
-/** After `textContent` updates, re-apply line gutters from codeblock.js. */
+/** Re-apply YAML colouring (Prism) and line gutters after live edits (Rouge markup is replaced on update). */
+function dvp_prism_highlight_and_line_numbers(codeEl) {
+  if (!codeEl || codeEl.tagName !== 'CODE') return;
+  var plain = typeof extractCopyText === 'function' ? extractCopyText(codeEl) : (codeEl.textContent || '');
+  if (typeof Prism !== 'undefined' && Prism.languages && Prism.languages.yaml && typeof Prism.highlight === 'function') {
+    try {
+      codeEl.innerHTML = Prism.highlight(plain, Prism.languages.yaml, 'yaml');
+    } catch (e) {
+      codeEl.textContent = plain;
+    }
+  } else {
+    codeEl.textContent = plain;
+  }
+  if (typeof ensureLineNumbers === 'function') {
+    ensureLineNumbers(codeEl);
+  }
+  codeEl.querySelectorAll('.cl, span.token').forEach(function (node) {
+    var tx = node.textContent || '';
+    if (tx.indexOf('!CHANGE_') !== -1) {
+      node.classList.add('mustChange');
+    }
+    if (/You might consider changing|Возможно, захотите изменить/i.test(tx)) {
+      node.classList.add('mightChange');
+    }
+  });
+}
+
 function dvp_restore_codeblock_line_numbers() {
-  if (typeof ensureLineNumbers !== 'function') return;
   dvp_get_config_yml_raw_elements().forEach(function (el) {
     var codeEl = dvp_resolve_highlight_code_for_config_artifact(el);
-    if (codeEl) {
-      ensureLineNumbers(codeEl);
-    }
+    dvp_prism_highlight_and_line_numbers(codeEl);
   });
 }
 
@@ -760,6 +793,9 @@ function dvp_refresh_visible_snippets() {
   dvp_sync_all_config_yml_highlights();
   dvp_apply_install_command_placeholders();
   dvp_restore_codeblock_line_numbers();
+  if (typeof config_highlight === 'function') {
+    config_highlight();
+  }
 }
 
 function dvp_config_update() {
