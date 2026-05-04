@@ -60,7 +60,7 @@ func NewEmptyImgRegistry(repoTags map[string]set.Set[string]) (registry.Registry
 		}
 	}
 
-	img, err := newImg()
+	img, err := newEmptyImg()
 	if err != nil {
 		return nil, err
 	}
@@ -166,9 +166,9 @@ type img struct {
 	blobs    map[digest.Digest][]byte
 }
 
-// newImg creates a minimal deterministic empty OCI image and pre-computes
+// newEmptyImg creates a minimal deterministic empty OCI image and pre-computes
 // all blobs so they can be served without recomputation on each request.
-func newImg() (img, error) {
+func newEmptyImg() (img, error) {
 	emtpyImg := empty.Image
 	emtpyImg = mutate.MediaType(emtpyImg, gcv1_types.OCIManifestSchema1)
 	emtpyImg = mutate.ConfigMediaType(emtpyImg, gcv1_types.OCIConfigJSON)
@@ -185,7 +185,7 @@ func newImg() (img, error) {
 			EmptyLayer: true,
 			Created:    cfg.Created,
 			Author:     "bundle-registry",
-			CreatedBy:  "newSyntheticImage",
+			CreatedBy:  "newEmptyImg",
 		},
 	}
 

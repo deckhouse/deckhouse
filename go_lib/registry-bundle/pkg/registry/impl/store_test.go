@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
@@ -27,6 +28,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/errs"
+	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/registry"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/store"
 	storemocks "github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/store/mocks"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/types"
@@ -34,8 +36,7 @@ import (
 
 // resolverImpl is a test implementation of StoreResolver backed by a map.
 type resolverImpl struct {
-	stores map[string]*storemocks.MockStore
-	sorted []string
+	stores map[string]store.Store
 }
 
 func (r *resolverImpl) StoreByRepo(repo string, fn func(ok bool, st store.Store)) {
@@ -44,12 +45,19 @@ func (r *resolverImpl) StoreByRepo(repo string, fn func(ok bool, st store.Store)
 }
 
 func (r *resolverImpl) SortedRepos() []string {
-	return r.sorted
+	repos := make([]string, 0, len(r.stores))
+
+	for repo := range r.stores {
+		repos = append(repos, repo)
+	}
+
+	slices.Sort(repos)
+	return repos
 }
 
-func newStoreRegistry(t *testing.T, repos map[string]*storemocks.MockStore, sorted []string) *StoreRegistry {
+func newStoreRegistry(t *testing.T, repos map[string]store.Store) registry.Registry {
 	t.Helper()
-	reg, err := NewStoreRegistry(&resolverImpl{stores: repos, sorted: sorted})
+	reg, err := NewStoreRegistry(&resolverImpl{stores: repos})
 	if err != nil {
 		t.Fatalf("NewStoreRegistry: %v", err)
 	}
@@ -65,7 +73,7 @@ func TestNewStoreRegistry(t *testing.T) {
 	})
 
 	t.Run("valid resolver", func(t *testing.T) {
-		_, err := NewStoreRegistry(&resolverImpl{stores: map[string]*storemocks.MockStore{}})
+		_, err := NewStoreRegistry(&resolverImpl{stores: map[string]store.Store{}})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -76,7 +84,7 @@ func TestStoreRegistry_Fetch(t *testing.T) {
 	content := "blob content"
 	dgst := digest.FromString(content)
 
-	newRegistry := func(repo string) *StoreRegistry {
+	newRegistry := func(repo string) registry.Registry {
 		st := storemocks.NopStore()
 		st.FetchFunc = func(_ context.Context, d digest.Digest) (io.ReadCloser, error) {
 			if d != dgst {
@@ -84,12 +92,12 @@ func TestStoreRegistry_Fetch(t *testing.T) {
 			}
 			return io.NopCloser(strings.NewReader(content)), nil
 		}
-		return newStoreRegistry(t, map[string]*storemocks.MockStore{repo: st}, nil)
+		return newStoreRegistry(t, map[string]store.Store{repo: st})
 	}
 
 	tests := []struct {
 		name    string
-		reg     *StoreRegistry
+		reg     registry.Registry
 		repo    string
 		dgst    digest.Digest
 		wantErr error
@@ -139,7 +147,7 @@ func TestStoreRegistry_Exists(t *testing.T) {
 	content := "blob content"
 	dgst := digest.FromString(content)
 
-	newRegistry := func(repo string) *StoreRegistry {
+	newRegistry := func(repo string) registry.Registry {
 		st := storemocks.NopStore()
 		st.ExistsFunc = func(_ context.Context, d digest.Digest) (bool, int64, error) {
 			if d != dgst {
@@ -147,12 +155,12 @@ func TestStoreRegistry_Exists(t *testing.T) {
 			}
 			return true, int64(len(content)), nil
 		}
-		return newStoreRegistry(t, map[string]*storemocks.MockStore{repo: st}, nil)
+		return newStoreRegistry(t, map[string]store.Store{repo: st})
 	}
 
 	tests := []struct {
 		name      string
-		reg       *StoreRegistry
+		reg       registry.Registry
 		repo      string
 		dgst      digest.Digest
 		wantErr   error
@@ -207,17 +215,17 @@ func TestStoreRegistry_Resolve(t *testing.T) {
 		Size:      int64(len(content)),
 	}
 
-	newRegistry := func(repo string) *StoreRegistry {
+	newRegistry := func(repo string) registry.Registry {
 		st := storemocks.NopStore()
 		st.ResolveFunc = func(_ context.Context, _ string) (types.ShortDescriptor, io.ReadCloser, error) {
 			return desc, io.NopCloser(strings.NewReader(content)), nil
 		}
-		return newStoreRegistry(t, map[string]*storemocks.MockStore{repo: st}, nil)
+		return newStoreRegistry(t, map[string]store.Store{repo: st})
 	}
 
 	tests := []struct {
 		name    string
-		reg     *StoreRegistry
+		reg     registry.Registry
 		repo    string
 		ref     string
 		wantErr error
@@ -267,7 +275,7 @@ func TestStoreRegistry_Predecessors(t *testing.T) {
 		Size:      10,
 	}
 
-	newRegistry := func(repo string) *StoreRegistry {
+	newRegistry := func(repo string) registry.Registry {
 		st := storemocks.NopStore()
 		st.PredecessorsFunc = func(_ context.Context, d digest.Digest) ([]ocispec.Descriptor, error) {
 			if d != dgst {
@@ -275,12 +283,12 @@ func TestStoreRegistry_Predecessors(t *testing.T) {
 			}
 			return []ocispec.Descriptor{ref}, nil
 		}
-		return newStoreRegistry(t, map[string]*storemocks.MockStore{repo: st}, nil)
+		return newStoreRegistry(t, map[string]store.Store{repo: st})
 	}
 
 	tests := []struct {
 		name      string
-		reg       *StoreRegistry
+		reg       registry.Registry
 		repo      string
 		dgst      digest.Digest
 		wantErr   error
@@ -322,7 +330,7 @@ func TestStoreRegistry_Predecessors(t *testing.T) {
 }
 
 func TestStoreRegistry_SortedTags(t *testing.T) {
-	newRegistry := func(repo string, tags []string) *StoreRegistry {
+	newRegistry := func(repo string, tags []string) registry.Registry {
 		st := storemocks.NopStore()
 		st.SortedTagsFunc = func(_ context.Context, last string) ([]string, error) {
 			if last == "" {
@@ -335,12 +343,12 @@ func TestStoreRegistry_SortedTags(t *testing.T) {
 			}
 			return nil, nil
 		}
-		return newStoreRegistry(t, map[string]*storemocks.MockStore{repo: st}, nil)
+		return newStoreRegistry(t, map[string]store.Store{repo: st})
 	}
 
 	tests := []struct {
 		name     string
-		reg      *StoreRegistry
+		reg      registry.Registry
 		repo     string
 		last     string
 		wantErr  error
@@ -417,7 +425,11 @@ func TestStoreRegistry_SortedRepos(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reg := newStoreRegistry(t, map[string]*storemocks.MockStore{}, tt.sorted)
+			repoStore := make(map[string]store.Store, len(tt.sorted))
+			for _, repo := range tt.sorted {
+				repoStore[repo] = &storemocks.MockStore{}
+			}
+			reg := newStoreRegistry(t, repoStore)
 
 			repos := reg.SortedRepos()
 			if len(repos) != len(tt.wantRepos) {

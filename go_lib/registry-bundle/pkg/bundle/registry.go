@@ -37,24 +37,29 @@ func NewRegistry(path string, bundle *Bundle) (registry.Registry, error) {
 		return nil, err
 	}
 
-	storeReg, err := impl.NewStoreRegistry(
+	reg, err := impl.NewStoreRegistry(
 		newStoreResolverAdapter(bundle),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("bundle store registry: %w", err)
 	}
 
-	fallback := []registry.Registry{storeReg}
+	listReg, err := newListRegistry(
+		bundle,
+		ModulesRootPath,   // /modules
+		PackagesRootPath,  // /packages`
+		D8PluginsRootPath, // /deckhouse-cli/plugins
+	)
 
-	if modulListReg, err := newListRegistry(bundle, ModulesRootPath); err != nil {
-		return nil, fmt.Errorf("module list registry: %w", err)
-	} else if modulListReg != nil {
-		fallback = append(fallback, modulListReg)
+	if err != nil {
+		return nil, fmt.Errorf("bundle list registry: %w", err)
 	}
 
-	reg, err := impl.NewFallbackRegistry(fallback...)
-	if err != nil {
-		return nil, fmt.Errorf("fallback registry: %w", err)
+	if listReg != nil {
+		reg, err = impl.NewFallbackRegistry(reg, listReg)
+		if err != nil {
+			return nil, fmt.Errorf("fallback registry: %w", err)
+		}
 	}
 
 	reg, err = impl.NewAtPathRegistry(path, reg)
@@ -91,21 +96,26 @@ func (sr storeResolverAdapter) SortedRepos() []string {
 	return sr.repos
 }
 
-func newListRegistry(bundle *Bundle, rootPath string) (registry.Registry, error) {
+func newListRegistry(bundle *Bundle, rootPaths ...string) (registry.Registry, error) {
 	repos := make([]string, 0, len(bundle.repoStore))
 	for repo := range bundle.repoStore {
 		repos = append(repos, repo)
 	}
 
-	tags := subdirs(rootPath, repos)
-	if tags.Len() == 0 {
+	repoTags := map[string]set.Set[string]{}
+
+	for _, root := range rootPaths {
+		tags := subdirs(root, repos)
+		if tags.Len() != 0 {
+			repoTags[root] = tags
+		}
+	}
+
+	if len(repoTags) == 0 {
 		return nil, nil
 	}
 
-	reg, err := impl.NewEmptyImgRegistry(map[string]set.Set[string]{
-		rootPath: tags,
-	})
-
+	reg, err := impl.NewEmptyImgRegistry(repoTags)
 	if err != nil {
 		return nil, fmt.Errorf("empty img registry: %w", err)
 	}

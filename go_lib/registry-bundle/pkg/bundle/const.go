@@ -17,10 +17,14 @@ limitations under the License.
 package bundle
 
 const (
-	// ModulesRootPath is the repository path prefix for module bundle layouts.
+	// ModulesRootPath is the repository path prefix for module layouts.
 	ModulesRootPath = "modules"
-	// SecurityRootPath is the repository path prefix for security bundle layouts.
+	// SecurityRootPath is the repository path prefix for security layouts.
 	SecurityRootPath = "security"
+	// PackagesRootPath is the repository path prefix for package layouts.
+	PackagesRootPath = "packages"
+	// D8PluginsRootPath is the repository path prefix for Deckhouse CLI plugin layouts.
+	D8PluginsRootPath = "deckhouse-cli/plugins"
 
 	// SecurityFilePrefix marks archives that use legacy security layout paths.
 	SecurityFilePrefix = "security"

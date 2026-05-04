@@ -1,11 +1,11 @@
-# Registry
+# Registry bundle
 
 A container registry server that implements the [OCI Distribution Spec](https://github.com/opencontainers/distribution-spec) and the [Docker Registry HTTP API V2](https://docs.docker.com/registry/spec/api/). It serves images from **Deckhouse chunked bundle archives** on disk (directory scan for `*.tar` and `*.tar.*.chunk` style layouts).
 
 ## Build
 
 ```bash
-go build -o bundle-registry ./cmd/bundle-registry
+go build -o registry-bundle ./cmd/registry-bundle
 ```
 
 ## Usage
@@ -13,7 +13,7 @@ go build -o bundle-registry ./cmd/bundle-registry
 The binary exposes a Cobra CLI. Run the server with the **`serve`** subcommand:
 
 ```bash
-./bundle-registry serve <bundle-path> [flags]
+./registry-bundle serve <bundle-path> [flags]
 ```
 
 **`bundle-path`** (required): directory to scan for bundle archives (chunked `.tar.*.chunk` or whole `.tar`).
@@ -32,23 +32,23 @@ The binary exposes a Cobra CLI. Run the server with the **`serve`** subcommand:
 Serve from a directory of chunked bundles:
 
 ```bash
-./bundle-registry serve /path/to/bundles
+./registry-bundle serve /path/to/bundles
 ```
 
 With listen address:
 
 ```bash
-./bundle-registry serve ./bundle-chunks/ --address 0.0.0.0:5001
+./registry-bundle serve ./bundle-chunks/ --address 0.0.0.0:5001
 ```
 
 Virtual repo path (clients pull under `/v2/<root-repo>/...`):
 
 ```bash
-./bundle-registry serve ./bundles/ --root-repo system/deckhouse
+./registry-bundle serve ./bundles/ --root-repo system/deckhouse
 ```
 
 HTTPS (paths must be readable by the process):
 
 ```bash
-./bundle-registry serve ./bundles/ --tls-cert server.crt --tls-key server.key
+./registry-bundle serve ./bundles/ --tls-cert server.crt --tls-key server.key
 ```

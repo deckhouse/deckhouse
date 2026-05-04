@@ -36,15 +36,11 @@ var (
 	patternRepo = `(?P<` + paramRepo + `>[^/]+(/[^/]+)*)`
 )
 
-// NewRegistryHandler returns an HTTP handler for the registry API
-func NewRegistryHandler(logger log.Logger, registry Registry) http.Handler {
+// NewV2Handler returns an HTTP handler for the registry v2 API
+func NewV2Handler(logger log.Logger, registry Registry) http.Handler {
 	rh := &registryHandlers{logger: logger, registry: registry}
 
 	h := NewRegexpHandler()
-	h.Add(
-		regexp.MustCompile(`^/healthz$`),
-		rh.handleHealth,
-	)
 	h.Add(
 		regexp.MustCompile(`^/v2/?$`),
 		rh.handleV2Root,
@@ -76,11 +72,6 @@ func (rh *registryHandlers) defaultHandler(w http.ResponseWriter, _ *http.Reques
 		ErrStatusMethodUnknown.
 		WithStatus(http.StatusNotFound).
 		Write(w)
-}
-
-func (rh *registryHandlers) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("OK"))
 }
 
 func (rh *registryHandlers) handleV2Root(w http.ResponseWriter, _ *http.Request) {

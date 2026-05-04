@@ -44,7 +44,7 @@ type StoreRegistry struct {
 	resolver StoreResolver
 }
 
-func NewStoreRegistry(resolver StoreResolver) (*StoreRegistry, error) {
+func NewStoreRegistry(resolver StoreResolver) (registry.Registry, error) {
 	if resolver == nil {
 		return nil, fmt.Errorf("store resolver is nil")
 	}

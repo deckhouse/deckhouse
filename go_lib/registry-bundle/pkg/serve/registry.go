@@ -49,7 +49,7 @@ func NewRegistryServer(ctx context.Context, logger log.Logger, reg registry.Regi
 		return err
 	}
 
-	handler := registry.NewRegistryHandler(logger, reg)
+	handler := registry.NewV2Handler(logger, reg)
 
 	httpServer, err := NewHTTPServer(logger, handler, config.HTTP)
 	if err != nil {

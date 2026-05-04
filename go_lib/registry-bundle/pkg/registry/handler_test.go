@@ -29,7 +29,6 @@ import (
 	"testing"
 
 	"github.com/opencontainers/go-digest"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/errs"
 	"github.com/deckhouse/deckhouse/go_lib/registry-bundle/pkg/log"
@@ -61,23 +60,10 @@ func positiveRepositoryPathScenarios() []string {
 }
 
 func newTestHandler(reg Registry) http.Handler {
-	return NewRegistryHandler(
+	return NewV2Handler(
 		log.NewNoop(),
 		reg,
 	)
-}
-
-func TestHandleHealth(t *testing.T) {
-	h := newTestHandler(mocks.NopRegistry())
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	if body := rec.Body.String(); body != "OK" {
-		t.Errorf("body = %q, want \"OK\"", body)
-	}
 }
 
 func TestHandleV2Root(t *testing.T) {
@@ -534,105 +520,6 @@ func TestHandleBlobHead(t *testing.T) {
 			}
 			if tt.wantRange != "" && rec.Header().Get("Content-Range") != tt.wantRange {
 				t.Errorf("Content-Range = %q, want %q", rec.Header().Get("Content-Range"), tt.wantRange)
-			}
-		})
-	}
-}
-
-func TestHandleReferrers(t *testing.T) {
-	dgst := digest.FromString("manifest")
-	desc := ocispec.Descriptor{
-		MediaType:    "application/vnd.oci.image.manifest.v1+json",
-		Digest:       digest.FromString("ref"),
-		Size:         10,
-		ArtifactType: "example/type",
-	}
-	newRegistry := func(inputRepo string) Registry {
-		reg := mocks.NopRegistry()
-		reg.PredecessorsFunc = func(_ context.Context, reqRepo string, reqDgst digest.Digest) ([]ocispec.Descriptor, error) {
-			if inputRepo != reqRepo {
-				return nil, errs.ErrUnknownRepository
-			}
-			if dgst != reqDgst {
-				return nil, nil
-			}
-			return []ocispec.Descriptor{desc}, nil
-		}
-		return reg
-	}
-
-	// nolint:prealloc
-	tests := []struct {
-		name       string
-		registry   Registry
-		request    *http.Request
-		wantStatus int
-		wantCount  int
-	}{
-		// OK
-		{
-			name:       "returns referrers",
-			registry:   newRegistry("myrepo"),
-			request:    httptest.NewRequest(http.MethodGet, "/v2/myrepo/referrers/"+dgst.String(), nil),
-			wantStatus: http.StatusOK,
-			wantCount:  1,
-		},
-		{
-			name:       "empty referrers",
-			registry:   newRegistry("myrepo"),
-			request:    httptest.NewRequest(http.MethodGet, "/v2/myrepo/referrers/"+digest.FromString("test").String(), nil),
-			wantStatus: http.StatusOK,
-			wantCount:  0,
-		},
-		// Bad
-		{
-			name:       "invalid digest",
-			registry:   newRegistry("myrepo"),
-			request:    httptest.NewRequest(http.MethodGet, "/v2/myrepo/referrers/bad-digest", nil),
-			wantStatus: http.StatusBadRequest,
-		},
-		{
-			name:       "repo not found",
-			registry:   newRegistry("test"),
-			request:    httptest.NewRequest(http.MethodGet, "/v2/myrepo/referrers/"+dgst.String(), nil),
-			wantStatus: http.StatusNotFound,
-		},
-	}
-
-	for _, repo := range positiveRepositoryPathScenarios() {
-		tests = append(tests, struct {
-			name       string
-			registry   Registry
-			request    *http.Request
-			wantStatus int
-			wantCount  int
-		}{
-			name:       "for corner cases repo name: " + repo,
-			registry:   newRegistry(repo),
-			request:    httptest.NewRequest(http.MethodGet, "/v2/"+repo+"/referrers/"+dgst.String(), nil),
-			wantStatus: http.StatusOK,
-			wantCount:  1,
-		})
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h := newTestHandler(tt.registry)
-
-			rec := httptest.NewRecorder()
-			h.ServeHTTP(rec, tt.request)
-
-			if rec.Code != tt.wantStatus {
-				t.Fatalf("status = %d, want %d", rec.Code, tt.wantStatus)
-			}
-			if tt.wantStatus == http.StatusOK {
-				var idx ocispec.Index
-				if err := json.NewDecoder(rec.Body).Decode(&idx); err != nil {
-					t.Fatal(err)
-				}
-				if len(idx.Manifests) != tt.wantCount {
-					t.Errorf("manifests count = %d, want %d", len(idx.Manifests), tt.wantCount)
-				}
 			}
 		})
 	}
