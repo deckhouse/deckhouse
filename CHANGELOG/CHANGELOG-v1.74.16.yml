@@ -2,6 +2,10 @@ admission-policy-engine:
   fixes:
     - summary: cve fixes for ratify
       pull_request: https://github.com/deckhouse/deckhouse/pull/19274
+cloud-provider-azure:
+  fixes:
+    - summary: fix disk discovery for Ubuntu 22.04 Gen2 VMs with NVMe controllers
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19330
 cloud-provider-openstack:
   fixes:
     - summary: Increase interval and timeout for health monitor
@@ -63,6 +67,9 @@ ingress-nginx:
       impact: All Ingress-NGINX controller pods will be restarted.
 istio:
   fixes:
+    - summary: fixed CVEs in module images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19363
+      impact: module pods will be restarted
     - summary: fixed CVE-2026-39882, CVE-2026-39883 and CVE-2026-35206
       pull_request: https://github.com/deckhouse/deckhouse/pull/19091
       impact: istio module pods will be restarted
