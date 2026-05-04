@@ -1705,17 +1705,17 @@ alerts:
       module: istio
       edition: ee
       description: |
-        Remote {{$labels.alliance_kind}} `{{$labels.name}}` with uuid `{{$labels.remote_uuid}}` requests private metadata using domain name `{{$labels.requested_to_hostname}}` which has deprecated subdomain `istio`.
+        Remote {{$labels.alliance_kind}} `{{$labels.name}}` (UUID: `{{$labels.remote_uuid}}`) requests private metadata from `{{$labels.requested_to_hostname}}`, which uses the deprecated `istio` subdomain.
 
-        Remote cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
+        The remote cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `(<publicDomainTemplate> + istio-metadata)/metadata/`.
 
-        Migration steps:
+        Migration steps on the remote cluster:
 
-        1. On remote cluster. Ensure DNS to resolve the new target `(<publicDomainTemplate> + istio-metadata)`.
-        2. On remote cluster. Update `spec.metadataEndpoint` on remote cluster object to use new domain name; keep the path `/metadata/`.
-        3. On remote cluster. Verify remote metadata fetch and alliance health after the change.
+        1. Ensure DNS resolves the new target `(<publicDomainTemplate> + istio-metadata)`.
+        2. Update `spec.metadataEndpoint` to use the new domain name. Keep the path `/metadata/` unchanged.
+        3. Verify remote metadata fetch and alliance health after the change.
       summary: |
-        A peer cluster still requests private metadata on this cluster using the deprecated subdomain.
+        A peer cluster requests private metadata using a deprecated subdomain.
       severity: "5"
       markupFormat: markdown
     - name: D8IstioAllianceDiscoveryMetadataEndpointUsesDeprecatedSubdomain
@@ -1724,15 +1724,15 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The `metadataEndpoint` of {{$labels.alliance_kind}} `{{$labels.name}}` uses domain name with a deprecated subdomain - `istio.{{$labels.hostname}}`.
+        The `metadataEndpoint` of {{$labels.alliance_kind}} `{{$labels.name}}` uses the deprecated subdomain `istio.{{$labels.hostname}}`.
 
         Cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `istio-metadata.{{$labels.hostname}}/metadata/`.
 
-        Migration steps:
+        Migration steps on the current cluster:
 
-        1. On this cluster. Ensure DNS to resolve the target `istio-metadata.{{$labels.hostname}}` (the Istio module Certificate adds the `istio-metadata` SAN when federation or multicluster is enabled and CertManager is used).
-        2. On this cluster. Update `spec.metadataEndpoint` on this object to use that domain name; keep the path `/metadata/`.
-        3. On this cluster. Verify remote metadata fetch and alliance health after the change.
+        1. Ensure DNS resolves the target `istio-metadata.{{$labels.hostname}}`. The `istio` module adds the `istio-metadata` SAN when a federation or multicluster is enabled and CertManager is used.
+        2. Update `spec.metadataEndpoint` on this object to use the new domain name. Keep the path `/metadata/` unchanged.
+        3. Verify remote metadata fetch and alliance health after the change.
       summary: |
         Alliance metadataEndpoint uses a deprecated subdomain.
       severity: "5"
