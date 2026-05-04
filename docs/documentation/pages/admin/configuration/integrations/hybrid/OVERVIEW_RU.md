@@ -8,7 +8,7 @@ lang: ru
 
 Такой подход позволяет использовать один Kubernetes-кластер для рабочих нагрузок, которые физически размещаются на разных площадках. При этом для приложений сохраняется единая плоскость управления Kubernetes: общие ресурсы, единый API, единые механизмы планирования, мониторинга и эксплуатации.
 
-Обычно постоянная часть нагрузки размещается на собственных серверах или заранее подготовленных виртуальных машинах. Такие узлы управляются как статические. Дополнительные ресурсы можно подключать из облака или среды виртуализации: например, чтобы временно увеличить вычислительные мощности, вынести часть нагрузки на другую площадку или постепенно мигрировать сервисы из собственного ЦОД.
+Обычно базовая часть кластера размещается на собственных серверах или заранее подготовленных виртуальных машинах. Такие узлы используются для control plane и постоянных рабочих нагрузок. Дополнительные ресурсы можно подключать из облака или среды виртуализации: например, чтобы временно увеличить вычислительные мощности, вынести часть нагрузки на другую площадку или постепенно мигрировать сервисы из собственного ЦОД.
 
 В DKP гибридная архитектура строится на сочетании разных типов групп узлов:
 
@@ -16,17 +16,20 @@ lang: ru
 - [`CloudEphemeral`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html) — узлы, которые DKP создаёт и удаляет автоматически через API провайдера;
 - [`CloudStatic`](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html) — узлы, которые создаются вручную во внешней инфраструктуре и затем подключаются к кластеру.
 
-В типовом сценарии сначала разворачивается кластер с [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype). В нём control plane и базовые узлы размещаются на заранее подготовленных серверах или виртуальных машинах. Затем в кластере включается модуль соответствующего облачного провайдера. После этого DKP получает возможность добавлять узлы из внешней инфраструктуры: создавать их автоматически через API провайдера или подключать заранее подготовленные виртуальные машины.
+В типовом сценарии сначала разворачивается кластер с [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype). В таком кластере control plane и базовые узлы размещаются на заранее подготовленных серверах или виртуальных машинах. Затем в кластере включается модуль соответствующего облачного провайдера, через который DKP получает информацию о внешней инфраструктуре и может работать с узлами, размещёнными в ней.
 
-Для автоматически создаваемых узлов параметры виртуальных машин описываются ресурсом `*InstanceClass`, а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup). После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
+Подключение узлов из внешней инфраструктуры может выполняться двумя способами:
+
+- **Автоматическое создание узлов**. Используется тип узлов `CloudEphemeral`. Параметры виртуальных машин описываются ресурсом `*InstanceClass`, а количество узлов и зоны размещения — ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup). После применения этих ресурсов DKP обращается к API провайдера, создаёт виртуальные машины, подготавливает их и подключает к существующему кластеру как worker-узлы.
+- **Подключение вручную созданных узлов**. Используется тип узлов `CloudStatic`. Виртуальные машины создаются пользователем вручную во внешней инфраструктуре, после чего подключаются к кластеру с помощью bootstrap-скрипта DKP как worker-узлы.
 
 В этом разделе описаны общие требования к гибридным кластерам, предварительная подготовка инфраструктуры и добавление узлов через поддерживаемых провайдеров.
 
-## Общие требования к сети
+## Общие сетевые требования
 
-Между статическими узлами кластера и узлами, создаваемыми во внешней инфраструктуре, должна быть настроена сетевая связность, достаточная для работы компонентов Kubernetes и DKP.
+Между статическими узлами кластера и узлами, размещёнными во внешней инфраструктуре, должна быть настроена сетевая связность, достаточная для работы компонентов Kubernetes и DKP.
 
-Подключаемые узлы должны иметь доступ к Kubernetes API, DNS и необходимым адресам внешних сервисов, включая container registry и API используемого провайдера инфраструктуры.
+Подключаемые узлы должны иметь доступ к Kubernetes API, DNS и необходимым адресам внешних сервисов, включая container registry. Компоненты DKP, взаимодействующие с внешней инфраструктурой, должны иметь доступ к API соответствующего провайдера.
 
 Полный перечень соединений приведён в разделе [Сетевое взаимодействие](../../../../reference/network_interaction.html), а рекомендации по ограничениям доступа — в разделе [Настройка сетевых политик](../../configuration/network/policy/configuration.html).
 
@@ -38,7 +41,7 @@ lang: ru
 - доступность Kubernetes API для подключаемых узлов;
 - параметры инкапсуляции трафика при использовании Cilium, включая [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), если между площадками применяется фильтрация трафика.
 
-Конкретные требования к сетям, подсетям, шаблонам виртуальных машин, учётным данным и дополнительным параметрам зависят от используемого провайдера инфраструктуры и приведены в разделе «Предварительные требования» для соответствующего провайдера ниже.
+Конкретные требования к сетям, подсетям, шаблонам виртуальных машин, учётным данным и дополнительным параметрам зависят от используемого провайдера инфраструктуры и приведены в разделе «Предварительные требования» для соответствующего провайдера.
 
 ## Гибридный кластер с Yandex Cloud
 
@@ -57,7 +60,7 @@ lang: ru
   - настроены необходимые роли и доступ к используемой VPC.
 - При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
-### Создание узлов в Yandex Cloud
+### Добавление автоматически создаваемых узлов в Yandex Cloud
 
 1. Создайте Service Account в нужном каталоге Yandex Cloud:
 
@@ -253,81 +256,59 @@ lang: ru
   - подготовлены необходимые ресурсы VCD: VDC, vApp, шаблоны, политики и другие параметры.
 - При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
-### Создание узлов в VCD
+### Добавление автоматически создаваемых узлов в VCD
 
-1. Создайте файл конфигурации `cloud-provider-vcd-token.yml` со следующим содержимым:
+1. Создайте файл, например, `cloud-provider-vcd-mc.yaml` с ресурсом ModuleConfig:
 
    ```yaml
-   apiVersion: deckhouse.io/v1
-   kind: VCDClusterConfiguration
-   layout: Standard
-   mainNetwork: <NETWORK_NAME>
-   internalNetworkCIDR: <NETWORK_CIDR>
-   organization: <ORGANIZATION>
-   virtualApplicationName: <VAPP_NAME>
-   virtualDataCenter: <VDC_NAME>
-   provider:
-     server: <API_URL>
-     apiToken: <PASSWORD>
-     username: <USER_NAME>
-     insecure: false
-   masterNodeGroup:
-     instanceClass:
-       etcdDiskSizeGb: 10
-       mainNetworkIPAddresses:
-       - 192.168.199.2
-       rootDiskSizeGb: 50
-       sizingPolicy: <SIZING_POLICY>
-       storageProfile: <STORAGE_PROFILE>
-       template: <VAPP_TEMPLATE>
-     replicas: 1
-   sshPublicKey: <SSH_PUBLIC_KEY>
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cloud-provider-vcd
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       mainNetwork: <NETWORK_NAME>
+       organization: <ORGANIZATION>
+       virtualDataCenter: <VDC_NAME>
+       virtualApplicationName: <VAPP_NAME>
+       sshPublicKey: <SSH_PUBLIC_KEY>
+       provider:
+         server: <API_URL>
+         username: <USER_NAME>
+         password: <PASSWORD>
+         insecure: false
    ```
 
    Где:
-   - `mainNetwork` — имя сети, в которой будут размещаться облачные узлы в кластере VCD.
-   - `internalNetworkCIDR` — CIDR-адресация указанной сети.
-   - `organization` — название вашей организации в VCD.
-   - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
-   - `virtualDataCenter` — имя виртуального датацентра.
-   - `template` — шаблон ВМ для создания узлов.
-   - `sizingPolicy` и `storageProfile` — соответствующие политики в VCD.
-   - `provider.server` — URL-адрес API вашего VCD.
-   - `provider.apiToken` — токен доступа (пароль) пользователя с правами администратора в VCD.
-   - `provider.username` — имя статического пользователя, от имени которого будет происходить взаимодействие с VCD.
-   - `mainNetworkIPAddresses` — список IP-адресов из указанной сети, которые будут выделены для master-узлов.
-   - `storageProfile` — имя storage-профиля, определяющего хранилище для дисков создаваемых ВМ.
+   - `mainNetwork` — имя сети, в которой будут размещаться облачные узлы в VCD;
+   - `organization` — имя Organization в VCD;
+   - `virtualDataCenter` — имя Virtual Data Center в VCD;
+   - `virtualApplicationName` — имя vApp, где будут создаваться узлы, например dkp-vcd-app;
+   - `sshPublicKey` — публичный SSH-ключ для доступа к узлам;
+   - `provider.server` — URL-адрес API VCD;
+   - `provider.username` — имя пользователя VCD;
+   - `provider.password` — пароль пользователя VCD;
+   - `provider.insecure` — установите значение true, если VCD использует самоподписанный TLS-сертификат.
 
-1. Закодируйте файл `cloud-provider-vcd-token.yml` в Base64:
-
-   ```shell
-   base64 -i $PWD/cloud-provider-vcd-token.yml
-   ```
-
-1. Создайте секрет со следующим содержимым:
+   Если для аутентификации используется токен, вместо `username` и `password` укажите `apiToken`:
 
    ```yaml
-   apiVersion: v1
-   data:
-     cloud-provider-cluster-configuration.yaml: <BASE64_СТРОКА_ПОЛУЧЕННАЯ_НА_ПРЕДЫДУЩЕМ_ЭТАПЕ> 
-     cloud-provider-discovery-data.json: eyJhcGlWZXJzaW9uIjoiZGVja2hvdXNlLmlvL3YxIiwia2luZCI6IlZDRENsb3VkUHJvdmlkZXJEaXNjb3ZlcnlEYXRhIiwiem9uZXMiOlsiZGVmYXVsdCJdfQo=
-   kind: Secret
-     metadata:
-       labels:
-         heritage: deckhouse
-         name: d8-provider-cluster-configuration
-       name: d8-provider-cluster-configuration
-       namespace: kube-system
-   type: Opaque
+   provider:
+     server: <API_URL>
+     apiToken: <API_TOKEN>
+     username: ""
+     password: ""
+     insecure: false
    ```
 
-1. Включите модуль `cloud-provider-vcd`:
+1. Примените ModuleConfig:
 
    ```shell
-   d8 system module enable cloud-provider-vcd
+   d8 k apply -f cloud-provider-vcd-mc.yaml
+   d8 k get mc cloud-provider-vcd
    ```
-
-1. Отредактируйте секрет `d8-cni-configuration`, чтобы значение параметра `mode` определялось из `mc cni-cilium` (измените `.data.cilium` на `.data.necilium` при необходимости).
 
 1. Убедитесь, что все поды в пространстве имён `d8-cloud-provider-vcd` находятся в состоянии `Running`:
 
@@ -335,11 +316,16 @@ lang: ru
    d8 k get pods -n d8-cloud-provider-vcd
    ```
 
-1. Перезагрузите master-узел и дождитесь завершения инициализации.
+1. Убедитесь, что в кластере созданы StorageClass для VCD:
 
-1. Создайте классы инстансов в VCD:
+   ```shell
+   d8 k get sc
+   ```
+
+1. Создайте файл, например, `vcd-instanceclass-nodegroup.yaml` с ресурсами [VCDInstanceClass](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass) и [NodeGroup](/modules/node-manager/cr.html#nodegroup):
 
    ```yaml
+   ---
    apiVersion: deckhouse.io/v1
    kind: VCDInstanceClass
    metadata:
@@ -349,16 +335,13 @@ lang: ru
      sizingPolicy: <SIZING_POLICY>
      storageProfile: <STORAGE_PROFILE>
      template: <VAPP_TEMPLATE>
-   ```  
-
-1. Создайте ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup):
-
-   ```yaml
+   ---
    apiVersion: deckhouse.io/v1
    kind: NodeGroup
    metadata:
      name: worker
    spec:
+     nodeType: CloudEphemeral
      cloudInstances:
        classReference:
          kind: VCDInstanceClass
@@ -368,13 +351,131 @@ lang: ru
      nodeTemplate:
        labels:
          node-role/worker: ""
-     nodeType: CloudEphemeral
+    ```
+
+1. Примените манифест:
+
+   ```shell
+   d8 k apply -f vcd-instanceclass-nodegroup.yaml
    ```
+
+   После применения манифеста DKP начнёт создавать виртуальные машины в VCD, управляемые модулем `node-manager`.
 
 1. Убедитесь, что в кластере появилось требуемое количество узлов:
 
    ```shell
    d8 k get nodes -o wide
+   ```
+
+1. При сбоях создания ВМ проверьте объекты Machine, MachineSet и логи machine-controller-manager:
+
+   ```shell
+   d8 k -n d8-cloud-instance-manager get machinesets,machines -o wide
+   d8 k -n d8-cloud-instance-manager logs deploy/machine-controller-manager --tail=200
+   ```
+
+### Добавление вручную созданных узлов в VCD
+
+Перед началом убедитесь, что выполнены следующие условия:
+
+- Модуль [`cloud-provider-vcd`](/modules/cloud-provider-vcd/) включён и настроен.
+- Компоненты модуля `cloud-provider-vcd` находятся в состоянии `Running`:
+
+  ```shell
+  d8 k -n d8-cloud-provider-vcd get pods -o wide
+  ```
+
+- В кластере созданы StorageClass для VCD:
+  
+  ```shell
+  d8 k get sc
+  ```
+
+- В VCD создана виртуальная машина, которая будет подключена к кластеру.
+- Имя виртуальной машины в VCD совпадает с hostname внутри операционной системы.
+- В дополнительных параметрах ВМ в VCD задано значение:
+
+  ```text
+  disk.EnableUUID = 1
+  ```
+
+- Виртуальная машина подключена к сети, указанной в параметре [`mainNetwork`](/modules/cloud-provider-vcd/cr.html#vcdinstanceclass-v1-spec-mainnetwork) модуля `cloud-provider-vcd`.
+- На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
+
+1. Создайте файл, например `cloud-static-nodegroup.yaml`, с ресурсом NodeGroup и типом узлов CloudStatic:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+   kind: NodeGroup
+   metadata:
+     name: cloud-static
+   spec:
+     nodeType: CloudStatic
+   ```
+
+1. Примените манифест:
+
+   ```shell
+   d8 k apply -f cloud-static-nodegroup.yaml
+   ```
+
+1. Убедитесь, что NodeGroup создана и синхронизирована:
+
+   ```shell
+   d8 k get nodegroup cloud-static
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME           TYPE          READY   NODES   UPTODATE   INSTANCES   DESIRED   MIN   MAX   STANDBY   STATUS   AGE   SYNCED
+   cloud-static   CloudStatic   0       0       0                                                               1m    True
+   ```
+
+1. Получите bootstrap-скрипт для созданной NodeGroup:
+
+   ```shell
+   NODE_GROUP=cloud-static
+
+   d8 k -n d8-cloud-instance-manager get secret manual-bootstrap-for-${NODE_GROUP} \
+     -o jsonpath='{.data.bootstrap\.sh}' > bootstrap.b64
+   ```
+
+1. Скопируйте bootstrap-скрипт на подключаемую виртуальную машину:
+
+   ```shell
+   scp bootstrap.b64 <USER>@<NODE_IP>:/tmp/bootstrap.b64
+   ```
+
+1. Подключитесь к виртуальной машине по SSH:
+
+   ```shell
+   ssh <USER>@<NODE_IP>
+   ```
+
+1. На виртуальной машине наначьте права и запустите bootstrap-скрипт:
+
+   ```shell
+   base64 -d /tmp/bootstrap.b64 > /tmp/bootstrap.sh
+   chmod +x /tmp/bootstrap.sh
+
+   sudo bash /tmp/bootstrap.sh
+   ```
+
+   После запуска bootstrap-скрипт установит необходимые компоненты, настроит container runtime, kubelet и подключит узел к кластеру.
+
+1. На master-узле проверьте появление нового узла:
+
+   ```shell
+   d8 k get nodes -o wide
+   ```
+
+   Пример ожидаемого результата:
+
+   ```console
+   NAME                       STATUS   ROLES          AGE   VERSION    INTERNAL-IP
+   static-master-0            Ready    master         1h    v1.33.10   192.168.240.138
+   cloud-static-worker-0      Ready    cloud-static   5m    v1.33.10   192.168.240.151
    ```
 
 ## Гибридный кластер с vSphere
@@ -399,7 +500,7 @@ lang: ru
   - настроены сети, Datastore, теги регионов и зон.
 - При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
-### Создание CloudEphemeral узлов в vSphere
+### Добавление автоматически создаваемых узлов в vSphere
 
 Для подключения уже работающего статического кластера к vCenter используйте ресурс [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/).
 
@@ -535,11 +636,7 @@ lang: ru
    d8 k get events -A --sort-by=.lastTimestamp | tail -n 100
    ```
 
-### Создание CloudStatic узлов в vSphere
-
-В vSphere можно использовать не только автоматически создаваемые узлы `CloudEphemeral`, но и заранее подготовленные виртуальные машины. Такой сценарий используется, если виртуальные машины создаются вручную во внешней инфраструктуре, а затем подключаются к существующему кластеру DKP как узлы типа `CloudStatic`.
-
-В этом режиме DKP не создаёт виртуальные машины через API vSphere. Пользователь самостоятельно создаёт ВМ, настраивает для неё сеть, hostname и параметры vSphere, после чего подключает её к кластеру с помощью bootstrap-скрипта DKP.
+### Добавление вручную созданных узлов в vSphere
 
 Перед началом убедитесь, что выполнены следующие условия:
 
@@ -632,7 +729,7 @@ lang: ru
 1. На master-узле проверьте появление нового узла:
 
    ```shell
-   На master-узле проверьте появление нового узла:
+   d8 k get nodes -o wide
    ```
 
    Пример ожидаемого результата:
