@@ -31,12 +31,13 @@ const (
 	ConditionReasonCheckVersion     status.ConditionReason = "CheckVersion"
 )
 
+// newDownloadErr wraps err when the package image cannot be downloaded from the registry.
 func newDownloadErr(err error) error {
 	return &status.Error{
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonDownload,
 				Message: err.Error(),
@@ -45,12 +46,13 @@ func newDownloadErr(err error) error {
 	}
 }
 
+// newCreatePackageDirErr wraps err when the package directory cannot be created on the host filesystem.
 func newCreatePackageDirErr(err error) error {
 	return &status.Error{
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionDownloaded,
+				Type:    status.ConditionReadyOnFilesystem,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCreatePackageDir,
 				Message: err.Error(),
@@ -59,6 +61,7 @@ func newCreatePackageDirErr(err error) error {
 	}
 }
 
+// newRemoveOldVersionErr wraps err when the previously installed version directory or symlink cannot be removed.
 func newRemoveOldVersionErr(err error) error {
 	return &status.Error{
 		Err: err,
@@ -73,6 +76,7 @@ func newRemoveOldVersionErr(err error) error {
 	}
 }
 
+// newCreateSymlinkErr wraps err when the versioned symlink pointing to the package directory cannot be created.
 func newCreateSymlinkErr(err error) error {
 	return &status.Error{
 		Err: err,
@@ -87,6 +91,7 @@ func newCreateSymlinkErr(err error) error {
 	}
 }
 
+// newCheckMountErr wraps err when the symlink target cannot be verified as a live mount.
 func newCheckMountErr(err error) error {
 	return &status.Error{
 		Err: err,
@@ -101,6 +106,7 @@ func newCheckMountErr(err error) error {
 	}
 }
 
+// newCheckVersionErr wraps err when the installed package version does not match the expected version.
 func newCheckVersionErr(err error) error {
 	return &status.Error{
 		Err: err,

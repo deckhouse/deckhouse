@@ -35,12 +35,12 @@ import (
 )
 
 const (
-	tracerName = "installer"
+	tracerName = "deployer"
 )
 
-// Installer handles package lifecycle using erofs images with dm-verity integrity.
+// Deployer handles package lifecycle using erofs images with dm-verity integrity.
 // Operations are serialized via mutex to prevent concurrent mount/unmount conflicts.
-type Installer struct {
+type Deployer struct {
 	mtx      sync.Mutex
 	registry registryService
 	logger   *log.Logger
@@ -51,16 +51,26 @@ type registryService interface {
 	GetImageReader(ctx context.Context, cred registry.Remote, packageName, tag string) (io.ReadCloser, error)
 }
 
-func NewInstaller(registry registryService, logger *log.Logger) *Installer {
-	return &Installer{
+// NewDeployer creates a Deployer with the given registry service.
+func NewDeployer(registry registryService, logger *log.Logger) *Deployer {
+	return &Deployer{
 		registry: registry,
-		logger:   logger.Named("erofs-installer"),
+		logger:   logger.Named("erofs-deployer"),
 	}
 }
 
-// Download fetches a package image from the registry and creates an erofs image.
+// Deploy fetches a package image from the registry and mounts it at the deployed path.
+func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error {
+	if err := d.download(ctx, repo, downloaded, packageName, version); err != nil {
+		return err
+	}
+
+	return d.mount(ctx, downloaded, deployed, name, version)
+}
+
+// download fetches a package image from the registry and creates an erofs image.
 // If the image already exists and passes verification, download is skipped.
-func (i *Installer) Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error {
+func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
@@ -70,7 +80,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	span.SetAttributes(attribute.String("repository", repo.Name))
 	span.SetAttributes(attribute.String("registry", repo.Repository))
 
-	logger := i.logger.With(
+	logger := d.logger.With(
 		slog.String("name", name),
 		slog.String("version", version),
 		slog.String("downloaded", downloaded),
@@ -86,8 +96,8 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	default:
 	}
 
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
 
 	// <downloaded>/<version>.erofs
 	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
@@ -96,7 +106,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 		return newCreatePackageDirErr(err)
 	}
 
-	rootHash, err := i.registry.GetImageRootHash(ctx, repo, name, version)
+	rootHash, err := d.registry.GetImageRootHash(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newGetRootHashErr(err)
@@ -104,7 +114,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 
 	// skip download if image exists and passes integrity check
 	logger.Debug("verify package image")
-	if err = i.verifyImage(ctx, imagePath, rootHash); err == nil {
+	if err = d.verifyImage(ctx, imagePath, rootHash); err == nil {
 		logger.Debug("package image verified")
 
 		return nil
@@ -113,7 +123,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	// verification failed - fetch fresh image from registry
 	logger.Warn("verify package image failed", log.Err(err))
 
-	img, err := i.registry.GetImageReader(ctx, repo, name, version)
+	img, err := d.registry.GetImageReader(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newGetImageReaderErr(err)
@@ -129,10 +139,10 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	return nil
 }
 
-// Install mounts an erofs image using dm-verity for integrity verification.
+// mount mounts an erofs image using dm-verity for integrity verification.
 // Flow: unmount old → close mapper → compute hash → create mapper → mount new.
-func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, version string) error {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "Install")
+func (d *Deployer) mount(ctx context.Context, downloaded, deployed, name, version string) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Deploy")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("downloaded", downloaded))
@@ -140,13 +150,13 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("version", version))
 
-	logger := i.logger.With(
+	logger := d.logger.With(
 		slog.String("downloaded", downloaded),
 		slog.String("deployed", deployed),
 		slog.String("name", name),
 		slog.String("version", version))
 
-	logger.Debug("install package")
+	logger.Debug("deploy package")
 
 	select {
 	case <-ctx.Done():
@@ -155,8 +165,8 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	default:
 	}
 
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
 
 	// <downloaded>/<version>.erofs
 	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
@@ -198,17 +208,17 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	return nil
 }
 
-// Uninstall unmounts the erofs image and closes the dm-verity mapper.
+// Undeploy unmounts the erofs image and closes the dm-verity mapper.
 // If keep=false, the downloaded image files are also deleted.
-func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "Uninstall")
+func (d *Deployer) Undeploy(ctx context.Context, downloaded, deployed, name string, keep bool) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Undeploy")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 
-	logger := i.logger.With(slog.String("name", name))
+	logger := d.logger.With(slog.String("name", name))
 
-	logger.Debug("uninstall package")
+	logger.Debug("undeploy package")
 
 	if _, err := os.Stat(deployed); err != nil {
 		if os.IsNotExist(err) {
@@ -232,8 +242,8 @@ func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name st
 	}()
 
 	// mounts should not be executed simultaneously
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
+	d.mtx.Lock()
+	defer d.mtx.Unlock()
 
 	logger.Debug("unmount erofs image", slog.String("path", deployed))
 	if err := verity.Unmount(ctx, deployed); err != nil {
@@ -247,13 +257,13 @@ func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name st
 		return fmt.Errorf("close device mapper: %w", err)
 	}
 
-	logger.Debug("package uninstalled")
+	logger.Debug("package undeployed")
 
 	return nil
 }
 
 // verifyImage checks that the image and hash exist and verified
-func (i *Installer) verifyImage(_ context.Context, imagePath, _ string) error {
+func (d *Deployer) verifyImage(_ context.Context, imagePath, _ string) error {
 	if _, err := os.Stat(imagePath); err != nil {
 		return fmt.Errorf("stat package image '%s': %w", imagePath, err)
 	}

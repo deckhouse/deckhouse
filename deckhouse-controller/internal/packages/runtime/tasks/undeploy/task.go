@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package uninstall
+package undeploy
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	taskTracer = "package-uninstall"
+	taskTracer = "package-undeploy"
 )
 
 var (
@@ -35,8 +35,8 @@ var (
 	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
 )
 
-type installerI interface {
-	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
+type deployerI interface {
+	Undeploy(ctx context.Context, downloaded, deployed, name string, keep bool) error
 }
 
 type task struct {
@@ -45,44 +45,44 @@ type task struct {
 	deployed   string
 	keep       bool
 
-	installer installerI
+	deployer deployerI
 
 	logger *log.Logger
 }
 
-// NewAppTask creates an Uninstall task for an Application package.
+// NewAppTask creates an Undeploy task for an Application package.
 // Sets keep=true to preserve downloaded images for potential reinstallation.
-func NewAppTask(name string, installer installerI, logger *log.Logger) queue.Task {
+func NewAppTask(name string, deployer deployerI, logger *log.Logger) queue.Task {
 	return &task{
 		name: name,
 		// TODO(ipaqsa): design app deletion
 		// downloaded: filepath.Join(appsDownloadedDir, repo.Name, name),
-		deployed:  filepath.Join(appsDeployedDir, name),
-		keep:      true,
-		installer: installer,
-		logger:    logger.Named(taskTracer),
+		deployed: filepath.Join(appsDeployedDir, name),
+		keep:     true,
+		deployer: deployer,
+		logger:   logger.Named(taskTracer),
 	}
 }
 
-// NewModuleTask creates an Uninstall task for a Module package.
+// NewModuleTask creates an Undeploy task for a Module package.
 // Sets keep=false to remove both deployed and downloaded directories.
-func NewModuleTask(name string, installer installerI, logger *log.Logger) queue.Task {
+func NewModuleTask(name string, deployer deployerI, logger *log.Logger) queue.Task {
 	return &task{
 		name:       name,
 		downloaded: filepath.Join(modulesDownloadedDir, name),
 		deployed:   filepath.Join(modulesDeployedDir, name),
 		keep:       false,
-		installer:  installer,
+		deployer:   deployer,
 		logger:     logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return "Uninstall"
+	return "Undeploy"
 }
 
 func (t *task) Execute(ctx context.Context) error {
-	t.logger.Debug("uninstall package", slog.String("name", t.name))
+	t.logger.Debug("undeploy package", slog.String("name", t.name))
 
-	return t.installer.Uninstall(ctx, t.downloaded, t.deployed, t.name, t.keep)
+	return t.deployer.Undeploy(ctx, t.downloaded, t.deployed, t.name, t.keep)
 }

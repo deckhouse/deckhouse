@@ -32,12 +32,12 @@ import (
 )
 
 const (
-	tracerName = "installer"
+	tracerName = "deployer"
 )
 
-// Installer handles package lifecycle using symlinks instead of dm-verity mounts.
+// Deployer handles package lifecycle using symlinks instead of dm-verity mounts.
 // Simpler alternative for environments where dm-verity is unavailable.
-type Installer struct {
+type Deployer struct {
 	mu       sync.Mutex
 	registry registryService
 	logger   *log.Logger
@@ -47,16 +47,24 @@ type registryService interface {
 	Download(ctx context.Context, cred registry.Remote, out, packageName, tag string) error
 }
 
-// NewInstaller creates an Installer with the given registry service.
-func NewInstaller(reg registryService, logger *log.Logger) *Installer {
-	return &Installer{
+// NewDeployer creates a Deployer with the given registry service.
+func NewDeployer(reg registryService, logger *log.Logger) *Deployer {
+	return &Deployer{
 		registry: reg,
-		logger:   logger.Named("symlink-installer"),
+		logger:   logger.Named("symlink-deployer"),
 	}
 }
 
-// Download fetches a package image from the registry to <downloaded>/<version>.
-func (i *Installer) Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error {
+// Deploy fetches a package image from the registry and exposes it at the deployed path.
+func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error {
+	if err := d.download(ctx, repo, downloaded, packageName, version); err != nil {
+		return err
+	}
+
+	return d.symlink(ctx, downloaded, deployed, name, version)
+}
+
+func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
@@ -66,7 +74,7 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	span.SetAttributes(attribute.String("repository", repo.Name))
 	span.SetAttributes(attribute.String("registry", repo.Repository))
 
-	logger := i.logger.With(
+	logger := d.logger.With(
 		slog.String("name", name),
 		slog.String("version", version),
 		slog.String("downloaded", downloaded),
@@ -84,8 +92,8 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 
 	// one package can be downloaded by different apps in the same time
 	// so lock it to prevent downloading same package
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	versionPath := filepath.Join(downloaded, version)
 	if _, err := os.Stat(versionPath); err == nil {
@@ -93,17 +101,17 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	}
 
 	// download/extract into <downloaded>/<version> directory
-	if err := i.registry.Download(ctx, repo, versionPath, name, version); err != nil {
+	if err := d.registry.Download(ctx, repo, versionPath, name, version); err != nil {
 		return newDownloadErr(err)
 	}
 
 	return nil
 }
 
-// Install creates a symlink from deployed path to the downloaded version directory.
+// symlink creates a symlink from deployed path to the downloaded version directory.
 // Removes any existing symlink for atomic version switching.
-func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, version string) error {
-	_, span := otel.Tracer(tracerName).Start(ctx, "Install")
+func (d *Deployer) symlink(ctx context.Context, downloaded, deployed, name, version string) error {
+	_, span := otel.Tracer(tracerName).Start(ctx, "Deploy")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("downloaded", downloaded))
@@ -111,13 +119,13 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("version", version))
 
-	logger := i.logger.With(
+	logger := d.logger.With(
 		slog.String("downloaded", downloaded),
 		slog.String("deployed", deployed),
 		slog.String("name", name),
 		slog.String("version", version))
 
-	logger.Debug("install package")
+	logger.Debug("deploy package")
 
 	select {
 	case <-ctx.Done():
@@ -155,16 +163,16 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 	return nil
 }
 
-// Uninstall removes the symlink. If keep=false, also deletes downloaded files.
-func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error {
-	_, span := otel.Tracer(tracerName).Start(ctx, "Uninstall")
+// Undeploy removes the symlink. If keep=false, also deletes downloaded files.
+func (d *Deployer) Undeploy(ctx context.Context, downloaded, deployed, name string, keep bool) error {
+	_, span := otel.Tracer(tracerName).Start(ctx, "Undeploy")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 
-	logger := i.logger.With(slog.String("name", name))
+	logger := d.logger.With(slog.String("name", name))
 
-	logger.Debug("uninstall package")
+	logger.Debug("undeploy package")
 
 	if _, err := os.Lstat(deployed); err != nil {
 		if os.IsNotExist(err) {

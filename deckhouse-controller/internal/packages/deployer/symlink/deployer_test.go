@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -69,20 +69,24 @@ func setupSymlink(t *testing.T, deployed, target string) {
 	require.NoError(t, os.Symlink(target, deployed))
 }
 
-func TestDownload(t *testing.T) {
+func TestDeployDownloadsPackage(t *testing.T) {
 	tests := []struct {
 		name        string
 		downloadErr error
 		cancelCtx   bool
 		wantErrIs   error // nil = success, errAny = any error, specific = errors.Is check
-		checkResult func(t *testing.T, downloaded string)
+		checkResult func(t *testing.T, downloaded, deployed string)
 	}{
 		{
 			name: "success",
-			checkResult: func(t *testing.T, downloaded string) {
+			checkResult: func(t *testing.T, downloaded, deployed string) {
 				versionPath := filepath.Join(downloaded, "1.0.0")
 				assert.DirExists(t, versionPath)
 				assert.FileExists(t, filepath.Join(versionPath, "package.yaml"))
+
+				linkTarget, err := os.Readlink(deployed)
+				require.NoError(t, err)
+				assert.Equal(t, versionPath, linkTarget)
 			},
 		},
 		{
@@ -101,8 +105,9 @@ func TestDownload(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpDir := t.TempDir()
 			downloaded := filepath.Join(tmpDir, "downloaded", "my-package")
+			deployed := filepath.Join(tmpDir, "deployed", "my-package")
 
-			inst := symlink.NewInstaller(&mockDownloader{downloadErr: tc.downloadErr}, log.NewNop())
+			deployer := symlink.NewDeployer(&mockDownloader{downloadErr: tc.downloadErr}, log.NewNop())
 			repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
 
 			ctx := context.Background()
@@ -112,7 +117,7 @@ func TestDownload(t *testing.T) {
 				cancel()
 			}
 
-			err := inst.Download(ctx, repo, downloaded, "my-package", "1.0.0")
+			err := deployer.Deploy(ctx, repo, downloaded, deployed, "my-package", "my-package", "1.0.0")
 
 			if tc.wantErrIs != nil {
 				require.Error(t, err)
@@ -129,13 +134,13 @@ func TestDownload(t *testing.T) {
 
 			require.NoError(t, err)
 			if tc.checkResult != nil {
-				tc.checkResult(t, downloaded)
+				tc.checkResult(t, downloaded, deployed)
 			}
 		})
 	}
 }
 
-func TestInstall(t *testing.T) {
+func TestDeploy(t *testing.T) {
 	tests := []struct {
 		name        string
 		version     string
@@ -183,14 +188,6 @@ func TestInstall(t *testing.T) {
 			wantErrIs: context.Canceled,
 		},
 		{
-			name:    "version_dir_missing",
-			version: "1.0.0",
-			setup: func(t *testing.T, _, deployed string) {
-				require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0755))
-			},
-			wantErrIs: errAny,
-		},
-		{
 			name:    "downgrade_version",
 			version: "1.0.0",
 			setup: func(t *testing.T, downloaded, deployed string) {
@@ -216,7 +213,7 @@ func TestInstall(t *testing.T) {
 				tc.setup(t, downloaded, deployed)
 			}
 
-			inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+			deployer := symlink.NewDeployer(new(mockDownloader), log.NewNop())
 
 			ctx := context.Background()
 			if tc.cancelCtx {
@@ -225,7 +222,8 @@ func TestInstall(t *testing.T) {
 				cancel()
 			}
 
-			err := inst.Install(ctx, downloaded, deployed, "my-package", tc.version)
+			repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+			err := deployer.Deploy(ctx, repo, downloaded, deployed, "my-package", "my-package", tc.version)
 
 			if tc.wantErrIs != nil {
 				require.Error(t, err)
@@ -243,7 +241,7 @@ func TestInstall(t *testing.T) {
 	}
 }
 
-func TestUninstall(t *testing.T) {
+func TestUndeploy(t *testing.T) {
 	tests := []struct {
 		name        string
 		setup       func(t *testing.T, downloaded, deployed string)
@@ -313,9 +311,9 @@ func TestUninstall(t *testing.T) {
 				tc.setup(t, downloaded, deployed)
 			}
 
-			inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+			deployer := symlink.NewDeployer(new(mockDownloader), log.NewNop())
 
-			err := inst.Uninstall(context.Background(), downloaded, deployed, "my-package", tc.keep)
+			err := deployer.Undeploy(context.Background(), downloaded, deployed, "my-package", tc.keep)
 			require.NoError(t, err)
 
 			if tc.checkResult != nil {
@@ -362,17 +360,14 @@ func TestLifecycle(t *testing.T) {
 			// Create parent directory for deployed symlink
 			require.NoError(t, os.MkdirAll(filepath.Dir(deployed), 0755))
 
-			inst := symlink.NewInstaller(new(mockDownloader), log.NewNop())
+			deployer := symlink.NewDeployer(new(mockDownloader), log.NewNop())
 			repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
 			ctx := context.Background()
 
-			// Download and install each version
+			// Download and deploy each version.
 			for _, version := range tc.versions {
-				err := inst.Download(ctx, repo, downloaded, "my-package", version)
-				require.NoError(t, err, "download %s", version)
-
-				err = inst.Install(ctx, downloaded, deployed, "my-package", version)
-				require.NoError(t, err, "install %s", version)
+				err := deployer.Deploy(ctx, repo, downloaded, deployed, "my-package", "my-package", version)
+				require.NoError(t, err, "deploy %s", version)
 
 				// Verify correct version is deployed
 				content, err := os.ReadFile(filepath.Join(deployed, "package.yaml"))
@@ -380,13 +375,13 @@ func TestLifecycle(t *testing.T) {
 				assert.Contains(t, string(content), "version: "+version)
 			}
 
-			// All version directories should exist before uninstall
+			// All version directories should exist before undeploy.
 			for _, version := range tc.versions {
 				assert.DirExists(t, filepath.Join(downloaded, version))
 			}
 
-			// Uninstall
-			err := inst.Uninstall(ctx, downloaded, deployed, "my-package", !tc.cleanup)
+			// Undeploy
+			err := deployer.Undeploy(ctx, downloaded, deployed, "my-package", !tc.cleanup)
 			require.NoError(t, err)
 
 			// Verify symlink removed

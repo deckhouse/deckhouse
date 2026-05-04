@@ -27,11 +27,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
+	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
-	taskdownload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/download"
-	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
-	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
+	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
@@ -51,7 +50,7 @@ type Module struct {
 // UpdateModule handles module creation and version changes from the module controller.
 //
 // Flow mirrors UpdateApp: version changes enqueue the full pipeline
-// (Disable → Download → Install → Load), settings-only changes trigger
+// (Disable → Deploy → Load), settings-only changes trigger
 // Reschedule to re-apply settings through the scheduler's schedule pipeline.
 // See UpdateApp for detailed flow documentation.
 func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
@@ -78,8 +77,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.status.ClearRuntimeConditions(name)
 
 	tasks := []queue.Task{
-		taskdownload.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),
-		taskinstall.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),
+		taskdeploy.NewModuleTask(name, version, repo, r.deployer, r.status, r.logger),
 		taskload.NewModuleTask(name, repo, r.loadModule, r.status, r.logger),
 	}
 
@@ -131,7 +129,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 }
 
 // RemoveModule removes a module and cancels all its running operations.
-// After uninstall, a cleanup goroutine removes the Store entry and stops the queue.
+// After undeploy, a cleanup goroutine removes the Store entry and stops the queue.
 // See RemoveApp for detailed rationale on the async cleanup pattern.
 func (r *Runtime) RemoveModule(name string) {
 	r.mu.Lock()
@@ -161,5 +159,5 @@ func (r *Runtime) RemoveModule(name string) {
 		}()
 	})
 
-	r.queueService.Enqueue(ctx, name, taskuninstall.NewModuleTask(name, r.installer, r.logger), cleanup)
+	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.deployer, r.logger), cleanup)
 }
