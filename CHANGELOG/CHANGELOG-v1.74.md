@@ -94,6 +94,7 @@
     In HA cluster mode hubble-ui and hubble-relay will be restarted
  - **[cloud-provider-aws]** fix getInstancesByIDs to comply with the describeInstanceBatcher. [#18312](https://github.com/deckhouse/deckhouse/pull/18312)
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
+ - **[cloud-provider-azure]** fix disk discovery for Ubuntu 22.04 Gen2 VMs with NVMe controllers [#19330](https://github.com/deckhouse/deckhouse/pull/19330)
  - **[cloud-provider-azure]** fixed patch in azure [#17696](https://github.com/deckhouse/deckhouse/pull/17696)
  - **[cloud-provider-azure]** fixed cve [#16839](https://github.com/deckhouse/deckhouse/pull/16839)
  - **[cloud-provider-dvp]** added fixes an infinite deletion state of DeckhouseMachine. [#18163](https://github.com/deckhouse/deckhouse/pull/18163)
@@ -179,6 +180,8 @@
  - **[ingress-nginx]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[ingress-nginx]** Improved stability of geoproxy service startup. [#17140](https://github.com/deckhouse/deckhouse/pull/17140)
+ - **[istio]** fixed CVEs in module images [#19363](https://github.com/deckhouse/deckhouse/pull/19363)
+    module pods will be restarted
  - **[istio]** fixed CVE-2026-39882, CVE-2026-39883 and CVE-2026-35206 [#19091](https://github.com/deckhouse/deckhouse/pull/19091)
     istio module pods will be restarted
  - **[istio]** fixed CVE-2026-34986 [#18973](https://github.com/deckhouse/deckhouse/pull/18973)
