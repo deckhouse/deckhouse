@@ -1818,6 +1818,14 @@ To add a GPU node to the cluster, perform the following steps:
    nvidia-smi
    ```
 
+   {% alert level="warning" %}
+   If the GPU node was prepared in advance, shipped with preinstalled NVIDIA drivers, or runs an OS with a graphical environment, make sure that the GPU is not being used by third-party processes.
+
+   In the `nvidia-smi` output, the `Processes` section must not contain third-party processes using the GPU. On nodes with a graphical environment, these may include, for example, graphical session or display manager processes: `Xorg`, `gnome-shell`, `gdm`, `sddm`, `lightdm`, and others. Such processes can consume GPU memory and interfere with correct workload operation as well as MIG configuration.
+
+   For dedicated GPU nodes, it is recommended to use a server OS without a graphical environment or disable the graphical session/display manager using OS tools.
+   {% endalert %}
+
    Expected proper output (example):
 
    ```console
@@ -2060,7 +2068,12 @@ A separate `custom-<ng>-<hash>` configuration is created for each group of nodes
 
 ## MIG profile does not activate — what to check?
 
-1. **GPU model:** MIG is supported on H100/A100/A30; it is **not** supported on V100/T4. See the profile tables in the [NVIDIA MIG guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).
+1. **GPU model:** MIG is supported on H100/A100/A30; it is **not** supported on V100/T4. See the profile tables in the [NVIDIA MIG guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html). Make sure that the GPU is not being used by OS processes or user applications. If a graphical environment, display manager, or other GPU-consuming processes are running on the node, applying the MIG configuration may fail or may not take effect until the GPU is released. Check this with the following command:
+
+  ```shell
+  nvidia-smi
+  ```
+
 1. **NodeGroup configuration:**
 
    ```yaml
