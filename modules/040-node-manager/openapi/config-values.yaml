@@ -25,6 +25,12 @@ properties:
   mcmEmergencyBrake:
     type: boolean
     default: false
+    x-doc-d8Editions:
+      - ce
+      - be
+      - se
+      - se+
+      - ee
     x-examples:
     - false
     description: |
