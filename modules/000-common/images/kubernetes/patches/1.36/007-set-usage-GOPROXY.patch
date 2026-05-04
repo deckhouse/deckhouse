@@ -1,0 +1,20 @@
+diff --git a/hack/lib/golang.sh b/hack/lib/golang.sh
+index 5fb6a82ba53..070e4ef0bda 100755
+--- a/hack/lib/golang.sh
++++ b/hack/lib/golang.sh
+@@ -796,13 +796,13 @@ kube::golang::build_some_binaries() {
+     done
+     if [[ "${#uncovered[@]}" != 0 ]]; then
+       V=2 kube::log::info "Building ${uncovered[*]} without coverage..."
+-      GOPROXY=off go install "${build_args[@]}" "${uncovered[@]}"
++      go install "${build_args[@]}" "${uncovered[@]}"
+     else
+       V=2 kube::log::info "Nothing to build without coverage."
+     fi
+   else
+     V=2 kube::log::info "Coverage is disabled."
+-    GOPROXY=off go install "${build_args[@]}" "$@"
++    go install "${build_args[@]}" "$@"
+   fi
+ }
+ 
