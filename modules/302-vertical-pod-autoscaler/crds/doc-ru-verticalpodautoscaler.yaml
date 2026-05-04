@@ -36,6 +36,9 @@ spec:
                   properties:
                     name:
                       description: Имя компонента, отвечающего за создание рекомендаций для данного объекта.
+              scope:
+                description: |-
+                  Задаёт ключ лейбла ноды для группировки рекомендаций DaemonSet (например, `node.kubernetes.io/instance-type`).
               resourcePolicy:
                 description: |-
                   Управляет тем, как автоскейлер вычисляет рекомендуемые ресурсы. Политика ресурсов может использоваться для установки ограничений на рекомендации для отдельных контейнеров.
@@ -143,6 +146,20 @@ spec:
                         Состояние условия (`True`, `False`, `Unknown`).
                     type:
                       description: Описывает текущее состояние условия.
+              groups:
+                description: Сгруппированные рекомендации по значениям `spec.scope`.
+                items:
+                  properties:
+                    scopeValue:
+                      description: Значение лейбла ноды для этой группы.
+                    containerRecommendations:
+                      description: Рекомендации по контейнерам для группы.
+                      items:
+                        properties:
+                          containerName:
+                            description: Имя контейнера.
+                          scope:
+                            description: Связка `<ключ scope>=<значение>`.
               recommendation:
                 description: Последнее вычисленное количество ресурсов, рекомендованных автоскейлером для контролируемых подов.
                 properties:
@@ -158,6 +175,8 @@ spec:
                           additionalProperties:
                           description: |-
                             Минимальное рекомендованное количество ресурсов. Учитывает `ContainerResourcePolicy`. Это количество ресурсов не гарантирует, что приложение будет работать стабильно, однако использование меньшего количества ресурсов, скорее всего, окажет значительное влияние на производительность и доступность.
+                        scope:
+                          description: Связка `<ключ scope>=<значение>`.
                         target:
                           additionalProperties:
                           description: |-

@@ -82,6 +82,11 @@ spec:
                   - name
                   type: object
                 type: array
+              scope:
+                description: |-
+                  Scope controls additional recommendation partitioning for DaemonSet targets.
+                  The value must be a node label key (for example: `node.kubernetes.io/instance-type`).
+                type: string
               resourcePolicy:
                 description: |-
                   Controls how the autoscaler computes recommended resources.
@@ -319,6 +324,85 @@ spec:
                   - type
                   type: object
                 type: array
+              groups:
+                description: Contains grouped recommendations by scope value when `spec.scope` is used.
+                items:
+                  properties:
+                    containerRecommendations:
+                      description: Resources recommended by autoscaler for each container in this group.
+                      items:
+                        properties:
+                          containerName:
+                            description: Name of the container.
+                            type: string
+                          lowerBound:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Minimum recommended amount of resources. Observes
+                              `ContainerResourcePolicy`. This amount is not guaranteed
+                              to be sufficient for the application to operate in a stable
+                              way, however running with less resources is likely to
+                              have significant impact on performance/availability.
+                            type: object
+                          scope:
+                            description: Scope binds this recommendation to a specific scope value in form "<scopeKey>=<scopeValue>".
+                            type: string
+                          target:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: Recommended amount of resources. Observes `ContainerResourcePolicy`.
+                            type: object
+                          uncappedTarget:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              The most recent recommended resources target
+                              computed by the autoscaler for the controlled pods, based
+                              only on actual resource usage, not taking into account
+                              the `ContainerResourcePolicy`. May differ from the Recommendation
+                              if the actual resource usage causes the target to violate
+                              the `ContainerResourcePolicy` (lower than MinAllowed or
+                              higher that MaxAllowed). Used only as status indication,
+                              will not affect actual resource assignment.
+                            type: object
+                          upperBound:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Maximum recommended amount of resources. Observes
+                              `ContainerResourcePolicy`. Any resources allocated beyond
+                              this value are likely wasted. This value may be larger
+                              than the maximum amount of application is actually capable
+                              of consuming.
+                            type: object
+                        required:
+                        - target
+                        type: object
+                      type: array
+                    scopeValue:
+                      description: Scope value of `spec.scope` label key for this recommendation group.
+                      type: string
+                  required:
+                  - scopeValue
+                  type: object
+                type: array
               recommendation:
                 description: The most recently computed amount of resources recommended
                   by the autoscaler for the controlled pods.
@@ -352,6 +436,9 @@ spec:
                             way, however running with less resources is likely to
                             have significant impact on performance/availability.
                           type: object
+                        scope:
+                          description: Scope binds this recommendation to a specific scope value in form "<scopeKey>=<scopeValue>".
+                          type: string
                         target:
                           additionalProperties:
                             anyOf:
