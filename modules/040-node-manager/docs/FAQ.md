@@ -2068,15 +2068,15 @@ A separate `custom-<ng>-<hash>` configuration is created for each group of nodes
 
 ## MIG profile does not activate — what to check?
 
-1. **GPU model:** MIG is supported on H100/A100/A30; it is **not** supported on V100/T4. See the profile tables in the [NVIDIA MIG guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).
+1. Check the GPU model. MIG is supported in the H100/A100/A30 models and **not** supported in V100/T4. To verify the support in a model, refer to [profile tables](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/latest/supported-mig-profiles.html) in the NVIDIA MIG guide.
 
-1. GPU is not being used by OS processes or user applications. If a graphical environment, display manager, or other GPU-consuming processes are running on the node, applying the MIG configuration may fail or may not take effect until the GPU is released. Check this with the following command:
+1. Ensure the GPU is not being used by OS processes or user applications. If a graphical environment, display manager, or other GPU-consuming processes are running on the node, applying the MIG configuration may fail or may not take effect until the GPU is released. Check this with the following command:
 
    ```shell
    nvidia-smi
    ```
 
-1. **NodeGroup configuration:**
+1. Check the [NodeGroup](cr.html#nodegroup-v1-spec-gpu) configuration:
 
    ```yaml
    gpu:
