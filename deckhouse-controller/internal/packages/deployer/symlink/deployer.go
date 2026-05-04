@@ -57,6 +57,11 @@ func NewDeployer(reg registryService, logger *log.Logger) *Deployer {
 
 // Deploy fetches a package image from the registry and exposes it at the deployed path.
 func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error {
+	// one package can be downloaded by different apps in the same time
+	// so lock it to prevent downloading same package
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if err := d.download(ctx, repo, downloaded, packageName, version); err != nil {
 		return err
 	}
@@ -89,11 +94,6 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 		return ctx.Err()
 	default:
 	}
-
-	// one package can be downloaded by different apps in the same time
-	// so lock it to prevent downloading same package
-	d.mu.Lock()
-	defer d.mu.Unlock()
 
 	versionPath := filepath.Join(downloaded, version)
 	if _, err := os.Stat(versionPath); err == nil {
@@ -182,6 +182,9 @@ func (d *Deployer) Undeploy(ctx context.Context, downloaded, deployed, name stri
 		span.SetStatus(codes.Error, err.Error())
 		return newCheckMountErr(err)
 	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	// clear package dir
 	defer func() {

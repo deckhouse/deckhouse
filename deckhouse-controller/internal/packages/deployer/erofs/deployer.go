@@ -41,7 +41,7 @@ const (
 // Deployer handles package lifecycle using erofs images with dm-verity integrity.
 // Operations are serialized via mutex to prevent concurrent mount/unmount conflicts.
 type Deployer struct {
-	mtx      sync.Mutex
+	mu       sync.Mutex
 	registry registryService
 	logger   *log.Logger
 }
@@ -61,6 +61,9 @@ func NewDeployer(registry registryService, logger *log.Logger) *Deployer {
 
 // Deploy fetches a package image from the registry and mounts it at the deployed path.
 func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if err := d.download(ctx, repo, downloaded, packageName, version); err != nil {
 		return err
 	}
@@ -95,9 +98,6 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 		return ctx.Err()
 	default:
 	}
-
-	d.mtx.Lock()
-	defer d.mtx.Unlock()
 
 	// <downloaded>/<version>.erofs
 	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
@@ -164,9 +164,6 @@ func (d *Deployer) mount(ctx context.Context, downloaded, deployed, name, versio
 		return ctx.Err()
 	default:
 	}
-
-	d.mtx.Lock()
-	defer d.mtx.Unlock()
 
 	// <downloaded>/<version>.erofs
 	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
@@ -242,8 +239,8 @@ func (d *Deployer) Undeploy(ctx context.Context, downloaded, deployed, name stri
 	}()
 
 	// mounts should not be executed simultaneously
-	d.mtx.Lock()
-	defer d.mtx.Unlock()
+	d.mu.Lock()
+	defer d.mu.Unlock()
 
 	logger.Debug("unmount erofs image", slog.String("path", deployed))
 	if err := verity.Unmount(ctx, deployed); err != nil {
