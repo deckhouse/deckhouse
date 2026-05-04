@@ -28,7 +28,7 @@ import (
 // Decoded: {"auths":{"registry.example.com":{"username":"user","password":"pass","auth":"dXNlcjpwYXNz"}}}
 const validDockerCfg = "eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJ1c2VybmFtZSI6InVzZXIiLCJwYXNzd29yZCI6InBhc3MiLCJhdXRoIjoiZFhObGNqcHdZWE56In19fQ=="
 
-func TestNewInitConfigFromJSON(t *testing.T) {
+func TestParsJSONInitConfig(t *testing.T) {
 	type output struct {
 		config *init_config.Config
 		err    bool
@@ -105,7 +105,7 @@ func TestNewInitConfigFromJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := NewInitConfigFromJSON(tt.input)
+			config, err := ParsJSONInitConfig(tt.input)
 
 			if tt.output.err {
 				require.Error(t, err)
@@ -118,7 +118,7 @@ func TestNewInitConfigFromJSON(t *testing.T) {
 	}
 }
 
-func TestNewInitConfigFromYAML(t *testing.T) {
+func TestParsYAMLInitConfig(t *testing.T) {
 	type output struct {
 		config *init_config.Config
 		err    bool
@@ -193,7 +193,7 @@ deckhouse:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := NewInitConfigFromYAML(tt.input)
+			config, err := ParsYAMLInitConfig(tt.input)
 
 			if tt.output.err {
 				require.Error(t, err)
@@ -206,7 +206,7 @@ deckhouse:
 	}
 }
 
-func TestNewDeckhouseSettingsFromJSON(t *testing.T) {
+func TestParsJSONDeckhouseMC(t *testing.T) {
 	type output struct {
 		settings *module_config.DeckhouseSettings
 		err      bool
@@ -292,7 +292,7 @@ func TestNewDeckhouseSettingsFromJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settings, err := NewDeckhouseSettingsFromJSON(tt.input)
+			settings, err := ParsJSONDeckhouseMC(tt.input)
 
 			if tt.output.err {
 				require.Error(t, err)
@@ -305,7 +305,7 @@ func TestNewDeckhouseSettingsFromJSON(t *testing.T) {
 	}
 }
 
-func TestNewDeckhouseSettingsFromYAML(t *testing.T) {
+func TestParsYAMLDeckhouseMC(t *testing.T) {
 	type output struct {
 		settings *module_config.DeckhouseSettings
 		err      bool
@@ -405,7 +405,7 @@ spec:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			settings, err := NewDeckhouseSettingsFromYAML(tt.input)
+			settings, err := ParsYAMLDeckhouseMC(tt.input)
 
 			if tt.output.err {
 				require.Error(t, err)

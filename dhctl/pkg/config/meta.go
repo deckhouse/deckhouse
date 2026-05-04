@@ -162,7 +162,7 @@ func (m *MetaConfig) prepareRegistry() error {
 		if err != nil {
 			return err
 		}
-		initConfig, err = registry.NewInitConfigFromJSON(rawJSON)
+		initConfig, err = registry.ParsJSONInitConfig(rawJSON)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (m *MetaConfig) prepareRegistry() error {
 		if err != nil {
 			return err
 		}
-		deckhouseSettings, err = registry.NewDeckhouseSettingsFromJSON(rawJSON)
+		deckhouseSettings, err = registry.ParsJSONDeckhouseMC(rawJSON)
 		if err != nil {
 			return err
 		}

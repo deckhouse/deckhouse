@@ -540,13 +540,13 @@ func fetchRegistryConfigs(docs []string) (*initconfig.Config, *moduleconfig.Deck
 
 		switch kind {
 		case InitConfigurationKind:
-			config, err := registry.NewInitConfigFromYAML([]byte(doc))
+			ret, err := registry.ParsYAMLInitConfig([]byte(doc))
 
 			if err != nil {
 				return nil, nil, err
 			}
 
-			initConfig = config
+			initConfig = ret
 
 		case ModuleConfigKind:
 			name, ok := getNestedKeyValue[string](parsed, []string{"metadata", "name"})
@@ -554,12 +554,12 @@ func fetchRegistryConfigs(docs []string) (*initconfig.Config, *moduleconfig.Deck
 				continue
 			}
 
-			config, err := registry.NewDeckhouseSettingsFromYAML([]byte(doc))
+			ret, err := registry.ParsYAMLDeckhouseMC([]byte(doc))
 			if err != nil {
 				return nil, nil, err
 			}
 
-			deckhouseSettings = config
+			deckhouseSettings = ret
 		}
 	}
 	return initConfig, deckhouseSettings, nil

@@ -60,9 +60,9 @@ type initConfiguration struct {
 	Deckhouse *init_config.Config `json:"deckhouse" yaml:"deckhouse"`
 }
 
-// NewInitConfigFromJSON parses an InitConfiguration from JSON and returns its registry config.
+// ParsJSONInitConfig parses an InitConfiguration from JSON and returns its registry config.
 // Returns nil if the input is empty or contains no registry fields.
-func NewInitConfigFromJSON(rawJSON []byte) (*init_config.Config, error) {
+func ParsJSONInitConfig(rawJSON []byte) (*init_config.Config, error) {
 	if len(rawJSON) == 0 {
 		return nil, nil
 	}
@@ -78,9 +78,9 @@ func NewInitConfigFromJSON(rawJSON []byte) (*init_config.Config, error) {
 	return deckhouse, nil
 }
 
-// NewInitConfigFromYAML parses an InitConfiguration from YAML and returns its registry config.
+// ParsYAMLInitConfig parses an InitConfiguration from YAML and returns its registry config.
 // Returns nil if the input is empty or contains no registry fields.
-func NewInitConfigFromYAML(rawYAML []byte) (*init_config.Config, error) {
+func ParsYAMLInitConfig(rawYAML []byte) (*init_config.Config, error) {
 	if len(rawYAML) == 0 {
 		return nil, nil
 	}
@@ -96,9 +96,9 @@ func NewInitConfigFromYAML(rawYAML []byte) (*init_config.Config, error) {
 	return deckhouse, nil
 }
 
-// NewDeckhouseSettingsFromJSON parses a DeckhouseModuleConfig from JSON and returns its registry settings.
+// ParsJSONDeckhouseMC parses a DeckhouseModuleConfig from JSON and returns its registry settings.
 // Returns nil if the input is empty or the registry section is absent.
-func NewDeckhouseSettingsFromJSON(rawJSON []byte) (*module_config.DeckhouseSettings, error) {
+func ParsJSONDeckhouseMC(rawJSON []byte) (*module_config.DeckhouseSettings, error) {
 	if len(rawJSON) == 0 {
 		return nil, nil
 	}
@@ -109,9 +109,9 @@ func NewDeckhouseSettingsFromJSON(rawJSON []byte) (*module_config.DeckhouseSetti
 	return v.Spec.Settings.Registry, nil
 }
 
-// NewDeckhouseSettingsFromYAML parses a DeckhouseModuleConfig from YAML and returns its registry settings.
+// ParsYAMLDeckhouseMC parses a DeckhouseModuleConfig from YAML and returns its registry settings.
 // Returns nil if the input is empty or the registry section is absent.
-func NewDeckhouseSettingsFromYAML(rawYAML []byte) (*module_config.DeckhouseSettings, error) {
+func ParsYAMLDeckhouseMC(rawYAML []byte) (*module_config.DeckhouseSettings, error) {
 	if len(rawYAML) == 0 {
 		return nil, nil
 	}
