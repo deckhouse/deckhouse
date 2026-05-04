@@ -30,21 +30,8 @@ bashible: &bashible
         - name: altlinux
           ids: [altlinux]
 k8s:
-  "1.31":
-    status: end-of-life
-    patch: 14
-    bashible: *bashible
-    clusterAutoscalerPatch: '1'
-    crictlPatch: 1
-    csi:
-      provisioner: v5.2.0
-      attacher: v4.7.0
-      resizer: v1.12.0
-      registrar: v2.13.0
-      snapshotter: v8.1.1
-      livenessprobe: v2.15.0
   "1.32":
-    status: available
+    status: end-of-life
     patch: 13
     bashible: *bashible
     clusterAutoscalerPatch: '3'
@@ -84,12 +71,36 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
   "1.35":
-    status: preview
+    status: available
     patch: 5
     bashible: *bashible
     clusterAutoscalerPatch: '1'
     crictlPatch: 0
     csi:
+      provisioner: v5.2.0
+      attacher: v4.8.1
+      resizer: v1.13.2
+      registrar: v2.13.0
+      snapshotter: v8.1.1
+      livenessprobe: v2.15.0
+  "1.36":
+    status: preview
+    patch: 0
+    bashible: *bashible
+    clusterAutoscalerPatch: '0'
+    crictlPatch: 0
+    ccm:
+      openstack: v1.35.0
+      aws: v1.35.1
+      vsphere: v1.36.0
+      azure: v1.35.3
+      gcp: ccm/v36.0.1
+    csi:
+      aws: v1.54.0
+      azure: v1.34.2
+      gcp: v1.15.4
+      vsphere: v3.0.3
+      openstack: v1.35.0
       provisioner: v5.2.0
       attacher: v4.8.1
       resizer: v1.13.2
