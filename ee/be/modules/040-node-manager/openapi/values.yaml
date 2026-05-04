@@ -373,7 +373,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.31"
+                - "1.32"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -460,7 +460,7 @@ properties:
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.31"
+              kubernetesVersion: "1.32"
               cri:
                 type: "Docker"
               cloudInstances:
