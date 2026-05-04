@@ -1,0 +1,108 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:{{ .Chart.Name }}:admin-kubeconfig
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - istiofederations
+  - istiomulticlusters
+  - ingressistiocontrollers
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - envoyfilters
+  - serviceentries
+  - sidecars
+  - gateways
+  - workloadentries
+  - workloadgroups
+  - virtualservices
+  - proxyconfigs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - security.istio.io
+  resources:
+  - peerauthentications
+  - authorizationpolicies
+  - requestauthentications
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups: 
+  - telemetry.istio.io
+  resources:
+  - telemetries
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: 
+  - install.istio.io
+  resources: 
+  - istiooperators
+  verbs: 
+  - get
+  - list
+  - watch
+- apiGroups: 
+  - sailoperator.io
+  resources: 
+  - istiocnis
+  - ztunnels
+  - istiorevisions
+  - istiorevisiontags
+  - istios
+  verbs: 
+  - get
+  - list
+  - watch
+- apiGroups:
+  - extensions.istio.io
+  resources:
+  - wasmplugins
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:{{ .Chart.Name }}:admin-kubeconfig
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:{{ .Chart.Name }}:admin-kubeconfig
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: kubeadm:cluster-admins
