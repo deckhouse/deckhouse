@@ -39,7 +39,6 @@ var terraformProviders = []string{
 	"vsphere",
 	"azure",
 	vcd.ProviderName,
-	"huaweicloud",
 }
 
 var tofuProviders = []string{
@@ -47,6 +46,7 @@ var tofuProviders = []string{
 	"dynamix",
 	"zvirt",
 	dvp.ProviderName,
+	"huaweicloud",
 }
 
 func TestAllProviderPresentInStore(t *testing.T) {
