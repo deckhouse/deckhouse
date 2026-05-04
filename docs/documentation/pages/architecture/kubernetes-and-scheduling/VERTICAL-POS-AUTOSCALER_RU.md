@@ -52,7 +52,7 @@ relatedLinks:
    * **updater** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для защищенного доступа к метрикам **updater**. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Vpa-recommender** (Deployment) — компонент [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), определяющий рекомендации для `requests` на основе информации о прошлом и текущем потреблении ресурсов подами. 
+1. **Vpa-recommender** (Deployment) — компонент [VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler), определяющий рекомендации для `requests` на основе информации о прошлом и текущем потреблении ресурсов подами.
 
     **Vpa-admission-controller** и **vpa-updater** пересчитывают значения `limits` пропорционально `requests`в том случае, если в политике управления ресурсами указан параметр [`controlledValues: RequestsAndLimits`](/modules/vertical-pod-autoscaler/cr.html#verticalpodautoscaler-v1-spec-resourcepolicy-containerpolicies-controlledvalues).
 
