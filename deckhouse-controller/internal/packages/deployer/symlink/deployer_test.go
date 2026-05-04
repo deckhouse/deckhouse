@@ -34,18 +34,28 @@ import (
 
 // mockDownloader simulates registry download by creating a directory with a marker file.
 type mockDownloader struct {
-	downloadErr error
+	downloadErr      error
+	partialBeforeErr bool
+	calls            int
 }
 
+// Download writes a package marker file and optionally returns a configured failure.
 func (m *mockDownloader) Download(_ context.Context, _ registry.Remote, out, packageName, tag string) error {
-	if m.downloadErr != nil {
-		return m.downloadErr
-	}
+	m.calls++
 	if err := os.MkdirAll(out, 0755); err != nil {
 		return err
 	}
 	markerFile := filepath.Join(out, "package.yaml")
-	return os.WriteFile(markerFile, []byte("name: "+packageName+"\nversion: "+tag), 0644)
+	if err := os.WriteFile(markerFile, []byte("name: "+packageName+"\nversion: "+tag), 0644); err != nil {
+		return err
+	}
+	if m.downloadErr != nil {
+		return m.downloadErr
+	}
+	if m.partialBeforeErr {
+		return errors.New("partial download failed")
+	}
+	return nil
 }
 
 // errAny is a sentinel indicating any error is expected (when specific error type doesn't matter).
@@ -69,6 +79,7 @@ func setupSymlink(t *testing.T, deployed, target string) {
 	require.NoError(t, os.Symlink(target, deployed))
 }
 
+// TestDeployDownloadsPackage verifies that Deploy downloads package contents and exposes the version path.
 func TestDeployDownloadsPackage(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -140,6 +151,59 @@ func TestDeployDownloadsPackage(t *testing.T) {
 	}
 }
 
+// TestDeployRemovesPartialDownload verifies that failed downloads do not publish reusable version directories.
+func TestDeployRemovesPartialDownload(t *testing.T) {
+	tmpDir := t.TempDir()
+	downloaded := filepath.Join(tmpDir, "downloaded", "my-package")
+	deployed := filepath.Join(tmpDir, "deployed", "my-package")
+	repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+
+	failingDownloader := &mockDownloader{partialBeforeErr: true}
+	deployer := symlink.NewDeployer(failingDownloader, log.NewNop())
+
+	err := deployer.Deploy(context.Background(), repo, downloaded, deployed, "my-package", "my-package", "1.0.0")
+	require.Error(t, err)
+
+	_, statErr := os.Stat(filepath.Join(downloaded, "1.0.0"))
+	require.True(t, os.IsNotExist(statErr), "partial version dir should not be published")
+	_, statErr = os.Lstat(deployed)
+	require.True(t, os.IsNotExist(statErr), "failed deploy should not create deployed symlink")
+
+	successfulDownloader := &mockDownloader{}
+	deployer = symlink.NewDeployer(successfulDownloader, log.NewNop())
+
+	err = deployer.Deploy(context.Background(), repo, downloaded, deployed, "my-package", "my-package", "1.0.0")
+	require.NoError(t, err)
+	require.Equal(t, 1, successfulDownloader.calls)
+
+	content, err := os.ReadFile(filepath.Join(deployed, "package.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "version: 1.0.0")
+}
+
+// TestDeployReusesCompletedVersion verifies that an existing completed version is reused without registry access.
+func TestDeployReusesCompletedVersion(t *testing.T) {
+	tmpDir := t.TempDir()
+	downloaded := filepath.Join(tmpDir, "downloaded", "my-package")
+	deployed := filepath.Join(tmpDir, "deployed", "my-package")
+	versionPath := filepath.Join(downloaded, "1.0.0")
+	require.NoError(t, os.MkdirAll(versionPath, 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(versionPath, "package.yaml"), []byte("name: my-package\nversion: cached"), 0644))
+
+	downloader := &mockDownloader{}
+	deployer := symlink.NewDeployer(downloader, log.NewNop())
+	repo := registry.Remote{Name: "test-repo", Repository: "registry.example.com"}
+
+	err := deployer.Deploy(context.Background(), repo, downloaded, deployed, "my-package", "my-package", "1.0.0")
+	require.NoError(t, err)
+	require.Zero(t, downloader.calls)
+
+	content, err := os.ReadFile(filepath.Join(deployed, "package.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "version: cached")
+}
+
+// TestDeploy verifies symlink deployment across create, replace, cancel, and downgrade paths.
 func TestDeploy(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -241,6 +305,7 @@ func TestDeploy(t *testing.T) {
 	}
 }
 
+// TestUndeploy verifies symlink removal and downloaded file cleanup behavior.
 func TestUndeploy(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -323,6 +388,7 @@ func TestUndeploy(t *testing.T) {
 	}
 }
 
+// TestLifecycle verifies repeated deploy and undeploy operations across version transitions.
 func TestLifecycle(t *testing.T) {
 	tests := []struct {
 		name     string

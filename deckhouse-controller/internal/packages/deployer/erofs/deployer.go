@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -99,9 +100,8 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 	default:
 	}
 
-	// <downloaded>/<version>.erofs
-	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
-	if err := os.MkdirAll(filepath.Dir(imagePath), 0755); err != nil {
+	imagePath := packageImagePath(downloaded, version)
+	if err := os.MkdirAll(downloaded, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newCreatePackageDirErr(err)
 	}
@@ -123,6 +123,25 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 	// verification failed - fetch fresh image from registry
 	logger.Warn("verify package image failed", log.Err(err))
 
+	if err = cleanupTempImageFiles(downloaded, version); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newImageByTarErr(err)
+	}
+
+	tempImagePath, err := createTempImagePath(downloaded, version)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newCreatePackageDirErr(err)
+	}
+
+	cleanupTemp := true
+	defer func() {
+		if cleanupTemp {
+			_ = os.Remove(tempImagePath)
+			_ = os.Remove(verityPath(tempImagePath))
+		}
+	}()
+
 	img, err := d.registry.GetImageReader(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -130,17 +149,91 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 	}
 	defer img.Close()
 
-	logger.Debug("create erofs image by package image", slog.String("path", imagePath))
-	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
+	logger.Debug("create erofs image by package image", slog.String("path", tempImagePath))
+	if err = verity.CreateImageByTar(ctx, img, tempImagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newImageByTarErr(err)
+	}
+
+	if err = d.verifyImage(ctx, tempImagePath, rootHash); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newImageByTarErr(err)
+	}
+
+	_ = os.Remove(verityPath(tempImagePath))
+
+	if err = os.Rename(tempImagePath, imagePath); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newImageByTarErr(err)
+	}
+
+	cleanupTemp = false
+
+	return nil
+}
+
+// packageImagePath returns the final erofs image path for a package version.
+func packageImagePath(downloaded, version string) string {
+	return filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
+}
+
+// verityPath returns the dm-verity hash tree path for an erofs image path.
+func verityPath(imagePath string) string {
+	return fmt.Sprintf("%s.verity", imagePath)
+}
+
+// cleanupTempImageFiles removes stale temporary erofs images for a package version.
+func cleanupTempImageFiles(downloaded, version string) error {
+	entries, err := os.ReadDir(downloaded)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	prefix := tempImagePrefix(version)
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), prefix) {
+			continue
+		}
+
+		if err = os.Remove(filepath.Join(downloaded, entry.Name())); err != nil && !os.IsNotExist(err) {
+			return err
+		}
 	}
 
 	return nil
 }
 
+// createTempImagePath reserves and returns a same-directory temporary erofs image path.
+func createTempImagePath(downloaded, version string) (string, error) {
+	file, err := os.CreateTemp(downloaded, tempImagePrefix(version))
+	if err != nil {
+		return "", err
+	}
+
+	path := file.Name()
+	if err = file.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", err
+	}
+
+	if err = os.Remove(path); err != nil {
+		return "", err
+	}
+
+	return path, nil
+}
+
+// tempImagePrefix returns a filesystem-safe temporary erofs image filename prefix.
+func tempImagePrefix(version string) string {
+	return "." + strings.NewReplacer("/", "_", string(os.PathSeparator), "_").Replace(version) + ".erofs.tmp-"
+}
+
 // mount mounts an erofs image using dm-verity for integrity verification.
-// Flow: unmount old → close mapper → compute hash → create mapper → mount new.
+// Flow: compute hash → unmount old → close mapper → create mapper → mount new.
 func (d *Deployer) mount(ctx context.Context, downloaded, deployed, name, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Deploy")
 	defer span.End()
@@ -166,27 +259,27 @@ func (d *Deployer) mount(ctx context.Context, downloaded, deployed, name, versio
 	}
 
 	// <downloaded>/<version>.erofs
-	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
+	imagePath := packageImagePath(downloaded, version)
 
-	// cleanup any existing mount before installing new version
-	logger.Debug("unmount old erofs image", slog.String("path", deployed))
-	if err := verity.Unmount(ctx, deployed); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return newUnmountErr(err)
-	}
-
-	logger.Debug("close old device mapper")
-	if err := verity.CloseMapper(ctx, name); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return newCloseDeviceMapperErr(err)
-	}
-
-	// compute dm-verity root hash for integrity verification during reads
+	// Compute the new image hash before unmounting the currently deployed package.
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	rootHash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newComputeHashErr(err)
+	}
+
+	// cleanup any existing mount before deploying new version
+	logger.Debug("unmount old erofs image", slog.String("path", deployed))
+	if err = verity.Unmount(ctx, deployed); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newUnmountErr(err)
+	}
+
+	logger.Debug("close old device mapper")
+	if err = verity.CloseMapper(ctx, name); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newCloseDeviceMapperErr(err)
 	}
 
 	// setup dm-verity device mapper with root hash for runtime integrity checks
@@ -259,13 +352,23 @@ func (d *Deployer) Undeploy(ctx context.Context, downloaded, deployed, name stri
 	return nil
 }
 
-// verifyImage checks that the image and hash exist and verified
-func (d *Deployer) verifyImage(_ context.Context, imagePath, _ string) error {
+// verifyImage checks that the image exists and matches rootHash when one is provided.
+func (d *Deployer) verifyImage(ctx context.Context, imagePath, rootHash string) error {
 	if _, err := os.Stat(imagePath); err != nil {
 		return fmt.Errorf("stat package image '%s': %w", imagePath, err)
 	}
 
-	// TODO(ipaqsa): before implementing verify mechanism wait until all packages have root hash
+	if strings.TrimSpace(rootHash) == "" {
+		return nil
+	}
+
+	computedHash, err := verity.CreateImageHash(ctx, imagePath)
+	if err != nil {
+		return err
+	}
+	if computedHash != rootHash {
+		return fmt.Errorf("root hash mismatch")
+	}
 
 	return nil
 }

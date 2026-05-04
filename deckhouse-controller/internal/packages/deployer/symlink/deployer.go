@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -69,6 +70,7 @@ func (d *Deployer) Deploy(ctx context.Context, repo registry.Remote, downloaded,
 	return d.symlink(ctx, downloaded, deployed, name, version)
 }
 
+// download fetches a package image into a versioned directory via an atomic temporary directory rename.
 func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
@@ -98,14 +100,73 @@ func (d *Deployer) download(ctx context.Context, repo registry.Remote, downloade
 	versionPath := filepath.Join(downloaded, version)
 	if _, err := os.Stat(versionPath); err == nil {
 		return nil
+	} else if !os.IsNotExist(err) {
+		return newCheckVersionErr(err)
 	}
 
-	// download/extract into <downloaded>/<version> directory
-	if err := d.registry.Download(ctx, repo, versionPath, name, version); err != nil {
+	if err := os.MkdirAll(downloaded, 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newCreatePackageDirErr(err)
+	}
+
+	if err := cleanupTempDownloadDirs(downloaded, version); err != nil {
 		return newDownloadErr(err)
 	}
 
+	tempDir, err := os.MkdirTemp(downloaded, tempDownloadPrefix(version))
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newCreatePackageDirErr(err)
+	}
+
+	cleanupTemp := true
+	defer func() {
+		if cleanupTemp {
+			_ = os.RemoveAll(tempDir)
+		}
+	}()
+
+	// download/extract into a temporary directory, then atomically publish it as <downloaded>/<version>
+	if err = d.registry.Download(ctx, repo, tempDir, name, version); err != nil {
+		return newDownloadErr(err)
+	}
+
+	if err = os.Rename(tempDir, versionPath); err != nil {
+		return newDownloadErr(err)
+	}
+	cleanupTemp = false
+
 	return nil
+}
+
+// cleanupTempDownloadDirs removes stale temporary download directories for a package version.
+func cleanupTempDownloadDirs(downloaded, version string) error {
+	entries, err := os.ReadDir(downloaded)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	prefix := tempDownloadPrefix(version)
+	for _, entry := range entries {
+		if !strings.HasPrefix(entry.Name(), prefix) {
+			continue
+		}
+
+		if err := os.RemoveAll(filepath.Join(downloaded, entry.Name())); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// tempDownloadPrefix returns a filesystem-safe temporary download directory prefix.
+func tempDownloadPrefix(version string) string {
+	return "." + strings.NewReplacer("/", "_", string(os.PathSeparator), "_").Replace(version) + ".tmp-"
 }
 
 // symlink creates a symlink from deployed path to the downloaded version directory.
