@@ -22,18 +22,17 @@ import (
 	"strings"
 	"time"
 
-	flantkubeclient "github.com/flant/kube-client/client"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/remotecommand"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
-func waitEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
+func waitEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
 	attempt := 0
 
 	return retry.NewLoop(fmt.Sprintf("Waiting for '%s' to join etcd", nodeName), 100, 20*time.Second).RunContext(ctx, func() error {
@@ -65,7 +64,7 @@ func waitEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, node
 	})
 }
 
-func waitEtcdHasNoMember(ctx context.Context, client *flantkubeclient.Client, nodeName string) error {
+func waitEtcdHasNoMember(ctx context.Context, client libcon.KubeClient, nodeName string) error {
 	const maxAttempts = 45
 	attempt := 0
 
@@ -89,7 +88,7 @@ func waitEtcdHasNoMember(ctx context.Context, client *flantkubeclient.Client, no
 	})
 }
 
-func isEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeName string, fieldSelector string) (bool, error) {
+func isEtcdHasMember(ctx context.Context, client libcon.KubeClient, nodeName string, fieldSelector string) (bool, error) {
 	members, err := getEtcdMembers(ctx, client, fieldSelector)
 	if err != nil {
 		return false, err
@@ -104,7 +103,7 @@ func isEtcdHasMember(ctx context.Context, client *flantkubeclient.Client, nodeNa
 	return false, nil
 }
 
-func getEtcdMembers(ctx context.Context, client *flantkubeclient.Client, fieldSelector string) ([]etcdMember, error) {
+func getEtcdMembers(ctx context.Context, client libcon.KubeClient, fieldSelector string) ([]etcdMember, error) {
 	pods, err := client.CoreV1().Pods("kube-system").List(ctx, v1.ListOptions{
 		LabelSelector: "component=etcd,tier=control-plane",
 		FieldSelector: fieldSelector,
@@ -133,12 +132,6 @@ func getEtcdMembers(ctx context.Context, client *flantkubeclient.Client, fieldSe
 		return nil, fmt.Errorf("no etcd pod with running container found")
 	}
 
-	req := client.CoreV1().RESTClient().Post().
-		Resource("pods").
-		Namespace("kube-system").
-		Name(pod.Name).
-		SubResource("exec")
-
 	command := []string{
 		"etcdctl",
 		"--cacert", "/etc/kubernetes/pki/etcd/ca.crt",
@@ -148,30 +141,17 @@ func getEtcdMembers(ctx context.Context, client *flantkubeclient.Client, fieldSe
 		"member", "list", "-w", "json",
 	}
 
-	req.VersionedParams(&corev1.PodExecOptions{
+	var stdout bytes.Buffer
+
+	params := libcon.PodExecParams{
+		Namespace: "kube-system",
+		Name:      pod.Name,
 		Command:   command,
 		Container: "etcd",
-		Stdin:     false,
-		Stdout:    true,
-		Stderr:    false,
-		TTY:       false,
-	}, scheme.ParameterCodec)
-
-	executor, err := remotecommand.NewSPDYExecutor(client.RestConfig(), "POST", req.URL())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create executor: %w", err)
+		Stdout:    &stdout,
 	}
 
-	var stdout bytes.Buffer
-	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
-		Stdin:  nil,
-		Stdout: &stdout,
-		Stderr: nil,
-		Tty:    false,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute etcdctl: %w", err)
-	}
+	client.Exec(ctx, &params)
 
 	var members memberListOutput
 	if err = json.Unmarshal(stdout.Bytes(), &members); err != nil {

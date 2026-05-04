@@ -375,6 +375,21 @@ spec:
       enabled: true
 ```
 
+**RemovePodsHavingTooManyRestarts** — evicts pods having too many restarts from nodes.
+Pods become eviction candidates when the total number of restarts across all containers, including init containers, exceeds the [`podRestartThreshold`](cr.html#descheduler-v1alpha2-spec-strategies-removepodshavingtoomanyrestarts-podrestartthreshold) threshold.
+This strategy is useful for evicting pods in the `CrashLoopBackOff` state or with repeated failures, as well as for freeing up resources and allowing fresh pods to be scheduled on potentially healthier nodes.
+
+Enable the strategy using the `strategies.removePodsHavingTooManyRestarts.enabled` parameter.
+
+Example:
+
+```yaml
+spec:
+  strategies:
+    removePodsHavingTooManyRestarts:
+      enabled: true
+```
+
 **RemovePodsViolatingInterPodAntiAffinity** — evicts any pods that violate [`inter-pod affinity/anti-affinity`](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/) rules. For example, if `pod2` and `pod3` have an `anti-affinity` rule against `pod1`, but all three end up on the same node, this strategy will evict `pod1` so that `pod2` and `pod3` can continue operating according to their scheduling constraints.
 
 Enable the strategy using the `strategies.removePodsViolatingInterPodAntiAffinity.enabled` parameter.
@@ -412,4 +427,18 @@ spec:
       nodeAffinityType:
         - requiredDuringSchedulingIgnoredDuringExecution
         - preferredDuringSchedulingIgnoredDuringExecution
+```
+
+**RemovePodsViolatingTopologySpreadConstraint** — ensures that pods violating [topology spread constraints](https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/) are evicted from nodes. It evicts the minimum number of pods required to balance topology domains to within each constraint's `maxSkew`.
+This is useful for rebalancing pods across zones after a zone outage recovery.
+
+Enable the strategy using the `strategies.removePodsViolatingTopologySpreadConstraint.enabled` parameter.
+
+Example:
+
+```yaml
+spec:
+  strategies:
+    removePodsViolatingTopologySpreadConstraint:
+      enabled: true
 ```

@@ -32,18 +32,23 @@ import (
 var ErrControlPlaneIsNotReady = errors.New("Control plane is not ready\n")
 
 type ManagerReadinessChecker struct {
-	getter kubernetes.KubeClientProvider
+	getter kubernetes.KubeClientProviderWithCtx
 }
 
-func NewManagerReadinessChecker(getter kubernetes.KubeClientProvider) *ManagerReadinessChecker {
+func NewManagerReadinessChecker(getter kubernetes.KubeClientProviderWithCtx) *ManagerReadinessChecker {
 	return &ManagerReadinessChecker{
 		getter: getter,
 	}
 }
 
 func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
+	kubeClient, err := c.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	return retry.NewLoop("Control-plane manager pods readiness", 50, 10*time.Second).RunContext(ctx, func() error {
-		nodes, err := c.getter.KubeClient().CoreV1().Nodes().List(ctx, metav1.ListOptions{
+		nodes, err := kubeClient.CoreV1().Nodes().List(ctx, metav1.ListOptions{
 			LabelSelector: "node.deckhouse.io/group=master",
 		})
 		if err != nil {
@@ -51,7 +56,7 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 			return ErrControlPlaneIsNotReady
 		}
 
-		cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
+		cpmPodsList, err := kubeClient.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
 			LabelSelector: "app=d8-control-plane-manager",
 		})
 		if err != nil {
@@ -92,7 +97,12 @@ func (c *ManagerReadinessChecker) IsReadyAll(ctx context.Context) error {
 }
 
 func (c *ManagerReadinessChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
-	cpmPodsList, err := c.getter.KubeClient().CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
+	kubeClient, err := c.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	cpmPodsList, err := kubeClient.CoreV1().Pods("kube-system").List(ctx, metav1.ListOptions{
 		LabelSelector: "app=d8-control-plane-manager",
 		FieldSelector: fmt.Sprintf("spec.nodeName=%s", nodeName),
 	})

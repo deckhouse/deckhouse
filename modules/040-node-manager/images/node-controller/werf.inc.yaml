@@ -27,6 +27,17 @@ git:
     - go.mod
     - go.sum
     - "**/*.go"
+- add: /{{ $.ModulePath }}go_lib/dependency/k8s/drain
+  to: /go_lib/dependency/k8s/drain
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*.go'
+    - 'go.mod'
+    - 'go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 from: {{ index $.Images "builder/golang-alpine" }}
@@ -35,6 +46,10 @@ import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
+  before: install
+- image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /go_lib/dependency/k8s/drain
+  to: /go_lib/dependency/k8s/drain
   before: install
 mount:
 {{ include "mount points for golang builds" . }}
