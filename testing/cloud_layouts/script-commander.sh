@@ -1114,9 +1114,9 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.enabled')" == "true" ]]; then
-  if kubectl -n d8-user-authn get ing kubernetes-api >/dev/null 2>&1; then
-    HOST=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
-    IP=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  if kubectl -n kube-system get ing kubernetes-api >/dev/null 2>&1; then
+    HOST=$(kubectl -n kube-system get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+    IP=$(kubectl -n kube-system get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     RESPONSE=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- bash -c \
     "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api")
     if echo "$RESPONSE" | jq -e '.kind' >/dev/null 2>&1; then
