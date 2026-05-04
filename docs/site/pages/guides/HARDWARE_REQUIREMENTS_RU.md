@@ -113,7 +113,7 @@ Deckhouse Kubernetes Platform, начиная с версии 1.74, имеет �
       <td style="text-align: center;">60</td>
     </tr>
     <tr>
-      <td>Worker-узел</td>
+      <td>Worker-узел<a href="#storage">*</a></td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">8</td>
       <td style="text-align: center;">60</td>
@@ -152,7 +152,7 @@ Deckhouse Kubernetes Platform, начиная с версии 1.74, имеет �
       <td style="text-align: center;">60</td>
     </tr>
     <tr>
-      <td>Worker-узел</td>
+      <td>Worker-узел<a href="#storage">*</a></td>
       <td style="text-align: center;">4</td>
       <td style="text-align: center;">12</td>
       <td style="text-align: center;">60</td>
