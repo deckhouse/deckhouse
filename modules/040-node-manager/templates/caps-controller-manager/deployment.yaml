@@ -44,6 +44,7 @@
   {{- $_ := set $capsConfig "additionalVolumeMounts" (include "static_controller_manager_volume_mounts" . | fromYamlArray) -}}
   {{- $_ := set $capsConfig "additionalVolumes" (include "static_controller_manager_volumes" . | fromYamlArray) -}}
   {{- $_ := set $capsConfig "vpaEnabled" true -}}
+  {{- $_ := set $capsConfig "securityPolicyExceptionEnabled" true -}}
 
   {{ include "helm_lib_capi_controller_manager_manifests" (list . $capsConfig) }}
 {{- end }}
