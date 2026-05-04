@@ -75,7 +75,6 @@ openstack:
   destinationBinary: terraform-provider-openstack
   vmResourceType: openstack_blockstorage_volume_v3
   useOpentofu: true
-
 ovirt:
   namespace: terraform-provider-ovirt
   cloudName: Zvirt
