@@ -166,13 +166,12 @@ func toYCNetworkInterfaces(items []NetworkInterfaceSpec) []*compute.NetworkInter
 	result := make([]*compute.NetworkInterfaceSpec, 0, len(items))
 	for _, item := range items {
 		ni := &compute.NetworkInterfaceSpec{
-			SubnetId: item.SubnetID,
+			SubnetId:             item.SubnetID,
+			PrimaryV4AddressSpec: &compute.PrimaryAddressSpec{},
 		}
 		if item.AssignPublicIPAddress {
-			ni.PrimaryV4AddressSpec = &compute.PrimaryAddressSpec{
-				OneToOneNatSpec: &compute.OneToOneNatSpec{
-					IpVersion: compute.IpVersion_IPV4,
-				},
+			ni.PrimaryV4AddressSpec.OneToOneNatSpec = &compute.OneToOneNatSpec{
+				IpVersion: compute.IpVersion_IPV4,
 			}
 		}
 		result = append(result, ni)
