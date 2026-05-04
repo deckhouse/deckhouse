@@ -153,8 +153,10 @@ func (m *MetaConfig) prepareRegistry() error {
 	var (
 		initConfig        *initconfig.Config
 		deckhouseSettings *moduleconfig.DeckhouseSettings
+		defaultCRI        registry_const.CRIType
 	)
 
+	// Init config
 	if len(m.InitClusterConfig) > 0 {
 		rawJSON, err := json.Marshal(m.InitClusterConfig)
 		if err != nil {
@@ -166,6 +168,7 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
+	// Deckhouse mc
 	if mc := m.getModuleConfig("deckhouse"); mc != nil {
 		rawJSON, err := json.Marshal(mc)
 		if err != nil {
@@ -177,7 +180,7 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
-	var defaultCRI registry_const.CRIType
+	// Default CRI
 	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
 		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
 			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
