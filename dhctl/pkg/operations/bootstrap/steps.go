@@ -226,7 +226,7 @@ func prepareMasterNode(ctx context.Context, nodeInterface libcon.Interface, cont
 	}
 
 	return log.ProcessCtx(ctx, "bootstrap", "Initial bootstrap", func(ctx context.Context) error {
-		for _, bootstrapScript := range []string{"01-network-scripts.sh", "02-base-pkgs.sh"} {
+		for _, bootstrapScript := range []string{"01-bootstrap-prerequisites.sh"} {
 			scriptPath := filepath.Join(controller.TmpDir, "bootstrap", bootstrapScript)
 
 			name := fmt.Sprintf("Execute %s", bootstrapScript)

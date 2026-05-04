@@ -29,7 +29,7 @@ while true; do
     bb-log-error "ERROR: Retry limit reached"
     exit 1
   fi
-  for server in {{ .normal.apiserverEndpoints | join " " }}; do
+  for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
     url="https://$server/api/v1/nodes/$(bb-d8-node-name)"
     if out="$(d8-curl --connect-timeout 10 -sS -f -x "" -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt" 2>&1)"; then
       # got node info from API, node exists, should fail

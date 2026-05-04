@@ -153,6 +153,10 @@ status:
 	)
 
 	f := HookExecutionConfigInit(`{"nodeManager":{"internal": {}}}`, `{}`)
+	expectClusterMasterValues := func(clusterMasterAddresses, clusterMasterEndpoints string) {
+		Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(clusterMasterAddresses))
+		Expect(f.ValuesGet("nodeManager.internal.clusterMasterEndpoints").String()).To(MatchJSON(clusterMasterEndpoints))
+	}
 
 	Context("Endpoint default/kubernetes has single address in .subsets[]", func() {
 		BeforeEach(func() {
@@ -162,7 +166,10 @@ status:
 
 		It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
+			expectClusterMasterValues(
+				`["10.0.3.192:6443"]`,
+				`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+			)
 		})
 
 		Context("Someone added additional addresses to .subsets[]", func() {
@@ -173,7 +180,10 @@ status:
 
 			It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
+				expectClusterMasterValues(
+					`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`,
+					`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+				)
 			})
 
 			Context("Someone added address with different port", func() {
@@ -184,7 +194,10 @@ status:
 
 				It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444']", func() {
 					Expect(f).To(ExecuteSuccessfully())
-					Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`))
+					expectClusterMasterValues(
+						`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`,
+						`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6444,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+					)
 				})
 
 				Context("Kube-apiserver pod is present", func() {
@@ -195,7 +208,10 @@ status:
 
 					It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444','192.168.199.233:6443']", func() {
 						Expect(f).To(ExecuteSuccessfully())
-						Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443"]`))
+						expectClusterMasterValues(
+							`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443"]`,
+							`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6444,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"192.168.199.233","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+						)
 					})
 
 					Context("Second kube-apiserver pod is present", func() {
@@ -206,7 +222,10 @@ status:
 
 						It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6444','192.168.199.233:6443','192.168.199.244:6443']", func() {
 							Expect(f).To(ExecuteSuccessfully())
-							Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443","192.168.199.244:6443"]`))
+							expectClusterMasterValues(
+								`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443","192.168.199.244:6443"]`,
+								`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6444,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"192.168.199.233","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"192.168.199.244","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+							)
 						})
 					})
 
@@ -223,7 +242,10 @@ status:
 
 		It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443','10.0.3.193:6443','10.0.3.194:6443']", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`))
+			expectClusterMasterValues(
+				`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`,
+				`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+			)
 		})
 
 		Context("Someone set number of addresses in .subsets[] to one", func() {
@@ -234,7 +256,10 @@ status:
 
 			It("`nodeManager.internal.clusterMasterAddresses` must be ['10.0.3.192:6443']", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(`["10.0.3.192:6443"]`))
+				expectClusterMasterValues(
+					`["10.0.3.192:6443"]`,
+					`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+				)
 			})
 		})
 	})
