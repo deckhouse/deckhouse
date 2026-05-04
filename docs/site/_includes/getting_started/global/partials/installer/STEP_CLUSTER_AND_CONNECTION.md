@@ -18,7 +18,7 @@
   <li>"Preconfigured username" — the username used for SSH login to machines for future cluster nodes.</li>
   <li>"Preconfigured user password" (for sudo) — the user's password, if set. It is used to escalate privileges via sudo. <i>Leave empty if sudo does not require a password.</i></li>
   <li>"SSH key for node access" — the key used to connect to machines. Here you can select a previously added key, generate a new one, or provide an existing key.
-  The private key is stored in the `~/.ssh/SSH_PRIVATE_KEY_FILE` file. You can get it with the `cat ~/.ssh/SSH_PRIVATE_KEY_FILE` command. Example output (for an ED25519-encrypted key):
+  The private key is stored in the <code>~/.ssh/&lt;SSH_PRIVATE_KEY_FILE&gt;</code> file. You can get it with the <code>cat ~/.ssh/&lt;SSH_PRIVATE_KEY_FILE&gt;</code> command. Example output (for an ED25519-encrypted key):
 {% capture command %}
 ```bash
 $ cat ~/.ssh/id_ed25519
@@ -31,7 +31,7 @@ RTAeNZpi2e6dqGhsbK6cAAAAGHpoYmVydEB6aGJlcnQtMjB3bnMxeGowOQECAwQF
 ```
 {% endcapture %}
   {{ command | markdownify }}
-  Copy the full output text into the form field, including the `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END OPENSSH PRIVATE KEY-----` lines.
+  Copy the full output text into the form field, including the <code>-----BEGIN OPENSSH PRIVATE KEY-----</code> and <code>-----END OPENSSH PRIVATE KEY-----</code> lines.
   </li>
   <li>"SSH port" — the port used for SSH connection. <i>Leave the default value if the machine uses the standard port.</i></li>
   <li>"Use SSH bastion" — SSH bastion settings. If you do not use an intermediate server to access resources in a private network, keep this toggle disabled. If you do, enable it and provide settings in the opened section.
