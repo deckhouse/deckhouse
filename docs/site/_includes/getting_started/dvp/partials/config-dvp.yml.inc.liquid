@@ -2,13 +2,13 @@
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse:
-{% if include.revision == 'ee' %}
+{%- if include.revision == 'ee' %}
   imagesRepo: registry.deckhouse.ru/deckhouse/ee
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
-{% else %}
+{%- else %}
   imagesRepo: registry.deckhouse.ru/deckhouse/ce
   registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5ydSI6IHt9fX0K
-{% endif %}
+{%- endif %}
 ---
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
@@ -28,11 +28,11 @@ spec:
   enabled: true
   settings:
     bundle: Default
-{% if include.revision == 'ee' %}
+{%- if include.revision == 'ee' %}
     releaseChannel: Stable
-{% else %}
+{%- else %}
     releaseChannel: EarlyAccess
-{% endif %}
+{%- endif %}
     logLevel: Info
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -78,16 +78,16 @@ kind: ModuleConfig
 metadata:
   name: admission-policy-engine
 spec:
-  enabled: true
   version: 1
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: multitenancy-manager
 spec:
-  enabled: true
   version: 1
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1
 kind: StaticClusterConfiguration
@@ -121,16 +121,16 @@ kind: ModuleConfig
 metadata:
   name: csi-nfs
 spec:
-  enabled: true
   version: 1
+  enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
   name: virtualization
 spec:
-  enabled: true
   version: 1
+  enabled: true
   settings:
     dvcr:
       storage:

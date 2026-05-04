@@ -536,6 +536,15 @@ function dvp_get_config_yml_raw_elements() {
   return list;
 }
 
+/** Plain YAML without gutter line numbers (codeblock.js adds spans with data-copy=ignore). */
+function dvp_yaml_plain_from_element(el) {
+  if (!el) return '';
+  if (typeof extractCopyText === 'function' && el.tagName === 'CODE') {
+    return extractCopyText(el);
+  }
+  return el.textContent || '';
+}
+
 function dvp_ensure_snippet_snapshots() {
   dvp_get_config_yml_raw_elements().forEach(function (el) {
     if (el._dvpYamlSnapshot !== undefined) return;
@@ -543,7 +552,7 @@ function dvp_ensure_snippet_snapshots() {
     if (fromAttr != null && fromAttr !== '') {
       el._dvpYamlSnapshot = fromAttr;
     } else {
-      el._dvpYamlSnapshot = el.textContent;
+      el._dvpYamlSnapshot = dvp_yaml_plain_from_element(el);
     }
   });
 }
@@ -686,6 +695,27 @@ function dvp_sync_all_config_yml_highlights() {
   dvp_get_config_yml_raw_elements().forEach(dvp_sync_highlight_for_config_yml_raw);
 }
 
+/** `<code>` that shows the config (either the node we edit or the highlighted copy next to snippetcut raw). */
+function dvp_resolve_highlight_code_for_config_artifact(el) {
+  if (!el) return null;
+  if (el.tagName === 'CODE') return el;
+  var root = el.closest('[data-snippetcut]');
+  if (!root) return null;
+  var hi = root.querySelector(':scope > .highlight');
+  return hi ? hi.querySelector('code') : null;
+}
+
+/** After `textContent` updates, re-apply line gutters from codeblock.js. */
+function dvp_restore_codeblock_line_numbers() {
+  if (typeof ensureLineNumbers !== 'function') return;
+  dvp_get_config_yml_raw_elements().forEach(function (el) {
+    var codeEl = dvp_resolve_highlight_code_for_config_artifact(el);
+    if (codeEl) {
+      ensureLineNumbers(codeEl);
+    }
+  });
+}
+
 function dvp_update_cluster_parameters() {
   dvp_get_config_yml_raw_elements().forEach(function (el) {
     var snap = el._dvpYamlSnapshot;
@@ -729,6 +759,7 @@ function dvp_apply_install_command_placeholders() {
 function dvp_refresh_visible_snippets() {
   dvp_sync_all_config_yml_highlights();
   dvp_apply_install_command_placeholders();
+  dvp_restore_codeblock_line_numbers();
 }
 
 function dvp_config_update() {
