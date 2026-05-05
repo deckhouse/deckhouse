@@ -9,7 +9,7 @@
 {{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
 {{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
 {{- $validationIsolationSupported := or (eq $controllerVersion "1.14") (eq $controllerVersion "1.15") }}
-{{- $validationIsolationEnabled := and $validationIsolationSupported (hasKey $crd.spec "validationIsolationMode") }}
+{{- $validationIsolationEnabled := and $validationIsolationSupported (not (eq $crd.spec.validationIsolationMode "NoIsolation")) }}
 {{- $fullValidation := and $validationIsolationEnabled (not (eq $validationIsolationMode "NoIsolation")) }}
 {{- $validatorServiceAccountName := "validator" }}
 {{- if $fullValidation }}

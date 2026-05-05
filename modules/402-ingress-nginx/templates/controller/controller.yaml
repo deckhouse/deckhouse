@@ -32,7 +32,7 @@ memory: 10Mi
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 -}}
 {{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
 {{- $validationIsolationSupported := or (eq $controllerVersion "1.14") (eq $controllerVersion "1.15") }}
-{{- $validationIsolationEnabled := and $validationIsolationSupported (hasKey $crd.spec "validationIsolationMode") }}
+{{- $validationIsolationEnabled := and $validationIsolationSupported (not (eq $crd.spec.validationIsolationMode "NoIsolation")) }}
 
 {{- if ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -260,7 +260,7 @@ spec:
         - --update-status=true
         {{- if or (eq $controllerVersion "1.12") (eq $controllerVersion "1.14") }}
         - --enable-metrics=true
-        {{- end }}
+- --enable-metrics=true
         {{- if $loadBalancer }}
         - --publish-service=d8-ingress-nginx/{{ $crd.name }}-load-balancer
         {{- end }}
