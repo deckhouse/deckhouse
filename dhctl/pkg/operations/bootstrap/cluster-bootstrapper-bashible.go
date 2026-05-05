@@ -21,12 +21,33 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 	restore := b.applyParams()
 	defer restore()
+
+	registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
+		return config.FetchDocuments(app.ConfigPaths)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Bundle registry shoud run before LoadConfigFromFile
+	stop, err := bundle.StartRegistry(ctx,
+		bundle.RegistryParams{
+			Logger:                 b.loggerProvider(),
+			RegistryConfigProvider: registryConfigProvider,
+			BundlePath:             app.ImgBundlePath,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	defer stop()
 
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,

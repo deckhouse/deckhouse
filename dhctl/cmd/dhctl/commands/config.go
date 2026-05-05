@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -39,9 +40,31 @@ var (
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
+	app.DefineImgBundleFlags(cmd)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
+			return config.FetchDocuments(app.ConfigPaths)
+		})
+		if err != nil {
+			return err
+		}
+
+		// Bundle registry shoud run before LoadConfigFromFile
+		stop, err := bundle.StartRegistry(ctx,
+			bundle.RegistryParams{
+				Logger:                 loggerProvider(),
+				RegistryConfigProvider: registryConfigProvider,
+				BundlePath:             app.ImgBundlePath,
+			},
+		)
+		if err != nil {
+			return err
+		}
+		defer stop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -83,9 +106,31 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
+	app.DefineImgBundleFlags(cmd)
 
 	runFunc := func(ctx context.Context) error {
 		logger := log.GetDefaultLogger()
+		loggerProvider := log.ExternalLoggerProvider(logger)
+
+		registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
+			return config.FetchDocuments(app.ConfigPaths)
+		})
+		if err != nil {
+			return err
+		}
+
+		// Bundle registry shoud run before LoadConfigFromFile
+		stop, err := bundle.StartRegistry(ctx,
+			bundle.RegistryParams{
+				Logger:                 loggerProvider(),
+				RegistryConfigProvider: registryConfigProvider,
+				BundlePath:             app.ImgBundlePath,
+			},
+		)
+		if err != nil {
+			return err
+		}
+		defer stop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
