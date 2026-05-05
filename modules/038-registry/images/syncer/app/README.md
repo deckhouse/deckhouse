@@ -26,14 +26,20 @@ source:
   user:                 # optional
     name: username
     password: secret
-  ca: /path/to/ca.crt   # optional
+  ca: |                 # optional
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
 
 destination:
   address: dst-registry.example.com
   user:                 # optional
     name: username
     password: secret
-  ca: /path/to/ca.crt   # optional
+  ca: |                 # optional
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
 ```
 
 | Field                       | Required | Description                                          |
@@ -41,11 +47,11 @@ destination:
 | `source.address`            | yes      | Source registry hostname (and optional port)         |
 | `source.user.name`          | no       | Username for source registry authentication          |
 | `source.user.password`      | no       | Password for source registry authentication          |
-| `source.ca`                 | no       | Path to a custom CA certificate file for source      |
+| `source.ca`                 | no       | Custom CA certificate (PEM-encoded) for source       |
 | `destination.address`       | yes      | Destination registry hostname (and optional port)    |
 | `destination.user.name`     | no       | Username for destination registry authentication     |
 | `destination.user.password` | no       | Password for destination registry authentication     |
-| `destination.ca`            | no       | Path to a custom CA certificate file for destination |
+| `destination.ca`            | no       | Custom CA certificate (PEM-encoded) for destination  |
 
 ### Examples
 
@@ -67,7 +73,10 @@ source:
   user:
     name: puller
     password: pull-secret
-  ca: /etc/ssl/src-registry-ca.crt
+  ca: |
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
 
 destination:
   address: dst-registry.example.com
