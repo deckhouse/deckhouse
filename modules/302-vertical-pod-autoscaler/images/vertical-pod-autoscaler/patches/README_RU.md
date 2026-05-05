@@ -18,5 +18,7 @@
 - Использует значение лейбла ноды как ключ группы рекомендаций для потока с Prometheus.
 - Использует `status.groups` как источник истины для scoped-рекомендаций.
 - Хранит grouped-рекомендации в compact-виде (в основном `target`).
-- Оставляет `status.recommendation` как несгруппированное summary без дублирования.
-- В admission-controller/updater использует map-lookup для быстрого выбора scoped-рекомендации.
+- Делает поля взаимоисключающими:
+  - `status.recommendation` используется только для обычных VPA (включая DaemonSet без `spec.scope`);
+  - `status.groups` используется только для scoped DaemonSet, а `status.recommendation` не заполняется.
+- Admission-controller/updater читают только актуальное поле статуса в зависимости от режима VPA.

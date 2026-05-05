@@ -18,6 +18,8 @@ Adds DaemonSet scoped recommendations grouped by node label key from `spec.scope
 - Uses node label value as a recommendation group key for Prometheus-based flow.
 - Uses `status.groups` as source-of-truth for scoped recommendations.
 - Stores grouped recommendations in compact form (target-focused payload).
-- Keeps `status.recommendation` as non-scoped summary to avoid duplication.
-- Uses map-based lookup in admission-controller/updater for scoped recommendation selection.
+- Keeps fields mutually exclusive:
+  - `status.recommendation` is used only for regular VPA (including DaemonSet without `spec.scope`);
+  - `status.groups` is used only for scoped DaemonSet and `status.recommendation` is not populated.
+- Admission-controller/updater read only the active status field for the current VPA mode.
 

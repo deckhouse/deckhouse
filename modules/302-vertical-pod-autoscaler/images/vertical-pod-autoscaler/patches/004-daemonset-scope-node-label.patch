@@ -121,6 +121,28 @@ index e46a7c465..92dff3771 100644
  	vpaMatcher := vpa.NewMatcher(vpaLister, targetSelectorFetcher, controllerFetcher)
  
  	stopCh := make(chan struct{})
+diff --git a/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go b/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go
+index 5cb9cbd96..5a4a92aae 100644
+--- a/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go
++++ b/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation/recommendation_provider.go
+@@ -123,13 +123,16 @@ func (p *recommendationProvider) GetContainersResourcesForPod(pod *core.Pod, vpa
+ 	var annotations vpa_api_util.ContainerToAnnotationsMap
+ 	recommendedPodResources := &vpa_types.RecommendedPodResources{}
+ 
+-	if vpa.Status.Recommendation != nil {
++	if vpa.Status.Recommendation != nil || len(vpa.Status.Groups) > 0 || vpa.Spec.ResourcePolicy != nil {
+ 		var err error
+ 		recommendedPodResources, annotations, err = p.recommendationProcessor.Apply(vpa, pod)
+ 		if err != nil {
+ 			klog.V(2).InfoS("Cannot process recommendation for pod", "pod", klog.KObj(pod))
+ 			return nil, annotations, err
+ 		}
++		if recommendedPodResources == nil {
++			recommendedPodResources = &vpa_types.RecommendedPodResources{}
++		}
+ 	}
+ 	containerLimitRange, err := p.limitsRangeCalculator.GetContainerLimitRangeItem(pod.Namespace)
+ 	if err != nil {
 diff --git a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go b/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
 index 0b27e9a6b..baca503a5 100644
 --- a/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go
@@ -535,7 +557,7 @@ index c1dce049b..88b9506ab 100644
  func (vpa *Vpa) HasRecommendation() bool {
  	vpa.mutex.RLock()
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go b/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
-index c86871fa9..9de13c753 100644
+index c86871fa9..7ee7a86e7 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
 @@ -19,6 +19,7 @@ package routines
@@ -554,7 +576,7 @@ index c86871fa9..9de13c753 100644
  	vpa_utils "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
  )
  
-@@ -81,16 +83,59 @@ func (r *recommender) GetClusterStateFeeder() input.ClusterStateFeeder {
+@@ -81,16 +83,64 @@ func (r *recommender) GetClusterStateFeeder() input.ClusterStateFeeder {
  }
  
  func processVPAUpdate(r *recommender, vpa *model.Vpa, observedVpa *v1.VerticalPodAutoscaler) {
@@ -565,8 +587,9 @@ index c86871fa9..9de13c753 100644
 +	resources := r.podResourceRecommender.GetRecommendedPodResources(GetContainerNameToAggregateStateMap(vpa))
 +	recommendation := logic.MapToListOfRecommendedContainerResources(resources)
 +	var groups []v1.RecommendedPodResourcesGroup
++	isScopedDaemonSet := observedVpa.Spec.TargetRef != nil && scopeutil.IsScopedDaemonSet(observedVpa.Spec.TargetRef.Kind, string(observedVpa.Spec.Scope))
 +
-+	if observedVpa.Spec.TargetRef != nil && scopeutil.IsScopedDaemonSet(observedVpa.Spec.TargetRef.Kind, string(observedVpa.Spec.Scope)) {
++	if isScopedDaemonSet {
 +		recommendationByScopeValue := GetContainerNameToAggregateStateMapByScopeValue(vpa)
 +		scopeValues := make([]string, 0, len(recommendationByScopeValue))
 +		for scopeValue := range recommendationByScopeValue {
@@ -591,9 +614,10 @@ index c86871fa9..9de13c753 100644
 +			groupRec = postProcessor.Process(observedVpa, groupRec)
 +			groups[i].ContainerRecommendations = groupRec.ContainerRecommendations
 +		}
-+	}
-+
-+	if observedVpa.Spec.TargetRef != nil && scopeutil.IsScopedDaemonSet(observedVpa.Spec.TargetRef.Kind, string(observedVpa.Spec.Scope)) {
+ 	}
+ 
+-	vpa.UpdateRecommendation(listOfResourceRecommendation)
++	if isScopedDaemonSet {
 +		for i := range groups {
 +			for j := range groups[i].ContainerRecommendations {
 +				containerRec := groups[i].ContainerRecommendations[j]
@@ -609,17 +633,20 @@ index c86871fa9..9de13c753 100644
 +			// Summary recommendation is not scope-specific.
 +			recommendation.ContainerRecommendations[i].Scope = ""
 +		}
- 	}
- 
--	vpa.UpdateRecommendation(listOfResourceRecommendation)
++	}
++
 +	status := vpa.AsStatus()
-+	status.Recommendation = recommendation
++	if isScopedDaemonSet {
++		status.Recommendation = nil
++	} else {
++		status.Recommendation = recommendation
++	}
 +	status.Groups = groups
 +	vpa.UpdateRecommendation(recommendation)
  	if vpa.HasRecommendation() && !had {
  		metrics_recommender.ObserveRecommendationLatency(vpa.Created)
  	}
-@@ -108,7 +153,7 @@ func processVPAUpdate(r *recommender, vpa *model.Vpa, observedVpa *v1.VerticalPo
+@@ -108,7 +158,7 @@ func processVPAUpdate(r *recommender, vpa *model.Vpa, observedVpa *v1.VerticalPo
  	}
  
  	_, err := vpa_utils.UpdateVpaStatusIfNeeded(
@@ -628,6 +655,101 @@ index c86871fa9..9de13c753 100644
  	if err != nil {
  		klog.ErrorS(err, "Cannot update VPA", "vpa", klog.KRef(vpa.ID.Namespace, vpa.ID.VpaName))
  	}
+diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go b/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go
+index e5f386f37..52ae74139 100644
+--- a/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go
++++ b/vertical-pod-autoscaler/pkg/recommender/routines/recommender_test.go
+@@ -17,6 +17,7 @@ limitations under the License.
+ package routines
+ 
+ import (
++	"context"
+ 	"fmt"
+ 	"sync"
+ 	"sync/atomic"
+@@ -24,6 +25,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/stretchr/testify/assert"
++	autoscalingv1 "k8s.io/api/autoscaling/v1"
+ 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+ 	"k8s.io/apimachinery/pkg/labels"
+ 	"k8s.io/apimachinery/pkg/runtime"
+@@ -276,6 +278,74 @@ func TestConcurrentVPAMethodAccess(t *testing.T) {
+ 	wg.Wait()
+ }
+ 
++func TestProcessVPAUpdateScopedDaemonSetUsesGroupsOnly(t *testing.T) {
++	vpaName := "scoped-vpa"
++	vpaID := model.VpaID{Namespace: "default", VpaName: vpaName}
++	selector, err := labels.Parse("app=test")
++	assert.NoError(t, err)
++
++	vpaModel := model.NewVpa(vpaID, selector, time.Now())
++	observedVpa := test.VerticalPodAutoscaler().
++		WithName(vpaName).
++		WithNamespace("default").
++		WithContainer("agent").
++		WithTargetRef(&autoscalingv1.CrossVersionObjectReference{
++			Kind:       "DaemonSet",
++			Name:       "agent",
++			APIVersion: "apps/v1",
++		}).
++		Get()
++	observedVpa.Spec.Scope = v1.VerticalPodAutoscalerScopeType("node.deckhouse.io/group")
++
++	fakeClient := vpa_fake.NewSimpleClientset(observedVpa).AutoscalingV1() //nolint:staticcheck // https://github.com/kubernetes/autoscaler/issues/8954
++	r := &recommender{
++		clusterState:                model.NewClusterState(time.Minute),
++		vpaClient:                   fakeClient,
++		podResourceRecommender:      &mockPodResourceRecommender{},
++		recommendationPostProcessor: []RecommendationPostProcessor{},
++	}
++
++	processVPAUpdate(r, vpaModel, observedVpa)
++
++	updated, err := fakeClient.VerticalPodAutoscalers("default").Get(context.Background(), vpaName, metav1.GetOptions{})
++	assert.NoError(t, err)
++	assert.Nil(t, updated.Status.Recommendation)
++}
++
++func TestProcessVPAUpdateRegularVPAUsesRecommendationOnly(t *testing.T) {
++	vpaName := "regular-vpa"
++	vpaID := model.VpaID{Namespace: "default", VpaName: vpaName}
++	selector, err := labels.Parse("app=test")
++	assert.NoError(t, err)
++
++	vpaModel := model.NewVpa(vpaID, selector, time.Now())
++	observedVpa := test.VerticalPodAutoscaler().
++		WithName(vpaName).
++		WithNamespace("default").
++		WithContainer("app").
++		WithTargetRef(&autoscalingv1.CrossVersionObjectReference{
++			Kind:       "Deployment",
++			Name:       "app",
++			APIVersion: "apps/v1",
++		}).
++		Get()
++
++	fakeClient := vpa_fake.NewSimpleClientset(observedVpa).AutoscalingV1() //nolint:staticcheck // https://github.com/kubernetes/autoscaler/issues/8954
++	r := &recommender{
++		clusterState:                model.NewClusterState(time.Minute),
++		vpaClient:                   fakeClient,
++		podResourceRecommender:      &mockPodResourceRecommender{},
++		recommendationPostProcessor: []RecommendationPostProcessor{},
++	}
++
++	processVPAUpdate(r, vpaModel, observedVpa)
++
++	updated, err := fakeClient.VerticalPodAutoscalers("default").Get(context.Background(), vpaName, metav1.GetOptions{})
++	assert.NoError(t, err)
++	assert.NotNil(t, updated.Status.Recommendation)
++	assert.Empty(t, updated.Status.Groups)
++}
++
+ // TestUpdateVPAsRaceCondition tests the UpdateVPAs method for race conditions
+ // by having multiple workers process overlapping sets of VPAs.
+ func TestUpdateVPAsRaceCondition(t *testing.T) {
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
 index d7cfd66fc..2aef87755 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/routines/vpa.go
@@ -688,10 +810,10 @@ index 409c72256..f7683781f 100644
  		targetSelectorFetcher,
  		controllerFetcher,
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
-index 565fd430d..463115750 100644
+index 565fd430d..6acb53c21 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
-@@ -17,22 +17,31 @@ limitations under the License.
+@@ -17,22 +17,32 @@ limitations under the License.
  package api
  
  import (
@@ -720,11 +842,12 @@ index 565fd430d..463115750 100644
 +		limitsRangeCalculator: limitsRangeCalculator,
 +		scopeCache:            map[string]cachedScopeValue{},
 +		scopeCacheTTL:         time.Minute,
++		groupLookup:           map[string]map[string]vpa_types.RecommendedContainerResources{},
 +	}
  }
  
  type cappingAction string
-@@ -51,6 +60,30 @@ func toCappingAnnotation(resourceName apiv1.ResourceName, action cappingAction)
+@@ -51,6 +61,34 @@ func toCappingAnnotation(resourceName apiv1.ResourceName, action cappingAction)
  
  type cappingRecommendationProcessor struct {
  	limitsRangeCalculator limitrange.LimitRangeCalculator
@@ -732,6 +855,9 @@ index 565fd430d..463115750 100644
 +	scopeCache            map[string]cachedScopeValue
 +	scopeCacheTTL         time.Duration
 +	scopeCacheMu          sync.RWMutex
++	groupLookupKey        string
++	groupLookup           map[string]map[string]vpa_types.RecommendedContainerResources
++	groupLookupMu         sync.RWMutex
 +}
 +
 +type cachedScopeValue struct {
@@ -751,11 +877,25 @@ index 565fd430d..463115750 100644
 +		nodeGetter:            nodeGetter,
 +		scopeCache:            map[string]cachedScopeValue{},
 +		scopeCacheTTL:         time.Minute,
++		groupLookup:           map[string]map[string]vpa_types.RecommendedContainerResources{},
 +	}
  }
  
  // Apply returns a recommendation for the given pod, adjusted to obey policy and limits.
-@@ -77,9 +110,13 @@ func (c *cappingRecommendationProcessor) Apply(
+@@ -68,8 +106,11 @@ func (c *cappingRecommendationProcessor) Apply(
+ 
+ 	policy := vpa.Spec.ResourcePolicy
+ 	podRecommendation := vpa.Status.Recommendation
++	hasScopedGroups := len(vpa.Status.Groups) > 0 &&
++		vpa.Spec.TargetRef != nil &&
++		scopeutil.IsScopedDaemonSet(vpa.Spec.TargetRef.Kind, string(vpa.Spec.Scope))
+ 
+-	if podRecommendation == nil && policy == nil {
++	if podRecommendation == nil && policy == nil && !hasScopedGroups {
+ 		// If there is no recommendation and no policies have been defined then no recommendation can be computed.
+ 		return nil, nil, nil
+ 	}
+@@ -77,9 +118,13 @@ func (c *cappingRecommendationProcessor) Apply(
  		// Policies have been specified. Create an empty recommendation so that the policies can be applied correctly.
  		podRecommendation = new(vpa_types.RecommendedPodResources)
  	}
@@ -770,7 +910,7 @@ index 565fd430d..463115750 100644
  	if err != nil {
  		return nil, nil, err
  	}
-@@ -110,6 +147,97 @@ func (c *cappingRecommendationProcessor) Apply(
+@@ -110,6 +155,100 @@ func (c *cappingRecommendationProcessor) Apply(
  	return &vpa_types.RecommendedPodResources{ContainerRecommendations: updatedRecommendations}, containerToAnnotationsMap, nil
  }
  
@@ -791,7 +931,7 @@ index 565fd430d..463115750 100644
 +		return []vpa_types.RecommendedContainerResources{}, nil
 +	}
 +
-+	groupLookup := buildGroupRecommendationLookup(vpa.Status.Groups)
++	groupLookup := c.getGroupRecommendationLookup(vpa)
 +	if group, found := groupLookup[scopeValue]; found {
 +		selected := make([]vpa_types.RecommendedContainerResources, 0, len(group))
 +		for _, recommendation := range group {
@@ -800,23 +940,26 @@ index 565fd430d..463115750 100644
 +		return selected, nil
 +	}
 +
-+	// Backward compatibility path for statuses serialized without groups.
-+	selectedByScope := make(map[string]vpa_types.RecommendedContainerResources)
-+	for _, recommendation := range podRecommendation.ContainerRecommendations {
-+		scopeKey, recommendationScopeValue, ok := scopeutil.ParseRecommendationScope(recommendation.Scope)
-+		if ok && scopeKey == string(vpa.Spec.Scope) && recommendationScopeValue == scopeValue {
-+			selectedByScope[recommendation.ContainerName] = recommendation
-+		}
-+	}
-+	if len(selectedByScope) != 0 {
-+		selected := make([]vpa_types.RecommendedContainerResources, 0, len(selectedByScope))
-+		for _, recommendation := range selectedByScope {
-+			selected = append(selected, recommendation)
-+		}
-+		return selected, nil
-+	}
-+
 +	return []vpa_types.RecommendedContainerResources{}, nil
++}
++
++func (c *cappingRecommendationProcessor) getGroupRecommendationLookup(vpa *vpa_types.VerticalPodAutoscaler) map[string]map[string]vpa_types.RecommendedContainerResources {
++	cacheKey := vpa.Namespace + "/" + vpa.Name + "/" + vpa.ResourceVersion + "/" + string(vpa.Spec.Scope)
++
++	c.groupLookupMu.RLock()
++	if c.groupLookupKey == cacheKey {
++		lookup := c.groupLookup
++		c.groupLookupMu.RUnlock()
++		return lookup
++	}
++	c.groupLookupMu.RUnlock()
++
++	lookup := buildGroupRecommendationLookup(vpa.Status.Groups)
++	c.groupLookupMu.Lock()
++	c.groupLookupKey = cacheKey
++	c.groupLookup = lookup
++	c.groupLookupMu.Unlock()
++	return lookup
 +}
 +
 +func buildGroupRecommendationLookup(groups []vpa_types.RecommendedPodResourcesGroup) map[string]map[string]vpa_types.RecommendedContainerResources {
@@ -868,7 +1011,7 @@ index 565fd430d..463115750 100644
  // getCappedRecommendationForContainer returns a recommendation for the given container, adjusted to obey policy and limits.
  func getCappedRecommendationForContainer(
  	pod *apiv1.Pod,
-@@ -316,6 +444,30 @@ func getContainer(containerName string, pod *apiv1.Pod) *apiv1.Container {
+@@ -316,6 +455,30 @@ func getContainer(containerName string, pod *apiv1.Pod) *apiv1.Container {
  	return nil
  }
  
@@ -900,7 +1043,7 @@ index 565fd430d..463115750 100644
  func applyContainerLimitRange(recommendation apiv1.ResourceList,
  	containerRequests apiv1.ResourceList, containerLimits apiv1.ResourceList,
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
-index 8096f2d95..c32bd0f9f 100644
+index 8096f2d95..47835a83b 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
 @@ -17,11 +17,14 @@ limitations under the License.
@@ -918,7 +1061,7 @@ index 8096f2d95..c32bd0f9f 100644
  
  	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
  	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
-@@ -1652,3 +1655,139 @@ func TestCapPodMemoryWithUnderByteSplit(t *testing.T) {
+@@ -1652,3 +1655,147 @@ func TestCapPodMemoryWithUnderByteSplit(t *testing.T) {
  		})
  	}
  }
@@ -934,7 +1077,7 @@ index 8096f2d95..c32bd0f9f 100644
 +	return nil, assert.AnError
 +}
 +
-+func TestApplyScopedRecommendationForDaemonSetByNodeLabel(t *testing.T) {
++func TestApplyScopedRecommendationForDaemonSetByNodeLabelRequiresGroups(t *testing.T) {
 +	const containerName = "agent"
 +	const scopeKey = "node.kubernetes.io/instance-type"
 +	pod := test.Pod().
@@ -989,9 +1132,7 @@ index 8096f2d95..c32bd0f9f 100644
 +
 +	res, _, err := processor.Apply(vpa, pod)
 +	assert.NoError(t, err)
-+	if assert.Len(t, res.ContainerRecommendations, 1) {
-+		assert.Equal(t, resource.MustParse("2Gi"), res.ContainerRecommendations[0].Target[apiv1.ResourceMemory])
-+	}
++	assert.Empty(t, res.ContainerRecommendations)
 +}
 +
 +func TestApplyScopedRecommendationFromCompactGroups(t *testing.T) {
@@ -1012,6 +1153,16 @@ index 8096f2d95..c32bd0f9f 100644
 +		}).
 +		Get()
 +	vpa.Spec.Scope = vpa_types.VerticalPodAutoscalerScopeType(scopeKey)
++	vpa.Status.Recommendation = &vpa_types.RecommendedPodResources{
++		ContainerRecommendations: []vpa_types.RecommendedContainerResources{
++			{
++				ContainerName: containerName,
++				Target: apiv1.ResourceList{
++					apiv1.ResourceMemory: resource.MustParse("1Gi"),
++				},
++			},
++		},
++	}
 +	vpa.Status.Groups = []vpa_types.RecommendedPodResourcesGroup{
 +		{
 +			ScopeValue: "master",
@@ -1057,6 +1208,85 @@ index 8096f2d95..c32bd0f9f 100644
 +	if assert.Len(t, res.ContainerRecommendations, 1) {
 +		assert.Equal(t, resource.MustParse("500Mi"), res.ContainerRecommendations[0].Target[apiv1.ResourceMemory])
 +	}
++}
+diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
+new file mode 100644
+index 000000000..e7e594c6a
+--- /dev/null
++++ b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
+@@ -0,0 +1,73 @@
++package routines
++
++import (
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	autoscalingv1 "k8s.io/api/autoscaling/v1"
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/labels"
++
++	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
++	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
++	scopeutil "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/scope"
++	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
++)
++
++func TestGetContainerNameToAggregateStateMapByScopeValue(t *testing.T) {
++	cluster := model.NewClusterState(time.Minute)
++	selector, err := labels.Parse("app=daemon")
++	assert.NoError(t, err)
++
++	vpaObj := test.VerticalPodAutoscaler().
++		WithName("scoped-vpa").
++		WithNamespace("default").
++		WithContainer("agent").
++		WithTargetRef(&autoscalingv1.CrossVersionObjectReference{
++			Kind:       "DaemonSet",
++			Name:       "agent-ds",
++			APIVersion: "apps/v1",
++		}).
++		Get()
++	vpaObj.Spec.Scope = "node.kubernetes.io/instance-type"
++	assert.NoError(t, cluster.AddOrUpdateVpa(vpaObj, selector))
++
++	scopeLabelKey := scopeutil.AggregationLabelKey(string(vpaObj.Spec.Scope))
++
++	podA := model.PodID{Namespace: "default", PodName: "pod-a"}
++	cluster.AddOrUpdatePod(podA, labels.Set{
++		"app":         "daemon",
++		scopeLabelKey: "c3.large",
++	}, v1.PodRunning)
++	assert.NoError(t, cluster.AddOrUpdateContainer(model.ContainerID{PodID: podA, ContainerName: "agent"}, model.Resources{}))
++
++	podB := model.PodID{Namespace: "default", PodName: "pod-b"}
++	cluster.AddOrUpdatePod(podB, labels.Set{
++		"app":         "daemon",
++		scopeLabelKey: "m5.large",
++	}, v1.PodRunning)
++	assert.NoError(t, cluster.AddOrUpdateContainer(model.ContainerID{PodID: podB, ContainerName: "agent"}, model.Resources{}))
++
++	key := model.VpaID{Namespace: "default", VpaName: "scoped-vpa"}
++	vpa := cluster.VPAs()[key]
++	assert.NotNil(t, vpa)
++
++	grouped := GetContainerNameToAggregateStateMapByScopeValue(vpa)
++	assert.Contains(t, grouped, "c3.large")
++	assert.Contains(t, grouped, "m5.large")
++	assert.Contains(t, grouped["c3.large"], "agent")
++	assert.Contains(t, grouped["m5.large"], "agent")
++
++	// Ensure container policy filter still works for grouped output.
++	off := vpa_types.ContainerScalingModeOff
++	vpa.ResourcePolicy = &vpa_types.PodResourcePolicy{
++		ContainerPolicies: []vpa_types.ContainerResourcePolicy{{
++			ContainerName: "agent",
++			Mode:          &off,
++		}},
++	}
++	grouped = GetContainerNameToAggregateStateMapByScopeValue(vpa)
++	assert.Empty(t, grouped["c3.large"])
++	assert.Empty(t, grouped["m5.large"])
 +}
 diff --git a/vertical-pod-autoscaler/pkg/utils/scope/scope.go b/vertical-pod-autoscaler/pkg/utils/scope/scope.go
 new file mode 100644
