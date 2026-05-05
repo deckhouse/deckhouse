@@ -52,5 +52,6 @@ status:
     reason: ScanSucceeded
     status: "True"
     type: LastScanSucceeded
+  partialScanAvailable: false
   phase: Active
   syncTime: "2025-10-31T12:00:00Z"
