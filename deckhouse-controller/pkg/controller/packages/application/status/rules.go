@@ -30,8 +30,8 @@ const (
 	ConditionUpdateInstalled string = "UpdateInstalled"
 	// ConditionReady indicates package is ready and operational
 	ConditionReady string = "Ready"
-	// ConditionPartiallyDegraded indicates package is partially degraded
-	ConditionPartiallyDegraded string = "PartiallyDegraded"
+	// ConditionScaled indicates package is fully scaled
+	ConditionScaled string = "Scaled"
 	// ConditionManaged indicates package is being managed
 	ConditionManaged string = "Managed"
 	// ConditionConfigurationApplied indicates configuration was applied
@@ -68,7 +68,7 @@ func buildMapper() condmapper.Mapper {
 			installedRule(),
 			updateInstalledRule(),
 			readyRule(),
-			partiallyDegradedRule(),
+			scaledRule(),
 			managedRule(),
 			configAppliedRule(),
 		},
@@ -130,13 +130,21 @@ func readyRule() condmapper.Rule {
 	}
 }
 
-// partiallyDegradedRule: True when functionality degraded (inverted semantics).
-func partiallyDegradedRule() condmapper.Rule {
+// scaledRule: True when package is operational.
+func scaledRule() condmapper.Rule {
 	return condmapper.Rule{
-		Type:    ConditionPartiallyDegraded,
-		TrueIf:  condmapper.AnyFalse(managedConds...),
-		FalseIf: condmapper.AllTrue(managedConds...),
-		OnlyIf:  condmapper.ExtTrue(ConditionInstalled),
+		Type:   ConditionScaled,
+		TrueIf: condmapper.IsTrue(string(status.ConditionReadyInCluster)),
+		FalseIf: condmapper.Or(
+			condmapper.AnyFalse(coreConds...),
+			condmapper.And(
+				condmapper.Not(condmapper.ExtTrue(ConditionInstalled)),
+				condmapper.Or(
+					condmapper.IsTrue(string(status.ConditionWaitConverge)),
+					condmapper.IsTrue(string(status.ConditionRequirementsMet)),
+				),
+			),
+		),
 	}
 }
 

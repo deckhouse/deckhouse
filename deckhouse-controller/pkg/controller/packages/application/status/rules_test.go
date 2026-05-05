@@ -318,64 +318,6 @@ func TestReadyRule(t *testing.T) {
 	runTestCases(t, cases)
 }
 
-func TestPartiallyDegradedRule(t *testing.T) {
-	cases := []testCase{
-		{
-			name: "true when ReadyInRuntime is false",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeDegraded"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "RuntimeDegraded"},
-			},
-		},
-		{
-			name: "true when ReadyInCluster is false",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ClusterDegraded"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "ClusterDegraded"},
-			},
-		},
-		{
-			name: "true when HooksProcessed is false",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionFalse, "HooksFailed"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionTrue, reason: "HooksFailed"},
-			},
-		},
-		{
-			name: "false when all managed conditions true",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
-				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
-				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: {status: metav1.ConditionFalse, reason: "RuntimeReady"},
-			},
-		},
-		{
-			name: "absent when not installed",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionFalse, "RuntimeDegraded"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionPartiallyDegraded: nil,
-			},
-		},
-	}
-
-	runTestCases(t, cases)
-}
-
 func TestManagedRule(t *testing.T) {
 	cases := []testCase{
 		{
