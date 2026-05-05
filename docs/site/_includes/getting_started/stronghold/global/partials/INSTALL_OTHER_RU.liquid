@@ -44,14 +44,12 @@ registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash
 <!-- Windows install, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
 {% snippetcut selector="docker-login-windows" %}
-```text
 docker login -u license-token registry.deckhouse.ru
 ```
 {% endsnippetcut %}
 
 Запустите контейнер с установщиком:
 {% snippetcut selector="docker-run-windows" %}
-```text
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
