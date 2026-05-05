@@ -43,12 +43,14 @@ registry.deckhouse.io/deckhouse/{{ revision }}/install:stable bash
 <!-- Windows install, EE -->
 Log in on the **personal computer** to the container image registry by providing the license key as a password:
 {% snippetcut selector="docker-login-windows" %}
+```shell
 docker login -u license-token registry.deckhouse.io
 ```
 {% endsnippetcut %}
 
 Run a container with the installer:
 {% snippetcut selector="docker-run-windows" %}
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
@@ -87,7 +89,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, CE -->
 {% snippetcut selector="docker-run-windows-ce" %}
-```text
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}

@@ -44,12 +44,14 @@ registry.deckhouse.ru/deckhouse/{{ revision }}/install:stable bash
 <!-- Windows install, EE -->
 Авторизуйтесь на **персональном компьютере** в container image registry, введя лицензионный ключ на запрос пароля:
 {% snippetcut selector="docker-login-windows" %}
+```shell
 docker login -u license-token registry.deckhouse.ru
 ```
 {% endsnippetcut %}
 
 Запустите контейнер с установщиком:
 {% snippetcut selector="docker-run-windows" %}
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig"{% endif %}
@@ -88,7 +90,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 <div id='block_installer_windows_{{ revision }}' class="tabs__content tabs__content_installer_{{ revision }}" markdown="1">
 <!-- Windows install, CE -->
 {% snippetcut selector="docker-run-windows-ce" %}
-```text
+```shell
 docker run --pull=always {% if page.platform_code == "kind" %} --network host {% endif %}-it -v "%cd%\config.yml:/config.yml"
 {%- if page.platform_type != 'existing' %} -v "%userprofile%\.ssh\:/tmp/.ssh/"{% endif %}
 {%- if page.platform_type == "existing" or page.platform_code == "kind" %} -v "%userprofile%\.kube\config:/kubeconfig" {% endif %}
