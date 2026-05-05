@@ -50,13 +50,7 @@ func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 	}
 	if svc != nil {
 		if isOwnedBySWHC(svc) {
-			u, err := lb.getServiceWithHealthchecksByName(ctx, loadBalancer.Name)
-			if err != nil {
-				return nil, err
-			}
-			if u != nil {
-				return lb.updateServiceWithHealthchecks(ctx, u, loadBalancer)
-			}
+			return lb.updateServiceWithHealthchecks(ctx, loadBalancer)
 		}
 		return lb.updateLoadBalancerService(ctx, svc, loadBalancer)
 	}
