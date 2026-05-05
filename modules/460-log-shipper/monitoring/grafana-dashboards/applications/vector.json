@@ -166,6 +166,7 @@
             }
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -179,7 +180,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "bytes"
         },
         "overrides": []
       },
@@ -189,11 +190,11 @@
         "x": 7,
         "y": 0
       },
-      "id": 46,
+      "id": 602,
       "options": {
         "legend": {
           "calcs": [
-            "last"
+            "lastNotNull"
           ],
           "displayMode": "table",
           "placement": "right",
@@ -213,14 +214,14 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum by (component_id, component_kind) (rate(vector_utilization{node=~\"$node\", job=\"log-shipper-agent\"}[$__rate_interval])) > 0",
+          "expr": "sum by (name) (label_join(rate(vector_component_received_event_bytes_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\", pod_namespace=~\".+\", pod_name=~\".+\"}[$__rate_interval]), \"name\", \"/\", \"pod_namespace\", \"pod_name\")) or sum by (name) (label_join(label_replace(label_replace(rate(vector_component_received_event_bytes_total{node=~\"$node\", component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\", pod_name!~\".+\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\"), \"name\", \"/\", \"host\", \"short_name\"))",
           "instant": false,
           "interval": "",
-          "legendFormat": "{{ component_kind }} : {{ component_id }}",
+          "legendFormat": "{{ name }}",
           "refId": "A"
         }
       ],
-      "title": "Utilization",
+      "title": "Received Event Bytes by Pod",
       "transparent": true,
       "type": "timeseries"
     },
@@ -235,6 +236,7 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -311,6 +313,7 @@
             "inspect": false
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -468,6 +471,7 @@
             }
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -528,41 +532,17 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed"
           },
           "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "inspect": false
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -575,9 +555,35 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "none"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "short_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Source"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Accepted logs"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -673,6 +679,7 @@
             }
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -717,8 +724,8 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_received_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__rate_interval])) > 0",
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
+          "expr": "sum by (short_name) (label_replace(label_replace(rate(vector_component_received_events_total{component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\")) > 0",
+          "legendFormat": "{{ short_name }}",
           "range": true,
           "refId": "A"
         }
@@ -770,6 +777,7 @@
             }
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -814,9 +822,9 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__rate_interval])) > 0",
+          "expr": "sum by (short_name) (label_replace(label_replace(rate(vector_component_sent_events_total{component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\")) > 0",
           "hide": false,
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
+          "legendFormat": "{{ short_name }}",
           "range": true,
           "refId": "B"
         }
@@ -868,6 +876,7 @@
             }
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -913,8 +922,8 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_received_event_bytes_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
+          "expr": "sum by (short_name) (label_replace(label_replace(rate(vector_component_received_event_bytes_total{component_id=~\"$component\", component_kind=\"source\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\")) > 0",
+          "legendFormat": "{{ short_name }}",
           "range": true,
           "refId": "A"
         }
@@ -966,6 +975,7 @@
             }
           },
           "mappings": [],
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1011,9 +1021,9 @@
             "uid": "$ds_prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (component_kind, component_id) (rate(vector_component_sent_event_bytes_total{component_id=~\"$component\"}[$__rate_interval])) > 0",
+          "expr": "sum by (short_name) (label_replace(label_replace(rate(vector_component_sent_event_bytes_total{component_id=~\"$component\", component_kind=\"sink\", job=\"log-shipper-agent\"}[$__rate_interval]), \"short_name\", \"$1\", \"component_id\", \".*/([^/]+)$\"), \"short_name\", \"$1\", \"component_id\", \"^([^/]+)$\")) > 0",
           "hide": false,
-          "legendFormat": "{{component_kind}} : {{ component_id }}",
+          "legendFormat": "{{ short_name }}",
           "range": true,
           "refId": "B"
         }
@@ -1249,295 +1259,118 @@
       "type": "timeseries"
     },
     {
-      "collapsed": true,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "$ds_prometheus"
-      },
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 57
       },
-      "id": 2,
-      "panels": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
+      "id": 601,
+      "panels": [],
+      "title": "Utilization",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
           },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "yellow",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "none"
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
             },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 0,
-            "y": 44
-          },
-          "id": 25,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
             },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_received_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
             }
-          ],
-          "title": "Received Events",
-          "transparent": true,
-          "type": "stat"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percentunit"
         },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "green",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "none"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 6,
-            "y": 44
-          },
-          "id": 26,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_sent_events_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
-            }
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "id": 46,
+      "options": {
+        "legend": {
+          "calcs": [
+            "last"
           ],
-          "title": "Sent Events",
-          "transparent": true,
-          "type": "stat"
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
         },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.5.2",
+      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "yellow",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 12,
-            "y": 44
-          },
-          "id": 23,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_received_event_bytes_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "Received Bytes",
-          "transparent": true,
-          "type": "stat"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "$ds_prometheus"
-          },
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "fixedColor": "green",
-                "mode": "fixed"
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green"
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 3,
-            "w": 6,
-            "x": 18,
-            "y": 44
-          },
-          "id": 24,
-          "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "center",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "value"
-          },
-          "pluginVersion": "8.5.13",
-          "targets": [
-            {
-              "datasource": {
-                "type": "prometheus",
-                "uid": "$ds_prometheus"
-              },
-              "editorMode": "code",
-              "expr": "sum by (component_id) (increase(vector_component_sent_event_bytes_total{component_id=~\"$component\", job=\"log-shipper-agent\"}[$__range])) > 0",
-              "legendFormat": "{{component_id}}",
-              "range": true,
-              "refId": "A"
-            }
-          ],
-          "title": "Sent Bytes",
-          "transparent": true,
-          "type": "stat"
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum by (component_id, component_kind) (rate(vector_utilization{node=~\"$node\", job=\"log-shipper-agent\"}[$__rate_interval])) > 0",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{ component_kind }} : {{ component_id }}",
+          "refId": "A"
         }
       ],
-      "repeat": "component",
-      "title": "Input / Output [$component]",
-      "type": "row"
+      "title": "Utilization",
+      "transparent": true,
+      "type": "timeseries"
     }
   ],
   "refresh": "30s",
