@@ -175,8 +175,21 @@ bb-package-module-install() {
   bb-log-deprecated "rpp-get install"
 
   local module_package="$1"
+  local repository="${2:-}"
+  local repository_path="${3:-}"
 
-  bb-package-install "${module_package}"
+  local result_path="$(mktemp)"
+
+  local rc=0
+  rpp-get install \
+    --result "${result_path}" \
+    --rpp-repository "${repository}" \
+    --rpp-path "${repository_path}" \
+    "${module_package}" || rc=$?
+  bb-rp-fire-events "${result_path}"
+  rm -f "${result_path}"
+
+  return "${rc}"
 }
 
 # Fetch packages by digest
@@ -299,7 +312,7 @@ function get_rpp_address() {
     local labelSelector="app%3Dregistry-packages-proxy"
 
     rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
-    port=4300
+    port=4282
     ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
     echo "$ips_csv"
   fi

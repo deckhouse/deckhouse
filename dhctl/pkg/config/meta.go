@@ -83,7 +83,7 @@ type ClusterMasterEndpoint struct {
 const (
 	defaultClusterMasterAddress                = "127.0.0.1"
 	defaultClusterMasterRPPServerPort          = 5444
-	defaultClusterMasterRPPBootstrapServerPort = 4300
+	defaultClusterMasterRPPBootstrapServerPort = 4282
 )
 
 func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
