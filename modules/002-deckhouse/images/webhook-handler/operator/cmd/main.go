@@ -269,15 +269,19 @@ func main() {
 		}
 	}
 
+	processExited := make(chan struct{}, 1)
+
 	// go-routine that checks if shell-operator is exited
 	go func() {
-		for range time.Tick(reloadInterval + 1*time.Second) {
-			// Do not wait if Process already been waited
-			if cmd.ProcessState == nil {
-				err := cmd.Wait()
-				if err != nil {
-					log.Error("wait shell-operator: %w", err)
-				}
+		for {
+			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+				continue
+			}
+			// wait blocks this goroutine until shell-operator is exited
+			err := cmd.Wait()
+			processExited <- struct{}{}
+			if err != nil {
+				log.Error("wait shell-operator: %w", err)
 			}
 			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
 				isReloadShellNeed.Store(true)
@@ -290,7 +294,6 @@ func main() {
 		for range time.Tick(reloadInterval) {
 			if isReloadShellNeed.Load() {
 				logger.Debug("restarting shell-operator")
-				isReloadShellNeed.Store(false)
 
 				// TODO: what if SIGTERM don't killed shell-operator?
 				err := cmd.Process.Signal(syscall.SIGTERM)
@@ -298,13 +301,8 @@ func main() {
 					logger.Error("sigterm shell-operator: %w", slog.Any("error", err.Error()))
 				}
 
-				// Do not wait if Process already been waited
-				if cmd.ProcessState == nil {
-					err = cmd.Wait()
-					if err != nil {
-						log.Error("wait shell-operator: %w", err)
-					}
-				}
+				<-processExited // wait for shell-operator to exit
+				isReloadShellNeed.Store(false)
 				logger.Info("killed shell-operator",
 					slog.Int("pid", cmd.Process.Pid),
 				)
