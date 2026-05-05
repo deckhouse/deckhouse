@@ -1,12 +1,13 @@
-{{- $moduleGateway := dict }}
-{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "is_basic_auth_enabled" .) (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- $controlPlaneManagerValues := get .Values "controlPlaneManager" | default dict }}
+{{- $publishAPIIngressEnabled := dig "apiserver" "publishAPI" "ingress" "enabled" false $controlPlaneManagerValues }}
+{{- if and $publishAPIIngressEnabled (include "is_basic_auth_enabled" .) (include "helm_lib_kind_exists" (list . "ReferenceGrant")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ReferenceGrant
 metadata:
   name: basic-auth-proxy
   namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   from:
   - group: gateway.networking.k8s.io
