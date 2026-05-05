@@ -1,0 +1,30 @@
+{{- if and
+  (include "istioSupportsAmbient" .)
+  (.Values.istio.ambient.enabled)
+  (.Values.istio.dataPlane.waypoint.enabled)
+}}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict
+    "app" "waypoint"
+    "istio.io/rev" (include "istioGlobalRevision" .)
+    "istio.io/waypoint-for" "all"
+    "gateway.networking.k8s.io/gateway-name" "waypoint"
+  )) | nindent 2 }}
+spec:
+  addresses:
+  - value: waypoint.d8-{{ .Chart.Name }}.svc.{{ .Values.global.discovery.clusterDomain }}
+    type: Hostname
+  gatewayClassName: istio-waypoint
+  listeners:
+  - allowedRoutes:
+      namespaces:
+        from: All
+    name: mesh
+    port: 15008
+    protocol: HBONE
+{{- end }}

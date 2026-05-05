@@ -1,0 +1,247 @@
+{{- if and
+  (include "istioSupportsAmbient" .)
+  (.Values.istio.ambient.enabled)
+  (.Values.istio.dataPlane.waypoint.enabled)
+}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waypoint
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict
+    "app" "waypoint"
+    "istio.io/rev" (include "istioGlobalRevision" .)
+    "istio.io/waypoint-for" "all"
+    "gateway.networking.k8s.io/gateway-name" "waypoint"
+    "gateway.istio.io/managed" "istio.io-mesh-controller"
+  )) | nindent 2 }}
+spec:
+  {{- if eq .Values.istio.dataPlane.waypoint.replicasManagement.mode "Standard" }}
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  {{- else if eq .Values.istio.dataPlane.waypoint.replicasManagement.mode "Static" }}
+  replicas: {{ .Values.istio.dataPlane.waypoint.replicasManagement.static.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: waypoint
+      gateway.networking.k8s.io/gateway-name: waypoint
+  template:
+    metadata:
+      annotations:
+        istio.io/rev: {{ include "istioGlobalRevision" . }}
+        prometheus.io/path: "/stats/prometheus"
+        prometheus.io/port: "15020"
+        prometheus.io/scrape: "true"
+      {{- include "helm_lib_module_labels" (list . (dict
+        "app" "waypoint"
+        "gateway.istio.io/managed" "istio.io-mesh-controller"
+        "gateway.networking.k8s.io/gateway-name" "waypoint"
+        "istio.io/dataplane-mode" "none"
+        "istio.io/rev" (include "istioGlobalRevision" .)
+        "istio.io/waypoint-for" "all"
+        "service.istio.io/canonical-name" "waypoint"
+        "service.istio.io/canonical-revision" "latest"
+        "sidecar.istio.io/inject" "false"
+        "topology.istio.io/network" (include "istioNetworkName" .)
+      )) | nindent 6 }}
+    spec:
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict
+        "app" "waypoint"
+        "gateway.networking.k8s.io/gateway-name" "waypoint"
+      )) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      containers:
+      - args:
+        - proxy
+        - waypoint
+        - --domain
+        - $(POD_NAMESPACE).svc.{{ .Values.global.discovery.clusterDomain }}
+        - --serviceCluster
+        - waypoint.$(POD_NAMESPACE)
+        - --log_as_json
+        - --log_output_level=default:info
+        - --proxyLogLevel=warning
+        - --proxyComponentLogLevel=misc:error
+        env:
+        - name: ISTIO_META_SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: ISTIO_META_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: PILOT_CERT_PROVIDER
+          value: istiod
+        - name: CA_ADDR
+          value: istiod-{{ include "istioGlobalRevision" . }}.d8-istio.svc:15012
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INSTANCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: SERVICE_ACCOUNT
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: HOST_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: ISTIO_CPU_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        - name: PROXY_CONFIG
+          value: |
+            {
+              "discoveryAddress": "istiod-{{ include "istioGlobalRevision" . }}.d8-istio.svc:15012",
+              "proxyMetadata": {
+                "CLOUD_PLATFORM": {{ include "istioCloudPlatform" . | quote }},
+                "ISTIO_META_DNS_AUTO_ALLOCATE": "true",
+                "ISTIO_META_DNS_CAPTURE": "true",
+                "ISTIO_META_IDLE_TIMEOUT": "1h",
+                "PROXY_CONFIG_XDS_AGENT": "true"
+              },
+              "meshId": "d8-istio-mesh",
+              "holdApplicationUntilProxyStarts": false
+            }
+        - name: CLOUD_PLATFORM
+          value: {{ include "istioCloudPlatform" . | quote }}
+        - name: ISTIO_META_DNS_AUTO_ALLOCATE
+          value: "true"
+        - name: ISTIO_META_DNS_CAPTURE
+          value: "true"
+        - name: ISTIO_META_IDLE_TIMEOUT
+          value: 1h
+        - name: PROXY_CONFIG_XDS_AGENT
+          value: "true"
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.memory
+        - name: GOMAXPROCS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
+        - name: ISTIO_META_CLUSTER_ID
+          value: {{ .Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum .Values.global.discovery.clusterUUID }}
+        - name: ISTIO_META_NETWORK
+          value: {{ include "istioNetworkName" . | quote }}
+        - name: ISTIO_META_INTERCEPTION_MODE
+          value: REDIRECT
+        - name: ISTIO_META_WORKLOAD_NAME
+          value: waypoint
+        - name: ISTIO_META_OWNER
+          value: kubernetes://apis/apps/v1/namespaces/d8-{{ .Chart.Name }}/deployments/waypoint
+        - name: ISTIO_META_MESH_ID
+          value: d8-istio-mesh
+        - name: TRUST_DOMAIN
+          value: {{ .Values.global.discovery.clusterDomain | quote }}
+        image: {{ include "helm_lib_module_image" (list . (printf "proxyv2%s" (include "istioImageSuffix" .))) }}
+        imagePullPolicy: IfNotPresent
+        name: istio-proxy
+        ports:
+        - containerPort: 15020
+          name: metrics
+          protocol: TCP
+        - containerPort: 15021
+          name: status-port
+          protocol: TCP
+        - containerPort: 15090
+          name: http-envoy-prom
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 4
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+            scheme: HTTP
+          periodSeconds: 15
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources:
+          {{- include "helm_lib_resources_management_pod_resources" (list .Values.istio.dataPlane.waypoint.resourcesManagement) | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 1337
+          runAsNonRoot: true
+          runAsUser: 1337
+        startupProbe:
+          failureThreshold: 30
+          httpGet:
+            path: /healthz/ready
+            port: 15021
+            scheme: HTTP
+          initialDelaySeconds: 1
+          periodSeconds: 1
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /var/run/secrets/workload-spiffe-uds
+          name: workload-socket
+        - mountPath: /var/run/secrets/istio
+          name: istiod-ca-cert
+        - mountPath: /var/lib/istio/data
+          name: istio-data
+        - mountPath: /etc/istio/proxy
+          name: istio-envoy
+        - mountPath: /var/run/secrets/tokens
+          name: istio-token
+        - mountPath: /etc/istio/pod
+          name: istio-podinfo
+      imagePullSecrets:
+      - name: d8-istio-sidecar-registry
+      serviceAccountName: waypoint
+      terminationGracePeriodSeconds: 2
+      volumes:
+      - emptyDir: {}
+        name: workload-socket
+      - emptyDir:
+          medium: Memory
+        name: istio-envoy
+      - emptyDir:
+          medium: Memory
+        name: go-proxy-envoy
+      - emptyDir: {}
+        name: istio-data
+      - emptyDir: {}
+        name: go-proxy-data
+      - downwardAPI:
+          defaultMode: 420
+          items:
+          - fieldRef:
+              fieldPath: metadata.labels
+            path: labels
+          - fieldRef:
+              fieldPath: metadata.annotations
+            path: annotations
+        name: istio-podinfo
+      - name: istio-token
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              audience: istio-ca
+              expirationSeconds: 43200
+              path: istio-token
+      - configMap:
+          defaultMode: 420
+          name: istio-ca-root-cert
+        name: istiod-ca-cert
+{{- end }}

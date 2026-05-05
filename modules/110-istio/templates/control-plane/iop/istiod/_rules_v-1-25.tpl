@@ -5,10 +5,11 @@
   - deployments
   verbs:
   - get
-  - list
   - watch
+  - list
   - update
   - patch
+  - create
   - delete
 - apiGroups:
   - ""
@@ -186,15 +187,6 @@
   verbs:
   - create
 - apiGroups:
-  - gateway.networking.k8s.io
-  resources:
-  - gatewayclasses
-  verbs:
-  - create
-  - update
-  - patch
-  - delete
-- apiGroups:
   - ""
   resources:
   - secrets
@@ -239,12 +231,7 @@
   - list
 - apiGroups:
   - gateway.networking.k8s.io
-  resources:
-  - gateways
-  - httproutes
-  - grpcroutes
-  - gatewayclasses
-  - referencegrants
+  resources: ["*"]
   verbs:
   - get
   - watch
@@ -253,6 +240,23 @@
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses/status
+  - gateways/status
+  - grpcroutes/status
+  - httproutes/status
+  - referencegrants/status
+  - tcproutes/status
+  - tlsroutes/status
+  - udproutes/status
   verbs:
   - update
+  - patch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  verbs:
+  - create
+  - update
+  - patch
+  - delete
 {{- end -}}

@@ -1,0 +1,30 @@
+{{- if and
+  (include "istioSupportsAmbient" .)
+  (.Values.istio.ambient.enabled)
+  (.Values.istio.dataPlane.waypoint.enabled)
+  (eq .Values.istio.dataPlane.waypoint.resourcesManagement.mode "VPA")
+  (.Values.global.enabledModules | has "vertical-pod-autoscaler")
+}}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: waypoint
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict
+    "app" "waypoint"
+    "gateway.istio.io/managed" "istio.io-mesh-controller"
+    "gateway.networking.k8s.io/gateway-name" "waypoint"
+    "istio.io/rev" (include "istioGlobalRevision" .)
+    "istio.io/waypoint-for" "all"
+    "topology.istio.io/network" (include "istioNetworkName" .)
+  )) | nindent 2 }}
+spec:
+{{- include "helm_lib_resources_management_vpa_spec" (list
+  "apps/v1"
+  "Deployment"
+  "waypoint"
+  "istio-proxy"
+  .Values.istio.dataPlane.waypoint.resourcesManagement
+) | nindent 2 }}
+{{- end }}
