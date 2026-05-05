@@ -124,25 +124,24 @@ generate: protoc
 generate-preflight-checks:
 	@go generate hack/gen_preflight_checks/main.go
 
-.PHONY: prepare-minget-embed
-prepare-minget-embed:
-	@mkdir -p $(dir $(MINGET_EMBED_PATH))
-	@if [ -f /minget ]; then \
-		cp /minget $(MINGET_EMBED_PATH); \
+.PHONY: prepare-minget
+prepare-minget:
+	@if [ -f $(MINGET_EMBED_PATH) ]; then \
+		echo "$(MINGET_EMBED_PATH) already exists"; \
 	else \
-		echo "Warning! /minget was not found, embedded minget will not be updated"; \
+		if ! command -v crane >/dev/null 2>&1; then \
+			echo "crane is required to fetch minget" >&2; \
+			exit 1; \
+		fi; \
+		mkdir -p $(dir $(MINGET_EMBED_PATH)); \
+		registry_path="$$(yq -r '.REGISTRY_PATH' $(ALT_BASE_IMAGES))"; \
+		digest="$$(yq -r '.minget' $(ALT_BASE_IMAGES))"; \
+		echo "Export minget from $$registry_path@$$digest"; \
+		crane export "$$registry_path@$$digest" | tar -xOf - usr/bin/minget > $(MINGET_EMBED_PATH); \
+		chmod +x $(MINGET_EMBED_PATH); \
 	fi
 
-.PHONY: minget
-minget:
-	@mkdir -p $(dir $(MINGET_EMBED_PATH))
-	@registry_path="$$(yq -r '.REGISTRY_PATH' $(ALT_BASE_IMAGES))"; \
-	digest="$$(yq -r '.minget' $(ALT_BASE_IMAGES))"; \
-	echo "Export minget from $$registry_path@$$digest"; \
-	crane export "$$registry_path@$$digest" | tar -xOf - usr/bin/minget > $(MINGET_EMBED_PATH); \
-	chmod +x $(MINGET_EMBED_PATH)
-
-build: check-vars minget
+build: check-vars prepare-minget
 	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build/test/check-digests:
