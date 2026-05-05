@@ -244,19 +244,6 @@ func main() {
 		log.WithLevel(log.LogLevelFromStr(os.Getenv("LOG_LEVEL")).Level()),
 		log.WithHandlerType(log.TextHandlerType))
 
-	setupLog.Info("starting shell-operator")
-	// synchronous run
-	cmd := exec.Command("./shell-operator")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Start()
-	if err != nil {
-		setupLog.Error(err, "unable to start shell-operator")
-		os.Exit(1)
-	}
-	logger.Info("new shell-operator PID",
-		slog.Int("pid", cmd.Process.Pid),
-	)
 	// non-blocking sync variable to know that we need to reload shell-operator
 	var isReloadShellNeed atomic.Bool
 	isReloadShellNeed.Store(false)
@@ -269,23 +256,28 @@ func main() {
 		}
 	}
 
-	processExited := make(chan struct{}, 1)
+	var cmd *exec.Cmd
+	processExited := make(chan struct{})
 
-	// go-routine that checks if shell-operator is exited
+	// go-routine that runs shell-operator and signals when it exited
 	go func() {
 		for {
-			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-				continue
-			}
-			// wait blocks this goroutine until shell-operator is exited
-			err := cmd.Wait()
-			processExited <- struct{}{}
+			logger.Debug("running shell-operator")
+			cmd = exec.Command("./shell-operator")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			err := cmd.Run()
 			if err != nil {
-				log.Error("wait shell-operator: %w", err)
+				logger.Info("shell-operator exited", slog.String("error", err.Error()))
 			}
+
+			// if exited not by signal
 			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
 				isReloadShellNeed.Store(true)
 			}
+
+			processExited <- struct{}{}
 		}
 	}()
 
@@ -293,32 +285,16 @@ func main() {
 	go func() {
 		for range time.Tick(reloadInterval) {
 			if isReloadShellNeed.Load() {
-				logger.Debug("restarting shell-operator")
+				logger.Info("restarting shell-operator")
 
 				// TODO: what if SIGTERM don't killed shell-operator?
 				err := cmd.Process.Signal(syscall.SIGTERM)
 				if err != nil && !errors.Is(err, os.ErrProcessDone) {
-					logger.Error("sigterm shell-operator: %w", slog.Any("error", err.Error()))
+					logger.Error("sigterm shell-operator", slog.String("error", err.Error()), slog.Int("pid", cmd.Process.Pid))
 				}
 
 				<-processExited // wait for shell-operator to exit
 				isReloadShellNeed.Store(false)
-				logger.Info("killed shell-operator",
-					slog.Int("pid", cmd.Process.Pid),
-				)
-
-				// start new shell-operator
-				cmd = exec.Command("./shell-operator")
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				err = cmd.Start()
-				if err != nil {
-					log.Error("start shell-operator: %w", err)
-					isAlive = false
-				}
-				logger.Info("new shell-operator PID",
-					slog.Int("pid", cmd.Process.Pid),
-				)
 			}
 		}
 	}()
