@@ -94,6 +94,14 @@ spec:
   - expression: |
       request.userInfo.username == "system:serviceaccount:d8-system:deckhouse"
       || request.userInfo.username == "system:serviceaccount:kube-system:d8-control-plane-manager"
+      || (
+        request.operation == "DELETE"
+        && request.resource.resource == "controlplaneoperations"
+        && (
+          request.userInfo.username == "system:kube-controller-manager"
+          || request.userInfo.username == "system:serviceaccount:kube-system:generic-garbage-collector"
+        )
+      )
     reason: Forbidden
     messageExpression: |
       "ControlPlaneNode/ControlPlaneOperation are managed by control-plane-manager; direct " + request.operation + " by " + request.userInfo.username + " is forbidden"
