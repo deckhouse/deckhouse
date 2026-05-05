@@ -30,9 +30,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
 
 const (
@@ -47,6 +50,7 @@ const (
 type reconciler struct {
 	client client.Client
 	dc     dependency.Container
+	psm    registryService.ServiceManagerInterface[registryService.PackagesService]
 	logger *log.Logger
 }
 
@@ -58,6 +62,7 @@ func RegisterController(
 	r := &reconciler{
 		client: runtimeManager.GetClient(),
 		dc:     dc,
+		psm:    registryService.NewPackageServiceManager(logger.Named("packages_manager")),
 		logger: logger,
 	}
 
@@ -124,6 +129,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 
 	if err := r.syncRegistrySettings(ctx, repo); err != nil {
 		return ctrl.Result{}, fmt.Errorf("sync registry settings: %w", err)
+	}
+
+	if r.psm != nil {
+		if err := r.checkPaginationSupport(ctx, repo); err != nil {
+			logger.Warn("failed to check pagination support", log.Err(err))
+		}
 	}
 
 	scanInterval := defaultScanInterval
@@ -205,6 +216,47 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, repo *v1alpha1.Pa
 	logger.Debug("package repository reconciled", slog.String("interval", scanInterval.String()))
 
 	return ctrl.Result{RequeueAfter: scanInterval}, nil
+}
+
+// checkPaginationSupport checks if the container registry supports pagination for tag listing.
+// It compares a full tag listing with a limited one; if the results differ, pagination is supported.
+func (r *reconciler) checkPaginationSupport(ctx context.Context, repo *v1alpha1.PackageRepository) error {
+	svc, err := r.psm.Service(repo.Spec.Registry.Repo, utils.RegistryConfig{
+		DockerConfig: repo.Spec.Registry.DockerCFG,
+		Login:        repo.Spec.Registry.Login,
+		Password:     repo.Spec.Registry.Password,
+		CA:           repo.Spec.Registry.CA,
+		Scheme:       repo.Spec.Registry.Scheme,
+		UserAgent:    "deckhouse-package-controller",
+	})
+	if err != nil {
+		return fmt.Errorf("create package service: %w", err)
+	}
+
+	// Request 1: full tag list (all applications)
+	allTags, err := svc.ListTags(ctx)
+	if err != nil {
+		return fmt.Errorf("list all tags: %w", err)
+	}
+
+	// Request 2: limited tag list (with pagination)
+	pagedTags, err := svc.ListTags(ctx, regClient.WithTagsLimit(1))
+	if err != nil {
+		return fmt.Errorf("list tags with limit: %w", err)
+	}
+
+	// If the lists differ in length, the registry supports pagination
+	partialScanAvailable := len(allTags) != len(pagedTags)
+
+	if repo.Status.PartialScanAvailable != partialScanAvailable {
+		original := repo.DeepCopy()
+		repo.Status.PartialScanAvailable = partialScanAvailable
+		if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("update PartialScanAvailable status: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.PackageRepository) error {
