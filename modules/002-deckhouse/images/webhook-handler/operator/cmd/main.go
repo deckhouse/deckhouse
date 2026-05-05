@@ -18,6 +18,7 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -261,48 +262,49 @@ func main() {
 	var isReloadShellNeed atomic.Bool
 	isReloadShellNeed.Store(false)
 
-	// go-routine that reloads shell-operator periodically when new hooks are registered
-	go func() {
-		reloadInterval := DefaultShellOperatorReloadInterval
-		if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS"); envInterval != "" {
-			if seconds, err := strconv.Atoi(envInterval); err == nil && seconds > 0 {
-				reloadInterval = time.Duration(seconds) * time.Second
-				logger.Info("using custom shell-operator reload interval", slog.Duration("interval", reloadInterval))
-			}
+	reloadInterval := DefaultShellOperatorReloadInterval
+	if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS"); envInterval != "" {
+		if seconds, err := strconv.Atoi(envInterval); err == nil && seconds > 0 {
+			reloadInterval = time.Duration(seconds) * time.Second
+			logger.Info("using custom shell-operator reload interval", slog.Duration("interval", reloadInterval))
 		}
-		ticker := time.NewTicker(reloadInterval)
+	}
 
-		for range ticker.C {
-			// if shell-operator is exited
-			if cmd.ProcessState != nil {
-
-				logger.Error("shell-operator exited", slog.Int("exitcode", cmd.ProcessState.ExitCode()))
+	// go-routine that checks if shell-operator is exited
+	go func() {
+		for range time.Tick(reloadInterval + 1*time.Second) {
+			// Do not wait if Process already been waited
+			if cmd.ProcessState == nil {
+				cmd.Wait()
+			}
+			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
 				isReloadShellNeed.Store(true)
 			}
+		}
+	}()
 
+	// go-routine that reloads shell-operator periodically when new hooks are registered
+	go func() {
+		for range time.Tick(reloadInterval) {
 			if isReloadShellNeed.Load() {
-				logger.Info("restarting shell-operator")
+				logger.Debug("restarting shell-operator")
 				isReloadShellNeed.Store(false)
 
+				// TODO: what if SIGTERM don't killed shell-operator?
 				err := cmd.Process.Signal(syscall.SIGTERM)
-				if err != nil {
-					log.Error("sigterm shell-operator: %w", err)
+				if err != nil && !errors.Is(err, os.ErrProcessDone) {
+					logger.Error("sigterm shell-operator: %w", slog.Any("error", err.Error()))
 				}
 
-				// TODO: what if SIGTERM don't killed shell-operator?
-				// err = cmd.Process.Kill()
-				// if err != nil {
-				// 	log.Error("kill shell-operator: %w", err)
-				// }
-
-				err = cmd.Wait()
-				if err != nil {
-					log.Error("wait shell-operator: %w", err)
+				// Do not wait if Process already been waited
+				if cmd.ProcessState == nil {
+					err = cmd.Wait()
+					if err != nil {
+						log.Error("wait shell-operator: %w", err)
+					}
 				}
 				logger.Info("killed shell-operator",
 					slog.Int("pid", cmd.Process.Pid),
-					slog.Bool("exited", cmd.ProcessState.Exited()),
-					slog.Int("exitcode", cmd.ProcessState.ExitCode()),
 				)
 
 				// start new shell-operator
