@@ -275,7 +275,10 @@ func main() {
 		for range time.Tick(reloadInterval + 1*time.Second) {
 			// Do not wait if Process already been waited
 			if cmd.ProcessState == nil {
-				cmd.Wait()
+				err := cmd.Wait()
+				if err != nil {
+					log.Error("wait shell-operator: %w", err)
+				}
 			}
 			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
 				isReloadShellNeed.Store(true)
