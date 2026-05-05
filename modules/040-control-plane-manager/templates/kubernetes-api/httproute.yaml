@@ -69,7 +69,65 @@ spec:
     - path:
         type: Exact
         value: /version
-{{- if and (include "helm_lib_module_https_route_tls_enabled" .) (if not .Values.controlPlaneManager.internal.authn.enableBasicAuth) }}
+{{- if .Values.controlPlaneManager.internal.authn.enableBasicAuth }}
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: basic-auth-proxy
+      namespace: d8-user-authn
+      port: 7332
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /api
+    - headers:
+      - name: Authorization
+        value: "Basic.*"
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: basic-auth-proxy
+      namespace: d8-user-authn
+      port: 7332
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /apis
+    - headers:
+      - name: Authorization
+        value: "Basic.*"
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: basic-auth-proxy
+      namespace: d8-user-authn
+      port: 7332
+      weight: 1
+    matches:
+    - path:
+        type: PathPrefix
+        value: /openapi
+    - headers:
+      - name: Authorization
+        value: "Basic.*"
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: basic-auth-proxy
+      namespace: d8-user-authn
+      port: 7332
+      weight: 1
+    matches:
+    - path:
+        type: Exact
+        value: /version
+    - headers:
+      - name: Authorization
+        value: "Basic.*"
+{{- end }}
+{{- if and (include "helm_lib_module_https_route_tls_enabled" .) (not .Values.controlPlaneManager.internal.authn.enableBasicAuth) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
