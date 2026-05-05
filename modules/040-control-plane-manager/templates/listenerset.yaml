@@ -1,6 +1,7 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -10,7 +11,7 @@ metadata:
   namespace: kube-system
 spec:
   listeners:
-  {{- if or .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (include "is_basic_auth_enabled" .) }}
+
   {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
   - allowedRoutes:
       namespaces:
@@ -42,10 +43,10 @@ spec:
     port: 80
     protocol: HTTP
   {{- end }}
-  {{- end }}
   parentRef:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: {{ $moduleGateway.name }}
     namespace: {{ $moduleGateway.namespace }}
+{{- end }}
 {{- end }}
