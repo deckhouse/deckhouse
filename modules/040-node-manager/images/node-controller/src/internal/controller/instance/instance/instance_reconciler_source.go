@@ -36,22 +36,25 @@ const (
 	sourceStatusSkipped  sourceStatus = "skipped"
 )
 
-func (s *InstanceService) reconcileLinkedSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
+func (s *InstanceService) ReconcileSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
 	source := getInstanceSource(instance)
 	logger := log.FromContext(ctx)
 
-	machineStatus, err := s.linkedMachineStatus(ctx, source.MachineRef)
-	if err != nil {
-		return false, err
-	}
-	if machineStatus == sourceStatusFound {
+	machineStatus := sourceStatusSkipped
+	nodeStatus := sourceStatusSkipped
+	var err error
+	switch source.Type {
+	case instanceSourceMachine:
+		machineStatus, err = s.linkedMachineStatus(ctx, source.MachineRef)
+	case instanceSourceNode:
+		nodeStatus, err = s.linkedNodeStatus(ctx, source.NodeName)
+	default:
 		return false, nil
 	}
-	nodeStatus, err := s.linkedNodeStatus(ctx, source.NodeName)
 	if err != nil {
 		return false, err
 	}
-	if nodeStatus == sourceStatusFound {
+	if machineStatus == sourceStatusFound || nodeStatus == sourceStatusFound {
 		return false, nil
 	}
 	hasConfirmedMissing := machineStatus == sourceStatusNotFound || nodeStatus == sourceStatusNotFound

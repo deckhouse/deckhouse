@@ -31,9 +31,6 @@ import (
 
 const InstanceMachineStatusFieldOwner = "node-controller-instancestatus"
 
-// SyncInstanceStatus patches Instance.Status Phase, MachineStatus and MachineReady condition
-// when any of them differ from the desired machine status. LastTransitionTime is preserved
-// when the condition type and status are unchanged.
 func SyncInstanceStatus(
 	ctx context.Context,
 	c client.Client,
@@ -50,6 +47,7 @@ func SyncInstanceStatus(
 	)
 	desiredMachineReadyCondition := *machineStatus.MachineReadyCondition
 
+	// Keep LastTransitionTime stable while condition semantics do not change.
 	if hasCurrent &&
 		currentCondition.Type == desiredMachineReadyCondition.Type &&
 		currentCondition.Status == desiredMachineReadyCondition.Status {
@@ -68,18 +66,23 @@ func SyncInstanceStatus(
 	}
 	log.FromContext(ctx).V(4).Info("tick", "op", "instance.machine_status.patch")
 
-	return ApplyInstanceMachineStatus(
+	if err := ApplyInstanceMachineStatus(
 		ctx,
 		c,
 		instance.Name,
 		machineStatus.Phase,
 		machineStatus.Status,
 		desiredMachineReadyCondition,
-	)
+	); err != nil {
+		return err
+	}
+
+	instance.Status.Phase = machineStatus.Phase
+	instance.Status.MachineStatus = string(machineStatus.Status)
+	instance.Status.Conditions = upsertInstanceCondition(instance.Status.Conditions, desiredMachineReadyCondition)
+	return nil
 }
 
-// ApplyInstanceMachineStatus applies Phase, MachineStatus and MachineReady condition
-// to Instance.Status via Server-Side Apply.
 func ApplyInstanceMachineStatus(
 	ctx context.Context,
 	c client.Client,
@@ -108,7 +111,6 @@ func ApplyInstanceMachineStatus(
 	return nil
 }
 
-// InstanceApplyObject returns a minimal Instance object suitable for Server-Side Apply.
 func InstanceApplyObject(name string) *deckhousev1alpha2.Instance {
 	return &deckhousev1alpha2.Instance{
 		TypeMeta: metav1.TypeMeta{
@@ -119,8 +121,6 @@ func InstanceApplyObject(name string) *deckhousev1alpha2.Instance {
 	}
 }
 
-// ConditionEqualExceptLastTransitionTime returns true if two conditions are equal
-// ignoring LastTransitionTime.
 func ConditionEqualExceptLastTransitionTime(
 	left deckhousev1alpha2.InstanceCondition,
 	right deckhousev1alpha2.InstanceCondition,
@@ -129,4 +129,18 @@ func ConditionEqualExceptLastTransitionTime(
 	right.LastTransitionTime = nil
 
 	return apiequality.Semantic.DeepEqual(left, right)
+}
+
+func upsertInstanceCondition(
+	conditions []deckhousev1alpha2.InstanceCondition,
+	condition deckhousev1alpha2.InstanceCondition,
+) []deckhousev1alpha2.InstanceCondition {
+	for i := range conditions {
+		if conditions[i].Type == condition.Type {
+			conditions[i] = condition
+			return conditions
+		}
+	}
+
+	return append(conditions, condition)
 }

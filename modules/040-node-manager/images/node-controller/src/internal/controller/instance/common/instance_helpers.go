@@ -46,12 +46,9 @@ func EnsureInstanceExists(
 	}
 
 	newInstance := &deckhousev1alpha2.Instance{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: spec,
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       spec,
 	}
-
 	if err := c.Create(ctx, newInstance); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			if err := c.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
@@ -59,10 +56,8 @@ func EnsureInstanceExists(
 			}
 			return instance, nil
 		}
-
 		return nil, fmt.Errorf("create instance %q: %w", name, err)
 	}
-
 	return newInstance, nil
 }
 

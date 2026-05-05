@@ -433,6 +433,62 @@ func TestReconcileConflictRequeues(t *testing.T) {
 	require.Equal(t, ctrl.Result{Requeue: true}, result)
 }
 
+func TestReconcileDeletingInstanceSyncsMachineStatus(t *testing.T) {
+	t.Parallel()
+
+	now := metav1.Now()
+	instance := existingInstanceWithFinalizer("deleting-instance", deckhousev1alpha2.InstanceSpec{
+		MachineRef: &deckhousev1alpha2.MachineRef{
+			Kind:       "Machine",
+			APIVersion: capiv1beta2.GroupVersion.String(),
+			Name:       "deleting-instance",
+			Namespace:  machine.MachineNamespace,
+		},
+	}, deckhousev1alpha2.InstancePhaseRunning)
+	instance.DeletionTimestamp = &now
+	instance.Status.BashibleStatus = deckhousev1alpha2.BashibleStatusReady
+	instance.Status.Message = "bashible: last successful step"
+	instance.Status.Conditions = []deckhousev1alpha2.InstanceCondition{{
+		Type:    deckhousev1alpha2.InstanceConditionTypeBashibleReady,
+		Status:  metav1.ConditionTrue,
+		Message: "last successful step",
+	}}
+
+	machineObj := capiMachineWithStatus("deleting-instance", capiv1beta2.MachineStatus{
+		Phase: string(capiv1beta2.MachinePhaseDeleting),
+		Conditions: []metav1.Condition{{
+			Type:               capiv1beta2.DeletingCondition,
+			Status:             metav1.ConditionTrue,
+			Reason:             capiv1beta2.MachineDeletingDrainingNodeReason,
+			Message:            "cannot evict pod because disruption budget",
+			LastTransitionTime: now,
+		}},
+	})
+	machineObj.DeletionTimestamp = &now
+	machineObj.Finalizers = []string{"machine.cluster.x-k8s.io"}
+
+	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
+	controller, k8sClient := newTestInstanceController(t, nil, machineObj, instance)
+
+	result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{RequeueAfter: instanceRequeueInterval}, result)
+
+	persisted := &deckhousev1alpha2.Instance{}
+	err = k8sClient.Get(ctx, types.NamespacedName{Name: instance.Name}, persisted)
+	require.NoError(t, err)
+	require.Contains(t, persisted.Finalizers, instancecommon.InstanceControllerFinalizer)
+	require.Equal(t, deckhousev1alpha2.InstancePhaseTerminating, persisted.Status.Phase)
+	require.Equal(t, string(machine.StatusBlocked), persisted.Status.MachineStatus)
+	require.Equal(t, deckhousev1alpha2.BashibleStatusReady, persisted.Status.BashibleStatus)
+	require.Equal(t, "machine: cannot evict pod because disruption budget", persisted.Status.Message)
+
+	condition := requireMachineReadyCondition(t, persisted.Status.Conditions)
+	require.Equal(t, metav1.ConditionFalse, condition.Status)
+	require.Equal(t, capiv1beta2.MachineDeletingDrainingNodeReason, condition.Reason)
+	require.Equal(t, "cannot evict pod because disruption budget", condition.Message)
+}
+
 func TestReconcileCreateFromSource(t *testing.T) {
 	t.Parallel()
 
@@ -526,6 +582,7 @@ func TestReconcileCreateFromSource(t *testing.T) {
 			},
 			wantResult: ctrl.Result{},
 			wantInstance: existingInstance("node-b", deckhousev1alpha2.InstanceSpec{
+				NodeRef: deckhousev1alpha2.NodeRef{Name: "node-b"},
 				MachineRef: &deckhousev1alpha2.MachineRef{
 					Kind:       "Machine",
 					APIVersion: mcmv1alpha1.SchemeGroupVersion.String(),
@@ -574,7 +631,7 @@ func TestReconcileCreateFromSource(t *testing.T) {
 					err:    fmt.Errorf("capi get boom"),
 				}
 			},
-			wantErr: "capi get boom",
+			wantErr: `get capi machine "node-e": capi get boom`,
 		},
 	}
 
@@ -620,6 +677,43 @@ func TestReconcileCreateFromSource(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReconcileExistingInstanceBindsMachineSource(t *testing.T) {
+	t.Parallel()
+
+	ctx := ctrl.LoggerInto(context.Background(), ctrl.Log.WithName("test"))
+	classReference := &deckhousev1alpha2.ClassReference{
+		Kind: "DVPInstanceClass",
+		Name: "worker",
+	}
+	instance := existingInstanceWithFinalizer("worker-a", deckhousev1alpha2.InstanceSpec{
+		NodeRef:        deckhousev1alpha2.NodeRef{Name: "worker-a"},
+		ClassReference: classReference,
+	}, deckhousev1alpha2.InstancePhaseRunning)
+	controller, k8sClient := newTestInstanceController(t, nil,
+		instance,
+		capiMachineWithStatus("worker-a", capiv1beta2.MachineStatus{
+			Phase:   string(capiv1beta2.MachinePhaseRunning),
+			NodeRef: capiv1beta2.MachineNodeReference{Name: "worker-a"},
+		}),
+	)
+
+	result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker-a"}})
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{RequeueAfter: instanceRequeueInterval}, result)
+
+	persisted := &deckhousev1alpha2.Instance{}
+	err = k8sClient.Get(ctx, types.NamespacedName{Name: "worker-a"}, persisted)
+	require.NoError(t, err)
+	require.Equal(t, deckhousev1alpha2.NodeRef{Name: "worker-a"}, persisted.Spec.NodeRef)
+	require.Equal(t, classReference, persisted.Spec.ClassReference)
+	require.Equal(t, &deckhousev1alpha2.MachineRef{
+		Kind:       "Machine",
+		APIVersion: capiv1beta2.GroupVersion.String(),
+		Name:       "worker-a",
+		Namespace:  machine.MachineNamespace,
+	}, persisted.Spec.MachineRef)
 }
 
 func TestReconcileSourceExistence(t *testing.T) {

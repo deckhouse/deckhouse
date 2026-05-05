@@ -29,9 +29,6 @@ import (
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 )
 
-// ReconcileNode reconciles the Instance for a Node event.
-// It handles the case when the Node is gone (delete Instance) or is a static node (ensure Instance).
-// Returns (deleted, error): deleted=true means the Instance was deleted because Node is gone.
 func ReconcileNode(ctx context.Context, c client.Client, name string) (bool, error) {
 	logger := log.FromContext(ctx).WithValues("node", name)
 	logger.V(4).Info("tick", "op", "node.reconcile.start")
@@ -41,7 +38,6 @@ func ReconcileNode(ctx context.Context, c client.Client, name string) (bool, err
 		if client.IgnoreNotFound(err) != nil {
 			return false, err
 		}
-		// Node gone — delete node-based Instance if it exists
 		deleted, err := deleteNodeBasedInstanceIfExists(ctx, c, name)
 		if err != nil {
 			return false, err

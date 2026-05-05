@@ -44,12 +44,10 @@ func TestFinalizeAfterMachineDeletion(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(instance.DeepCopy()).Build()
 		svc := &InstanceService{client: c, machineFactory: machine.NewMachineFactory()}
 
-		fastRequeue, err := svc.finalizeAfterMachineDeletion(context.Background(), instance, true)
-		require.NoError(t, err)
-		require.False(t, fastRequeue)
+		require.NoError(t, svc.finalizeAfterMachineDeletion(context.Background(), instance, true))
 	})
 
-	t.Run("machine still exists keeps finalizer and requests fast requeue", func(t *testing.T) {
+	t.Run("machine still exists keeps finalizer", func(t *testing.T) {
 		t.Parallel()
 
 		instance := &deckhousev1alpha2.Instance{
@@ -61,12 +59,10 @@ func TestFinalizeAfterMachineDeletion(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(instance.DeepCopy()).Build()
 		svc := &InstanceService{client: c, machineFactory: machine.NewMachineFactory()}
 
-		fastRequeue, err := svc.finalizeAfterMachineDeletion(context.Background(), instance, false)
-		require.NoError(t, err)
-		require.True(t, fastRequeue)
+		require.NoError(t, svc.finalizeAfterMachineDeletion(context.Background(), instance, false))
 
 		persisted := &deckhousev1alpha2.Instance{}
-		err = c.Get(context.Background(), types.NamespacedName{Name: instance.Name}, persisted)
+		err := c.Get(context.Background(), types.NamespacedName{Name: instance.Name}, persisted)
 		require.NoError(t, err)
 		require.Contains(t, persisted.Finalizers, instancecommon.InstanceControllerFinalizer)
 	})
@@ -83,13 +79,11 @@ func TestFinalizeAfterMachineDeletion(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(instance.DeepCopy()).Build()
 		svc := &InstanceService{client: c, machineFactory: machine.NewMachineFactory()}
 
-		fastRequeue, err := svc.finalizeAfterMachineDeletion(context.Background(), instance, true)
-		require.NoError(t, err)
-		require.False(t, fastRequeue)
+		require.NoError(t, svc.finalizeAfterMachineDeletion(context.Background(), instance, true))
 		require.NotContains(t, instance.Finalizers, instancecommon.InstanceControllerFinalizer)
 
 		persisted := &deckhousev1alpha2.Instance{}
-		err = c.Get(context.Background(), types.NamespacedName{Name: instance.Name}, persisted)
+		err := c.Get(context.Background(), types.NamespacedName{Name: instance.Name}, persisted)
 		require.NoError(t, err)
 		require.NotContains(t, persisted.Finalizers, instancecommon.InstanceControllerFinalizer)
 	})

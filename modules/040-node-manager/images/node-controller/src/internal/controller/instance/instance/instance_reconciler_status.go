@@ -29,7 +29,7 @@ import (
 
 const instanceBashibleStatusFieldOwner = "node-controller-instance-bashible-status"
 
-func (s *InstanceService) reconcileBashibleStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+func (s *InstanceService) ReconcileBashibleStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	desiredStatus := bashibleStatusFromConditions(instance.Status.Conditions)
 	desiredMessage := messageFromConditions(instance.Status.Conditions)
 	if instance.Status.BashibleStatus == desiredStatus && instance.Status.Message == desiredMessage {

@@ -135,14 +135,26 @@ rules:
   - get
   - list
   - watch
-# Instance full access
+# Instance lifecycle and status reconciliation
 - apiGroups:
   - deckhouse.io
   resources:
   - instances
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - delete
+- apiGroups:
+  - deckhouse.io
+  resources:
   - instances/status
   verbs:
-  - "*"
+  - get
+  - patch
+  - update
 # ModuleConfig - read for validation (customTolerationKeys)
 - apiGroups:
   - deckhouse.io

@@ -35,16 +35,16 @@ const (
 	bashibleHeartbeatReason                   = "HeartBeat"
 	bashibleHeartbeatWaitingApprovalReason    = deckhousev1alpha2.InstanceConditionTypeWaitingApproval
 	bashibleHeartbeatWaitingDisruptionReason  = deckhousev1alpha2.InstanceConditionTypeWaitingDisruptionApproval
-	bashibleHeartbeatMessage                  = "No Bashible reconciliation for 10m"
-	bashibleHeartbeatWaitingApprovalMessage   = "No Bashible reconciliation for 5m: waiting for approval"
+	bashibleHeartbeatMessage                  = "No Bashible reconciliation for 5m"
+	bashibleHeartbeatWaitingApprovalMessage   = "No Bashible reconciliation for 20m: waiting for approval"
 	bashibleHeartbeatWaitingDisruptionMessage = "No Bashible reconciliation for 20m: waiting for disruption approval"
 
-	bashibleHeartbeatTimeout                  = 10 * time.Minute
+	bashibleHeartbeatTimeout                  = 5 * time.Minute
 	bashibleHeartbeatWaitingApprovalTimeout   = 20 * time.Minute
 	bashibleHeartbeatWaitingDisruptionTimeout = 20 * time.Minute
 )
 
-func (s *InstanceService) reconcileBashibleHeartbeat(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+func (s *InstanceService) ReconcileBashibleHeartbeat(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	desiredCondition, shouldPatch := desiredBashibleHeartbeatCondition(instance.Status.Conditions, time.Now())
 	if !shouldPatch {
 		return nil

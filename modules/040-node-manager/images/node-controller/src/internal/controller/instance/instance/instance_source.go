@@ -21,7 +21,6 @@ import deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/
 type instanceSourceType string
 
 const (
-	instanceSourceNone    instanceSourceType = ""
 	instanceSourceMachine instanceSourceType = "machine"
 	instanceSourceNode    instanceSourceType = "node"
 )
@@ -42,7 +41,7 @@ func getInstanceSource(instance *deckhousev1alpha2.Instance) instanceSource {
 
 	nodeName := instance.Spec.NodeRef.Name
 	if nodeName == "" {
-		return instanceSource{Type: instanceSourceNone}
+		return instanceSource{}
 	}
 
 	return instanceSource{

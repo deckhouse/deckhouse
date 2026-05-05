@@ -31,17 +31,12 @@ import (
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
-// MapObjectNameToInstance maps any object to a reconcile.Request for an Instance
-// with the same name. Used to trigger Instance reconcile when a linked Machine or Node changes.
 func MapObjectNameToInstance(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{
 		{NamespacedName: types.NamespacedName{Name: obj.GetName()}},
 	}
 }
 
-// StaticNodeEventPredicate filters Node events to only pass through events
-// for static (non-cloud-ephemeral) nodes, i.e. nodes without a CAPI machine annotation
-// and with type Static or CloudPermanent.
 func StaticNodeEventPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -76,8 +71,6 @@ func StaticNodeEventPredicate() predicate.Predicate {
 	}
 }
 
-// IsStaticNode returns true if the node is a static or cloud-permanent node
-// that is not managed by a CAPI Machine.
 func IsStaticNode(node *corev1.Node) bool {
 	if _, hasCAPIMachineAnnotation := node.Annotations[nodecommon.CAPIMachineAnnotation]; hasCAPIMachineAnnotation {
 		return false

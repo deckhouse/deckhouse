@@ -19,9 +19,7 @@ package instance
 import (
 	"context"
 
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
@@ -39,60 +37,13 @@ func NewInstanceService(c client.Client) *InstanceService {
 	}
 }
 
-func (s *InstanceService) ReconcileHeartbeat(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (bool, ctrl.Result, error) {
-	if err := s.reconcileBashibleHeartbeat(ctx, instance); err != nil {
-		return false, ctrl.Result{}, err
-	}
-	return false, ctrl.Result{}, nil
-}
-
-func (s *InstanceService) ReconcileBashibleStatus(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (bool, ctrl.Result, error) {
-	if err := s.reconcileBashibleStatus(ctx, instance); err != nil {
-		return false, ctrl.Result{}, err
-	}
-	return false, ctrl.Result{}, nil
-}
-
-func (s *InstanceService) ReconcileEnsureFinalizer(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (bool, ctrl.Result, error) {
-	log.FromContext(ctx).V(4).Info("tick", "op", "instance.reconcile.active")
-	if err := s.ensureInstanceFinalizer(ctx, instance); err != nil {
-		return false, ctrl.Result{}, err
-	}
-	return false, ctrl.Result{}, nil
-}
-
-func (s *InstanceService) ReconcileSourceExistence(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (bool, ctrl.Result, error) {
-	deleted, err := s.reconcileLinkedSourceExistence(ctx, instance)
-	if err != nil {
-		return false, ctrl.Result{}, err
-	}
-	if deleted {
-		return true, ctrl.Result{}, nil
-	}
-	return false, ctrl.Result{}, nil
-}
-
-// ReconcileFinalization runs the finalization flow for a deleting Instance.
-// Returns fastRequeue=true when the Machine deletion is in progress and we must wait.
-func (s *InstanceService) ReconcileFinalization(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (bool, error) {
+func (s *InstanceService) ReconcileFinalization(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
 	machineGone, err := s.reconcileLinkedMachineDeletion(ctx, instance)
 	if err != nil {
 		return false, err
 	}
-	return s.finalizeAfterMachineDeletion(ctx, instance, machineGone)
+	if err := s.finalizeAfterMachineDeletion(ctx, instance, machineGone); err != nil {
+		return false, err
+	}
+	return machineGone, nil
 }

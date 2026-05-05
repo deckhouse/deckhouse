@@ -29,24 +29,22 @@ import (
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 )
 
-// finalizeAfterMachineDeletion completes the finalization: waits for machine to be gone,
-// then removes the controller finalizer.
 func (s *InstanceService) finalizeAfterMachineDeletion(
 	ctx context.Context,
 	instance *deckhousev1alpha2.Instance,
 	machineGone bool,
-) (bool, error) {
+) error {
 	if !controllerutil.ContainsFinalizer(instance, instancecommon.InstanceControllerFinalizer) {
-		return false, nil
+		return nil
 	}
 	if !machineGone {
-		return true, nil
+		return nil
 	}
 
-	return false, s.removeInstanceFinalizer(ctx, instance)
+	return s.removeInstanceFinalizer(ctx, instance)
 }
 
-func (s *InstanceService) ensureInstanceFinalizer(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
+func (s *InstanceService) EnsureInstanceFinalizer(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	if controllerutil.ContainsFinalizer(instance, instancecommon.InstanceControllerFinalizer) {
 		return nil
 	}

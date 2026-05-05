@@ -122,7 +122,7 @@ func TestReconcileLinkedSourceExistence(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 			svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-			deleted, err := svc.reconcileLinkedSourceExistence(context.Background(), tc.instance)
+			deleted, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
 			require.NoError(t, err)
 			require.False(t, deleted)
 
@@ -192,7 +192,7 @@ func TestReconcileLinkedSourceExistenceDeletes(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 			svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-			deleted, err := svc.reconcileLinkedSourceExistence(context.Background(), tc.instance)
+			deleted, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
 			require.NoError(t, err)
 			require.True(t, deleted)
 
@@ -300,7 +300,7 @@ func TestReconcileLinkedSourceExistenceErrors(t *testing.T) {
 
 			svc := &InstanceService{client: fakeClient, machineFactory: tc.machineFactory}
 
-			deleted, err := svc.reconcileLinkedSourceExistence(context.Background(), tc.instance)
+			deleted, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
 			require.Error(t, err)
 			require.ErrorContains(t, err, tc.errorContains)
 			require.False(t, deleted)
@@ -328,7 +328,7 @@ func TestReconcileLinkedSourceExistenceErrors(t *testing.T) {
 
 		svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-		deleted, err := svc.reconcileLinkedSourceExistence(context.Background(), instance)
+		deleted, err := svc.ReconcileSourceExistence(context.Background(), instance)
 		require.Error(t, err)
 		require.False(t, deleted)
 
@@ -389,7 +389,7 @@ func TestReconcileLinkedSourceExistenceWithBothRefsUsesMachinePriority(t *testin
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 	svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-	deleted, err := svc.reconcileLinkedSourceExistence(context.Background(), instance)
+	deleted, err := svc.ReconcileSourceExistence(context.Background(), instance)
 	require.NoError(t, err)
 	require.True(t, deleted)
 
