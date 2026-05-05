@@ -23,13 +23,14 @@ import (
 
 	"gopkg.in/yaml.v2"
 
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
 )
 
 var (
