@@ -357,6 +357,8 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 		}
 
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-endChannel:
 			if len(resources) > 0 {
 				_ = log.ProcessCtx(ctx, "Create Resources", "Failed to create", func(ctx context.Context) error {
