@@ -74,6 +74,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --enable-metrics=true
         - --publish-service=d8-ingress-nginx/test-load-balancer
         - --shutdown-grace-period=120
         - --controller-class=ingress-nginx.deckhouse.io/nginx
@@ -93,6 +94,8 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
+        - name: VALIDATION_ISOLATION_MODE
+          value: NoIsolation
         image: registry.example.com@imageHash-ingressNginx-controller115
         lifecycle:
           preStop:
@@ -145,6 +148,14 @@ spec:
           seccompProfile:
             type: Unconfined
         volumeMounts:
+        - mountPath: /validation-chroot/tmp
+          name: validation-tmp
+        - mountPath: /validation-chroot/etc/ingress-controller
+          name: etc-ingress-controller
+          readOnly: true
+        - mountPath: /validation-chroot/etc/nginx/ssl/
+          name: secret-nginx-auth-tls
+          readOnly: true
         - mountPath: /chroot/etc/nginx/ssl/
           name: secret-nginx-auth-tls
           readOnly: true
@@ -255,6 +266,7 @@ spec:
             /etc/ingress-controller/ssl /etc/ingress-controller/lua /etc/ingress-controller/nginx \
             /etc/ingress-controller/resolv /etc/ingress-controller/geoip \
             /etc/ingress-controller/auth /etc/ingress-controller/telemetry \
+            /validation-chroot/tmp/nginx \
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /etc/ingress-controller/nginx/nginx.conf
@@ -278,6 +290,8 @@ spec:
           name: etc-ingress-controller
         - mountPath: /chroot/tmp
           name: tmp
+        - mountPath: /validation-chroot/tmp
+          name: validation-tmp
         - mountPath: /chroot/var/lib/nginx
           name: var-lib-nginx
         - mountPath: /chroot/var/log/nginx
@@ -298,6 +312,8 @@ spec:
       volumes:
       - emptyDir: {}
         name: tmp
+      - emptyDir: {}
+        name: validation-tmp
       - emptyDir: {}
         name: etc-ingress-controller
       - emptyDir: {}

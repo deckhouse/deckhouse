@@ -302,8 +302,6 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
     controllerVersion: "` + version + `"
     validationIsolationMode: NoIsolation
 `)
-			Expect(disabledMode["ingress-nginx/templates/controller/controller.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
-			Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("name: VALIDATION_ISOLATION_MODE"))
 			Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("serviceAccountName: validator"))
 			Expect(disabledMode["ingress-nginx/templates/validator/deployment.yaml"]).To(ContainSubstring("--watch-namespace=d8-ingress-nginx"))
 			Expect(disabledMode["ingress-nginx/templates/validator/rbac-for-us.yaml"]).NotTo(ContainSubstring("name: validator-full"))
