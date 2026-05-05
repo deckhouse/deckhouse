@@ -63,18 +63,20 @@ func (params TunnelParams) Validate() error {
 // StartTunnel opens an SSH reverse tunnel so the bootstrap target can reach the
 // local OCI bundle registry. Returns nil when skipped (non-local mode or standalone install).
 func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
+	nop := func() {}
+
 	if err := params.Validate(); err != nil {
-		return nil, err
+		return nop, err
 	}
 
 	if !params.MetaConfig.Registry.IsLocal() {
-		return nil, nil
+		return nop, nil
 	}
 
 	// Standalone (non-SSH) installs have no remote host to tunnel to.
 	wrapper, ok := params.Node.(*ssh.NodeInterfaceWrapper)
 	if !ok {
-		return nil, nil
+		return nop, nil
 	}
 
 	logger := params.Logger
@@ -82,7 +84,7 @@ func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 
 	tunnel := newTunnel(params.DirsConfig, wrapper.Client())
 	if err := tunnel.start(ctx); err != nil {
-		return nil, fmt.Errorf("start bundle registry tunnel: %w", err)
+		return nop, fmt.Errorf("start bundle registry tunnel: %w", err)
 	}
 
 	return func() {

@@ -47,20 +47,22 @@ func (params RegistryParams) Validate() error {
 // StartRegistry starts a local OCI bundle registry if the registry mode is Local.
 // Returns a StopRegistry function to gracefully shut down the registry, or nil if skipped.
 func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, error) {
+	nop := func() {}
+
 	if err := params.Validate(); err != nil {
-		return nil, err
+		return nop, err
 	}
 
 	isLocal, err := params.RegistryConfigProvider.IsLocal()
 	if err != nil {
-		return nil, err
+		return nop, err
 	}
 	if !isLocal {
-		return nil, nil
+		return nop, nil
 	}
 
 	if params.BundlePath == "" {
-		return nil, fmt.Errorf("cluster bootstrap requires --img-bundle-path option when registry mode is Local. Please use --img-bundle-path option to bootstrap the cluster")
+		return nop, fmt.Errorf("cluster bootstrap requires --img-bundle-path option when registry mode is Local. Please use --img-bundle-path option to bootstrap the cluster")
 	}
 
 	logger := params.Logger
@@ -68,7 +70,7 @@ func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, er
 
 	reg := newRegistry(params.BundlePath)
 	if err = reg.start(ctx, logger); err != nil {
-		return nil, fmt.Errorf("start bundle registry: %w", err)
+		return nop, fmt.Errorf("start bundle registry: %w", err)
 	}
 
 	return func() {
