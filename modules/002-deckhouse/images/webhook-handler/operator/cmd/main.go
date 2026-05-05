@@ -26,7 +26,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -56,7 +55,7 @@ const (
 	// This value should be low enough to minimize the delay between webhook registration
 	// and shell-operator becoming aware of the new hook, but high enough to avoid
 	// unnecessary restarts when multiple webhooks are created in quick succession.
-	// Can be overridden via SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS environment variable.
+	// Can be overridden via SHELL_OPERATOR_RELOAD_INTERVAL environment variable.
 	DefaultShellOperatorReloadInterval = 5 * time.Second
 )
 
@@ -263,9 +262,9 @@ func main() {
 	isReloadShellNeed.Store(false)
 
 	reloadInterval := DefaultShellOperatorReloadInterval
-	if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS"); envInterval != "" {
-		if seconds, err := strconv.Atoi(envInterval); err == nil && seconds > 0 {
-			reloadInterval = time.Duration(seconds) * time.Second
+	if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL"); envInterval != "" {
+		if parsedInterval, err := time.ParseDuration(envInterval); err == nil && parsedInterval > 0 {
+			reloadInterval = parsedInterval
 			logger.Info("using custom shell-operator reload interval", slog.Duration("interval", reloadInterval))
 		}
 	}
