@@ -27,6 +27,7 @@ TEST_PACKAGES := $(shell go list ./... | grep -Ev '/pkg/preflight(/|$$)')
 
 DHCTL_BIN_NAME=bin/dhctl
 MINGET_EMBED_PATH=pkg/minget/embed/minget
+ALT_BASE_IMAGES=../candi/alt_base_images.yml
 
 ADDITIONAL_BUILD_ARGS=
 DEV_IMAGES_DIGESTS=./pkg/config/digests/images_digests_dev.json
@@ -73,7 +74,7 @@ export PATH := $(abspath bin/):${PATH}
 
 INSTALLER_IMAGE_URL=dev-registry.deckhouse.io/sys/deckhouse-oss/install:main
 
-.PHONY : deps fmt lint build test all ci devenv devstop
+.PHONY : deps fmt lint build test all ci devenv devstop minget
 
 check-vars:
 	@[ "${DEFAULT_KUBERNETES_VERSION}" ] || ( echo "DEFAULT_KUBERNETES_VERSION is not set"; exit 1 )
@@ -132,7 +133,16 @@ prepare-minget-embed:
 		echo "Warning! /minget was not found, embedded minget will not be updated"; \
 	fi
 
-build: check-vars prepare-minget-embed
+.PHONY: minget
+minget:
+	@mkdir -p $(dir $(MINGET_EMBED_PATH))
+	@registry_path="$$(yq -r '.REGISTRY_PATH' $(ALT_BASE_IMAGES))"; \
+	digest="$$(yq -r '.minget' $(ALT_BASE_IMAGES))"; \
+	echo "Export minget from $$registry_path@$$digest"; \
+	crane export "$$registry_path@$$digest" | tar -xOf - usr/bin/minget > $(MINGET_EMBED_PATH); \
+	chmod +x $(MINGET_EMBED_PATH)
+
+build: check-vars minget
 	GOOS="$(OS)" GOARCH="$(GOARCH)" CGO_ENABLED=0 go build $(ADDITIONAL_BUILD_ARGS) -ldflags "-s -w -extldflags '-static' -X github.com/deckhouse/deckhouse/dhctl/pkg/config.RppSignCheck=$(RPP_SIGN_CHECK) -X github.com/deckhouse/deckhouse/dhctl/pkg/app.AppVersion=$(D8_VERSION) -X github.com/deckhouse/deckhouse/dhctl/pkg/config.DefaultKubernetesVersion=$(DEFAULT_KUBERNETES_VERSION)" -o $(DHCTL_BIN_NAME) ./cmd/dhctl
 
 build/test/check-digests:

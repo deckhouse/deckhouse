@@ -76,11 +76,6 @@ groups:
     description:
       en: "Proxy for registry packages `registry-packages-proxy`"
       ru: "Прокси для пакетов registry `registry-packages-proxy`"
-  - ports: "4282"
-    protocol: TCP
-    description:
-      en: "Bootstrap endpoint for downloading `rpp-get` from `registry-packages-proxy`"
-      ru: "Bootstrap endpoint для скачивания `rpp-get` из `registry-packages-proxy`"
   - ports: "4222"
     protocol: TCP
     description:
@@ -387,6 +382,11 @@ groups:
     description:
       en: "`virtualization` USB over IP (usb/ip) protocol for sharing USB devices between cluster nodes"
       ru: "Протокол USB over IP (usb/ip) модуля `virtualization` для проброса USB-устройств между узлами кластера"
+  - ports: "4282"
+    protocol: TCP
+    description:
+      en: "Bootstrap endpoint for downloading `rpp-get` from `registry-packages-proxy`"
+      ru: "Bootstrap endpoint для скачивания `rpp-get` из `registry-packages-proxy`"
   - ports: "4286"
     protocol: TCP
     description:

@@ -23,7 +23,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -345,10 +344,10 @@ func (h *rppBinaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	digest, ok := singleQueryValue(r.URL.Query(), "digest")
-	if !ok {
-		h.logger.Warnf("rpp-get request from client %s has invalid query %q", requestIP, r.URL.RawQuery)
-		http.Error(w, "missing digest", http.StatusBadRequest)
+	digest := r.URL.Query().Get("digest")
+	if digest == "" {
+		h.logger.Warnf("rpp-get request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
+		http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
 		return
 	}
 
@@ -409,15 +408,6 @@ func (h *rppBinaryHandler) writeBinaryResponse(w http.ResponseWriter, binary []b
 	if _, err := w.Write(binary); err != nil {
 		h.logger.Errorf("write %s response: %v", h.binaryName, err)
 	}
-}
-
-func singleQueryValue(query url.Values, name string) (string, bool) {
-	values, ok := query[name]
-	if !ok || len(query) != 1 || len(values) != 1 || values[0] == "" {
-		return "", false
-	}
-
-	return values[0], true
 }
 
 func normalizeBootstrapClusterUUID(clusterUUID string) string {
