@@ -21,50 +21,68 @@ import (
 	"strings"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
+	"github.com/deckhouse/lib-connection/pkg/ssh"
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
+// TunnelParams holds dependencies required to establish the SSH reverse tunnel.
 type TunnelParams struct {
-	DirectoryConfig *directoryconfig.DirectoryConfig
-	LoggerProvider  log.LoggerProvider
-	SSHClient       libcon.SSHClient
+	MetaConfig *config.MetaConfig
+	Node       libcon.Interface
+	Logger     log.Logger
+	DirsConfig *directoryconfig.DirectoryConfig
 }
 
 func (params TunnelParams) Validate() error {
-	if params.DirectoryConfig == nil {
-		return fmt.Errorf("directory config is required")
+	if params.MetaConfig == nil {
+		return fmt.Errorf("internal error: meta config is required")
 	}
 
-	if params.LoggerProvider == nil {
-		return fmt.Errorf("logger provider is required")
+	if params.Node == nil {
+		return fmt.Errorf("internal error: node client is required")
 	}
 
-	if params.SSHClient == nil {
-		return fmt.Errorf("ssh client is required")
+	if params.Logger == nil {
+		return fmt.Errorf("internal error: logger is required")
+	}
+
+	if params.DirsConfig == nil {
+		return fmt.Errorf("internal error: directory config is required")
 	}
 
 	return nil
 }
 
-type StopTunnel func()
-
+// StartTunnel opens an SSH reverse tunnel so the bootstrap target can reach the
+// local OCI bundle registry. Returns nil when skipped (non-local mode or standalone install).
 func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	if err := params.Validate(); err != nil {
 		return nil, err
 	}
 
-	logger := params.LoggerProvider()
-	tunnel := newTunnel(params.DirectoryConfig, params.SSHClient)
+	if !params.MetaConfig.Registry.IsLocal() {
+		return nil, nil
+	}
 
+	// Standalone (non-SSH) installs have no remote host to tunnel to.
+	wrapper, ok := params.Node.(*ssh.NodeInterfaceWrapper)
+	if !ok {
+		return nil, nil
+	}
+
+	logger := params.Logger
 	logger.DebugF("Up bundle registry tunnel...")
+
+	tunnel := newTunnel(params.DirsConfig, wrapper.Client())
 	if err := tunnel.start(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("start bundle registry tunnel: %w", err)
 	}
 
 	return func() {
@@ -74,6 +92,7 @@ func StartTunnel(ctx context.Context, params TunnelParams) (StopTunnel, error) {
 	}, nil
 }
 
+// newTunnel creates a Tunnel pre-configured with the bundle-specific scheme, address, and port.
 func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl libcon.SSHClient) *Tunnel {
 	return &Tunnel{
 		dc:      dc,
@@ -84,6 +103,7 @@ func newTunnel(dc *directoryconfig.DirectoryConfig, sshCl libcon.SSHClient) *Tun
 	}
 }
 
+// Tunnel manages the SSH reverse tunnel lifecycle for the bundle registry.
 type Tunnel struct {
 	dc      *directoryconfig.DirectoryConfig
 	sshCl   libcon.SSHClient
@@ -114,7 +134,8 @@ func (t *Tunnel) start(ctx context.Context) error {
 	checker := utils.NewRunScriptReverseTunnelChecker(t.sshCl, checkingScript)
 	killer := utils.NewRunScriptReverseTunnelKiller(t.sshCl, killScript)
 
-	// SSH reverse tunnel format: remoteHost:remotePort:localHost:localPort
+	// remoteBindAddress:remotePort:localHost:localPort — binds on the same host/port on both
+	// ends so that the remote side can reach the local registry at the same address it expects.
 	addr := fmt.Sprintf("%s:%s:%s:%s", t.address, t.port, t.address, t.port)
 
 	tun := t.sshCl.ReverseTunnel(addr)

@@ -64,7 +64,13 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 	if err := checkDirs(); err != nil {
 		// download and init schemaStore
 		// get registry setting first
-		remoteData, err := fetchRegistryRemoteData(paths)
+		provider, err := RegistryConfigProvider(func() ([]string, error) {
+			return FetchDocuments(paths)
+		})
+		if err != nil {
+			return nil, err
+		}
+		remoteData, err := provider.RemoteData()
 		if err != nil {
 			return nil, err
 		}
@@ -469,33 +475,7 @@ func checkDirs() error {
 	return nil
 }
 
-func IsRegistryModeLocal(docsPaths []string) (bool, error) {
-	docs, err := fetchDocuments(docsPaths)
-	if err != nil {
-		return false, err
-	}
-
-	initConfig, deckhouseSettings, err := fetchRegistryConfigs(docs)
-	if err != nil {
-		return false, err
-	}
-	return registry.IsLocalBootstrapMode(initConfig, deckhouseSettings)
-}
-
-func fetchRegistryRemoteData(docsPaths []string) (registry.Data, error) {
-	docs, err := fetchDocuments(docsPaths)
-	if err != nil {
-		return registry.Data{}, err
-	}
-
-	initConfig, deckhouseSettings, err := fetchRegistryConfigs(docs)
-	if err != nil {
-		return registry.Data{}, err
-	}
-	return registry.BootstrapRemoteData(initConfig, deckhouseSettings)
-}
-
-func fetchDocuments(paths []string) ([]string, error) {
+func FetchDocuments(paths []string) ([]string, error) {
 	content := ""
 	for _, path := range paths {
 		if strings.Contains(path, "*") {
@@ -521,7 +501,12 @@ func fetchDocuments(paths []string) ([]string, error) {
 	return docs, nil
 }
 
-func fetchRegistryConfigs(docs []string) (*initconfig.Config, *moduleconfig.DeckhouseSettings, error) {
+func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.ConfigProvider, error) {
+	docs, err := docsFetcher()
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		initConfig        *initconfig.Config
 		deckhouseSettings *moduleconfig.DeckhouseSettings
@@ -530,7 +515,7 @@ func fetchRegistryConfigs(docs []string) (*initconfig.Config, *moduleconfig.Deck
 	for _, doc := range docs {
 		var parsed map[string]interface{}
 		if err := yaml.Unmarshal([]byte(doc), &parsed); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		kind, ok := getNestedKeyValue[string](parsed, []string{"kind"})
@@ -543,7 +528,7 @@ func fetchRegistryConfigs(docs []string) (*initconfig.Config, *moduleconfig.Deck
 			ret, err := registry.ParsYAMLInitConfig([]byte(doc))
 
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
 			initConfig = ret
@@ -556,13 +541,13 @@ func fetchRegistryConfigs(docs []string) (*initconfig.Config, *moduleconfig.Deck
 
 			ret, err := registry.ParsYAMLDeckhouseMC([]byte(doc))
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
 			deckhouseSettings = ret
 		}
 	}
-	return initConfig, deckhouseSettings, nil
+	return registry.NewConfigProvider(initConfig, deckhouseSettings), nil
 }
 
 func prepareCandiDir(ctx context.Context, conf *image.RegistryConfig, dc *directoryconfig.DirectoryConfig) error {

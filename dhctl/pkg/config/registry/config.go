@@ -52,41 +52,47 @@ func errNonStaticClusterMode(mode constant.ModeType) error {
 	)
 }
 
-// IsLocalBootstrapMode returns true when the bootstrap registry mode is Local.
+func NewConfigProvider(init *init_config.Config, deckhouseSettings *module_config.DeckhouseSettings) *ConfigProvider {
+	return &ConfigProvider{
+		initConfig:        init,
+		deckhouseSettings: deckhouseSettings,
+	}
+}
+
+type ConfigProvider struct {
+	initConfig        *init_config.Config
+	deckhouseSettings *module_config.DeckhouseSettings
+}
+
+// IsLocal returns true when the bootstrap registry mode is Local.
 // It is used only for preliminary registry information retrieval.
-func IsLocalBootstrapMode(
-	initConfig *init_config.Config,
-	deckhouseSettings *module_config.DeckhouseSettings,
-) (bool, error) {
+func (p *ConfigProvider) IsLocal() (bool, error) {
 	switch {
-	case initConfig != nil && deckhouseSettings != nil:
+	case p.initConfig != nil && p.deckhouseSettings != nil:
 		return false, errDuplicateConfig()
 
-	case deckhouseSettings != nil:
-		return deckhouseSettings.Mode == constant.ModeLocal, nil
+	case p.deckhouseSettings != nil:
+		return p.deckhouseSettings.Mode == constant.ModeLocal, nil
 	}
 	return false, nil
 }
 
-// BootstrapRemoteData returns the remote registry Data derived from the provided configuration.
+// RemoteData returns the remote registry Data derived from the provided configuration.
 // It is used only for preliminary registry information retrieval.
-func BootstrapRemoteData(
-	initConfig *init_config.Config,
-	deckhouseSettings *module_config.DeckhouseSettings,
-) (Data, error) {
+func (p *ConfigProvider) RemoteData() (Data, error) {
 	var config Config
 
 	switch {
-	case initConfig != nil && deckhouseSettings != nil:
+	case p.initConfig != nil && p.deckhouseSettings != nil:
 		return Data{}, errDuplicateConfig()
 
-	case deckhouseSettings != nil:
-		if err := config.useDeckhouseSettings(*deckhouseSettings); err != nil {
+	case p.deckhouseSettings != nil:
+		if err := config.useDeckhouseSettings(*p.deckhouseSettings); err != nil {
 			return Data{}, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
 
-	case initConfig != nil:
-		if err := config.useInitConfig(*initConfig); err != nil {
+	case p.initConfig != nil:
+		if err := config.useInitConfig(*p.initConfig); err != nil {
 			return Data{}, fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
 		}
 
@@ -99,54 +105,44 @@ func BootstrapRemoteData(
 	return config.Settings.RemoteData, nil
 }
 
-// BootstrapConfig builds a full registry Config from the provided configuration sources.
-func BootstrapConfig(
-	initConfig *init_config.Config,
-	deckhouseSettings *module_config.DeckhouseSettings,
-	defaultCRI constant.CRIType,
-	isStatic bool,
-) (Config, error) {
+// MetaConfig builds a full registry MetaConfig from the provided configuration sources.
+func (p *ConfigProvider) MetaConfig(defaultCRI constant.CRIType, isStatic bool) (Config, error) {
+	var config Config
+
 	criSupported := constant.IsCRISupported(defaultCRI)
 
 	switch {
-	case initConfig != nil && deckhouseSettings != nil:
+	case p.initConfig != nil && p.deckhouseSettings != nil:
 		return Config{}, errDuplicateConfig()
 
-	case deckhouseSettings != nil:
+	case p.deckhouseSettings != nil:
 		if !criSupported {
 			return Config{}, errUnsupportedCRI(defaultCRI)
 		}
 
-		switch deckhouseSettings.Mode {
+		switch p.deckhouseSettings.Mode {
 		case constant.ModeProxy, constant.ModeLocal:
 			if !isStatic {
-				return Config{}, errNonStaticClusterMode(deckhouseSettings.Mode)
+				return Config{}, errNonStaticClusterMode(p.deckhouseSettings.Mode)
 			}
 		}
 
-		config := Config{}
-
-		if err := config.useDeckhouseSettings(*deckhouseSettings); err != nil {
-			return config, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+		if err := config.useDeckhouseSettings(*p.deckhouseSettings); err != nil {
+			return Config{}, fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
 		}
-		return config, nil
 
-	case initConfig != nil:
-		config := Config{}
-
-		if err := config.useInitConfig(*initConfig); err != nil {
-			return config, fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+	case p.initConfig != nil:
+		if err := config.useInitConfig(*p.initConfig); err != nil {
+			return Config{}, fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
 		}
-		return config, nil
 
 	default:
-		config := Config{}
-
 		if err := config.useDefault(criSupported); err != nil {
-			return config, fmt.Errorf("get default registry settings: %w", err)
+			return Config{}, fmt.Errorf("get default registry settings: %w", err)
 		}
-		return config, nil
 	}
+
+	return config, nil
 }
 
 type Config struct {
@@ -231,6 +227,10 @@ func (c *Config) Process(deckhouseSettings module_config.DeckhouseSettings, lega
 	}
 
 	return nil
+}
+
+func (c *Config) IsLocal() bool {
+	return c.Settings.Mode == constant.ModeLocal
 }
 
 // Manifest creates a ManifestBuilder instance for generating configuration manifests.

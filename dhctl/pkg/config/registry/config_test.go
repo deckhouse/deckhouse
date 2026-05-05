@@ -467,7 +467,7 @@ func TestIsLocalBootstrapMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			isLocal, err := IsLocalBootstrapMode(tt.input.initConfig, tt.input.deckhouseSettings)
+			isLocal, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings).IsLocal()
 
 			if tt.output.err {
 				require.Error(t, err)
@@ -550,7 +550,7 @@ func TestBootstrapRemoteData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data, err := BootstrapRemoteData(tt.input.initConfig, tt.input.deckhouseSettings)
+			data, err := NewConfigProvider(tt.input.initConfig, tt.input.deckhouseSettings).RemoteData()
 
 			if tt.output.err {
 				require.Error(t, err)
@@ -715,9 +715,10 @@ func TestBootstrapConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := BootstrapConfig(
+			config, err := NewConfigProvider(
 				tt.input.initConfig,
 				tt.input.deckhouseSettings,
+			).MetaConfig(
 				tt.input.defaultCRI,
 				tt.input.isStatic,
 			)

@@ -202,12 +202,14 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
-	registry, err := registry_config.BootstrapConfig(
+	registry, err := registry.NewConfigProvider(
 		initConfig,
 		deckhouseSettings,
+	).MetaConfig(
 		defaultCRI,
 		m.IsStatic(),
 	)
+
 	if err == nil {
 		m.Registry = registry
 	}

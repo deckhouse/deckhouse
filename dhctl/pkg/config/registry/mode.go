@@ -79,10 +79,6 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 	}
 }
 
-func (s ModeSettings) IsLocal() bool {
-	return s.Mode == constant.ModeLocal
-}
-
 func (s ModeSettings) ToModel() ModeModel {
 	switch s.Mode {
 	case constant.ModeDirect:

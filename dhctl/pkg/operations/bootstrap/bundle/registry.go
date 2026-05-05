@@ -26,36 +26,49 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
+// RegistryParams holds dependencies required to start the bundle registry.
 type RegistryParams struct {
-	BundlePath     string
-	LoggerProvider log.LoggerProvider
+	Logger                 log.Logger
+	RegistryConfigProvider RegistryConfigProvider
+	BundlePath             string
 }
 
 func (params RegistryParams) Validate() error {
-	if params.BundlePath == "" {
-		return fmt.Errorf("bundle path is required")
+	if params.Logger == nil {
+		return fmt.Errorf("internal error: logger is required")
 	}
 
-	if params.LoggerProvider == nil {
-		return fmt.Errorf("logger provider is required")
+	if params.RegistryConfigProvider == nil {
+		return fmt.Errorf("internal error: registry config provider is required")
 	}
-
 	return nil
 }
 
-type StopRegistry func()
-
+// StartRegistry starts a local OCI bundle registry if the registry mode is Local.
+// Returns a StopRegistry function to gracefully shut down the registry, or nil if skipped.
 func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, error) {
 	if err := params.Validate(); err != nil {
 		return nil, err
 	}
 
-	logger := params.LoggerProvider()
+	isLocal, err := params.RegistryConfigProvider.IsLocal()
+	if err != nil {
+		return nil, err
+	}
+	if !isLocal {
+		return nil, nil
+	}
+
+	if params.BundlePath == "" {
+		return nil, fmt.Errorf("cluster bootstrap requires --img-bundle-path option when registry mode is Local. Please use --img-bundle-path option to bootstrap the cluster")
+	}
+
+	logger := params.Logger
 	logger.DebugF("Up bundle registry...")
 
 	reg := newRegistry(params.BundlePath)
-	if err := reg.start(ctx, logger); err != nil {
-		return nil, err
+	if err = reg.start(ctx, logger); err != nil {
+		return nil, fmt.Errorf("start bundle registry: %w", err)
 	}
 
 	return func() {
@@ -68,6 +81,7 @@ func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, er
 	}, nil
 }
 
+// newRegistry creates a Registry pre-configured with the bundle-specific address and repo path.
 func newRegistry(bundlePath string) *Registry {
 	return &Registry{
 		repoPath:   constant.BundleRepoPath,
@@ -76,6 +90,7 @@ func newRegistry(bundlePath string) *Registry {
 	}
 }
 
+// Registry wraps the OCI bundle and its HTTP registry server lifecycle.
 type Registry struct {
 	repoPath   string
 	address    string

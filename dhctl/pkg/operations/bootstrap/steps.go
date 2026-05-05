@@ -32,7 +32,6 @@ import (
 	"github.com/name212/govalue"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
-	"github.com/deckhouse/lib-connection/pkg/ssh"
 	dhctllog "github.com/deckhouse/lib-dhctl/pkg/log"
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
@@ -145,22 +144,19 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	// Bundle registry tunnel
-	if cfg.Registry.Settings.IsLocal() {
-		if wrapper, ok := params.Node.(*ssh.NodeInterfaceWrapper); ok {
-			stop, err := bundle.StartTunnel(ctx, bundle.TunnelParams{
-				SSHClient:       wrapper.Client(),
-				LoggerProvider:  params.LoggerProvider,
-				DirectoryConfig: dc,
-			})
-
-			if err != nil {
-				return fmt.Errorf("Start bundle registry tunnel: %w", err)
-			}
-
-			defer stop()
-		}
+	bundleRegistryTunnelStop, err := bundle.StartTunnel(ctx, bundle.TunnelParams{
+		MetaConfig: cfg,
+		Node:       params.Node,
+		Logger:     params.LoggerProvider(),
+		DirsConfig: dc,
+	},
+	)
+	if err != nil {
+		return err
 	}
+	defer bundleRegistryTunnelStop()
 
+	// RPP + RPP tunnel
 	registryPackagesProxyCleanup, err := rpp.Init(ctx, rpp.InitParams{
 		MetaConfig:     cfg,
 		Node:           nodeInterface,

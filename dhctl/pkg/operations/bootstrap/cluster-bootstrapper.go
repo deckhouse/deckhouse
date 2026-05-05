@@ -238,25 +238,25 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		app.ConfigPaths = append(app.ConfigPaths, app.ResourcesPath)
 	}
 
-	// Bundle registry shoud run before LoadConfigFromFile
-	isLocal, err := config.IsRegistryModeLocal(app.ConfigPaths)
+	registryConfigProvider, err := config.RegistryConfigProvider(func() ([]string, error) {
+		return config.FetchDocuments(app.ConfigPaths)
+	})
 	if err != nil {
 		return err
 	}
-	if isLocal {
-		if app.ImgBundlePath == "" {
-			return fmt.Errorf("Cluster bootstrap requires --img-bundle-path option when registry mode is Local. Please use --img-bundle-path option to bootstrap the cluster")
-		}
 
-		stop, err := bundle.StartRegistry(ctx, bundle.RegistryParams{
-			BundlePath:     app.ImgBundlePath,
-			LoggerProvider: b.loggerProvider,
-		})
-		if err != nil {
-			return fmt.Errorf("Start bundle registry: %w", err)
-		}
-		defer stop()
+	// Bundle registry shoud run before LoadConfigFromFile
+	stop, err := bundle.StartRegistry(ctx,
+		bundle.RegistryParams{
+			Logger:                 b.loggerProvider(),
+			RegistryConfigProvider: registryConfigProvider,
+			BundlePath:             app.ImgBundlePath,
+		},
+	)
+	if err != nil {
+		return err
 	}
+	defer stop()
 
 	// first, parse and check cluster config
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)

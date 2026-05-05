@@ -18,6 +18,8 @@ import (
 	"github.com/deckhouse/lib-dhctl/pkg/log"
 )
 
+// logger is a thin adapter over log.Logger that adds an optional prefix and
+// the ability to demote Info-level messages to Debug (used for verbose registry output).
 type logger struct {
 	logger      log.Logger
 	prefix      string
@@ -49,13 +51,13 @@ func (l *logger) Errorf(format string, args ...any) {
 }
 
 func (l *logger) WithPrefix(prefix string) *logger {
-	l.prefix = prefix
-	return l
+	return &logger{logger: l.logger, prefix: prefix, infoAsDebug: l.infoAsDebug}
 }
 
+// WithInfoAsDebug returns a logger that routes Infof calls to DebugF, keeping
+// verbose registry-server output out of the default user-visible log level.
 func (l *logger) WithInfoAsDebug() *logger {
-	l.infoAsDebug = true
-	return l
+	return &logger{logger: l.logger, prefix: l.prefix, infoAsDebug: true}
 }
 
 func (l *logger) prefixed(format string) string {
