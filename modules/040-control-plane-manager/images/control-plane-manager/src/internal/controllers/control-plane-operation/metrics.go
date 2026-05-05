@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"time"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
-
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 const (

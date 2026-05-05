@@ -22,11 +22,6 @@ import (
 	"testing"
 	"time"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/checksum"
-	"control-plane-manager/internal/constants"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +32,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
+	"control-plane-manager/internal/constants"
 )
 
 var scheme = runtime.NewScheme()

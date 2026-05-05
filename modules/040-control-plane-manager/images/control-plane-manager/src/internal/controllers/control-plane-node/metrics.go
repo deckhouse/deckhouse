@@ -20,11 +20,11 @@ import (
 	"errors"
 	"fmt"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/collectors"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/options"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 )
 
 const (

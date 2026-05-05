@@ -104,9 +104,9 @@ func newApprover(nodes nodeCounts, operations []controlplanev1alpha1.ControlPlan
 	}
 }
 
-func partitionOperationsByApprovalState(operations []controlplanev1alpha1.ControlPlaneOperation) (approvedOperations, unapprovedOperations []controlplanev1alpha1.ControlPlaneOperation) {
-	approvedOperations = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
-	unapprovedOperations = make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
+func partitionOperationsByApprovalState(operations []controlplanev1alpha1.ControlPlaneOperation) ([]controlplanev1alpha1.ControlPlaneOperation, []controlplanev1alpha1.ControlPlaneOperation) {
+	approvedOperations := make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
+	unapprovedOperations := make([]controlplanev1alpha1.ControlPlaneOperation, 0, len(operations))
 
 	for _, operation := range operations {
 		if operation.Spec.Approved && !operation.IsTerminal() {

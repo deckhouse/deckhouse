@@ -22,11 +22,11 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Compile-time checks.
@@ -236,9 +236,9 @@ func syncFullManifest(component controlplanev1alpha1.OperationComponent, secretD
 		return nil, fmt.Errorf("write manifest: %w", err)
 	}
 
-	results := append(extraResults, manifestResult)
-	results = append(results, removeStaleExtraFiles(component, secretData, constants.ExtraFilesPath)...)
-	return results, nil
+	extraResults = append(extraResults, manifestResult)
+	extraResults = append(extraResults, removeStaleExtraFiles(component, secretData, constants.ExtraFilesPath)...)
+	return extraResults, nil
 }
 
 // syncAnnotationsOnly patches checksum annotations on the existing manifest without rewriting the template.

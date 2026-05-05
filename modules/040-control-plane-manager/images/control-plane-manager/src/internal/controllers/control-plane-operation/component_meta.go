@@ -19,11 +19,11 @@ package controlplaneoperation
 import (
 	"sort"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/checksum"
-
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
 )
 
 // componentDependencies holds the dependencies for control plane component as runtime configuration files.

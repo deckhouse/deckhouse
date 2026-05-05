@@ -18,15 +18,17 @@ package controlplaneoperation
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
+	"github.com/pmezard/go-difflib/difflib"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/pmezard/go-difflib/difflib"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 func saveDiffResults(component controlplanev1alpha1.OperationComponent, operationName string, results []fileWriteResult, logger *log.Logger) {
@@ -36,7 +38,7 @@ func saveDiffResults(component controlplanev1alpha1.OperationComponent, operatio
 			continue
 		}
 		if err := saveDiff(component, operationName, res); err != nil {
-			logger.Warn("failed to save diff", log.Err(err), "file", res.Path)
+			logger.Warn("failed to save diff", log.Err(err), slog.String("file", res.Path))
 		}
 	}
 }

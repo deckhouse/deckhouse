@@ -17,10 +17,10 @@ limitations under the License.
 package controlplaneoperation
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type checksumAnnotations struct {

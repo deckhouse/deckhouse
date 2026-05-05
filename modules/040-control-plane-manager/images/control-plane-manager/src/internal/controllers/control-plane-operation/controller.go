@@ -22,13 +22,6 @@ import (
 	"log/slog"
 	"time"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/checksum"
-	"control-plane-manager/internal/constants"
-
-	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
-	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +36,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/checksum"
+	"control-plane-manager/internal/constants"
 )
 
 const (
@@ -122,6 +123,9 @@ func Register(mgr manager.Manager, metricsStorage metricsstorage.Storage) error 
 		Complete(r)
 }
 
+// keep named return to log deferred reconcile result
+//
+//nolint:nonamedreturns
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (result reconcile.Result, err error) {
 	logger := r.log.With(slog.String("operation", req.Name))
 

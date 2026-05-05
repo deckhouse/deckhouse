@@ -21,11 +21,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 )
 
 type ClusterSecrets struct {
@@ -85,6 +86,9 @@ func (r *Reconciler) reconcilePipeline(ctx context.Context, state *controlplanev
 // executeStep runs a single pipeline step with status tracking and start/finish logging.
 // executeStep is the only writer of step-level conditions: steps describe the outcome
 // via StepResult and leave condition updates to the pipeline.
+// keep named return to recover and update deferred step result
+//
+//nolint:nonamedreturns
 func (r *Reconciler) executeStep(ctx context.Context, state *controlplanev1alpha1.OperationState, name controlplanev1alpha1.StepName, step Step, env *StepEnv, logger *log.Logger) (result reconcile.Result, err error) {
 	stepLogger := logger.With(slog.String("step", string(name)))
 	var res StepResult

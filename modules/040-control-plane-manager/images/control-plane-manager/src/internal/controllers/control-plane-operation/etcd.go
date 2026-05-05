@@ -24,14 +24,14 @@ import (
 	"path/filepath"
 	"time"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
-
 	pkiconstants "github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/etcd"
 	etcdclient "github.com/deckhouse/deckhouse/go_lib/controlplane/etcd/client"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 const (

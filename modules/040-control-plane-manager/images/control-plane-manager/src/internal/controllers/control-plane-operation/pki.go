@@ -23,10 +23,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"control-plane-manager/internal/constants"
-
 	pkiconstants "github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/pki"
+
+	"control-plane-manager/internal/constants"
 )
 
 // infrastructure CA files mapping
@@ -70,7 +70,7 @@ type PKIParams struct {
 	ServiceSubnetCIDR string
 	PKIDir            string
 
-	ApiServerCertSANs   []string
+	APIServerCertSANs   []string
 	EncryptionAlgorithm string
 }
 
@@ -91,7 +91,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 				params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 				pki.WithPKIDir(params.PKIDir),
 				pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-				pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
+				pki.WithAPIServerCertSANs(params.APIServerCertSANs),
 				pki.WithCertTreeScheme(certTree),
 			)
 		}
@@ -99,7 +99,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 			params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 			pki.WithPKIDir(params.PKIDir),
 			pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-			pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
+			pki.WithAPIServerCertSANs(params.APIServerCertSANs),
 		)
 	}
 
@@ -108,7 +108,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 			params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 			pki.WithPKIDir(params.PKIDir),
 			pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-			pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
+			pki.WithAPIServerCertSANs(params.APIServerCertSANs),
 			pki.WithEncryptionAlgorithmType(pkiconstants.EncryptionAlgorithmType(params.EncryptionAlgorithm)),
 			pki.WithCertTreeScheme(certTree),
 		)
@@ -117,7 +117,7 @@ func renewCertsIfNeeded(params PKIParams, certTree map[pki.RootCertName][]pki.Le
 		params.NodeName, params.ClusterDomain, ip, params.ServiceSubnetCIDR,
 		pki.WithPKIDir(params.PKIDir),
 		pki.WithControlPlaneEndpoint(constants.LocalControlPlaneEndpoint),
-		pki.WithAPIServerCertSANs(params.ApiServerCertSANs),
+		pki.WithAPIServerCertSANs(params.APIServerCertSANs),
 		pki.WithEncryptionAlgorithmType(pkiconstants.EncryptionAlgorithmType(params.EncryptionAlgorithm)),
 	)
 }
@@ -132,7 +132,7 @@ func parsePKIParams(pkiDir string, secretData map[string][]byte, node NodeIdenti
 	}
 
 	if sans, ok := secretData[constants.SecretKeyCertSANs]; ok && len(sans) > 0 {
-		params.ApiServerCertSANs = strings.Split(string(sans), ",")
+		params.APIServerCertSANs = strings.Split(string(sans), ",")
 	}
 
 	if algo, ok := secretData[constants.SecretKeyEncryptionAlgorithm]; ok && len(algo) > 0 {

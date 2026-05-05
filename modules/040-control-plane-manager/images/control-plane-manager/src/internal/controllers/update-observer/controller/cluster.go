@@ -128,7 +128,7 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 	var needRetry bool
 
 	if unhealthyPods > 0 {
-		logger.Warn("Pod readiness check failed", "unhealthyPods", unhealthyPods)
+		logger.Warn("Pod readiness check failed", "unhealthy_pods", unhealthyPods)
 		needRetry = true
 	}
 

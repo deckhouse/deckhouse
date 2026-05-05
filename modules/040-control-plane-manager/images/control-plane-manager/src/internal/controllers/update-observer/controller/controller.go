@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
@@ -34,6 +33,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"control-plane-manager/internal/controllers/update-observer/cluster"
 	"control-plane-manager/internal/controllers/update-observer/common"

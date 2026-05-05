@@ -18,13 +18,14 @@ package main
 
 import (
 	"context"
-	"control-plane-manager/internal"
-	"control-plane-manager/internal/constants"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"control-plane-manager/internal"
+	"control-plane-manager/internal/constants"
 )
 
 func main() {

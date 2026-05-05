@@ -35,7 +35,7 @@ func rotateDirectories(dir string, keep int) error {
 		return fmt.Errorf("read dir: %w", err)
 	}
 
-	var dirs []timedDirEntry
+	dirs := make([]timedDirEntry, 0, len(entries))
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue

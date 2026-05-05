@@ -23,11 +23,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
-
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 type fileWriteResult struct {
@@ -136,7 +136,7 @@ func removeStaleExtraFiles(component controlplanev1alpha1.OperationComponent, se
 	if len(keys) == 0 {
 		return nil
 	}
-	var results []fileWriteResult
+	results := make([]fileWriteResult, 0, len(keys))
 	for _, key := range keys {
 		if _, exists := secretData[key]; exists {
 			continue

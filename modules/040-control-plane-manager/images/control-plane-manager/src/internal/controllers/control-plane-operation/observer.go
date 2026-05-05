@@ -24,12 +24,13 @@ import (
 	"os"
 	"path/filepath"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 // readCertExpiration reads a PEM certificate file and returns its NotAfter time.
@@ -83,7 +84,7 @@ func readKubeconfigCertExpiration(kubeconfigPath string) (metav1.Time, error) {
 }
 
 // observeCertExpirationsForStaticPod reads leaf cert and kubeconfig client cert expirations for one static pod component.
-func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, kubeconfigDir string, logger *log.Logger) (state controlplanev1alpha1.ObservedComponentState, ok bool) {
+func observeCertExpirationsForStaticPod(component controlplanev1alpha1.OperationComponent, kubeconfigDir string, logger *log.Logger) (controlplanev1alpha1.ObservedComponentState, bool) {
 	if !component.IsStaticPodComponent() {
 		return controlplanev1alpha1.ObservedComponentState{}, false
 	}

@@ -24,10 +24,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/internal/constants"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // backupStep creates a per-component backup of files.
@@ -82,7 +82,8 @@ func (c *backupStep) Execute(_ context.Context, env *StepEnv, logger *log.Logger
 // Static pod manifest, leaf certs, CA, kubeconfigs, extra files.
 func backupFilesForComponent(component controlplanev1alpha1.OperationComponent, kubeconfigDir string) []string {
 	deps := componentDeps(component)
-	var files []string
+	// Capacity is derived from several conditional groups; prealloc makes this harder to read.
+	var files []string //nolint:prealloc
 
 	if name := component.PodComponentName(); name != "" {
 		files = append(files, filepath.Join(constants.ManifestsPath, name+".yaml"))

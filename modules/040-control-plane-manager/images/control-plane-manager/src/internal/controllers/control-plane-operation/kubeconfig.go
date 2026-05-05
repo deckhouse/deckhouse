@@ -21,11 +21,11 @@ import (
 	"os"
 	"path/filepath"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/internal/constants"
-
 	pkiconstants "github.com/deckhouse/deckhouse/go_lib/controlplane/constants"
 	"github.com/deckhouse/deckhouse/go_lib/controlplane/kubeconfig"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 )
 
 // renewKubeconfigsForComponent idempotentally generates kubeconfig files belonging to the given component.

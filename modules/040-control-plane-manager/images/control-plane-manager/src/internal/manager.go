@@ -24,27 +24,13 @@ import (
 	"os"
 	"time"
 
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	updateobserverv1 "control-plane-manager/internal/controllers/update-observer/pkg/v1"
-
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-
-	"control-plane-manager/internal/constants"
-	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
-	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
-	controlplaneoperation "control-plane-manager/internal/controllers/control-plane-operation"
-	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
-	updateobserver "control-plane-manager/internal/controllers/update-observer/controller"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/deckhouse/kube-api-rewriter/pkg/middleware/auth"
-	"github.com/go-logr/logr"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -54,6 +40,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
+	"github.com/deckhouse/kube-api-rewriter/pkg/middleware/auth"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
+	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
+	controlplanenode "control-plane-manager/internal/controllers/control-plane-node"
+	controlplaneoperation "control-plane-manager/internal/controllers/control-plane-operation"
+	operationsapprover "control-plane-manager/internal/controllers/operations-approver"
+	updateobserver "control-plane-manager/internal/controllers/update-observer/controller"
+	updateobserverv1 "control-plane-manager/internal/controllers/update-observer/pkg/v1"
 )
 
 const (
