@@ -26,6 +26,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
+const testRPPBootstrapServerPort = 4282
+
 func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 	tplContent, err := os.ReadFile("/deckhouse/candi/bashible/bashible.sh.tpl")
 	require.NoError(t, err)
@@ -45,7 +47,7 @@ func TestRenderBashibleTemplateUsesOnlyKubeAPIEndpoints(t *testing.T) {
 			{
 				"address":                "10.0.0.2",
 				"rppServerPort":          4219,
-				"rppBootstrapServerPort": 4300,
+				"rppBootstrapServerPort": testRPPBootstrapServerPort,
 			},
 		},
 		"clusterMasterKubeAPIEndpoints": []string{

@@ -17,6 +17,8 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -157,6 +159,25 @@ status:
 		Expect(f.ValuesGet("nodeManager.internal.clusterMasterAddresses").String()).To(MatchJSON(clusterMasterAddresses))
 		Expect(f.ValuesGet("nodeManager.internal.clusterMasterEndpoints").String()).To(MatchJSON(clusterMasterEndpoints))
 	}
+	type expectedClusterMasterEndpoint struct {
+		Address                string `json:"address"`
+		KubeAPIPort            int    `json:"kubeApiPort"`
+		RPPServerPort          int    `json:"rppServerPort"`
+		RPPBootstrapServerPort int    `json:"rppBootstrapServerPort"`
+	}
+	expectedEndpoint := func(address string, kubeAPIPort int) expectedClusterMasterEndpoint {
+		return expectedClusterMasterEndpoint{
+			Address:                address,
+			KubeAPIPort:            kubeAPIPort,
+			RPPServerPort:          packagesProxyPort,
+			RPPBootstrapServerPort: packagesProxyBootstrapPort,
+		}
+	}
+	expectedClusterMasterEndpoints := func(endpoints ...expectedClusterMasterEndpoint) string {
+		data, err := json.Marshal(endpoints)
+		Expect(err).NotTo(HaveOccurred())
+		return string(data)
+	}
 
 	Context("Endpoint default/kubernetes has single address in .subsets[]", func() {
 		BeforeEach(func() {
@@ -168,7 +189,7 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			expectClusterMasterValues(
 				`["10.0.3.192:6443"]`,
-				`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+				expectedClusterMasterEndpoints(expectedEndpoint("10.0.3.192", 6443)),
 			)
 		})
 
@@ -182,7 +203,11 @@ status:
 				Expect(f).To(ExecuteSuccessfully())
 				expectClusterMasterValues(
 					`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`,
-					`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+					expectedClusterMasterEndpoints(
+						expectedEndpoint("10.0.3.192", 6443),
+						expectedEndpoint("10.0.3.193", 6443),
+						expectedEndpoint("10.0.3.194", 6443),
+					),
 				)
 			})
 
@@ -196,7 +221,11 @@ status:
 					Expect(f).To(ExecuteSuccessfully())
 					expectClusterMasterValues(
 						`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444"]`,
-						`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6444,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+						expectedClusterMasterEndpoints(
+							expectedEndpoint("10.0.3.192", 6443),
+							expectedEndpoint("10.0.3.193", 6443),
+							expectedEndpoint("10.0.3.194", 6444),
+						),
 					)
 				})
 
@@ -210,7 +239,12 @@ status:
 						Expect(f).To(ExecuteSuccessfully())
 						expectClusterMasterValues(
 							`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443"]`,
-							`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6444,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"192.168.199.233","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+							expectedClusterMasterEndpoints(
+								expectedEndpoint("10.0.3.192", 6443),
+								expectedEndpoint("10.0.3.193", 6443),
+								expectedEndpoint("10.0.3.194", 6444),
+								expectedEndpoint("192.168.199.233", 6443),
+							),
 						)
 					})
 
@@ -224,7 +258,13 @@ status:
 							Expect(f).To(ExecuteSuccessfully())
 							expectClusterMasterValues(
 								`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6444","192.168.199.233:6443","192.168.199.244:6443"]`,
-								`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6444,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"192.168.199.233","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"192.168.199.244","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+								expectedClusterMasterEndpoints(
+									expectedEndpoint("10.0.3.192", 6443),
+									expectedEndpoint("10.0.3.193", 6443),
+									expectedEndpoint("10.0.3.194", 6444),
+									expectedEndpoint("192.168.199.233", 6443),
+									expectedEndpoint("192.168.199.244", 6443),
+								),
 							)
 						})
 					})
@@ -244,7 +284,11 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 			expectClusterMasterValues(
 				`["10.0.3.192:6443","10.0.3.193:6443","10.0.3.194:6443"]`,
-				`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.193","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300},{"address":"10.0.3.194","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+				expectedClusterMasterEndpoints(
+					expectedEndpoint("10.0.3.192", 6443),
+					expectedEndpoint("10.0.3.193", 6443),
+					expectedEndpoint("10.0.3.194", 6443),
+				),
 			)
 		})
 
@@ -258,7 +302,7 @@ status:
 				Expect(f).To(ExecuteSuccessfully())
 				expectClusterMasterValues(
 					`["10.0.3.192:6443"]`,
-					`[{"address":"10.0.3.192","kubeApiPort":6443,"rppServerPort":4219,"rppBootstrapServerPort":4300}]`,
+					expectedClusterMasterEndpoints(expectedEndpoint("10.0.3.192", 6443)),
 				)
 			})
 		})

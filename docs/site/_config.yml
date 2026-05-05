@@ -19,7 +19,7 @@ github_repo_path: /deckhouse/deckhouse
 d8Revision: EE
 LTSChannel:
   version: v1.73-cse
-  versionName: v1.73 (CSE)
+  versionName: v1.73.1 (CSE)
 excerpt_separator: ""
 
 metrics:

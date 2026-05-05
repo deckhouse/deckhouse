@@ -39,7 +39,7 @@ import (
 const (
 	apiserverPort              = 6443
 	packagesProxyPort          = 4219
-	packagesProxyBootstrapPort = 4300
+	packagesProxyBootstrapPort = 4282
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
