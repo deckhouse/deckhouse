@@ -27,6 +27,7 @@ set -Eeo pipefail
 %s
 
 {{ template "bb-minget" $ }}
+{{ template "bb-discover-node-name" $ }}
 
 ` $lib) $ctx }}
 
@@ -58,3 +59,13 @@ bb-rpp-get-install
     {{- tpl ($bootstrap_script_network) $ | nindent 0 }}
   {{- end }}
 {{- end }}
+
+# discover node name and ip
+
+mkdir -p /var/lib/bashible
+bb-discover-node-name
+
+{{- $bbniCandi := "candi/bashible/bb_node_ip.sh.tpl" }}
+{{- $bbniDeckhouse := "/deckhouse/candi/bashible/bb_node_ip.sh.tpl" }}
+{{- $bbni := .Files.Get $bbniDeckhouse | default (.Files.Get $bbniCandi) }}
+{{- tpl $bbni . | nindent 0 }}
