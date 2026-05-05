@@ -299,7 +299,7 @@ function get_rpp_address() {
     local labelSelector="app%3Dregistry-packages-proxy"
 
     rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
-    port=4300
+    port=4282
     ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
     echo "$ips_csv"
   fi

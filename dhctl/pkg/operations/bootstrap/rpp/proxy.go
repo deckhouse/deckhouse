@@ -60,7 +60,7 @@ type RegistryPackagesProxy struct {
 
 const (
 	registryPackagesProxyPort = "5444"
-	rppGetBinaryPort          = "4300"
+	rppGetBinaryPort          = "4282"
 )
 
 func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger log.LoggerProvider) *RegistryPackagesProxy {
