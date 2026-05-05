@@ -135,13 +135,14 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.config = Config{}
 	}
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+		requestIP := getRequestIP(r)
+
 		if r.Method != http.MethodHead && r.Method != http.MethodGet {
-			p.logger.Error("method not allowed")
+			p.logger.Errorf("method %s from client %s is not allowed", r.Method, requestIP)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		requestIP := getRequestIP(r)
 		digest := r.URL.Query().Get("digest")
 		repository := r.URL.Query().Get("repository")
 		additionalPath := r.URL.Query().Get("path")
@@ -159,8 +160,8 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.logger.Infof("%s", logEntry)
 
 		if digest == "" {
-			p.logger.Error("missing digest")
-			http.Error(w, "missing digest", http.StatusBadRequest)
+			p.logger.Errorf("request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
+			http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
 			return
 		}
 
@@ -169,7 +170,7 @@ func (p *Proxy) Serve(cfg *Config) {
 			defer packageReader.Close()
 		}
 		if err != nil {
-			p.logger.Error(err.Error())
+			p.logger.Errorf("get package %q for client %s: %v", digest, requestIP, err)
 			if errors.Is(err, registry.ErrPackageNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
@@ -284,12 +285,10 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 		if err == nil {
 			return
 		}
-		// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
-		p.logger.Error(err.Error())
-		// Copy remaining data to pipe
+		p.logger.Errorf("cache set for digest %q: %v", digest, err)
 		_, err = io.Copy(pipeWriter, registryReader)
 		if err != nil {
-			p.logger.Error(err.Error())
+			p.logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
 		}
 	}()
 
@@ -417,7 +416,7 @@ func normalizeBootstrapClusterUUID(clusterUUID string) string {
 func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
 	gzipReader, err := gzip.NewReader(reader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read gzip stream: %w", err)
 	}
 	defer gzipReader.Close()
 
