@@ -32,7 +32,7 @@ kind: InitConfiguration
 deckhouse:
   # [<en>] Address of the Docker registry where the Deckhouse images are located
   # [<ru>] Адрес Docker registry с образами Deckhouse
-  imagesRepo: registry.deckhouse.ru/deckhouse/<REVISION>
+  imagesRepo: registry.deckhouse.io/deckhouse/<REVISION>
   # [<en>] A special string with your token to access Docker registry (generated automatically for your license token)
   # [<ru>] Строка с ключом для доступа к Docker registry (сгенерировано автоматически для вашего токена доступа)
   registryDockerCfg: <YOUR_ACCESS_STRING_IS_HERE>
