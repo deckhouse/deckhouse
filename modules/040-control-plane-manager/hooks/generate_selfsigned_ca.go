@@ -91,32 +91,32 @@ func generateSelfSignedCA(_ context.Context, input *go_hook.HookInput) error {
 		return nil
 	}
 
-	var sefSignedCA certificate.Authority
+	var selfSignedCA certificate.Authority
 
 	certs := input.Snapshots.Get("cert")
 	authnCerts := input.Snapshots.Get("cert_from_authn")
 
 	switch {
 	case len(certs) == 1:
-		err := certs[0].UnmarshalTo(&sefSignedCA)
+		err := certs[0].UnmarshalTo(&selfSignedCA)
 		if err != nil {
 			return fmt.Errorf("cannot convert sefsigned certificate to certificate authority: failed to unmarshal 'cert' snapshot: %w", err)
 		}
 		// to remove this case after migrating from authn
 	case len(authnCerts) == 1:
-		err := authnCerts[0].UnmarshalTo(&sefSignedCA)
+		err := authnCerts[0].UnmarshalTo(&selfSignedCA)
 		if err != nil {
 			return fmt.Errorf("cannot convert sefsigned certificate to certificate authority: failed to unmarshal 'cert_authn' snapshot: %w", err)
 		}
 	default:
 		var err error
-		sefSignedCA, err = certificate.GenerateCA(input.Logger, "kubernetes-api-selfsigned-ca")
+		selfSignedCA, err = certificate.GenerateCA(input.Logger, "kubernetes-api-selfsigned-ca")
 		if err != nil {
 			return fmt.Errorf("cannot generate selfsigned ca: %v", err)
 		}
 	}
 
-	input.Values.Set(certPath, sefSignedCA.Cert)
-	input.Values.Set(keyPath, sefSignedCA.Key)
+	input.Values.Set(certPath, selfSignedCA.Cert)
+	input.Values.Set(keyPath, selfSignedCA.Key)
 	return nil
 }

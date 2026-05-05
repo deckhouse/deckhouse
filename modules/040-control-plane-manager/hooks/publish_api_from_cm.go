@@ -98,7 +98,10 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		mcValues := input.ConfigValues.Get("controlPlaneManager.apiserver.publishAPI.ingress").Value()
 
 		// Manually set defaults as in OpenAPI because they are missing when patching via hook from Value() data.
-		rootMap := mcValues.(map[string]interface{})
+		rootMap, ok := mcValues.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type for apiserver.publishAPI.ingress: %T", mcValues)
+		}
 		if _, exists := rootMap["enabled"]; !exists {
 			rootMap["enabled"] = false
 		}
@@ -109,7 +112,10 @@ func handlePublishAPIConfig(_ context.Context, input *go_hook.HookInput) error {
 		// Create https map if it does not exist
 		var httpsMap map[string]interface{}
 		if httpsVal, exists := rootMap["https"]; exists && httpsVal != nil {
-			httpsMap = httpsVal.(map[string]interface{})
+			httpsMap, ok = httpsVal.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("unexpected type for apiserver.publishAPI.ingress.https: %T", httpsVal)
+			}
 		} else {
 			httpsMap = make(map[string]interface{})
 			rootMap["https"] = httpsMap
