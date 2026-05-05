@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: api-proxy
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Initial"
   resourcePolicy:
     containerPolicies:
     - containerName: api-proxy
