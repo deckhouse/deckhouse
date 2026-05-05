@@ -200,7 +200,7 @@ index e8e5a783..e04ff083 100644
 +        type: date
 +        jsonPath: .metadata.creationTimestamp
 diff --git a/server/handlers.go b/server/handlers.go
-index 04c391e2..8b77f748 100644
+index 04c391e2..03aa996f 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -422,6 +422,27 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +231,17 @@ index 04c391e2..8b77f748 100644
  		var p storage.Password
  		var passwordFound bool
  		// Fetch local password in case of local connector for the further password policies validation
-@@ -455,7 +476,53 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+@@ -451,11 +472,62 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 
+ 		identity, ok, err := pwConn.Login(r.Context(), scopes, username, password)
+ 		if err != nil {
+-			s.logger.ErrorContext(r.Context(), "failed to login user", "err", err)
++			s.logger.ErrorContext(r.Context(), "failed to login user",
++				"err", err,
++				"user", username,
++				"connector_id", authReq.ConnectorID,
++				"client_id", authReq.ClientID,
++			)
  			s.renderError(r, w, http.StatusInternalServerError, ErrMsgLoginError)
  			return
  		}
@@ -285,7 +295,20 @@ index 04c391e2..8b77f748 100644
  			// Validate login incorrect attempts for local connector with configured password policy
  			// Only apply lockout logic for existing users (passwordFound == true)
  			if localConnector && s.passwordPolicy != nil && passwordFound && s.passwordPolicy.IsMaxLoginAttemptsExeeded(p.IncorrectPasswordLoginAttempts+1) {
-@@ -694,6 +761,70 @@ func (e *NotAllowedError) Error() string {
+@@ -488,7 +560,11 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+ 			if err := s.templates.password(r, w, r.URL.String(), username, usernamePrompt(pwConn), true, backLink); err != nil {
+ 				s.logger.ErrorContext(r.Context(), "server template error", "err", err)
+ 			}
+-			s.logger.ErrorContext(r.Context(), "failed login attempt: Invalid credentials.", "user", username)
++			s.logger.ErrorContext(r.Context(), "failed login attempt: Invalid credentials.",
++				"user", username,
++				"connector_id", authReq.ConnectorID,
++				"client_id", authReq.ClientID,
++			)
+ 			return
+ 		}
+ 
+@@ -694,6 +770,70 @@ func (e *NotAllowedError) Error() string {
  	return "not allowed: " + e.Reason
  }
  
@@ -356,7 +379,7 @@ index 04c391e2..8b77f748 100644
  // finalizeLogin associates the user's identity with the current AuthRequest, then returns
  // the approval page's path.
  func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity, authReq storage.AuthRequest, conn connector.Connector) (string, bool, error) {
-@@ -761,6 +892,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -761,6 +901,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		offlineSessions := storage.OfflineSessions{
  			UserID:        identity.UserID,
  			ConnID:        authReq.ConnectorID,
@@ -364,7 +387,7 @@ index 04c391e2..8b77f748 100644
  			Refresh:       make(map[string]*storage.RefreshTokenRef),
  			ConnectorData: identity.ConnectorData,
  		}
-@@ -787,6 +919,13 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -787,6 +928,13 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		if len(identity.ConnectorData) > 0 {
  			old.ConnectorData = identity.ConnectorData
  		}
@@ -378,6 +401,31 @@ index 04c391e2..8b77f748 100644
  		// If 2FA was enabled after OfflineSessions creation, existing users may have empty TOTP.
  		// Populate it to avoid broken login flows.
  		if old.TOTP == "" && s.totp.enabledForConnector(authReq.ConnectorID) {
+@@ -1455,11 +1603,23 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+ 	password := q.Get("password")
+ 	identity, ok, err := passwordConnector.Login(ctx, parseScopes(scopes), username, password)
+ 	if err != nil {
+-		s.logger.ErrorContext(r.Context(), "failed to login user", "err", err)
++		s.logger.ErrorContext(r.Context(), "failed to login user",
++			"err", err,
++			"user", username,
++			"connector_id", connID,
++			"client_id", client.ID,
++			"grant_type", "password",
++		)
+ 		s.tokenErrHelper(w, errInvalidRequest, "Could not login user", http.StatusBadRequest)
+ 		return
+ 	}
+ 	if !ok {
++		s.logger.ErrorContext(r.Context(), "failed login attempt: Invalid credentials.",
++			"user", username,
++			"connector_id", connID,
++			"client_id", client.ID,
++			"grant_type", "password",
++		)
+ 		s.tokenErrHelper(w, errAccessDenied, "Invalid username or password", http.StatusUnauthorized)
+ 		return
+ 	}
 diff --git a/server/lockout_test.go b/server/lockout_test.go
 new file mode 100644
 index 00000000..37a42aeb
@@ -1386,6 +1434,23 @@ index d463fd50..da62c409 100644
  	handleFunc("/device", s.handleDeviceExchange)
  	handleFunc("/device/auth/verify_code", s.verifyUserCode)
  	handleFunc("/device/code", s.handleDeviceCode)
+diff --git a/server/totphandler.go b/server/totphandler.go
+index cc79ce3d..ac66b114 100644
+--- a/server/totphandler.go
++++ b/server/totphandler.go
+@@ -81,7 +81,11 @@ func (s *Server) handleTOTPVerify(w http.ResponseWriter, r *http.Request) {
+ 		ok := totp.Validate(password, generated.Secret())
+ 		if !ok {
+ 			s.renderTOTPValidatePage(offlineSession, true, w, r)
+-			s.logger.ErrorContext(r.Context(), "failed TOTP attempt: Invalid credentials.", "user", "????")
++			s.logger.ErrorContext(r.Context(), "failed TOTP attempt: Invalid credentials.",
++				"user_id", offlineSession.UserID,
++				"connector_id", offlineSession.ConnID,
++				"client_id", authReq.ClientID,
++			)
+ 			return
+ 		}
+ 
 diff --git a/storage/ent/client/offlinesession.go b/storage/ent/client/offlinesession.go
 index c4fb9ef6..61db9be3 100644
 --- a/storage/ent/client/offlinesession.go
