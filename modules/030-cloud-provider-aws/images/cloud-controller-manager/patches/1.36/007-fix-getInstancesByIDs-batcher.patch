@@ -1,0 +1,69 @@
+From 01b99237e1d31d4b51703473426c9d77f8e91621 Mon Sep 17 00:00:00 2001
+From: Vladislav Denisov <vlad144denisov@gmail.com>
+Date: Tue, 3 Mar 2026 16:41:58 +0300
+Subject: [PATCH] fix getInstancesByIDs to comply with describeInstanceBatcher
+ single-ID contract
+
+fix getInstancesByIDs to comply with describeInstanceBatcher single-ID
+contract
+
+Signed-off-by: Vladislav Denisov <vlad144denisov@gmail.com>
+---
+ pkg/providers/v1/aws.go | 31 ++++++++++++++++++-------------
+ 1 file changed, 18 insertions(+), 13 deletions(-)
+
+diff --git a/pkg/providers/v1/aws.go b/pkg/providers/v1/aws.go
+index e1070eec..68a77fcc 100644
+--- a/pkg/providers/v1/aws.go
++++ b/pkg/providers/v1/aws.go
+@@ -3159,29 +3159,34 @@ func (c *Cloud) getInstanceByID(ctx context.Context, instanceID string) (*ec2typ
+ 
+ 	return instances[instanceID], nil
+ }
+-
+ func (c *Cloud) getInstancesByIDs(ctx context.Context, instanceIDs []string) (map[string]*ec2types.Instance, error) {
+ 	instancesByID := make(map[string]*ec2types.Instance)
++
+ 	if len(instanceIDs) == 0 {
+ 		return instancesByID, nil
+ 	}
+ 
+-	request := &ec2.DescribeInstancesInput{
+-		InstanceIds: instanceIDs,
+-	}
+-
+-	instances, err := c.describeInstanceBatcher.DescribeInstances(ctx, request)
+-	if err != nil {
+-		return nil, err
+-	}
+-
+-	for _, instance := range instances {
+-		instanceID := aws.ToString(instance.InstanceId)
++	for _, instanceID := range instanceIDs {
+ 		if instanceID == "" {
+ 			continue
+ 		}
+ 
+-		instancesByID[instanceID] = instance
++		request := &ec2.DescribeInstancesInput{
++			InstanceIds: []string{instanceID},
++		}
++
++		instances, err := c.describeInstanceBatcher.DescribeInstances(ctx, request)
++		if err != nil {
++			return nil, err
++		}
++
++		for _, instance := range instances {
++			id := aws.ToString(instance.InstanceId)
++			if id == "" {
++				continue
++			}
++			instancesByID[id] = instance
++		}
+ 	}
+ 
+ 	return instancesByID, nil
+-- 
+2.48.1
+
