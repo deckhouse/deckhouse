@@ -273,6 +273,13 @@ func main() {
 		ticker := time.NewTicker(reloadInterval)
 
 		for range ticker.C {
+			// if shell-operator is exited
+			if cmd.ProcessState != nil {
+
+				logger.Error("shell-operator exited", slog.Int("exitcode", cmd.ProcessState.ExitCode()))
+				isReloadShellNeed.Store(true)
+			}
+
 			if isReloadShellNeed.Load() {
 				logger.Info("restarting shell-operator")
 				isReloadShellNeed.Store(false)
