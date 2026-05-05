@@ -15,7 +15,7 @@ import:
   add: /shell-operator/frameworks
   to: /frameworks
   before: setup
-{{- $k8sVersion := "1.31" }}
+{{- $k8sVersion := "1.32" }}
 {{- $image_version := printf "%s.%d" $k8sVersion (index $.CandiVersionMap "k8s" $k8sVersion "patch") | replace "." "-" }}
 - image: common/kubernetes-artifact-{{ $image_version }}
   add: /src/_output/bin/kubectl
