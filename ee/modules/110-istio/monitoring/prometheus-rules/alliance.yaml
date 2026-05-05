@@ -1,30 +1,7 @@
 - name: d8.istio.alliance
   rules:
-    - alert: D8IstioAllianceDiscoveryMetadataEndpointUsesDeprecatedSubdomain
-      expr: max by (alliance_kind, name, hostname) (d8_istio_alliance_metadata_endpoint_uses_deprecated_subdomain == 1)
-      for: 5m
-      labels:
-        severity_level: "5"
-        tier: cluster
-      annotations:
-        plk_markup_format: "markdown"
-        plk_protocol_version: "1"
-        plk_create_group_if_not_exists__d8_istio_alliance_metadata_exporter_endpoint_discovery_issues: D8IstioAllianceMetadataExporterEndpointDiscoveryIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-        plk_grouped_by__d8_istio_alliance_metadata_exporter_endpoint_discovery_issues: D8IstioAllianceMetadataExporterEndpointDiscoveryIssues,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
-        summary: Alliance metadataEndpoint uses a deprecated subdomain.
-        description: |
-          The `metadataEndpoint` of {{$labels.alliance_kind}} `{{$labels.name}}` uses the deprecated subdomain `istio.{{$labels.hostname}}`.
-          
-          Cluster {{$labels.alliance_kind}} resource should switch `spec.metadataEndpoint` to `istio-metadata.{{$labels.hostname}}/metadata/`.
-          
-          Migration steps on the current cluster:
-          
-          1. Ensure DNS resolves the target `istio-metadata.{{$labels.hostname}}`. The `istio` module adds the `istio-metadata` SAN when a federation or multicluster is enabled and CertManager is used.
-          2. Update `spec.metadataEndpoint` on this object to use the new domain name. Keep the path `/metadata/` unchanged.
-          3. Verify remote metadata fetch and alliance health after the change.
-
-    - alert: D8IstioAllianceDiscoveryMetadataEndpointAccessedViaDeprecatedSubdomain
-      expr: sum by (alliance_kind, remote_uuid, name, requested_to_hostname) (rate(d8_istio_alliance_metadata_exporter_accessed_via_deprecated_subdomain[5m])) > 0
+    - alert: D8IstioAllianceDiscoveryMetadataEndpointRequestedViaDeprecatedSubdomain
+      expr: sum by (alliance_kind, remote_uuid, name, requested_to_hostname) (rate(d8_istio_alliance_metadata_exporter_requested_via_deprecated_subdomain[5m])) > 0
       for: 5m
       labels:
         severity_level: "5"

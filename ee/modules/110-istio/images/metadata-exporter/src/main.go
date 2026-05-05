@@ -20,8 +20,8 @@ import (
 )
 
 var (
-	privateAllianceDeprecatedSubdomainRequests                           *prometheus.CounterVec
-	privateAllianceMetadataEndpointAccessedDeprecatedSubdomainMetricName = "d8_istio_alliance_metadata_exporter_accessed_via_deprecated_subdomain"
+	privateAllianceDeprecatedSubdomainRequests                               *prometheus.CounterVec
+	privateAllianceMetadataEndpointRequestedViaDeprecatedSubdomainMetricName = "d8_istio_alliance_metadata_exporter_requested_via_deprecated_subdomain"
 )
 
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
@@ -178,8 +178,8 @@ func main() {
 func registerMetadataExporterMetrics(reg prometheus.Registerer) {
 	a := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: privateAllianceMetadataEndpointAccessedDeprecatedSubdomainMetricName,
-			Help: "Requests to private metadata whose Host equals this cluster are using deprecated 'istio' subdomain (istio.<publicDomainTemplate>).",
+			Name: privateAllianceMetadataEndpointRequestedViaDeprecatedSubdomainMetricName,
+			Help: "Requests to private metadata whose Host equals this cluster are using deprecated 'istio' domain (<publicDomainTemplate> + istio).",
 		},
 		[]string{"remote_uuid", "alliance_kind", "name", "requested_to_hostname"},
 	)
