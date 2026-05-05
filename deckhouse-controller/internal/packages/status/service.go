@@ -41,11 +41,11 @@ const (
 	ConditionReadyInCluster ConditionType = "ReadyInCluster"
 	// ConditionSettingsValid checks the settings passed openAPI validation
 	ConditionSettingsValid ConditionType = "SettingsValid"
-	// ConditionWaitConverge indicates that the package wait converge
-	ConditionWaitConverge ConditionType = "WaitConverge"
+	// ConditionPending indicates that the package wait converge
+	ConditionPending ConditionType = "Pending"
 
-	// ConditionReasonManifestsApply indicates that nelm is applying manifests to the cluster
-	ConditionReasonManifestsApply ConditionReason = "ManifestsApply"
+	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
+	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
 )
 
 // Error wraps an error with associated status conditions
@@ -207,8 +207,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		return
 	}
 
-	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
-	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
+	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: ConditionReasonApplyingManifests})
+	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: ConditionReasonApplyingManifests})
 
 	for i := len(report.StageReports) - 1; i >= 0; i-- {
 		r := report.StageReports[i]
@@ -262,7 +262,7 @@ func (s *Service) ClearRuntimeConditions(name string) {
 		ConditionHooksProcessed,
 		ConditionReadyInCluster,
 		ConditionReadyInRuntime,
-		ConditionWaitConverge,
+		ConditionPending,
 	}
 
 	for idx, condition := range s.statuses[name].Conditions {

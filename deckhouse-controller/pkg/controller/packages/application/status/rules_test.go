@@ -20,14 +20,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmapper"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 )
 
-type mappingOption func(state *condmapper.State)
+type mappingOption func(state *condmap.State)
 
 func withInternalCondition(cond string, status metav1.ConditionStatus, reason string) mappingOption {
-	return func(state *condmapper.State) {
+	return func(state *condmap.State) {
 		state.Internal[cond] = metav1.Condition{
 			Type:   cond,
 			Status: status,
@@ -37,7 +37,7 @@ func withInternalCondition(cond string, status metav1.ConditionStatus, reason st
 }
 
 func withExternalCondition(cond string, status metav1.ConditionStatus, reason string) mappingOption {
-	return func(state *condmapper.State) {
+	return func(state *condmap.State) {
 		state.External[cond] = metav1.Condition{
 			Type:   cond,
 			Status: status,
@@ -47,13 +47,13 @@ func withExternalCondition(cond string, status metav1.ConditionStatus, reason st
 }
 
 func withVersionChanged() mappingOption {
-	return func(state *condmapper.State) {
-		state.VersionChanged = true
+	return func(state *condmap.State) {
+		state.Updating = true
 	}
 }
 
 func testMapping(opts ...mappingOption) map[string]metav1.Condition {
-	state := &condmapper.State{
+	state := &condmap.State{
 		Internal: make(map[string]metav1.Condition),
 		External: make(map[string]metav1.Condition),
 	}
@@ -287,19 +287,19 @@ func TestReadyRule(t *testing.T) {
 		{
 			name: "false when not installed and WaitConverge",
 			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionWaitConverge), metav1.ConditionTrue, "Waiting"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
 			},
 			expected: map[string]*expectedCondition{
 				ConditionReady: {status: metav1.ConditionFalse, reason: "Waiting"},
 			},
 		},
 		{
-			name: "false when not installed and RequirementsMet",
+			name: "requirements passed does not explain readiness",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "RequirementsMet"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionFalse, reason: "RequirementsMet"},
+				ConditionReady: nil,
 			},
 		},
 		{
@@ -307,10 +307,44 @@ func TestReadyRule(t *testing.T) {
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
-				withInternalCondition(string(intstatus.ConditionWaitConverge), metav1.ConditionTrue, "Waiting"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
 			},
 			expected: map[string]*expectedCondition{
 				ConditionReady: {status: metav1.ConditionTrue, reason: "Ready"},
+			},
+		},
+	}
+
+	runTestCases(t, cases)
+}
+
+func TestScaledRule(t *testing.T) {
+	cases := []testCase{
+		{
+			name: "true when ReadyInCluster",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: {status: metav1.ConditionTrue, reason: "Ready"},
+			},
+		},
+		{
+			name: "false when ReadyInCluster is false",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionFalse, "ClusterNotReady"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: {status: metav1.ConditionFalse, reason: "ClusterNotReady"},
+			},
+		},
+		{
+			name: "not affected by RequirementsMet",
+			opts: []mappingOption{
+				withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionFalse, "RequirementsNotMet"),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionScaled: nil,
 			},
 		},
 	}
@@ -374,7 +408,7 @@ func TestManagedRule(t *testing.T) {
 				withInternalCondition(string(intstatus.ConditionReadyInRuntime), metav1.ConditionTrue, "RuntimeReady"),
 				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "ClusterReady"),
 				withInternalCondition(string(intstatus.ConditionHooksProcessed), metav1.ConditionTrue, "HooksOK"),
-				withInternalCondition(string(intstatus.ConditionWaitConverge), metav1.ConditionTrue, "Waiting"),
+				withInternalCondition(string(intstatus.ConditionPending), metav1.ConditionTrue, "Waiting"),
 			},
 			expected: map[string]*expectedCondition{
 				ConditionManaged: {status: metav1.ConditionFalse, reason: "Waiting"},
