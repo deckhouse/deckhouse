@@ -24,6 +24,20 @@ spec:
       metadata:
         description: |
           Allow the SELinux label used by the privileged fencing agent container
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          Privileged mode required for watchdog device access
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_ADMIN
+        drop:
+          - ALL
+      metadata:
+        description: |
+          SYS_ADMIN needed for host watchdog; all other caps dropped
   network:
     hostNetwork:
       allowedValue: false
@@ -40,6 +54,11 @@ spec:
         metadata:
           description: Memberlist UDP listener used by the fencing agent
   volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: hostPath volumes needed for watchdog and socket access
     hostPath:
       allowedValues:
         - path: /dev/watchdog
