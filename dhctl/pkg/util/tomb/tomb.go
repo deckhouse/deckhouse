@@ -88,7 +88,7 @@ func (c *teardownCallbacks) shutdown(exitCode int) {
 
 	log.DebugF("teardown started, queue length: %d\n", len(c.data))
 
-	// Run callbacks in FIFO order to shutdown fundamental things last.
+	// Run callbacks in LIFO order to shutdown fundamental things last.
 	for i := len(c.data) - 1; i >= 0; i-- {
 		cb := c.data[i]
 		log.DebugF("teardown callback %d: '%s' started\n", i, cb.Name)

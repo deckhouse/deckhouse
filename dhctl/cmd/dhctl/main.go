@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -290,13 +292,14 @@ func main() {
 
 	initGlobalVars()
 
-	tracesShutdownFn, err := enableTrace()
-	if err != nil {
+	if err := telemetry.Bootstrap(appContext); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
-	registerOnShutdown("Trace", tracesShutdownFn)
+	appContext, applicationSpan := telemetry.StartApplication(appContext)
+	tomb.RegisterOnShutdown("End telemetry application span", func() { applicationSpan.End() })
+
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
 	registerOnShutdown("Stop default SSH session", process.DefaultSession.Stop)
 
@@ -325,6 +328,8 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application) {
 
 	// inject context.Context to kingpin.ParseContext
 	kpApp.Action(kpcontext.SetContextToAction(ctx))
+
+	kpApp.Action(kptelemetry.StartCommand)
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		initer.setParams(actionIniterParams{
@@ -360,6 +365,7 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application) {
 			log.ErrorLn(msg)
 			errorCode = 1
 		}
+		kptelemetry.EndCommand(err, errorCode)
 		tomb.Shutdown(errorCode)
 	}()
 
