@@ -1,0 +1,172 @@
+diff --git a/pilot/pkg/credentials/kube/multicluster.go b/pilot/pkg/credentials/kube/multicluster.go
+index 54e9b4a8a9..00ef0f0078 100644
+--- a/pilot/pkg/credentials/kube/multicluster.go
++++ b/pilot/pkg/credentials/kube/multicluster.go
+@@ -55,8 +55,10 @@ func (m *Multicluster) ClusterUpdated(cluster *multicluster.Cluster, _ <-chan st
+ 	sc := NewCredentialsController(cluster.Client)
+ 	m.m.Lock()
+ 	defer m.m.Unlock()
+-	m.deleteCluster(cluster.ID)
+-	m.addCluster(cluster, sc)
++	for _, onCredential := range m.secretHandlers {
++		sc.AddEventHandler(onCredential)
++	}
++	m.remoteKubeControllers[cluster.ID] = sc
+ }
+ 
+ func (m *Multicluster) ClusterDeleted(key cluster.ID) {
+diff --git a/pilot/pkg/serviceregistry/aggregate/controller.go b/pilot/pkg/serviceregistry/aggregate/controller.go
+index f4f91c7bba..f2d74d0f01 100644
+--- a/pilot/pkg/serviceregistry/aggregate/controller.go
++++ b/pilot/pkg/serviceregistry/aggregate/controller.go
+@@ -16,6 +16,7 @@ package aggregate
+ 
+ import (
+ 	"net/netip"
++	"reflect"
+ 	"sync"
+ 
+ 	"istio.io/istio/pilot/pkg/features"
+@@ -215,6 +216,29 @@ func (c *Controller) DeleteRegistry(clusterID cluster.ID, providerID provider.ID
+ 	log.Infof("%s registry for the cluster %s has been deleted.", providerID, clusterID)
+ }
+ 
++// Used when two registries temporarily share the same cluster ID and provider during remote-secret rotation.
++func (c *Controller) DeleteRegistryInstance(registry serviceregistry.Instance) bool {
++	if registry == nil {
++		return false
++	}
++	target := reflect.ValueOf(registry)
++	c.storeLock.Lock()
++	defer c.storeLock.Unlock()
++	for i, re := range c.registries {
++		if re == nil {
++			continue
++		}
++		cur := reflect.ValueOf(re.Instance)
++		if target.Kind() == reflect.Ptr && cur.Kind() == reflect.Ptr && target.Pointer() == cur.Pointer() {
++			c.registries = append(c.registries[:i], c.registries[i+1:]...)
++			log.Infof("registry instance %T removed from aggregate", registry)
++			return true
++		}
++	}
++	log.Warnf("registry instance %T not found in aggregate", registry)
++	return false
++}
++
+ // GetRegistries returns a copy of all registries
+ func (c *Controller) GetRegistries() []serviceregistry.Instance {
+ 	c.storeLock.RLock()
+diff --git a/pilot/pkg/serviceregistry/kube/controller/multicluster.go b/pilot/pkg/serviceregistry/kube/controller/multicluster.go
+index 9fde457cdc..fb93c427df 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/multicluster.go
++++ b/pilot/pkg/serviceregistry/kube/controller/multicluster.go
+@@ -18,6 +18,7 @@ import (
+ 	"context"
+ 	"strings"
+ 	"sync"
++	"time"
+ 
+ 	"golang.org/x/sync/errgroup"
+ 	"k8s.io/apimachinery/pkg/api/errors"
+@@ -167,16 +168,64 @@ func (m *Multicluster) ClusterAdded(cluster *multicluster.Cluster, clusterStopCh
+ // when a remote cluster is updated.
+ func (m *Multicluster) ClusterUpdated(cluster *multicluster.Cluster, stop <-chan struct{}) {
+ 	m.m.Lock()
+-	m.deleteCluster(cluster.ID)
++	if m.closing {
++		m.m.Unlock()
++		return
++	}
++	oldKC, existed := m.remoteKubeControllers[cluster.ID]
++	if !existed {
++		m.m.Unlock()
++		m.ClusterAdded(cluster, stop)
++		return
++	}
+ 	kubeController, kubeRegistry, options, configCluster := m.addCluster(cluster)
+ 	if kubeController == nil {
+-		// m.closing was true, nothing to do.
+ 		m.m.Unlock()
+ 		return
+ 	}
+ 	m.m.Unlock()
+-	// clusterStopCh is a channel that will be closed when this cluster removed.
++
++	// Register and start the new kube registry first so the mesh keeps serving traffic from the old
++	// registry until the new one has completed initial sync, then drop the old registry by instance.
+ 	m.initializeCluster(cluster, kubeController, kubeRegistry, *options, configCluster, stop)
++
++	m.waitForRemoteKubeRegistryReady(kubeRegistry, cluster.ID)
++
++	m.removeOldRemoteClusterAfterNewReady(oldKC)
++
++	if m.XDSUpdater != nil {
++		m.XDSUpdater.ConfigUpdate(&model.PushRequest{Full: true, Reason: model.NewReasonStats(model.ClusterUpdate)})
++	}
++}
++
++func (m *Multicluster) waitForRemoteKubeRegistryReady(kubeRegistry *Controller, id cluster.ID) {
++	maxWait := 15 * time.Minute
++	if features.RemoteClusterTimeout > 0 {
++		maxWait = features.RemoteClusterTimeout*3 + 60*time.Second
++	}
++	deadline := time.Now().Add(maxWait)
++	for time.Now().Before(deadline) {
++		if kubeRegistry.HasSynced() {
++			return
++		}
++		time.Sleep(50 * time.Millisecond)
++	}
++	log.Warnf("remote cluster %s: new kube registry did not report HasSynced within %v; removing old registry anyway",
++		id, maxWait)
++}
++
++func (m *Multicluster) removeOldRemoteClusterAfterNewReady(oldKC *kubeController) {
++	if oldKC.workloadEntryController != nil {
++		if !m.opts.MeshServiceController.DeleteRegistryInstance(oldKC.workloadEntryController) {
++			log.Warnf("failed to remove old WorkloadEntry registry from aggregate during cluster credential rotation")
++		}
++	}
++	if !m.opts.MeshServiceController.DeleteRegistryInstance(oldKC.Controller) {
++		log.Warnf("failed to remove old Kubernetes registry from aggregate during cluster credential rotation")
++	}
++	if err := oldKC.Cleanup(); err != nil {
++		log.Warnf("failed cleaning up old kube controller after remote cluster update: %v", err)
++	}
+ }
+ 
+ // ClusterDeleted is passed to the secret controller as a callback to be called
+diff --git a/pkg/kube/multicluster/secretcontroller.go b/pkg/kube/multicluster/secretcontroller.go
+index 4df6fcfcdc..e93662451d 100644
+--- a/pkg/kube/multicluster/secretcontroller.go
++++ b/pkg/kube/multicluster/secretcontroller.go
+@@ -253,6 +253,7 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+ 		}
+ 
+ 		action, callback := "Adding", c.handleAdd
++		var prevCluster *Cluster
+ 		if prev := c.cs.Get(secretKey, cluster.ID(clusterID)); prev != nil {
+ 			action, callback = "Updating", c.handleUpdate
+ 			// clusterID must be unique even across multiple secrets
+@@ -261,8 +262,8 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+ 				logger.Infof("skipping update (kubeconfig are identical)")
+ 				continue
+ 			}
+-			// stop previous remote cluster
+-			prev.Stop()
++			// Defer prev.Stop() until after ClusterUpdated has registered the replacement and removed the old registry.
++			prevCluster = prev
+ 		} else if c.cs.Contains(cluster.ID(clusterID)) {
+ 			// if the cluster has been registered before by another secret, ignore the new one.
+ 			logger.Warnf("cluster has already been registered")
+@@ -280,6 +281,9 @@ func (c *Controller) addSecret(name types.NamespacedName, s *corev1.Secret) erro
+ 		logger.Infof("finished callback for cluster and starting to sync")
+ 		c.cs.Store(secretKey, remoteCluster.ID, remoteCluster)
+ 		go remoteCluster.Run()
++		if prevCluster != nil {
++			prevCluster.Stop()
++		}
+ 	}
+ 
+ 	log.Infof("Number of remote clusters: %d", c.cs.Len())
