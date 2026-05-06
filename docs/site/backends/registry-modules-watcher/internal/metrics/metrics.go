@@ -45,6 +45,10 @@ const (
 	RegistryScannerNoModuleYamlMetric     = "d8_telemetry_module_validations_no_module_yaml_in_release_image"
 	RegistryScannerNoModuleSign           = "d8_telemetry_module_validations_no_module_sign_in_release_image"
 	RegistryScannerCriticalMetricSet      = "d8_telemetry_module_validations_critical_set"
+	RegistryScannerModuleWithoutTags      = "d8_telemetry_registry_scanner_module_without_tags"
+	RegistryScannerRegistryUnavailable    = "d8_telemetry_registry_scanner_registry_unavailable"
+
+	RegistryScannerTelemetryGroup = "d8_registry_scanner_telemetry"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {
@@ -145,6 +149,18 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	_, err = ms.RegisterGauge(RegistryScannerCriticalMetricSet, []string{"module"}, options.WithHelp("Modules with critical flag set in module.yaml"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryScannerCriticalMetricSet, err)
+	}
+
+	logger.Info("register metric", slog.String("metric", RegistryScannerModuleWithoutTags))
+	_, err = ms.RegisterGauge(RegistryScannerModuleWithoutTags, []string{"module", "registry"}, options.WithHelp("Modules listed in registry catalog but without tags in registry"))
+	if err != nil {
+		return fmt.Errorf("can not register %s: %w", RegistryScannerModuleWithoutTags, err)
+	}
+
+	logger.Info("register metric", slog.String("metric", RegistryScannerRegistryUnavailable))
+	_, err = ms.RegisterGauge(RegistryScannerRegistryUnavailable, []string{"registry"}, options.WithHelp("Registries that are unavailable during scanning"))
+	if err != nil {
+		return fmt.Errorf("can not register %s: %w", RegistryScannerRegistryUnavailable, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderTimeoutRequestsTotalMetric))
