@@ -1,7 +1,7 @@
 {% assign revision=include.revision %}
 
 {% if revision != "ce" %}
-<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}">
+<div class="dimmer-block-content{% if page.ee_only %} disabled{% endif %}" markdown="1">
 {% endif %}
 
 Use a Docker image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration files to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/<SSH_PRIVATE_KEY_FILE>` is used){% endif %}.
