@@ -1,0 +1,25 @@
+{{- if and (or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException")) (include "capi_controller_manager_enabled" .) }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: capi-controller-manager
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Allow the CAPI controller manager to run on the host network, CAPI should not depend on the operation of CNI
+    hostPorts:
+      - port: 4200
+        protocol: TCP
+        metadata:
+          description: CAPI controller manager webhook listener.
+      - port: 4211
+        protocol: TCP
+        metadata:
+          description: CAPI controller manager metrics endpoint exposed through kube-rbac-proxy
+{{- end }}

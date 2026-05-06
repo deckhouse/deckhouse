@@ -59,6 +59,7 @@ spec:
     metadata:
       labels:
         app: registry-packages-proxy
+        security.deckhouse.io/security-policy-exception: registry-packages-proxy
       annotations:
         kubectl.kubernetes.io/default-exec-container: registry-packages-proxy
         kubectl.kubernetes.io/default-logs-container: registry-packages-proxy
@@ -78,7 +79,7 @@ spec:
       serviceAccountName: registry-packages-proxy
       containers:
       - name: registry-packages-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "registryPackagesProxy") }}
         imagePullPolicy: IfNotPresent
         args:
