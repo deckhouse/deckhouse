@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterCheckboxesTags = document.querySelector('.filter__checkboxes--tags');
   const resetButton = document.querySelector('.reset-check');
   const applyButton = document.querySelector('.apply-filter');
+  const applyButtonBlock = document.querySelector('.filter__block--apply');
   const openMobile =  document.querySelector('.filter__search--filter');
   const fullReset = document.createElement('div');
   fullReset.classList.add('full-reset');
@@ -470,8 +471,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     filterOverlay.addEventListener('click', closeFilterMobilePanel);
-    if (applyButton) {
-      applyButton.addEventListener('click', closeFilterMobilePanel);
+    if (applyButtonBlock) {
+      applyButtonBlock.addEventListener('click', () => {
+        if (applyButton && !applyButton.disabled) {
+          closeFilterMobilePanel();
+        }
+      });
     }
   }
 
