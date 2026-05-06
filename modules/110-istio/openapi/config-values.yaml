@@ -242,6 +242,26 @@ properties:
         - {}
         - jaegerURLForUsers: https://tracing-service:4443/jaeger
           jaegerGRPCEndpoint: http://tracing.myjaeger.svc:16685/
+  telemetryAPI:
+    type: object
+    description: |
+      [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) (`telemetry.istio.io`) integration.
+
+      When `enabled` is `true`, the module turns off the legacy `telemetry`/`telemetry.v2` section in the Istio Operator / `Istio` resource so that mesh-wide metrics, access logging, and tracing policies are expected to be driven by **Telemetry** custom resources (deployed by the module or by you).
+
+      When `false` (default), the legacy control-plane telemetry stack remains enabled (see `telemetry` in the rendered Istio Operator / `Istio` manifest).
+
+      This is separate from [`dataPlane.accessLog`](#parameters-dataplane-accesslog): `accessLog` only defines the Envoy access log format in `meshConfig.extensionProviders`.
+    default: {}
+    properties:
+      enabled:
+        type: boolean
+        description: |
+          Use the Telemetry API path: disable embedded `telemetry`/`v2` in the Istio Operator / `Istio` resource.
+
+          Keep `false` (default) until Telemetry resources provide the policies you need.
+        default: false
+        x-examples: [true]
   sidecar:
     type: object
     description: Network settings for traffic capture by istio sidecar.
