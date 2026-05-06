@@ -193,7 +193,7 @@ and is supported starting from Kubernetes version 1.31.
 
 The `x-kubernetes-sensitive-data` marker is validated by `kube-apiserver` when applying a resource:
 
-- Marker requires the `CRDSensitiveData` feature gate to be enabled, which is enabled automatically when `apiserver.encryptionEnabled` is set to `true`.
+- Marker requires the `CRDSensitiveData` feature gate to be enabled. It is enabled by default and shouldn't be specified manually.
 - Marker can't be set on the root of the schema (the `openAPIV3Schema` node).
   To protect all fields of a resource, add the marker to the `spec` property (or a subtree below it),
   not to the schema root — the root also includes system fields (`apiVersion`, `kind`, `metadata`), which cannot be encrypted.
@@ -212,8 +212,8 @@ the following protection mechanisms are applied to all custom resources of this 
 - **Audit log masking**: Values of sensitive fields are replaced with `"******"` in audit logs,
   regardless of RBAC permissions and audit level.
 
-To enable sensitive data protection, set the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter to `true`.
-The `CRDSensitiveData` feature gate is enabled automatically and it shouldn't be specified manually:
+To add encryption in etcd to sensitive data protection, set the [`apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) parameter to `true`.
+The `CRDSensitiveData` feature gate is enabled by default and it shouldn't be specified manually:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
