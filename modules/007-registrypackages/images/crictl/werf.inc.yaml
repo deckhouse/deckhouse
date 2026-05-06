@@ -61,7 +61,11 @@ imageSpec:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
+<<<<<<< HEAD
 from: {{ index $.Images "builder/golang" }}
+=======
+from: {{ index $.Images "builder/golang-alpine-1.26.2" }}
+>>>>>>> 596dc798e3 (update builder image to 1.26.2)
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
