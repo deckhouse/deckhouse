@@ -251,6 +251,12 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
+	// sync maintenance label from ModuleConfig to Module
+	if err := r.syncMaintenanceLabel(ctx, module, moduleConfig.Spec.Maintenance); err != nil {
+		r.logger.Error("failed to sync maintenance label", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	// clear conflict metrics
 	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
@@ -439,6 +445,12 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{}, err
 	}
 
+	// clear the maintenance label when ModuleConfig is deleted
+	if err := r.syncMaintenanceLabel(ctx, module, ""); err != nil {
+		r.logger.Error("failed to clear maintenance label", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
 		r.logger.Debug("skip system module", slog.String("name", module.Name))
@@ -563,5 +575,30 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) 
 		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
 
 		return true
+	})
+}
+
+func (r *reconciler) syncMaintenanceLabel(ctx context.Context, module *v1alpha1.Module, maintenance string) error {
+	return utils.Update[*v1alpha1.Module](ctx, r.client, module, func(m *v1alpha1.Module) bool {
+		labels := m.GetLabels()
+		if maintenance != "" {
+			if labels == nil {
+				labels = make(map[string]string)
+			}
+			if labels[v1alpha1.ModuleLabelMaintenance] != maintenance {
+				labels[v1alpha1.ModuleLabelMaintenance] = maintenance
+				m.SetLabels(labels)
+				return true
+			}
+		} else {
+			if labels != nil {
+				if _, ok := labels[v1alpha1.ModuleLabelMaintenance]; ok {
+					delete(labels, v1alpha1.ModuleLabelMaintenance)
+					m.SetLabels(labels)
+					return true
+				}
+			}
+		}
+		return false
 	})
 }
