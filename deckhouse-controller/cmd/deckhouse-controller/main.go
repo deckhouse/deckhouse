@@ -37,28 +37,6 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// envOr returns the env var name's value, or defaultValue when unset/empty.
-func envOr(name, defaultValue string) string {
-	if v, ok := os.LookupEnv(name); ok && v != "" {
-		return v
-	}
-	return defaultValue
-}
-
-// envBoolOr parses the env var as a bool (per strconv.ParseBool), or returns
-// defaultValue when unset, empty, or unparseable.
-func envBoolOr(name string, defaultValue bool) bool {
-	v, ok := os.LookupEnv(name)
-	if !ok || v == "" {
-		return defaultValue
-	}
-	parsed, err := strconv.ParseBool(v)
-	if err != nil {
-		return defaultValue
-	}
-	return parsed
-}
-
 // Variables with component versions. They set by 'go build' command.
 var (
 	DeckhouseVersion     = "dev"
@@ -159,4 +137,26 @@ func main() {
 	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
+}
+
+// envOr returns the env var name's value, or defaultValue when unset/empty.
+func envOr(name, defaultValue string) string {
+	if v, ok := os.LookupEnv(name); ok && v != "" {
+		return v
+	}
+	return defaultValue
+}
+
+// envBoolOr parses the env var as a bool (per strconv.ParseBool), or returns
+// defaultValue when unset, empty, or unparseable.
+func envBoolOr(name string, defaultValue bool) bool {
+	v, ok := os.LookupEnv(name)
+	if !ok || v == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.ParseBool(v)
+	if err != nil {
+		return defaultValue
+	}
+	return parsed
 }
