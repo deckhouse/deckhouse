@@ -45,7 +45,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Instance describes the full lifecycle of a server in the Deckhouse platform, aggregating status from Machine (infrastructure) and Bashible (configuration).
+            Instance describes the full lifecycle of a server in Deckhouse Kubernetes Platform, aggregating status from the Machine object (infrastructure) and Bashible service on the node (configuration).
           properties:
             spec:
               type: object
@@ -57,7 +57,7 @@ spec:
                   properties:
                     name:
                       type: string
-                      description: Node name
+                      description: Node name.
                 machineRef:
                   type: object
                   description: Reference to instance in the cloud.
@@ -95,6 +95,7 @@ spec:
                   type: string
                   description: |
                     The high-level lifecycle phase of the Instance.
+
                     Mapping: Pending -> Provisioning -> Provisioned -> Running -> Terminating.
                   enum:
                     - Pending
@@ -107,7 +108,8 @@ spec:
                   type: string
                   description: |
                     Aggregated status of the infrastructure machine.
-                    Derived from MachineReady condition.
+
+                    Derived from `MachineReady` condition.
                   enum:
                     - Progressing
                     - Error
@@ -118,7 +120,8 @@ spec:
                   type: string
                   description: |
                     Aggregated status of the bashible configuration process.
-                    Derived from BashibleReady condition.
+
+                    Derived from `BashibleReady` condition.
                   enum:
                     - Error
                     - Unknown
@@ -128,9 +131,10 @@ spec:
                   type: string
                   description: |
                     A human-readable message indicating details about the current status or error.
-                    Displayed in CLI only when using -o wide.
+
+                    Displayed in CLI only when using `-o wide` for `d8 k`.
                 conditions:
-                  description: Detailed conditions of the instance (MachineReady, BashibleReady, etc.).
+                  description: Detailed conditions of the instance (`MachineReady`, `BashibleReady`, etc.).
                   type: array
                   x-kubernetes-list-map-keys:
                     - type
@@ -139,12 +143,13 @@ spec:
                     type: object
                     properties:
                       type:
-                        description: Type of the condition (e.g., MachineReady, BashibleReady).
+                        description: Type of the condition (e.g., `MachineReady`, `BashibleReady`).
                         type: string
                       status:
-                        description: Status of the condition (True, False, Unknown).
+                        description: Status of the condition (`True`, `False`, `Unknown`).
                         type: string
                       severity:
+                        description: Severity of the condition (`Error`, `Warning`, `Info`).
                         type: string
                       lastHeartbeatTime:
                         description: Last time the condition heartbeat was updated by its source.
@@ -188,7 +193,7 @@ spec:
                   properties:
                     name:
                       type: string
-                      description: Node name
+                      description: Node name.
                 classReference:
                   description: |
                     The reference to the `InstanceClass` object. It is unique for each `cloud-provider-*` module.

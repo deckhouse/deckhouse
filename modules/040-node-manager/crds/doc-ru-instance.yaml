@@ -1,178 +1,88 @@
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: instances.deckhouse.io
-  labels:
-    heritage: deckhouse
-    module: node-manager
 spec:
-  group: deckhouse.io
-  scope: Cluster
-  names:
-    plural: instanceinstances
-    singular: instance
-    kind: Instance
-  preserveUnknownFields: false
   versions:
     - name: v1alpha2
-      served: true
-      storage: true
-      subresources:
-        status: {}
-      additionalPrinterColumns:
-        - name: MachineStatus
-          type: string
-          description: "Статус инфраструктурной машины"
-          jsonPath: .status.machineStatus
-        - name: BashibleStatus
-          type: string
-          description: "Статус конфигурации bashible"
-          jsonPath: .status.bashibleStatus
-        - name: Phase
-          type: string
-          description: "Фаза жизненного цикла instance"
-          jsonPath: .status.phase
-        - name: Age
-          type: date
-          description: "Время с момента создания."
-          jsonPath: .metadata.creationTimestamp
-        - name: Message
-          type: string
-          description: "Сообщение об ошибке или подробный статус"
-          jsonPath: .status.message
-          priority: 1
       schema:
         openAPIV3Schema:
-          type: object
           description: |
-            Instance описывает полный жизненный цикл сервера в платформе Deckhouse, агрегируя состояние от Machine (инфраструктура) и Bashible (конфигурация).
+            Instance описывает полный жизненный цикл сервера в Deckhouse Kubernetes Platform, агрегируя состояние от объектов Machine (инфраструктура) и сервиса Bashible на узле (конфигурация).
           properties:
             spec:
-              type: object
               description: Спецификация Instance, включая ссылки на связанные ресурсы.
               properties:
                 nodeRef:
-                  type: object
-                  description: Ссылка на объект узла kubernetes.
+                  description: Ссылка на объект узла Kubernetes.
                   properties:
                     name:
-                      type: string
-                      description: Имя узла
+                      description: Имя узла.
                 machineRef:
-                  type: object
-                  description: Ссылка на объект узла облачного провайдера.
+                  description: Ссылка на объект машины облачного провайдера.
                   properties:
                     apiVersion:
-                      type: string
-                      description: Используемая версия API Kubernetes.
+                      description: Используемая версия API.
                     kind:
-                      type: string
                       description: Тип объекта.
                     name:
-                      type: string
                       description: Имя объекта.
                     namespace:
-                      type: string
-                      description: Пространство имен, в котором находится объект.
+                      description: Пространство имён, в котором находится объект.
                 classReference:
                   description: |
-                    Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
-                  type: object
+                    Ссылка на объект `InstanceClass`.
+
+                    Уникален для каждого модуля `cloud-provider-*`.
                   properties:
                     kind:
-                      type: string
                       description: |
-                        Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
+                        Тип объекта (например, `OpenStackInstanceClass`).
+
+                        Тип объекта указан в документации соответствующего модуля облачного провайдера.
                     name:
-                      type: string
                       description: |
-                        Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
+                        Имя нужного объекта `InstanceClass` (например, `finland-medium`).
             status:
-              type: object
               description: Последнее наблюдаемое состояние Instance.
               properties:
                 phase:
-                  type: string
                   description: |
                     Высокоуровневая фаза жизненного цикла Instance.
+
                     Соответствие: Pending -> Provisioning -> Provisioned -> Running -> Terminating.
-                  enum:
-                    - Pending
-                    - Provisioning
-                    - Provisioned
-                    - Running
-                    - Terminating
-                    - Unknown
                 machineStatus:
-                  type: string
                   description: |
                     Агрегированный статус инфраструктурной машины.
-                    Вычисляется из условия MachineReady.
-                  enum:
-                    - Progressing
-                    - Error
-                    - Ready
-                    - Blocked
-                    - Rebooting
+
+                    Вычисляется из условия `MachineReady`.
                 bashibleStatus:
-                  type: string
                   description: |
                     Агрегированный статус процесса конфигурации bashible.
-                    Вычисляется из условия BashibleReady.
-                  enum:
-                    - Error
-                    - Unknown
-                    - Ready
-                    - WaitingApproval
+
+                    Вычисляется из условия `BashibleReady`.
                 message:
-                  type: string
                   description: |
                     Человекочитаемое сообщение с деталями текущего состояния или ошибки.
-                    В CLI отображается только при использовании флага -o wide.
+
+                    В CLI отображается только при использовании флага `-o wide` при вызове `d8 k`.
                 conditions:
-                  description: Детализированные условия instance (MachineReady, BashibleReady и т.д.).
-                  type: array
-                  x-kubernetes-list-map-keys:
-                    - type
-                  x-kubernetes-list-type: map
+                  description: Детализированные условия Instance (MachineReady, BashibleReady и т.д.).
                   items:
-                    type: object
                     properties:
                       type:
-                        description: Тип условия (например, MachineReady, BashibleReady).
-                        type: string
+                        description: Тип условия (например, `MachineReady`, `BashibleReady`).
                       status:
-                        description: Статус условия (True, False, Unknown).
-                        type: string
+                        description: Статус условия (`True`, `False`, `Unknown`).
                       severity:
-                        type: string
+                        description: Серьёзность условия (`Error`, `Warning`, `Info`).
                       lastHeartbeatTime:
                         description: Время последнего heartbeat-обновления условия от источника.
-                        type: string
-                        format: date-time
                       lastTransitionTime:
                         description: Время последнего перехода условия из одного состояния в другое.
-                        type: string
-                        format: date-time
                       reason:
                         description: Причина последнего перехода условия.
-                        type: string
                       message:
                         description: Человекочитаемое сообщение с деталями перехода.
-                        type: string
                       observedGeneration:
                         description: Поколение ресурса, наблюдаемое контроллером.
-                        type: integer
-                        format: int64
-                    required:
-                      - type
-                      - status
-                      - reason
     - name: v1alpha1
-      served: true
-      storage: true
-      subresources:
-        status: {}
       schema:
         openAPIV3Schema:
           description: |
@@ -181,10 +91,10 @@ spec:
             status:
               properties:
                 nodeRef:
-                  description: Ссылка на объект узла kubernetes.
+                  description: Ссылка на объект узла Kubernetes.
                   properties:
                     name:
-                      description: Имя узла
+                      description: Имя узла.
                 classReference:
                   description: |
                     Ссылка на объект `InstanceClass`. Уникален для каждого модуля `cloud-provider-*`.
@@ -194,53 +104,40 @@ spec:
                         Тип объекта (например, `OpenStackInstanceClass`). Тип объекта указан в документации соответствующего модуля облачного провайдера.
                     name:
                       description: |
-                        Имя нужного `InstanceClass`-объекта (например, `finland-medium`).
+                        Имя нужного объекта `InstanceClass` (например, `finland-medium`).
                 machineRef:
-                  description: Ссылка на объект узла облачного провайдера.
+                  description: Ссылка на объект машины облачного провайдера.
                   properties:
                     apiVersion:
-                      description: Используемая версия API Kubernetes.
+                      description: Используемая версия API.
                     kind:
                       description: Тип объекта.
                     name:
                       description: Имя объекта.
                     namespace:
-                      description: Пространство имен, в котором находится объект.
+                      description: Пространство имён, в котором находится объект.
                 currentStatus:
                   description: Текущий статус объекта.
                   properties:
                     lastUpdateTime:
-                      description: Время последнего обновления ствтуса.
+                      description: Время последнего обновления статуса.
                     phase:
-                      description: Лейбл состояния машин в текущий момент времени.
+                      description: Фаза состояния машины в текущий момент времени.
                 lastOperation:
                   description: Последняя выполненная операция.
                   properties:
                     description:
                       description: Описание текущей операции.
                     lastUpdateTime:
-                      description: Время последней операции.
+                      description: Время последнего обновления операции.
                     state:
                       description: Состояние операции.
                     type:
                       description: Тип операции.
-                  type: object
                 bootstrapStatus:
-                  type: object
                   description: Информация о процессе начальной настройки узла.
                   properties:
                     logsEndpoint:
-                      type: string
-                      description: http эндпоинт для получения логов начальной настройки узла.
+                      description: HTTP-эндпоинт для получения логов начальной настройки узла.
                     description:
-                      type: string
                       description: Описание процесса получения логов начальной настройки узла.
-      additionalPrinterColumns:
-        - name: Status
-          type: string
-          description: Текущий статус.
-          jsonPath: .status.currentStatus.phase
-        - name: Age
-          type: date
-          description: Время создания объекта.
-          jsonPath: .metadata.creationTimestamp
