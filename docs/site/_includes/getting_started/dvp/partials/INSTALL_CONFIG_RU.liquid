@@ -32,6 +32,18 @@
 {{ dvp_cfg_yaml }}
 ```
 {% endsnippetcut %}
+
+{% alert level="info" %}
+
+При загрузке больших образов ВМ (особенно при медленном канале) добавьте увеличенный таймаут завершения worker-узлов для ресурса `IngressNginxController` с именем `nginx` в этом манифесте. Иначе длительная загрузка может оборваться при перезагрузке конфигурации контроллера и смене воркер-узлов, так как типового окна ожидания может не хватить на один долгий запрос. Укажите в `spec` рядом с `ingressClass`, `inlet` и остальными полями:
+
+```yaml
+  config:
+    worker-shutdown-timeout: 1800s  # 30 минут или более при необходимости
+```
+
+{% endalert %}
+
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="Про nodeSelector, taints и tolerations..." %}
 Управлять тем, на каких узлах будет запускаться ядро Deckhouse, можно с помощью указания `nodeSelector`/`tolerations` в параметре `configOverrides.deckhouse` конфигурации установки. Также, вы можете перечислить необходимые taint'ы узлов кластера в массиве `configOverrides.global.modules.placement.customTolerationKeys`, чтобы Deckhouse автоматически указывал соответствующие `toleration` своим компонентам.

@@ -31,6 +31,18 @@ Create the `config.yml` file.
 {{ dvp_cfg_yaml }}
 ```
 {% endsnippetcut %}
+
+{% alert level="info" %}
+
+When uploading large VM images (especially over slow connections), add an increased Ingress NGINX worker shutdown timeout to the `IngressNginxController` named `nginx` in this manifest. Otherwise, uploads may be interrupted when the controller reloads configuration and replaces workers—the default grace period can be too short for one long request. Place this under `spec` next to `ingressClass`, `inlet`, and other fields:
+
+```yaml
+  config:
+    worker-shutdown-timeout: 1800s  # 30 minutes or more if needed
+```
+
+{% endalert %}
+
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}
 You can control on which nodes the Deckhouse core components will run by setting  `nodeSelector`/`tolerations` in the `configOverrides.deckhouse` parameter of the installation configuration. You can also specify cluster node taints in the `configOverrides.global.modules.placement.customTolerationKeys` array so that Deckhouse can automatically add the appropriate `toleration` to its components.
