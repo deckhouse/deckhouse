@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/462-loki/openapi/config-values.yaml
+# /ee/cse/modules/462-loki/openapi/config-values.yaml
 type: object
 properties:
   storageClass:
