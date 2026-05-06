@@ -26,13 +26,13 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
 
 Модуль `cert-manager` состоит из следующих компонентов:
 
-1. **Cert-manager** — контроллер, обеспечивающий полный цикл управления сертификатами в Deckhouse Kubernetes Platform (DKP). **Cert-manager** управляет следующими кастомными ресурсами:
+1. **Cert-manager** — контроллер, обеспечивающий полный цикл управления сертификатами в Deckhouse Kubernetes Platform (DKP). Cert-manager управляет следующими кастомными ресурсами:
 
     - Issuer — описывает настройки и параметры для получения сертификатов от конкретного источника (например, CA или внешний сервис). Применяется внутри выбранного namespace;
     - ClusterIssuer — аналог Issuer, но действует на весь кластер и доступен во всех namespace;
     - Certificate — определяет, какой сертификат требуется: указывает параметры, такие как субъект, срок действия, использованный Issuer/ClusterIssuer и дополнительные опции;
     - CertificateRequest — заявка на выпуск или продление сертификатов;
-    - Challenge — описывает задание, используемое для прохождения валидации домена (например, HTTP-01, DNS-01 challenge для Let's Encrypt);
+    - Challenge — описывает задание, используемое для прохождения валидации домена (например, `HTTP-01`, `DNS-01 challenge` для Let's Encrypt);
     - Order — объединяет связанные Challenge в последовательность для получения сертификата у ACME-сервера (например, Let's Encrypt).
 
     Компонент содержит следующие контейнеры:
@@ -41,22 +41,22 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
     - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cert-manager.
 
     {% alert level="info" %}
-    **Cert-manager** поддерживает интеграцию с внешними компонентами для работы с DNS-провайдерами, которые не имеют нативной поддержки в контроллере, с помощью [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/). Эти интеграционные компоненты являются отдельными решениями и не входят в стандартную комплектацию модуля, однако для их корректной работы их необходимо устанавливать в системный namespace `d8-cert-manager`. При внесении изменений в этот namespace рекомендуется всегда учитывать наличие подобных расширений для сохранения их работоспособности.
+    Для прохождения `DNS-01 challenge` **cert-manager** поддерживает ряд популярных DNS-провайдеров, таких как AzureDNS, Cloudflare, DigitalOcean и т.д. С полным списком поддерживаемых DNS-провайдеров можно ознакомиться [в документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/). Для неподдерживаемых "из коробки" провайдеров используются issuer типа [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/), которые являются внешними компонентами. Для корректной работы таких провайдеров их необходимо устанавливать в системный namespace `d8-cert-manager`. При внесении изменений в этот namespace рекомендуется всегда учитывать наличие подобных расширений для сохранения их работоспособности.
     {% endalert %}
 
-1. **Webhook** — компонент состоит из одного контейнера **webhook**, который обеспечивает следующие действия:
+1. **Webhook** — компонент состоит из одного контейнера webhook, который обеспечивает следующие действия:
     - валидацию кастомных ресурсов Issuer, ClusterIssuer, Certificate, CertificateRequest, Challenge, Order;
-    - мутацию кастомных ресурсов CertificateRequest, при этом **webhook** добавляет информацию о пользователе, создавшем запрос на сертификат.
+    - мутацию кастомных ресурсов CertificateRequest, при этом webhook добавляет информацию о пользователе, создавшем запрос на сертификат.
 
     В DKP валидация отключена для ресурсов в неймспейсе `d8-cert-manager`, а также для неймспейсов с меткой `cert-manager.io/disable-validation=true`.
 
-1. **Cainjector** — дополнительный компонент, состоящий из одного контейнера [**cainjector**](https://cert-manager.io/docs/concepts/ca-injector/). **Cainjector** отвечает за автоматическую подстановку или обновление сертификатов корневого центра сертификации (CA) во все релевантные ресурсы Kubernetes: ValidatingWebhookConfiguration, MutatingWebhookConfiguration, CustomResourceDefinition и APIService. Это обеспечивает актуальность доверенных корневых сертификатов для сервисов, использующих webhooks и расширения API.
+1. **Cainjector** — дополнительный компонент, состоящий из одного контейнера [cainjector](https://cert-manager.io/docs/concepts/ca-injector/). Cainjector отвечает за автоматическую подстановку или обновление сертификатов корневого центра сертификации (CA) во все релевантные ресурсы Kubernetes: ValidatingWebhookConfiguration, MutatingWebhookConfiguration, CustomResourceDefinition и APIService. Это обеспечивает актуальность доверенных корневых сертификатов для сервисов, использующих webhooks и расширения API.
 
-    Активация **cainjector** возможна через параметр `.spec.settings.enableCAInjector` в [ModuleConfig модуля `cert-manager`](/modules/cert-manager/configuration.html).
+    Cainjector активируется параметром [`.spec.settings.enableCAInjector`](/modules/cert-manager/configuration.html#parameters-enablecainjector) в настройках модуля [`cert-manager`](/modules/cert-manager/configuration.html). DKP не использует cainjector, поэтому включать нужно только в том случае, если вы используете в своих сервисах пользовательские инъекции CA.
 
-    **Cainjector** обрабатывает только ресурсы с аннотациями  `cert-manager.io/inject-ca-from`, `cert-manager.io/inject-ca-from-secret` или `cert-manager.io/inject-apiserver-ca` в зависимости от типа ресурса.
+    Cainjector обрабатывает только ресурсы с аннотациями  `cert-manager.io/inject-ca-from`, `cert-manager.io/inject-ca-from-secret` или `cert-manager.io/inject-apiserver-ca` в зависимости от типа ресурса.
 
-1. **Cm-acme-http-solver** — временный pod с контейнером **acmesolver**, запускаемый для прохождения [HTTP-01 Challenge](https://cert-manager.io/docs/configuration/acme/http01/) при валидации домена через ACME (например, Let's Encrypt). Этот компонент автоматически создаётся **cert-manager** на время исполнения HTTP-01 Challenge и удаляется по завершении процедуры. Такой подход реализует безопасную временную публикацию ресурса, подтверждающего владение доменом для получения сертификата.
+1. **Cm-acme-http-solver** — временный pod с контейнером **acmesolver**, запускаемый для прохождения [`HTTP-01 Challenge`](https://cert-manager.io/docs/configuration/acme/http01/) при валидации домена через ACME (например, Let's Encrypt). Этот pod автоматически создаётся контроллером cert-manager на время исполнения `HTTP-01 Challenge` и удаляется по завершении процедуры. Такой подход реализует безопасную временную публикацию ресурса, подтверждающего владение доменом для получения сертификата.
 
 ## Взаимодействия модуля
 
@@ -71,7 +71,7 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
 
 1. **PKI-сервис** — выполняет запросы для выпуска и обновления (перевыпуска) сертификатов.
 
-1. **DNS-провайдер** — выполняет запросы на добавление и удаление записей в службах DNS для прохождения DNS-01 Challenge при валидации домена через ACME.
+1. **DNS-провайдер** — выполняет запросы на добавление и удаление записей в службах DNS для прохождения `DNS-01 Challenge` при валидации домена через ACME-сервер.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
@@ -81,4 +81,4 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
 
 1. **Prometheus-main** — сбор метрик **cert-manager**.
 
-1. **Nginx Controller** — пересылка запросов от ACME-сервисов к **cm-acme-http-solver**.
+1. **Nginx Controller** — пересылка запросов от ACME-сервера к cm-acme-http-solver.
