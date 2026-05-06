@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package download
+package deploy
 
 import (
 	"context"
@@ -28,16 +28,18 @@ import (
 )
 
 const (
-	taskTracer = "package-download"
+	taskTracer = "package-deploy"
 )
 
 var (
 	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
+	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
 	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
+	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
 )
 
-type downloaderI interface {
-	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
+type deployerI interface {
+	Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error
 }
 
 type statusService interface {
@@ -50,43 +52,50 @@ type task struct {
 	packageName string
 	version     string
 	downloaded  string
+	deployed    string
 
 	repository registry.Remote
 
-	downloader downloaderI
-	status     statusService
+	deployer deployerI
+	status   statusService
 
 	logger *log.Logger
 }
 
-func NewModuleTask(name, version string, repo registry.Remote, downloader downloaderI, status statusService, logger *log.Logger) queue.Task {
+// NewModuleTask creates a Deploy task for a Module package.
+// The package is cached under downloaded/{name} and exposed at downloaded/modules/{name}.
+func NewModuleTask(name, version string, repo registry.Remote, deployer deployerI, status statusService, logger *log.Logger) queue.Task {
 	return &task{
 		name:        name,
 		packageName: name,
 		version:     version,
 		downloaded:  filepath.Join(modulesDownloadedDir, name),
+		deployed:    filepath.Join(modulesDeployedDir, name),
 		repository:  repo,
-		downloader:  downloader,
+		deployer:    deployer,
 		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
 
-func NewAppTask(instance, name, version string, repo registry.Remote, downloader downloaderI, status statusService, logger *log.Logger) queue.Task {
+// NewAppTask creates a Deploy task for an Application package.
+// The package is cached under apps/{repo}/{package} and exposed at apps/deployed/{instance}.
+func NewAppTask(instance, name, version string, repo registry.Remote, deployer deployerI, status statusService, logger *log.Logger) queue.Task {
 	return &task{
-		downloaded:  filepath.Join(appsDownloadedDir, repo.Name, name),
-		packageName: name,
 		name:        instance,
+		packageName: name,
 		version:     version,
+		downloaded:  filepath.Join(appsDownloadedDir, repo.Name, name),
+		deployed:    filepath.Join(appsDeployedDir, instance),
 		repository:  repo,
-		downloader:  downloader,
+		deployer:    deployer,
 		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return fmt.Sprintf("Download:%s", t.version)
+	return fmt.Sprintf("Deploy:%s", t.version)
 }
 
 func (t *task) Execute(ctx context.Context) error {
@@ -96,14 +105,14 @@ func (t *task) Execute(ctx context.Context) error {
 		slog.String("repository", t.repository.Name),
 		slog.String("version", t.version))
 
-	// download package from repository
-	logger.Debug("download package")
-	if err := t.downloader.Download(ctx, t.repository, t.downloaded, t.packageName, t.version); err != nil {
+	// Cache package content locally and expose it at the path consumed by the load task.
+	logger.Debug("deploy package")
+	if err := t.deployer.Deploy(ctx, t.repository, t.downloaded, t.deployed, t.packageName, t.name, t.version); err != nil {
 		t.status.HandleError(t.name, err)
-		return fmt.Errorf("download package: %w", err)
+		return fmt.Errorf("deploy package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.name, status.ConditionDownloaded)
+	t.status.SetConditionTrue(t.name, status.ConditionReadyOnFilesystem)
 
 	return nil
 }

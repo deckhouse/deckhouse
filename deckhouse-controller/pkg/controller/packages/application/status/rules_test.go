@@ -130,15 +130,6 @@ func TestInstalledRule(t *testing.T) {
 			},
 		},
 		{
-			name: "false when Downloaded is false",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionInstalled: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
-			},
-		},
-		{
 			name: "false when ReadyOnFilesystem is false",
 			opts: []mappingOption{
 				withInternalCondition(string(intstatus.ConditionReadyOnFilesystem), metav1.ConditionFalse, "MountFailed"),
@@ -236,28 +227,6 @@ func TestUpdateInstalledRule(t *testing.T) {
 				ConditionUpdateInstalled: nil, // Should not be present for fresh installs
 			},
 		},
-		{
-			name: "false when core condition fails during update",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
-				withVersionChanged(),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionUpdateInstalled: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
-			},
-		},
-		{
-			name: "absent when core condition fails without version change",
-			opts: []mappingOption{
-				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
-			},
-			expected: map[string]*expectedCondition{
-				// FalseIf only triggers when version changed, so no update to this condition
-				ConditionUpdateInstalled: nil,
-			},
-		},
 	}
 
 	runTestCases(t, cases)
@@ -273,15 +242,6 @@ func TestReadyRule(t *testing.T) {
 			},
 			expected: map[string]*expectedCondition{
 				ConditionReady: {status: metav1.ConditionTrue, reason: "Ready"},
-			},
-		},
-		{
-			name: "false when core condition fails",
-			opts: []mappingOption{
-				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
-			},
-			expected: map[string]*expectedCondition{
-				ConditionReady: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
 			},
 		},
 		{
