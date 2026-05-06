@@ -22,8 +22,6 @@ import (
 	external "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 var (
@@ -33,8 +31,9 @@ var (
 )
 
 var (
-	defaultLogger Logger = newExternalLogger(external.NewDummyLogger(app.IsDebug))
+	defaultLogger Logger = newExternalLogger(external.NewDummyLogger(false))
 	emptyLogger   Logger = newExternalLogger(external.NewSilentLogger())
+	debugEnabled  bool
 )
 
 const (
@@ -88,8 +87,12 @@ type LoggerOptions struct {
 
 func InitLogger(loggerType string) error {
 	return initLoggerWithOptions(loggerType, LoggerOptions{
-		IsDebug: app.IsDebug,
+		IsDebug: debugEnabled,
 	})
+}
+
+func SetDebugEnabled(enabled bool) {
+	debugEnabled = enabled
 }
 
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
@@ -151,7 +154,7 @@ func getExternalLoggerWrapper(loggerType string, opts LoggerOptions) (*ExternalL
 	}
 	// Mute Shell-Operator logs
 	log.Default().SetLevel(log.LevelFatal)
-	if app.IsDebug {
+	if opts.IsDebug {
 		// Enable shell-operator log, because it captures klog output
 		// todo: capture output of klog with default logger instead
 		log.Default().SetLevel(log.LevelDebug)

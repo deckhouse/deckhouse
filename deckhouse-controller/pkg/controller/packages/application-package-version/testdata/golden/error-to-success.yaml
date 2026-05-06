@@ -41,4 +41,5 @@ spec:
     repo: registry.example.com/test
     scheme: https
 status:
+  partialScanAvailable: false
   syncTime: null

@@ -107,32 +107,6 @@ The `.spec.settings.dvcr.storage` block configures a persistent volume for stori
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.size`: Volume size (for example, `50G`). To expand the storage, increase the value of the parameter.
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`: StorageClass name (for example, `rv-thin-r1`).
 
-{% alert level="warning" %}
-Migrating images when changing the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` parameter value is not supported.
-
-When you change the DVCR StorageClass, all images stored in DVCR will be lost.
-{% endalert %}
-
-To change the DVCR StorageClass, perform the following steps:
-
-1. Change the value of the [`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) parameter.
-
-1. Delete the old PVC for DVCR using the following command:
-
-   ```shell
-   d8 k -n d8-virtualization delete pvc -l app=dvcr
-   ```
-
-1. Restart DVCR by running the following command:
-
-   ```shell
-   d8 k -n d8-virtualization rollout restart deployment dvcr
-   ```
-
-{% alert level="warning" %}
-The storage that serves the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` StorageClass must be accessible from the nodes where DVCR runs (system nodes, or worker nodes if there are no system nodes).
-{% endalert %}
-
 ### Ingress settings
 
 The `.spec.settings.ingressClass` parameter defines the Ingress controller class that will be used to upload virtual machine images via the web interface or CLI.

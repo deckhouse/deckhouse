@@ -18,14 +18,10 @@
 {{- /*
 # We need include 'bb_package_install' in this file for dhctl bootstrap render.
 */}}
-{{- if $bb_package_install := .Files.Get "/deckhouse/candi/bashible/bb_package_install.sh.tpl" -}}
-  {{- tpl ( $bb_package_install ) . | nindent 0 }}
-{{- end }}
-
 
 if [ ! -f /var/lib/bashible/hosname-set-as-in-aws ]; then
 {{ with .images.registrypackages }}
-  bb-package-install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant3 }}"
+  /opt/deckhouse/bin/rpp-get install "ec2DescribeTags:{{ .ec2DescribeTagsV001Flant3 }}"
 {{- end }}
 
   attempt=0

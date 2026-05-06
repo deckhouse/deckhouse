@@ -200,9 +200,8 @@ func (i *Attacher) prepare(ctx context.Context) (*client.KubernetesClient, *conf
 
 		kubeCl, err := i.Params.KubeProvider.Client(ctx)
 		if err != nil {
-			return fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
+			return fmt.Errorf("connect to kubernetes api: %w", err)
 		}
-
 		kubeClient = &client.KubernetesClient{KubeClient: kubeCl}
 
 		metaConfig, err = config.ParseConfigInCluster(

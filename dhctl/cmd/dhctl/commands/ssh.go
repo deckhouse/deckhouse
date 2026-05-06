@@ -23,38 +23,44 @@ import (
 
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
+		params, err := app.DefaultProviderParams()
+		if err != nil {
 			return err
 		}
-		if err := terminal.AskBastionPassword(); err != nil {
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		if err != nil {
 			return err
 		}
+		if sshProviderInitializer == nil {
+			return fmt.Errorf("SSH credentials not provided")
+		}
+		defer sshProviderInitializer.Cleanup(ctx)
 
-		sshCl, err := sshclient.NewClientFromFlagsWithHosts(ctx)
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return err
+		}
+		sshCl, err := sshProvider.Client(ctx)
 		if err != nil {
 			return err
 		}
 
-		if err := sshCl.Start(); err != nil {
-			return err
-		}
-
-		if err := sshCl.Check().AwaitAvailability(ctx); err != nil {
+		if err := sshCl.Check().AwaitAvailability(ctx, retry.NewEmptyParams()); err != nil {
 			return fmt.Errorf("check connection: %v", err)
 		}
 
@@ -70,7 +76,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var Data string
 	var Direction string
 
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Flag("src", "source path").Short('s').StringVar(&SrcPath)
@@ -81,20 +87,25 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		log.DebugLn("scp: start ssh-agent")
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
-		if err := terminal.AskBastionPassword(); err != nil {
-			return err
-		}
-
-		sshCl, err := sshclient.NewClientFromFlagsWithHosts(ctx)
+		params, err := app.DefaultProviderParams()
 		if err != nil {
 			return err
 		}
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		if err != nil {
+			return err
+		}
+		if sshProviderInitializer == nil {
+			return fmt.Errorf("SSH credentials not provided")
+		}
+		defer sshProviderInitializer.Cleanup(ctx)
 
-		if err := sshCl.Start(); err != nil {
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return err
+		}
+		sshCl, err := sshProvider.Client(ctx)
+		if err != nil {
 			return err
 		}
 
@@ -144,7 +155,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	var ScriptPath string
 	var Sudo bool
 
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 	cmd.Flag("script", "source path").
 		StringVar(&ScriptPath)
@@ -154,14 +165,24 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
+		params, err := app.DefaultProviderParams()
+		if err != nil {
 			return err
 		}
-		if err := terminal.AskBastionPassword(); err != nil {
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		if err != nil {
 			return err
 		}
+		if sshProviderInitializer == nil {
+			return fmt.Errorf("SSH credentials not provided")
+		}
+		defer sshProviderInitializer.Cleanup(ctx)
 
-		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(ctx, true)
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return err
+		}
+		sshClient, err := sshProvider.Client(ctx)
 		if err != nil {
 			return err
 		}
@@ -189,7 +210,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
+	app.DefineSSHFlags(cmd, nil)
 	app.DefineBecomeFlags(cmd)
 
 	var bundleDirFlag string
@@ -205,14 +226,24 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		if err := terminal.AskBecomePassword(); err != nil {
+		params, err := app.DefaultProviderParams()
+		if err != nil {
 			return err
 		}
-		if err := terminal.AskBastionPassword(); err != nil {
+		sshProviderInitializer, err := providerinitializer.GetSSHProviderInitializer(ctx, params)
+		if err != nil {
 			return err
 		}
+		if sshProviderInitializer == nil {
+			return fmt.Errorf("SSH credentials not provided")
+		}
+		defer sshProviderInitializer.Cleanup(ctx)
 
-		sshClient, err := sshclient.NewInitClientFromFlagsWithHosts(ctx, true)
+		sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
+		if err != nil {
+			return err
+		}
+		sshClient, err := sshProvider.Client(ctx)
 		if err != nil {
 			return err
 		}

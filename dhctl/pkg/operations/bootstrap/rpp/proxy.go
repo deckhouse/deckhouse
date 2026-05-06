@@ -43,25 +43,36 @@ type RegistryPackagesProxy struct {
 	signCheck     bool
 	configGetter  registry.ClientConfigGetter
 	clusterDomain string
+	clusterUUID   string
 	dc            *directoryconfig.DirectoryConfig
 
-	localPort  string
-	remotePort string
+	localPort           string
+	remotePort          string
+	bootstrapLocalPort  string
+	bootstrapRemotePort string
 
 	loggerProvider log.LoggerProvider
 
-	proxy  *proxy.Proxy
-	tunnel libcon.ReverseTunnel
+	proxy        *proxy.Proxy
+	rppGetServer *proxy.RPPClientBinaryServer
+	tunnels      []libcon.ReverseTunnel
 }
+
+const (
+	registryPackagesProxyPort = "5444"
+	rppGetBinaryPort          = "4282"
+)
 
 func NewRegistryPackagesProxy(clusterDomain string, configGetter registry.ClientConfigGetter, logger log.LoggerProvider) *RegistryPackagesProxy {
 	return &RegistryPackagesProxy{
-		clusterDomain:  clusterDomain,
-		configGetter:   configGetter,
-		localPort:      "5444",
-		remotePort:     "5444",
-		signCheck:      false,
-		loggerProvider: logger,
+		clusterDomain:       clusterDomain,
+		configGetter:        configGetter,
+		localPort:           registryPackagesProxyPort,
+		remotePort:          registryPackagesProxyPort,
+		bootstrapLocalPort:  rppGetBinaryPort,
+		bootstrapRemotePort: rppGetBinaryPort,
+		signCheck:           false,
+		loggerProvider:      logger,
 	}
 }
 
@@ -82,6 +93,28 @@ func (p *RegistryPackagesProxy) WithRemotePort(port string) *RegistryPackagesPro
 	if port != "" {
 		p.remotePort = port
 	}
+
+	return p
+}
+
+func (p *RegistryPackagesProxy) WithBootstrapLocalPort(port string) *RegistryPackagesProxy {
+	if port != "" {
+		p.bootstrapLocalPort = port
+	}
+
+	return p
+}
+
+func (p *RegistryPackagesProxy) WithBootstrapRemotePort(port string) *RegistryPackagesProxy {
+	if port != "" {
+		p.bootstrapRemotePort = port
+	}
+
+	return p
+}
+
+func (p *RegistryPackagesProxy) WithClusterUUID(clusterUUID string) *RegistryPackagesProxy {
+	p.clusterUUID = clusterUUID
 
 	return p
 }
@@ -131,10 +164,13 @@ func (p *RegistryPackagesProxy) Stop() {
 
 	tunnelMessage := notInitMsg
 	proxyMessage := notInitMsg
+	rppGetServerMessage := notInitMsg
 
-	if !govalue.IsNil(p.tunnel) {
-		p.tunnel.Stop()
-		p.tunnel = nil
+	if len(p.tunnels) > 0 {
+		for _, tunnel := range p.tunnels {
+			tunnel.Stop()
+		}
+		p.tunnels = nil
 		tunnelMessage = stoppedMsg
 	}
 
@@ -144,8 +180,15 @@ func (p *RegistryPackagesProxy) Stop() {
 		proxyMessage = stoppedMsg
 	}
 
+	if !govalue.IsNil(p.rppGetServer) {
+		p.rppGetServer.Stop()
+		p.rppGetServer = nil
+		rppGetServerMessage = stoppedMsg
+	}
+
 	p.debug("Registry packages proxy tunnel %s", tunnelMessage)
 	p.debug("Registry packages proxy server %s", proxyMessage)
+	p.debug("rpp-get bootstrap server %s", rppGetServerMessage)
 }
 
 func (p *RegistryPackagesProxy) startProxy() error {
@@ -179,6 +222,13 @@ func (p *RegistryPackagesProxy) startProxy() error {
 		return fmt.Errorf("failed to listen registry proxy socket: %v", err)
 	}
 
+	bootstrapAddr := net.JoinHostPort(localhost, p.bootstrapLocalPort)
+	bootstrapListener, err := net.Listen("tcp", bootstrapAddr)
+	if err != nil {
+		_ = listener.Close()
+		return fmt.Errorf("failed to listen rpp-get socket: %v", err)
+	}
+
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	proxyConfig := &proxy.Config{
@@ -188,11 +238,21 @@ func (p *RegistryPackagesProxy) startProxy() error {
 	registryCl := &registry.DefaultClient{}
 	proxyLogger := newLogger(p.loggerProvider())
 
-	proxy := proxy.NewProxy(srv, listener, p.configGetter, proxyLogger, registryCl)
+	packagesProxy := proxy.NewProxy(srv, listener, p.configGetter, proxyLogger, registryCl)
+	rppGetServer := proxy.NewRPPClientBinaryServerFromRegistry(proxy.RPPClientBinaryServerOptions{
+		Listener:           bootstrapListener,
+		Logger:             proxyLogger,
+		ClientConfigGetter: p.configGetter,
+		RegistryClient:     registryCl,
+		SignCheck:          proxyConfig.SignCheck,
+		ClusterUUID:        p.clusterUUID,
+	})
 
-	go proxy.Serve(proxyConfig)
+	go packagesProxy.Serve(proxyConfig)
+	go rppGetServer.Serve()
 
-	p.proxy = proxy
+	p.proxy = packagesProxy
+	p.rppGetServer = rppGetServer
 
 	return nil
 }
@@ -200,36 +260,52 @@ func (p *RegistryPackagesProxy) startProxy() error {
 func (p *RegistryPackagesProxy) startTunnel(ctx context.Context, sshCl libcon.SSHClient) error {
 	p.debug("Up registry packages proxy tunnel...")
 
-	listenAddress := localhost
-
-	preflightUrl := fmt.Sprintf("https://%s/healthz", net.JoinHostPort(listenAddress, p.remotePort))
-
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightUrl, p.dc)
+	tunnel, err := p.upSingleTunnel(ctx, sshCl, p.localPort, p.remotePort, true)
 	if err != nil {
-		return fmt.Errorf("cannot render reverse tunnel checking script: %v", err)
+		return err
+	}
+	p.tunnels = append(p.tunnels, tunnel)
+
+	bootstrapTunnel, err := p.upSingleTunnel(ctx, sshCl, p.bootstrapLocalPort, p.bootstrapRemotePort, false)
+	if err != nil {
+		return err
+	}
+	p.tunnels = append(p.tunnels, bootstrapTunnel)
+
+	return nil
+}
+
+func (p *RegistryPackagesProxy) upSingleTunnel(ctx context.Context, sshCl libcon.SSHClient, localPort, remotePort string, healthCheck bool) (libcon.ReverseTunnel, error) {
+	listenAddress := localhost
+	addr := fmt.Sprintf("%s:%s:%s:%s", listenAddress, localPort, listenAddress, remotePort)
+
+	tun := sshCl.ReverseTunnel(addr)
+	if err := tun.Up(); err != nil {
+		return nil, fmt.Errorf("cannot up tunnel for registry packages proxy: %w", err)
 	}
 
-	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, p.remotePort, p.dc)
+	if !healthCheck {
+		return tun, nil
+	}
+
+	preflightURL := fmt.Sprintf("https://%s/healthz", net.JoinHostPort(listenAddress, remotePort))
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(preflightURL, p.dc)
 	if err != nil {
-		return fmt.Errorf("cannot render kill reverse tunnel script: %v", err)
+		tun.Stop()
+		return nil, fmt.Errorf("cannot render reverse tunnel checking script: %v", err)
+	}
+
+	killScript, err := template.RenderAndSaveKillReverseTunnelScript(listenAddress, remotePort, p.dc)
+	if err != nil {
+		tun.Stop()
+		return nil, fmt.Errorf("cannot render kill reverse tunnel script: %v", err)
 	}
 
 	checker := utils.NewRunScriptReverseTunnelChecker(sshCl, checkingScript)
 	killer := utils.NewRunScriptReverseTunnelKiller(sshCl, killScript)
-
-	addr := fmt.Sprintf("%s:%s:%s:%s", listenAddress, p.localPort, listenAddress, p.remotePort)
-
-	tun := sshCl.ReverseTunnel(addr)
-	err = tun.Up()
-	if err != nil {
-		return fmt.Errorf("cannot up tunnel for registry packages proxy: %w", err)
-	}
-
 	tun.StartHealthMonitor(ctx, checker, killer)
 
-	p.tunnel = tun
-
-	return nil
+	return tun, nil
 }
 
 func (p *RegistryPackagesProxy) debug(f string, args ...any) {

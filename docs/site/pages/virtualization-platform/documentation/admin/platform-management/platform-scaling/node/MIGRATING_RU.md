@@ -35,6 +35,12 @@ ls -l /etc/containerd/conf.d
 
 ## Как включить containerd v2
 
+{% alert level="info" %}
+В процессе миграции директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
+
+Также обратите внимание, что обновление узла приводит к прерыванию его работы ([disruptive-обновлению](./node-management.html#обновления-требующие-прерывания-работы-узла)). Если для группы узлов установлено значение [`spec.disruptions.approvalMode: Manual`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode), запустите обновление вручную на соответствующих узлах с помощью аннотации: `d8 k annotate node <NODE-NAME> update.node.deckhouse.io/disruption-approved=`.
+{% endalert %}
+
 Включение containerd v2 возможно двумя способами:
 
 1. **Для всего кластера**. Укажите значение `ContainerdV2` в параметре [`defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) ресурса ClusterConfiguration. Это значение будет применяться ко всем [NodeGroup](/modules/node-manager/cr.html#nodegroup), в которых явно не указан [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type).
@@ -62,9 +68,4 @@ ls -l /etc/containerd/conf.d
        type: ContainerdV2
    ```
 
-При переходе на containerd v2 Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов.
-Обновление узла приводит к прерыванию работы размещенной на нем нагрузки (disruptive-обновление). На процесс обновления узла влияют параметры применения disruptive-обновлений группы узлов ([spec.disruptions.approvalMode](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode)).
-
-{% alert level="info" %}
-В процессе миграции директория `/var/lib/containerd` будет очищена, что приведет к повторному скачиванию образов всех подов, и узел перезагрузится.
-{% endalert %}
+   При переходе на containerd v2 Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов.

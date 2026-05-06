@@ -297,7 +297,7 @@
 
     - alert: D8UpmeterProbeGarbagePodsFromDeployments
       expr: |
-        (time() - max by (namespace, pod) (kube_pod_created{namespace="d8-upmeter"})) > 300
+        ((time() - max by (namespace, pod) (kube_pod_created{namespace="d8-upmeter"})) > 300)
         * on (namespace, pod)
         max by (namespace, pod) (kube_pod_labels{namespace="d8-upmeter", label_heritage="upmeter", label_upmeter_probe="controller-manager"})
       labels:

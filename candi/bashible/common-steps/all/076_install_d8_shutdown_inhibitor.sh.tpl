@@ -62,8 +62,8 @@ function _shutdown-inhibitor-cleanup() {
 function inhibitor::install:service() {
 {{- $noCordon := true }}
 {{- if and (eq .runType "Normal") (eq .nodeGroup.name "master") }}
-  {{- $apiserverEndpoints := dig "apiserverEndpoints" (list) .normal }}
-  {{- if gt (len $apiserverEndpoints) 1 }}
+  {{- $clusterMasterEndpoints := .clusterMasterEndpoints | default (list) }}
+  {{- if gt (len $clusterMasterEndpoints) 1 }}
     {{- $noCordon = false }}
   {{- end }}
 {{- end }}
@@ -96,7 +96,7 @@ function inhibitor::install() {
     old_inhibitor_hash=$(<"${digest_path}")
   fi
 
-  bb-package-install "{{ $inhibitorPackage }}"
+  rpp-get install "{{ $inhibitorPackage }}"
 
   new_inhibitor_hash=$(<"${digest_path}")
   if [[ "${old_inhibitor_hash}" != "${new_inhibitor_hash}" ]]; then
