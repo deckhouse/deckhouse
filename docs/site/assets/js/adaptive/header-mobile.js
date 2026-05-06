@@ -345,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
+                closeFilter()
                 closeBurgerSidebar();
                 headerNavList.classList.add('active');
                 navTrigger.classList.add('rotated');

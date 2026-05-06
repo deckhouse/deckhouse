@@ -11,6 +11,11 @@
         border: none !important;
         box-shadow: none !important;
         text-transform: none;
+        background: none;
+
+        @include breakpoints.max-w(s) {
+            max-width: 250px !important;
+        }
     }
 
     .tippy-content {
@@ -143,6 +148,14 @@
                 align-items: center;
                 border-radius: 1px;
                 background: #0064FF;
+
+                &:has(button:disabled) {
+                    cursor: not-allowed;
+                    background-color: variables.$ntrl-300;
+                    border: 2px solid variables.$ntrl-300;
+                    opacity: .6;
+                    pointer-events: none;
+                }
 
                 button {
                     background: none;
