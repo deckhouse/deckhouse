@@ -52,7 +52,7 @@ CDI состоит из следующих компонентов:
    - PersistentVolumeClaim — стандартный ресурс kubernetes API;
    - InternalVirtualizationDataVolume — абстракция поверх стандартных PVC для создания на их основе дисков виртуальных машин;
    - CDI — кастомный ресурс, используемый cdi-operator, для установки и настройки компонентов CDI;
-   - DataImportCron — определяет задание cron для импорта образов дисков в виде PVC-файлов;
+   - InternalVirtualizationDataImportCron — определяет задание cron для импорта образов дисков в виде PVC-файлов;
    - VolumeImportSource — определяет источники для импорта дисков.
 
    Компонент содержит следующие контейнеры:
