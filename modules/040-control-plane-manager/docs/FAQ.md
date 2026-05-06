@@ -52,7 +52,7 @@ If, after bootstrapping, you need to create a multi-master cluster and add maste
 For example, if you need to create a multi-master with three master nodes in `spec.staticInstances.count` NodeGroup `master`, specify the value `2` and create two `staticInstances` for the nodes to be added. After adding them to the cluster, the number of master nodes will be three: the master node on which the installation took place and two master nodes added using CAPS.
 {% endalert %}
 
-Otherwise, adding a master node to a static or hybrid cluster is similar to adding a regular node. To do this, use the corresponding [examples](/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure a cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
+Otherwise, adding a master node to a static or hybrid cluster is similar to adding a regular node. To do this, use the corresponding [examples](/modules/node-manager/examples.html#adding-a-static-node-to-a-cluster). All the necessary actions to configure cluster control plane components on the new master nodes are performed automatically. Wait until the master nodes appear in `Ready` status.
 
 <div id='how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master'></div>
 
@@ -1087,7 +1087,7 @@ To get cluster objects data from an etcd backup, you need:
 
 #### Example of steps to restore objects from an etcd backup
 
-In the example below, `etcd-backup.snapshot` is a [etcd shapshot](#how-to-manually-backup-etcd), `infra-production` is the namespace in which objects need to be restored.
+In the example below, `etcd-backup.snapshot` is an [etcd snapshot](#how-to-manually-backup-etcd), `infra-production` is the namespace in which objects need to be restored.
 
 * To decode objects from `etcd` you would need [auger](https://github.com/etcd-io/auger/tree/main). It can be built from source on any machine that has Docker installed (it cannot be done on cluster nodes).
 
