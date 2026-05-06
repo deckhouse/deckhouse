@@ -23,4 +23,5 @@ rules:
   - controlplaneoperations
   verbs:
   - get
+  - list
   - watch
