@@ -1,0 +1,17 @@
+apiVersion: chainsaw.kyverno.io/v1alpha2
+kind: Configuration
+metadata:
+  name: cluster-autoscaler-e2e
+spec:
+  timeouts:
+    apply: 60s
+    assert: 15m
+    error: 2m
+    delete: 5m
+    cleanup: 10m
+    exec: 5m
+  execution:
+    failFast: true
+    parallel: 1
+  discovery:
+    testFile: chainsaw-test.yaml

@@ -1,0 +1,28 @@
+version: "3"
+
+vars:
+  CONFIG: ../../chainsaw-config.yaml
+
+tasks:
+  run:
+    desc: Run ca-priority-fallback-dvp e2e test with JUNIT report
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/
+
+  run:verbose:
+    desc: Run ca-priority-fallback-dvp e2e test with verbose output
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --verbose
+
+  dry-run:
+    desc: Validate test YAML without a cluster
+    cmds:
+      - chainsaw test --test-dir . --config {{.CONFIG}} --no-cluster
+
+  run:debug:
+    desc: Run test with pause on failure and fail-fast
+    cmds:
+      - mkdir -p ./reports
+      - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-TEST --report-path ./reports/ --pause-on-failure --fail-fast
