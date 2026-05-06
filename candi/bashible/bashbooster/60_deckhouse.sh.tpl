@@ -39,7 +39,7 @@ bb-deckhouse-get-disruptive-update-approval() {
     fi
 
     local disruption_approval_step="${BASH_SOURCE[1]##*/}"
-    local disruption_approval_command="kubectl annotate node $(bb-d8-node-name) update.node.deckhouse.io/disruption-approved="
+    local disruption_approval_command="d8 k annotate node $(bb-d8-node-name) update.node.deckhouse.io/disruption-approved="
     local disruption_approval_message="Step needs to make some disruptive action. It will continue upon approval: ${disruption_approval_command}"
     if [ -n "${disruption_approval_step}" ]; then
       disruption_approval_message="${disruption_approval_step}: ${disruption_approval_message}"
