@@ -48,7 +48,7 @@ module Jekyll
       private
 
       def slugify(text)
-        text.downcase.strip.gsub(/[^a-z0-9\s_-]/, '').gsub(/[\s-]+/, '_')
+        text.downcase.strip.gsub('+', '-plus-').gsub(/[^a-z0-9\s_-]/, '').gsub(/[\s-]+/, '_')
       end
     end
 

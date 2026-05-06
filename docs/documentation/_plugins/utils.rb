@@ -11,19 +11,20 @@ module JekyllLiquidBlockUtils
     lines.map { |l| l.length >= min_indent ? l[min_indent..] : l }.join("\n")
   end
 
-  # Collapse all newlines outside <pre> blocks and replace blank lines inside
-  # <pre> blocks with a newline entity. Kramdown's block HTML parser stops at
-  # any newline that introduces a new block element even inside
-  # <div markdown="0">, so the output must be newline-free outside <pre>.
+  # Collapse all newlines outside <pre> blocks and replace all newlines inside
+  # <pre> blocks with &#10; entities. Kramdown's block HTML parser breaks the
+  # HTML structure on any bare newline inside div markdown="0", so the output
+  # must be completely newline-free. &#10; is rendered identically by browsers.
   def collapse_inter_block_newlines(html)
     parts = html.split(/(<pre\b[^>]*>.*?<\/pre>)/m)
     parts.map.with_index do |part, i|
       if i.even?
         part.strip.gsub(/\n+/, ' ')
       else
-        # Replace blank lines inside <pre> with a newline entity so Kramdown
-        # does not see a blank line while browsers still render a blank line.
-        part.gsub(/\n([ \t]*\n)+/, "&#10;\n")
+        # Capture groups from the outer split are stable — no inner gsub here,
+        # so $~ is not clobbered. Replace every newline so the whole plugin
+        # output is a single line and Kramdown cannot break the block.
+        part.gsub("\n", '&#10;')
       end
     end.join
   end
