@@ -18,4 +18,8 @@ spec:
         protocol: TCP
         metadata:
           description: HTTPS endpoint of registry-packages-proxy exposed through kube-rbac-proxy
+      - port: 4282
+        protocol: TCP
+        metadata:
+          description: HTTP endpoint of the package registry proxy server is required to download the rpp-get client during node bootstrap
 {{- end }}
