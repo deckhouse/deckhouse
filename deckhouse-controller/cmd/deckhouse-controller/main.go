@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
@@ -32,8 +33,31 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
+	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+// envOr returns the env var name's value, or defaultValue when unset/empty.
+func envOr(name, defaultValue string) string {
+	if v, ok := os.LookupEnv(name); ok && v != "" {
+		return v
+	}
+	return defaultValue
+}
+
+// envBoolOr parses the env var as a bool (per strconv.ParseBool), or returns
+// defaultValue when unset, empty, or unparseable.
+func envBoolOr(name string, defaultValue bool) bool {
+	v, ok := os.LookupEnv(name)
+	if !ok || v == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.ParseBool(v)
+	if err != nil {
+		return defaultValue
+	}
+	return parsed
+}
 
 // Variables with component versions. They set by 'go build' command.
 var (
@@ -116,14 +140,16 @@ func main() {
 	// deckhouse-controller registry
 	registry.DefineRegistryCommand(kpApp, logger)
 
-	// dhctlcli command builders read defaults from DHCTL_CLI_* env vars
-	// (kingpin Envar bindings in dhctl/pkg/app); seed them here so we don't
-	// import dhctl/pkg/app from main. Deployer-set values are preserved.
+	// dhctlcli command builders read these globals from dhctl/pkg/app at run
+	// time. The corresponding kingpin Envar bindings in dhctl/pkg/app are
+	// gated by flag-registration (DefineGlobalFlags / DefineKubeFlags) which
+	// we do not invoke, so they never fire. Read the env directly and assign
+	// the globals here; deployer-set values win over hardcoded defaults.
 	{
-		setDhctlEnvDefault("DHCTL_CLI_LOGGER_TYPE", "json")
-		setDhctlEnvDefault("DHCTL_CLI_EDITOR", "vim")
-		setDhctlEnvDefault("DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER", "true")
-		setDhctlEnvDefault("DHCTL_CLI_TMP_DIR", os.TempDir())
+		dhctl_app.LoggerType = envOr("DECKHOUSE_LOGGER_TYPE", "json")
+		dhctl_app.Editor = envOr("DECKHOUSE_EDITOR", "vim")
+		dhctl_app.KubeConfigInCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
+		dhctl_app.TmpDirName = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
 
 		editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
 		dhctlcli.DefineEditCommands(editCmd /* wConnFlags */, false)
@@ -133,13 +159,4 @@ func main() {
 	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
-}
-
-// setDhctlEnvDefault seeds an env var only if the deployer hasn't set one.
-// os.Setenv error is dropped: it only fails on names containing '=' or NUL.
-func setDhctlEnvDefault(name, value string) {
-	if v, ok := os.LookupEnv(name); ok && v != "" {
-		return
-	}
-	_ = os.Setenv(name, value)
 }
