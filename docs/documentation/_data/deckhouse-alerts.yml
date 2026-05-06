@@ -1977,7 +1977,7 @@ alerts:
 
         Please migrate to the next kubernetes version (at least 1.32)
 
-        Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
+        Read [documentation](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
       summary: |
         Kubernetes version {{ $labels.k8s_version }} is deprecated.
       severity: "7"
