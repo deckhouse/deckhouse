@@ -89,6 +89,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func expireDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	now := time.Now()
+	expiredUsers := make(map[string]struct{})
 
 	for dexUserExpire, err := range sdkobjectpatch.SnapshotIter[DexUserExpire](input.Snapshots.Get("users")) {
 		if err != nil {
@@ -97,52 +98,49 @@ func expireDexUsers(_ context.Context, input *go_hook.HookInput) error {
 
 		if dexUserExpire.CheckExpire && dexUserExpire.ExpireAt.Before(now) {
 			input.PatchCollector.Delete("deckhouse.io/v1", "User", "", dexUserExpire.Name)
-
-			for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](input.Snapshots.Get("groups")) {
-				if err != nil {
-					return fmt.Errorf("cannot convert group: cannot iterate over 'groups' snapshot: %v", err)
-				}
-
-				if !groupContainsUser(group, dexUserExpire.Name) {
-					continue
-				}
-
-				members, changed := removeUserFromGroupMembers(group.Spec.Members, dexUserExpire.Name)
-				if !changed {
-					continue
-				}
-
-				input.PatchCollector.PatchWithMerge(map[string]any{
-					"spec": map[string]any{
-						"members": members,
-					},
-				}, "deckhouse.io/v1alpha1", "Group", "", group.Name)
-			}
+			expiredUsers[dexUserExpire.Name] = struct{}{}
 		}
 	}
+
+	if len(expiredUsers) == 0 {
+		return nil
+	}
+
+	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](input.Snapshots.Get("groups")) {
+		if err != nil {
+			return fmt.Errorf("cannot convert group: cannot iterate over 'groups' snapshot: %v", err)
+		}
+
+		members, removedUsers := removeUsersFromGroupMembers(group.Spec.Members, expiredUsers)
+		if len(removedUsers) == 0 {
+			continue
+		}
+
+		input.Logger.Info("Removing expired users from group members", "group", group.Name, "users", removedUsers)
+		input.PatchCollector.PatchWithMerge(map[string]any{
+			"spec": map[string]any{
+				"members": members,
+			},
+		}, "deckhouse.io/v1alpha1", "Group", "", group.Name)
+	}
+
 	return nil
 }
 
-func groupContainsUser(group DexGroup, username string) bool {
-	for _, member := range group.Spec.Members {
-		if member.Kind == "User" && member.Name == username {
-			return true
-		}
-	}
-	return false
-}
-
-func removeUserFromGroupMembers(members []DexGroupMember, username string) ([]DexGroupMember, bool) {
+func removeUsersFromGroupMembers(members []DexGroupMember, expiredUsers map[string]struct{}) ([]DexGroupMember, []string) {
 	newMembers := make([]DexGroupMember, 0, len(members))
-	changed := false
+	removedUsers := make([]string, 0)
+
 	for _, member := range members {
-		if member.Kind == "User" && member.Name == username {
-			changed = true
-			continue
+		if member.Kind == "User" {
+			if _, shouldRemove := expiredUsers[member.Name]; shouldRemove {
+				removedUsers = append(removedUsers, member.Name)
+				continue
+			}
 		}
 
 		newMembers = append(newMembers, member)
 	}
 
-	return newMembers, changed
+	return newMembers, removedUsers
 }
