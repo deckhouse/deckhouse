@@ -29,11 +29,7 @@ import (
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 )
 
-func (s *InstanceService) finalizeAfterMachineDeletion(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-	machineGone bool,
-) error {
+func (s *InstanceService) finalizeAfterMachineDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance, machineGone bool) error {
 	if !controllerutil.ContainsFinalizer(instance, instancecommon.InstanceControllerFinalizer) {
 		return nil
 	}
@@ -52,6 +48,7 @@ func (s *InstanceService) EnsureInstanceFinalizer(ctx context.Context, instance 
 
 	updated := instance.DeepCopy()
 	controllerutil.AddFinalizer(updated, instancecommon.InstanceControllerFinalizer)
+
 	if err := s.client.Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
 		return fmt.Errorf("ensure finalizer on instance %q: %w", instance.Name, err)
 	}
@@ -68,10 +65,7 @@ type linkedMachineDeletionResult struct {
 	MachineGone bool
 }
 
-func (s *InstanceService) reconcileLinkedMachineDeletion(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (linkedMachineDeletionResult, error) {
+func (s *InstanceService) reconcileLinkedMachineDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (linkedMachineDeletionResult, error) {
 	ref := instance.Spec.MachineRef
 	if ref == nil || ref.Name == "" {
 		return linkedMachineDeletionResult{MachineGone: true}, nil

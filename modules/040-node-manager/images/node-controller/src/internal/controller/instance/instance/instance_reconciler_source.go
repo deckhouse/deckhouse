@@ -40,10 +40,7 @@ type SourceExistenceResult struct {
 	InstanceDeleted bool
 }
 
-func (s *InstanceService) ReconcileSourceExistence(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (SourceExistenceResult, error) {
+func (s *InstanceService) ReconcileSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (SourceExistenceResult, error) {
 	source := getInstanceSource(instance)
 	logger := log.FromContext(ctx)
 
@@ -61,9 +58,11 @@ func (s *InstanceService) ReconcileSourceExistence(
 	if err != nil {
 		return SourceExistenceResult{}, err
 	}
+
 	if machineStatus == sourceStatusFound || nodeStatus == sourceStatusFound {
 		return SourceExistenceResult{}, nil
 	}
+
 	hasConfirmedMissing := machineStatus == sourceStatusNotFound || nodeStatus == sourceStatusNotFound
 
 	if !hasConfirmedMissing {
@@ -84,11 +83,11 @@ func (s *InstanceService) ReconcileSourceExistence(
 		return SourceExistenceResult{}, fmt.Errorf("remove finalizer before deleting instance %q with missing source: %w", instance.Name, err)
 	}
 
-	if err := s.client.Delete(ctx, instance); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return SourceExistenceResult{}, fmt.Errorf("delete instance %q with missing source: %w", instance.Name, err)
-		}
+	err = s.client.Delete(ctx, instance)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return SourceExistenceResult{}, fmt.Errorf("delete instance %q with missing source: %w", instance.Name, err)
 	}
+
 	logger.V(1).Info(
 		"instance deleted",
 		"instance", instance.Name,
@@ -104,10 +103,7 @@ func (s *InstanceService) ReconcileSourceExistence(
 	return SourceExistenceResult{InstanceDeleted: true}, nil
 }
 
-func (s *InstanceService) linkedMachineStatus(
-	ctx context.Context,
-	ref *deckhousev1alpha2.MachineRef,
-) (sourceStatus, error) {
+func (s *InstanceService) linkedMachineStatus(ctx context.Context, ref *deckhousev1alpha2.MachineRef) (sourceStatus, error) {
 	if ref == nil || ref.Name == "" {
 		return sourceStatusSkipped, nil
 	}
@@ -133,6 +129,7 @@ func machineRefName(ref *deckhousev1alpha2.MachineRef) string {
 	if ref == nil {
 		return ""
 	}
+
 	return ref.Name
 }
 

@@ -23,13 +23,14 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
-func TestEnsureInstanceExistsReturnsExistingUnchanged(t *testing.T) {
+func TestEnsureInstanceExistsLeavesExistingUnchanged(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -49,10 +50,26 @@ func TestEnsureInstanceExistsReturnsExistingUnchanged(t *testing.T) {
 
 	c := newFakeInstanceClient(t, existing)
 
-	instance, err := EnsureInstanceExists(ctx, c, "worker-a", deckhousev1alpha2.InstanceSpec{})
-	require.NoError(t, err)
-	require.Equal(t, existingMachineRef, instance.Spec.MachineRef)
-	require.Equal(t, deckhousev1alpha2.NodeRef{Name: "worker-a"}, instance.Spec.NodeRef)
+	require.NoError(t, EnsureInstanceExists(ctx, c, "worker-a", deckhousev1alpha2.InstanceSpec{}))
+
+	persisted := &deckhousev1alpha2.Instance{}
+	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: "worker-a"}, persisted))
+	require.Equal(t, existingMachineRef, persisted.Spec.MachineRef)
+	require.Equal(t, deckhousev1alpha2.NodeRef{Name: "worker-a"}, persisted.Spec.NodeRef)
+}
+
+func TestEnsureInstanceExistsCreatesWhenMissing(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	c := newFakeInstanceClient(t)
+
+	spec := deckhousev1alpha2.InstanceSpec{NodeRef: deckhousev1alpha2.NodeRef{Name: "worker-a"}}
+	require.NoError(t, EnsureInstanceExists(ctx, c, "worker-a", spec))
+
+	persisted := &deckhousev1alpha2.Instance{}
+	require.NoError(t, c.Get(ctx, types.NamespacedName{Name: "worker-a"}, persisted))
+	require.Equal(t, "worker-a", persisted.Spec.NodeRef.Name)
 }
 
 func newFakeInstanceClient(t *testing.T, objects ...runtime.Object) client.Client {

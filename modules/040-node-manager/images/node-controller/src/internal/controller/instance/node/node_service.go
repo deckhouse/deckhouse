@@ -34,14 +34,18 @@ func ReconcileNode(ctx context.Context, c client.Client, name string) error {
 	logger.V(4).Info("tick", "op", "node.reconcile.start")
 
 	node := &corev1.Node{}
-	if err := c.Get(ctx, types.NamespacedName{Name: name}, node); err != nil {
+
+	err := c.Get(ctx, types.NamespacedName{Name: name}, node)
+	if err != nil {
 		if client.IgnoreNotFound(err) != nil {
 			return err
 		}
+
 		result, err := deleteNodeBasedInstanceIfExists(ctx, c, name)
 		if err != nil {
 			return err
 		}
+
 		logger.V(1).Info("node not found, node based instance delete handled", "instance", name, "deleted", result.InstanceDeleted)
 		return nil
 	}
@@ -52,13 +56,13 @@ func ReconcileNode(ctx context.Context, c client.Client, name string) error {
 	}
 
 	logger.V(4).Info("tick", "op", "node.instance.ensure")
-	instance, err := instancecommon.EnsureInstanceExists(ctx, c, node.Name, deckhousev1alpha2.InstanceSpec{
+	if err := instancecommon.EnsureInstanceExists(ctx, c, node.Name, deckhousev1alpha2.InstanceSpec{
 		NodeRef: deckhousev1alpha2.NodeRef{Name: node.Name},
-	})
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("ensure instance for static node %q: %w", node.Name, err)
 	}
-	if err := instancecommon.SetInstancePhase(ctx, c, instance, deckhousev1alpha2.InstancePhaseRunning); err != nil {
+
+	if err := instancecommon.ApplyInstancePhase(ctx, c, node.Name, deckhousev1alpha2.InstancePhaseRunning); err != nil {
 		return fmt.Errorf("set instance phase for static node %q: %w", node.Name, err)
 	}
 
@@ -70,13 +74,11 @@ type nodeBasedInstanceDeletionResult struct {
 	InstanceDeleted bool
 }
 
-func deleteNodeBasedInstanceIfExists(
-	ctx context.Context,
-	c client.Client,
-	name string,
-) (nodeBasedInstanceDeletionResult, error) {
+func deleteNodeBasedInstanceIfExists(ctx context.Context, c client.Client, name string) (nodeBasedInstanceDeletionResult, error) {
 	instance := &deckhousev1alpha2.Instance{}
-	if err := c.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
+
+	err := c.Get(ctx, types.NamespacedName{Name: name}, instance)
+	if err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nodeBasedInstanceDeletionResult{}, nil
 		}
@@ -91,19 +93,24 @@ func deleteNodeBasedInstanceIfExists(
 		return nodeBasedInstanceDeletionResult{}, nil
 	}
 
-	if err := instancecommon.RemoveInstanceControllerFinalizer(ctx, c, instance); err != nil {
+	err = instancecommon.RemoveInstanceControllerFinalizer(ctx, c, instance)
+	if err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nodeBasedInstanceDeletionResult{}, nil
 		}
+
 		return nodeBasedInstanceDeletionResult{}, fmt.Errorf("remove finalizer from node based instance %q: %w", name, err)
 	}
 
-	if err := c.Delete(ctx, instance); err != nil {
+	err = c.Delete(ctx, instance)
+	if err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nodeBasedInstanceDeletionResult{}, nil
 		}
+
 		return nodeBasedInstanceDeletionResult{}, fmt.Errorf("delete node based instance %q: %w", name, err)
 	}
+
 	log.FromContext(ctx).V(1).Info(
 		"instance deleted",
 		"instance", name,

@@ -403,7 +403,7 @@ func TestReconcileBashibleStatus(t *testing.T) {
 	}
 }
 
-func TestReconcileConflictRequeues(t *testing.T) {
+func TestReconcileConflictReturnsError(t *testing.T) {
 	t.Parallel()
 
 	instance := existingInstanceWithFinalizer("conflict-machine-status", deckhousev1alpha2.InstanceSpec{
@@ -429,8 +429,9 @@ func TestReconcileConflictRequeues(t *testing.T) {
 	}), instance)
 
 	result, err := controller.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: instance.Name}})
-	require.NoError(t, err)
-	require.Equal(t, ctrl.Result{Requeue: true}, result)
+	require.Error(t, err)
+	require.True(t, apierrors.IsConflict(err))
+	require.Equal(t, ctrl.Result{}, result)
 }
 
 func TestReconcileDeletingInstanceSyncsMachineStatus(t *testing.T) {

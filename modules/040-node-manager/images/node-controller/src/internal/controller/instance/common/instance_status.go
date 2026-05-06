@@ -29,14 +29,12 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
 )
 
-const InstanceMachineStatusFieldOwner = "node-controller-instancestatus"
+const (
+	InstanceMachineStatusFieldOwner = "node-controller-instancestatus"
+	InstancePhaseFieldOwner         = "node-controller-instancephase"
+)
 
-func SyncInstanceStatus(
-	ctx context.Context,
-	c client.Client,
-	instance *deckhousev1alpha2.Instance,
-	machineStatus machine.MachineStatus,
-) error {
+func SyncInstanceStatus(ctx context.Context, c client.Client, instance *deckhousev1alpha2.Instance, machineStatus machine.MachineStatus) error {
 	if machineStatus.MachineReadyCondition == nil {
 		return fmt.Errorf("build desired MachineReady condition for instance %q: condition is nil", instance.Name)
 	}
@@ -83,14 +81,7 @@ func SyncInstanceStatus(
 	return nil
 }
 
-func ApplyInstanceMachineStatus(
-	ctx context.Context,
-	c client.Client,
-	instanceName string,
-	phase deckhousev1alpha2.InstancePhase,
-	status machine.Status,
-	machineReadyCondition deckhousev1alpha2.InstanceCondition,
-) error {
+func ApplyInstanceMachineStatus(ctx context.Context, c client.Client, instanceName string, phase deckhousev1alpha2.InstancePhase, status machine.Status, machineReadyCondition deckhousev1alpha2.InstanceCondition) error {
 	applyObj := InstanceApplyObject(instanceName)
 	applyObj.Status = deckhousev1alpha2.InstanceStatus{
 		Phase:         phase,
@@ -111,6 +102,23 @@ func ApplyInstanceMachineStatus(
 	return nil
 }
 
+func ApplyInstancePhase(ctx context.Context, c client.Client, instanceName string, phase deckhousev1alpha2.InstancePhase) error {
+	applyObj := InstanceApplyObject(instanceName)
+	applyObj.Status = deckhousev1alpha2.InstanceStatus{Phase: phase}
+
+	if err := c.Status().Patch(
+		ctx,
+		applyObj,
+		client.Apply,
+		client.FieldOwner(InstancePhaseFieldOwner),
+		client.ForceOwnership,
+	); err != nil {
+		return fmt.Errorf("apply instance %q phase: %w", instanceName, err)
+	}
+
+	return nil
+}
+
 func InstanceApplyObject(name string) *deckhousev1alpha2.Instance {
 	return &deckhousev1alpha2.Instance{
 		TypeMeta: metav1.TypeMeta{
@@ -121,20 +129,14 @@ func InstanceApplyObject(name string) *deckhousev1alpha2.Instance {
 	}
 }
 
-func ConditionEqualExceptLastTransitionTime(
-	left deckhousev1alpha2.InstanceCondition,
-	right deckhousev1alpha2.InstanceCondition,
-) bool {
+func ConditionEqualExceptLastTransitionTime(left deckhousev1alpha2.InstanceCondition, right deckhousev1alpha2.InstanceCondition) bool {
 	left.LastTransitionTime = nil
 	right.LastTransitionTime = nil
 
 	return apiequality.Semantic.DeepEqual(left, right)
 }
 
-func upsertInstanceCondition(
-	conditions []deckhousev1alpha2.InstanceCondition,
-	condition deckhousev1alpha2.InstanceCondition,
-) []deckhousev1alpha2.InstanceCondition {
+func upsertInstanceCondition(conditions []deckhousev1alpha2.InstanceCondition, condition deckhousev1alpha2.InstanceCondition) []deckhousev1alpha2.InstanceCondition {
 	for i := range conditions {
 		if conditions[i].Type == condition.Type {
 			conditions[i] = condition

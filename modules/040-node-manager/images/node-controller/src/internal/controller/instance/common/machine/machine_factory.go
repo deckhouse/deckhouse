@@ -47,11 +47,7 @@ func (f *machineFactory) NewMachine(obj client.Object) (Machine, error) {
 	}
 }
 
-func (f *machineFactory) NewMachineFromRef(
-	ctx context.Context,
-	c client.Client,
-	ref *deckhousev1alpha2.MachineRef,
-) (Machine, error) {
+func (f *machineFactory) NewMachineFromRef(ctx context.Context, c client.Client, ref *deckhousev1alpha2.MachineRef) (Machine, error) {
 	if ref == nil {
 		return nil, fmt.Errorf("machine ref is nil")
 	}

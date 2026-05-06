@@ -79,10 +79,7 @@ func (s *InstanceService) ReconcileBashibleHeartbeat(ctx context.Context, instan
 	return nil
 }
 
-func desiredBashibleHeartbeatCondition(
-	conditions []deckhousev1alpha2.InstanceCondition,
-	now time.Time,
-) (*deckhousev1alpha2.InstanceCondition, bool) {
+func desiredBashibleHeartbeatCondition(conditions []deckhousev1alpha2.InstanceCondition, now time.Time) (*deckhousev1alpha2.InstanceCondition, bool) {
 	bashibleReady, hasBashibleReady := instancecommon.GetInstanceConditionByType(
 		conditions,
 		deckhousev1alpha2.InstanceConditionTypeBashibleReady,

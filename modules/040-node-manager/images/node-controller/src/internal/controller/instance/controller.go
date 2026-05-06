@@ -79,11 +79,13 @@ func (r *InstanceController) SetupWatches(w register.Watcher) {
 
 func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithValues("instance", req.Name)
-	logger.Info("reconcile triggered")
+	logger.V(2).Info("reconcile triggered")
 	logger.V(4).Info("tick", "op", "instance.reconcile.start")
 
 	instance := &deckhousev1alpha2.Instance{}
-	if err := r.Client.Get(ctx, req.NamespacedName, instance); err != nil {
+
+	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return r.reconcileCreateFromSource(ctx, req.Name)
 		}
@@ -101,8 +103,9 @@ func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (c
 	} {
 		action, err := s(ctx, instance)
 		if err != nil {
-			return resultFromErr(err)
+			return ctrl.Result{}, err
 		}
+
 		if action == stopPipeline {
 			break
 		}
@@ -127,10 +130,7 @@ func nonTerminalStep(fn func(context.Context, *deckhousev1alpha2.Instance) error
 	}
 }
 
-func (r *InstanceController) reconcileDeletion(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (pipelineAction, error) {
+func (r *InstanceController) reconcileDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (pipelineAction, error) {
 	if instance.DeletionTimestamp == nil || instance.DeletionTimestamp.IsZero() {
 		return continuePipeline, nil
 	}
@@ -155,25 +155,17 @@ func (r *InstanceController) reconcileDeletion(
 	return stopPipeline, nil
 }
 
-func (r *InstanceController) reconcileSourceExistence(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (pipelineAction, error) {
+func (r *InstanceController) reconcileSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (pipelineAction, error) {
 	result, err := r.instanceSvc.ReconcileSourceExistence(ctx, instance)
 	if err != nil {
-		return continuePipeline, err
+		return stopPipeline, err
 	}
+
 	if result.InstanceDeleted {
 		return stopPipeline, nil
 	}
-	return continuePipeline, nil
-}
 
-func resultFromErr(err error) (ctrl.Result, error) {
-	if apierrors.IsConflict(err) {
-		return ctrl.Result{Requeue: true}, nil
-	}
-	return ctrl.Result{}, err
+	return continuePipeline, nil
 }
 
 func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name string) (ctrl.Result, error) {
@@ -183,6 +175,7 @@ func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
 	if found {
 		if err := r.createInstanceFromMachine(ctx, m); err != nil {
 			return ctrl.Result{}, err
@@ -216,9 +209,11 @@ func (r *InstanceController) reconcileMachineRef(ctx context.Context, instance *
 	if ref == nil {
 		return nil
 	}
+
 	if err := r.patchInstanceMachineRef(ctx, instance, ref); err != nil {
 		return err
 	}
+
 	log.FromContext(ctx).Info("instance machine ref self-healed", "instance", instance.Name, "ref", ref.Name)
 	return nil
 }
@@ -244,24 +239,34 @@ func (r *InstanceController) findMachineForInstance(ctx context.Context, name st
 	ns := types.NamespacedName{Namespace: machine.MachineNamespace, Name: name}
 
 	capiObj := &capiv1beta2.Machine{}
-	if err := r.Client.Get(ctx, ns, capiObj); err == nil {
+
+	err := r.Client.Get(ctx, ns, capiObj)
+	if err == nil {
 		m, err := r.machineFactory.NewMachine(capiObj)
 		if err != nil {
 			return nil, false, fmt.Errorf("wrap capi machine %q: %w", name, err)
 		}
+
 		return m, true, nil
-	} else if !apierrors.IsNotFound(err) {
+	}
+
+	if !apierrors.IsNotFound(err) {
 		return nil, false, fmt.Errorf("get capi machine %q: %w", name, err)
 	}
 
 	mcmObj := &mcmv1alpha1.Machine{}
-	if err := r.Client.Get(ctx, ns, mcmObj); err == nil {
+
+	err = r.Client.Get(ctx, ns, mcmObj)
+	if err == nil {
 		m, err := r.machineFactory.NewMachine(mcmObj)
 		if err != nil {
 			return nil, false, fmt.Errorf("wrap mcm machine %q: %w", name, err)
 		}
+
 		return m, true, nil
-	} else if !apierrors.IsNotFound(err) {
+	}
+
+	if !apierrors.IsNotFound(err) {
 		return nil, false, fmt.Errorf("get mcm machine %q: %w", name, err)
 	}
 
@@ -273,26 +278,27 @@ func (r *InstanceController) createInstanceFromMachine(ctx context.Context, m ma
 	if nodeName := m.GetNodeName(); nodeName != "" {
 		spec.NodeRef = deckhousev1alpha2.NodeRef{Name: nodeName}
 	}
+
 	if ref := m.GetMachineRef(); ref != nil {
 		refCopy := *ref
 		spec.MachineRef = &refCopy
 	}
-	if _, err := instancecommon.EnsureInstanceExists(ctx, r.Client, m.GetName(), spec); err != nil {
+
+	if err := instancecommon.EnsureInstanceExists(ctx, r.Client, m.GetName(), spec); err != nil {
 		return fmt.Errorf("ensure instance for machine %q: %w", m.GetName(), err)
 	}
+
 	return nil
 }
 
-func (r *InstanceController) patchInstanceMachineRef(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-	ref *deckhousev1alpha2.MachineRef,
-) error {
+func (r *InstanceController) patchInstanceMachineRef(ctx context.Context, instance *deckhousev1alpha2.Instance, ref *deckhousev1alpha2.MachineRef) error {
 	patch := client.MergeFrom(instance.DeepCopy())
 	refCopy := *ref
 	instance.Spec.MachineRef = &refCopy
+
 	if err := r.Client.Patch(ctx, instance, patch); err != nil {
 		return fmt.Errorf("patch instance %q machine ref: %w", instance.Name, err)
 	}
+
 	return nil
 }

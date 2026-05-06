@@ -41,10 +41,7 @@ func NewInstanceService(c client.Client) *InstanceService {
 	}
 }
 
-func (s *InstanceService) ReconcileFinalization(
-	ctx context.Context,
-	instance *deckhousev1alpha2.Instance,
-) (FinalizationResult, error) {
+func (s *InstanceService) ReconcileFinalization(ctx context.Context, instance *deckhousev1alpha2.Instance) (FinalizationResult, error) {
 	result, err := s.reconcileLinkedMachineDeletion(ctx, instance)
 	if err != nil {
 		return FinalizationResult{}, err
