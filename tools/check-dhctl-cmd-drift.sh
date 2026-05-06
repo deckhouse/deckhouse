@@ -37,9 +37,11 @@ extract_body() {
     ' "$file"
 }
 
-# Strip whitespace so reformatting alone does not trigger drift.
+# Strip //nolint:... directives (the duplicate may need them while the dhctl
+# source doesn't, since the root module's golangci-lint config is stricter)
+# and whitespace so reformatting alone does not trigger drift.
 normalize() {
-    tr -d '[:space:]'
+    sed 's|//nolint:.*||' | tr -d '[:space:]'
 }
 
 fail=0
