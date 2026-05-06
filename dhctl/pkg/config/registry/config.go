@@ -105,8 +105,8 @@ func (p *ConfigProvider) RemoteData() (Data, error) {
 	return config.Settings.RemoteData, nil
 }
 
-// MetaConfig builds a full registry MetaConfig from the provided configuration sources.
-func (p *ConfigProvider) MetaConfig(defaultCRI constant.CRIType, isStatic bool) (Config, error) {
+// Config builds a full registry Config from the provided configuration sources.
+func (p *ConfigProvider) Config(defaultCRI constant.CRIType, isStatic bool) (Config, error) {
 	var config Config
 
 	criSupported := constant.IsCRISupported(defaultCRI)

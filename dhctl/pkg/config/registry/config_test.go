@@ -386,7 +386,7 @@ func TestConfig_DeepCopy(t *testing.T) {
 	})
 }
 
-func TestIsLocalBootstrapMode(t *testing.T) {
+func TestConfigProvider_IsLocal(t *testing.T) {
 	directSettings := module_config.DeckhouseSettings{
 		Mode: constant.ModeDirect,
 		Direct: &module_config.RegistrySettings{
@@ -481,7 +481,7 @@ func TestIsLocalBootstrapMode(t *testing.T) {
 	}
 }
 
-func TestBootstrapRemoteData(t *testing.T) {
+func TestConfigProvider_RemoteData(t *testing.T) {
 	directSettings := module_config.DeckhouseSettings{
 		Mode: constant.ModeDirect,
 		Direct: &module_config.RegistrySettings{
@@ -564,7 +564,7 @@ func TestBootstrapRemoteData(t *testing.T) {
 	}
 }
 
-func TestBootstrapConfig(t *testing.T) {
+func TestConfigProvider_Config(t *testing.T) {
 	directSettings := module_config.DeckhouseSettings{
 		Mode: constant.ModeDirect,
 		Direct: &module_config.RegistrySettings{
@@ -718,7 +718,7 @@ func TestBootstrapConfig(t *testing.T) {
 			config, err := NewConfigProvider(
 				tt.input.initConfig,
 				tt.input.deckhouseSettings,
-			).MetaConfig(
+			).Config(
 				tt.input.defaultCRI,
 				tt.input.isStatic,
 			)

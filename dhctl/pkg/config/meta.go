@@ -205,7 +205,7 @@ func (m *MetaConfig) prepareRegistry() error {
 	registry, err := registry.NewConfigProvider(
 		initConfig,
 		deckhouseSettings,
-	).MetaConfig(
+	).Config(
 		defaultCRI,
 		m.IsStatic(),
 	)
