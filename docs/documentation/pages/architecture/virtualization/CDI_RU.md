@@ -48,12 +48,12 @@ CDI состоит из следующих компонентов:
    Компонент содержит следующие контейнеры:
 
    - **cdi-operator** — основной контейнер;
-   - **proxy** (он же **kube-api-rewriter**) —  сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API, а именно переименование метаданных кастомных ресурсов. Это необходимо, поскольку компоненты Kubevirt используют API Group вида `*.kubervirt.io`, а другие компоненты модуля [`virtualization`](/modules/virtualization/) используют аналогичные ресурсы, но с API Group вида `*.virtualization.deckhouse.io`. Kube-api-rewriter является шлюзом, проксирующим запросы между контроллерами, управляющими ресурсами из разных API Group;
+   - **proxy** (он же **kube-api-rewriter**) —  сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API, а именно переименование метаданных кастомных ресурсов. Это необходимо, поскольку компоненты Kubevirt используют API-группы вида `*.kubervirt.io`, а другие компоненты модуля [`virtualization`](/modules/virtualization/) используют аналогичные ресурсы, но с API-группами вида `*.virtualization.deckhouse.io`. Kube-api-rewriter является шлюзом, проксирующим запросы между контроллерами, управляющими ресурсами из разных API-групп;
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера proxy. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 1. **Cdi-apiserver** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который используется для проверки и изменения ресурсов Kubernetes API через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Cdi-apiserver реализует validating и mutating вебхуки для следующих типов ресурсов:
 
-   - PersistentVolumeClaim — стандартный ресурс kubernetes API;
+   - PersistentVolumeClaim — стандартный ресурс Kubernetes API;
    - InternalVirtualizationDataVolume — абстракция поверх стандартных PVC для создания на их основе дисков виртуальных машин;
    - InternalVirtualizationCDI — кастомный ресурс, используемый cdi-operator, для установки и настройки компонентов CDI;
    - InternalVirtualizationDataImportCron — определяет задание cron для импорта образов дисков в виде PVC-файлов;
