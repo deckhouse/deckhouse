@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/040-control-plane-manager/openapi/config-values.yaml
+# /ee/cse/modules/040-control-plane-manager/openapi/config-values.yaml
 x-config-version: 2
 type: object
 x-doc-example:
