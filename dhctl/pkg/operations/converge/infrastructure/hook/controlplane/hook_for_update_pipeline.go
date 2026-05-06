@@ -78,6 +78,7 @@ func NewHookForUpdatePipeline(
 	}
 
 	checkers = append(checkers, NewManagerReadinessChecker(kubeGetter))
+	checkers = append(checkers, NewStrongholdReadinessChecker(kubeGetter))
 	checker := NewChecker(nodeToHostForChecks, checkers, "", DefaultConfirm)
 
 	return &HookForUpdatePipeline{
@@ -172,6 +173,22 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 	err = waitEtcdHasMember(ctx, h.kubeGetter.KubeClient().KubeClient.(*flantkubeclient.Client), h.nodeToConverge)
 	if err != nil {
 		return fmt.Errorf("failed to wait for the master node '%s' to be listed as etcd cluster member: %v", h.nodeToConverge, err)
+	}
+
+	err = retry.NewLoop("Check Stronghold readiness after node converge", 45, 10*time.Second).RunContext(ctx, func() error {
+		ready, err := NewStrongholdReadinessChecker(h.kubeGetter).IsReady(ctx, h.nodeToConverge)
+		if err != nil {
+			return fmt.Errorf("failed to check Stronghold readiness: %v", err)
+		}
+
+		if !ready {
+			return hook.ErrNotReady
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	err = retry.NewLoop(fmt.Sprintf("Check the master node '%s' is ready", h.nodeToConverge), 45, 10*time.Second).RunContext(ctx, func() error {
