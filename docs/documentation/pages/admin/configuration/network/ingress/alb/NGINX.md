@@ -6,6 +6,12 @@ description: "Configure Application Load Balancer with Ingress NGINX Controller 
 
 The [`ingress-nginx`](/modules/ingress-nginx/) module is used to implement ALB using the [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx).
 
+{% alert level="info" %}
+In 2025, ingress-nginx was [placed](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) in maintenance mode, with no plans for active development of new features. Further evolution of inbound traffic load balancing in Kubernetes is focused on the [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
+
+This does not apply to the module as part of Deckhouse Kubernetes Platform: the module is maintained by the Deckhouse team, including security updates. For details, see [Module support and security](#module-support-and-security).
+{% endalert %}
+
 The `ingress-nginx` module installs the Ingress NGINX Controller and manages it with custom resources.
 If there is more than one node available for hosting the Ingress controller,
 it is deployed in the HA mode, taking into account the infrastructure specifics of both cloud and bare-metal environments,
@@ -485,3 +491,7 @@ spec:
     httpsPort: 8443
     behindL7Proxy: true
 ```
+
+## Module support and security
+
+The ingress-nginx module is covered by Deckhouse Kubernetes Platform maintenance for the entire platform support lifecycle, regardless of the upstream project's development status. The Deckhouse team tracks CVEs in the controller and its dependencies — NGINX, Lua modules, and base images — and delivers fixes in platform releases. For compliance with PCI DSS expectations regarding vendor support and vulnerability remediation timelines, Flant is the responsible vendor of the module. Among other things, vulnerability management processes and the release of security updates.
