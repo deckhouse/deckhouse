@@ -103,6 +103,21 @@ properties:
               Адрес GRPC-интерфейса Jaeger'а в формате `<proto>://<fqdn>[:port]/`, доступный сервису Kiali изнутри кластера для служебных запросов.
 
               Если не указать, то Kiali не будет интерпретировать трейсы самостоятельно и ограничится генерацией ссылок на `jaegerURLForUsers`.
+  telemetryAPI:
+    description: |
+      Интеграция с [Telemetry API](https://istio.io/latest/docs/tasks/observability/telemetry/) Istio (ресурсы `telemetry.istio.io`).
+
+      Если `enabled` — `true`, модуль отключает в Istio Operator / ресурсе `Istio` legacy-секцию `telemetry` / `telemetry.v2`, чтобы политики observability (метрики, access log, трассировка) задавались через ресурсы **Telemetry** (модулем или вручную).
+
+      Если `false` (по умолчанию), остаётся прежняя встроенная телеметрия control plane (см. `telemetry` в сгенерированном манифесте Istio Operator / `Istio`).
+
+      Это **не то же самое**, что [`dataPlane.accessLog`](#parameters-dataplane-accesslog): `accessLog` задаёт только шаблон access-логов Envoy в `meshConfig.extensionProviders`.
+    properties:
+      enabled:
+        description: |
+          Использовать сценарий Telemetry API: отключить встроенные `telemetry` / `v2` в Istio Operator / ресурсе `Istio`.
+
+          Оставьте `false` (значение по умолчанию), пока через ресурсы Telemetry не заданы нужные вам политики.
   sidecar:
     description: Настройки для перехвата сетевого трафика в istio-sidecar.
     properties:
