@@ -1,40 +1,29 @@
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index 20fad5afb..1dc1fb47c 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -1100,6 +1100,7 @@ func (n *NGINXController) createLuaConfig(cfg *ngx_config.Configuration) error {
+ 		HSTSMaxAge:              cfg.HSTSMaxAge,
+ 		HSTSIncludeSubdomains:   cfg.HSTSIncludeSubdomains,
+ 		HSTSPreload:             cfg.HSTSPreload,
++		ProxyRealIPCIDR:         cfg.ProxyRealIPCIDR,
+ 	}
+ 	jsonCfg, err := json.Marshal(luaconfigs)
+ 	if err != nil {
 diff --git a/internal/ingress/controller/template/template.go b/internal/ingress/controller/template/template.go
-index 8628f8090..5a008b18c 100644
+index f6816d70a..86f2c53d5 100644
 --- a/internal/ingress/controller/template/template.go
 +++ b/internal/ingress/controller/template/template.go
-@@ -391,6 +391,12 @@ func configForLua(input interface{}) string {
- 		return "{}"
- 	}
+@@ -221,6 +221,7 @@ type LuaConfig struct {
+ 	HSTSMaxAge              string         `json:"hsts_max_age"`
+ 	HSTSIncludeSubdomains   bool           `json:"hsts_include_subdomains"`
+ 	HSTSPreload             bool           `json:"hsts_preload"`
++	ProxyRealIPCIDR         []string       `json:"proxy_real_ip_cidr"`
+ }
  
-+	proxyRealIPCIDRs, err := convertGoSliceIntoLuaTable(all.Cfg.ProxyRealIPCIDR, false)
-+	if err != nil {
-+		klog.Errorf("failed to convert %v into Lua table: %q", all.Cfg.ProxyRealIPCIDR, err)
-+		proxyRealIPCIDRs = "{}"
-+	}
-+
- 	return fmt.Sprintf(`{
- 		use_forwarded_headers = %t,
- 		use_proxy_protocol = %t,
-@@ -403,6 +409,8 @@ func configForLua(input interface{}) string {
- 		hsts_include_subdomains = %t,
- 		hsts_preload = %t,
- 
-+		proxy_real_ip_cidr = %v,
-+
- 		global_throttle = {
- 			memcached = {
- 				host = "%v", port = %d, connect_timeout = %d, max_idle_timeout = %d, pool_size = %d,
-@@ -422,6 +430,8 @@ func configForLua(input interface{}) string {
- 		all.Cfg.HSTSIncludeSubdomains,
- 		all.Cfg.HSTSPreload,
- 
-+		proxyRealIPCIDRs,
-+
- 		all.Cfg.GlobalRateLimitMemcachedHost,
- 		all.Cfg.GlobalRateLimitMemcachedPort,
- 		all.Cfg.GlobalRateLimitMemcachedConnectTimeout,
+ type LuaListenPorts struct {
 diff --git a/rootfs/etc/nginx/lua/lua_ingress.lua b/rootfs/etc/nginx/lua/lua_ingress.lua
-index 49e0f5b05..998f73cc7 100644
+index a513928cf..5643ebf59 100644
 --- a/rootfs/etc/nginx/lua/lua_ingress.lua
 +++ b/rootfs/etc/nginx/lua/lua_ingress.lua
 @@ -11,6 +11,7 @@ local string = string
@@ -45,7 +34,7 @@ index 49e0f5b05..998f73cc7 100644
  
  local _M = {}
  
-@@ -103,6 +104,11 @@ function _M.init_worker()
+@@ -103,6 +104,10 @@ function _M.init_worker()
  end
  
  function _M.set_config(new_config)
@@ -53,11 +42,10 @@ index 49e0f5b05..998f73cc7 100644
 +    iputils.enable_lrucache()
 +    new_config.real_ip_from = iputils.parse_cidrs(new_config.proxy_real_ip_cidr)
 +  end
-+
    config = new_config
  end
  
-@@ -114,7 +120,7 @@ function _M.rewrite(location_config)
+@@ -123,7 +128,7 @@ function _M.rewrite()
  
    ngx.var.best_http_host = ngx.var.http_host or ngx.var.host
  

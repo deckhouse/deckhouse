@@ -1,6 +1,6 @@
-# How to test ingress controller build
+# Как протестировать сборку ingress-controller
 
-Apply resources:
+Примените ресурсы:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -55,4 +55,4 @@ spec:
             pathType: Exact
 ```
 
-And check ingress-controller logs for errors.
+Затем проверьте логи `ingress-controller` на наличие ошибок.

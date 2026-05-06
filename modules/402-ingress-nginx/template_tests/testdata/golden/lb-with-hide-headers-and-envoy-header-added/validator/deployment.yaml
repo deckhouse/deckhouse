@@ -38,8 +38,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 76be19ae90c532dca73b3a0bf0f96ea0a0cd109872a536d715328883cddfe644
-    ingress-nginx-controller.deckhouse.io/validator-version: "1.10"
+    ingress-nginx-controller.deckhouse.io/checksum: e126d7cd01376954db28e5fdbfea007b7663e154312295debcaee84da7916a81
+    ingress-nginx-controller.deckhouse.io/validator-version: "1.15"
   labels:
     app: validator
     heritage: deckhouse
@@ -98,7 +98,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller110
+        image: registry.example.com@imageHash-ingressNginx-controller115
         lifecycle:
           preStop:
             exec:

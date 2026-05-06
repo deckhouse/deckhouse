@@ -10,7 +10,7 @@ spec:
   additionalLogFields:
     my-cookie: "$cookie_MY_COOKIE"
   validationEnabled: true
-  controllerVersion: "1.10"
+  controllerVersion: "1.15"
   inlet: LoadBalancer
   hsts: true
   hstsOptions:

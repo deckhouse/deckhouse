@@ -5,7 +5,7 @@ index 3bd895b5d..ba0ce42b4 100644
 @@ -88,6 +88,9 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
  		attempts = minimumRetriesCount
  	}
-
+ 
 +	klog.Infof("Starting GeoLite2 DB download (editions: %s, attempts: %d, interval: %s)",
 +		MaxmindEditionIDs, attempts, period)
 +
@@ -13,7 +13,7 @@ index 3bd895b5d..ba0ce42b4 100644
  		Steps:    attempts,
  		Duration: period,
 @@ -103,7 +106,14 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
-
+ 
  	lastErr = wait.ExponentialBackoff(defaultRetry, func() (bool, error) {
  		var dlError error
 +
@@ -28,13 +28,13 @@ index 3bd895b5d..ba0ce42b4 100644
  			if dlError != nil {
  				break
 @@ -112,6 +122,7 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
-
+ 
  		lastErr = dlError
  		if dlError == nil {
 +			klog.Infof("GeoLite2 DBs downloaded successfully")
  			return true, nil
  		}
-
+ 
 @@ -120,14 +131,21 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
  				if e, ok := e.Err.(*os.SyscallError); ok {
  					if e.Err == syscall.ECONNREFUSED {
@@ -57,4 +57,4 @@ index 3bd895b5d..ba0ce42b4 100644
 +
  	return lastErr
  }
-
+ 
