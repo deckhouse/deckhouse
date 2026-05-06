@@ -1,12 +1,12 @@
 diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
-index 5bf378bab58..01b456a1686 100644
+index 5bf378bab58..bb2f48d0445 100644
 --- a/pkg/kubelet/kubelet.go
 +++ b/pkg/kubelet/kubelet.go
-@@ -1140,6 +1140,7 @@ func NewMainKubelet(ctx context.Context,
-                klet.heartbeatClient,
-                string(klet.nodeName),
-                kubeCfg.NodeLeaseDurationSeconds,
-+				// To do fix the patch
-                klet.onRepeatedHeartbeatFailure,
-                renewInterval,
-                string(klet.nodeName),
+@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
++// to do patch  007-kubelet-graceful-shutdown-wait-for-external-inhibitors.patch
+ package kubelet
+
+ import (
