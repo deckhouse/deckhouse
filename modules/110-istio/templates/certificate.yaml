@@ -43,4 +43,25 @@ spec:
   issuerRef:
     name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
     kind: ClusterIssuer
+  {{- if .Values.istio.multicluster.enabled }}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-proxy-httproute
+  namespace: d8-{{ $.Chart.Name }}
+  annotations:
+    werf.io/fail-mode: IgnoreAndContinueDeployProcess
+    werf.io/track-termination-mode: NonBlocking
+  {{- include "helm_lib_module_labels" (list . (dict "app" "api-proxy")) | nindent 2 }}
+spec:
+  certificateOwnerRef: false
+  secretName: {{ include "helm_lib_module_https_secret_name" (list . "api-proxy-httproute-tls") }}
+  {{ include "helm_lib_module_generate_common_name" (list . "istio-api-proxy") | nindent 2 }}
+  dnsNames:
+  - {{ include "helm_lib_module_public_domain" (list . "istio-api-proxy") }}
+  issuerRef:
+    name: {{ printf "letsencrypt-gateway-%s" $moduleGateway.name }}
+    kind: ClusterIssuer
+  {{- end }}
 {{- end }}

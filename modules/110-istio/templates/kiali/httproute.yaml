@@ -36,7 +36,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "api-proxy-ingress-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "api-proxy-httproute-tls") }}
         namespace: d8-{{ $.Chart.Name }}
       mode: Terminate
   {{- end }}
