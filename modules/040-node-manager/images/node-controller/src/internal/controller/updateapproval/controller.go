@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,21 +30,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
 	"github.com/deckhouse/node-controller/internal/controller/updateapproval/engine"
 	"github.com/deckhouse/node-controller/internal/controller/updateapproval/kubeclient"
 	uametrics "github.com/deckhouse/node-controller/internal/controller/updateapproval/metrics"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 func init() {
 	uametrics.Register()
+	register.RegisterController("nodegroup-update-approval", &v1.NodeGroup{}, New())
 }
 
 type Reconciler struct {
-	dynctrl.Base
+	register.Base
 	deckhouseNodeName string
 }
 
@@ -54,7 +56,7 @@ func New() *Reconciler {
 	}
 }
 
-func (r *Reconciler) SetupWatches(w dynctrl.Watcher) {
+func (r *Reconciler) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(ngcommon.NodeToNodeGroup), builder.WithPredicates(ngcommon.NodeHasGroupLabelPredicate()))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(nodecommon.ChecksumSecretPredicate()))
 }

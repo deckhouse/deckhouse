@@ -37,13 +37,17 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
 	instancepkg "github.com/deckhouse/node-controller/internal/controller/instance/instance"
 	instancenode "github.com/deckhouse/node-controller/internal/controller/instance/node"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 const instanceRequeueInterval = time.Minute
 
+func init() {
+	register.RegisterController("instance", &deckhousev1alpha2.Instance{}, &InstanceController{})
+}
+
 type InstanceController struct {
-	dynctrl.Base
+	register.Base
 
 	machineFactory machine.MachineFactory
 	instanceSvc    *instancepkg.InstanceService
@@ -55,7 +59,7 @@ func (r *InstanceController) Setup(_ ctrl.Manager) error {
 	return nil
 }
 
-func (r *InstanceController) SetupWatches(w dynctrl.Watcher) {
+func (r *InstanceController) SetupWatches(w register.Watcher) {
 	w.Watches(
 		&capiv1beta2.Machine{},
 		handler.EnqueueRequestsFromMapFunc(instancecommon.MapObjectNameToInstance),

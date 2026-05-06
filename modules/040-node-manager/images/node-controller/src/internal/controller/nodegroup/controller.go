@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -42,17 +42,19 @@ import (
 	calcconditions "github.com/deckhouse/node-controller/internal/controller/nodegroup/conditionscalc"
 	nodestatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/node_status"
 	processedstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/processed_status"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
-var _ dynctrl.Reconciler = (*Status)(nil)
+func init() {
+	register.RegisterController("nodegroup-status", &v1.NodeGroup{}, &Status{})
+}
 
 type Status struct {
-	dynctrl.Base
+	register.Base
 	conditionService ngconditions.Service
 }
 
-func (r *Status) SetupWatches(w dynctrl.Watcher) {
+func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(ngcommon.NodeToNodeGroup), builder.WithPredicates(ngcommon.NodeHasGroupLabelPredicate()))
 	w.Watches(&mcmv1alpha1.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))

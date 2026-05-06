@@ -32,7 +32,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 func newReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
@@ -46,7 +46,7 @@ func newReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
 	}
 	cl := fakeclient.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objs...).Build()
 	return &Reconciler{
-		Base:       dynctrl.Base{Client: cl, Recorder: record.NewFakeRecorder(10)},
+		Base:       register.Base{Client: cl, Recorder: record.NewFakeRecorder(10)},
 		kubeClient: fake.NewSimpleClientset(),
 	}
 }

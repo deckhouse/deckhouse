@@ -29,19 +29,24 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
+
+func init() {
+	register.RegisterController("node-draining", &corev1.Node{}, &Reconciler{})
+}
 
 const (
 	defaultDrainTimeout = 10 * time.Minute
 )
 
 type Reconciler struct {
-	dynctrl.Base
+	register.Base
 	kubeClient kubernetes.Interface
 }
 
@@ -51,7 +56,12 @@ func (r *Reconciler) Setup(mgr ctrl.Manager) error {
 	return err
 }
 
-func (r *Reconciler) SetupWatches(_ dynctrl.Watcher) {}
+func (r *Reconciler) SetupWatches(w register.Watcher) {
+	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		_, hasGroup := obj.GetLabels()[nodecommon.NodeGroupLabel]
+		return hasGroup
+	}))
+}
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -85,11 +95,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if drainingSource == "" {
 		clearDrainMetric(node.Name)
 
-		if drainedSource == "" {
-			logger.V(1).Info("skipping: no draining/drained annotations", "node", node.Name)
-			return ctrl.Result{}, nil
-		}
-
 		if drainedSource == "user" && !node.Spec.Unschedulable {
 			logger.Info("removing stale drained=user annotation from schedulable node", "node", node.Name)
 			return ctrl.Result{}, r.patchAnnotations(ctx, node.Name, map[string]interface{}{
@@ -103,7 +108,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	logger.Info("node drain requested", "node", node.Name, "source", drainingSource, "nodeGroup", node.Labels[nodecommon.NodeGroupLabel])
 
-	// If the node is marked for draining while it has been drained by user, remove 'drained'
 	if drainedSource == "user" {
 		logger.Info("removing existing drained=user annotation before new drain", "node", node.Name)
 		if err := r.patchAnnotations(ctx, node.Name, map[string]interface{}{
@@ -126,7 +130,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	// Run drain
 	logger.Info("draining node pods", "node", node.Name, "timeout", drainTimeout)
 	drainCtx, cancel := context.WithTimeout(ctx, drainTimeout)
 	defer cancel()
@@ -145,13 +148,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	} else {
 		clearDrainMetric(node.Name)
 	}
-
-	logger.Info("drain completed, updating annotations",
-		"node", node.Name,
-		"removingAnnotation", nodecommon.DrainingAnnotation,
-		"settingAnnotation", nodecommon.DrainedAnnotation,
-		"value", drainingSource,
-	)
 
 	if err := r.patchAnnotations(ctx, node.Name, map[string]interface{}{
 		nodecommon.DrainingAnnotation: nil,
@@ -227,5 +223,3 @@ func (r *Reconciler) patchAnnotations(ctx context.Context, nodeName string, anno
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
 	return r.Client.Patch(ctx, node, client.RawPatch(types.MergePatchType, patch))
 }
-
-var _ dynctrl.Reconciler = (*Reconciler)(nil)

@@ -31,7 +31,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	ua "github.com/deckhouse/node-controller/internal/controller/updateapproval/common"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 func newTestReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
@@ -49,7 +49,7 @@ func newTestReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
 		WithRuntimeObjects(objs...).
 		Build()
 	return &Reconciler{
-		Base: dynctrl.Base{Client: cl, Recorder: record.NewFakeRecorder(10)},
+		Base: register.Base{Client: cl, Recorder: record.NewFakeRecorder(10)},
 	}
 }
 

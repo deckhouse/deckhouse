@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 func newReconciler(t *testing.T, objs ...runtime.Object) (*Status, *record.FakeRecorder) {
@@ -48,7 +48,7 @@ func newReconciler(t *testing.T, objs ...runtime.Object) (*Status, *record.FakeR
 		Build()
 	rec := record.NewFakeRecorder(10)
 	return &Status{
-		Base: dynctrl.Base{Client: cl, Recorder: rec},
+		Base: register.Base{Client: cl, Recorder: rec},
 	}, rec
 }
 

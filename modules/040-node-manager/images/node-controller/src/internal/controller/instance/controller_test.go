@@ -37,7 +37,7 @@ import (
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 func TestReconcileMachineStatus(t *testing.T) {
@@ -809,7 +809,7 @@ func newTestInstanceController(
 		controllerClient = clientFactory(k8sClient)
 	}
 
-	controller := &InstanceController{Base: dynctrl.Base{Client: controllerClient}}
+	controller := &InstanceController{Base: register.Base{Client: controllerClient}}
 	require.NoError(t, controller.Setup(nil))
 
 	return controller, k8sClient

@@ -27,7 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/deckhouse/node-controller/internal/register/dynctrl"
+	"github.com/deckhouse/node-controller/internal/register"
 )
 
 func newReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
@@ -37,7 +37,7 @@ func newReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
 		t.Fatalf("add scheme: %v", err)
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objs...).Build()
-	return &Reconciler{Base: dynctrl.Base{Client: cl}}
+	return &Reconciler{Base: register.Base{Client: cl}}
 }
 
 func getNode(t *testing.T, r *Reconciler, name string) *corev1.Node {
