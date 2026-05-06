@@ -122,9 +122,9 @@ func TestReconcileLinkedSourceExistence(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 			svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-			deleted, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
+			result, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
 			require.NoError(t, err)
-			require.False(t, deleted)
+			require.False(t, result.InstanceDeleted)
 
 			persisted := &deckhousev1alpha2.Instance{}
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: tc.instance.Name}, persisted)
@@ -192,9 +192,9 @@ func TestReconcileLinkedSourceExistenceDeletes(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 			svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-			deleted, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
+			result, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
 			require.NoError(t, err)
-			require.True(t, deleted)
+			require.True(t, result.InstanceDeleted)
 
 			persisted := &deckhousev1alpha2.Instance{}
 			err = fakeClient.Get(context.Background(), types.NamespacedName{Name: tc.instance.Name}, persisted)
@@ -300,10 +300,10 @@ func TestReconcileLinkedSourceExistenceErrors(t *testing.T) {
 
 			svc := &InstanceService{client: fakeClient, machineFactory: tc.machineFactory}
 
-			deleted, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
+			result, err := svc.ReconcileSourceExistence(context.Background(), tc.instance)
 			require.Error(t, err)
 			require.ErrorContains(t, err, tc.errorContains)
-			require.False(t, deleted)
+			require.False(t, result.InstanceDeleted)
 		})
 	}
 
@@ -328,9 +328,9 @@ func TestReconcileLinkedSourceExistenceErrors(t *testing.T) {
 
 		svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-		deleted, err := svc.ReconcileSourceExistence(context.Background(), instance)
+		result, err := svc.ReconcileSourceExistence(context.Background(), instance)
 		require.Error(t, err)
-		require.False(t, deleted)
+		require.False(t, result.InstanceDeleted)
 
 		persisted := &deckhousev1alpha2.Instance{}
 		err = fakeClient.Get(context.Background(), types.NamespacedName{Name: instance.Name}, persisted)
@@ -389,9 +389,9 @@ func TestReconcileLinkedSourceExistenceWithBothRefsUsesMachinePriority(t *testin
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 	svc := &InstanceService{client: fakeClient, machineFactory: machine.NewMachineFactory()}
 
-	deleted, err := svc.ReconcileSourceExistence(context.Background(), instance)
+	result, err := svc.ReconcileSourceExistence(context.Background(), instance)
 	require.NoError(t, err)
-	require.True(t, deleted)
+	require.True(t, result.InstanceDeleted)
 
 	persisted := &deckhousev1alpha2.Instance{}
 	err = fakeClient.Get(context.Background(), types.NamespacedName{Name: instance.Name}, persisted)

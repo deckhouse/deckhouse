@@ -64,20 +64,31 @@ func (s *InstanceService) removeInstanceFinalizer(ctx context.Context, instance 
 	return instancecommon.RemoveInstanceControllerFinalizer(ctx, s.client, instance)
 }
 
-func (s *InstanceService) reconcileLinkedMachineDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
+type linkedMachineDeletionResult struct {
+	MachineGone bool
+}
+
+func (s *InstanceService) reconcileLinkedMachineDeletion(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (linkedMachineDeletionResult, error) {
 	ref := instance.Spec.MachineRef
 	if ref == nil || ref.Name == "" {
-		return true, nil
+		return linkedMachineDeletionResult{MachineGone: true}, nil
 	}
 
 	machine, err := s.machineFactory.NewMachineFromRef(ctx, s.client, ref)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return true, nil
+			return linkedMachineDeletionResult{MachineGone: true}, nil
 		}
-		return false, err
+		return linkedMachineDeletionResult{}, err
 	}
 
 	log.FromContext(ctx).V(4).Info("tick", "op", "instance.machine.ensure_deleted")
-	return machine.EnsureDeleted(ctx, s.client)
+	deletion, err := machine.EnsureDeleted(ctx, s.client)
+	if err != nil {
+		return linkedMachineDeletionResult{}, err
+	}
+	return linkedMachineDeletionResult{MachineGone: deletion.Gone}, nil
 }

@@ -74,19 +74,19 @@ func (m *mcmMachine) GetStatus() MachineStatus {
 	}
 }
 
-func (m *mcmMachine) EnsureDeleted(ctx context.Context, c client.Client) (bool, error) {
+func (m *mcmMachine) EnsureDeleted(ctx context.Context, c client.Client) (DeletionResult, error) {
 	if !m.machine.DeletionTimestamp.IsZero() {
-		return false, nil
+		return DeletionResult{Gone: false}, nil
 	}
 
 	if err := c.Delete(ctx, m.machine); err != nil {
 		if apierrors.IsNotFound(err) {
-			return true, nil
+			return DeletionResult{Gone: true}, nil
 		}
-		return false, fmt.Errorf("delete mcm machine %q: %w", m.machine.Name, err)
+		return DeletionResult{}, fmt.Errorf("delete mcm machine %q: %w", m.machine.Name, err)
 	}
 
-	return false, nil
+	return DeletionResult{Gone: false}, nil
 }
 
 func (m *mcmMachine) calculatePhase() deckhousev1alpha2.InstancePhase {

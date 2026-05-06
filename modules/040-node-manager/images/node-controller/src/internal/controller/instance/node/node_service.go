@@ -29,26 +29,26 @@ import (
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 )
 
-func ReconcileNode(ctx context.Context, c client.Client, name string) (bool, error) {
+func ReconcileNode(ctx context.Context, c client.Client, name string) error {
 	logger := log.FromContext(ctx).WithValues("node", name)
 	logger.V(4).Info("tick", "op", "node.reconcile.start")
 
 	node := &corev1.Node{}
 	if err := c.Get(ctx, types.NamespacedName{Name: name}, node); err != nil {
 		if client.IgnoreNotFound(err) != nil {
-			return false, err
+			return err
 		}
-		deleted, err := deleteNodeBasedInstanceIfExists(ctx, c, name)
+		result, err := deleteNodeBasedInstanceIfExists(ctx, c, name)
 		if err != nil {
-			return false, err
+			return err
 		}
-		logger.V(1).Info("node not found, node based instance delete handled", "instance", name, "deleted", deleted)
-		return deleted, nil
+		logger.V(1).Info("node not found, node based instance delete handled", "instance", name, "deleted", result.InstanceDeleted)
+		return nil
 	}
 
 	if !instancecommon.IsStaticNode(node) {
 		logger.V(4).Info("node is not static, skipping instance reconcile")
-		return false, nil
+		return nil
 	}
 
 	logger.V(4).Info("tick", "op", "node.instance.ensure")
@@ -56,23 +56,31 @@ func ReconcileNode(ctx context.Context, c client.Client, name string) (bool, err
 		NodeRef: deckhousev1alpha2.NodeRef{Name: node.Name},
 	})
 	if err != nil {
-		return false, fmt.Errorf("ensure instance for static node %q: %w", node.Name, err)
+		return fmt.Errorf("ensure instance for static node %q: %w", node.Name, err)
 	}
 	if err := instancecommon.SetInstancePhase(ctx, c, instance, deckhousev1alpha2.InstancePhaseRunning); err != nil {
-		return false, fmt.Errorf("set instance phase for static node %q: %w", node.Name, err)
+		return fmt.Errorf("set instance phase for static node %q: %w", node.Name, err)
 	}
 
 	logger.V(1).Info("instance ensured for static node")
-	return false, nil
+	return nil
 }
 
-func deleteNodeBasedInstanceIfExists(ctx context.Context, c client.Client, name string) (bool, error) {
+type nodeBasedInstanceDeletionResult struct {
+	InstanceDeleted bool
+}
+
+func deleteNodeBasedInstanceIfExists(
+	ctx context.Context,
+	c client.Client,
+	name string,
+) (nodeBasedInstanceDeletionResult, error) {
 	instance := &deckhousev1alpha2.Instance{}
 	if err := c.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			return false, nil
+			return nodeBasedInstanceDeletionResult{}, nil
 		}
-		return false, fmt.Errorf("get instance %q: %w", name, err)
+		return nodeBasedInstanceDeletionResult{}, fmt.Errorf("get instance %q: %w", name, err)
 	}
 
 	// Delete only instances that are explicitly sourced from Node.
@@ -80,21 +88,21 @@ func deleteNodeBasedInstanceIfExists(ctx context.Context, c client.Client, name 
 	isNodeBased := instance.Spec.MachineRef == nil
 	pointsToThisNode := instance.Spec.NodeRef.Name == name
 	if !isNodeBased || !pointsToThisNode {
-		return false, nil
+		return nodeBasedInstanceDeletionResult{}, nil
 	}
 
 	if err := instancecommon.RemoveInstanceControllerFinalizer(ctx, c, instance); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			return false, nil
+			return nodeBasedInstanceDeletionResult{}, nil
 		}
-		return false, fmt.Errorf("remove finalizer from node based instance %q: %w", name, err)
+		return nodeBasedInstanceDeletionResult{}, fmt.Errorf("remove finalizer from node based instance %q: %w", name, err)
 	}
 
 	if err := c.Delete(ctx, instance); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			return false, nil
+			return nodeBasedInstanceDeletionResult{}, nil
 		}
-		return false, fmt.Errorf("delete node based instance %q: %w", name, err)
+		return nodeBasedInstanceDeletionResult{}, fmt.Errorf("delete node based instance %q: %w", name, err)
 	}
 	log.FromContext(ctx).V(1).Info(
 		"instance deleted",
@@ -104,5 +112,5 @@ func deleteNodeBasedInstanceIfExists(ctx context.Context, c client.Client, name 
 	)
 	log.FromContext(ctx).V(4).Info("tick", "op", "node.instance.delete")
 
-	return true, nil
+	return nodeBasedInstanceDeletionResult{InstanceDeleted: true}, nil
 }

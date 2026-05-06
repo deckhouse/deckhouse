@@ -101,9 +101,9 @@ func TestReconcileLinkedMachineDeletion(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		svc := &InstanceService{client: c, machineFactory: machine.NewMachineFactory()}
 
-		machineGone, err := svc.reconcileLinkedMachineDeletion(context.Background(), instance)
+		result, err := svc.reconcileLinkedMachineDeletion(context.Background(), instance)
 		require.NoError(t, err)
-		require.True(t, machineGone)
+		require.True(t, result.MachineGone)
 	})
 
 	t.Run("not found machine is treated as machine gone", func(t *testing.T) {
@@ -123,8 +123,8 @@ func TestReconcileLinkedMachineDeletion(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		svc := &InstanceService{client: c, machineFactory: &fakeMachineFactory{err: apierrors.NewNotFound(schema.GroupResource{Resource: "machines"}, "missing-machine")}}
 
-		machineGone, err := svc.reconcileLinkedMachineDeletion(context.Background(), instance)
+		result, err := svc.reconcileLinkedMachineDeletion(context.Background(), instance)
 		require.NoError(t, err)
-		require.True(t, machineGone)
+		require.True(t, result.MachineGone)
 	})
 }

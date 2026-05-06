@@ -30,6 +30,10 @@ type InstanceService struct {
 	machineFactory machine.MachineFactory
 }
 
+type FinalizationResult struct {
+	MachineGone bool
+}
+
 func NewInstanceService(c client.Client) *InstanceService {
 	return &InstanceService{
 		client:         c,
@@ -37,13 +41,16 @@ func NewInstanceService(c client.Client) *InstanceService {
 	}
 }
 
-func (s *InstanceService) ReconcileFinalization(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
-	machineGone, err := s.reconcileLinkedMachineDeletion(ctx, instance)
+func (s *InstanceService) ReconcileFinalization(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (FinalizationResult, error) {
+	result, err := s.reconcileLinkedMachineDeletion(ctx, instance)
 	if err != nil {
-		return false, err
+		return FinalizationResult{}, err
 	}
-	if err := s.finalizeAfterMachineDeletion(ctx, instance, machineGone); err != nil {
-		return false, err
+	if err := s.finalizeAfterMachineDeletion(ctx, instance, result.MachineGone); err != nil {
+		return FinalizationResult{}, err
 	}
-	return machineGone, nil
+	return FinalizationResult{MachineGone: result.MachineGone}, nil
 }

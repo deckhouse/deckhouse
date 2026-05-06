@@ -47,7 +47,11 @@ type Machine interface {
 	GetNodeGroup() string
 	GetMachineRef() *deckhousev1alpha2.MachineRef
 	GetStatus() MachineStatus
-	EnsureDeleted(ctx context.Context, c client.Client) (bool, error)
+	EnsureDeleted(ctx context.Context, c client.Client) (DeletionResult, error)
+}
+
+type DeletionResult struct {
+	Gone bool
 }
 
 type MachineStatus struct {

@@ -36,7 +36,14 @@ const (
 	sourceStatusSkipped  sourceStatus = "skipped"
 )
 
-func (s *InstanceService) ReconcileSourceExistence(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
+type SourceExistenceResult struct {
+	InstanceDeleted bool
+}
+
+func (s *InstanceService) ReconcileSourceExistence(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (SourceExistenceResult, error) {
 	source := getInstanceSource(instance)
 	logger := log.FromContext(ctx)
 
@@ -49,13 +56,13 @@ func (s *InstanceService) ReconcileSourceExistence(ctx context.Context, instance
 	case instanceSourceNode:
 		nodeStatus, err = s.linkedNodeStatus(ctx, source.NodeName)
 	default:
-		return false, nil
+		return SourceExistenceResult{}, nil
 	}
 	if err != nil {
-		return false, err
+		return SourceExistenceResult{}, err
 	}
 	if machineStatus == sourceStatusFound || nodeStatus == sourceStatusFound {
-		return false, nil
+		return SourceExistenceResult{}, nil
 	}
 	hasConfirmedMissing := machineStatus == sourceStatusNotFound || nodeStatus == sourceStatusNotFound
 
@@ -68,17 +75,19 @@ func (s *InstanceService) ReconcileSourceExistence(ctx context.Context, instance
 			"machineRefName", machineRefName(source.MachineRef),
 			"nodeName", source.NodeName,
 		)
-		return false, nil
+		return SourceExistenceResult{}, nil
 	}
 
 	// Safety net: this delete path is best-effort garbage collection for orphaned instances.
 	// Remove finalizer first to avoid machine deletion side-effects on an erroneous source miss.
 	if err := s.removeInstanceFinalizer(ctx, instance); err != nil {
-		return false, fmt.Errorf("remove finalizer before deleting instance %q with missing source: %w", instance.Name, err)
+		return SourceExistenceResult{}, fmt.Errorf("remove finalizer before deleting instance %q with missing source: %w", instance.Name, err)
 	}
 
-	if err := s.client.Delete(ctx, instance); err != nil && !apierrors.IsNotFound(err) {
-		return false, fmt.Errorf("delete instance %q with missing source: %w", instance.Name, err)
+	if err := s.client.Delete(ctx, instance); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return SourceExistenceResult{}, fmt.Errorf("delete instance %q with missing source: %w", instance.Name, err)
+		}
 	}
 	logger.V(1).Info(
 		"instance deleted",
@@ -92,7 +101,7 @@ func (s *InstanceService) ReconcileSourceExistence(ctx context.Context, instance
 	)
 	logger.V(4).Info("tick", "op", "instance.source.delete")
 
-	return true, nil
+	return SourceExistenceResult{InstanceDeleted: true}, nil
 }
 
 func (s *InstanceService) linkedMachineStatus(

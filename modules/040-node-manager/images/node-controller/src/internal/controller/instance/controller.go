@@ -90,16 +90,16 @@ func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (c
 		r.reconcileDeletion,
 		nonTerminalStep(r.instanceSvc.EnsureInstanceFinalizer),
 		nonTerminalStep(r.reconcileMachineRef),
-		r.instanceSvc.ReconcileSourceExistence,
+		r.reconcileSourceExistence,
 		nonTerminalStep(r.instanceSvc.ReconcileBashibleHeartbeat),
 		nonTerminalStep(r.instanceSvc.ReconcileBashibleStatus),
 		nonTerminalStep(r.reconcileMachineStatus),
 	} {
-		done, err := s(ctx, instance)
+		action, err := s(ctx, instance)
 		if err != nil {
 			return resultFromErr(err)
 		}
-		if done {
+		if action == stopPipeline {
 			break
 		}
 	}
@@ -108,27 +108,61 @@ func (r *InstanceController) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{RequeueAfter: instanceRequeueInterval}, nil
 }
 
-type reconcileStep func(context.Context, *deckhousev1alpha2.Instance) (bool, error)
+type pipelineAction string
+
+const (
+	continuePipeline pipelineAction = "continue"
+	stopPipeline     pipelineAction = "stop"
+)
+
+type reconcileStep func(context.Context, *deckhousev1alpha2.Instance) (pipelineAction, error)
 
 func nonTerminalStep(fn func(context.Context, *deckhousev1alpha2.Instance) error) reconcileStep {
-	return func(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
-		return false, fn(ctx, instance)
+	return func(ctx context.Context, instance *deckhousev1alpha2.Instance) (pipelineAction, error) {
+		return continuePipeline, fn(ctx, instance)
 	}
 }
 
-func (r *InstanceController) reconcileDeletion(ctx context.Context, instance *deckhousev1alpha2.Instance) (bool, error) {
+func (r *InstanceController) reconcileDeletion(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (pipelineAction, error) {
 	if instance.DeletionTimestamp == nil || instance.DeletionTimestamp.IsZero() {
-		return false, nil
+		return continuePipeline, nil
 	}
 	log.FromContext(ctx).V(4).Info("tick", "op", "instance.reconcile.deletion")
-	machineGone, err := r.instanceSvc.ReconcileFinalization(ctx, instance)
-	if err != nil || machineGone {
-		return true, err
+	finalization, err := r.instanceSvc.ReconcileFinalization(ctx, instance)
+	if err != nil {
+		return stopPipeline, err
 	}
+
+	if finalization.MachineGone {
+		return stopPipeline, nil
+	}
+
 	if err := r.reconcileMachineStatus(ctx, instance); err != nil {
-		return true, err
+		return stopPipeline, err
 	}
-	return true, r.instanceSvc.ReconcileBashibleStatus(ctx, instance)
+
+	if err := r.instanceSvc.ReconcileBashibleStatus(ctx, instance); err != nil {
+		return stopPipeline, err
+	}
+
+	return stopPipeline, nil
+}
+
+func (r *InstanceController) reconcileSourceExistence(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+) (pipelineAction, error) {
+	result, err := r.instanceSvc.ReconcileSourceExistence(ctx, instance)
+	if err != nil {
+		return continuePipeline, err
+	}
+	if result.InstanceDeleted {
+		return stopPipeline, nil
+	}
+	return continuePipeline, nil
 }
 
 func resultFromErr(err error) (ctrl.Result, error) {
@@ -153,7 +187,7 @@ func (r *InstanceController) reconcileCreateFromSource(ctx context.Context, name
 		return ctrl.Result{}, nil
 	}
 
-	if _, err := instancenode.ReconcileNode(ctx, r.Client, name); err != nil {
+	if err := instancenode.ReconcileNode(ctx, r.Client, name); err != nil {
 		return ctrl.Result{}, err
 	}
 

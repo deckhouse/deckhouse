@@ -90,7 +90,7 @@ For an existing `Instance`, reconcile runs these steps in order:
 
 The loop uses two step shapes:
 
-- terminal steps return `(done bool, error)` and may stop the pipeline;
+- terminal steps return `pipelineAction` and may stop the pipeline;
 - non-terminal steps return `error` and are adapted with `nonTerminalStep`.
 
 ### Step Details
@@ -99,7 +99,9 @@ The loop uses two step shapes:
 
 Stops the pipeline when `DeletionTimestamp` is set. It asks the linked machine
 to delete, waits until the machine is gone, then removes the instance finalizer.
-If there is no `MachineRef`, finalization can remove the finalizer immediately.
+While the machine still exists, it keeps the finalizer and refreshes machine
+status and message fields so deletion progress is visible. If there is no
+`MachineRef`, finalization can remove the finalizer immediately.
 
 `EnsureInstanceFinalizer`
 
@@ -173,7 +175,7 @@ get linked Machine from MachineRef
         │
         └─ exists ─► machine.EnsureDeleted()
                        │
-                       ├─ machine still present ─► keep finalizer
+                       ├─ machine still present ─► keep finalizer, sync status
                        └─ machine gone ──────────► remove finalizer
 ```
 

@@ -54,9 +54,9 @@ func TestDeleteNodeBasedInstanceIfExistsSkipsMachineBackedInstance(t *testing.T)
 		},
 	})
 
-	deleted, err := deleteNodeBasedInstanceIfExists(context.Background(), c, "node-a")
+	result, err := deleteNodeBasedInstanceIfExists(context.Background(), c, "node-a")
 	require.NoError(t, err)
-	require.False(t, deleted)
+	require.False(t, result.InstanceDeleted)
 
 	persisted := &deckhousev1alpha2.Instance{}
 	err = c.Get(context.Background(), types.NamespacedName{Name: "node-a"}, persisted)
@@ -77,9 +77,9 @@ func TestDeleteNodeBasedInstanceIfExistsSkipsNodeMismatch(t *testing.T) {
 		},
 	})
 
-	deleted, err := deleteNodeBasedInstanceIfExists(context.Background(), c, "node-a")
+	result, err := deleteNodeBasedInstanceIfExists(context.Background(), c, "node-a")
 	require.NoError(t, err)
-	require.False(t, deleted)
+	require.False(t, result.InstanceDeleted)
 
 	persisted := &deckhousev1alpha2.Instance{}
 	err = c.Get(context.Background(), types.NamespacedName{Name: "node-a"}, persisted)
@@ -116,9 +116,9 @@ func TestDeleteNodeBasedInstanceIfExistsRemovesFinalizerBeforeDelete(t *testing.
 		}).
 		Build()
 
-	deleted, err := deleteNodeBasedInstanceIfExists(context.Background(), c, "node-a")
+	result, err := deleteNodeBasedInstanceIfExists(context.Background(), c, "node-a")
 	require.NoError(t, err)
-	require.True(t, deleted)
+	require.True(t, result.InstanceDeleted)
 	require.False(t, deleteSawFinalizer)
 
 	persisted := &deckhousev1alpha2.Instance{}
