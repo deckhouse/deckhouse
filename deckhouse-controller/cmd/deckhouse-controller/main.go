@@ -28,11 +28,10 @@ import (
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/dhctlcli"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
-	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
-	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -117,16 +116,30 @@ func main() {
 	// deckhouse-controller registry
 	registry.DefineRegistryCommand(kpApp, logger)
 
-	// deckhouse-controller edit subcommands
-	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+	// dhctlcli command builders read defaults from DHCTL_CLI_* env vars
+	// (kingpin Envar bindings in dhctl/pkg/app); seed them here so we don't
+	// import dhctl/pkg/app from main. Deployer-set values are preserved.
 	{
-		dhctl_app.LoggerType = "json"
-		dhctl_app.Editor = "vim"
-		dhctl_app.KubeConfigInCluster = true
-		dhctl_app.TmpDirName = os.TempDir()
+		setDhctlEnvDefault("DHCTL_CLI_LOGGER_TYPE", "json")
+		setDhctlEnvDefault("DHCTL_CLI_EDITOR", "vim")
+		setDhctlEnvDefault("DHCTL_CLI_KUBE_CLIENT_FROM_CLUSTER", "true")
+		setDhctlEnvDefault("DHCTL_CLI_TMP_DIR", os.TempDir())
 
-		dhctl_commands.DefineEditCommands(editCmd /* wConnFlags */, false)
+		editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+		dhctlcli.DefineEditCommands(editCmd /* wConnFlags */, false)
+
+		dhctlcli.DefineCommandParseClusterConfiguration(kpApp.Command("cluster-configuration", "Parse configuration and print it."))
+		dhctlcli.DefineCommandParseCloudDiscoveryData(kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it."))
 	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
+}
+
+// setDhctlEnvDefault seeds an env var only if the deployer hasn't set one.
+// os.Setenv error is dropped: it only fails on names containing '=' or NUL.
+func setDhctlEnvDefault(name, value string) {
+	if v, ok := os.LookupEnv(name); ok && v != "" {
+		return
+	}
+	_ = os.Setenv(name, value)
 }
