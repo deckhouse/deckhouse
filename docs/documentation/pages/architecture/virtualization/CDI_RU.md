@@ -50,7 +50,7 @@ CDI состоит из следующих компонентов:
 1. **Cdi-apiserver** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), который используется для проверки и изменения ресурсов Kubernetes API через механизмы [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Cdi-apiserver реализует validating и mutating вебхуки для следующих типов ресурсов:
 
    - PersistentVolumeClaim — стандартный ресурс kubernetes API;
-   - DataVolume — абстракция поверх стандартных PVC для создания на их основе дисков виртуальных машин;
+   - InternalVirtualizationDataVolume — абстракция поверх стандартных PVC для создания на их основе дисков виртуальных машин;
    - CDI — кастомный ресурс, используемый cdi-operator, для установки и настройки компонентов CDI;
    - DataImportCron — определяет задание cron для импорта образов дисков в виде PVC-файлов;
    - VolumeImportSource — определяет источники для импорта дисков.
