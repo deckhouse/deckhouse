@@ -147,5 +147,9 @@ bb-log-callstack() {
 #   === Step output: stdout line 2
 bb-log-stream-dhctl() {
     local PREFIX="=== Step output: "
-    awk -v prefix="$PREFIX" '{print prefix $0}'
+    local line
+    
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf "%s%s\n" "$PREFIX" "$line"
+    done
 }
