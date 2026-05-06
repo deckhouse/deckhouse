@@ -1,3 +1,4 @@
+{{- if ne $.Env "CSE" }}
 {{- $mig_manager_version := "0.12.3" }}
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $image_version := toString $key | replace "." "-" }}
@@ -93,4 +94,5 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64
   - make PREFIX=/usr/bin/ cmds
   - chmod 0700 /usr/bin/nvidia-mig-parted /usr/bin/nvidia-mig-manager
+{{- end }}
 {{- end }}

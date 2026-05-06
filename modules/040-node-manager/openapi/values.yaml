@@ -61,7 +61,6 @@ properties:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
-
       machineControllerManagerEnabled:
         type: boolean
       capiControllerManagerEnabled:
@@ -384,6 +383,7 @@ properties:
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
             gpu:
+              # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
             cri:
@@ -441,6 +441,8 @@ properties:
             nodeDrainTimeoutSecond:
               type: [integer]
               additionalProperties: true
+              minimum: 30
+              maximum: 7200
             fencing:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
