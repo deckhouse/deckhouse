@@ -55,36 +55,39 @@ spec:
         properties:
           apiVersion:
             description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              Specifies the API version this object belongs to.
+
+              The server converts supported versions of the resource to the latest internal format and may reject unrecognized versions.
+
+              For details on required fields in resources, refer to the [Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              String value that defines the type of resource this object represents.
+
+              The server may infer this value from the endpoint the client sends requests to.
+
+              This field is immutable and must be specified in CamelCase.
+
+              For details on resource types, refer to the [Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
           metadata:
             type: object
           spec:
-            description: ControlPlaneOperationSpec describes the desired state of
+            description: Describes the desired state of
               an operation.
             properties:
               approved:
                 default: false
                 description: |-
-                  Approved indicates whether the operation is allowed to run.
+                  Indicates whether the operation is allowed to run.
 
                   Only one approved operation may run on a node at a time.
                   The approver controller sets this automatically based on the current control plane state.
                 type: boolean
               component:
-                description: Component is the control plane component the operation
-                  targets.
+                description: |-
+                  Control plane component the operation targets.
                 enum:
                 - Etcd
                 - KubeAPIServer
@@ -93,45 +96,46 @@ spec:
                 type: string
               desiredCaChecksum:
                 description: |-
-                  DesiredCAChecksum is the expected CA certificates fingerprint once the operation completes.
+                  Expected CA certificate checksum once the operation completes.
 
-                  Populated only for steps that update the root CA (SyncCA and related).
+                  Populated only for steps that update the root CA certificate (`SyncCA` and related).
                 type: string
               desiredConfigChecksum:
                 description: |-
-                  DesiredConfigChecksum is the expected component configuration fingerprint
-                  (static pod manifest and extra-files) once the operation completes.
+                  Expected component configuration checksum
+                  (static pod manifest and associated configuration files) once the operation completes.
 
-                  Used to confirm that the operation actually applied the intended configuration:
-                  after the pod restarts the fingerprint in ControlPlaneNode.status must match this value.
+                  Used to confirm that the operation actually applied the intended configuration.
+                  After the pod restarts the checksum in `ControlPlaneNode.status` must match this value.
                 type: string
               desiredPkiChecksum:
                 description: |-
-                  DesiredPKIChecksum is the expected component PKI fingerprint
-                  (certSANs, encryption-algorithm) once the operation completes.
+                  Expected component PKI fingerprint
+                  (`certSANs`, `encryption-algorithm`) once the operation completes.
 
-                  Populated only for steps that change PKI (RenewPKICerts and related).
+                  Populated only for steps that change PKI (`RenewPKICerts` and related).
                 type: string
               nodeName:
-                description: NodeName is the name of the control plane node on which
+                description: Name of the control plane node on which
                   the operation must be executed.
                 type: string
               steps:
-                description: Steps is the ordered list of steps to perform within
-                  the operation.
+                description: |-
+                  Ordered list of steps to perform within the operation.
+
+                  Possible values:
+
+                  - `Backup`: Backs up the current component configuration (static pod manifest, associated configuration files) into `/etc/kubernetes/deckhouse/backup` before any changes.
+                  - `SyncCA`: Synchronizes CA certificates (`ca.crt`, `ca.key`) with the current `d8-pki` Secret.
+                  - `RenewPKICerts`: Re-issues component certificates (`server`, `peer`, `client`).
+                  - `RenewKubeconfigs`: Re-issues kubeconfig files used by the component to authenticate against the API.
+                  - `SyncManifests`: Updates the static pod manifest and accompanying files (`/etc/kubernetes/manifests`, associated configuration files) and records changes in `/etc/kubernetes/deckhouse/diffs`.
+                  - `JoinEtcdCluster`: Joins a new member to the etcd cluster.
+                  - `WaitPodReady`: Waits for the component static pod to become `Ready` after a restart.
+                  - `CertObserve`: Collects the current certificate expiration dates for the component and publishes them to `status.observedState`.
                 items:
                   description: |-
-                    StepName is the name of a single step performed within an operation.
-
-                    Possible values:
-                      - Backup           — backs up the current component configuration (static pod manifest, extra-files) into /etc/kubernetes/deckhouse/backup before any change.
-                      - SyncCA           — synchronizes CA certificates (ca.crt, ca.key) with the current d8-pki secret.
-                      - RenewPKICerts    — re-issues component certificates (server, peer, client).
-                      - RenewKubeconfigs — re-issues kubeconfig files used by the component to authenticate against the API.
-                      - SyncManifests    — updates the static pod manifest and accompanying files (/etc/kubernetes/manifests, extra-files) and records changes in /etc/kubernetes/deckhouse/diffs.
-                      - JoinEtcdCluster  — joins a new member to the etcd cluster.
-                      - WaitPodReady     — waits for the component static pod to become Ready after restart.
-                      - CertObserve      — collects current certificate expiration dates for the component and publishes them to status.observedState.
+                    Name of a single step performed within an operation.
                   enum:
                   - Backup
                   - SyncCA
@@ -151,64 +155,55 @@ spec:
             - steps
             type: object
           status:
-            description: ControlPlaneOperationStatus describes the observed state
-              of an operation.
+            description: Observed state of an operation.
             properties:
               conditions:
                 description: |-
-                  Conditions reflects the operation progress.
+                  Reflects the operation progress.
 
-                  The primary condition is "Completed". Its "reason" field is shown in the Phase column of `kubectl get cpo`:
-                    - InProgress — the operation is running. The current step name is shown in the CurrentStep column.
-                    - Succeeded  — the operation finished successfully.
-                    - Failed     — the operation finished with an error; details are in "message".
+                  The primary condition is `Completed`. Its `reason` field is shown in the `Phase` column of `kubectl get cpo`:
 
-                  In addition to "Completed", a separate condition is created for each executed step,
-                  where "type" equals the step name (for example RenewPKICerts, SyncManifests).
+                  - `InProgress`: Operation is running. The current step name is shown in the `CurrentStep` column.
+                  - `Succeeded`: Operation finished successfully.
+                  - `Failed`: Operation finished with an error. See details in `message`.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        Last time the condition transitioned from one status to another.
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
+                        Human-readable description of the current condition state.
+                        If there is an error, this field contains the last error output on a step.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
+                        The `.metadata.generation` value that the condition was set based upon.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
                       description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                        Machine-readable reason for the current condition state (for example, `InProgress`, `Succeeded`, or `Failed`).
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Status of the condition.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: |-
+                        Type of condition.
+                        
+                        In addition to `Completed`, a separate condition is created for each executed step, where `type` equals the step name (for example, `RenewPKICerts`, `SyncManifests`).
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -225,7 +220,8 @@ spec:
                 x-kubernetes-list-type: map
               observedState:
                 description: |-
-                  ObservedState contains the component state collected by the CertObserve step.
+                  Contains the component state collected by the `CertObserve` step.
+                  
                   Populated only for static pod components (etcd, kube-apiserver, kube-controller-manager, kube-scheduler).
                 properties:
                   certificatesExpirationDate:
@@ -233,8 +229,9 @@ spec:
                       format: date-time
                       type: string
                     description: |-
-                      CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
-                      Used by the module to renew certificates in time and to drive related alerts.
+                      Maps each component certificate file name to its `NotAfter` timestamp.
+                      
+                      Used by the module for certificate re-issuing and alerting.
                     type: object
                 type: object
             type: object

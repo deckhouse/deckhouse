@@ -185,7 +185,7 @@
       description: |-
         Control-plane operation `{{ $labels.operation }}` for component `{{ $labels.component }}` on node `{{ $labels.node }}` has been running or retrying for more than 10 minutes.
 
-        Check the corresponding `ControlPlaneOperation` and logs of `d8-control-plane-manager` pod on that node:
+        Check the corresponding ControlPlaneOperation and logs of the `d8-control-plane-manager` Pod on that node:
 
         ```bash
         d8 k get cpo {{ $labels.operation }} -o yaml

@@ -47,190 +47,193 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          ControlPlaneNode describes the desired and observed state of control plane components on a single node:
+          Describes the desired and observed state of control plane components on a single node:
           etcd, kube-apiserver, kube-controller-manager, kube-scheduler.
 
-          The resource is created and updated by the control-plane-manager module automatically; users do not need to create or edit it.
+          The resource is created and updated by the `control-plane-manager` module automatically. Users do not need to create or edit it.
 
           Useful for diagnosing the health of the control plane on the node:
-            - the ETCD, APISERVER, CONTROLLERMANAGER and SCHEDULER columns of `kubectl get cpn` show component readiness;
-            - the CERTIFICATES column shows overall certificate health;
-            - spec.components contains desired fingerprints, status.components contains the actually applied ones.
+
+          - `ETCD`, `APISERVER`, `CONTROLLERMANAGER` and `SCHEDULER` columns of `kubectl get cpn` show component readiness.
+          - `CERTIFICATES` column shows overall certificate health.
+          - `spec.components` contains desired fingerprints, while `status.components` contains the actually applied ones.
         properties:
           apiVersion:
             description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              Specifies the API version this object belongs to.
+
+              The server converts supported versions of the resource to the latest internal format and may reject unrecognized versions.
+
+              For details on required fields in resources, refer to the [Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
             description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              String value that defines the type of resource this object represents.
+
+              The server may infer this value from the endpoint the client sends requests to.
+
+              This field is immutable and must be specified in CamelCase.
+
+              For details on resource types, refer to the [Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
           metadata:
             type: object
           spec:
-            description: ControlPlaneNodeSpec describes the desired state of control
-              plane components on the node.
+            description: Describes the desired state of control plane components on the node.
             properties:
               caChecksum:
-                description: CAChecksum is the fingerprint of the d8-pki secret (CA
-                  certificates) that must be applied to all components on the node.
+                description: Checksum of the `d8-pki` Secret containing CA certificates that must be applied to all components on the node.
                 type: string
               components:
                 description: |-
-                  Components holds the desired configuration and PKI fingerprints for each control plane component.
+                  Contains the desired configuration and PKI checksums for each control plane component.
 
-                  If a value here differs from the matching value under status.components, the module starts a
+                  If a value in `spec.components.<component>.checksums` differs from the corresponding value in `status.components.<component>.checksums`, the module starts a
                   ControlPlaneOperation to bring the component to the desired state.
                 properties:
                   etcd:
-                    description: Etcd is the desired state of the etcd component.
+                    description: Desired state of the etcd component.
                     properties:
                       checksums:
-                        description: Checksums is the desired set of fingerprints
-                          for the component.
+                        description: Desired checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                     type: object
                   kube-apiserver:
-                    description: KubeAPIServer is the desired state of the kube-apiserver
+                    description: Desired state of the kube-apiserver
                       component.
                     properties:
                       checksums:
-                        description: Checksums is the desired set of fingerprints
-                          for the component.
+                        description: Desired checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                     type: object
                   kube-controller-manager:
-                    description: KubeControllerManager is the desired state of the
+                    description: Desired state of the
                       kube-controller-manager component.
                     properties:
                       checksums:
-                        description: Checksums is the desired set of fingerprints
-                          for the component.
+                        description: Desired checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                     type: object
                   kube-scheduler:
-                    description: KubeScheduler is the desired state of the kube-scheduler
+                    description: Desired state of the kube-scheduler
                       component.
                     properties:
                       checksums:
-                        description: Checksums is the desired set of fingerprints
-                          for the component.
+                        description: Desired checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                     type: object
                 type: object
             type: object
           status:
-            description: ControlPlaneNodeStatus describes the observed state of control
+            description: Describes the observed state of control
               plane components on the node.
             properties:
               caChecksum:
-                description: CAChecksum is the actually applied fingerprint of CA
+                description: Actually applied checksum of CA
                   certificates.
                 type: string
               components:
-                description: 'Components holds the observed state of each component:
-                  applied fingerprints and certificate expirations.'
+                description: |
+                  Contains the observed state for each component: applied checksums and certificate expiration dates.
                 properties:
                   etcd:
-                    description: Etcd is the observed state of the etcd component.
+                    description: Observed state of the etcd component.
                     properties:
                       certificatesExpirationDate:
                         additionalProperties:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
-                          Populated by the CertObserve step.
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
                         type: object
                       checksums:
-                        description: Checksums is the set of fingerprints applied
-                          to the component.
+                        description: Applied checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                       lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
-                          CertObserve step for the component.
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
                         format: date-time
                         type: string
                     type: object
                   kube-apiserver:
-                    description: KubeAPIServer is the observed state of the kube-apiserver
+                    description: Observed state of the kube-apiserver
                       component.
                     properties:
                       certificatesExpirationDate:
@@ -238,35 +241,36 @@ spec:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
-                          Populated by the CertObserve step.
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
                         type: object
                       checksums:
-                        description: Checksums is the set of fingerprints applied
-                          to the component.
+                        description: Applied checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                       lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
-                          CertObserve step for the component.
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
                         format: date-time
                         type: string
                     type: object
                   kube-controller-manager:
-                    description: KubeControllerManager is the observed state of the
+                    description: Observed state of the
                       kube-controller-manager component.
                     properties:
                       certificatesExpirationDate:
@@ -274,35 +278,36 @@ spec:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
-                          Populated by the CertObserve step.
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
                         type: object
                       checksums:
-                        description: Checksums is the set of fingerprints applied
-                          to the component.
+                        description: Applied checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                       lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
-                          CertObserve step for the component.
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
                         format: date-time
                         type: string
                     type: object
                   kube-scheduler:
-                    description: KubeScheduler is the observed state of the kube-scheduler
+                    description: Observed state of the kube-scheduler
                       component.
                     properties:
                       certificatesExpirationDate:
@@ -310,90 +315,82 @@ spec:
                           format: date-time
                           type: string
                         description: |-
-                          CertificatesExpirationDate maps each component certificate file name to its NotAfter timestamp.
-                          Populated by the CertObserve step.
+                          Maps each component certificate file name to its `NotAfter` timestamp.
+
+                          Populated during the `CertObserve` step.
                         type: object
                       checksums:
-                        description: Checksums is the set of fingerprints applied
-                          to the component.
+                        description: Applied checksums for the component.
                         properties:
                           ca:
                             description: |-
-                              CA is the fingerprint of CA certificates applied to the component.
-                              Absent in spec (CA is global). Set in status when the component pod restarts with the new CA.
+                              Checksum of the CA certificates applied to the component.
+
+                              Absent in `spec` because CA configuration is global.
+
+                              Set in `status` after the component pod restarts with the new CA certificates.
                             type: string
                           config:
-                            description: Config is the fingerprint of the component
-                              static pod manifest and extra-files.
+                            description: Applied checksum of the component static pod manifest and associated configuration files.
                             type: string
                           pki:
-                            description: PKI is the fingerprint of PKI-related settings
-                              of the component (certSANs, encryption-algorithm).
+                            description: Applied checksum of the component PKI settings (`certSANs`, `encryption-algorithm`).
                             type: string
                         type: object
                       lastObservedAt:
-                        description: LastObservedAt is the time of the last successful
-                          CertObserve step for the component.
+                        description: Time of the last successful
+                          `CertObserve` step for the component.
                         format: date-time
                         type: string
                     type: object
                 type: object
               conditions:
                 description: |-
-                  Conditions reflects the readiness of control plane components on the node.
+                  List of conditions reflecting the readiness of control plane components on the node.
 
                   Possible condition types:
-                    - EtcdReady              — etcd is running and accepting requests (shown in the ETCD column).
-                    - APIServerReady         — kube-apiserver is running and accepting requests (APISERVER column).
-                    - ControllerManagerReady — kube-controller-manager is running (CONTROLLERMANAGER column).
-                    - SchedulerReady         — kube-scheduler is running (SCHEDULER column).
-                    - CertificatesHealthy    — all component certificates are valid and have enough lifetime left (CERTIFICATES column).
 
-                  When status is False, the cause is described in "reason" and "message".
+                  - `EtcdReady`: etcd is running and accepting requests (`ETCD` column).
+                  - `APIServerReady`: kube-apiserver is running and accepting requests (`APISERVER` column).
+                  - `ControllerManagerReady`: kube-controller-manager is running (`CONTROLLERMANAGER` column).
+                  - `SchedulerReady`: kube-scheduler is running (`SCHEDULER` column).
+                  - `CertificatesHealthy`: All component certificates are valid and have enough lifetime left (`CERTIFICATES` column).
+
+                  When `status` is `False`, the cause is described in `reason` and `message`.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        Time of the last condition status transition.
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
+                        Human-readable description of the current condition state.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
+                        The `.metadata.generation` value used to calculate the current condition state.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
                       description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                        Machine-readable reason for the current condition state.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Status of the condition.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: Type of the condition in CamelCase or in the `foo.example.com/CamelCase` format.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
