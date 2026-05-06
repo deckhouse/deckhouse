@@ -396,6 +396,7 @@
 
 .searchV3 .loading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   padding: 1rem;
@@ -446,6 +447,7 @@
   }
 
   .searchV3 .results {
+    width: 80vw;
     padding: 1rem;
   }
 
@@ -466,7 +468,6 @@
 
 @media (max-width: 768px) {
   .searchV3 .results {
-    width: 80vw;
     flex-direction: column;
     flex-wrap: nowrap;
     gap: 1rem;

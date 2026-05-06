@@ -373,6 +373,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked:not([data-select-all="true"])');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
+    if (applyButton) {
+      applyButton.disabled = checkedCheckboxes.length === 0;
+    }
+
     if(resetButton) {
       if (checkedCheckboxes.length > 0) {
         resetButton.classList.add('active');
@@ -581,7 +585,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     filterOverlay.addEventListener('click', closeFilterMobilePanel);
-    applyButton.addEventListener('click', closeFilterMobilePanel);
+    if (applyButton) {
+      applyButton.addEventListener('click', closeFilterMobilePanel);
+    }
   }
 
   filterArticles();
