@@ -42,7 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -246,11 +246,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	// Bundle registry shoud run before LoadConfigFromFile
-	stop, err := bundle.StartRegistry(ctx,
-		bundle.RegistryParams{
-			Logger:                 b.loggerProvider(),
-			RegistryConfigProvider: registryConfigProvider,
-			BundlePath:             app.ImgBundlePath,
+	stop, err := registry.Start(ctx,
+		registry.Params{
+			Logger:         b.loggerProvider(),
+			ConfigProvider: registryConfigProvider,
+			BundlePath:     app.ImgBundlePath,
 		},
 	)
 	if err != nil {

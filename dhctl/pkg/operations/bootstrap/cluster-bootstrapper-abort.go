@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -58,11 +58,11 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	// Bundle registry shoud run before LoadConfigFromFile
-	stop, err := bundle.StartRegistry(ctx,
-		bundle.RegistryParams{
-			Logger:                 b.loggerProvider(),
-			RegistryConfigProvider: registryConfigProvider,
-			BundlePath:             app.ImgBundlePath,
+	stop, err := registry.Start(ctx,
+		registry.Params{
+			Logger:         b.loggerProvider(),
+			ConfigProvider: registryConfigProvider,
+			BundlePath:     app.ImgBundlePath,
 		},
 	)
 	if err != nil {

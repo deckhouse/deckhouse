@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bundle
+package registry
 
 import (
 	"context"
@@ -26,34 +26,34 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
-// RegistryParams holds dependencies required to start the bundle registry.
-type RegistryParams struct {
-	Logger                 log.Logger
-	RegistryConfigProvider RegistryConfigProvider
-	BundlePath             string
+// Params holds dependencies required to start the bundle registry.
+type Params struct {
+	Logger         log.Logger
+	ConfigProvider ConfigProvider
+	BundlePath     string
 }
 
-func (params RegistryParams) Validate() error {
+func (params Params) Validate() error {
 	if params.Logger == nil {
 		return fmt.Errorf("internal error: logger is required")
 	}
 
-	if params.RegistryConfigProvider == nil {
+	if params.ConfigProvider == nil {
 		return fmt.Errorf("internal error: registry config provider is required")
 	}
 	return nil
 }
 
-// StartRegistry starts a local OCI bundle registry if the registry mode is Local.
+// Start starts a local OCI bundle registry if the registry mode is Local.
 // Returns a StopRegistry function to gracefully shut down the registry, or nil if skipped.
-func StartRegistry(ctx context.Context, params RegistryParams) (StopRegistry, error) {
+func Start(ctx context.Context, params Params) (Stop, error) {
 	nop := func() {}
 
 	if err := params.Validate(); err != nil {
 		return nop, err
 	}
 
-	isLocal, err := params.RegistryConfigProvider.IsLocal()
+	isLocal, err := params.ConfigProvider.IsLocal()
 	if err != nil {
 		return nop, err
 	}

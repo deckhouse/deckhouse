@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -54,11 +54,11 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		// Bundle registry shoud run before LoadConfigFromFile
-		stop, err := bundle.StartRegistry(ctx,
-			bundle.RegistryParams{
-				Logger:                 loggerProvider(),
-				RegistryConfigProvider: registryConfigProvider,
-				BundlePath:             app.ImgBundlePath,
+		stop, err := registry.Start(ctx,
+			registry.Params{
+				Logger:         loggerProvider(),
+				ConfigProvider: registryConfigProvider,
+				BundlePath:     app.ImgBundlePath,
 			},
 		)
 		if err != nil {
@@ -120,11 +120,11 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		// Bundle registry shoud run before LoadConfigFromFile
-		stop, err := bundle.StartRegistry(ctx,
-			bundle.RegistryParams{
-				Logger:                 loggerProvider(),
-				RegistryConfigProvider: registryConfigProvider,
-				BundlePath:             app.ImgBundlePath,
+		stop, err := registry.Start(ctx,
+			registry.Params{
+				Logger:         loggerProvider(),
+				ConfigProvider: registryConfigProvider,
+				BundlePath:     app.ImgBundlePath,
 			},
 		)
 		if err != nil {

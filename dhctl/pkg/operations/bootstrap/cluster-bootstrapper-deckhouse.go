@@ -21,7 +21,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
 
@@ -37,11 +37,11 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	}
 
 	// Bundle registry shoud run before ParseConfig
-	stop, err := bundle.StartRegistry(ctx,
-		bundle.RegistryParams{
-			Logger:                 b.loggerProvider(),
-			RegistryConfigProvider: registryConfigProvider,
-			BundlePath:             app.ImgBundlePath,
+	stop, err := registry.Start(ctx,
+		registry.Params{
+			Logger:         b.loggerProvider(),
+			ConfigProvider: registryConfigProvider,
+			BundlePath:     app.ImgBundlePath,
 		},
 	)
 	if err != nil {

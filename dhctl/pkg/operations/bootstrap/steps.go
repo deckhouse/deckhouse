@@ -48,8 +48,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	dhbashible "github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bashible"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/deps"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -144,13 +144,12 @@ func RunBashiblePipeline(ctx context.Context, params *BashiblePipelineParams) er
 	}
 
 	// Bundle registry tunnel
-	bundleRegistryTunnelStop, err := bundle.StartTunnel(ctx, bundle.TunnelParams{
+	bundleRegistryTunnelStop, err := registry.StartTunnel(ctx, registry.TunnelParams{
 		MetaConfig: cfg,
 		Node:       params.Node,
 		Logger:     params.LoggerProvider(),
 		DirsConfig: dc,
-	},
-	)
+	})
 	if err != nil {
 		return err
 	}

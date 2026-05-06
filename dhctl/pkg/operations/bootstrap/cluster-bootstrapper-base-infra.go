@@ -24,7 +24,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/bundle"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
@@ -41,11 +41,11 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 	}
 
 	// Bundle registry shoud run before LoadConfigFromFile
-	stop, err := bundle.StartRegistry(ctx,
-		bundle.RegistryParams{
-			Logger:                 b.loggerProvider(),
-			RegistryConfigProvider: registryConfigProvider,
-			BundlePath:             app.ImgBundlePath,
+	stop, err := registry.Start(ctx,
+		registry.Params{
+			Logger:         b.loggerProvider(),
+			ConfigProvider: registryConfigProvider,
+			BundlePath:     app.ImgBundlePath,
 		},
 	)
 	if err != nil {

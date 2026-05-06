@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bundle
+package registry
 
 type (
-	// StopRegistry gracefully shuts down the bundle registry server.
-	StopRegistry func()
+	// Stop gracefully shuts down the bundle registry server.
+	Stop func()
 	// StopTunnel closes the SSH reverse tunnel to the bundle registry.
 	StopTunnel func()
 )
 
-// RegistryConfigProvider abstracts registry configuration, allowing callers to query
+// ConfigProvider abstracts registry configuration, allowing callers to query
 // whether the cluster uses a local (bundle-based) registry.
-type RegistryConfigProvider interface {
+type ConfigProvider interface {
 	IsLocal() (bool, error)
 }
