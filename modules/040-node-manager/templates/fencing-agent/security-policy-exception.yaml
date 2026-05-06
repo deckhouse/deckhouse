@@ -29,6 +29,11 @@ spec:
       metadata:
         description: |
           Privileged mode required for watchdog device access
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Required because the container runs in privileged mode with SYS_ADMIN capability    
     capabilities:
       allowedValues:
         add:
