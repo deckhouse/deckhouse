@@ -44,7 +44,7 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
     Для прохождения `DNS-01 challenge` **cert-manager** поддерживает ряд популярных DNS-провайдеров, таких как AzureDNS, Cloudflare, DigitalOcean и т.д. С полным списком поддерживаемых DNS-провайдеров можно ознакомиться [в документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/). Для неподдерживаемых "из коробки" провайдеров используются issuer типа [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/), которые являются внешними компонентами. Для корректной работы таких провайдеров их необходимо устанавливать в системный namespace `d8-cert-manager`. При внесении изменений в этот namespace рекомендуется всегда учитывать наличие подобных расширений для сохранения их работоспособности.
     {% endalert %}
 
-1. **Webhook** — компонент состоит из одного контейнера webhook, который обеспечивает следующие действия:
+1. **Webhook** — компонент состоящий из одного контейнера webhook и выполняющий следующие операции:
     - валидацию кастомных ресурсов Issuer, ClusterIssuer, Certificate, CertificateRequest, Challenge, Order;
     - мутацию кастомных ресурсов CertificateRequest, при этом webhook добавляет информацию о пользователе, создавшем запрос на сертификат.
 

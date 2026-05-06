@@ -43,7 +43,7 @@ The `cert-manager` module consists of the following components:
     To complete the `DNS-01 challenge`, **cert-manager** supports a number of popular DNS providers, such as AzureDNS, Cloudflare, DigitalOcean, and others. For the full list of supported DNS providers, refer to [the cert-manager documentation](https://cert-manager.io/docs/configuration/acme/dns01/). For providers that are not supported out of the box, [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/) issuer types are used as external components. To work correctly, such providers must be installed in the `d8-cert-manager` system namespace. When making changes to this namespace, it is recommended to always account for such extensions so they remain operational.
     {% endalert %}
 
-1. **Webhook**: A component consisting of a single webhook container that performs the following actions:
+1. **Webhook**: A component consisting of a single webhook container and performing the following operations:
     - validates the Issuer, ClusterIssuer, Certificate, CertificateRequest, Challenge, and Order custom resources;
     - mutates CertificateRequest custom resources by adding the user identity created the certificate request.
 
