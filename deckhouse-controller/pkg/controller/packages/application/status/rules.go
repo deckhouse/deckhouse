@@ -108,7 +108,6 @@ func mapReady(state condmap.State) metav1.Condition {
 	for _, cond := range []string{
 		string(intstatus.ConditionPending),
 		string(intstatus.ConditionRequirementsMet),
-		string(intstatus.ConditionDownloaded),
 		string(intstatus.ConditionReadyOnFilesystem),
 		string(intstatus.ConditionReadyInRuntime),
 		string(intstatus.ConditionSettingsValid),
@@ -206,7 +205,6 @@ func mapConfigurationApplied(state condmap.State) metav1.Condition {
 func firstInstallBlocker(state condmap.State) (string, bool) {
 	for _, cond := range []string{
 		string(intstatus.ConditionRequirementsMet),
-		string(intstatus.ConditionDownloaded),
 		string(intstatus.ConditionReadyOnFilesystem),
 		string(intstatus.ConditionReadyInRuntime),
 		string(intstatus.ConditionReadyInCluster),
