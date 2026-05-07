@@ -64,7 +64,7 @@ index 3b3f69cd9d..b7d84d5121 100644
      - {{ .MeshConfig.ProxyInboundListenPort | default "15006" | quote }}
      - "-u"
 -    - {{ .ProxyUID | default "1337" | quote }}
-+    - {{ printf "%d,1337" .ProxyUID | quote }}
++    - {{ printf "%d,1337" (.ProxyUID | default 64535) | quote }}
      - "-m"
      - "{{ annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode }}"
      - "-i"
