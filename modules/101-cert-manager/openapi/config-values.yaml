@@ -1,8 +1,5 @@
 type: object
 description: The module does not have any mandatory parameters.
-x-kubernetes-validations:
-  - rule: "self.enableGatewayAPIListenerSet == false || self.enableGatewayAPI == true"
-    message: "enableGatewayAPI must be enabled when enableGatewayAPIListenerSet is set to true"
 properties:
   nodeSelector:
     type: object
@@ -143,31 +140,12 @@ properties:
       Enable CAInjector. It only needs to inject CA certs into `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, `CustomResourceDefinition` and `APIService`.
       Deckhouse does not use CAInjector, so you have to enable it only if you use custom CA injections in your services.
 
-  enableGatewayAPI:
+  enableListenerSet:
     type: boolean
     default: false
     x-examples: [true, false]
     description: |
-      Enable support for Gateway API in cert-manager.
-
-  enableGatewayAPIListenerSet:
-    type: boolean
-    default: false
-    x-examples: [true, false]
-    description: |
-      Enable support for ListenerSet in cert-manager Gateway API integration.
-      Requires `enableGatewayAPI: true`.
-
-  featureGates:
-    type: object
-    default: {}
-    properties:
-      ListenerSets:
-        type: boolean
-        default: false
-        x-examples: [true, false]
-        description: |
-          Enable cert-manager `ListenerSets` feature gate.
+      Enable ListenerSet support in cert-manager Gateway API integration.
 
   ingressClassHttp01:
     type: string

@@ -103,10 +103,7 @@ internal:
 `
 
 const certManagerGatewayAPI = `
-enableGatewayAPI: true
-enableGatewayAPIListenerSet: true
-featureGates:
-  ListenerSets: true
+enableListenerSet: true
 `
 
 const cloudDNS = `
