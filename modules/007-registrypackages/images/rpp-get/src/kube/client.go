@@ -228,15 +228,8 @@ func ShouldRetry(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+	if errors.Is(err, context.Canceled) {
 		return false
-	}
-
-	var statusErr *kubeHTTPError
-	if errors.As(err, &statusErr) {
-		return statusErr.statusCode == http.StatusRequestTimeout ||
-			statusErr.statusCode == http.StatusTooManyRequests ||
-			statusErr.statusCode >= http.StatusInternalServerError
 	}
 
 	return true
