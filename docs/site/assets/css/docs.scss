@@ -1283,7 +1283,11 @@ a.comparison-table__module-proprietaryOkmeter::after {
   }
 
   @include breakpoints.max-w(l) {
-    scroll-margin-top: 50px;
+    scroll-margin-top: 45px;
+  }
+
+  @include breakpoints.max-w(xxs) {
+    scroll-margin-top: 65px;
   }
 }
 
