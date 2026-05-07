@@ -153,6 +153,11 @@ data:
   bpf-map-dynamic-size-ratio: "0.005"
   bpf-policy-map-max: "65536"
 
+  # Aggregate datapath monitor events to keep cilium-agent CPU bounded under high flow rate.
+  # Matches the upstream Cilium Helm chart default. Can be overridden
+  # per-node via CiliumNodeConfig (key: monitor-aggregation).
+  monitor-aggregation: "medium"
+
   # Local hubble sever section
   {{- if or (has "cilium-hubble" .Values.global.enabledModules) .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled .Values.cniCilium.internal.hubble.settings.flowLogs.enabled }}
   enable-hubble: "true"
