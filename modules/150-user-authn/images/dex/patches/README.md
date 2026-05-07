@@ -53,7 +53,13 @@ Fix CVEs:
 - GHSA-479m-364c-43vc
 - CVE-2026-34986
 
-### 009-ratelimit-lock-unlock-users.patch
+### 009-forced-password-change.patch
+
+This patch adds a forced password change flag (`requireResetHashOnNextSuccLogin`) for local users.
+The flag can be set externally (e.g. by a controller). After a successful login, the user is redirected to the password change page.
+The flag is reset on successful password change.
+
+### 010-ratelimit-lock-unlock-users.patch
 
 This patch adds two security features to Dex on top of the existing local-user
 password policy.

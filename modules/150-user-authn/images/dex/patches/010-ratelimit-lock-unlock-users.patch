@@ -85,10 +85,10 @@ index 0c4f7f55..7976877e 100644
 +	Burst int `json:"burst"`
 +}
 diff --git a/cmd/dex/serve.go b/cmd/dex/serve.go
-index 4e5d3cfb..9f4df1f3 100644
+index 8558314f..4a525b7f 100644
 --- a/cmd/dex/serve.go
 +++ b/cmd/dex/serve.go
-@@ -363,6 +363,11 @@ func runServe(options serveOptions) error {
+@@ -364,6 +364,11 @@ func runServe(options serveOptions) error {
  			opts = append(opts, server.WithLockoutSettings(
  				c.PasswordPolicy.Lockout.MaxAttempts, c.PasswordPolicy.Lockout.LockDuration,
  			))
@@ -100,7 +100,7 @@ index 4e5d3cfb..9f4df1f3 100644
  		}
  		if c.PasswordPolicy.Rotation != nil {
  			opts = append(opts, server.WithRotationSettings(
-@@ -386,6 +391,21 @@ func runServe(options serveOptions) error {
+@@ -387,6 +392,21 @@ func runServe(options serveOptions) error {
  		return fmt.Errorf("failed to parse client remote IP settings: %v", err)
  	}
  
@@ -212,7 +212,7 @@ index e8e5a783..e04ff083 100644
 +        type: date
 +        jsonPath: .metadata.creationTimestamp
 diff --git a/server/handlers.go b/server/handlers.go
-index 3fd7f42d..ca0eb013 100644
+index aefa88c1..c767fe92 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -380,6 +380,27 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
@@ -320,7 +320,7 @@ index 3fd7f42d..ca0eb013 100644
  			return
  		}
  
-@@ -621,6 +697,70 @@ func (e *NotAllowedError) Error() string {
+@@ -650,6 +726,70 @@ func (e *NotAllowedError) Error() string {
  	return "not allowed: " + e.Reason
  }
  
@@ -391,7 +391,7 @@ index 3fd7f42d..ca0eb013 100644
  // finalizeLogin associates the user's identity with the current AuthRequest, then returns
  // the approval page's path.
  func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity, authReq storage.AuthRequest, conn connector.Connector) (string, bool, error) {
-@@ -688,6 +828,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -717,6 +857,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		offlineSessions := storage.OfflineSessions{
  			UserID:        identity.UserID,
  			ConnID:        authReq.ConnectorID,
@@ -399,7 +399,7 @@ index 3fd7f42d..ca0eb013 100644
  			Refresh:       make(map[string]*storage.RefreshTokenRef),
  			ConnectorData: identity.ConnectorData,
  		}
-@@ -714,6 +855,13 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -743,6 +884,13 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		if len(identity.ConnectorData) > 0 {
  			old.ConnectorData = identity.ConnectorData
  		}
@@ -410,10 +410,10 @@ index 3fd7f42d..ca0eb013 100644
 +		}
 +		old.IncorrectPasswordLoginAttempts = 0
 +		old.LockedUntil = nil
- 		return old, nil
- 	}); err != nil {
- 		s.logger.ErrorContext(ctx, "failed to update offline session", "err", err)
-@@ -1342,11 +1490,23 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+ 		// If 2FA was enabled after OfflineSessions creation, existing users may have empty TOTP.
+ 		// Populate it to avoid broken login flows.
+ 		if old.TOTP == "" && s.totp.enabledForConnector(authReq.ConnectorID) {
+@@ -1404,11 +1552,23 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
  	password := q.Get("password")
  	identity, ok, err := passwordConnector.Login(ctx, parseScopes(scopes), username, password)
  	if err != nil {
@@ -2700,10 +2700,10 @@ index acf1d6a7..00a238e1 100644
  	if s.Refresh == nil {
  		// Server code assumes this will be non-nil.
 diff --git a/storage/kubernetes/types.go b/storage/kubernetes/types.go
-index 7856996e..ee7f16fc 100644
+index 8270b429..9b667386 100644
 --- a/storage/kubernetes/types.go
 +++ b/storage/kubernetes/types.go
-@@ -689,12 +689,15 @@ type OfflineSessions struct {
+@@ -692,12 +692,15 @@ type OfflineSessions struct {
  	k8sapi.TypeMeta   `json:",inline"`
  	k8sapi.ObjectMeta `json:"metadata,omitempty"`
  
@@ -2725,7 +2725,7 @@ index 7856996e..ee7f16fc 100644
  }
  
  func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) OfflineSessions {
-@@ -707,23 +710,29 @@ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) Offline
+@@ -710,23 +713,29 @@ func (cli *client) fromStorageOfflineSessions(o storage.OfflineSessions) Offline
  			Name:      cli.offlineTokenName(o.UserID, o.ConnID),
  			Namespace: cli.namespace,
  		},
@@ -2768,7 +2768,7 @@ index 7856996e..ee7f16fc 100644
  	if s.Refresh == nil {
  		// Server code assumes this will be non-nil.
 diff --git a/storage/sql/crud.go b/storage/sql/crud.go
-index 84ace050..929e32fe 100644
+index b767bfdd..c52cd566 100644
 --- a/storage/sql/crud.go
 +++ b/storage/sql/crud.go
 @@ -714,13 +714,15 @@ func scanPassword(s scanner) (p storage.Password, err error) {
@@ -2827,11 +2827,11 @@ index 84ace050..929e32fe 100644
  	if err != nil {
  		if err == sql.ErrNoRows {
 diff --git a/storage/sql/migrate.go b/storage/sql/migrate.go
-index 5d8672bf..40141156 100644
+index 23788ecd..2204b6e0 100644
 --- a/storage/sql/migrate.go
 +++ b/storage/sql/migrate.go
-@@ -335,4 +335,14 @@ var migrations = []migration{
- 				add column groups bytea`,
+@@ -341,4 +341,14 @@ var migrations = []migration{
+ 				add column require_reset_hash_on_next_succ_login boolean default false`,
  		},
  	},
 +	{
@@ -2846,7 +2846,7 @@ index 5d8672bf..40141156 100644
 +	},
  }
 diff --git a/storage/storage.go b/storage/storage.go
-index 5adce6f2..339e8303 100644
+index c4fe7f26..1f331103 100644
 --- a/storage/storage.go
 +++ b/storage/storage.go
 @@ -330,6 +330,11 @@ type OfflineSessions struct {
