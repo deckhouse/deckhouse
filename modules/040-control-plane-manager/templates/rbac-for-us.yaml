@@ -72,7 +72,21 @@ roleRef:
   kind: ClusterRole
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
-{{- if ($.Values.global.enabledModules | default list | has "user-authz") }}
+{{- $userAuthzEnabled := has "user-authz" ($.Values.global.enabledModules | default list) }}
+{{- /*
+  Granular admin.conf is gated by global.clusterIsBootstrapped to avoid the chicken-and-egg case on
+  a fresh cluster: kubeadm pre-creates ClusterRoleBinding kubeadm:cluster-admins -> cluster-admin,
+  Helm cannot mutate roleRef (it is immutable), and the reconcile_kubeadm_cluster_admins_binding
+  hook needs the kube API working to delete/recreate the binding.
+
+  IMPORTANT: use `dig` (not `.Values.global.clusterIsBootstrapped | default false`) because the flag
+  is set asynchronously by the global hook cluster_is_bootstrapped — early helm renders happen
+  before the flag exists in values, and a chained lookup through a missing parent would either
+  fail or silently render the granular branch. We switch the binding ONLY when the flag is
+  explicitly present AND set to true.
+*/}}
+{{- $clusterBootstrapped := dig "clusterIsBootstrapped" false .Values.global }}
+{{- if and $userAuthzEnabled (eq $clusterBootstrapped true) }}
 ---
 # Extra rules for identity kubernetes-admin (group kubeadm:cluster-admins) beyond user-authz:cluster-admin.
 # No user-authz.deckhouse.io/access-level annotation: that pattern is for optional ClusterRoles merged into
@@ -92,9 +106,6 @@ rules:
 - apiGroups: [""]
   resources: ["nodes/status"]
   verbs: ["get", "patch", "update"]
-- apiGroups: [""]
-  resources: ["nodes/proxy"]
-  verbs: ["get", "create"]
 - apiGroups: [""]
   resources: ["users", "groups", "serviceaccounts"]
   verbs: ["impersonate"]
@@ -210,9 +221,11 @@ rules:
   verbs: ["get", "patch", "update"]
 {{/*
   ClusterRoleBinding kubeadm:cluster-admins: binds group from admin.conf to RBAC roles.
-  - With user-authz: two bindings so the union matches high-level ClusterAdmin + machine-only extras (same group).
-  - Without user-authz: single binding to built-in cluster-admin (wildcard).
-  The global hook migrate_k8s_upgrade may create/update the same binding name on upgrade; Helm reconcile keeps it aligned.
+  - With user-authz AND cluster bootstrapped: two bindings so the union matches high-level ClusterAdmin
+    (which now includes nodes/proxy for apiserver -> kubelet path) plus machine-only extras (same group).
+  - Otherwise (fresh cluster or user-authz disabled): single binding to built-in cluster-admin (wildcard).
+  Hook reconcile_kubeadm_cluster_admins_binding (OnBeforeHelm, Order=5) recreates this binding when its
+  desired roleRef changes (roleRef is immutable in Kubernetes RBAC).
 */}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1

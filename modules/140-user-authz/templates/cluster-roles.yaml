@@ -334,6 +334,17 @@
   - rolebindings
   verbs:
 {{- include "user_authz_verbs" "w" }}
+# Required for kube-apiserver-kubelet-client (group kubeadm:cluster-admins per kubeadm 1.29+ defaults):
+# every kubelet API call from apiserver (exec, attach, logs, portforward) is authorized as nodes/proxy.
+# Without this verb, switching ClusterRoleBinding kubeadm:cluster-admins from cluster-admin to
+# user-authz:cluster-admin would break kubectl exec/logs/port-forward via the apiserver proxy.
+- apiGroups:
+  - ""
+  resources:
+  - nodes/proxy
+  verbs:
+  - get
+  - create
 {{- end }}
 
 {{- define "user_authz_super_admin_rules" }}

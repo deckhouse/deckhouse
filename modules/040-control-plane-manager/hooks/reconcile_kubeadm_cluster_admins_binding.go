@@ -80,25 +80,53 @@ func userAuthzEnabledFromSnapshot(input *go_hook.HookInput) bool {
 	return enabledSnaps[len(enabledSnaps)-1]
 }
 
-func reconcileKubeadmClusterAdminsBindingHook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+// clusterIsBootstrapped mirrors the helm template gate: until the cluster is fully bootstrapped
+// (global hook cluster_is_bootstrapped sets the flag once a non-master node is Ready), keep the
+// kubeadm-default wildcard binding so initial helm installs cannot fail on the immutable roleRef.
+func clusterIsBootstrapped(input *go_hook.HookInput) bool {
+	return input.Values.Get("global.clusterIsBootstrapped").Bool()
+}
+
+func reconcileKubeadmClusterAdminsBindingHook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) (err error) {
+	// Last-resort guard: this hook runs OnBeforeHelm and an unhandled panic here would block
+	// the whole control-plane-manager helm release (and on a fresh cluster, kubectl access).
+	// A panic must never escape: turn it into a logged error so addon-operator can retry safely.
+	defer func() {
+		if r := recover(); r != nil {
+			input.Logger.Error("recovered from panic in reconcile_kubeadm_cluster_admins_binding",
+				slog.Any("panic", r))
+			err = fmt.Errorf("recovered from panic: %v", r)
+		}
+	}()
+
 	kubeCl, err := dc.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("kubernetes client: %w", err)
 	}
 
-	return syncKubeadmClusterAdminsClusterRoleBinding(ctx, input.Logger, kubeCl, userAuthzEnabledFromSnapshot(input))
+	desiredGranular := userAuthzEnabledFromSnapshot(input) && clusterIsBootstrapped(input)
+	return syncKubeadmClusterAdminsClusterRoleBinding(ctx, input.Logger, kubeCl, desiredGranular)
 }
 
 // syncKubeadmClusterAdminsClusterRoleBinding keeps ClusterRoleBinding kubeadm:cluster-admins aligned with
-// user-authz enablement (roleRef is immutable, so the binding is recreated when the desired role changes).
+// the desired roleRef (roleRef is immutable, so the binding is recreated when the role changes).
+// granular=true means user-authz:cluster-admin (gated by user-authz enabled and cluster bootstrapped);
+// granular=false means the kubeadm-default cluster-admin wildcard.
+//
+// Safety properties:
+//   - If granular=true but user-authz:cluster-admin does not exist yet (e.g., user-authz module is
+//     enabled but its templates have not been rendered yet), we skip the rebind to avoid leaving the
+//     cluster with a binding pointing at a nonexistent ClusterRole.
+//   - If Delete succeeds but Create fails, we attempt a best-effort rollback to the previous binding
+//     so admin.conf does not lose access while addon-operator retries the hook.
 func syncKubeadmClusterAdminsClusterRoleBinding(
 	ctx context.Context,
 	logger go_hook.Logger,
 	kubeCl kubernetes.Interface,
-	userAuthzModuleEnabled bool,
+	granular bool,
 ) error {
 	desiredRoleName := clusterAdminWildcardClusterRoleName
-	if userAuthzModuleEnabled {
+	if granular {
 		desiredRoleName = userAuthzClusterAdminClusterRoleName
 	}
 
@@ -131,8 +159,7 @@ func syncKubeadmClusterAdminsClusterRoleBinding(
 		logger.Info("creating clusterrolebinding",
 			slog.String("name", kubeadmClusterAdminsBindingName),
 			slog.String("roleRef", desiredRoleName))
-		_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, desiredCRB, metav1.CreateOptions{})
-		if err != nil {
+		if _, err := kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, desiredCRB, metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("create clusterrolebinding %s: %w", kubeadmClusterAdminsBindingName, err)
 		}
 		return nil
@@ -145,20 +172,65 @@ func syncKubeadmClusterAdminsClusterRoleBinding(
 		return nil
 	}
 
+	if granular {
+		_, err := kubeCl.RbacV1().ClusterRoles().Get(ctx, userAuthzClusterAdminClusterRoleName, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			logger.Warn("desired clusterrole does not exist yet, keeping existing binding to avoid loss of access",
+				slog.String("name", kubeadmClusterAdminsBindingName),
+				slog.String("desired_clusterrole", userAuthzClusterAdminClusterRoleName),
+				slog.String("current_roleRef", existing.RoleRef.Name))
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("get clusterrole %s: %w", userAuthzClusterAdminClusterRoleName, err)
+		}
+	}
+
 	logger.Info("rebinding clusterrolebinding",
 		slog.String("name", kubeadmClusterAdminsBindingName),
 		slog.String("from", existing.RoleRef.Name),
 		slog.String("to", desiredRoleName))
 
-	err = kubeCl.RbacV1().ClusterRoleBindings().Delete(ctx, kubeadmClusterAdminsBindingName, metav1.DeleteOptions{})
-	if err != nil {
+	rollbackCRB := buildRollbackCRB(existing)
+
+	if err := kubeCl.RbacV1().ClusterRoleBindings().Delete(ctx, kubeadmClusterAdminsBindingName, metav1.DeleteOptions{}); err != nil {
 		return fmt.Errorf("delete clusterrolebinding %s: %w", kubeadmClusterAdminsBindingName, err)
 	}
 
-	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, desiredCRB, metav1.CreateOptions{})
-	if err != nil {
+	if _, err := kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, desiredCRB, metav1.CreateOptions{}); err != nil {
+		// Best-effort rollback: try to recreate the previous binding so admin.conf does not lose
+		// access while the hook is retried. Failure to roll back is logged but not fatal — the next
+		// hook run will reconcile from whatever state we end up in.
+		if _, rbErr := kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, rollbackCRB, metav1.CreateOptions{}); rbErr != nil {
+			logger.Error("rollback failed: clusterrolebinding is missing in the cluster",
+				slog.String("name", kubeadmClusterAdminsBindingName),
+				slog.Any("rollback_error", rbErr))
+		} else {
+			logger.Warn("rolled back to previous clusterrolebinding after failed rebind",
+				slog.String("name", kubeadmClusterAdminsBindingName),
+				slog.String("restored_roleRef", existing.RoleRef.Name))
+		}
 		return fmt.Errorf("create clusterrolebinding %s: %w", kubeadmClusterAdminsBindingName, err)
 	}
 
 	return nil
+}
+
+// buildRollbackCRB returns a fresh ClusterRoleBinding object matching the immutable parts of an
+// existing binding (name, roleRef, subjects). Server-managed metadata (resourceVersion, uid, etc.)
+// is intentionally omitted so the object can be re-created via Create after a Delete.
+func buildRollbackCRB(existing *rbac.ClusterRoleBinding) *rbac.ClusterRoleBinding {
+	return &rbac.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        existing.Name,
+			Labels:      existing.Labels,
+			Annotations: existing.Annotations,
+		},
+		RoleRef:  existing.RoleRef,
+		Subjects: existing.Subjects,
+	}
 }
