@@ -652,12 +652,50 @@ lang: ru
   ```
 
 - В vSphere создана виртуальная машина, которая будет подключена к кластеру.
-- Имя виртуальной машины в vSphere совпадает с hostname внутри операционной системы.
-- В дополнительных параметрах ВМ в vSphere задано значение:
+- Имя виртуальной машины в vSphere, значение local-hostname в метаданных и hostname внутри операционной системы совпадают.
+- В дополнительных параметрах ВМ в vSphere заданы параметры:
 
   ```text
   disk.EnableUUID = TRUE
+  guestinfo.metadata = <BASE64_ENCODED_METADATA>
+  guestinfo.metadata.encoding = base64
   ```
+
+  Параметр `guestinfo.metadata` должен содержать конфигурацию метаданных, закодированных в Base64. Пример файла `metadata.json`:
+
+  ```json
+  {
+     "instance-id": "cloud-static-worker-0",
+     "local-hostname": "cloud-static-worker-0",
+     "public-keys-data": "<SSH_PUBLIC_KEY>",
+     "network": {
+       "version": 2,
+       "ethernets": {
+         "id0": {
+           "match": {
+             "driver": "vmxnet3"
+           },
+           "set-name": "ens192",
+           "dhcp4": true
+         }
+       }
+     }
+   }
+  ```
+
+  Где:
+
+  - `instance-id` — идентификатор виртуальной машины;
+  - `local-hostname` — hostname узла внутри операционной системы;
+  - `public-keys-data` — публичный SSH-ключ для доступа к виртуальной машине;
+  - `network` — сетевые настройки, которые будут применены внутри виртуальной машины.
+
+  Чтобы получить значение для параметра `guestinfo.metadata`, выполните:
+
+  ```shell
+  METADATA_B64="$(base64 -w0 metadata.json)"
+  echo "$METADATA_B64"
+  ``` 
 
 - Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
 - На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
@@ -713,7 +751,7 @@ lang: ru
    ssh <USER>@<NODE_IP>
    ```
 
-1. На виртуальной машине наначьте права и запустите bootstrap-скрипт:
+1. На виртуальной машине назначьте права и запустите bootstrap-скрипт:
 
    ```shell
    base64 -d /tmp/bootstrap.b64 > /tmp/bootstrap.sh
