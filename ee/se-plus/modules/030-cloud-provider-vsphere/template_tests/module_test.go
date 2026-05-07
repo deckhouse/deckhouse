@@ -325,7 +325,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
@@ -424,7 +424,6 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
 			Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
 
-
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiNodePluginDS.Exists()).To(BeTrue())
@@ -469,7 +468,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Hybrid vSphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.32", "1.32"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesHybrid)
 			f.HelmRender()
@@ -538,7 +537,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -546,10 +545,10 @@ storageclass.kubernetes.io/is-default-class: "true"
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
 				"cloudControllerManager131": "sha256:ccm131digest",
-				"cloudDataDiscoverer": "sha256:cdddigest",
-				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
-				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
-				"terraformManager": "sha256:terraformdigest",
+				"cloudDataDiscoverer":       "sha256:cdddigest",
+				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy":    "sha256:csipluginlegacydigest",
+				"terraformManager":          "sha256:terraformdigest",
 			}
 			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
@@ -613,7 +612,7 @@ labels:
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -631,7 +630,7 @@ labels:
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -639,10 +638,10 @@ labels:
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
 				"cloudControllerManager131": "sha256:ccm131digest",
-				"cloudDataDiscoverer": "sha256:cdddigest",
-				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
-				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
-				"terraformManager": "sha256:terraformdigest",
+				"cloudDataDiscoverer":       "sha256:cdddigest",
+				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy":    "sha256:csipluginlegacydigest",
+				"terraformManager":          "sha256:terraformdigest",
 			}
 			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
@@ -669,7 +668,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere with NSX-T specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -677,10 +676,10 @@ storageclass.kubernetes.io/is-default-class: "true"
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
 				"cloudControllerManager131": "sha256:ccm131digest",
-				"cloudDataDiscoverer": "sha256:cdddigest",
-				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
-				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
-				"terraformManager": "sha256:terraformdigest",
+				"cloudDataDiscoverer":       "sha256:cdddigest",
+				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy":    "sha256:csipluginlegacydigest",
+				"terraformManager":          "sha256:terraformdigest",
 			}
 			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
@@ -730,7 +729,7 @@ nodes:
 
 	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -738,10 +737,10 @@ nodes:
 			digests := images["digests"].(map[string]interface{})
 			digests["cloudProviderVsphere"] = map[string]interface{}{
 				"cloudControllerManager131": "sha256:ccm131digest",
-				"cloudDataDiscoverer": "sha256:cdddigest",
-				"vsphereCsiPlugin131": "sha256:csiplugin131digest",
-				"vsphereCsiPluginLegacy": "sha256:csipluginlegacydigest",
-				"terraformManager": "sha256:terraformdigest",
+				"cloudDataDiscoverer":       "sha256:cdddigest",
+				"vsphereCsiPlugin131":       "sha256:csiplugin131digest",
+				"vsphereCsiPluginLegacy":    "sha256:csipluginlegacydigest",
+				"terraformManager":          "sha256:terraformdigest",
 			}
 			f.ValuesSet("global.modulesImages", images)
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)

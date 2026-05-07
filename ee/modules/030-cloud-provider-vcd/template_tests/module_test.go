@@ -40,7 +40,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.31"
+    kubernetesVersion: "1.32"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -51,7 +51,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.31.0
+    kubernetesVersion: 1.32.0
     clusterUUID: cluster
 `
 
@@ -265,7 +265,6 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			Expect(providerSpecificRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("v1rtual-app"))))
 			Expect(providerSpecificRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("rsa-aaaa"))))
 
-
 			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
 			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeFalse())
 
@@ -273,7 +272,7 @@ var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 			Expect(providerSpecificBashibleBootstrapSecret.Exists()).To(BeTrue())
 			providerSpecificBashibleBootstrapSecretData := providerSpecificBashibleBootstrapSecret.Field("data").Map()
 			Expect(len(providerSpecificBashibleBootstrapSecretData) >= 1).To(BeTrue())
-			Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0 ).To(BeTrue())
+			Expect(len(providerSpecificBashibleBootstrapSecretData["bootstrap-networks.sh.tpl"].String()) > 0).To(BeTrue())
 
 			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
 			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
