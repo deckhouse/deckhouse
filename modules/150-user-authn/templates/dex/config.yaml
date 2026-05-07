@@ -54,7 +54,7 @@
   rateLimit:
     enabled: true
     perIP:
-      requestsPerMinute: {{ .perIP.requestsPerMinute | default 30 }}
+      requestsPerMinute: {{ .perIP.requestsPerMinute | default 10 }}
       burst: {{ .perIP.burst | default 10 }}
   {{- end }}
   {{- end }}

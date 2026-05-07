@@ -534,8 +534,8 @@ func findOfflineSessionByTarget(input *go_hook.HookInput, target *UserOperationT
 		if strings.ToLower(sess.Email) != wantEmail {
 			continue
 		}
-		copy := sess
-		return &copy, nil
+		sessCopy := sess
+		return &sessCopy, nil
 	}
 	return nil, fmt.Errorf("no OfflineSessions found for connector %q and email %q (the user has likely never logged in yet)", target.ConnectorID, target.Email)
 }
@@ -543,6 +543,15 @@ func findOfflineSessionByTarget(input *go_hook.HookInput, target *UserOperationT
 // lockOfflineSession patches OfflineSessions for a non-local user, setting
 // LockedUntil and the deckhouse.io/locked-by-administrator annotation that the
 // UI uses to distinguish admin-initiated locks from automatic ones.
+//
+// We use an explicit JSON merge patch (PatchWithMerge) instead of
+// PatchWithMutatingFunc: the mutating-func variant computes a merge patch from
+// the diff of mutated vs. source object, and on top-level CR fields like
+// `lockedUntil` it produced a body in which neither `lockedUntil` nor
+// `incorrectPasswordLoginAttempts` actually reached the apiserver — only the
+// annotation slot did. Sending the desired values explicitly is the only
+// reliable way to set top-level fields on a CR with
+// x-kubernetes-preserve-unknown-fields. This mirrors unlockOfflineSession.
 func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockFor time.Duration) error {
 	sess, err := findOfflineSessionByTarget(input, operation.Spec.Target)
 	if err != nil {
@@ -557,23 +566,21 @@ func lockOfflineSession(input *go_hook.HookInput, operation UserOperation, lockF
 	)
 
 	until := time.Now().Add(lockFor).UTC().Format(time.RFC3339)
-	input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-		// OfflineSessions has x-kubernetes-preserve-unknown-fields: true, so we
-		// patch fields directly on the unstructured map without a typed model.
-		if err := unstructured.SetNestedField(obj.Object, until, "lockedUntil"); err != nil {
-			return nil, err
-		}
-		if err := unstructured.SetNestedField(obj.Object, int64(0), "incorrectPasswordLoginAttempts"); err != nil {
-			return nil, err
-		}
-		annotations := obj.GetAnnotations()
-		if annotations == nil {
-			annotations = map[string]string{}
-		}
-		annotations[PasswordAnnotationLockedByAdministrator] = ""
-		obj.SetAnnotations(annotations)
-		return obj, nil
-	}, "dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
+	patch := map[string]any{
+		"lockedUntil":                    until,
+		"incorrectPasswordLoginAttempts": int64(0),
+		"metadata": map[string]any{
+			"annotations": map[string]any{
+				// "true" matches what the Console UI writes for direct PATCHes
+				// and what hasAdminLockAnnotation in the frontend treats as the
+				// admin-lock marker; presence of the key is what actually
+				// matters, but a stable value keeps both paths uniform.
+				PasswordAnnotationLockedByAdministrator: "true",
+			},
+		},
+	}
+
+	input.PatchCollector.PatchWithMerge(patch, "dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
 
 	return nil
 }
