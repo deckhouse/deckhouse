@@ -48,8 +48,10 @@ Follow these steps:
 
    <img src="/images/gs/installer/ingress-settings.png" alt="New Ingress controller settings" style="width: 100%;">
 
-2. Configure the DNS name template to be used for cluster components.  
-   _The DNS name template is used to configure Ingress resources for system applications. For example, the Grafana UI is bound to the name `grafana`. Then, for the template `%s.kube.company.my`, Grafana will be available at `grafana.kube.company.my`, and so on._  
+2. Configure the DNS name template to be used for cluster components.
+   {% alert level="info" %}
+   The DNS name template is used to configure Ingress resources for system applications. For example, the Grafana UI is bound to the name `grafana`. Then, for the template `%s.kube.company.my`, Grafana will be available at `grafana.kube.company.my`, and so on.
+   {% endalert %}
    Go to "Deckhouse" → "Global settings" and enter the template in the "DNS name template" field.
 
    <img src="/images/gs/installer/dns-settings.png" alt="DNS template settings" style="width: 100%;">
