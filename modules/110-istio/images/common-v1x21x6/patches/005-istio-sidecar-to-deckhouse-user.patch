@@ -56,7 +56,7 @@ index 28f9e2658c..c4f5561f03 100644
  # Customize distroless with the following:
  # - password file
 diff --git a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
-index f88fec8242..54c43220c2 100644
+index f88fec8242..c4f930c393 100644
 --- a/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
 +++ b/manifests/charts/istio-control/istio-discovery/files/injection-template.yaml
 @@ -87,7 +87,7 @@ spec:
@@ -69,10 +69,10 @@ index f88fec8242..54c43220c2 100644
      - "{{ annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode }}"
      - "-i"
 diff --git a/manifests/charts/istiod-remote/files/injection-template.yaml b/manifests/charts/istiod-remote/files/injection-template.yaml
-index f88fec8242..2ad5b870e4 100644
+index f88fec8242..c4f930c393 100644
 --- a/manifests/charts/istiod-remote/files/injection-template.yaml
 +++ b/manifests/charts/istiod-remote/files/injection-template.yaml
-@@ -87,7 +87,8 @@ spec:
+@@ -87,7 +87,7 @@ spec:
      - "-z"
      - {{ .MeshConfig.ProxyInboundListenPort | default "15006" | quote }}
      - "-u"
