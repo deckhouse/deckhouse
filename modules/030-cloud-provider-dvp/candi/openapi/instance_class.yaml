@@ -20,26 +20,176 @@ spec:
           properties:
             spec:
               type: object
-              required: [virtualMachine, rootDisk]
+              required: [ rootDisk, virtualMachine ]
               properties:
                 virtualMachine:
                   type: object
-                  description: |
+                  description: |-
                     Virtual machine settings for the created node.
 
                     > The `runPolicy: AlwaysOnUnlessStoppedManually` policy is used for virtual machines of nodes.
                     > This allows the virtual machine to be stopped manually (for example, for maintenance) without triggering an automatic restart.
-                  required: [cpu, memory, virtualMachineClassName]
+                  required: [ cpu, memory, virtualMachineClassName ]
                   properties:
-                    cpu:
-                      description: |
-                        CPU settings for the virtual machine.
+                    additionalAnnotations:
+                      additionalProperties:
+                        type: string
+                      description: Additional annotations for a virtual machine resource.
                       type: object
-                      required: [cores]
+                      x-doc-example: |-
+                        ```yaml
+                        cluster-owner: user
+                        ```
+                    additionalLabels:
+                      additionalProperties:
+                        type: string
+                      description: Additional labels for a virtual machine resource.
+                      type: object
+                      x-doc-example: |-
+                        ```yaml
+                        cluster-owner: user
+                        ```
+                    nodeSelector:
+                      description: |-
+                        Allows a virtual machine to be assigned to specified DVP nodes.
+                        [The same](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/) as in the `spec.nodeSelector` parameter for Kubernetes Pods.
+                      properties:
+                        nodeSelectorTerms:
+                          description: Required. A list of node selector terms. The terms are ORed.
+                          items:
+                            description: |-
+                              A null or empty node selector term matches no objects. The requirements of
+                              them are ANDed.
+                              The TopologySelectorTerm type implements a subset of the NodeSelectorTerm.
+                            properties:
+                              matchExpressions:
+                                description: A list of node selector requirements by node's labels.
+                                items:
+                                  description: |-
+                                    A node selector requirement is a selector that contains values, a key, and an operator
+                                    that relates the key and values.
+                                  properties:
+                                    key:
+                                      description: The label key that the selector applies to.
+                                      type: string
+                                    operator:
+                                      description: |-
+                                        Represents a key's relationship to a set of values.
+                                        Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+                                      type: string
+                                    values:
+                                      description: |-
+                                        An array of string values. If the operator is In or NotIn,
+                                        the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                        the values array must be empty. If the operator is Gt or Lt, the values
+                                        array must have a single element, which will be interpreted as an integer.
+                                        This array is replaced during a strategic merge patch.
+                                      items:
+                                        type: string
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                  required:
+                                    - key
+                                    - operator
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
+                              matchFields:
+                                description: A list of node selector requirements by node's fields.
+                                items:
+                                  description: |-
+                                    A node selector requirement is a selector that contains values, a key, and an operator
+                                    that relates the key and values.
+                                  properties:
+                                    key:
+                                      description: The label key that the selector applies to.
+                                      type: string
+                                    operator:
+                                      description: |-
+                                        Represents a key's relationship to a set of values.
+                                        Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+                                      type: string
+                                    values:
+                                      description: |-
+                                        An array of string values. If the operator is In or NotIn,
+                                        the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                        the values array must be empty. If the operator is Gt or Lt, the values
+                                        array must have a single element, which will be interpreted as an integer.
+                                        This array is replaced during a strategic merge patch.
+                                      items:
+                                        type: string
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                  required:
+                                    - key
+                                    - operator
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                        - nodeSelectorTerms
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    priorityClassName:
+                      description: "[The
+                        same](https://kubernetes.io/docs/concepts/scheduling-eviction\
+                        /pod-priority-preemption/) as in the
+                        `spec.priorityClassName` parameter for Kubernetes Pods."
+                      type: string
+                    tolerations:
+                      description: |-
+                        Allows setting tolerations for virtual machines for a DVP node.
+                        [The same](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) as in the `spec.tolerations` parameter in Kubernetes Pods.
+                      items:
+                        description: |-
+                          The pod this Toleration is attached to tolerates any taint that matches
+                          the triple <key,value,effect> using the matching operator <operator>.
+                        properties:
+                          effect:
+                            description: |-
+                              Effect indicates the taint effect to match. Empty means match all taint effects.
+                              When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                            type: string
+                          key:
+                            description: |-
+                              Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                              If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                            type: string
+                          operator:
+                            description: |-
+                              Operator represents a key's relationship to the value.
+                              Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
+                              Exists is equivalent to wildcard for value, so that a pod can
+                              tolerate all taints of a particular category.
+                              Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
+                            type: string
+                          tolerationSeconds:
+                            description: |-
+                              TolerationSeconds represents the period of time the toleration (which must be
+                              of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+                              it is not set, which means tolerate the taint forever (do not evict). Zero and
+                              negative values will be treated as 0 (evict immediately) by the system.
+                            format: int64
+                            nullable: true
+                            type: integer
+                          value:
+                            description: |-
+                              Value is the taint value the toleration matches to.
+                              If the operator is Exists, the value should be empty, otherwise just a regular string.
+                            type: string
+                        type: object
+                      type: array
+                    cpu:
+                      description: CPU settings for the virtual machine.
+                      type: object
+                      required: [ cores ]
                       properties:
                         cores:
-                          description: |
-                            Number of CPU cores for the virtual machine.
+                          description: Number of CPU cores for the virtual machine.
                           minimum: 1
                           format: int32
                           type: integer
@@ -48,25 +198,23 @@ spec:
                           type: string
                           default: "100%"
                           pattern: ^100%$|^[1-9][0-9]?%$
-                          description: |
-                            Guaranteed share of CPU fraction that will be allocated to the virtual machine.
+                          description: Guaranteed share of CPU fraction that will be allocated to the
+                            virtual machine.
                           x-doc-example: "100%"
                     memory:
                       type: object
-                      description: |
-                        Specifies the memory settings for the virtual machine.
+                      description: Specifies the memory settings for the virtual machine.
                       required:
                         - size
                       properties:
                         size:
                           type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          description: |
-                            Amount of memory resources allowed for the virtual machine.
+                          description: Amount of memory resources allowed for the virtual machine.
                           x-doc-example: "4Gi"
                     virtualMachineClassName:
                       type: string
-                      description: |
+                      description: |-
                         The name of the VirtualMachineClass.
 
                         Intended for centralized configuration of preferred virtual machine parameters. It allows you to specify CPU instruction sets, resource configuration policies for CPU and memory, and define the ratio between these resources.
@@ -77,7 +225,7 @@ spec:
                         - EFI
                         - EFIWithSecureBoot
                       default: EFI
-                      description: |
+                      description: |-
                         Defines a bootloader for the virtual machine.
 
                         * `BIOS`: Use BIOS.
@@ -91,7 +239,7 @@ spec:
                         - Manual
                         - AlwaysOnUnlessStoppedManually
                       default: AlwaysOnUnlessStoppedManually
-                      description: |
+                      description: |-
                         Virtual machine run policy.
 
                         * `AlwaysOn`: The virtual machine should always be running.
@@ -109,7 +257,7 @@ spec:
                         - AlwaysForced
                         - PreferForced
                       default: PreferForced
-                      description: |
+                      description: |-
                         Live migration policy for the virtual machine.
 
                         * `Manual`: Migration is controlled manually.
@@ -121,64 +269,76 @@ spec:
                       x-doc-example: PreferForced
                 rootDisk:
                   type: object
-                  description: |
-                    Specifies settings for the root disk of the virtual machine.
+                  description: Specifies settings for the root disk of the virtual machine.
                   required:
-                    - size
                     - image
+                    - size
                   properties:
                     size:
                       type: string
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                      description: |
-                        Root disk size.
+                      description: Root disk size.
                       x-doc-example: "10Gi"
                     storageClass:
                       type: string
-                      description: |
+                      description: |-
                         The name of the existing StorageClass will be used to create the virtual machine's root disk.
 
                         If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
                     image:
                       type: object
-                      description: |
-                        Image parameters that will be used to create the virtual machine's root disk.
+                      description: Image parameters that will be used to create the virtual machine's
+                        root disk.
                       required:
                         - kind
                         - name
                       properties:
                         kind:
                           type: string
-                          description: |
-                            The kind of the image source.
+                          description: The kind of the image source.
                           enum:
                             - "ClusterVirtualImage"
                             - "VirtualImage"
                             - "VirtualDisk"
                         name:
                           type: string
-                          description: |
+                          description: |-
                             The name of the image that will be used to create the root disk.
 
                             > The installation requires Linux OS images with cloud-init pre-installed.
                 additionalDisks:
                   type: array
-                  description: |
-                    Parameters for additional virtual machine disks.
+                  description: Parameters for additional virtual machine disks.
                   items:
                     type: object
-                    required: ["size", "storageClass"]
+                    required: [ "size", "storageClass" ]
                     properties:
                       size:
                         type: string
                         pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        description: |
-                          Size of the additional disk.
+                        description: Size of the disk.
                         x-doc-example: "10Gi"
                       storageClass:
                         type: string
-                        description: |
-                          Name of the existing StorageClass that will be used to create the additional disk.
+                        description: Name of the existing StorageClass that will be used to create the
+                          disk.
+                etcdDisk:
+                  description: Specifies settings for the etcd data disk.
+                  properties:
+                    size:
+                      description: Size of the disk.
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      type: string
+                      x-doc-example: 10Gi
+                    storageClass:
+                      description: Name of the existing StorageClass that will be used to create the
+                        disk.
+                      type: string
+                  required:
+                    - size
+                    - storageClass
+                  type: object
+
   scope: Cluster
   names:
     plural: dvpinstanceclasses
