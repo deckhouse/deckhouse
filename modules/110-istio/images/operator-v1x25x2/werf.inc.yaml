@@ -76,5 +76,5 @@ shell:
   install:
   - cd /src/operator && git apply --verbose /patches/001-istio-go-mod.patch
   - cd /src/operator && git apply --verbose /patches/002-istio-operato-cni_status_restrict.patch
-  - cd /src/operator && git apply --verbose /patches/003-injection-template-add-deckhouse-user.patch
+  - cd /src/operator && git apply --verbose /patches/003-change-to-deckhouse-user.patch
 ---
