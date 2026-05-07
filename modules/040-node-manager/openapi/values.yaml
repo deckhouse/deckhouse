@@ -69,6 +69,18 @@ properties:
         - true
       capsControllerManagerEnabled:
         type: boolean
+      deployAutoscaler:
+        type: boolean
+      deployAutoscalerMCM:
+        type: boolean
+      autoscalerNodes:
+        type: array
+        items:
+          type: string
+      autoscalerMCMNodes:
+        type: array
+        items:
+          type: string
       clusterMasterAddresses:
         type: array
         x-doc-deprecated: true

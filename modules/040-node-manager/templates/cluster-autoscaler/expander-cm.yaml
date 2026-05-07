@@ -1,3 +1,4 @@
+{{- if include "cluster_autoscaler_enabled" . }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -15,3 +16,4 @@ data:
     {{- else }}
     {}
     {{- end }}
+{{- end }}
