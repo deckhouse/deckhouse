@@ -202,6 +202,7 @@ properties:
                       type: string
                       enum:
                         - PasswordPolicyLockout
+                        - LockedByAdministrator
                     message:
                       type: string
                     until:
