@@ -277,26 +277,29 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("set maintenance label", func() {
+		suite.setupTestController(string(suite.parseTestdata("set-maintenance-label.yaml")))
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("clear maintenance label", func() {
+		suite.setupTestController(string(suite.parseTestdata("clear-maintenance-label.yaml")))
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
-	suite.Run("simple delete test", func() {
-		m := `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: test-module
-  finalizers:
-  - modules.deckhouse.io/module-registered
-  deletionTimestamp: "2024-01-01T00:00:00Z"
-spec:
-  enabled: true
-`
-		suite.setupTestController(m)
+	suite.Run("delete clears maintenance label", func() {
+		suite.setupTestController(string(suite.parseTestdata("delete-maintenance-label.yaml")))
 
-		config := suite.moduleConfig("test-module")
-		assert.NotNil(suite.T(), config.DeletionTimestamp)
-		assert.Len(suite.T(), config.Finalizers, 1)
+		_, err := suite.r.deleteModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+
+		module := suite.module("test-module")
+		assert.NotContains(suite.T(), module.Labels, v1alpha1.ModuleLabelMaintenance)
 	})
 }
 
@@ -316,6 +319,14 @@ func (suite *ControllerTestSuite) moduleConfig(name string) *v1alpha1.ModuleConf
 	require.NoError(suite.T(), err)
 
 	return config
+}
+
+func (suite *ControllerTestSuite) module(name string) *v1alpha1.Module {
+	module := new(v1alpha1.Module)
+	err := suite.client.Get(context.TODO(), types.NamespacedName{Name: name}, module)
+	require.NoError(suite.T(), err)
+
+	return module
 }
 
 // Mock implementations

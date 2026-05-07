@@ -251,6 +251,11 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
+	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
+		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	// sync maintenance label from ModuleConfig to Module
 	if err := r.syncMaintenanceLabel(ctx, module, moduleConfig.Spec.Maintenance); err != nil {
 		r.logger.Error("failed to sync maintenance label", slog.String("module", module.Name), log.Err(err))
@@ -260,11 +265,6 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	// clear conflict metrics
 	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
-
-	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
-		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
-		return ctrl.Result{}, err
-	}
 
 	if !moduleConfig.IsEnabled() {
 		// delete all pending releases for EnabledByModuleConfig disabled modules
