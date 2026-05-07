@@ -237,6 +237,8 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
+create,get:
+    - nodes/proxy
 read-write:
     - deckhouse.io/clusterauthorizationrules
     - namespaces
