@@ -14,6 +14,7 @@
 
 package client
 
+//nolint:gci
 import (
 	"context"
 	"fmt"
