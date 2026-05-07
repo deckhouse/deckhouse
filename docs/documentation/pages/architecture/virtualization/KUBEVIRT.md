@@ -6,21 +6,22 @@ search: virt-controller, virt-api, virt-handler, virt-launcher, subresources, с
 description: Архитектура компонента KubeVirt модуля virtualization в Deckhouse Kubernetes Platform.
 ---
 
-В модуле [`virtualization`](/modules/virtualization/) непосредственно за работу с ВМ отвечает компонент KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это открытый проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он позволяет сосуществовать традиционным виртуальным машинам и контейнерным рабочим нагрузкам в одном кластере Kubernetes, обеспечивая единую плоскость управления. 
+В модуле [`virtualization`](/modules/virtualization/) непосредственно за работу с ВМ отвечает компонент KubeVirt. [KubeVirt](https://github.com/kubevirt/kubevirt) — это открытый проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он позволяет сосуществовать традиционным виртуальным машинам и контейнерным рабочим нагрузкам в одном кластере Kubernetes, обеспечивая единую плоскость управления. В модуле [`virtualization`](/modules/virtualization/) используется [форк KubeVirt](https://github.com/deckhouse/3p-kubevirt) от компании «Флант».
 
-Для управления ВМ KubeVirt использует кастомные ресурсы следующих API Group:
+Для управления ВМ KubeVirt использует кастомные ресурсы следующих API-групп:
 
-1. `kubevirt.io` — основная группа, включает в себя следующие кастомные ресурсы:
+1. `internal.virtualization.deckhouse.io` — основная группа, аналог API-группы `kubervirt.io` оригинального KubeVirt, включает в себя следующие кастомные ресурсы:
 
-   - VirtualMachine — ресурс, описывающий конфигурацию и статус виртуальной машины (ВМ);
-   - VirtualMachineInstance - ресурс, описывающий работающую ВМ. После выключения ВМ ресурс VirtualMachineInstance удаляется, но остается ресурс VirtualMachine, который управляет жизненным циклом VirtualMachineInstance;
-   - VirtualMachineInstanceMigration — ресурс, описывающий миграцию работающей ВМ;
-   - VirtualMachineInstanceReplicaSet - ресурс, описывающий набор однотипных VirtualMachineInstances;
-   - VirtualMachineSnapshot - ресурс, описывающий снимок ВМ.
+   - InternalVirtualizationVirtualMachine — ресурс, описывающий конфигурацию и статус виртуальной машины (ВМ);
+   - InternalVirtualizationVirtualMachineInstance - ресурс, описывающий работающую ВМ. После выключения ВМ ресурс InternalVirtualizationVirtualMachineInstance удаляется, но остается ресурс InternalVirtualizationVirtualMachine, который управляет жизненным циклом InternalVirtualizationVirtualMachineInstance;
 
-   Ресурсами основной группы управляет компонент virt-сontroller. Ресурсы VirtualMachine и VirtualMachineSnapshot основной группы KubeVirt используются в качестве бэкенда для аналогичных ресурсов из `virtualization.deckhouse.io` API Group, управляемых virtualization-controller.
+   Ресурсами основной группы управляет компонент virt-сontroller. Ресурс InternalVirtualizationVirtualMachine основной API-группы `internal.virtualization.deckhouse.io` KubeVirt используется в качестве бэкенда для ресурса VirtualMachine API-группы `virtualization.deckhouse.io`, управляемой virtualization-controller.
 
-2. `Subresources.kubervirt.io` — группа сабресурсов. Сабресурсы — это дополнительные операции или действия, которые можно выполнять над основными ресурсами (например, VirtualMachineInstance) через API Kubernetes. Они предоставляют интерфейсы для управления конкретными аспектами ресурсов, не затрагивая весь объект. Вместо привычного для Kubernetes декларативного ресурса они представляют собой эндпойнт для императивных операций. В модуле [`virtualization`](/modules/virtualization/) используются следующие сабресурсы Kubevirt:
+{% alert level="info" %}
+Для упрощения для ресурсов InternalVirtualizationVirtualMachine и InternalVirtualizationVirtualMachineInstance далее будут использоваться сокращенные наименования VirtualMachine и VirtualMachineInstance соответственно (из API-группы `kubervirt.io` оригинального KubeVirt).
+{% endalert %}
+
+2. `subresources.kubervirt.io` — группа сабресурсов. Сабресурсы — это дополнительные операции или действия, которые можно выполнять над основными ресурсами (например, VirtualMachineInstance) через API Kubernetes. Они предоставляют интерфейсы для управления конкретными аспектами ресурсов, не затрагивая весь объект. Вместо привычного для Kubernetes декларативного ресурса они представляют собой эндпойнт для императивных операций. В модуле [`virtualization`](/modules/virtualization/) используются следующие сабресурсы KubeVirt:
    
    - virtualmachines/{name}/addvolume;
    - virtualmachines/{name}/removevolume;
@@ -32,7 +33,7 @@ description: Архитектура компонента KubeVirt модуля v
    - virtualmachineinstances/{name}/freeze;
    - virtualmachineinstances/{name}/unfreeze.
 
-   Сабресурсами управляет компонент virt-api. Перечисленные выше сабресурсы KubeVirt используются в качестве бэкенда для аналогичных ресурсов из `subresources.virtualization.deckhouse.io` API Group, управляемых virtualization-api.
+   Сабресурсами управляет компонент virt-api. Перечисленные выше сабресурсы KubeVirt используются в качестве бэкенда для аналогичных ресурсов из `subresources.virtualization.deckhouse.io` API-групп, управляемых virtualization-api.
 
 ## Архитектура KubeVirt
 {% alert level="info" %}
@@ -51,15 +52,15 @@ description: Архитектура компонента KubeVirt модуля v
 
 KubeVirt состоит из следующих компонентов:
 
-1. **Virt-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.kubevirt.io` API Group. Virt-api выполняет валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API Group с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Запросы проходят через сайдкар-контейнер **proxy**, который переименовывает метаданные из API Group `internal.virtualization.deckhouse.io` в API Group `kubervirt.io` и проксирует их на эндпойнт virt-api.
+1. **Virt-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.kubevirt.io` API-группы. Virt-api выполняет валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API-группы с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Запросы проходят через сайдкар-контейнер **proxy**, который переименовывает метаданные из API-группы `internal.virtualization.deckhouse.io` в API-группу `kubervirt.io` и проксирует их на эндпойнт virt-api.
 
    Cостоит из следующих контейнеров:
 
    - **virt-api** — основной контейнер, реализующий контроллер и вебхук-сервер;
-   - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API, а именно переименование метаданных кастомных ресурсов. Это необходимо, поскольку компоненты Kubevirt используют API Group вида `*.kubervirt.io`, а другие компоненты модуля [`virtualization`](/modules/virtualization/) используют аналогичные ресурсы, но с API Group вида `*.virtualization.deckhouse.io`. Kube-api-rewriter является шлюзом, проксирующим запросы между контроллерами, управляющими ресурсами из разных API Group;
+   - **proxy** (он же **kube-api-rewriter**) — сайдкар-контейнер, выполняющий модификацию проходящих через него запросов API, а именно переименование метаданных кастомных ресурсов. Это необходимо, поскольку компоненты Kubevirt используют API-группы вида `*.kubervirt.io`, а другие компоненты модуля [`virtualization`](/modules/virtualization/) используют аналогичные ресурсы, но с API-группой вида `*.virtualization.deckhouse.io`. Kube-api-rewriter является шлюзом, проксирующим запросы между контроллерами, управляющими ресурсами из разных API-групп;
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера и сайдкар-контейнера proxy. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Virt-controller** — контроллер, управляющий кастомными ресурсами основной `kubervirt.io` API Group и отвечающий за функциональность виртуализации на уровне кластера (cluster wide). Для каждого ресурса VirtualMachineInstance он создает отдельный под, в котором запускается ВМ. Virt-controller следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами.
+1. **Virt-controller** — контроллер, управляющий кастомными ресурсами основной `internal.virtualization.deckhouse.io` API-группы и отвечающий за функциональность виртуализации на уровне кластера (cluster wide). Для каждого ресурса VirtualMachineInstance он создает отдельный под, в котором запускается ВМ. Virt-controller следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами.
 
    Cостоит из следующих контейнеров:
 
@@ -122,6 +123,6 @@ KubeVirt взаимодействует со следующими компоне
 1. **Kube-apiserver**:
 
    - отправляет запросы на валидацию кастомных ресурсов KubeVirt;
-   - отправляет запросы на валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API Group.
+   - отправляет запросы на валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API-группы.
 
 1. **Prometheus-main** — собирает метрики компонентов.
