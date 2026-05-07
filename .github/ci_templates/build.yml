@@ -173,9 +173,30 @@ steps:
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
     {!{- if eq $buildType "release" }!}
+      declare -A WERF_SECONDARY_REPOS=(
+        ["ce"]="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/ce"
+        ["ee"]="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/ee"
+        ["fe"]="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/fe"
+        [se]="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/se"
+        [se-plus]="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/se-plus"
+        [be]="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/be"
+      )
+    
       STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
       export WERF_REPO="${STAGE_REGISTRY_PATH}"
+
+      # Set up WERF_SECONDARY_REPO_1, WERF_SECONDARY_REPO_2, etc. Because werf needs cache from other editions.
+      # Exclude current edition from the list.
+      repo_number=0
+      for edition in "${!WERF_SECONDARY_REPOS[@]}"; do
+        if [ "${REGISTRY_SUFFIX}" == "${edition}" ]; then
+          continue
+        else
+          repo_number=$((repo_number+1))
+          export WERF_SECONDARY_REPO_${repo_number}="${WERF_SECONDARY_REPOS[${edition}]}"
+        fi
+      done
     {!{- else }!}
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
