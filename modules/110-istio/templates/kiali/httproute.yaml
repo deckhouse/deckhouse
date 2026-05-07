@@ -31,7 +31,17 @@ spec:
     name: istio-redirect
     port: 80
     protocol: HTTP
-  {{- if .Values.istio.multicluster.enabled }}
+{{- else }}
+  - allowedRoutes:
+      namespaces:
+        from: Same
+    hostname: {{ include "helm_lib_module_public_domain" (list . "istio") }}
+    name: istio
+    port: 80
+    protocol: HTTP
+{{- end }}
+{{- if .Values.istio.multicluster.enabled }}
+  {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
   - allowedRoutes:
       namespaces:
         from: Same
@@ -53,16 +63,7 @@ spec:
     name: api-proxy-redirect
     port: 80
     protocol: HTTP
-  {{- end }}
-{{- else }}
-  - allowedRoutes:
-      namespaces:
-        from: Same
-    hostname: {{ include "helm_lib_module_public_domain" (list . "istio") }}
-    name: istio
-    port: 80
-    protocol: HTTP
-  {{- if .Values.istio.multicluster.enabled }}
+  {{- else }}
   - allowedRoutes:
       namespaces:
         from: Same
