@@ -41,7 +41,7 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
     - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cert-manager.
 
     {% alert level="info" %}
-    Для прохождения `DNS-01 challenge` **cert-manager** поддерживает ряд популярных DNS-провайдеров, таких как AzureDNS, Cloudflare, DigitalOcean и т.д. С полным списком поддерживаемых DNS-провайдеров можно ознакомиться [в документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/). Для неподдерживаемых "из коробки" провайдеров используются issuer типа [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/), которые являются внешними компонентами. Для корректной работы таких провайдеров их необходимо устанавливать в системный namespace `d8-cert-manager`. При внесении изменений в этот namespace рекомендуется всегда учитывать наличие подобных расширений для сохранения их работоспособности.
+    Для прохождения `DNS-01 challenge` cert-manager поддерживает ряд популярных DNS-провайдеров, таких как AzureDNS, Cloudflare, DigitalOcean и т.д. С полным списком поддерживаемых DNS-провайдеров можно ознакомиться [в документации cert-manager](https://cert-manager.io/docs/configuration/acme/dns01/). Для неподдерживаемых "из коробки" провайдеров используются issuer типа [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/), которые являются внешними компонентами. Для корректной работы таких провайдеров их необходимо устанавливать в системный namespace `d8-cert-manager`. При внесении изменений в этот namespace рекомендуется всегда учитывать наличие подобных расширений для сохранения их работоспособности.
     {% endalert %}
 
 1. **Webhook** — компонент состоящий из одного контейнера webhook и выполняющий следующие операции:
@@ -79,6 +79,6 @@ description: Архитектура модуля cert-manager в Deckhouse Kuber
     - валидация кастомных ресурсов Issuer, ClusterIssuer, Certificate, CertificateRequest, Challenge, Order;
     - мутацию кастомных ресурсов CertificateRequest.
 
-1. **Prometheus-main** — сбор метрик **cert-manager**.
+1. **Prometheus-main** — сбор метрик cert-manager.
 
 1. **Nginx Controller** — пересылка запросов от ACME-сервера к cm-acme-http-solver.

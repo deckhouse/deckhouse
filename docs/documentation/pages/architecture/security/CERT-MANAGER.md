@@ -40,7 +40,7 @@ The `cert-manager` module consists of the following components:
     - **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the cert-manager container metrics.
 
     {% alert level="info" %}
-    To complete the `DNS-01 challenge`, **cert-manager** supports a number of popular DNS providers, such as AzureDNS, Cloudflare, DigitalOcean, and others. For the full list of supported DNS providers, refer to [the cert-manager documentation](https://cert-manager.io/docs/configuration/acme/dns01/). For providers that are not supported out of the box, [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/) issuer types are used as external components. To work correctly, such providers must be installed in the `d8-cert-manager` system namespace. When making changes to this namespace, it is recommended to always account for such extensions so they remain operational.
+    To complete the `DNS-01 challenge`, cert-manager supports a number of popular DNS providers, such as AzureDNS, Cloudflare, DigitalOcean, and others. For the full list of supported DNS providers, refer to [the cert-manager documentation](https://cert-manager.io/docs/configuration/acme/dns01/). For providers that are not supported out of the box, [webhook](https://cert-manager.io/docs/configuration/acme/dns01/webhook/) issuer types are used as external components. To work correctly, such providers must be installed in the `d8-cert-manager` system namespace. When making changes to this namespace, it is recommended to always account for such extensions so they remain operational.
     {% endalert %}
 
 1. **Webhook**: A component consisting of a single webhook container and performing the following operations:
@@ -78,6 +78,6 @@ The following external components interact with the module:
     - validates the Issuer, ClusterIssuer, Certificate, CertificateRequest, Challenge, and Order custom resources;
     - mutates CertificateRequest custom resources.
 
-1. **Prometheus-main**: Collects **cert-manager** metrics.
+1. **Prometheus-main**: Collects cert-manager metrics.
 
 1. **Nginx Controller**: Forwards requests from ACME server to cm-acme-http-solver.
