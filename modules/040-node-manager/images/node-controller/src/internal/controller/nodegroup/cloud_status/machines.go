@@ -19,38 +19,26 @@ package cloud_status
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
 func (s *Service) getMachinesCount(ctx context.Context, ngName string) int32 {
 	var count int32
 
-	// MCM Machines.
-	mcmList := &unstructured.UnstructuredList{}
-	mcmList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   common.MCMMachineGVK.Group,
-		Version: common.MCMMachineGVK.Version,
-		Kind:    "MachineList",
-	})
+	mcmList := &mcmv1alpha1.MachineList{}
 	if err := s.Client.List(ctx, mcmList, client.InNamespace(common.MachineNamespace)); err == nil {
-		for _, m := range mcmList.Items {
-			if labels, found, _ := unstructured.NestedStringMap(m.Object, "spec", "nodeTemplate", "metadata", "labels"); found && labels[common.NodeGroupLabel] == ngName {
+		for i := range mcmList.Items {
+			if mcmList.Items[i].Spec.NodeTemplateSpec.Labels[common.NodeGroupLabel] == ngName {
 				count++
 			}
 		}
 	}
 
-	// CAPI Machines.
-	capiList := &unstructured.UnstructuredList{}
-	capiList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   common.CAPIMachineGVK.Group,
-		Version: common.CAPIMachineGVK.Version,
-		Kind:    "MachineList",
-	})
+	capiList := &capiv1beta2.MachineList{}
 	if err := s.Client.List(ctx, capiList, client.InNamespace(common.MachineNamespace), client.MatchingLabels{"node-group": ngName}); err == nil {
 		count += int32(len(capiList.Items))
 	}

@@ -23,6 +23,6 @@ import (
 
 func DisableFor() []client.Object {
 	return []client.Object{
-		&corev1.Endpoints{},
+		&corev1.Endpoints{}, //nolint:staticcheck // Admission cache still disables core/v1 Endpoints.
 	}
 }

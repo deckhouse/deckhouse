@@ -20,54 +20,17 @@ set -Eeo pipefail
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
 {{- $ctx := . -}}
+{{- $packagesProxy := .packagesProxy | default (dict) -}}
 {{- tpl (printf `
 %s
 
 {{ template "bb-d8-node-name" $ }}
+{{ template "bb-d8-machine-name" $ }}
 {{ template "bb-d8-node-ip" $ }}
 {{ template "bb-discover-node-name" $ }}
 {{ template "bb-minget" $ }}
+{{ template "bb-status" $ }}
 ` $lib) $ctx }}
-
-bb-label-node-bashible-first-run-finished() {
-  local max_attempts=25
-  local attempt=1
-
-  while [ $attempt -le $max_attempts ]; do
-    if bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/bashible-first-run-finished=true"; then
-      echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
-      return 0
-    fi
-
-    echo "[$attempt/$max_attempts] Failed to set label on node $(bb-d8-node-name), retrying in 5 seconds..."
-    attempt=$((attempt + 1))
-    sleep 5
-  done
-
-  echo "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
-  exit 1
-}
-
-bb-node-has-bashible-uninitialized-taint() {
-  local max_attempts=5
-  local attempt=1
-
-  while [[ $attempt -le $max_attempts ]]; do
-    if node_json="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2>/dev/null)"; then
-      if echo "$node_json" | jq -e '.spec.taints[]? | select(.key == "node.deckhouse.io/bashible-uninitialized")' >/dev/null 2>&1; then
-        return 0
-      else
-        return 1
-      fi
-    fi
-    echo "[$attempt/$max_attempts] Failed to get node $(bb-d8-node-name), retrying in 5 seconds..."
-    attempt=$((attempt + 1))
-    sleep 5
-  done
-
-  echo "ERROR: Timed out after $max_attempts attempts. Could not check taint node.deckhouse.io/bashible-uninitialized on node $(bb-d8-node-name)." >&2
-  return 1
-}
 
 bb-curl-kube-healthz() {
   local server="$1"
@@ -81,7 +44,7 @@ bb-curl-kube() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local -a auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert /var/lib/kubelet/pki/kubelet-client-current.pem)
 
-  # If auth type is overridden (admin-cert for cluster-bootstrap), use those creds
+  # If auth type is overridden (admin-cert for cluster-bootstrap), use those creds.
   if [[ "${BB_KUBE_AUTH_TYPE:-}" == "admin-cert" ]]; then
     auth_args=(--cacert /etc/kubernetes/pki/ca.crt --cert "${TMPDIR}/bb-kube-admin-cert.pem" --key "${TMPDIR}/bb-kube-admin-key.pem")
     kubeconfig="/etc/kubernetes/admin.conf"
@@ -164,6 +127,47 @@ bb-curl-helper-patch-node-metadata() {
     --data "$patch"
 }
 
+bb-label-node-bashible-first-run-finished() {
+  local max_attempts=25
+  local attempt=1
+
+  while [ $attempt -le $max_attempts ]; do
+    if bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" "node.deckhouse.io/bashible-first-run-finished=true"; then
+      echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
+      return 0
+    fi
+
+    echo "[$attempt/$max_attempts] Failed to set label on node $(bb-d8-node-name), retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  echo "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
+  bb-bashible-ready-error "Failed to set node.deckhouse.io/bashible-first-run-finished label"
+  exit 1
+}
+
+bb-node-has-bashible-uninitialized-taint() {
+  local max_attempts=5
+  local attempt=1
+
+  while [[ $attempt -le $max_attempts ]]; do
+    if node_json="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" 2>/dev/null)"; then
+      if echo "$node_json" | jq -e '.spec.taints[]? | select(.key == "node.deckhouse.io/bashible-uninitialized")' >/dev/null 2>&1; then
+        return 0
+      else
+        return 1
+      fi
+    fi
+    echo "[$attempt/$max_attempts] Failed to get node $(bb-d8-node-name), retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  echo "ERROR: Timed out after $max_attempts attempts. Could not check taint node.deckhouse.io/bashible-uninitialized on node $(bb-d8-node-name)." >&2
+  return 1
+}
+
 # make the function available in $step
 export -f bb-curl-kube-healthz
 export -f bb-curl-kube
@@ -179,77 +183,6 @@ bb-indent-text() {
     done
 }
 
-function bb-event-error-create() {
-    # This function is used for creating event in the default namespace with reference of
-    # bashible step and used events.k8s.io/v1 apiVersion.
-    # nodeName is used for both .name and .uid fields intentionally as putting a real node uid
-    # has proven to have some side effects like missing events when describing objects
-    # (https://github.com/deckhouse/deckhouse/issues/4609).
-    # If event creation failed, error is suppressed.
-    step="$1"
-    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo "$step" | sed 's#.*/##; s/_/-/g')"
-    nodeName=$(bb-d8-node-name)
-    eventLog="/var/lib/bashible/step.log"
-    if [[ -f "${eventLog}" ]]; then
-      eventNote="$(tail -c 500 "${eventLog}")"
-    else
-      eventNote="bashible step log is not available."
-    fi
-    if test -f /etc/kubernetes/kubelet.conf ; then
-      local json
-      json=$(jq -nc \
-        --arg eventName "bashible-error-${eventName}-" \
-        --arg nodeName "$nodeName" \
-        --arg note "$eventNote" \
-        --arg instance "$(bb-d8-node-name)" \
-        --arg eventTime "$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")" \
-        '{
-          "apiVersion": "events.k8s.io/v1",
-          "kind": "Event",
-          "metadata": {"generateName": $eventName},
-          "regarding": {"apiVersion": "v1", "kind": "Node", "name": $nodeName, "uid": $nodeName},
-          "note": $note,
-          "reason": "BashibleStepFailed",
-          "type": "Warning",
-          "reportingController": "bashible",
-          "reportingInstance": $instance,
-          "eventTime": $eventTime,
-          "action": "BashibleStepExecution"
-        }')
-      bb-curl-kube "/apis/events.k8s.io/v1/namespaces/default/events" \
-        -X POST -H "Content-Type: application/json" --data "$json" >/dev/null 2>&1 || true
-    fi
-}
-
-function bb-event-info-create() {
-    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo "$1" | sed 's#.*/##; s/_/-/g')"
-    nodeName="$(bb-d8-node-name)"
-    if test -f /etc/kubernetes/kubelet.conf ; then
-      local json
-      json=$(jq -nc \
-        --arg eventName "bashible-info-${eventName}-update-" \
-        --arg nodeName "$nodeName" \
-        --arg note "$1 steps update on ${nodeName}" \
-        --arg instance "$(bb-d8-node-name)" \
-        --arg eventTime "$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")" \
-        '{
-          "apiVersion": "events.k8s.io/v1",
-          "kind": "Event",
-          "metadata": {"generateName": $eventName},
-          "regarding": {"apiVersion": "v1", "kind": "Node", "name": $nodeName, "uid": $nodeName},
-          "reason": "BashibleNodeUpdate",
-          "type": "Normal",
-          "note": $note,
-          "reportingController": "bashible",
-          "reportingInstance": $instance,
-          "eventTime": $eventTime,
-          "action": "BashibleStepExecution"
-        }')
-      bb-curl-kube "/apis/events.k8s.io/v1/namespaces/default/events" \
-        -X POST -H "Content-Type: application/json" --data "$json" >/dev/null 2>&1 || true
-    fi
-}
-
 function annotate_node() {
   echo "Annotate node $(bb-d8-node-name) with annotation ${@}"
   attempt=0
@@ -257,6 +190,7 @@ function annotate_node() {
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
       >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error: ${error}"
+      bb-bashible-ready-error "Failed to annotate node after retry limit"
       exit 1
     fi
     if [ "$attempt" -gt "2" ]; then
@@ -278,6 +212,7 @@ function get_secret() {
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get secret $secret"
+        bb-bashible-ready-error "Failed to get secret ${secret} after retry limit"
         exit 1
       fi
       >&2 echo "failed to get secret $secret"
@@ -301,6 +236,7 @@ function get_secret() {
 {{ end }}
   else
     >&2 echo "failed to get secret $secret: can't find kubelet.conf or bootstrap-token"
+    bb-bashible-ready-error "Failed to get secret ${secret}: kubelet.conf and bootstrap-token are unavailable"
     exit 1
   fi
 }
@@ -315,6 +251,7 @@ function get_bundle() {
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get $resource $name"
+        bb-bashible-ready-error "Failed to get ${resource} ${name} after retry limit"
         exit 1
       fi
       >&2 echo "failed to get $resource $name"
@@ -338,32 +275,61 @@ function get_bundle() {
 {{ end }}
   else
     >&2 echo "failed to get $resource $name: can't find kubelet.conf or bootstrap-token"
+    bb-bashible-ready-error "Failed to get ${resource} ${name}: kubelet.conf and bootstrap-token are unavailable"
     exit 1
   fi
 }
 
-log_configuration_checksum() {
-  local kind="$1"
-  local objName="$2"
-  local payload="$3"
+get_configuration_checksum() {
+  local payload="$1"
   local checksum
   checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
-  echo "Got $kind/$objName configuration checksum: $checksum" >&2
-}
-
-bootstrap_log_init() {
-  local current_file="$1"
-
-  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
-    mkdir -p /var/log/d8/bashible
-    exec {bootstrap_stdout_fd}>&1
-    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
-    export BOOTSTRAP_LOG_INITIALIZED=1
-  fi
+  echo "${checksum:0:8}"
 }
 
 function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
+}
+
+# curl request to get list of pods with labelSelector
+# $1 namespace
+# $2 labelSelector
+# $3 token
+function get_pods() {
+  local namespace=$1
+  local labelSelector=$2
+  local token=$3
+
+  while true; do
+    for server in {{ .clusterMasterKubeAPIEndpoints | join " " }}; do
+      url="https://$server/api/v1/namespaces/$namespace/pods?labelSelector=$labelSelector"
+      if d8-curl -sS -f -x "" --connect-timeout 10 -X GET "$url" --header "Authorization: Bearer $token" --cacert "$BOOTSTRAP_DIR/ca.crt"
+      then
+      return 0
+      else
+        >&2 echo "failed to get $resource $name with curl https://$server..."
+      fi
+    done
+    sleep 10
+  done
+}
+
+function get_rpp_address() {
+  if [ -f /var/lib/bashible/bootstrap-token ]; then
+    local token="$(</var/lib/bashible/bootstrap-token)"
+    local namespace="d8-cloud-instance-manager"
+    local labelSelector="app%3Dregistry-packages-proxy"
+
+    rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
+    port=4219
+    ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
+    echo "$ips_csv"
+  fi
+}
+
+function get_rpp_token() {
+  local rpp_token="$(get_secret "registry-packages-proxy-token" | jq -r '.data.token' |base64 -d)"
+  echo "${rpp_token}"
 }
 
 function main() {
@@ -383,38 +349,40 @@ function main() {
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
   export BB_RP_INSTALLED_PACKAGES_STORE="/var/cache/registrypackages" # Deprecated, backward compatibility
   export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="{{ .clusterMasterRPPBootstrapAddresses | join " " }}"
-
-  {{ if eq .runType "Normal" }}
-  # autodiscover token and rpp endpoint from kube api
+{{ if eq .runType "Normal" }}
   export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
   export PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS="{{ .clusterMasterKubeAPIEndpoints | join "," }}"
   unset PACKAGES_PROXY_ADDRESSES
   unset PACKAGES_PROXY_TOKEN
-  {{ end }}
-
-  {{ if ne .runType "Normal" }}
-  # static set of rpp endpoint and token
+{{ else }}
   unset PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID
   export PACKAGES_PROXY_ADDRESSES="{{ .clusterMasterRPPAddresses | join "," }}"
-  export PACKAGES_PROXY_TOKEN="{{ get .packagesProxy "token" | default "passthrough" }}"
-  {{ end }}
-
+  export PACKAGES_PROXY_TOKEN="{{ get $packagesProxy "token" | default "passthrough" }}"
+{{ end }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 
   if [ -z "${is_local-}" ]; then
-  {{- if ne .runType "Normal" }}
+{{- if ne .runType "Normal" }}
     bb-minget-install
-  {{- end }}
+{{- end }}
     bb-rpp-get-install
-  fi
-
-  if [ -f "$BOOTSTRAP_DIR/first_run" ] ; then
-    FIRST_BASHIBLE_RUN="yes"
-    bootstrap_log_init "bashible.sh.tpl"
   fi
 
   bb-discover-node-name
   export D8_NODE_HOSTNAME=$(bb-d8-node-name)
+
+{{ if eq .runType "Normal" }}
+  {{- if .packagesProxy }}
+  rpp_addr="$(get_rpp_address)"
+  if [[ -n $rpp_addr ]]; then
+    export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
+  fi
+  rpp_token="$(get_rpp_token)"
+  if [[ -n $rpp_token ]]; then
+    export PACKAGES_PROXY_TOKEN="${rpp_token}"
+  fi
+  {{- end }}
+{{- end }}
 
   if test -f /etc/kubernetes/kubelet.conf ; then
     if tmp="$(bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | jq -r '.metadata.labels."node.deckhouse.io/group"')" ; then
@@ -425,20 +393,37 @@ function main() {
     fi
   fi
 
+  if [ -f /var/lib/bashible/first_run ] ; then
+    FIRST_BASHIBLE_RUN="yes"
+  fi
+
+  if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+    bb-bashible-ready-initial-run "Initial run is in progress"
+    bb-waiting-approval-not-required
+    bb-disruption-approval-not-required
+  fi
+  local configuration_checksum="${CONFIGURATION_CHECKSUM:0:8}"
+
   mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
+
     bashible_bundle="$(get_bundle bashible "${NODE_GROUP}")"
-    log_configuration_checksum "bashible" "${NODE_GROUP}" "$bashible_bundle"
+    local bashible_configuration_checksum
+    bashible_configuration_checksum="$(get_configuration_checksum "$bashible_bundle")"
+    echo "Got bashible/${NODE_GROUP} configuration checksum: ${bashible_configuration_checksum}" >&2
+
     printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
+      bb-bashible-ready-error "Got empty bashible-new.sh"
       exit 1
     fi
     read -r first_line < $BOOTSTRAP_DIR/bashible-new.sh
     if [[ "$first_line" != '#!/usr/bin/env bash' ]] ; then
       >&2 echo "ERROR: $BOOTSTRAP_DIR/bashible-new.sh is not a bash script."
+      bb-bashible-ready-error "bashible-new.sh is not a bash script"
       exit 1
     fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
@@ -468,9 +453,12 @@ function main() {
     fi
   fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
-    echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     current_uptime > $UPTIME_FILE
+
+    local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
+    bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
+
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"
@@ -485,7 +473,12 @@ function main() {
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
     nodegroupbundle_bundle="$(get_bundle nodegroupbundle "${NODE_GROUP}")"
-    log_configuration_checksum "nodegroupbundle" "${NODE_GROUP}" "$nodegroupbundle_bundle"
+    local nodegroupbundle_configuration_checksum
+    nodegroupbundle_configuration_checksum="$(get_configuration_checksum "$nodegroupbundle_bundle")"
+    echo "Got nodegroupbundle/${NODE_GROUP} configuration checksum: ${nodegroupbundle_configuration_checksum}" >&2
+    if [ -n "$nodegroupbundle_configuration_checksum" ]; then
+      configuration_checksum="$nodegroupbundle_configuration_checksum"
+    fi
     ng_steps_collection="$(printf '%s\n' "$nodegroupbundle_bundle" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
@@ -493,6 +486,10 @@ function main() {
     done
 
   fi
+
+  # Temporarily avoid per-step status patches: they noticeably slow down convergence.
+  local converge_start_message="converge cycle is in progress"
+  bb-bashible-ready-converge-in-progress "${converge_start_message}"
 
   {{- if ne .runType "ClusterBootstrap" }}
       bb-event-info-create "start"
@@ -505,10 +502,14 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
+    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee "/var/lib/bashible/step${sx:+.debug}.log" >&2)
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+        {{- if ne .runType "ClusterBootstrap" }}
+        bb-event-error-create "$step"
+        {{- end }}
+        bb-bashible-ready-steps-failed "${step##*/}"
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
@@ -523,8 +524,16 @@ function main() {
       {{- if ne .runType "ClusterBootstrap" }}
       bb-event-error-create "$step"
       {{- end }}
+      bb-bashible-ready-steps-failed "${step##*/}"
     done
+
+    #local last_successful_step="${step##*/}"
+    #local steps_completed_message="Last successful step: ${last_successful_step}"
+    #bb-bashible-ready-steps-completed "$last_successful_step" "${steps_completed_message}"
   done
+
+  local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}"
+  bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
 
   {{- if ne .runType "ClusterBootstrap" }}
       bb-event-info-create "finish"
