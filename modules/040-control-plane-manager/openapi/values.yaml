@@ -45,6 +45,16 @@ properties:
         type: boolean
         default: false
         x-examples: [false]
+      userAuthzClusterAdminClusterRoleAvailable:
+        type: boolean
+        default: false
+        description: |
+          Reflects whether ClusterRole user-authz:cluster-admin exists in the cluster right now.
+          Set by the reconcile_kubeadm_cluster_admins_binding hook on each tick. Used by templates
+          to decide whether it is safe to switch ClusterRoleBinding kubeadm:cluster-admins to
+          user-authz:cluster-admin (Kubernetes will reject the switch if the role does not exist
+          yet because of the immutable roleRef constraint).
+        x-examples: [false]
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'

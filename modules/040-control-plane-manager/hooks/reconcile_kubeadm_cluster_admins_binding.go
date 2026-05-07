@@ -43,6 +43,13 @@ const (
 	kubeadmClusterAdminsBindingName      = "kubeadm:cluster-admins"
 	clusterAdminWildcardClusterRoleName  = "cluster-admin"
 	userAuthzClusterAdminClusterRoleName = "user-authz:cluster-admin"
+
+	// userAuthzCRAvailableValuePath holds the live state of ClusterRole user-authz:cluster-admin in
+	// the cluster. It is written by this hook on every run and consumed by templates/rbac-for-us.yaml
+	// to decide whether it is safe to switch the kubeadm:cluster-admins binding (roleRef is immutable,
+	// so SSA fails if the role does not exist yet — which happens on a fresh cluster while user-authz
+	// is enabled in values but its templates are not rendered yet).
+	userAuthzCRAvailableValuePath = "controlPlaneManager.internal.userAuthzClusterAdminClusterRoleAvailable"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -104,8 +111,33 @@ func reconcileKubeadmClusterAdminsBindingHook(ctx context.Context, input *go_hoo
 		return fmt.Errorf("kubernetes client: %w", err)
 	}
 
-	desiredGranular := userAuthzEnabledFromSnapshot(input) && clusterIsBootstrapped(input)
+	// Detect whether ClusterRole user-authz:cluster-admin exists right now and publish the result
+	// to internal values BEFORE the helm release is rendered. Templates use this flag (together
+	// with global.clusterIsBootstrapped and the user-authz enabled flag) to decide whether to
+	// render the granular roleRef. Without this gate, on a fresh cluster Helm would render
+	// roleRef=user-authz:cluster-admin while the role is not yet in the API and SSA would fail
+	// permanently because of the immutable roleRef rule.
+	userAuthzCRAvailable, err := userAuthzClusterAdminClusterRoleExists(ctx, kubeCl)
+	if err != nil {
+		return fmt.Errorf("probe clusterrole %s: %w", userAuthzClusterAdminClusterRoleName, err)
+	}
+	input.Values.Set(userAuthzCRAvailableValuePath, userAuthzCRAvailable)
+
+	desiredGranular := userAuthzEnabledFromSnapshot(input) && clusterIsBootstrapped(input) && userAuthzCRAvailable
 	return syncKubeadmClusterAdminsClusterRoleBinding(ctx, input.Logger, kubeCl, desiredGranular)
+}
+
+// userAuthzClusterAdminClusterRoleExists returns true if ClusterRole user-authz:cluster-admin is
+// present in the cluster. NotFound is reported as (false, nil); only transport/auth errors bubble up.
+func userAuthzClusterAdminClusterRoleExists(ctx context.Context, kubeCl kubernetes.Interface) (bool, error) {
+	_, err := kubeCl.RbacV1().ClusterRoles().Get(ctx, userAuthzClusterAdminClusterRoleName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // syncKubeadmClusterAdminsClusterRoleBinding keeps ClusterRoleBinding kubeadm:cluster-admins aligned with

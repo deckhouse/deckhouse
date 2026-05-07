@@ -227,3 +227,40 @@ func TestSyncKubeadmClusterAdminsClusterRoleBinding(t *testing.T) {
 		}
 	})
 }
+
+func TestUserAuthzClusterAdminClusterRoleExists(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns true when the role exists", func(t *testing.T) {
+		cl := fake.NewSimpleClientset(userAuthzClusterAdminRole())
+		got, err := userAuthzClusterAdminClusterRoleExists(ctx, cl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !got {
+			t.Fatal("expected true when the ClusterRole exists")
+		}
+	})
+
+	t.Run("returns false (no error) when the role does not exist", func(t *testing.T) {
+		cl := fake.NewSimpleClientset()
+		got, err := userAuthzClusterAdminClusterRoleExists(ctx, cl)
+		if err != nil {
+			t.Fatalf("expected NotFound to be folded into (false, nil), got error: %v", err)
+		}
+		if got {
+			t.Fatal("expected false when the ClusterRole does not exist")
+		}
+	})
+
+	t.Run("returns the underlying error on transport/auth failures", func(t *testing.T) {
+		cl := fake.NewSimpleClientset()
+		cl.PrependReactor("get", "clusterroles", func(action clienttesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errors.New("simulated apiserver outage")
+		})
+		_, err := userAuthzClusterAdminClusterRoleExists(ctx, cl)
+		if err == nil {
+			t.Fatal("expected non-nil error so addon-operator can retry the hook")
+		}
+	})
+}
