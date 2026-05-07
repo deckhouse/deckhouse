@@ -31,23 +31,23 @@ import (
 )
 
 const (
-	capiMachineAPIVersion = "cluster.x-k8s.io/v1beta2"
+	capiMachineAPIVersion = "cluster.x-k8s.io/v1beta1"
 )
 
-var capiMachineAPIGroups = map[string]string{
-	"DynamixMachine":     capiInfrastructureAPIGroup,
-	"HuaweiCloudMachine": capiInfrastructureAPIGroup,
-	"VCDMachine":         capiInfrastructureAPIGroup,
-	"ZvirtMachine":       capiInfrastructureAPIGroup,
-	"DeckhouseMachine":   capiInfrastructureAPIGroup,
-	"StaticMachine":      capiInfrastructureAPIGroup,
+var capiMachineAPIVersions = map[string]string{
+	"DynamixMachine":     capiInfrastructureAPIVersion,
+	"HuaweiCloudMachine": capiInfrastructureAPIVersion,
+	"VCDMachine":         capiInfrastructureAPIVersion,
+	"ZvirtMachine":       capiInfrastructureAPIVersion,
+	"DeckhouseMachine":   capiInfrastructureAPIVersion,
+	"StaticMachine":      capiInfrastructureAPIVersion,
 }
 
 type machineInfrastructureRef struct {
-	Name      string
-	Namespace string
-	Kind      string
-	APIGroup  string
+	Name       string
+	Namespace  string
+	Kind       string
+	APIVersion string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -70,13 +70,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func capiMachineInfrastructureRefFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	kind, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "kind")
-	apiGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "apiGroup")
+	apiVersion, _, _ := unstructured.NestedString(obj.Object, "spec", "infrastructureRef", "apiVersion")
 
 	return machineInfrastructureRef{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-		Kind:      kind,
-		APIGroup:  apiGroup,
+		Name:       obj.GetName(),
+		Namespace:  obj.GetNamespace(),
+		Kind:       kind,
+		APIVersion: apiVersion,
 	}, nil
 }
 
@@ -88,25 +88,25 @@ func handleSetMachineInfrastructureAPIVersion(_ context.Context, input *go_hook.
 			return fmt.Errorf("failed to iterate over Machine snapshots: %w", err)
 		}
 
-		apiGroup, ok := capiMachineAPIGroups[machine.Kind]
+		apiVersion, ok := capiMachineAPIVersions[machine.Kind]
 		if !ok {
 			input.Logger.Warn("unknown infrastructure machine kind", slog.String("machine", machine.Name), slog.String("kind", machine.Kind))
 			continue
 		}
 
-		if machine.APIGroup == apiGroup {
+		if machine.APIVersion == apiVersion {
 			continue
 		}
 
-		if machine.APIGroup != "" {
-			input.Logger.Debug("infrastructureRef.apiGroup already set", slog.String("machine", machine.Name), slog.String("apiGroup", machine.APIGroup))
+		if machine.APIVersion != "" {
+			input.Logger.Debug("infrastructureRef.apiVersion already set", slog.String("machine", machine.Name), slog.String("apiVersion", machine.APIVersion))
 			continue
 		}
 
 		patch := map[string]interface{}{
 			"spec": map[string]interface{}{
 				"infrastructureRef": map[string]interface{}{
-					"apiGroup": apiGroup,
+					"apiVersion": apiVersion,
 				},
 			},
 		}

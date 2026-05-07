@@ -31,17 +31,17 @@ import (
 )
 
 const (
-	capiMachineDeploymentAPIVersion = "cluster.x-k8s.io/v1beta2"
-	capiInfrastructureAPIGroup      = "infrastructure.cluster.x-k8s.io"
+	capiMachineDeploymentAPIVersion = "cluster.x-k8s.io/v1beta1"
+	capiInfrastructureAPIVersion    = "infrastructure.cluster.x-k8s.io/v1alpha1"
 )
 
-var capiMachineTemplateAPIGroups = map[string]string{
-	"DynamixMachineTemplate":     capiInfrastructureAPIGroup,
-	"HuaweiCloudMachineTemplate": capiInfrastructureAPIGroup,
-	"VCDMachineTemplate":         capiInfrastructureAPIGroup,
-	"ZvirtMachineTemplate":       capiInfrastructureAPIGroup,
-	"DeckhouseMachineTemplate":   capiInfrastructureAPIGroup,
-	"StaticMachineTemplate":      capiInfrastructureAPIGroup,
+var capiMachineTemplateAPIVersions = map[string]string{
+	"DynamixMachineTemplate":     capiInfrastructureAPIVersion,
+	"HuaweiCloudMachineTemplate": capiInfrastructureAPIVersion,
+	"VCDMachineTemplate":         capiInfrastructureAPIVersion,
+	"ZvirtMachineTemplate":       capiInfrastructureAPIVersion,
+	"DeckhouseMachineTemplate":   capiInfrastructureAPIVersion,
+	"StaticMachineTemplate":      capiInfrastructureAPIVersion,
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -63,21 +63,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSetInfrastructureAPIVersion)
 
 type machineDeploymentInfrastructureRef struct {
-	Name      string
-	Namespace string
-	Kind      string
-	APIGroup  string
+	Name       string
+	Namespace  string
+	Kind       string
+	APIVersion string
 }
 
 func capiInfrastructureRefFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	kind, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "kind")
-	apiGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "apiGroup")
+	apiVersion, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "apiVersion")
 
 	return machineDeploymentInfrastructureRef{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-		Kind:      kind,
-		APIGroup:  apiGroup,
+		Name:       obj.GetName(),
+		Namespace:  obj.GetNamespace(),
+		Kind:       kind,
+		APIVersion: apiVersion,
 	}, nil
 }
 
@@ -89,18 +89,18 @@ func handleSetInfrastructureAPIVersion(_ context.Context, input *go_hook.HookInp
 			return fmt.Errorf("failed to iterate over MachineDeployment snapshots: %w", err)
 		}
 
-		apiGroup, ok := capiMachineTemplateAPIGroups[md.Kind]
+		apiVersion, ok := capiMachineTemplateAPIVersions[md.Kind]
 		if !ok {
 			input.Logger.Warn("unknown infrastructure template kind", slog.String("machinedeployment", md.Name), slog.String("kind", md.Kind))
 			continue
 		}
 
-		if md.APIGroup == apiGroup {
+		if md.APIVersion == apiVersion {
 			continue
 		}
 
-		if md.APIGroup != "" {
-			input.Logger.Debug("infrastructureRef.apiGroup already set", slog.String("machinedeployment", md.Name), slog.String("apiGroup", md.APIGroup))
+		if md.APIVersion != "" {
+			input.Logger.Debug("infrastructureRef.apiVersion already set", slog.String("machinedeployment", md.Name), slog.String("apiVersion", md.APIVersion))
 			continue
 		}
 
@@ -109,7 +109,7 @@ func handleSetInfrastructureAPIVersion(_ context.Context, input *go_hook.HookInp
 				"template": map[string]interface{}{
 					"spec": map[string]interface{}{
 						"infrastructureRef": map[string]interface{}{
-							"apiGroup": apiGroup,
+							"apiVersion": apiVersion,
 						},
 					},
 				},

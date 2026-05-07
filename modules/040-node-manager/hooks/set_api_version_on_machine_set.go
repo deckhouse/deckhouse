@@ -31,14 +31,14 @@ import (
 )
 
 const (
-	capiMachineSetAPIVersion = "cluster.x-k8s.io/v1beta2"
+	capiMachineSetAPIVersion = "cluster.x-k8s.io/v1beta1"
 )
 
 type machineSetInfrastructureRef struct {
-	Name      string
-	Namespace string
-	Kind      string
-	APIGroup  string
+	Name       string
+	Namespace  string
+	Kind       string
+	APIVersion string
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -61,13 +61,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 
 func capiMachineSetInfrastructureRefFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	kind, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "kind")
-	apiGroup, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "apiGroup")
+	apiVersion, _, _ := unstructured.NestedString(obj.Object, "spec", "template", "spec", "infrastructureRef", "apiVersion")
 
 	return machineSetInfrastructureRef{
-		Name:      obj.GetName(),
-		Namespace: obj.GetNamespace(),
-		Kind:      kind,
-		APIGroup:  apiGroup,
+		Name:       obj.GetName(),
+		Namespace:  obj.GetNamespace(),
+		Kind:       kind,
+		APIVersion: apiVersion,
 	}, nil
 }
 
@@ -79,18 +79,18 @@ func handleSetMachineSetInfrastructureAPIVersion(_ context.Context, input *go_ho
 			return fmt.Errorf("failed to iterate over MachineSet snapshots: %w", err)
 		}
 
-		apiGroup, ok := capiMachineTemplateAPIGroups[ms.Kind]
+		apiVersion, ok := capiMachineTemplateAPIVersions[ms.Kind]
 		if !ok {
 			input.Logger.Warn("unknown infrastructure template kind", slog.String("machineset", ms.Name), slog.String("kind", ms.Kind))
 			continue
 		}
 
-		if ms.APIGroup == apiGroup {
+		if ms.APIVersion == apiVersion {
 			continue
 		}
 
-		if ms.APIGroup != "" {
-			input.Logger.Debug("infrastructureRef.apiGroup already set", slog.String("machineset", ms.Name), slog.String("apiGroup", ms.APIGroup))
+		if ms.APIVersion != "" {
+			input.Logger.Debug("infrastructureRef.apiVersion already set", slog.String("machineset", ms.Name), slog.String("apiVersion", ms.APIVersion))
 			continue
 		}
 
@@ -99,7 +99,7 @@ func handleSetMachineSetInfrastructureAPIVersion(_ context.Context, input *go_ho
 				"template": map[string]interface{}{
 					"spec": map[string]interface{}{
 						"infrastructureRef": map[string]interface{}{
-							"apiGroup": apiGroup,
+							"apiVersion": apiVersion,
 						},
 					},
 				},
