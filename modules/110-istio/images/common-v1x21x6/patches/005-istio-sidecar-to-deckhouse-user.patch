@@ -77,7 +77,6 @@ index f88fec8242..2ad5b870e4 100644
      - {{ .MeshConfig.ProxyInboundListenPort | default "15006" | quote }}
      - "-u"
 -    - {{ .ProxyUID | default "1337" | quote }}
-+    # Comma-separated: primary proxy UID (from mesh/OpenShift) plus 1337 for rolling upgrades (old sidecars).
 +    - {{ printf "%d,1337" (.ProxyUID | default 64535) | quote }}
      - "-m"
      - "{{ annotation .ObjectMeta `sidecar.istio.io/interceptionMode` .ProxyConfig.InterceptionMode }}"
