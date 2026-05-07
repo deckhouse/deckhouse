@@ -121,11 +121,6 @@ func NewSelfSignedCACert(cfg CertConfig, key crypto.Signer) (*x509.Certificate, 
 }
 
 // NewSignedCert creates a leaf certificate signed by the given CA.
-//
-// NotBefore is inherited from the CA certificate rather than set to time.Now().
-// This matches kubeadm behaviour: all certificates in the same PKI share the same
-// NotBefore anchor, which keeps the timeline consistent and avoids surprising
-// "cert is newer than its CA" situations.
 func NewSignedCert(cfg CertConfig, key crypto.Signer, caCert *x509.Certificate, caKey crypto.Signer) (*x509.Certificate, error) {
 	if len(cfg.CommonName) == 0 {
 		return nil, fmt.Errorf("must specify a CommonName")
@@ -139,7 +134,12 @@ func NewSignedCert(cfg CertConfig, key crypto.Signer, caCert *x509.Certificate, 
 
 	RemoveDuplicateAltNames(&cfg.AltNames)
 
-	notBefore := caCert.NotBefore
+	now := time.Now().UTC().Add(-constants.CertificateBackdate)
+	if now.Before(caCert.NotBefore) {
+		return nil, fmt.Errorf("cert cannot be newer than ca certificate")
+	}
+
+	notBefore := now
 	if !cfg.NotBefore.IsZero() {
 		notBefore = cfg.NotBefore
 	}
