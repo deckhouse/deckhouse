@@ -1,4 +1,5 @@
 {{- $hubbleUIVersion := include "get_oss_version_by_id" (list "cilium-hubble-ui" $ )  -}}
+{{- $hubbleUIFrontendAssetsVersion := "0.13.2-auth" -}}
 ---
 # Based on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1698
 # and on https://github.com/cilium/cilium/blob/v1.17.4/install/kubernetes/cilium/values.yaml#L1732
@@ -26,7 +27,7 @@ shell:
   # CSE
   - find /src/hubble-ui -mindepth 1 -maxdepth 1 ! -name 'backend' -exec rm -rf {} +
   # also, there is README.md in repo ;)
-  - git clone --depth 1 --branch v{{ $hubbleUIVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui-frontend-assets.git /src/frontend_prebuilt
+  - git clone --depth 1 --branch v{{ $hubbleUIFrontendAssetsVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui-frontend-assets.git /src/frontend_prebuilt
   - rm -r /src/frontend_prebuilt/.git
   - mkdir -p /src/server/public
   - mv /src/frontend_prebuilt/static/* /src/server/public
