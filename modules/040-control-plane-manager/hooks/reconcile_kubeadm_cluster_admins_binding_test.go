@@ -25,8 +25,11 @@ import (
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: reconcile_kubeadm_cluster_admins_binding ::", func() {
 	const (
-		valuesUserAuthzOff = `{"global": {"enabledModules": []}, "controlPlaneManager":{"internal": {}}}`
-		valuesUserAuthzOn  = `{"global": {"enabledModules": ["user-authz"]}, "controlPlaneManager":{"internal": {}}}`
+		// All four combinations of (user-authz on/off) × (bootstrapped true/false).
+		valuesUserAuthzOffNotBootstrapped = `{"global": {"enabledModules": [], "clusterIsBootstrapped": false}, "controlPlaneManager":{"internal": {}}}`
+		valuesUserAuthzOffBootstrapped    = `{"global": {"enabledModules": [], "clusterIsBootstrapped": true}, "controlPlaneManager":{"internal": {}}}`
+		valuesUserAuthzOnNotBootstrapped  = `{"global": {"enabledModules": ["user-authz"], "clusterIsBootstrapped": false}, "controlPlaneManager":{"internal": {}}}`
+		valuesUserAuthzOnBootstrapped     = `{"global": {"enabledModules": ["user-authz"], "clusterIsBootstrapped": true}, "controlPlaneManager":{"internal": {}}}`
 
 		crbCurrentClusterAdmin = `
 ---
@@ -57,7 +60,21 @@ subjects:
 - kind: Group
   name: kubeadm:cluster-admins
 `
+
+		userAuthzClusterAdminCR = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:cluster-admin
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get"]
+`
 	)
+
+	const internalCRAvailablePath = "controlPlaneManager.internal.userAuthzClusterAdminClusterRoleAvailable"
 
 	expectDesiredCRB := func(f *HookExecutionConfig, roleName string) {
 		crb := f.KubernetesGlobalResource("ClusterRoleBinding", "kubeadm:cluster-admins")
@@ -69,96 +86,138 @@ subjects:
 		Expect(crb.Field("subjects.0.name").String()).To(Equal("kubeadm:cluster-admins"))
 	}
 
-	Context("user-authz disabled", func() {
-		f := HookExecutionConfigInit(valuesUserAuthzOff, "")
-
-		Context("ClusterRoleBinding kubeadm:cluster-admins is missing", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(``))
-				f.RunHook()
-			})
-
-			It("creates the binding pointing to cluster-admin (kubeadm-default wildcard)", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				expectDesiredCRB(f, "cluster-admin")
-			})
+	// ── user-authz disabled: binding must always stay on cluster-admin (kubeadm-default) ──
+	Context("user-authz disabled and not bootstrapped, no CRB", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOffNotBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
 		})
-
-		Context("ClusterRoleBinding kubeadm:cluster-admins already targets cluster-admin", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin))
-				f.RunHook()
-			})
-
-			It("is a no-op (binding stays pointed at cluster-admin)", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				expectDesiredCRB(f, "cluster-admin")
-			})
-		})
-
-		Context("ClusterRoleBinding kubeadm:cluster-admins targets user-authz:cluster-admin", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin))
-				f.RunHook()
-			})
-
-			It("rebinds back to cluster-admin (Delete + Create — roleRef is immutable)", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				expectDesiredCRB(f, "cluster-admin")
-			})
+		It("creates the binding pointing to cluster-admin and exports CRAvailable=false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeFalse())
 		})
 	})
 
-	Context("user-authz enabled", func() {
-		f := HookExecutionConfigInit(valuesUserAuthzOn, "")
-
-		Context("ClusterRoleBinding kubeadm:cluster-admins is missing", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(``))
-				f.RunHook()
-			})
-
-			It("creates the binding pointing to user-authz:cluster-admin (granular)", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				expectDesiredCRB(f, "user-authz:cluster-admin")
-			})
+	Context("user-authz disabled and bootstrapped, CRB already on cluster-admin", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOffBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin))
+			f.RunHook()
 		})
-
-		Context("ClusterRoleBinding kubeadm:cluster-admins targets cluster-admin", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin))
-				f.RunHook()
-			})
-
-			It("rebinds to user-authz:cluster-admin (Delete + Create — roleRef is immutable)", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				expectDesiredCRB(f, "user-authz:cluster-admin")
-			})
+		It("is a no-op and exports CRAvailable=false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeFalse())
 		})
+	})
 
-		Context("ClusterRoleBinding kubeadm:cluster-admins already targets user-authz:cluster-admin", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin))
-				f.RunHook()
-			})
-
-			It("is a no-op (binding stays pointed at user-authz:cluster-admin)", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				expectDesiredCRB(f, "user-authz:cluster-admin")
-			})
+	Context("user-authz disabled, CRB on user-authz:cluster-admin (stale state)", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOffBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin + userAuthzClusterAdminCR))
+			f.RunHook()
 		})
+		It("rebinds back to cluster-admin (immutable roleRef → Delete+Create) even though the granular role exists", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue(), "CRAvailable must reflect the API state regardless of decision")
+		})
+	})
 
-		Context("OnBeforeHelm tick after KubeStateSet (Helm-driven reconcile)", func() {
-			BeforeEach(func() {
-				f.KubeStateSet(crbCurrentClusterAdmin)
-				f.BindingContexts.Set(f.GenerateBeforeHelmContext())
-				f.RunHook()
-			})
+	// ── user-authz enabled but cluster not yet bootstrapped: hold cluster-admin ──
+	Context("user-authz enabled but cluster not bootstrapped, granular role already in API", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnNotBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(userAuthzClusterAdminCR))
+			f.RunHook()
+		})
+		It("keeps cluster-admin until bootstrap finishes (gate 2)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+		})
+	})
 
-			It("rebinds the snapshot CRB to user-authz:cluster-admin on OnBeforeHelm too", func() {
-				Expect(f).To(ExecuteSuccessfully())
-				expectDesiredCRB(f, "user-authz:cluster-admin")
-			})
+	Context("user-authz enabled, NOT bootstrapped, CRB already pointing at user-authz:cluster-admin", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnNotBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin + userAuthzClusterAdminCR))
+			f.RunHook()
+		})
+		It("rolls the binding back to cluster-admin while bootstrap is still in flight", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+		})
+	})
+
+	// ── user-authz enabled and bootstrapped, granular role missing in API: hold cluster-admin ──
+	Context("user-authz enabled and bootstrapped, granular ClusterRole not yet in API", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+		It("keeps cluster-admin (gate 3 false) and exports CRAvailable=false", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeFalse())
+		})
+	})
+
+	// ── user-authz enabled, bootstrapped, granular role in API: switch happens ──
+	Context("user-authz enabled, bootstrapped, granular role in API, no CRB", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(userAuthzClusterAdminCR))
+			f.RunHook()
+		})
+		It("creates the binding pointing to user-authz:cluster-admin and exports CRAvailable=true", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "user-authz:cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+		})
+	})
+
+	Context("user-authz enabled, bootstrapped, granular role in API, CRB on cluster-admin", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin + userAuthzClusterAdminCR))
+			f.RunHook()
+		})
+		It("rebinds to user-authz:cluster-admin (immutable roleRef → Delete+Create)", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "user-authz:cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+		})
+	})
+
+	Context("user-authz enabled, bootstrapped, granular role in API, CRB already on user-authz:cluster-admin", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin + userAuthzClusterAdminCR))
+			f.RunHook()
+		})
+		It("is a no-op and keeps CRAvailable=true", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "user-authz:cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+		})
+	})
+
+	Context("OnBeforeHelm tick (Helm-driven reconcile) with all three gates satisfied", func() {
+		f := HookExecutionConfigInit(valuesUserAuthzOnBootstrapped, "")
+		BeforeEach(func() {
+			f.KubeStateSet(crbCurrentClusterAdmin + userAuthzClusterAdminCR)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+		It("rebinds the snapshot CRB to user-authz:cluster-admin on OnBeforeHelm too", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectDesiredCRB(f, "user-authz:cluster-admin")
+			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
 		})
 	})
 })
