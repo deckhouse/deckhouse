@@ -48,8 +48,10 @@
 
    <img src="/images/gs/installer/ingress-settings.png" alt="Настройки нового Ingress-контроллера" style="width: 100%;">
 
-2. Настройте шаблон DNS-имён, который будет использоваться для компонентов кластера.  
-   _Шаблон DNS-имен используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `grafana.kube.company.my`, и т.д._  
+2. Настройте шаблон DNS-имён, который будет использоваться для компонентов кластера.
+   {% alert level="info" %}
+   Шаблон DNS-имен используется для настройки Ingress-ресурсов системных приложений. Например, за интерфейсом Grafana закреплено имя `grafana`. Тогда, для шаблона `%s.kube.company.my` Grafana будет доступна по адресу `grafana.kube.company.my`, и т.д.
+   {% endalert %}
    Перейдите в раздел «Deckhouse» → «Глобальные настройки» и введите нужный шаблон в поле «Шаблон DNS-имен».
 
    <img src="/images/gs/installer/dns-settings.png" alt="Настройка шаблона DNS" style="width: 100%;">
