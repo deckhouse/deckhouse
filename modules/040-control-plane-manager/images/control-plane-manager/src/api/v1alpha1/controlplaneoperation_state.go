@@ -100,14 +100,14 @@ func (s *OperationState) SetCondition(cond metav1.Condition) {
 	meta.SetStatusCondition(&s.op.Status.Conditions, cond)
 }
 
-// EnsureInitialConditions populates missing operation and step conditions with Unknown state.
+// EnsureInitialConditions populates missing operation and step conditions with initial state.
 // Existing conditions are not modified.
 func (s *OperationState) EnsureInitialConditions() {
 	if s.op.GetCondition(CPOConditionCompleted) == nil {
 		s.SetCondition(metav1.Condition{
 			Type:   CPOConditionCompleted,
 			Status: metav1.ConditionUnknown,
-			Reason: CPOReasonOperationUnknown,
+			Reason: CPOReasonOperationPending,
 		})
 	}
 

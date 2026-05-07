@@ -245,7 +245,7 @@ func (s *ControllerTestSuite) TestReconcileNotApproved() {
 		completedCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionCompleted)
 		require.NotNil(s.T(), completedCond)
 		require.Equal(s.T(), metav1.ConditionUnknown, completedCond.Status)
-		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationUnknown, completedCond.Reason)
+		require.Equal(s.T(), controlplanev1alpha1.CPOReasonOperationPending, completedCond.Reason)
 
 		commandCond := meta.FindStatusCondition(got.Status.Conditions, controlplanev1alpha1.CPOConditionManifestsSynced)
 		require.NotNil(s.T(), commandCond)

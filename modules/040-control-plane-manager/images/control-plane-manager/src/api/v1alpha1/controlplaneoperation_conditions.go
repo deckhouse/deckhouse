@@ -42,7 +42,7 @@ const (
 	CPOReasonStepCompleted  = "Completed"
 	CPOReasonStepFailed     = "Failed"
 
-	CPOReasonOperationUnknown    = "OperationUnknown"
+	CPOReasonOperationPending    = "OperationPending"
 	CPOReasonOperationInProgress = "OperationInProgress"
 	CPOReasonOperationCompleted  = "OperationCompleted"
 	CPOReasonOperationFailed     = "OperationFailed"

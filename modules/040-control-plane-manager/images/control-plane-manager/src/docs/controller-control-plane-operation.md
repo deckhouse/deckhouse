@@ -24,8 +24,8 @@ On controller startup, it applies node-local kubeconfig policy once:
 ## Reconciliation Logic
 
 1. Load CPO.
-2. Initialize missing conditions with `Unknown` for non-terminal operations (`Completed` / `Abandoned` are terminal; `Failed` is retryable):
-   - `Completed` with `Status=Unknown, Reason=OperationUnknown`
+2. Initialize missing conditions for non-terminal operations (`Completed` / `Abandoned` are terminal; `Failed` is retryable):
+   - `Completed` with `Status=Unknown, Reason=OperationPending`
    - each step condition with `Status=Unknown, Reason=Unknown`
 3. Skip if not approved or already terminal:
    - `Completed=True, Reason=OperationCompleted`, or
