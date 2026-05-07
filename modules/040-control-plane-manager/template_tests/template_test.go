@@ -990,7 +990,7 @@ resources:
 	Context("webhook configuration in apiserver", func() {
 		const webhookTestValues = `
 internal:
-  effectiveKubernetesVersion: "1.31"
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1015,7 +1015,7 @@ apiserver:
 
 		const webhookAuthzMissingCATestValues = `
 internal:
-  effectiveKubernetesVersion: "1.31"
+  effectiveKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
