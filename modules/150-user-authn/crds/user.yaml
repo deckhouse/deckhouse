@@ -111,6 +111,7 @@ spec:
                       type: string
                       enum:
                         - PasswordPolicyLockout
+                        - LockedByAdministrator
                       description: |
                         Machine-readable reason for the account lock.
                         Used for programmatic checks and policy enforcement.
@@ -233,6 +234,7 @@ spec:
                       type: string
                       enum:
                         - PasswordPolicyLockout
+                        - LockedByAdministrator
                       description: |
                         Machine-readable reason for the account lock.
                         Used for programmatic checks and policy enforcement.
