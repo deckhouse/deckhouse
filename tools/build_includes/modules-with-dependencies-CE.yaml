@@ -327,14 +327,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/462-loki/hooks
-  to: /deckhouse/modules/462-loki/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/500-cilium-hubble/hooks
   to: /deckhouse/modules/500-cilium-hubble/hooks
   excludePaths:

@@ -439,17 +439,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/462-loki
-  to: /deckhouse/modules/462-loki
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/470-chrony
   to: /deckhouse/modules/470-chrony
   excludePaths:

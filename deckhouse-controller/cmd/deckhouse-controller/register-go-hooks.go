@@ -93,7 +93,6 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/hooks/storage"
 	_ "github.com/deckhouse/deckhouse/modules/402-ingress-nginx/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks"
-	_ "github.com/deckhouse/deckhouse/modules/462-loki/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/500-cilium-hubble/hooks/https"
 	_ "github.com/deckhouse/deckhouse/modules/500-okmeter/hooks"
