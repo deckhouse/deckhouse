@@ -15,4 +15,4 @@ Adopted upstream pr https://github.com/istio/istio/pull/58567.
 
 ## 003-change-to-deckhouse-user.patch
 
-Change default user from 1337 to 64535 in istio containers
+Change runAsUser from 1337 to 64535 in istio templates, changed istio-init.iptables user arg to both 1337 and 64535 UIDs in injection-template.yaml

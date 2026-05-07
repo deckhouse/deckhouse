@@ -10,4 +10,4 @@ Fix Sails operator check status about CNI
 
 ## 003-change-to-deckhouse-user.patch
 
-Change istio-init.iptables user arg to both 1337 and 64535 UIDs in injection-template.yaml
+Change runAsUser from 1337 to 64535 in istio templates, changed istio-init.iptables user arg to both 1337 and 64535 UIDs in injection-template.yaml
