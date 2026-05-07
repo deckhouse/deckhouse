@@ -51,7 +51,7 @@ description: Архитектура компонента KubeVirt модуля v
 
 KubeVirt состоит из следующих компонентов:
 
-1. **Virt-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.kubevirt.io` API Group. Virt-api выполняет валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API Group с помощью механизма [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Запросы проходят через сайдкар-контейнер **proxy**, который переименовывает метаданные из API Group `internal.virtualization.deckhouse.io` в API Group `kubervirt.io` и проксирует их на эндпойнт virt-api.
+1. **Virt-api** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), обслуживающий запросы к `subresources.kubevirt.io` API Group. Virt-api выполняет валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API Group с помощью механизма [Validating/Mutating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/). Запросы проходят через сайдкар-контейнер **proxy**, который переименовывает метаданные из API Group `internal.virtualization.deckhouse.io` в API Group `kubervirt.io` и проксирует их на эндпойнт virt-api.
 
    Cостоит из следующих контейнеров:
 
@@ -93,25 +93,9 @@ KubeVirt состоит из следующих компонентов:
 
 1. **Virt-launcher-**<имя VMI> — под, в котором запускается ВМ (точнее VirtualMachineInstance).
 
-   Cостоит из следующих контейнеров (набор контейнеров может быть разным в зависимости от конфигурации ВМ):
+   Cостоит из одного контейнера:
 
-   - **guest-console-log** — init-контейнер, настраивающий вывод журнала серийной консоли ВМ;
-   - init-контейнеры, подготавливающие диски ВМ:
-
-      - **volume<имя тома>-init**;
-      - **container-disk-binary**;
-      - **volumekernel-boot-volume-init**;
-   
-   - сайдкар-контейнеры дисков ВМ:
-
-      - **volume<имя тома>**;
-      - **volumekernel-boot-volume**;
-      - **virtiofs-volume**;
-
-   - hook sidecar контейнеры. Hook sidecar предоставляет гибкий механизм для расширения функциональности KubeVirt за счёт дополнительных контейнеров, которые могут выполнять произвольный код или запускать скрипты перед инициализацией ВМ. Таких контейнеров может быть несколько. Также может быть запущен network binding sidecar, вариант hook sidecar, расширяющий сетевые возможности для ВМ, запущенной в поде:
-      
-      - **hook-sidecar-<порядковый номер>**.
-   - **compute** — основной контейнер, в котором запускается virt-launcher. Virt-launcher реализует cmd-server (gRPC-срвер для удалённого выполнения команд).
+   - **compute** — контейнер, в котором запускается virt-launcher. Virt-launcher реализует cmd-server (gRPC-срвер для удалённого выполнения команд).
    
      Virt-launcher в зависимости от поступающей от virt-handler команды формирует XML-спецификацию запускаемой или обновляемой ВМ и отправляет ее в libvirtd. Libvirtd — это демон серверной части системы управления виртуализацией libvirt. Он работает на хост-серверах и выполняет задачи управления для виртуальных гостевых систем. 
 
@@ -120,10 +104,6 @@ KubeVirt состоит из следующих компонентов:
      Фактически libvirtd запускает процесс QEMU, который и есть ВМ (точнее VirtualMachineInstance).
 
      Также virt-handler постоянно следит за состоянием запущенной ВМ, которое возвращает libvirtd через virt-launcher, и обновляет статус VirtualMachineInstance.
-
-   Архитектура virt-launcher изображена на следующей диаграмме:
-
-![Архитектура компонента virt-launcher](../../../images/architecture/virtualization/c4-l2-virtualization-virt-launcher.ru.png)
    
 ## Взаимодействия KubeVirt
 
@@ -134,6 +114,8 @@ KubeVirt взаимодействует со следующими компоне
    - cледит за кастомными ресурсами KubeVirt, управляет компонентами KubeVirt;
    - следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами;
    - выполняет авторизацию запросов на получение метрик.
+
+1. [**CDI (Containerized-Data-Importer)**](cdi.html) — передает спецификацию диска и ссылку на образ для создаваемой виртуальной машины через кастомный ресурс DataVolumeTemplate. На основе шаблона DataVolumeTemplate создается ресурс DataVolume, а CDI импортирует образ диска из указанного в DataVolume/DataVolumeTemplate источника в PVC. Созданный PVC является диском виртуальной машины, управляемой KubeVirt. 
 
 С KubeVirt взаимодействуют следующие внешние компоненты:
 
