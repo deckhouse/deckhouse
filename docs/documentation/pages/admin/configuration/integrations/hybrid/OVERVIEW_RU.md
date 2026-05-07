@@ -695,7 +695,7 @@ lang: ru
   ```shell
   METADATA_B64="$(base64 -w0 metadata.json)"
   echo "$METADATA_B64"
-  ``` 
+  ```
 
 - Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
 - На виртуальной машине установлены необходимые базовые пакеты для поддерживаемой ОС. Для РЕД ОС заранее установите `which` и пакетный менеджер, если они отсутствуют.
