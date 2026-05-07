@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 16,
+  "version": 17,
   "statements": [
     {
       "vulnerability": {
@@ -245,6 +245,30 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Зависимость github.com/docker/docker является транзитивной, поступающей через цепочку werf (delivery-kit-sdk), go-containerregistry и addon-operator. Уязвимый функционал Docker Engine API не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller. Обновление зависимости невозможно без синхронного обновления всей цепочки werf/delivery-kit.",
       "timestamp": "2026-04-17T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-35469"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/moby/spdystream@v0.2.0"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/moby/spdystream версии 0.2.0 является транзитивной, поступающей через встроенные бинари (kubectl, k8s.io/* пакеты). В корневом go.mod уже используется фикс-версия v0.5.1. Уязвимый функционал spdystream-протокола не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов компонента deckhouse-controller.",
+      "timestamp": "2026-04-22T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-3219"
+      },
+      "products": [
+        {"@id": "pkg:pypi/pip@25.3"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал обработки TAR/ZIP polyglot-архивов pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Python-зависимости не обновляются, чтобы не нарушить совместимость с shell-operator.",
+      "timestamp": "2026-04-22T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
