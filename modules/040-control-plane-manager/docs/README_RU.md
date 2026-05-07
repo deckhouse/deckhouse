@@ -95,6 +95,32 @@ description: Deckhouse управляет компонентами control plane
   - Успешное понижение версии гарантируется только на одну версию вниз от максимальной минорной версии control plane, когда-либо использовавшейся в кластере.
   - Сначала на узлах кластера выполняется понижение версии kubelet, после чего производится понижение версии компонентов control plane.
 
+## Публикация API kubernetes
+
+Компонент kube-apiserver без дополнительных настроек доступен только во внутренней сети кластера. Этот модуль решает проблему простого и безопасного доступа к API Kubernetes извне кластера. 
+
+### Через Ingress
+
+Указанием параметров [`apiserver.publishAPI.ingress`](configuration.html#parameters-apiserver-publishapi-ingress) можно опубликовать API-сервер на специальном домене (подробнее см. [раздел о служебных доменах в документации](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+При настройке можно указать:
+
+* перечень сетевых адресов и подсетей, с которых разрешено подключение;
+* Ingress-контроллер, на котором производится публикация;
+* Использовать ли вручную заданный, полученный через cert-manager или автоматический самоподписанный сертификат TLS.
+
+По умолчанию будет сгенерирован специальный сертификат ЦС (CA) и автоматически настроен генератор kubeconfig.
+
+### Через сервис с типом LoadBalancer
+
+Указанием параметров [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) можно создать сервис с типом LoadBalancer `kube-system/d8-control-plane-apiserver`.
+
+При настройке можно указать:
+
+* перечень сетевых адресов и подсетей, с которых разрешено подключение;
+* внешний порт сервиса;
+* аннотации на сервис для настроек провайдера балансировки.
+
 ## Аудит
 
 Если требуется журналировать операции с API или отдебажить неожиданное поведение, для этого в Kubernetes предусмотрен [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/). Его можно настроить путем создания правил [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy), а результатом работы аудита будет лог-файл `/var/log/kube-audit/audit.log` со всеми интересующими операциями.
