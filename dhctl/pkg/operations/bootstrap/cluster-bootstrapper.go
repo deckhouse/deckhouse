@@ -246,7 +246,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	// Bundle registry shoud run before LoadConfigFromFile
-	stop, err := registry.Start(ctx,
+	registryStop, err := registry.Start(ctx,
 		registry.Params{
 			Logger:         b.loggerProvider(),
 			ConfigProvider: registryConfigProvider,
@@ -256,7 +256,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer stop()
+	defer registryStop()
 
 	// first, parse and check cluster config
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)

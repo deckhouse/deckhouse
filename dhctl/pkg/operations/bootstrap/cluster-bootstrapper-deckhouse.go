@@ -37,7 +37,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	}
 
 	// Bundle registry shoud run before ParseConfig
-	stop, err := registry.Start(ctx,
+	registryStop, err := registry.Start(ctx,
 		registry.Params{
 			Logger:         b.loggerProvider(),
 			ConfigProvider: registryConfigProvider,
@@ -47,7 +47,7 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer stop()
+	defer registryStop()
 
 	metaConfig, err := config.ParseConfig(
 		ctx,

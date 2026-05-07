@@ -54,7 +54,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		// Bundle registry shoud run before LoadConfigFromFile
-		stop, err := registry.Start(ctx,
+		registryStop, err := registry.Start(ctx,
 			registry.Params{
 				Logger:         loggerProvider(),
 				ConfigProvider: registryConfigProvider,
@@ -64,7 +64,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		defer stop()
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,
@@ -120,7 +120,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		// Bundle registry shoud run before LoadConfigFromFile
-		stop, err := registry.Start(ctx,
+		registryStop, err := registry.Start(ctx,
 			registry.Params{
 				Logger:         loggerProvider(),
 				ConfigProvider: registryConfigProvider,
@@ -130,7 +130,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		if err != nil {
 			return err
 		}
-		defer stop()
+		defer registryStop()
 
 		metaConfig, err := config.LoadConfigFromFile(
 			ctx,

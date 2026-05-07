@@ -58,7 +58,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	// Bundle registry shoud run before LoadConfigFromFile
-	stop, err := registry.Start(ctx,
+	registryStop, err := registry.Start(ctx,
 		registry.Params{
 			Logger:         b.loggerProvider(),
 			ConfigProvider: registryConfigProvider,
@@ -68,7 +68,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	if err != nil {
 		return err
 	}
-	defer stop()
+	defer registryStop()
 
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
