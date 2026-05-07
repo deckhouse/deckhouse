@@ -7133,7 +7133,6 @@ modules-having-alerts:
     - istio
     - kube-dns
     - log-shipper
-    - loki
     - metallb
     - monitoring-applications
     - monitoring-custom
