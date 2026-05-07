@@ -27,8 +27,6 @@ set -Eeo pipefail
 %s
 
 {{ template "bb-minget" $ }}
-{{ template "bb-discover-node-name" $ }}
-
 ` $lib) $ctx }}
 
 export PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID="{{ .clusterUUID | default "" }}"
@@ -60,12 +58,14 @@ bb-rpp-get-install
   {{- end }}
 {{- end }}
 
-# discover node name and ip
+# discover node name and ip for first bootstraping master node
 
+{{- if eq .runType "ClusterBootstrap" }}
+{{- template "bb-discover-node-name" . }}
 mkdir -p /var/lib/bashible
 bb-discover-node-name
-
 {{- $bbniCandi := "candi/bashible/bb_node_ip.sh.tpl" }}
 {{- $bbniDeckhouse := "/deckhouse/candi/bashible/bb_node_ip.sh.tpl" }}
 {{- $bbni := .Files.Get $bbniDeckhouse | default (.Files.Get $bbniCandi) }}
 {{- tpl $bbni . | nindent 0 }}
+{{- end }}

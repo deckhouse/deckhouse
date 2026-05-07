@@ -54,22 +54,8 @@ spec:
           whether the operation completed successfully (see Phase and CurrentStep columns of `kubectl get cpo`).
         properties:
           apiVersion:
-            description: |-
-              Specifies the API version this object belongs to.
-
-              The server converts supported versions of the resource to the latest internal format and may reject unrecognized versions.
-
-              For details on required fields in resources, refer to the [Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources).
             type: string
           kind:
-            description: |-
-              String value that defines the type of resource this object represents.
-
-              The server may infer this value from the endpoint the client sends requests to.
-
-              This field is immutable and must be specified in CamelCase.
-
-              For details on resource types, refer to the [Kubernetes documentation](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds).
             type: string
           metadata:
             type: object
