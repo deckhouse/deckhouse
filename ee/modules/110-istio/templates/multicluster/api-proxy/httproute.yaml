@@ -1,6 +1,9 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- if and .Values.istio.multicluster.enabled $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+  {{- if eq (include "helm_lib_module_https_mode" .) "Disabled" }}
+    {{- fail "HTTPS is mandatory for api proxy." }}
+  {{- end }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
