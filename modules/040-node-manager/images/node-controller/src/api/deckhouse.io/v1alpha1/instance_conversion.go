@@ -146,9 +146,11 @@ func convertInstanceStatusToV1Alpha2(src InstanceStatus) v1alpha2.InstanceStatus
 	if src.CurrentStatus.Phase != "" {
 		dst.Phase = v1alpha2.InstancePhase(src.CurrentStatus.Phase)
 	}
-	dst.BootstrapStatus = v1alpha2.BootstrapStatus{
-		LogsEndpoint: src.BootstrapStatus.LogsEndpoint,
-		Description:  src.BootstrapStatus.Description,
+	if src.BootstrapStatus.LogsEndpoint != "" || src.BootstrapStatus.Description != "" {
+		dst.BootstrapStatus = &v1alpha2.BootstrapStatus{
+			LogsEndpoint: src.BootstrapStatus.LogsEndpoint,
+			Description:  src.BootstrapStatus.Description,
+		}
 	}
 
 	return dst
@@ -206,9 +208,11 @@ func convertInstanceStatusFromV1Alpha2(srcSpec v1alpha2.InstanceSpec, srcStatus 
 	if srcStatus.Phase != "" {
 		status.CurrentStatus.Phase = InstancePhase(srcStatus.Phase)
 	}
-	status.BootstrapStatus = BootstrapStatus{
-		LogsEndpoint: srcStatus.BootstrapStatus.LogsEndpoint,
-		Description:  srcStatus.BootstrapStatus.Description,
+	if srcStatus.BootstrapStatus != nil {
+		status.BootstrapStatus = BootstrapStatus{
+			LogsEndpoint: srcStatus.BootstrapStatus.LogsEndpoint,
+			Description:  srcStatus.BootstrapStatus.Description,
+		}
 	}
 
 	return status

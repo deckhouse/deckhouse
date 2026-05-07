@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -32,7 +33,9 @@ const instanceBashibleStatusFieldOwner = "node-controller-instance-bashible-stat
 func (s *InstanceService) ReconcileBashibleStatus(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	desiredStatus := bashibleStatusFromConditions(instance.Status.Conditions)
 	desiredMessage := messageFromConditions(instance.Status.Conditions)
-	if instance.Status.BashibleStatus == desiredStatus && instance.Status.Message == desiredMessage {
+	hasBashibleReady := hasBashibleReadyCondition(instance.Status.Conditions)
+	clearBootstrapStatus := hasBashibleReady && instance.Status.BootstrapStatus != nil
+	if instance.Status.BashibleStatus == desiredStatus && instance.Status.Message == desiredMessage && !clearBootstrapStatus {
 		return nil
 	}
 	log.FromContext(ctx).V(4).Info("tick", "op", "instance.bashible_status.patch")
@@ -63,5 +66,37 @@ func (s *InstanceService) ReconcileBashibleStatus(ctx context.Context, instance 
 
 	instance.Status.BashibleStatus = desiredStatus
 	instance.Status.Message = desiredMessage
+	if clearBootstrapStatus {
+		if err := clearInstanceBootstrapStatus(ctx, s.client, instance.Name); err != nil {
+			return err
+		}
+		instance.Status.BootstrapStatus = nil
+	}
 	return nil
+}
+
+func clearInstanceBootstrapStatus(ctx context.Context, c client.Client, instanceName string) error {
+	obj := &deckhousev1alpha2.Instance{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: deckhousev1alpha2.GroupVersion.String(),
+			Kind:       "Instance",
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: instanceName},
+	}
+	patch := client.RawPatch(types.MergePatchType, []byte(`{"status":{"bootstrapStatus":null}}`))
+	if err := c.Status().Patch(ctx, obj, patch); err != nil {
+		return fmt.Errorf("clear instance %q bootstrap status: %w", instanceName, err)
+	}
+
+	return nil
+}
+
+func hasBashibleReadyCondition(conditions []deckhousev1alpha2.InstanceCondition) bool {
+	for i := range conditions {
+		if conditions[i].Type == deckhousev1alpha2.InstanceConditionTypeBashibleReady {
+			return true
+		}
+	}
+
+	return false
 }

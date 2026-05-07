@@ -61,7 +61,7 @@ type InstanceStatus struct {
 	Message string `json:"message,omitempty"`
 
 	// Information about instance bootstrapping process.
-	BootstrapStatus BootstrapStatus `json:"bootstrapStatus,omitempty"`
+	BootstrapStatus *BootstrapStatus `json:"bootstrapStatus,omitempty"`
 
 	// Raw status observations.
 	Conditions []InstanceCondition `json:"conditions,omitempty"`

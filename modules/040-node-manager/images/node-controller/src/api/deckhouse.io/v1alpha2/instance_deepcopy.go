@@ -97,6 +97,11 @@ func (in *InstanceList) DeepCopyObject() runtime.Object {
 // DeepCopyInto copies receiver into out.
 func (in *InstanceStatus) DeepCopyInto(out *InstanceStatus) {
 	*out = *in
+	if in.BootstrapStatus != nil {
+		inBootstrapStatus, outBootstrapStatus := &in.BootstrapStatus, &out.BootstrapStatus
+		*outBootstrapStatus = new(BootstrapStatus)
+		**outBootstrapStatus = **inBootstrapStatus
+	}
 	if in.Conditions != nil {
 		inConditions, outConditions := &in.Conditions, &out.Conditions
 		*outConditions = make([]InstanceCondition, len(*inConditions))
