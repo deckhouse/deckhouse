@@ -13,6 +13,6 @@ Fix Istio CVE vulnerabilities
 Implement graceful transition for remote multicluster secrets. To prevent connectivity gaps during secret rotation, the old secret is no longer dismissed immediately. Instead, it remains active until the new secret is processed and all associated metadata is synced.
 Adopted upstream pr https://github.com/istio/istio/pull/58567.
 
-## 003-istio-sidecar-to-deckhouse-user.patch
+## 003-change-to-deckhouse-user.patch
 
-Change default user from 1337 to 64535 in istio-proxy sidecar
+Change default user from 1337 to 64535 in istio containers

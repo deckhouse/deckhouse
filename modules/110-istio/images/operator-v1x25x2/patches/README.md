@@ -8,6 +8,6 @@ Fix Istio CVE vulnerabilities
 
 Fix Sails operator check status about CNI
 
-## 003-injection-template-add-deckhouse-user.patch
+## 003-change-to-deckhouse-user.patch
 
 Change istio-init.iptables user arg to both 1337 and 64535 UIDs in injection-template.yaml
