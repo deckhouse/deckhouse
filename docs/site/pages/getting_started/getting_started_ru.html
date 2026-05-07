@@ -90,6 +90,11 @@ toc: false
 
       document.getElementById(installTabName).classList.add("active");
       evt.currentTarget.classList.add("active");
+      if (installTabName === "tab-gui-install" && window.refreshInstallerCarousels) {
+        window.requestAnimationFrame(function() {
+          window.refreshInstallerCarousels();
+        });
+      }
   }
 
   function getHashValue() {
@@ -104,6 +109,11 @@ toc: false
         document.getElementById("tab-gui-install").classList.add("active");
         document.getElementById("tab-button-manual-install").classList.remove("active");
         document.getElementById("tab-button-gui-install").classList.add("active");
+        if (window.refreshInstallerCarousels) {
+          window.requestAnimationFrame(function() {
+            window.refreshInstallerCarousels();
+          });
+        }
       }
   });
 </script>

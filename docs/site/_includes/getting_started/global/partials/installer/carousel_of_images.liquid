@@ -1,0 +1,43 @@
+{%- assign installer_data = site.data.getting_started.installer.screenshots -%}
+{%- assign filter_group = include.group | default: '' | strip -%}
+{%- assign total_slides = 0 -%}
+{%- for block in installer_data.screenshots -%}
+  {%- if filter_group == '' or block.group == filter_group -%}
+    {%- for item in block.items -%}
+      {%- assign total_slides = total_slides | plus: 1 -%}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if total_slides > 0 -%}
+<div class="installer_box installer-carousel" data-installer-carousel data-counter-lang="{% if page.lang == 'ru' %}ru{% else %}en{% endif %}">
+  <div class="installer-carousel__viewport">
+    <div class="installer-carousel__track">
+      {%- for block in installer_data.screenshots -%}
+        {%- if filter_group == '' or block.group == filter_group -%}
+          {%- for item in block.items -%}
+      <div class="installer-carousel__slide">
+        <figure class="installer-carousel__figure">
+          <img
+            src="/images/gs/installer/{{ item.filename }}"
+            alt="{{ item.title | default: '' | escape }}"
+            decoding="async"
+          />
+          {%- if item.title -%}
+          <figcaption class="installer-carousel__caption">{{ item.title | escape }}</figcaption>
+          {%- endif -%}
+        </figure>
+      </div>
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+    </div>
+  </div>
+  {%- if total_slides > 1 -%}
+  <div class="installer-carousel__nav" role="group" aria-label="{% if page.lang == 'ru' %}Слайды{% else %}Slides{% endif %}">
+    <button type="button" class="installer-carousel__prev" aria-label="{% if page.lang == 'ru' %}Предыдущий слайд{% else %}Previous slide{% endif %}">←</button>
+    <span class="installer-carousel__counter" aria-live="polite">{% if page.lang == 'ru' %}(1 из {{ total_slides }}){% else %}(1 of {{ total_slides }}){% endif %}</span>
+    <button type="button" class="installer-carousel__next" aria-label="{% if page.lang == 'ru' %}Следующий слайд{% else %}Next slide{% endif %}">→</button>
+  </div>
+  {%- endif -%}
+</div>
+{%- endif -%}

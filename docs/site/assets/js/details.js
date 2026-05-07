@@ -1,5 +1,11 @@
 $( document ).ready(function() {
   $('.details__summary').on('click tap', function() {
-    $(this).closest('.details').toggleClass('active');
+    var $details = $(this).closest('.details');
+    $details.toggleClass('active');
+    if ($details.hasClass('active') && window.refreshInstallerCarousels) {
+      requestAnimationFrame(function() {
+        window.refreshInstallerCarousels();
+      });
+    }
   });
 });
