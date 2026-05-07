@@ -1187,17 +1187,18 @@ internal:
 				f.HelmRender()
 			})
 
-			It("should keep the kubeadm-default cluster-admin wildcard binding and skip the supplement", func() {
+			It("should keep the kubeadm-default cluster-admin wildcard binding but already render the supplement (it is purely additive on the same group)", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(main.Exists()).To(BeTrue())
 				Expect(main.Field("roleRef.name").String()).To(Equal("cluster-admin"))
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
-				Expect(sup.Exists()).To(BeFalse())
+				Expect(sup.Exists()).To(BeTrue())
+				Expect(sup.Field("roleRef.name").String()).To(Equal("d8:control-plane-manager:admin-kubeconfig-supplement"))
 
 				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
-				Expect(supCR.Exists()).To(BeFalse())
+				Expect(supCR.Exists()).To(BeTrue())
 			})
 		})
 
@@ -1209,17 +1210,17 @@ internal:
 				f.HelmRender()
 			})
 
-			It("should keep the kubeadm-default cluster-admin wildcard binding (avoid SSA failure on missing roleRef target)", func() {
+			It("should keep the kubeadm-default cluster-admin wildcard binding (avoid SSA failure on missing roleRef target) but still render the supplement", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(main.Exists()).To(BeTrue())
 				Expect(main.Field("roleRef.name").String()).To(Equal("cluster-admin"))
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
-				Expect(sup.Exists()).To(BeFalse())
+				Expect(sup.Exists()).To(BeTrue())
 
 				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
-				Expect(supCR.Exists()).To(BeFalse())
+				Expect(supCR.Exists()).To(BeTrue())
 			})
 		})
 
@@ -1243,17 +1244,6 @@ internal:
 
 				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
 				Expect(supCR.Exists()).To(BeTrue())
-			})
-
-			It("should not duplicate nodes/proxy in the supplement role (it lives in user-authz:cluster-admin)", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
-				Expect(supCR.Exists()).To(BeTrue())
-				for _, rule := range supCR.Field("rules").Array() {
-					for _, res := range rule.Get("resources").Array() {
-						Expect(res.String()).ToNot(Equal("nodes/proxy"))
-					}
-				}
 			})
 		})
 	})

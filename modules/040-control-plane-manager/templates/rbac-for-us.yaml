@@ -74,8 +74,8 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 {{- $userAuthzEnabled := has "user-authz" ($.Values.global.enabledModules | default list) }}
 {{- /*
-  Granular admin.conf is gated by THREE independent flags to avoid the chicken-and-egg case on
-  a fresh cluster: kubeadm pre-creates ClusterRoleBinding kubeadm:cluster-admins -> cluster-admin,
+  ClusterRoleBinding kubeadm:cluster-admins is gated by THREE independent flags to avoid the
+  chicken-and-egg case on a fresh cluster: kubeadm pre-creates kubeadm:cluster-admins -> cluster-admin,
   Helm cannot mutate roleRef (it is immutable), and SSA fails permanently if the desired
   ClusterRole does not yet exist.
 
@@ -97,10 +97,20 @@ roleRef:
   set asynchronously by hooks — an early helm render happens before the parent maps are populated,
   and a chained lookup through a missing parent would either fail or silently render the granular
   branch. The binding is switched ONLY when all three flags are explicitly true.
+
+  NOTE on supplement: the supplement ClusterRole+ClusterRoleBinding render under a SINGLE gate
+  ($userAuthzEnabled), without waiting for clusterBootstrapped/userAuthzCRAvailable. The supplement
+  is a strict ADD-ON of permissions to the same Group/kubeadm:cluster-admins, so even before the
+  main binding flips it does no harm (the kubeadm-default cluster-admin wildcard already grants
+  more than the supplement does). Pre-rendering the supplement collapses the otherwise-unavoidable
+  transient window where the main binding has already moved to user-authz:cluster-admin (which
+  intentionally does NOT include nodes/proxy) but the supplement is not yet applied — without
+  this split, kubectl exec/logs/port-forward via admin.conf would briefly return 403 right after
+  the rebind.
 */}}
 {{- $clusterBootstrapped := dig "clusterIsBootstrapped" false .Values.global }}
 {{- $userAuthzCRAvailable := dig "internal" "userAuthzClusterAdminClusterRoleAvailable" false .Values.controlPlaneManager }}
-{{- if and $userAuthzEnabled (eq $clusterBootstrapped true) (eq $userAuthzCRAvailable true) }}
+{{- if $userAuthzEnabled }}
 ---
 # Extra rules for identity kubernetes-admin (group kubeadm:cluster-admins) beyond user-authz:cluster-admin.
 # No user-authz.deckhouse.io/access-level annotation: that pattern is for optional ClusterRoles merged into
@@ -120,6 +130,15 @@ rules:
 - apiGroups: [""]
   resources: ["nodes/status"]
   verbs: ["get", "patch", "update"]
+# Required for kube-apiserver-kubelet-client (group kubeadm:cluster-admins per kubeadm 1.29+ defaults):
+# every kubelet API call from apiserver (exec, attach, logs, portforward) is authorized as nodes/proxy.
+# Deliberately kept OUT of user-authz:cluster-admin so that the high-level ClusterAdmin role
+# (granted to users via ClusterAuthorizationRule.accessLevel=ClusterAdmin) does NOT silently turn
+# into a root-on-every-node permission via the kubelet API. nodes/proxy is admin.conf-specific
+# and lives only in this supplement bound to Group/kubeadm:cluster-admins.
+- apiGroups: [""]
+  resources: ["nodes/proxy"]
+  verbs: ["get", "create"]
 - apiGroups: [""]
   resources: ["users", "groups", "serviceaccounts"]
   verbs: ["impersonate"]
@@ -233,14 +252,34 @@ rules:
 - apiGroups: ["apps", "extensions"]
   resources: ["deployments/scale", "statefulsets/scale", "replicasets/scale"]
   verbs: ["get", "patch", "update"]
+---
+# Supplement ClusterRoleBinding renders under the SINGLE gate $userAuthzEnabled (deliberately
+# without waiting for clusterBootstrapped/userAuthzCRAvailable). It is purely additive on the
+# same Group/kubeadm:cluster-admins, so it cannot harm the cluster while the main binding is
+# still on the kubeadm-default cluster-admin wildcard. Rendering it early eliminates the
+# transient 403 window for kubectl exec/logs/port-forward right after the main rebind.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:control-plane-manager:kubeadm-cluster-admins-supplement
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:control-plane-manager:admin-kubeconfig-supplement
+subjects:
+- kind: Group
+  name: kubeadm:cluster-admins
+{{- end }}
 {{/*
-  ClusterRoleBinding kubeadm:cluster-admins: binds group from admin.conf to RBAC roles.
-  - With user-authz AND cluster bootstrapped: two bindings so the union matches high-level ClusterAdmin
-    (which now includes nodes/proxy for apiserver -> kubelet path) plus machine-only extras (same group).
-  - Otherwise (fresh cluster or user-authz disabled): single binding to built-in cluster-admin (wildcard).
-  Hook reconcile_kubeadm_cluster_admins_binding (OnBeforeHelm, Order=5) recreates this binding when its
-  desired roleRef changes (roleRef is immutable in Kubernetes RBAC).
+  ClusterRoleBinding kubeadm:cluster-admins: binds the admin.conf group to RBAC.
+  Switched to user-authz:cluster-admin only when all three gates are satisfied; otherwise stays
+  on the kubeadm-default cluster-admin wildcard so the very first helm install does not collide
+  with the immutable roleRef rule. Hook reconcile_kubeadm_cluster_admins_binding (OnBeforeHelm,
+  Order=5) actually recreates the binding when its desired roleRef changes — Helm SSA on its own
+  cannot mutate roleRef.
 */}}
+{{- if and $userAuthzEnabled (eq $clusterBootstrapped true) (eq $userAuthzCRAvailable true) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -251,19 +290,6 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: user-authz:cluster-admin
-subjects:
-- kind: Group
-  name: kubeadm:cluster-admins
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: d8:control-plane-manager:kubeadm-cluster-admins-supplement
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: d8:control-plane-manager:admin-kubeconfig-supplement
 subjects:
 - kind: Group
   name: kubeadm:cluster-admins
