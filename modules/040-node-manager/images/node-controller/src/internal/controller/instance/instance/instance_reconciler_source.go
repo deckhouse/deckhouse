@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 )
 
 type sourceStatus string
@@ -151,6 +152,15 @@ func (s *InstanceService) linkedNodeStatus(ctx context.Context, nodeName string)
 			return sourceStatusNotFound, nil
 		}
 		return "", fmt.Errorf("get node %q: %w", nodeName, err)
+	}
+
+	if !instancecommon.IsStaticNode(node) {
+		logger.V(1).Info(
+			"linked source is no longer static",
+			"sourceType", instanceSourceNode,
+			"nodeName", nodeName,
+		)
+		return sourceStatusNotFound, nil
 	}
 
 	return sourceStatusFound, nil

@@ -37,6 +37,7 @@ import (
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	instancecommon "github.com/deckhouse/node-controller/internal/controller/instance/common"
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -606,6 +607,30 @@ func TestReconcileCreateFromSource(t *testing.T) {
 			wantInstancePhase: deckhousev1alpha2.InstancePhaseRunning,
 		},
 		{
+			name:       "both absent static node with capi annotation present",
+			targetName: "node-capi",
+			objects: []client.Object{
+				staticNodeWithCAPIMachineAnnotation("node-capi", "machine-a"),
+			},
+			wantResult: ctrl.Result{},
+		},
+		{
+			name:       "both absent static node with caps provider id present",
+			targetName: "node-caps-provider-id",
+			objects: []client.Object{
+				staticNodeWithProviderID("node-caps-provider-id", "static:///hash"),
+			},
+			wantResult: ctrl.Result{},
+		},
+		{
+			name:       "both absent static node with caps provider id annotation present",
+			targetName: "node-caps-provider-id-annotation",
+			objects: []client.Object{
+				staticNodeWithProviderIDAnnotation("node-caps-provider-id-annotation", "static:///hash"),
+			},
+			wantResult: ctrl.Result{},
+		},
+		{
 			name:       "both absent non static node present",
 			targetName: "node-d",
 			objects: []client.Object{
@@ -910,6 +935,31 @@ func staticNode(name string) *corev1.Node {
 			},
 		},
 	}
+}
+
+func staticNodeWithCAPIMachineAnnotation(name, machineName string) *corev1.Node {
+	node := staticNode(name)
+	node.Annotations = map[string]string{
+		nodecommon.CAPIMachineAnnotation: machineName,
+	}
+
+	return node
+}
+
+func staticNodeWithProviderID(name, providerID string) *corev1.Node {
+	node := staticNode(name)
+	node.Spec.ProviderID = providerID
+
+	return node
+}
+
+func staticNodeWithProviderIDAnnotation(name, providerID string) *corev1.Node {
+	node := staticNode(name)
+	node.Annotations = map[string]string{
+		nodecommon.ProviderIDAnnotation: providerID,
+	}
+
+	return node
 }
 
 func nonStaticNode(name string) *corev1.Node {

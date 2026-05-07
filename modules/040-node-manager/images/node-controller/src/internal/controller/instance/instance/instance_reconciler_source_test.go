@@ -23,8 +23,10 @@ import (
 	"testing"
 
 	capi "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/instance/common/machine"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -86,7 +88,12 @@ func TestReconcileLinkedSourceExistence(t *testing.T) {
 				},
 			},
 			initialObjects: []client.Object{
-				&corev1.Node{ObjectMeta: v1.ObjectMeta{Name: "static-node"}},
+				&corev1.Node{ObjectMeta: v1.ObjectMeta{
+					Name: "static-node",
+					Labels: map[string]string{
+						nodecommon.NodeTypeLabel: string(deckhousev1.NodeTypeStatic),
+					},
+				}},
 			},
 		},
 		{
@@ -151,6 +158,66 @@ func TestReconcileLinkedSourceExistenceDeletes(t *testing.T) {
 				Spec: deckhousev1alpha2.InstanceSpec{
 					NodeRef: deckhousev1alpha2.NodeRef{Name: "ghost-node"},
 				},
+			},
+		},
+		{
+			name: "node source with capi backed node",
+			instance: &deckhousev1alpha2.Instance{
+				ObjectMeta: v1.ObjectMeta{Name: "node-source-capi-backed"},
+				Spec: deckhousev1alpha2.InstanceSpec{
+					NodeRef: deckhousev1alpha2.NodeRef{Name: "capi-backed-node"},
+				},
+			},
+			initialObjects: []client.Object{
+				&corev1.Node{ObjectMeta: v1.ObjectMeta{
+					Name: "capi-backed-node",
+					Labels: map[string]string{
+						nodecommon.NodeTypeLabel: string(deckhousev1.NodeTypeStatic),
+					},
+					Annotations: map[string]string{
+						nodecommon.CAPIMachineAnnotation: "machine-a",
+					},
+				}},
+			},
+		},
+		{
+			name: "node source with caps provider id",
+			instance: &deckhousev1alpha2.Instance{
+				ObjectMeta: v1.ObjectMeta{Name: "node-source-caps-provider-id"},
+				Spec: deckhousev1alpha2.InstanceSpec{
+					NodeRef: deckhousev1alpha2.NodeRef{Name: "caps-provider-id-node"},
+				},
+			},
+			initialObjects: []client.Object{
+				&corev1.Node{
+					ObjectMeta: v1.ObjectMeta{
+						Name: "caps-provider-id-node",
+						Labels: map[string]string{
+							nodecommon.NodeTypeLabel: string(deckhousev1.NodeTypeStatic),
+						},
+					},
+					Spec: corev1.NodeSpec{ProviderID: "static:///hash"},
+				},
+			},
+		},
+		{
+			name: "node source with caps provider id annotation",
+			instance: &deckhousev1alpha2.Instance{
+				ObjectMeta: v1.ObjectMeta{Name: "node-source-caps-provider-id-annotation"},
+				Spec: deckhousev1alpha2.InstanceSpec{
+					NodeRef: deckhousev1alpha2.NodeRef{Name: "caps-provider-id-annotation-node"},
+				},
+			},
+			initialObjects: []client.Object{
+				&corev1.Node{ObjectMeta: v1.ObjectMeta{
+					Name: "caps-provider-id-annotation-node",
+					Labels: map[string]string{
+						nodecommon.NodeTypeLabel: string(deckhousev1.NodeTypeStatic),
+					},
+					Annotations: map[string]string{
+						nodecommon.ProviderIDAnnotation: "static:///hash",
+					},
+				}},
 			},
 		},
 		{

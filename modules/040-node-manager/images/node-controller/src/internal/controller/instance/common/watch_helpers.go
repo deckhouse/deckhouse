@@ -18,6 +18,7 @@ package common
 
 import (
 	"context"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -30,6 +31,8 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
+
+const capsProviderIDPrefix = "static:///"
 
 func MapObjectNameToInstance(_ context.Context, obj client.Object) []reconcile.Request {
 	return []reconcile.Request{
@@ -75,7 +78,21 @@ func IsStaticNode(node *corev1.Node) bool {
 	if _, hasCAPIMachineAnnotation := node.Annotations[nodecommon.CAPIMachineAnnotation]; hasCAPIMachineAnnotation {
 		return false
 	}
+	if isCAPSProviderID(node.Spec.ProviderID) {
+		return false
+	}
+	if isCAPSProviderID(node.Annotations[nodecommon.ProviderIDAnnotation]) {
+		return false
+	}
 
 	nodeType := deckhousev1.NodeType(node.Labels[nodecommon.NodeTypeLabel])
 	return nodeType == deckhousev1.NodeTypeStatic || nodeType == deckhousev1.NodeTypeCloudPermanent
+}
+
+func isCAPSProviderID(providerID string) bool {
+	if !strings.HasPrefix(providerID, capsProviderIDPrefix) {
+		return false
+	}
+
+	return len(providerID) > len(capsProviderIDPrefix)
 }

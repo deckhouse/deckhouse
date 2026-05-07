@@ -45,6 +45,14 @@ func TestStaticNodeEventPredicateCreateDelete(t *testing.T) {
 
 	require.False(t, pred.CreateFunc(event.CreateEvent{Object: nodeWithAnnotation("annotated-static")}))
 	require.False(t, pred.DeleteFunc(event.DeleteEvent{Object: nodeWithAnnotation("annotated-static")}))
+	require.False(t, pred.CreateFunc(event.CreateEvent{Object: nodeWithProviderID("caps-static", "static:///hash")}))
+	require.False(t, pred.DeleteFunc(event.DeleteEvent{Object: nodeWithProviderID("caps-static", "static:///hash")}))
+	require.False(t, pred.CreateFunc(event.CreateEvent{Object: nodeWithProviderIDAnnotation("caps-static", "static:///hash")}))
+	require.False(t, pred.DeleteFunc(event.DeleteEvent{Object: nodeWithProviderIDAnnotation("caps-static", "static:///hash")}))
+	require.True(t, pred.CreateFunc(event.CreateEvent{Object: nodeWithProviderID("plain-static", "static://")}))
+	require.True(t, pred.DeleteFunc(event.DeleteEvent{Object: nodeWithProviderID("plain-static", "static://")}))
+	require.True(t, pred.CreateFunc(event.CreateEvent{Object: nodeWithProviderID("empty-caps-id", "static:///")}))
+	require.True(t, pred.DeleteFunc(event.DeleteEvent{Object: nodeWithProviderID("empty-caps-id", "static:///")}))
 }
 
 func TestStaticNodeEventPredicateUpdate(t *testing.T) {
@@ -95,6 +103,24 @@ func TestStaticNodeEventPredicateUpdate(t *testing.T) {
 			newObj: nodeWithAnnotation("node"),
 			want:   false,
 		},
+		{
+			name:   "caps provider id added",
+			oldObj: staticNode("node", nil),
+			newObj: nodeWithProviderID("node", "static:///hash"),
+			want:   true,
+		},
+		{
+			name:   "caps provider id annotation added",
+			oldObj: staticNode("node", nil),
+			newObj: nodeWithProviderIDAnnotation("node", "static:///hash"),
+			want:   true,
+		},
+		{
+			name:   "plain static provider id remains static",
+			oldObj: staticNode("node", nil),
+			newObj: nodeWithProviderID("node", "static://"),
+			want:   false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -114,6 +140,22 @@ func staticNode(name string, extra map[string]string) *corev1.Node {
 
 func nodeWithAnnotation(name string) *corev1.Node {
 	return makeNode(name, string(deckhousev1.NodeTypeStatic), nil, true)
+}
+
+func nodeWithProviderID(name, providerID string) *corev1.Node {
+	node := staticNode(name, nil)
+	node.Spec.ProviderID = providerID
+
+	return node
+}
+
+func nodeWithProviderIDAnnotation(name, providerID string) *corev1.Node {
+	node := staticNode(name, nil)
+	node.Annotations = map[string]string{
+		nodecommon.ProviderIDAnnotation: providerID,
+	}
+
+	return node
 }
 
 func makeNode(name, nodeType string, extra map[string]string, annotated bool) *corev1.Node {
