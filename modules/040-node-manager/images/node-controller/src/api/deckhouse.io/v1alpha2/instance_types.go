@@ -60,8 +60,20 @@ type InstanceStatus struct {
 	// Human-readable details for current state.
 	Message string `json:"message,omitempty"`
 
+	// Information about instance bootstrapping process.
+	BootstrapStatus BootstrapStatus `json:"bootstrapStatus,omitempty"`
+
 	// Raw status observations.
 	Conditions []InstanceCondition `json:"conditions,omitempty"`
+}
+
+// BootstrapStatus is information about bootstrapping process.
+type BootstrapStatus struct {
+	// Endpoint for getting bootstrap logs.
+	LogsEndpoint string `json:"logsEndpoint,omitempty"`
+
+	// Description about getting logs.
+	Description string `json:"description,omitempty"`
 }
 
 // InstancePhase is a high-level lifecycle phase.

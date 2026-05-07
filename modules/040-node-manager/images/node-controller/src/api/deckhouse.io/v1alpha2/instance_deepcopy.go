@@ -21,6 +21,21 @@ import (
 )
 
 // DeepCopyInto copies receiver into out.
+func (in *BootstrapStatus) DeepCopyInto(out *BootstrapStatus) {
+	*out = *in
+}
+
+// DeepCopy creates a deep copy.
+func (in *BootstrapStatus) DeepCopy() *BootstrapStatus {
+	if in == nil {
+		return nil
+	}
+	out := new(BootstrapStatus)
+	in.DeepCopyInto(out)
+	return out
+}
+
+// DeepCopyInto copies receiver into out.
 func (in *Instance) DeepCopyInto(out *Instance) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta

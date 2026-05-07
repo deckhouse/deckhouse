@@ -133,6 +133,16 @@ spec:
                     A human-readable message indicating details about the current status or error.
 
                     Displayed in CLI only when using `-o wide` for `d8 k`.
+                bootstrapStatus:
+                  type: object
+                  description: Information about instance bootstrapping process.
+                  properties:
+                    logsEndpoint:
+                      type: string
+                      description: http endpoint for getting bootstrap logs.
+                    description:
+                      type: string
+                      description: Description about getting logs.
                 conditions:
                   description: Detailed conditions of the instance (`MachineReady`, `BashibleReady`, etc.).
                   type: array

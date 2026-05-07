@@ -46,6 +46,7 @@ func (obj *Instance) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Status.MachineStatus = restored.Status.MachineStatus
 	dst.Status.BashibleStatus = restored.Status.BashibleStatus
 	dst.Status.Message = restored.Status.Message
+	dst.Status.BootstrapStatus = restored.Status.BootstrapStatus
 	dst.Status.Conditions = restored.Status.Conditions
 	if restored.Status.Phase != "" {
 		dst.Status.Phase = restored.Status.Phase
@@ -145,6 +146,10 @@ func convertInstanceStatusToV1Alpha2(src InstanceStatus) v1alpha2.InstanceStatus
 	if src.CurrentStatus.Phase != "" {
 		dst.Phase = v1alpha2.InstancePhase(src.CurrentStatus.Phase)
 	}
+	dst.BootstrapStatus = v1alpha2.BootstrapStatus{
+		LogsEndpoint: src.BootstrapStatus.LogsEndpoint,
+		Description:  src.BootstrapStatus.Description,
+	}
 
 	return dst
 }
@@ -200,6 +205,10 @@ func convertInstanceStatusFromV1Alpha2(srcSpec v1alpha2.InstanceSpec, srcStatus 
 
 	if srcStatus.Phase != "" {
 		status.CurrentStatus.Phase = InstancePhase(srcStatus.Phase)
+	}
+	status.BootstrapStatus = BootstrapStatus{
+		LogsEndpoint: srcStatus.BootstrapStatus.LogsEndpoint,
+		Description:  srcStatus.BootstrapStatus.Description,
 	}
 
 	return status

@@ -62,6 +62,13 @@ spec:
                     Человекочитаемое сообщение с деталями текущего состояния или ошибки.
 
                     В CLI отображается только при использовании флага `-o wide` при вызове `d8 k`.
+                bootstrapStatus:
+                  description: Информация о процессе начальной настройки узла.
+                  properties:
+                    logsEndpoint:
+                      description: HTTP-эндпоинт для получения логов начальной настройки узла.
+                    description:
+                      description: Описание процесса получения логов начальной настройки узла.
                 conditions:
                   description: Детализированные условия Instance (MachineReady, BashibleReady и т.д.).
                   items:
