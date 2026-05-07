@@ -46,7 +46,7 @@ description: Архитектура компонента KubeVirt модуля v
 Архитектура компонента KubeVirt модуля [`virtualization`](/modules/virtualization/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_RU --->
-![Архитектура компонента virt сontroller/API модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-virt-controller.ru.png)
+![Архитектура компонента virt сontroller/API модуля virtualization](../../../images/architecture/virtualization/c4-l2-virtualization-kubevirt.ru.png)
 
 ## Компоненты KubeVirt
 
@@ -85,7 +85,7 @@ KubeVirt состоит из следующих компонентов:
    - **virt-launcher-image-holder** — служебный сайдкар-контейнер для предварительного скачивания образа virt-launcher. Контейнер стоит на паузе и выполняет только функцию хранения образа;
    - **pr-helper** — [QEMU persistent reservation helper](https://www.qemu.org/docs/master/tools/qemu-pr-helper.html), служебный сайдкар-контейнер, создаёт сокет-слушатель, который принимает входящие соединения для коммуникации с QEMU. Это необходимо поскольку операционная система ограничивает отправку отправка команд SCSI с постоянным резервированием непривилегированным программам, что не позволяет совместно использовать блочные SCSI-устройства несколькими ВМ, например в случае кластеризации. [QEMU](https://www.qemu.org/) — свободная программа с открытым исходным кодом для эмуляции аппаратного обеспечения различных платформ, которая используется для запуска ВМ в поде.
 
-1. **Virt-operator** — оператор Kubernetes, управляющий жизненным циклом компонентов KubeVirt при помощи кастомного ресурса KubeVirt. Virt-operator устанавливает в кластере virt-api, virt-controller и virt-handler, а также выполняет их настройку.
+1. **Virt-operator** — оператор Kubernetes, управляющий жизненным циклом компонентов KubeVirt при помощи кастомного ресурса InternalVirtualizationKubeVirt. Virt-operator устанавливает в кластере virt-api, virt-controller и virt-handler, а также выполняет их настройку.
 
    Cостоит из следующих контейнеров:
 
@@ -122,7 +122,7 @@ KubeVirt взаимодействует со следующими компоне
 
 1. **Kube-apiserver**:
 
-   - отправляет запросы на валидацию кастомных ресурсов KubeVirt;
+   - отправляет запросы на валидацию кастомных ресурсов InternalVirtualizationKubeVirt;
    - отправляет запросы на валидацию и мутацию кастомных ресурсов из `internal.virtualization.deckhouse.io` API-группы.
 
 1. **Prometheus-main** — собирает метрики компонентов.
