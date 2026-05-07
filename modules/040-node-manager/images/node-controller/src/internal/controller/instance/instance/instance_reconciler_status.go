@@ -35,7 +35,8 @@ func (s *InstanceService) ReconcileBashibleStatus(ctx context.Context, instance 
 	desiredMessage := messageFromConditions(instance.Status.Conditions)
 	hasBashibleReady := hasBashibleReadyCondition(instance.Status.Conditions)
 	clearBootstrapStatus := hasBashibleReady && instance.Status.BootstrapStatus != nil
-	if instance.Status.BashibleStatus == desiredStatus && instance.Status.Message == desiredMessage && !clearBootstrapStatus {
+	bashibleStatusChanged := instance.Status.BashibleStatus != desiredStatus || instance.Status.Message != desiredMessage
+	if !bashibleStatusChanged && !clearBootstrapStatus {
 		return nil
 	}
 	log.FromContext(ctx).V(4).Info("tick", "op", "instance.bashible_status.patch")
