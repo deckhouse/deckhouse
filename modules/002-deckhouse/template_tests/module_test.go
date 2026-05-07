@@ -148,6 +148,14 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
   - operator: Exists
 `))
 		})
+
+		It("Heritage label admission policies must render", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			denyHeritageLabelPolicy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "deny-heritage-label-update.deckhouse.io")
+			denyHeritageLabelBinding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "deny-heritage-label-update.deckhouse.io")
+			Expect(denyHeritageLabelPolicy.Exists()).To(BeTrue())
+			Expect(denyHeritageLabelBinding.Exists()).To(BeTrue())
+		})
 	})
 
 	Context("Cluster with deckhouse on system node", func() {
