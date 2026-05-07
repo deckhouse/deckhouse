@@ -292,6 +292,25 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 }
 
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
+	suite.Run("simple delete test", func() {
+		m := `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+  finalizers:
+  - modules.deckhouse.io/module-registered
+  deletionTimestamp: "2024-01-01T00:00:00Z"
+spec:
+  enabled: true
+`
+		suite.setupTestController(m)
+
+		config := suite.moduleConfig("test-module")
+		assert.NotNil(suite.T(), config.DeletionTimestamp)
+		assert.Len(suite.T(), config.Finalizers, 1)
+	})
+
 	suite.Run("delete clears maintenance label", func() {
 		suite.setupTestController(string(suite.parseTestdata("delete-maintenance-label.yaml")))
 
