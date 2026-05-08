@@ -4,7 +4,7 @@
 {{- $httpRouteKindExists := or (include "helm_lib_kind_exists" (list . "HTTPRoute")) ((.Values.global.discovery.apiVersions | default list) | has "gateway.networking.k8s.io/v1/HTTPRoute") }}
 {{- $gatewayAPIEnabled := and $moduleGateway $gatewayKindExists $httpRouteKindExists }}
 {{- $featureGates := list "ACMEHTTP01IngressPathTypeExact=false" }}
-{{- if and .Values.certManager.enableListenerSet $gatewayAPIEnabled }}
+{{- if .Values.certManager.enableListenerSet }}
   {{- $featureGates = append $featureGates "ListenerSets=true" }}
 {{- end }}
 {{- define "cert_manager_resources" }}

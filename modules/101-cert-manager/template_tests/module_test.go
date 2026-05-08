@@ -581,4 +581,25 @@ namespace: d8-ingress-gateway
 			Expect(args).To(ContainSubstring("--enable-gateway-api-listenerset=true"))
 		})
 	})
+
+	Context("<ListenerSet feature gate without Gateway API>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager+certManagerGatewayAPI)
+			f.HelmRender()
+		})
+
+		It("should enable ListenerSets feature gate only", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			certManagerDeployment := f.KubernetesResource("Deployment", "d8-cert-manager", "cert-manager")
+			Expect(certManagerDeployment.Exists()).To(BeTrue())
+
+			args := certManagerDeployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--feature-gates=ACMEHTTP01IngressPathTypeExact=false,ListenerSets=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api=true"))
+			Expect(args).NotTo(ContainSubstring("--enable-gateway-api-listenerset=true"))
+		})
+	})
 })
