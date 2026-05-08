@@ -1,10 +1,10 @@
-{{- if .Values.userAuthn.publishAPI.enabled }}
+{{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: kubernetes
-  namespace: d8-{{ .Chart.Name }}
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   clusterIP: None
@@ -12,7 +12,7 @@ spec:
   - name: https
     port: 443
     protocol: TCP
-    targetPort: {{ .Values.userAuthn.internal.kubernetesApiserverTargetPort }}
+    targetPort: {{ .Values.controlPlaneManager.internal.kubernetesApiserverTargetPort }}
   sessionAffinity: None
   type: ClusterIP
 ---
@@ -20,15 +20,15 @@ apiVersion: v1
 kind: Endpoints
 metadata:
   name: kubernetes
-  namespace: d8-{{ .Chart.Name }}
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 subsets:
 - addresses:
-  {{- range $address := .Values.userAuthn.internal.kubernetesApiserverAddresses }}
+  {{- range $address := .Values.controlPlaneManager.internal.kubernetesApiserverAddresses }}
   - ip: {{ $address }}
   {{- end }}
   ports:
   - name: https
-    port: {{ .Values.userAuthn.internal.kubernetesApiserverTargetPort }}
+    port: {{ .Values.controlPlaneManager.internal.kubernetesApiserverTargetPort }}
     protocol: TCP
 {{- end }}

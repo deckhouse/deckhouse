@@ -36,7 +36,7 @@ type PublishAPICert struct {
 	Data []byte `json:"data"`
 }
 
-func applyPublishAPISecretCertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyPublishAPICertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	s := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, s)
 	if err != nil {
@@ -44,16 +44,6 @@ func applyPublishAPISecretCertFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	return PublishAPICert{Name: obj.GetName(), Data: s.Data["ca.crt"]}, nil
-}
-
-func applyPublishAPICertFilterCPM(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	scpm := &v1.Secret{}
-	err := sdk.FromUnstructured(obj, scpm)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
-	}
-
-	return PublishAPICert{Name: obj.GetName(), Data: scpm.Data["publishedAPIKubeconfigGeneratorMasterCA"]}, nil
 }
 
 var possiblePublishAPISecretNames = []string{
@@ -71,54 +61,32 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "Secret",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{"d8-user-authn"},
+					MatchNames: []string{"kube-system"},
 				},
 			},
 			NameSelector: &types.NameSelector{
 				MatchNames: possiblePublishAPISecretNames,
 			},
-			FilterFunc: applyPublishAPISecretCertFilter,
-		},
-		{
-			Name:       "secret_cpm",
-			ApiVersion: "v1",
-			Kind:       "Secret",
-			NamespaceSelector: &types.NamespaceSelector{
-				NameSelector: &types.NameSelector{
-					MatchNames: []string{"kube-system"},
-				},
-			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-publish-api-config"},
-			},
-			FilterFunc: applyPublishAPICertFilterCPM,
+			FilterFunc: applyPublishAPICertFilter,
 		},
 	},
 }, discoverPublishAPICA)
 
 func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 	var (
-		secretPath     = "userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA"
-		modePath       = "userAuthn.publishAPI.https.mode"
-		globalOptsPath = "userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA"
+		secretPath     = "controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA"
+		modePath       = "controlPlaneManager.apiserver.publishAPI.ingress.https.mode"
+		globalOptsPath = "controlPlaneManager.apiserver.publishAPI.ingress.https.global.kubeconfigGeneratorMasterCA"
 		kubeCAPath     = "global.discovery.kubernetesCA"
 	)
 
-	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.Snapshots.Get("secret_cpm")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'secret_cpm' snapshot: %w", err)
-		}
-		input.Values.Set(secretPath, string(publishCert.Data))
-		return nil
-	}
-
-	caCertificatesBytes := make(map[string][]byte)
+	caCertificates := make(map[string][]byte)
 	for publishCert, err := range sdkobjectpatch.SnapshotIter[PublishAPICert](input.Snapshots.Get("secret")) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'secret' snapshot: %w", err)
 		}
 
-		caCertificatesBytes[publishCert.Name] = publishCert.Data
+		caCertificates[publishCert.Name] = publishCert.Data
 	}
 
 	var cert string
@@ -128,7 +96,7 @@ func discoverPublishAPICA(_ context.Context, input *go_hook.HookInput) error {
 		if input.Values.Exists(globalOptsPath) {
 			cert = input.Values.Get(globalOptsPath).String()
 		} else {
-			switch module.GetHTTPSMode("userAuthn", input) {
+			switch module.GetHTTPSMode("global.modules", input) {
 			case "CertManager":
 				cert, err = getCert(input, "kubernetes-tls")
 				if err != nil {
@@ -176,7 +144,7 @@ func getCert(input *go_hook.HookInput, secretKey string) (string, error) {
 			cert = string(caCertificates[name])
 			continue
 		}
-		input.PatchCollector.DeleteInBackground("v1", "Secret", "d8-user-authn", name)
+		input.PatchCollector.DeleteInBackground("v1", "Secret", "kube-system", name)
 	}
 	return cert, nil
 }

@@ -27,29 +27,30 @@ import (
 
 type inputPublishAPICACert struct {
 	manifests          string
-	httpMode           string
+	httpsMode          string
 	publishAPIMode     string
 	kubeconfigMasterCA *string
 }
 
-var _ = Describe("User Authn hooks :: discover publish api cert ::", func() {
+var _ = Describe("Control plane manager hooks :: discover publish api cert ::", func() {
 	f := HookExecutionConfigInit(
 		`
 global:
+  modules:
+    https:
+      mode: CertManager
   discovery:
     kubernetesCA: "discoveredKubernetesCA"
-userAuthn:
-  publishAPI:
-    enabled: true
-    https:
-      mode: SelfSigned
-  internal:
+controlPlaneManager:
+  apiserver:
     publishAPI:
-      enabled: true
-      https:
-        mode: SelfSigned
-  https:
-    mode: CertManager`,
+      ingress:
+        enabled: true
+        https:
+          mode: SelfSigned
+  internal:
+    authn: {}
+`,
 		"",
 	)
 	selfSignedCertSecret := `
@@ -58,7 +59,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: kubernetes-tls-selfsigned
-  namespace: d8-user-authn
+  namespace: kube-system
 data:
   ca.crt: a3ViZXJuZXRlcy10bHMtc2VsZnNpZ25lZA==
 `
@@ -68,7 +69,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: kubernetes-tls
-  namespace: d8-user-authn
+  namespace: kube-system
 data:
   ca.crt: a3ViZXJuZXRlcy10bHM=
 `
@@ -78,40 +79,31 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: kubernetes-tls-customcertificate
-  namespace: d8-user-authn
+  namespace: kube-system
 data:
   ca.crt: a3ViZXJuZXRlcy10bHMtY3VzdG9tY2VydGlmaWNhdGU=
 `
-	cpmConfigSecret := `
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-publish-api-config
-  namespace: kube-system
-data:
-  publishedAPIKubeconfigGeneratorMasterCA: Y29udHJvbFBsYW5lTWFuYWdlckNB
-`
+
 	DescribeTable("publishAPI discovery cert",
 		func(in inputPublishAPICACert, out string) {
 			f.BindingContexts.Set(f.KubeStateSet(in.manifests))
-			f.ValuesSet("userAuthn.publishAPI.https.mode", in.publishAPIMode)
-			f.ValuesSet("userAuthn.https.mode", in.httpMode)
+			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", in.publishAPIMode)
+			f.ValuesSet("global.modules.https.mode", in.httpsMode)
 
 			if in.kubeconfigMasterCA != nil {
-				f.ValuesSet("userAuthn.publishAPI.https.global.kubeconfigGeneratorMasterCA", *in.kubeconfigMasterCA)
+				f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.global.kubeconfigGeneratorMasterCA", *in.kubeconfigMasterCA)
 			}
 
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthn.internal.publishAPI.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal(out))
+			Expect(f.ValuesGet("controlPlaneManager.internal.authn.publishedAPIKubeconfigGeneratorMasterCA").String()).To(Equal(out))
 		},
 		Entry("On first start: SelfSigned",
 			inputPublishAPICACert{
 				manifests:      "",
 				publishAPIMode: "SelfSigned",
-				httpMode:       "CertManager",
+				httpsMode:      "CertManager",
 			},
 			"discoveredKubernetesCA",
 		),
@@ -119,7 +111,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
 				publishAPIMode: "SelfSigned",
-				httpMode:       "CertManager",
+				httpsMode:      "CertManager",
 			},
 			"kubernetes-tls-selfsigned",
 		),
@@ -127,7 +119,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      certManagerCertSecret + customCertSecret,
 				publishAPIMode: "SelfSigned",
-				httpMode:       "CertManager",
+				httpsMode:      "CertManager",
 			},
 			"discoveredKubernetesCA",
 		),
@@ -135,7 +127,7 @@ data:
 			inputPublishAPICACert{
 				manifests:          "",
 				publishAPIMode:     "SelfSigned",
-				httpMode:           "CertManager",
+				httpsMode:          "CertManager",
 				kubeconfigMasterCA: ptr.To("test"),
 			},
 			"discoveredKubernetesCA",
@@ -144,7 +136,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
 				publishAPIMode: "Global",
-				httpMode:       "CertManager",
+				httpsMode:      "CertManager",
 			},
 			"kubernetes-tls",
 		),
@@ -152,7 +144,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      selfSignedCertSecret + customCertSecret,
 				publishAPIMode: "Global",
-				httpMode:       "CertManager",
+				httpsMode:      "CertManager",
 			},
 			"discoveredKubernetesCA",
 		),
@@ -160,7 +152,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
 				publishAPIMode: "Global",
-				httpMode:       "CustomCertificate",
+				httpsMode:      "CustomCertificate",
 			},
 			"kubernetes-tls-customcertificate",
 		),
@@ -168,7 +160,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      selfSignedCertSecret + certManagerCertSecret,
 				publishAPIMode: "Global",
-				httpMode:       "CustomCertificate",
+				httpsMode:      "CustomCertificate",
 			},
 			"discoveredKubernetesCA",
 		),
@@ -176,7 +168,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret,
 				publishAPIMode: "Global",
-				httpMode:       "OnlyInURI",
+				httpsMode:      "OnlyInURI",
 			},
 			"discoveredKubernetesCA",
 		),
@@ -184,7 +176,7 @@ data:
 			inputPublishAPICACert{
 				manifests:      "",
 				publishAPIMode: "Global",
-				httpMode:       "OnlyInURI",
+				httpsMode:      "OnlyInURI",
 			},
 			"discoveredKubernetesCA",
 		),
@@ -192,7 +184,7 @@ data:
 			inputPublishAPICACert{
 				manifests:          "",
 				publishAPIMode:     "Global",
-				httpMode:           "OnlyInURI",
+				httpsMode:          "OnlyInURI",
 				kubeconfigMasterCA: ptr.To("testMasterCA"),
 			},
 			"testMasterCA",
@@ -201,33 +193,25 @@ data:
 			inputPublishAPICACert{
 				manifests:          "",
 				publishAPIMode:     "Global",
-				httpMode:           "OnlyInURI",
+				httpsMode:          "OnlyInURI",
 				kubeconfigMasterCA: ptr.To(""),
 			},
 			"",
-		),
-		Entry("With control-plane-manager imported CM:",
-			inputPublishAPICACert{
-				manifests:      selfSignedCertSecret + certManagerCertSecret + customCertSecret + cpmConfigSecret,
-				publishAPIMode: "Global",
-				httpMode:       "CustomCertificate",
-			},
-			"controlPlaneManagerCA",
 		),
 	)
 
 	Context("With all secrets in cluster", func() {
 		BeforeEach(func() {
-			f.ValuesSet("userAuthn.publishAPI.https.mode", "SelfSigned")
-			f.ValuesSet("userAuthn.https.mode", "CertManager")
+			f.ValuesSet("controlPlaneManager.apiserver.publishAPI.ingress.https.mode", "SelfSigned")
+			f.ValuesSet("global.modules.https.mode", "CertManager")
 			f.BindingContexts.Set(f.KubeStateSet(selfSignedCertSecret + certManagerCertSecret + customCertSecret))
 			f.RunHook()
 		})
 
 		It("Should delete not matching secrets", func() {
-			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-selfsigned").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-selfsigned").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Secret", "kube-system", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
 		})
 	})
 })
