@@ -60,7 +60,9 @@ tags:
 
 > **Важно!** В данной схеме размещения необходим bastion-хост для доступа к узлам (его можно создать вместе с кластером, указав параметры в секции `withNAT.bastionInstance`).
 >
-> **Важно!** В этой схеме размещения NAT Gateway всегда создается в зоне `a`. Если узлы кластера будут заказаны в других зонах, при проблемах в зоне `a` они также будут недоступны. Другими словами, при выборе схемы размещения `WithNat` доступность всего кластера будет зависеть от работоспособности зоны `a`.
+> **Важно!** По умолчанию (`withNAT.natGatewayMode: Single`) создается один NAT Gateway в одной зоне доступности, и все private-подсети используют его как default route.
+> Для отказоустойчивости между зонами используйте `withNAT.natGatewayMode: PerAZ` — будет создан отдельный NAT Gateway для каждой Availability Zone (кроме Local Zone).
+> Учтите, что режим `PerAZ` увеличивает стоимость.
 
 Виртуальные машины выходят в интернет через NAT Gateway с общим и единственным IP-адресом.
 
@@ -78,6 +80,7 @@ provider:
   providerSecretAccessKey: '<AWS_SECRET_ACCESS_KEY>'
   region: eu-central-1
 withNAT:
+  natGatewayMode: PerAZ
   bastionInstance:
     zone: eu-central-1a
     instanceClass:
