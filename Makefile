@@ -308,6 +308,7 @@ docs: bin/werf ## Run containers with the documentation.
 docs-generate-pdf: ## Generate PDF documentation.
   ##~ Options: DKP_DOC_VERSION=X.XX - version of the documentation, if not set, the version is determined from the git branch name.
   ##~ Options: ONLY_RU=1 or ONLY_EN=1 - build a single language, do not combine both.
+  ##~ Outputs: PDF/deckhouse-admin-guide_{ru,en}.pdf and PDF/deckhouse-user-guide_{ru,en}.pdf
 	## GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1;
 	@GET_DOCUMENTATION_TMPDIR=/tmp/dkp-pdf; \
 	export GET_DOCUMENTATION_TMPDIR; \
@@ -329,6 +330,24 @@ docs-generate-pdf: ## Generate PDF documentation.
 		-e DKP_DOC_VERSION="$$DKP_DOC_VERSION" \
 		-e ONLY_RU="$(strip $(ONLY_RU))" \
 		-e ONLY_EN="$(strip $(ONLY_EN))" \
+		-v "$(CURDIR)/tools/docs/pdf/get_pdf_page.py:/app/get_pdf_page.py:ro" \
+		-v "$(CURDIR)/tools/docs/pdf/toc_style.css:/app/toc_style.css:ro" \
+		-v "$(CURDIR)/tools/docs/pdf/toc_template.xsl:/app/toc_template.xsl:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/app/docs-dkp:/app/content:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/app/embedded-modules:/app/embedded-modules:ro" \
+		-v "$(CURDIR)/docs/documentation/_data/sidebars/main.yml:/app/main.yml:ro" \
+		-v "$(CURDIR)/PDF:/out" \
+		konstantinnezhbert/deckhouse-docs-builder:0.1 \
+		python3 get_pdf_page.py && \
+	docker run --rm \
+		-w /app \
+		-e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
+		-e DKP_DOC_VERSION="$$DKP_DOC_VERSION" \
+		-e ONLY_RU="$(strip $(ONLY_RU))" \
+		-e ONLY_EN="$(strip $(ONLY_EN))" \
+		-e SECTION_FILTER="Using" \
+		-e GUIDE_TITLE_EN="User's guide" \
+		-e GUIDE_TITLE_RU="Руководство пользователя" \
 		-v "$(CURDIR)/tools/docs/pdf/get_pdf_page.py:/app/get_pdf_page.py:ro" \
 		-v "$(CURDIR)/tools/docs/pdf/toc_style.css:/app/toc_style.css:ro" \
 		-v "$(CURDIR)/tools/docs/pdf/toc_template.xsl:/app/toc_template.xsl:ro" \

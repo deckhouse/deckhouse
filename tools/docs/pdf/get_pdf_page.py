@@ -54,8 +54,16 @@ def embedded_modules_root(lang: str) -> str:
     return os.path.join("embedded-modules", lang, "modules")
 
 
-def traverse_menu_to_list(yaml_file_path: str, lang: str) -> List[Dict[str, Optional[str]]]:
-    """Collects sidebar entries with localized title (lang, fallback ru/en, or plain string)."""
+def traverse_menu_to_list(
+    yaml_file_path: str,
+    lang: str,
+    only_top_section: Optional[str] = None,
+) -> List[Dict[str, Optional[str]]]:
+    """Collects sidebar entries with localized title (lang, fallback ru/en, or plain string).
+
+    When only_top_section is set, only entries under the matching top-level section are returned.
+    The match is checked against both EN and RU title values of level-0 entries.
+    """
     with open(yaml_file_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -74,22 +82,32 @@ def traverse_menu_to_list(yaml_file_path: str, lang: str) -> List[Dict[str, Opti
                 return title
         return ""
 
-    def walk(node: Any, level: int) -> None:
+    def walk(node: Any, level: int, in_section: Optional[bool] = None) -> None:
         if isinstance(node, list):
             for item in node:
-                walk(item, level)
+                walk(item, level, in_section)
         elif isinstance(node, dict):
-            title_loc = get_localized_title(node)
-            if title_loc:
-                url = node.get("url")
-                results.append({
-                    "title": title_loc,
-                    "level": level,
-                    "url": url
-                })
-            folders = node.get("folders")
-            if folders is not None:
-                walk(folders, level + 1)
+            if level == 0 and only_top_section is not None:
+                raw = node.get("title", {})
+                en_title = (raw.get("en") or "").strip() if isinstance(raw, dict) else ""
+                ru_title = (raw.get("ru") or "").strip() if isinstance(raw, dict) else ""
+                in_section = (en_title == only_top_section or ru_title == only_top_section)
+            if in_section is None or in_section:
+                title_loc = get_localized_title(node)
+                if title_loc:
+                    url = node.get("url")
+                    results.append({
+                        "title": title_loc,
+                        "level": level,
+                        "url": url
+                    })
+                folders = node.get("folders")
+                if folders is not None:
+                    walk(folders, level + 1, in_section)
+            else:
+                folders = node.get("folders")
+                if folders is not None:
+                    walk(folders, level + 1, False)
 
     entries = data.get("entries", [])
     walk(entries, level=0)
@@ -108,7 +126,7 @@ def generate_html_header(title: str = "Extracted content", lang: str = "ru") -> 
     <title>""" + title + """</title>
     <style>
         body {
-            font-size: 200%;
+            font-size: 15px;
         }
         a, a:link, a:visited, a:hover, a:active {
             color: black;
@@ -800,9 +818,14 @@ def append_embedded_modules(out_f, lang: str) -> None:
             out_f.write(content)
 
 
-def process_menu_and_extract_content(yaml_file_path: str, lang: str) -> None:
+def process_menu_and_extract_content(
+    yaml_file_path: str,
+    lang: str,
+    section_filter: Optional[str] = None,
+    include_embedded_modules: bool = True,
+) -> None:
     """Builds extracted_content_{lang}.html: main.yml → content/{lang}, then embedded-modules."""
-    menu_items = traverse_menu_to_list(yaml_file_path, lang)
+    menu_items = traverse_menu_to_list(yaml_file_path, lang, only_top_section=section_filter)
     intermediate = intermediate_html_path(lang)
     base_content = content_base_path(lang)
 
@@ -840,35 +863,43 @@ def process_menu_and_extract_content(yaml_file_path: str, lang: str) -> None:
 
             out_f.write(content)
 
-        append_embedded_modules(out_f, lang)
+        if include_embedded_modules:
+            append_embedded_modules(out_f, lang)
 
         out_f.write("</body>\n</html>\n")
 
 
-def _wkhtml_ui_strings(lang: str, dkp_doc_version: str) -> Tuple[str, str, str]:
+def _wkhtml_ui_strings(
+    lang: str,
+    dkp_doc_version: str,
+    guide_title_en: str = "Administrator's guide",
+    guide_title_ru: str = "Справочник администратора",
+) -> Tuple[str, str, str]:
     """Header left, footer right, TOC title for wkhtmltopdf."""
     if lang == "en":
+        guide_title = guide_title_en
         if dkp_doc_version:
             header_left = (
                 f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
-                "Administrator's guide - [section]"
+                f"{guide_title} - [section]"
             )
         else:
             header_left = (
-                "Deckhouse Kubernetes Platform. "
-                "Administrator's guide - [section]"
+                f"Deckhouse Kubernetes Platform. "
+                f"{guide_title} - [section]"
             )
         footer_right = "Page [page]"
         toc_header = "Contents"
     else:
+        guide_title = guide_title_ru
         if dkp_doc_version:
             header_left = (
                 f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
-                "Справочник администратора - [section]"
+                f"{guide_title} - [section]"
             )
         else:
             header_left = (
-                "Deckhouse Kubernetes Platform. Справочник администратора - [section]"
+                f"Deckhouse Kubernetes Platform. {guide_title} - [section]"
             )
         footer_right = "Страница [page]"
         toc_header = "Содержание"
@@ -901,17 +932,25 @@ def selected_pdf_langs() -> Tuple[str, ...]:
 if __name__ == "__main__":
     base_pdf = os.environ.get("PDF_OUTPUT_PATH", "deckhouse-admin-guide.pdf")
     dkp_doc_version = os.environ.get("DKP_DOC_VERSION", "").strip()
+    section_filter = os.environ.get("SECTION_FILTER", "").strip() or None
+    guide_title_en = os.environ.get("GUIDE_TITLE_EN", "").strip() or "Administrator's guide"
+    guide_title_ru = os.environ.get("GUIDE_TITLE_RU", "").strip() or "Справочник администратора"
     langs_to_build = selected_pdf_langs()
 
     for lang in langs_to_build:
         print(f"Starting HTML content extraction ({lang})...")
-        process_menu_and_extract_content(SIDEBAR_YAML, lang)
+        process_menu_and_extract_content(
+            SIDEBAR_YAML,
+            lang,
+            section_filter=section_filter,
+            include_embedded_modules=(section_filter is None),
+        )
         print(f"Result saved to: {intermediate_html_path(lang)}")
 
         pdf_out = pdf_output_path_for_lang(base_pdf, lang)
         print(f"Generating PDF ({lang}) → {pdf_out}...")
         header_left, footer_right, toc_header = _wkhtml_ui_strings(
-            lang, dkp_doc_version
+            lang, dkp_doc_version, guide_title_en=guide_title_en, guide_title_ru=guide_title_ru
         )
 
         wkhtmltopdf_cmd = [
