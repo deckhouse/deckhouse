@@ -89,7 +89,6 @@ func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) er
 		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
 	}
 
-	fmt.Println(publishAPISet)
 	if publishAPISet {
 		input.MetricsCollector.Set("d8_obsolete_publishapi_in_user_authn", 1,
 			map[string]string{},
