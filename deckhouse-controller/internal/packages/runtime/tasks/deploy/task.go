@@ -18,12 +18,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -31,15 +29,8 @@ const (
 	taskTracer = "package-deploy"
 )
 
-var (
-	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
-	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
-	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
-	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
-)
-
 type deployerI interface {
-	Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
 }
 
 type statusService interface {
@@ -51,8 +42,6 @@ type task struct {
 	name        string
 	packageName string
 	version     string
-	downloaded  string
-	deployed    string
 
 	repository registry.Remote
 
@@ -63,14 +52,11 @@ type task struct {
 }
 
 // NewModuleTask creates a Deploy task for a Module package.
-// The package is cached under downloaded/{name} and exposed at downloaded/modules/{name}.
 func NewModuleTask(name, version string, repo registry.Remote, deployer deployerI, status statusService, logger *log.Logger) queue.Task {
 	return &task{
 		name:        name,
 		packageName: name,
 		version:     version,
-		downloaded:  filepath.Join(modulesDownloadedDir, name),
-		deployed:    filepath.Join(modulesDeployedDir, name),
 		repository:  repo,
 		deployer:    deployer,
 		status:      status,
@@ -79,14 +65,11 @@ func NewModuleTask(name, version string, repo registry.Remote, deployer deployer
 }
 
 // NewAppTask creates a Deploy task for an Application package.
-// The package is cached under apps/{repo}/{package} and exposed at apps/deployed/{instance}.
 func NewAppTask(instance, name, version string, repo registry.Remote, deployer deployerI, status statusService, logger *log.Logger) queue.Task {
 	return &task{
 		name:        instance,
 		packageName: name,
 		version:     version,
-		downloaded:  filepath.Join(appsDownloadedDir, repo.Name, name),
-		deployed:    filepath.Join(appsDeployedDir, instance),
 		repository:  repo,
 		deployer:    deployer,
 		status:      status,
@@ -101,13 +84,13 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	logger := t.logger.With(
 		slog.String("name", t.name),
-		slog.String("downloaded", t.downloaded),
 		slog.String("repository", t.repository.Name),
+		slog.String("package", t.packageName),
 		slog.String("version", t.version))
 
 	// Cache package content locally and expose it at the path consumed by the load task.
 	logger.Debug("deploy package")
-	if err := t.deployer.Deploy(ctx, t.repository, t.downloaded, t.deployed, t.packageName, t.name, t.version); err != nil {
+	if err := t.deployer.Deploy(ctx, t.repository, t.packageName, t.name, t.version); err != nil {
 		t.status.HandleError(t.name, err)
 		return fmt.Errorf("deploy package: %w", err)
 	}

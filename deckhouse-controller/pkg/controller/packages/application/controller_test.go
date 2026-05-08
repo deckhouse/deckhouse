@@ -198,7 +198,7 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		init:          new(sync.WaitGroup),
 		client:        kubeClient,
 		logger:        log.NewNop(),
-		operator:      &operatorStub{},
+		runtime:       &operatorStub{},
 		moduleManager: &moduleManagerStub{},
 		dc:            dependency.NewMockedContainer(),
 	}
@@ -448,3 +448,5 @@ func (o *operatorStub) RemoveApp(_, _ string) {
 func (o *operatorStub) Status() *packagestatus.Service {
 	return packagestatus.NewService()
 }
+
+func (o *operatorStub) Cleanup(_ context.Context, _ []packageoperator.PreservePackage) {}

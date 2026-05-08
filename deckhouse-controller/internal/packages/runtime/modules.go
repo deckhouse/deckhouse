@@ -77,7 +77,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.status.ClearRuntimeConditions(name)
 
 	tasks := []queue.Task{
-		taskdeploy.NewModuleTask(name, version, repo, r.deployer, r.status, r.logger),
+		taskdeploy.NewModuleTask(name, version, repo, r.moduleDeployer, r.status, r.logger),
 		taskload.NewModuleTask(name, repo, r.loadModule, r.status, r.logger),
 	}
 
@@ -159,5 +159,5 @@ func (r *Runtime) RemoveModule(name string) {
 		}()
 	})
 
-	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.deployer, r.logger), cleanup)
+	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
 }
