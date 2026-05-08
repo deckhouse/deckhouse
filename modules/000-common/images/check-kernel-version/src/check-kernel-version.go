@@ -17,12 +17,12 @@ limitations under the License.
 package main
 
 import (
-	"bytes"
-	"github.com/Masterminds/semver/v3"
-	"golang.org/x/sys/unix"
 	"log"
 	"os"
 	"strconv"
+
+	"github.com/Masterminds/semver/v3"
+	"golang.org/x/sys/unix"
 )
 
 func main() {
@@ -64,25 +64,23 @@ func toSemver(version string) string {
 
 	var mmp [3]int
 	c := 0
+
+loop:
 	for _, b := range version {
-		if b >= '0' && b <= '9' {
+		switch {
+		case b >= '0' && b <= '9':
 			mmp[c] = 10*mmp[c] + int(b-'0')
-		} else if b == '.' {
+
+		case b == '.':
 			c++
 			if c > 2 {
-				break
+				break loop
 			}
-		} else {
-			break
+
+		default:
+			break loop
 		}
 	}
 
-	var buffer bytes.Buffer
-	buffer.WriteString(strconv.Itoa(mmp[0]))
-	buffer.WriteString(".")
-	buffer.WriteString(strconv.Itoa(mmp[1]))
-	buffer.WriteString(".")
-	buffer.WriteString(strconv.Itoa(mmp[2]))
-
-	return buffer.String()
+	return strconv.Itoa(mmp[0]) + "." + strconv.Itoa(mmp[1]) + "." + strconv.Itoa(mmp[2])
 }

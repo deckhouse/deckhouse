@@ -123,3 +123,41 @@ properties:
               type: string
               pattern: '^[a-zA-Z]+$'
             default: []
+      selfSignedCA:
+        type: object
+        default: {}
+        x-examples:
+        - cert: test
+          key: test
+        properties:
+          cert:
+            type: string
+          key:
+            type: string
+      kubernetesApiserverTargetPort:
+        type: integer
+      kubernetesApiserverAddresses:
+        type: array
+        items: strings
+      authn:
+        type: object
+        default: {}
+        properties:
+          enableBasicAuth:
+            type: boolean
+          publishedAPIKubeconfigGeneratorMasterCA:
+            type: string
+      customCertificateData:
+        type: object
+        default: {}
+        x-examples:
+        - tls.crt: plainstring
+          tls.key: plainstring
+          ca.crt: plainstring
+        properties:
+          ca.crt:
+            type: string
+          tls.key:
+            type: string
+          tls.crt:
+            type: string

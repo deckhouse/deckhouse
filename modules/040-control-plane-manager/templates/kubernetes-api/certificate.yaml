@@ -1,12 +1,13 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- if .Values.global.enabledModules | has "cert-manager" }}
 {{- if include "publish_api_deploy_certificate" . }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: {{ include "publish_api_certificate_name" . }}
-  namespace: d8-{{ .Chart.Name }}
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   certificateOwnerRef: false
@@ -15,10 +16,10 @@ spec:
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   issuerRef:
-  {{- if eq .Values.userAuthn.publishAPI.https.mode "Global" }}
+  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" }}
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
-  {{- else if eq .Values.userAuthn.publishAPI.https.mode "SelfSigned" }}
+  {{- else if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned" }}
     {{- if .Values.global.enabledModules | has "cert-manager" }}
     name: kubernetes-api
     kind: Issuer
@@ -27,13 +28,14 @@ spec:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- if and $moduleGateway .Values.userAuthn.publishAPI.enabled (eq .Values.userAuthn.publishAPI.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- end }}
+{{- if and $moduleGateway .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: {{ include "publish_api_http_route_certificate_name" . }}
-  namespace: d8-{{ .Chart.Name }}
+  namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-configurator")) | nindent 2 }}
 spec:
   certificateOwnerRef: false
