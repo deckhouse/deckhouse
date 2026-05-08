@@ -65,7 +65,8 @@ properties:
   enableListenerSet:
     description: |
       Включить поддержку ListenerSet в cert-manager через feature gate `ListenerSets`.
-      Дополнительно, если включена интеграция Gateway API, этот флаг включает интеграцию ListenerSet для Gateway API.
+
+      Также включает интеграцию ListenerSet для Gateway API, если включена интеграция Gateway API.
 
   ingressClassHttp01:
     type: string
