@@ -67,7 +67,6 @@ properties:
       Включить поддержку ListenerSet в cert-manager через feature gate `ListenerSets`.
 
       Также включает интеграцию ListenerSet для Gateway API, если включена интеграция Gateway API.
-
   ingressClassHttp01:
     type: string
     x-examples: ["nginx"]
