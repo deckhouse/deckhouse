@@ -26,6 +26,9 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 )
 
 func CacheOptions() (cache.Options, client.Options) {
@@ -61,9 +64,9 @@ func CacheOptions() (cache.Options, client.Options) {
 					},
 				},
 			},
-			newUnstructured("machine.sapcloud.io", "v1alpha1", "Machine"):           machineNS,
+			&mcmv1alpha1.Machine{}: machineNS,
+			&capiv1beta2.Machine{}: machineNS,
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"): machineNS,
-			newUnstructured("cluster.x-k8s.io", "v1beta2", "Machine"):               machineNS,
 			newUnstructured("cluster.x-k8s.io", "v1beta2", "MachineDeployment"):     machineNS,
 		},
 	}

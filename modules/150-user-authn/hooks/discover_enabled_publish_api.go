@@ -1,0 +1,132 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package hooks
+
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+)
+
+func applyIngressFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return obj.GetName(), nil
+}
+
+type PublishAPIConfig struct {
+	Name                        string `json:"name"`
+	AddKubeconfigGeneratorEntry []byte `json:"addKubeconfigGeneratorEntry"`
+	WhitelistSourceRanges       []byte `json:"whitelistSourceRanges"`
+	HTTPSMode                   []byte `json:"httpsMode"`
+	IngressClass                []byte `json:"ingressClass"`
+}
+
+func applyPublishAPIConfigFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	s := &v1.Secret{}
+	err := sdk.FromUnstructured(obj, s)
+	if err != nil {
+		return nil, fmt.Errorf("cannot convert kubernetes secret to secret: %v", err)
+	}
+
+	return PublishAPIConfig{
+			Name:                        obj.GetName(),
+			AddKubeconfigGeneratorEntry: s.Data["addKubeconfigGeneratorEntry"],
+			WhitelistSourceRanges:       s.Data["whitelistSourceRanges"],
+			HTTPSMode:                   s.Data["httpsMode"],
+			IngressClass:                s.Data["ingressClass"]},
+		nil
+}
+
+var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "ingress",
+			ApiVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"kubernetes-api"},
+			},
+			FilterFunc: applyIngressFilter,
+		},
+		{
+			Name:       "secret_cpm",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"d8-publish-api-config"},
+			},
+			FilterFunc: applyPublishAPIConfigFilter,
+		},
+	},
+}, discoverPublishAPI)
+
+func discoverPublishAPI(_ context.Context, input *go_hook.HookInput) error {
+	const (
+		publishAPIEnabled = "userAuthn.internal.publishAPI.enabled"
+	)
+	if len(input.Snapshots.Get("ingress")) == 0 {
+		input.Values.Set(publishAPIEnabled, false)
+	} else {
+		input.Values.Set(publishAPIEnabled, true)
+	}
+
+	for configs, err := range sdkobjectpatch.SnapshotIter[PublishAPIConfig](input.Snapshots.Get("secret_cpm")) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'secret_cpm' snapshot: %w", err)
+		}
+
+		var addKCGEBool bool
+		if configs.AddKubeconfigGeneratorEntry != nil {
+			addKCGEBool, err = strconv.ParseBool(string(configs.AddKubeconfigGeneratorEntry))
+			if err != nil {
+				return fmt.Errorf("failed to convert AddKubeconfigGeneratorEntry to bool: %w", err)
+			}
+		}
+
+		whitelistsSlice := strings.Fields(strings.Trim(string(configs.WhitelistSourceRanges), "[] "))
+
+		input.Values.Set("userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry", addKCGEBool)
+		input.Values.Set("userAuthn.internal.publishAPI.whitelistSourceRanges", whitelistsSlice)
+
+		if configs.HTTPSMode != nil {
+			input.Values.Set("userAuthn.internal.publishAPI.https.mode", string(configs.HTTPSMode))
+		}
+		if configs.IngressClass != nil {
+			input.Values.Set("userAuthn.internal.publishAPI.ingressClass", string(configs.IngressClass))
+		}
+	}
+	return nil
+}

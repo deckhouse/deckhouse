@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 
 	ad_app "github.com/flant/addon-operator/pkg/app"
 	"github.com/flant/addon-operator/pkg/utils/stdliblogtolog"
@@ -28,10 +29,10 @@ import (
 	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/dhctlcli"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/registry"
-	dhctl_commands "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	dhctl_app "github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -117,16 +118,45 @@ func main() {
 	// deckhouse-controller registry
 	registry.DefineRegistryCommand(kpApp, logger)
 
-	// deckhouse-controller edit subcommands
-	editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+	// dhctlcli command builders read these globals from dhctl/pkg/app at run
+	// time. The corresponding kingpin Envar bindings in dhctl/pkg/app are
+	// gated by flag-registration (DefineGlobalFlags / DefineKubeFlags) which
+	// we do not invoke, so they never fire. Read the env directly and assign
+	// the globals here; deployer-set values win over hardcoded defaults.
 	{
-		dhctl_app.LoggerType = "json"
-		dhctl_app.Editor = "vim"
-		dhctl_app.KubeConfigInCluster = true
-		dhctl_app.TmpDirName = os.TempDir()
+		dhctl_app.LoggerType = envOr("DECKHOUSE_LOGGER_TYPE", "json")
+		dhctl_app.Editor = envOr("DECKHOUSE_EDITOR", "vim")
+		dhctl_app.KubeConfigInCluster = envBoolOr("DECKHOUSE_KUBE_CONFIG_IN_CLUSTER", true)
+		dhctl_app.TmpDirName = envOr("DECKHOUSE_TMP_DIR", os.TempDir())
 
-		dhctl_commands.DefineEditCommands(editCmd /* wConnFlags */, false)
+		editCmd := kpApp.Command("edit", "Change configuration files in Kubernetes cluster conveniently and safely.")
+		dhctlcli.DefineEditCommands(editCmd /* wConnFlags */, false)
+
+		dhctlcli.DefineCommandParseClusterConfiguration(kpApp.Command("cluster-configuration", "Parse configuration and print it."))
+		dhctlcli.DefineCommandParseCloudDiscoveryData(kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it."))
 	}
 
 	kingpin.MustParse(kpApp.Parse(os.Args[1:]))
+}
+
+// envOr returns the env var name's value, or defaultValue when unset/empty.
+func envOr(name, defaultValue string) string {
+	if v, ok := os.LookupEnv(name); ok && v != "" {
+		return v
+	}
+	return defaultValue
+}
+
+// envBoolOr parses the env var as a bool (per strconv.ParseBool), or returns
+// defaultValue when unset, empty, or unparseable.
+func envBoolOr(name string, defaultValue bool) bool {
+	v, ok := os.LookupEnv(name)
+	if !ok || v == "" {
+		return defaultValue
+	}
+	parsed, err := strconv.ParseBool(v)
+	if err != nil {
+		return defaultValue
+	}
+	return parsed
 }

@@ -61,6 +61,7 @@ metadata:
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- if and (ne (include "helm_lib_module_https_mode" .) "Disabled") .Values.ciliumHubble.auth.externalAuthentication }}
+    alb.network.deckhouse.io/auth-response-headers: Authorization
     alb.network.deckhouse.io/auth-signin: {{ replace "$host" (include "helm_lib_module_public_domain" (list . "hubble")) .Values.ciliumHubble.auth.externalAuthentication.authSignInURL | quote }}
     alb.network.deckhouse.io/auth-url: {{ .Values.ciliumHubble.auth.externalAuthentication.authURL | quote }}
   {{- else }}

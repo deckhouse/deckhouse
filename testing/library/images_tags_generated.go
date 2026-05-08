@@ -300,9 +300,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"x509CertificateExporter":    "imageHash-extendedMonitoring-x509CertificateExporter",
 	},
 	"ingressNginx": map[string]interface{}{
-		"controller110":            "imageHash-ingressNginx-controller110",
 		"controller112":            "imageHash-ingressNginx-controller112",
 		"controller114":            "imageHash-ingressNginx-controller114",
+		"controller115":            "imageHash-ingressNginx-controller115",
 		"failoverCleaner":          "imageHash-ingressNginx-failoverCleaner",
 		"geoproxy":                 "imageHash-ingressNginx-geoproxy",
 		"init":                     "imageHash-ingressNginx-init",

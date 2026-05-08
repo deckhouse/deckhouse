@@ -7,12 +7,14 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 automountServiceAccountToken: false
 ---
+# ClusterRole for node-controller
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: d8:node-manager:node-controller
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 rules:
+# NodeGroups - full access for status updates
 - apiGroups:
   - deckhouse.io
   resources:
@@ -31,6 +33,7 @@ rules:
   - get
   - update
   - patch
+# Nodes - read and update for labels/taints
 - apiGroups:
   - deckhouse.io
   resources:
@@ -50,6 +53,7 @@ rules:
   - patch
   - update
   - watch
+# Secrets - read for configuration checksums and cloud provider data
 - apiGroups:
   - ""
   resources:
@@ -87,6 +91,7 @@ rules:
   verbs:
   - create
   - patch
+# MCM Machine and MachineDeployment - read for status calculation
 - apiGroups:
   - machine.sapcloud.io
   resources:
@@ -96,6 +101,7 @@ rules:
   - get
   - list
   - watch
+# CAPI Machine
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -105,6 +111,51 @@ rules:
   - get
   - list
   - watch
+  - update
+  - patch
+  - delete
+# MCM Machine
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines/status
+  - machines
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines/status
+  verbs:
+  - get
+  - list
+  - watch
+# Instance lifecycle and status reconciliation
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - delete
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances/status
+  verbs:
+  - get
+  - patch
+  - update
+# ModuleConfig - read for validation (customTolerationKeys)
 - apiGroups:
   - deckhouse.io
   resources:
@@ -113,6 +164,7 @@ rules:
   - get
   - list
   - watch
+# ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""
   resources:
@@ -121,6 +173,7 @@ rules:
   - get
   - list
   - watch
+# Endpoints - read for master node count validation
 - apiGroups:
   - ""
   resources:

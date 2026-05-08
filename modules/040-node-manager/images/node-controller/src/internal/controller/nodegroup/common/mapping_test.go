@@ -22,7 +22,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 )
 
 func TestMappingToNodeGroup(t *testing.T) {
@@ -35,8 +36,9 @@ func TestMappingToNodeGroup(t *testing.T) {
 		t.Fatalf("unexpected node mapping: %#v", reqs)
 	}
 
-	machine := &unstructured.Unstructured{}
-	machine.SetLabels(map[string]string{"node-group": "ng-b"})
+	machine := &mcmv1alpha1.Machine{ObjectMeta: metav1.ObjectMeta{
+		Labels: map[string]string{"node-group": "ng-b"},
+	}}
 	reqs = MachineToNodeGroup(context.Background(), machine)
 	if len(reqs) != 1 || reqs[0].Name != "ng-b" {
 		t.Fatalf("unexpected machine mapping: %#v", reqs)
