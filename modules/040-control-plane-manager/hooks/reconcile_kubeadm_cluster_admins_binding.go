@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Flant JSC
+Copyright 2024 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,18 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// reconcile_kubeadm_cluster_admins_binding rebinds ClusterRoleBinding kubeadm:cluster-admins
-// between cluster-admin (kubeadm-default wildcard) and user-authz:cluster-admin (granular)
-// using the same three-gate decision as templates/rbac-for-us.yaml:
+// reconcile_kubeadm_cluster_admins_binding is the SINGLE SOURCE OF TRUTH for ClusterRoleBinding
+// kubeadm:cluster-admins reconciliation. It evaluates three independent signals:
 //
 //  1. user-authz module is enabled (module.IsEnabled / global.enabledModules);
 //  2. the cluster has finished its first bootstrap (global.clusterIsBootstrapped);
 //  3. ClusterRole user-authz:cluster-admin is observed in the API right now.
 //
 // Only when all three are true the binding flips to user-authz:cluster-admin; otherwise it stays
-// on cluster-admin. The hook also exports gate (3) into
-// controlPlaneManager.internal.userAuthzClusterAdminClusterRoleAvailable so the Helm template
-// uses the very same signal it sees in the API at render time.
+// on cluster-admin (kubeadm-default wildcard). The supplement (extra ClusterRole bound to the same
+// kubeadm:cluster-admins group) is enabled while user-authz is on (single gate).
+//
+// The hook publishes its decision into Helm values so templates/rbac-for-us.yaml renders verbatim
+// and does NOT re-evaluate the gates:
+//
+//	controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName  string
+//	controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled bool
 //
 // Why a hook is needed at all: ClusterRoleBinding.roleRef is immutable in Kubernetes RBAC, Helm
 // SSA cannot mutate it. We Delete+Create via PatchCollector on OnBeforeHelm, before Helm runs.
@@ -59,8 +63,9 @@ const (
 	kubeadmClusterAdminsBindingSnapshot = "kubeadm_cluster_admins_binding"
 	userAuthzClusterAdminCRSnapshot     = "user_authz_cluster_admin_clusterrole"
 
-	clusterIsBootstrappedValuePath            = "global.clusterIsBootstrapped"
-	userAuthzClusterAdminCRAvailableValuePath = "controlPlaneManager.internal.userAuthzClusterAdminClusterRoleAvailable"
+	clusterIsBootstrappedValuePath           = "global.clusterIsBootstrapped"
+	kubeadmTargetRoleNameValuePath           = "controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName"
+	kubeadmSupplementEnabledValuePath        = "controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled"
 )
 
 // kubeadmClusterAdminsBindingState keeps the only moving piece of the CRB — the target role.
@@ -120,15 +125,15 @@ func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.
 	}
 	userAuthzCRAvailable := len(userAuthzCRSnaps) > 0
 
-	// Export the third gate to values so the Helm template (templates/rbac-for-us.yaml) uses
-	// exactly the same signal we are using here. Helm picks up values updates of OnBeforeHelm
-	// hooks before rendering the chart.
-	input.Values.Set(userAuthzClusterAdminCRAvailableValuePath, userAuthzCRAvailable)
-
 	desiredRoleName := clusterAdminWildcardClusterRoleName
 	if userAuthzEnabled && clusterBootstrapped && userAuthzCRAvailable {
 		desiredRoleName = userAuthzClusterAdminClusterRoleName
 	}
+
+	// Single source of truth: publish the already-made decision into values so the Helm template
+	// renders verbatim. Helm picks up values updates of OnBeforeHelm hooks before rendering.
+	input.Values.Set(kubeadmTargetRoleNameValuePath, desiredRoleName)
+	input.Values.Set(kubeadmSupplementEnabledValuePath, userAuthzEnabled)
 
 	logger := input.Logger.With(
 		slog.String("name", kubeadmClusterAdminsBindingName),

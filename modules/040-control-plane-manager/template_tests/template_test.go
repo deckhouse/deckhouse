@@ -1167,27 +1167,38 @@ internal:
 		})
 	})
 
+	// The decision (target ClusterRole + whether to render supplement) is made by the
+	// reconcile_kubeadm_cluster_admins_binding hook and published into Helm values. The template
+	// reads .Values.controlPlaneManager.internal.{kubeadmClusterAdminsTargetRoleName,kubeadmClusterAdminsSupplementEnabled}
+	// verbatim, so these tests drive the template directly via those internal values.
 	Context("kubeadm ClusterRoleBinding for admin.conf", func() {
-		Context("when user-authz module is disabled", func() {
+		Context("hook decision: target=cluster-admin, supplement=false (user-authz off)", func() {
 			BeforeEach(func() {
+				// schema defaults: target=cluster-admin, supplementEnabled=false; render with no overrides.
 				f.HelmRender()
 			})
 
-			It("should bind kubeadm:cluster-admins to cluster-admin", func() {
+			It("should bind kubeadm:cluster-admins to cluster-admin and not render the supplement", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(crb.Exists()).To(BeTrue())
 				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+
+				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
+				Expect(sup.Exists()).To(BeFalse())
+				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
+				Expect(supCR.Exists()).To(BeFalse())
 			})
 		})
 
-		Context("when user-authz is enabled but the cluster is not yet bootstrapped", func() {
+		Context("hook decision: target=cluster-admin, supplement=true (user-authz on, but at least one of bootstrap/CR-presence gates is false)", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "cluster-admin")
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
 				f.HelmRender()
 			})
 
-			It("should keep the kubeadm-default cluster-admin wildcard binding but already render the supplement (it is purely additive on the same group)", func() {
+			It("should keep cluster-admin on main binding but render the supplement (purely additive on the same group)", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(main.Exists()).To(BeTrue())
@@ -1202,37 +1213,14 @@ internal:
 			})
 		})
 
-		Context("when user-authz is enabled and bootstrapped, but ClusterRole user-authz:cluster-admin is not yet observed in the API", func() {
+		Context("hook decision: target=user-authz:cluster-admin, supplement=true (all three gates satisfied)", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
-				f.ValuesSet("global.clusterIsBootstrapped", true)
-				// internal.userAuthzClusterAdminClusterRoleAvailable defaults to false; we keep it false here.
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "user-authz:cluster-admin")
+				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
 				f.HelmRender()
 			})
 
-			It("should keep the kubeadm-default cluster-admin wildcard binding (avoid SSA failure on missing roleRef target) but still render the supplement", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
-				Expect(main.Exists()).To(BeTrue())
-				Expect(main.Field("roleRef.name").String()).To(Equal("cluster-admin"))
-
-				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
-				Expect(sup.Exists()).To(BeTrue())
-
-				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
-				Expect(supCR.Exists()).To(BeTrue())
-			})
-		})
-
-		Context("when user-authz module is enabled and the cluster is bootstrapped", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
-				f.ValuesSet("global.clusterIsBootstrapped", true)
-				f.ValuesSet("controlPlaneManager.internal.userAuthzClusterAdminClusterRoleAvailable", true)
-				f.HelmRender()
-			})
-
-			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add supplement binding", func() {
+			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add the supplement binding", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
 				Expect(main.Exists()).To(BeTrue())

@@ -72,25 +72,22 @@ roleRef:
   kind: ClusterRole
   name: d8:control-plane-manager
   apiGroup: rbac.authorization.k8s.io
-{{- $userAuthzEnabled := has "user-authz" ($.Values.global.enabledModules | default list) }}
 {{- /*
-  Three gates avoid the immutable-roleRef trap on a fresh cluster (kubeadm pre-creates the binding
-  pointing at cluster-admin and Helm SSA cannot rewrite roleRef):
-    1. $userAuthzEnabled       — user-authz module is on.
-    2. $clusterBootstrapped    — first non-master node became Ready (set by global hook).
-    3. $userAuthzCRAvailable   — ClusterRole user-authz:cluster-admin is observed in the API
-                                 (set by the reconcile hook; lives under .internal.*).
-  Flags are set asynchronously by hooks — read them via `dig` so an early render does not silently
-  fall through to the granular branch. Main binding flips ONLY when all three are true.
+  Single source of truth for the kubeadm:cluster-admins binding lives in the Go hook
+  modules/040-control-plane-manager/hooks/reconcile_kubeadm_cluster_admins_binding.go. The hook
+  evaluates three gates (user-authz enabled, cluster bootstrapped, ClusterRole user-authz:cluster-admin
+  observed in the API) and publishes already-made decisions into Helm values:
 
-  Supplement (ClusterRole + its ClusterRoleBinding) renders under just $userAuthzEnabled. It is
-  purely additive on the same Group/kubeadm:cluster-admins (the kubeadm-default cluster-admin
-  wildcard already grants more), so rendering it early is safe and closes the transient 403
-  window for nodes/proxy (kubectl exec/logs/port-forward) right after the main rebind.
+    .Values.controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName  string
+    .Values.controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled bool
+
+  We read those values verbatim and do NOT re-evaluate the gates here, so hook and template
+  stay aligned by construction. Read via `dig` to keep the early-render path safe (hook runs
+  on OnBeforeHelm before each helm reconcile, but the schema defaults must work too).
 */}}
-{{- $clusterBootstrapped := dig "clusterIsBootstrapped" false .Values.global }}
-{{- $userAuthzCRAvailable := dig "internal" "userAuthzClusterAdminClusterRoleAvailable" false .Values.controlPlaneManager }}
-{{- if $userAuthzEnabled }}
+{{- $targetRole := dig "internal" "kubeadmClusterAdminsTargetRoleName" "cluster-admin" .Values.controlPlaneManager }}
+{{- $supplementEnabled := dig "internal" "kubeadmClusterAdminsSupplementEnabled" false .Values.controlPlaneManager }}
+{{- if $supplementEnabled }}
 ---
 # Extra rules for identity kubernetes-admin (group kubeadm:cluster-admins) beyond user-authz:cluster-admin.
 # No user-authz.deckhouse.io/access-level annotation: that pattern is for optional ClusterRoles merged into
@@ -251,13 +248,11 @@ subjects:
 - kind: Group
   name: kubeadm:cluster-admins
 {{- end }}
-{{/*
-  Main kubeadm:cluster-admins binding: switches to user-authz:cluster-admin only when all three
-  gates are satisfied; otherwise stays on the kubeadm-default cluster-admin wildcard. The actual
-  recreation on roleRef change is done by the reconcile_kubeadm_cluster_admins_binding hook
-  before Helm runs (Helm SSA cannot mutate roleRef on its own).
+{{- /*
+  Main kubeadm:cluster-admins binding: target ClusterRole comes from the hook (see top of file).
+  Helm SSA cannot mutate roleRef (immutable), so the actual Delete+Create on role flip is done
+  by reconcile_kubeadm_cluster_admins_binding hook before Helm runs; Helm here only adopts.
 */}}
-{{- if and $userAuthzEnabled (eq $clusterBootstrapped true) (eq $userAuthzCRAvailable true) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -267,22 +262,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: user-authz:cluster-admin
+  name: {{ $targetRole }}
 subjects:
 - kind: Group
   name: kubeadm:cluster-admins
-{{- else }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kubeadm:cluster-admins
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: Group
-  name: kubeadm:cluster-admins
-{{- end }}

@@ -74,7 +74,10 @@ rules:
 `
 	)
 
-	const internalCRAvailablePath = "controlPlaneManager.internal.userAuthzClusterAdminClusterRoleAvailable"
+	const (
+		targetRolePath        = "controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName"
+		supplementEnabledPath = "controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled"
+	)
 
 	expectDesiredCRB := func(f *HookExecutionConfig, roleName string) {
 		crb := f.KubernetesGlobalResource("ClusterRoleBinding", "kubeadm:cluster-admins")
@@ -86,6 +89,14 @@ rules:
 		Expect(crb.Field("subjects.0.name").String()).To(Equal("kubeadm:cluster-admins"))
 	}
 
+	// expectInternalDecision asserts that the hook published the same decision into Helm values
+	// that it actually applied to the CRB — keeping the template-rendered shape aligned with the
+	// hook-rendered shape (single source of truth invariant).
+	expectInternalDecision := func(f *HookExecutionConfig, targetRole string, supplementEnabled bool) {
+		Expect(f.ValuesGet(targetRolePath).String()).To(Equal(targetRole))
+		Expect(f.ValuesGet(supplementEnabledPath).Bool()).To(Equal(supplementEnabled))
+	}
+
 	// ── user-authz disabled: binding must always stay on cluster-admin (kubeadm-default) ──
 	Context("user-authz disabled and not bootstrapped, no CRB", func() {
 		f := HookExecutionConfigInit(valuesUserAuthzOffNotBootstrapped, "")
@@ -93,10 +104,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
-		It("creates the binding pointing to cluster-admin and exports CRAvailable=false", func() {
+		It("creates the binding pointing to cluster-admin and publishes target=cluster-admin, supplement=false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeFalse())
+			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
 
@@ -106,10 +117,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin))
 			f.RunHook()
 		})
-		It("is a no-op and exports CRAvailable=false", func() {
+		It("is a no-op and publishes target=cluster-admin, supplement=false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeFalse())
+			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
 
@@ -119,10 +130,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("rebinds back to cluster-admin (immutable roleRef → Delete+Create) even though the granular role exists", func() {
+		It("rebinds back to cluster-admin (immutable roleRef → Delete+Create) and publishes target=cluster-admin, supplement=false", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue(), "CRAvailable must reflect the API state regardless of decision")
+			expectInternalDecision(f, "cluster-admin", false)
 		})
 	})
 
@@ -133,10 +144,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("keeps cluster-admin until bootstrap finishes (gate 2)", func() {
+		It("keeps cluster-admin (gate 2 false) and publishes target=cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
@@ -146,10 +157,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("rolls the binding back to cluster-admin while bootstrap is still in flight", func() {
+		It("rolls the binding back to cluster-admin while bootstrap is still in flight, supplement stays on", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
@@ -160,10 +171,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
-		It("keeps cluster-admin (gate 3 false) and exports CRAvailable=false", func() {
+		It("keeps cluster-admin (gate 3 false) and publishes target=cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeFalse())
+			expectInternalDecision(f, "cluster-admin", true)
 		})
 	})
 
@@ -174,10 +185,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("creates the binding pointing to user-authz:cluster-admin and exports CRAvailable=true", func() {
+		It("creates the binding pointing to user-authz:cluster-admin and publishes target=user-authz:cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "user-authz:cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+			expectInternalDecision(f, "user-authz:cluster-admin", true)
 		})
 	})
 
@@ -187,10 +198,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentClusterAdmin + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("rebinds to user-authz:cluster-admin (immutable roleRef → Delete+Create)", func() {
+		It("rebinds to user-authz:cluster-admin (immutable roleRef → Delete+Create) and publishes target=user-authz:cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "user-authz:cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+			expectInternalDecision(f, "user-authz:cluster-admin", true)
 		})
 	})
 
@@ -200,10 +211,10 @@ rules:
 			f.BindingContexts.Set(f.KubeStateSet(crbCurrentUserAuthzClusterAdmin + userAuthzClusterAdminCR))
 			f.RunHook()
 		})
-		It("is a no-op and keeps CRAvailable=true", func() {
+		It("is a no-op and keeps target=user-authz:cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "user-authz:cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+			expectInternalDecision(f, "user-authz:cluster-admin", true)
 		})
 	})
 
@@ -214,10 +225,10 @@ rules:
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
-		It("rebinds the snapshot CRB to user-authz:cluster-admin on OnBeforeHelm too", func() {
+		It("rebinds the snapshot CRB to user-authz:cluster-admin on OnBeforeHelm too and publishes target=user-authz:cluster-admin, supplement=true", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			expectDesiredCRB(f, "user-authz:cluster-admin")
-			Expect(f.ValuesGet(internalCRAvailablePath).Bool()).To(BeTrue())
+			expectInternalDecision(f, "user-authz:cluster-admin", true)
 		})
 	})
 })
