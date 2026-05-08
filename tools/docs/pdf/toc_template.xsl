@@ -14,18 +14,18 @@
         <style>
           h1 {
             text-align: center;
-            font-size: 20px;
+            font-size: 16pt;
             font-family: arial;
           }
           li {list-style: none;}
           ul {
-            font-size: 20px;
+            font-size: 11pt;
             font-family: arial;
             padding-left: 0em;
             margin: 0;
           }
           ul ul {
-            font-size: 20px;
+            font-size: 11pt;
             padding-left: 1em;
           }
           a {

@@ -30,13 +30,24 @@ SIDEBAR_YAML = "main.yml"
 
 # H1 before embedded-modules block in merged HTML.
 MODULES_SECTION_H1: Dict[str, str] = {
-    "ru": "Модули Deckhouse Kubernetes Platform",
-    "en": "Deckhouse Kubernetes Platform modules",
+    "ru": "Встроенные модули Deckhouse Kubernetes Platform",
+    "en": "Embedded Deckhouse Kubernetes Platform modules",
 }
 
 
 def intermediate_html_path(lang: str) -> str:
     return f"extracted_content_{lang}.html"
+
+
+def intermediate_html_dir(lang: str) -> str:
+    return f"chunks_{lang}"
+
+
+# Max uncompressed HTML bytes per chunk. Qt WebKit scales fonts down when a
+# single HTML document exceeds ~2–3 MB; keeping each chunk well below that
+# threshold ensures consistent font rendering across documents of very
+# different sizes (e.g. admin guide vs. user guide).
+_CHUNK_MAX_BYTES = 1_000_000  # 1 MB
 
 
 def pdf_output_path_for_lang(base_pdf_path: str, lang: str) -> str:
@@ -126,7 +137,18 @@ def generate_html_header(title: str = "Extracted content", lang: str = "ru") -> 
     <title>""" + title + """</title>
     <style>
         body {
-            font-size: 15px;
+            font-size: 11pt;
+        }
+        p, li, td, th, dt, dd, blockquote, figcaption, label, span, div {
+            font-size: 11pt;
+        }
+        h1 { font-size: 18pt; }
+        h2 { font-size: 16pt; }
+        h3 { font-size: 14pt; }
+        h4 { font-size: 12pt; }
+        h5, h6 { font-size: 11pt; }
+        pre, code, kbd, samp, tt {
+            font-size: 10pt;
         }
         a, a:link, a:visited, a:hover, a:active {
             color: black;
@@ -735,8 +757,114 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
         remove_sections_with_exact_heading(soup, "Внешние компоненты")
 
 
-def append_embedded_modules(out_f, lang: str) -> None:
-    """After main.yml/content: append embedded-modules/{lang}/modules/* in module order, pages sorted."""
+
+class _ChunkWriter:
+    """Accumulates content and flushes to numbered HTML chunk files under a directory."""
+
+    def __init__(self, chunk_dir: str, lang: str, max_bytes: int = _CHUNK_MAX_BYTES) -> None:
+        self._dir = chunk_dir
+        self._lang = lang
+        self._max = max_bytes
+        self._buf: List[str] = []
+        self._buf_bytes = 0
+        self._index = 0
+        self._paths: List[str] = []
+        os.makedirs(chunk_dir, exist_ok=True)
+
+    def write(self, fragment: str) -> None:
+        encoded = len(fragment.encode("utf-8"))
+        if self._buf and self._buf_bytes + encoded > self._max:
+            self._flush()
+        self._buf.append(fragment)
+        self._buf_bytes += encoded
+
+    def finish(self) -> List[str]:
+        if self._buf:
+            self._flush()
+        return list(self._paths)
+
+    _REL_PATH_RE = re.compile(
+        r'(?P<attr>\b(?:src|href|xlink:href)\s*=\s*)(?P<q>["\'])(?P<path>(?:content|embedded-modules)/)',
+        re.IGNORECASE,
+    )
+
+    def _abs_paths(self, html: str) -> str:
+        """Rewrite relative content/ and embedded-modules/ paths to /app/ absolute paths.
+
+        Chunk files live in a subdirectory, so relative paths like content/images/...
+        would resolve to chunks_ru/content/images/ instead of /app/content/images/.
+        """
+        def repl(m: re.Match) -> str:
+            return f"{m.group('attr')}{m.group('q')}/app/{m.group('path')}"
+        return self._REL_PATH_RE.sub(repl, html)
+
+    def _flush(self) -> None:
+        path = os.path.join(self._dir, f"chunk_{self._index:04d}.html")
+        header = generate_html_header("Extracted documentation content", lang=self._lang)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(header)
+            f.write("\n")
+            for fragment in self._buf:
+                f.write(self._abs_paths(fragment))
+            f.write("</body>\n</html>\n")
+        self._paths.append(path)
+        self._buf = []
+        self._buf_bytes = 0
+        self._index += 1
+
+
+def process_menu_and_extract_content(
+    yaml_file_path: str,
+    lang: str,
+    section_filter: Optional[str] = None,
+    include_embedded_modules: bool = True,
+) -> List[str]:
+    """Builds chunk HTML files under chunks_{lang}/: main.yml → content/{lang}, then embedded-modules.
+
+    Returns list of generated chunk file paths (in order).
+    """
+    menu_items = traverse_menu_to_list(yaml_file_path, lang, only_top_section=section_filter)
+    chunk_dir = intermediate_html_dir(lang)
+    base_content = content_base_path(lang)
+
+    writer = _ChunkWriter(chunk_dir, lang)
+
+    for item in menu_items:
+        url = item["url"]
+        if not url:
+            continue
+
+        clean_url = url.lstrip("/")
+        if clean_url.startswith("modules/"):
+            clean_url = clean_url.replace("modules/", "embedded-modules/", 1)
+        html_path = os.path.join(base_content, clean_url)
+
+        if url.endswith("/"):
+            html_path = os.path.join(html_path, "index.html")
+        else:
+            if not html_path.endswith(".html"):
+                html_path += ".html"
+
+        if not os.path.isfile(html_path):
+            continue
+        content = extract_content_from_html(html_path)
+        if not content:
+            continue
+
+        soup = BeautifulSoup(content, "html.parser")
+        postprocess_extracted_docs_soup(soup, lang)
+        content = str(soup)
+        content = fix_image_paths(content, lang=lang)
+        writer.write(content)
+
+    if include_embedded_modules:
+        _append_embedded_modules_to_writer(writer, lang)
+
+    return writer.finish()
+
+
+def _append_embedded_modules_to_writer(writer: "_ChunkWriter", lang: str) -> None:
+    """Append embedded-modules content to the chunk writer."""
     root = embedded_modules_root(lang)
     if not os.path.isdir(root):
         print(f"Note: embedded modules path not found, skipping: {root}")
@@ -768,7 +896,7 @@ def append_embedded_modules(out_f, lang: str) -> None:
     if not module_jobs:
         return
 
-    out_f.write(
+    writer.write(
         f'<h1 id="deckhouse-platform-modules-section">{MODULES_SECTION_H1[lang]}</h1>\n'
     )
 
@@ -784,7 +912,6 @@ def append_embedded_modules(out_f, lang: str) -> None:
             soup = BeautifulSoup(content, "html.parser")
             postprocess_extracted_docs_soup(soup, lang)
             demote_headings_one_level(soup)
-            # index: заголовок модуля = h2 под общим h1 «Модули…». Остальные страницы — ещё на уровень ниже (h3+), вложенные в модуль в оглавлении PDF.
             if fname.lower() != "index.html":
                 demote_headings_one_level(soup)
             if fname.lower() == "index.html":
@@ -815,58 +942,7 @@ def append_embedded_modules(out_f, lang: str) -> None:
             content = fix_image_paths(
                 content, apply_special_path_rewrites=False, lang=lang
             )
-            out_f.write(content)
-
-
-def process_menu_and_extract_content(
-    yaml_file_path: str,
-    lang: str,
-    section_filter: Optional[str] = None,
-    include_embedded_modules: bool = True,
-) -> None:
-    """Builds extracted_content_{lang}.html: main.yml → content/{lang}, then embedded-modules."""
-    menu_items = traverse_menu_to_list(yaml_file_path, lang, only_top_section=section_filter)
-    intermediate = intermediate_html_path(lang)
-    base_content = content_base_path(lang)
-
-    with open(intermediate, "w", encoding="utf-8") as out_f:
-        header = generate_html_header("Extracted documentation content", lang=lang)
-        out_f.write(header)
-        out_f.write("\n")
-        for item in menu_items:
-            url = item["url"]
-            if not url:
-                continue  # Skip elements without URL
-
-            clean_url = url.lstrip("/")
-            if clean_url.startswith("modules/"):
-                clean_url = clean_url.replace("modules/", "embedded-modules/", 1)
-            html_path = os.path.join(base_content, clean_url)
-
-            if url.endswith("/"):
-                html_path = os.path.join(html_path, "index.html")
-            else:
-                if not html_path.endswith(".html"):
-                    html_path += ".html"
-
-            if not os.path.isfile(html_path):
-                continue
-            content = extract_content_from_html(html_path)
-            if content is None:
-                continue
-
-            if content:
-                soup = BeautifulSoup(content, "html.parser")
-                postprocess_extracted_docs_soup(soup, lang)
-                content = str(soup)
-                content = fix_image_paths(content, lang=lang)
-
-            out_f.write(content)
-
-        if include_embedded_modules:
-            append_embedded_modules(out_f, lang)
-
-        out_f.write("</body>\n</html>\n")
+            writer.write(content)
 
 
 def _wkhtml_ui_strings(
@@ -939,19 +1015,25 @@ if __name__ == "__main__":
 
     for lang in langs_to_build:
         print(f"Starting HTML content extraction ({lang})...")
-        process_menu_and_extract_content(
+        chunk_paths = process_menu_and_extract_content(
             SIDEBAR_YAML,
             lang,
             section_filter=section_filter,
             include_embedded_modules=(section_filter is None),
         )
-        print(f"Result saved to: {intermediate_html_path(lang)}")
+        print(f"Result: {len(chunk_paths)} chunk(s) in {intermediate_html_dir(lang)}/")
 
         pdf_out = pdf_output_path_for_lang(base_pdf, lang)
         print(f"Generating PDF ({lang}) → {pdf_out}...")
         header_left, footer_right, toc_header = _wkhtml_ui_strings(
             lang, dkp_doc_version, guide_title_en=guide_title_en, guide_title_ru=guide_title_ru
         )
+
+        # Build page-object list: each chunk is a separate wkhtmltopdf page object.
+        # This keeps individual HTML files small so Qt WebKit does not scale fonts down.
+        page_args: List[str] = []
+        for chunk_path in chunk_paths:
+            page_args.extend(["page", chunk_path])
 
         wkhtmltopdf_cmd = [
             "wkhtmltopdf",
@@ -962,7 +1044,6 @@ if __name__ == "__main__":
             "--margin-bottom", "1cm",
             "--enable-local-file-access",
             "--dpi", "96",
-            "--minimum-font-size", "8",
             "--load-error-handling", "ignore",
             "--disable-external-links",
             "--disable-javascript",
@@ -982,7 +1063,7 @@ if __name__ == "__main__":
             "--toc-level-indentation", "20",
             "--xsl-style-sheet", "toc_template.xsl",
             "--user-style-sheet", "toc_style.css",
-            intermediate_html_path(lang),
+            *page_args,
             pdf_out,
         ]
 
