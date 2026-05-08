@@ -84,7 +84,7 @@ func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) er
 		return nil
 	}
 
-	settings := new(SettingsValues)
+	settings := new(SettingsValues).PublishAPI
 
 	err := mcSnaps[0].UnmarshalTo(settings)
 	if err != nil {
