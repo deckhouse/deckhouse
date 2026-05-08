@@ -40,31 +40,6 @@ function get_data_device_secret() {
   fi
 }
 
-function normalize_disk_path_case() {
-  local path="$1"
-  local dir base candidate
-
-  if [ -b "$path" ]; then
-    printf '%s\n' "$path"
-    return 0
-  fi
-
-  dir="$(dirname "$path")"
-  base="$(basename "$path")"
-
-  if ! [ -d "$dir" ]; then
-    return 1
-  fi
-
-  candidate="$(find "$dir" -maxdepth 1 -type l -iname "$base" -print -quit 2>/dev/null)"
-  if [ -n "$candidate" ] && [ -b "$candidate" ]; then
-    printf '%s\n' "$candidate"
-    return 0
-  fi
-
-  return 1
-}
-
 if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
   exit 0
 fi
@@ -81,11 +56,6 @@ else
     >&2 echo "failed to get data device path"
     exit 1
   fi
-fi
-
-NORMALIZED_DATA_DEVICE="$(normalize_disk_path_case "$DATA_DEVICE")" || true
-if [ -n "$NORMALIZED_DATA_DEVICE" ]; then
-  DATA_DEVICE="$NORMALIZED_DATA_DEVICE"
 fi
 
 {{- /*
