@@ -701,55 +701,54 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
         if not font_tag.attrs:
             font_tag.unwrap()
 
+    def _is_nested_in_tabs_container(tag: Any, container: Any) -> bool:
+        """True if tag has a tabs__content ancestor between itself and container."""
+        cur = tag.parent
+        while cur is not None and cur is not container:
+            cls = getattr(cur, "attrs", {}).get("class") or []
+            if "tabs__content" in cls:
+                return True
+            cur = cur.parent
+        return False
+
     tabs_divs = soup.find_all("div", class_="tabs")
     for tabs_div in tabs_divs:
-        parent = tabs_div.find_parent()
+        parent = tabs_div.parent
         if not parent:
             continue
 
-        content_divs = parent.find_all("div", class_=lambda x: x and "tabs__content" in x)
+        # Build label map: panel-id → button text (skip panels nested in sibling panels)
+        btn_label: Dict[str, str] = {}
+        for btn in tabs_div.find_all("a", class_=lambda x: x and "tabs__btn" in x):
+            store_val = (btn.get("data-store-val") or "").strip()
+            label = " ".join(btn.get_text().split())
+            if store_val:
+                for panel in parent.find_all(
+                    "div",
+                    class_=lambda x: x and "tabs__content" in x,
+                    id=lambda pid: pid and pid.endswith("_" + store_val),
+                ):
+                    if not _is_nested_in_tabs_container(panel, parent):
+                        btn_label[panel.get("id")] = label
 
-        active_content_div = None
-        active_id = None
+        # Show all direct (non-nested) panels with a bold label; remove tab button bar
+        panels = [
+            p for p in parent.find_all("div", class_=lambda x: x and "tabs__content" in x)
+            if not _is_nested_in_tabs_container(p, parent)
+        ]
+        for panel in panels:
+            panel_id = panel.get("id") or ""
+            label = btn_label.get(panel_id, "")
+            # Make panel visible (remove display:none imposed by tabs__content CSS)
+            panel["style"] = "display:block;"
+            if label:
+                label_tag = soup.new_tag("p")
+                strong = soup.new_tag("strong")
+                strong.string = label
+                label_tag.append(strong)
+                panel.insert(0, label_tag)
 
-        for content_div in content_divs:
-            attrs_cd = getattr(content_div, "attrs", None)
-            if not isinstance(attrs_cd, dict):
-                continue
-            classes = attrs_cd.get("class", [])
-            if not isinstance(classes, list):
-                classes = [classes] if classes else []
-            if "active" in classes or "activ" in classes:
-                active_content_div = content_div
-                active_id = attrs_cd.get("id")
-                break
-
-        if not active_id:
-            continue
-
-        for content_div in content_divs:
-            attrs_cd = getattr(content_div, "attrs", None)
-            cid = attrs_cd.get("id") if isinstance(attrs_cd, dict) else None
-            if cid != active_id:
-                content_div.decompose()
-
-        tab_links = tabs_div.find_all("a", class_=lambda x: x and "tabs__btn" in x)
-        for link in tab_links:
-            attrs_link = getattr(link, "attrs", None)
-            if not isinstance(attrs_link, dict):
-                continue
-            onclick = str(attrs_link.get("onclick") or "")
-            matches = re.findall(r"['\"]([^'\"]+)['\"]", onclick)
-            if matches:
-                link_id = matches[-1]
-                if link_id != active_id:
-                    link.decompose()
-            else:
-                classes = attrs_link.get("class", [])
-                if not isinstance(classes, list):
-                    classes = [classes] if classes else []
-                if "active" not in classes and "activ" not in classes:
-                    link.decompose()
+        tabs_div.decompose()
 
     if lang == "en":
         remove_sections_with_exact_heading(soup, "External components")
