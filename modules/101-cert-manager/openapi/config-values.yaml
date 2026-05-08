@@ -146,6 +146,7 @@ properties:
     x-examples: [true, false]
     description: |
       Enable ListenerSet support in cert-manager Gateway API integration.
+      This flag is considered only when Gateway API integration is enabled.
 
   ingressClassHttp01:
     type: string
