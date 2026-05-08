@@ -65,7 +65,6 @@ bootstrap_log_init
 {{ template "get-phase2" $ }}
 ` $lib) $ctx }}
 
-#prepare_base_d8_binaries
 {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl" }}
   {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
 {{- end }}
@@ -75,7 +74,6 @@ bootstrap_log_init
 bootstrap_job_log_pid=$!
 {{- end }}
 
-#run phase2
 get_phase2 | bash
 
 if [ -n "${bootstrap_job_log_pid:-}" ]; then
