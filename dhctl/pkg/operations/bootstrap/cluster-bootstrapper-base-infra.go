@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -29,14 +28,11 @@ import (
 )
 
 func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(preparatorParams),
 		b.DirectoryConfig,
 	)
@@ -65,7 +61,7 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	stateCache := cache.Global()
 
-	if app.DropCache {
+	if b.Options.Cache.DropCache {
 		stateCache.Clean(ctx)
 		stateCache.Delete(ctx, state.TombstoneKey)
 	}

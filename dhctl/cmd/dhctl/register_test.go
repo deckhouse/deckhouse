@@ -19,6 +19,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestCheckCommand(t *testing.T) {
@@ -270,12 +272,12 @@ func TestRegisterCommands(t *testing.T) {
 				{
 					Name:       "bootstrap",
 					Help:       "Bootstrap cluster",
-					DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd },
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd },
 				},
 				{
 					Name:       "converge",
 					Help:       "Converge cluster",
-					DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd },
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd },
 				},
 			},
 			allowedCommands: []string{},
@@ -287,12 +289,12 @@ func TestRegisterCommands(t *testing.T) {
 				{
 					Name:       "bootstrap",
 					Help:       "Bootstrap cluster",
-					DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 				{
 					Name:       "install",
 					Help:       "Install component",
 					Parent:     "bootstrap",
-					DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 			},
 			allowedCommands: []string{},
 			expectError:     false,
@@ -304,7 +306,7 @@ func TestRegisterCommands(t *testing.T) {
 					Name:       "install",
 					Help:       "Install component",
 					Parent:     "nonexistent",
-					DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 			},
 			allowedCommands: []string{"nonexistent install"},
 			expectError:     true,
@@ -315,11 +317,11 @@ func TestRegisterCommands(t *testing.T) {
 				{
 					Name:       "bootstrap",
 					Help:       "Bootstrap cluster",
-					DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 				{
 					Name:       "converge",
 					Help:       "Converge cluster",
-					DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause { return cmd }},
+					DefineFunc: func(cmd *kingpin.CmdClause, _ *options.Options) *kingpin.CmdClause { return cmd }},
 			},
 			allowedCommands: []string{"bootstrap"},
 			expectError:     false,
@@ -344,7 +346,7 @@ func TestRegisterCommands(t *testing.T) {
 				allowedCommands = originalAllowedCommands
 			}()
 
-			err := registerCommands(app)
+			err := registerCommands(app, &options.Options{})
 
 			if tt.expectError {
 				require.Error(t, err)

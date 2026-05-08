@@ -24,7 +24,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -221,9 +220,9 @@ func (c *ConvergeExporter) registerMetrics() {
 //nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
 	log.InfoLn("Start exporter")
-	log.InfoLn("Address: ", app.ListenAddress)
-	log.InfoLn("Metrics path: ", app.MetricsPath)
-	log.InfoLn("Checks interval: ", app.CheckInterval)
+	log.InfoLn("Address: ", c.ListenAddress)
+	log.InfoLn("Metrics path: ", c.MetricsPath)
+	log.InfoLn("Checks interval: ", c.CheckInterval)
 	c.registerMetrics()
 
 	ctx, cancel := context.WithCancel(ctx)

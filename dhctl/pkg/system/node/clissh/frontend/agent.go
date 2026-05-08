@@ -21,7 +21,6 @@ import (
 
 	"github.com/deckhouse/lib-gossh/agent"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -73,7 +72,7 @@ func (a *Agent) AddKeys(keys []session.AgentPrivateKey) error {
 		return fmt.Errorf("Add keys: %w", err)
 	}
 
-	if app.IsDebug {
+	if debugEnabled {
 		log.DebugLn("list added keys")
 		listCmd := cmd.NewSSHAdd(a.AgentSettings).ListCmd()
 

@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
@@ -692,7 +691,7 @@ func WaitForReadiness(ctx context.Context, kubeCl *client.KubernetesClient) erro
 
 func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesClient, excludeNode string) error {
 	return log.ProcessCtx(ctx, "default", "Waiting for Deckhouse to become Ready", func(ctx context.Context) error {
-		ctx, cancel := context.WithTimeout(ctx, app.DeckhouseTimeout)
+		ctx, cancel := context.WithTimeout(ctx, deckhouseTimeout)
 		defer cancel()
 
 		for {

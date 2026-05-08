@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -104,12 +103,11 @@ func (c *Command) Sudo(ctx context.Context) {
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
-			var becomePass string
-
+			// shadow the package-level becomePass with a local that may be
+			// overridden by per-session settings.
+			becomePass := becomePass
 			if c.Session.BecomePass != "" {
 				becomePass = c.Session.BecomePass
-			} else {
-				becomePass = app.BecomePass
 			}
 			if !passSent {
 				// send pass through stdin

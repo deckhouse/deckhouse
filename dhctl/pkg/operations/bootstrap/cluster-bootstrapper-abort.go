@@ -20,7 +20,6 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -36,10 +35,7 @@ import (
 )
 
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
-	restore := b.applyParams()
-	defer restore()
-
-	if !app.SanityCheck {
+	if !b.Options.Global.SanityCheck {
 		log.WarnLn(bootstrapAbortCheckMessage)
 	}
 
@@ -51,7 +47,7 @@ func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache boo
 func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbortFromCache bool) error {
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
@@ -164,11 +160,12 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		destroyParams := &destroy.Params{
 			StateCache:             cache.Global(),
 			PhasedExecutionContext: b.PhasedExecutionContext,
-			SkipResources:          app.SkipResources,
+			SkipResources:          b.Options.Destroy.SkipResources,
 			InfrastructureContext:  b.InfrastructureContext,
 			DirectoryConfig:        b.DirectoryConfig,
 			SSHProvider:            sshProvider,
 			KubeProvider:           b.KubeProvider,
+			Options:                b.Options,
 		}
 
 		if b.CommanderMode {
@@ -219,8 +216,8 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		}
 		preflightRunner := preflight.New(staticAbortSuite)
 		preflightRunner.UseCache(bootstrapState)
-		preflightRunner.SetCacheSalt(state.ConfigHash(app.ConfigPaths))
-		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		preflightRunner.SetCacheSalt(state.ConfigHash(b.Options.Global.ConfigPaths))
+		preflightRunner.DisableChecks(b.Options.Preflight.DisabledChecks()...)
 		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
@@ -232,7 +229,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	}
 
 	// destroy cluster cleanup provider
-	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {
+	if err := destroyer.DestroyCluster(ctx, b.Options.Global.SanityCheck); err != nil {
 		b.lastState = b.PhasedExecutionContext.GetLastState()
 		return err
 	}

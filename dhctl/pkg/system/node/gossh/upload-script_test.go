@@ -225,8 +225,8 @@ func TestUploadScriptExecuteBundle(t *testing.T) {
 	// we don't have /opt/deckhouse in the container, so we should create it before start any UploadScript with sudo
 	err = container.CreateDeckhouseDirs()
 	require.NoError(t, err)
-	// in tests, app.TmpDirName doesn't exist
-	app.TmpDirName = os.TempDir()
+	// in tests, tmpDir doesn't exist
+	tmpDir = os.TempDir()
 
 	t.Run("Upload and execute bundle to container via existing ssh client", func(t *testing.T) {
 		cases := []struct {

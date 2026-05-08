@@ -20,16 +20,12 @@ import (
 
 	"github.com/deckhouse/lib-connection/pkg/ssh"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
 	if err != nil {
 		return err
@@ -44,7 +40,7 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 		return fmt.Errorf("unable to start ssh client: %w", err)
 	}
 
-	if err := terminal.AskBecomePassword(); err != nil {
+	if err := terminal.AskBecomePassword(&b.Options.Become); err != nil {
 		return err
 	}
 
@@ -54,8 +50,8 @@ func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
 
 	bootstrapState := NewBootstrapState(cache.Global())
 
-	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, app.PostBootstrapScriptPath, bootstrapState).
-		WithTimeout(app.PostBootstrapScriptTimeout)
+	postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).
+		WithTimeout(b.Options.Bootstrap.PostBootstrapScriptTimeout)
 
 	if err := postScriptExecutor.Execute(ctx); err != nil {
 		return err

@@ -22,25 +22,45 @@ import (
 
 	ssh "github.com/deckhouse/lib-gossh"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
+
+// TODO(nabokikhms): fix package level setters in the following PRs.
+//
+// These package-level vars replace the dhctl/pkg/app globals this package used
+// to read directly. Set once at startup via SetGlobals from the resolved
+// *options.Options.
+var (
+	sshPrivateKeys                     []string
+	privateKeysToPassPhrasesFromConfig options.PrivateKeyFileToPassphrase
+)
+
+// SetGlobals wires in SSH options at startup.
+// TODO(nabokikhms): fix package level setters in the following PRs.
+func SetGlobals(opts *options.Options) {
+	if opts == nil {
+		return
+	}
+	sshPrivateKeys = opts.SSH.PrivateKeys
+	privateKeysToPassPhrasesFromConfig = opts.SSH.PrivateKeysToPassPhrasesFromConfig
+}
 
 func tryToExtractPassPhraseFromConfig(path string) string {
 	if path == "" {
 		return ""
 	}
 
-	l := len(app.PrivateKeysToPassPhrasesFromConfig)
+	l := len(privateKeysToPassPhrasesFromConfig)
 	log.DebugF("Passphrases map has %d passphrases\n", l)
 
 	if l == 0 {
 		return ""
 	}
 
-	p, ok := app.PrivateKeysToPassPhrasesFromConfig[path]
+	p, ok := privateKeysToPassPhrasesFromConfig[path]
 	if !ok || len(p) == 0 {
 		return ""
 	}
@@ -73,8 +93,8 @@ func tryToExtractPassPhraseFromConfigOrTerminal(path string) (string, error) {
 }
 
 func CollectDHCTLPrivateKeysFromFlags() []session.AgentPrivateKey {
-	keys := make([]session.AgentPrivateKey, 0, len(app.SSHPrivateKeys))
-	for _, key := range app.SSHPrivateKeys {
+	keys := make([]session.AgentPrivateKey, 0, len(sshPrivateKeys))
+	for _, key := range sshPrivateKeys {
 		keys = append(keys, session.AgentPrivateKey{Key: key})
 	}
 

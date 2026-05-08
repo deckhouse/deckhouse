@@ -21,7 +21,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 )
@@ -99,7 +98,7 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 		"-o", "ConnectTimeout=15",
 	}
 
-	if app.IsDebug {
+	if debugEnabled {
 		args = append(args, "-vvv")
 	}
 

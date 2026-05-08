@@ -24,7 +24,6 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
@@ -146,13 +145,13 @@ type ClientOptions struct {
 
 func NewInitClientFromFlags(ctx context.Context, askPassword bool) (node.SSHClient, error) {
 	switch {
-	case app.SSHLegacyMode:
+	case sshLegacyMode:
 		// if set --ssh-legacy-mode
 		return clissh.NewInitClientFromFlags(askPassword)
-	case app.SSHModernMode:
+	case sshModernMode:
 		// if set --ssh-modern-mode
 		return gossh.NewInitClientFromFlags(ctx, askPassword)
-	case len(app.SSHPrivateKeys) > 0:
+	case len(sshPrivateKeys) > 0:
 		// if flags doesn't set, but we have private keys
 		return clissh.NewInitClientFromFlags(askPassword)
 	default:
@@ -161,7 +160,7 @@ func NewInitClientFromFlags(ctx context.Context, askPassword bool) (node.SSHClie
 }
 
 func NewInitClientFromFlagsWithHosts(ctx context.Context, askPassword bool) (node.SSHClient, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
@@ -174,14 +173,14 @@ func NewClient(ctx context.Context, sess *session.Session, privateKeys []session
 
 func NewClientWithOptions(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, clientOptions ClientOptions) node.SSHClient {
 	switch {
-	case app.SSHLegacyMode:
+	case sshLegacyMode:
 		// if set --ssh-legacy-mode
 		client := clissh.NewClient(sess, privateKeys, clientOptions.InitializeNewAgent)
 		return client
-	case app.SSHModernMode:
+	case sshModernMode:
 		// if set --ssh-modern-mode
 		return gossh.NewClient(ctx, sess, privateKeys)
-	case len(app.SSHPrivateKeys) > 0:
+	case len(sshPrivateKeys) > 0:
 		// if flags doesn't set, but we have private keys
 		client := clissh.NewClient(sess, privateKeys, clientOptions.InitializeNewAgent)
 		return client
@@ -192,11 +191,11 @@ func NewClientWithOptions(ctx context.Context, sess *session.Session, privateKey
 
 func NewClientFromFlags(ctx context.Context) (node.SSHClient, error) {
 	switch {
-	case app.SSHLegacyMode:
+	case sshLegacyMode:
 		return clissh.NewClientFromFlags(), nil
-	case app.SSHModernMode:
+	case sshModernMode:
 		return gossh.NewClientFromFlags(ctx)
-	case len(app.SSHPrivateKeys) > 0:
+	case len(sshPrivateKeys) > 0:
 		return clissh.NewClientFromFlags(), nil
 	default:
 		return gossh.NewClientFromFlags(ctx)
@@ -204,7 +203,7 @@ func NewClientFromFlags(ctx context.Context) (node.SSHClient, error) {
 }
 
 func NewClientFromFlagsWithHosts(ctx context.Context) (node.SSHClient, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
@@ -239,7 +238,7 @@ func NewClientFromConfig(ctx context.Context, host string, cred ClientConfig) (n
 	keys = append(keys, cred.BastionKeys...)
 
 	if cred.PrivateSSHKey != "" {
-		tmpFile, err := os.CreateTemp(app.TmpDirName, "sshkey-for-staticinstance-*")
+		tmpFile, err := os.CreateTemp(tmpDir, "sshkey-for-staticinstance-*")
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create temp file for SSH key: %w", err)
 		}
@@ -258,9 +257,9 @@ func NewClientFromConfig(ctx context.Context, host string, cred ClientConfig) (n
 }
 
 func IsModernMode() bool {
-	return app.SSHModernMode || len(app.SSHPrivateKeys) == 0
+	return sshModernMode || len(sshPrivateKeys) == 0
 }
 
 func IsLegacyMode() bool {
-	return app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode)
+	return sshLegacyMode || (len(sshPrivateKeys) > 0 && !sshModernMode)
 }

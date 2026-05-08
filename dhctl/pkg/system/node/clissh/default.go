@@ -17,7 +17,6 @@ package clissh
 import (
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
@@ -25,13 +24,13 @@ import (
 
 func NewClientFromFlags() *Client {
 	settings := session.NewSession(session.Input{
-		AvailableHosts: app.SSHHosts,
-		User:           app.SSHUser,
-		Port:           app.SSHPort,
-		BastionHost:    app.SSHBastionHost,
-		BastionPort:    app.SSHBastionPort,
-		BastionUser:    app.SSHBastionUser,
-		ExtraArgs:      app.SSHExtraArgs,
+		AvailableHosts: sshHosts,
+		User:           sshUser,
+		Port:           sshPort,
+		BastionHost:    sshBastionHost,
+		BastionPort:    sshBastionPort,
+		BastionUser:    sshBastionUser,
+		ExtraArgs:      sshExtraArgs,
 	})
 
 	return &Client{
@@ -41,7 +40,7 @@ func NewClientFromFlags() *Client {
 }
 
 func NewClientFromFlagsWithHosts() (*Client, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
@@ -49,7 +48,7 @@ func NewClientFromFlagsWithHosts() (*Client, error) {
 }
 
 func NewInitClientFromFlagsWithHosts(askPassword bool) (*Client, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
@@ -57,7 +56,7 @@ func NewInitClientFromFlagsWithHosts(askPassword bool) (*Client, error) {
 }
 
 func NewInitClientFromFlags(askPassword bool) (*Client, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, nil
 	}
 
@@ -70,7 +69,8 @@ func NewInitClientFromFlags(askPassword bool) (*Client, error) {
 	}
 
 	if askPassword {
-		err = terminal.AskBecomePassword()
+		// TODO(nabokikhms): fix package level setters in the following PRs.
+		err = terminal.AskBecomePassword(&pkgBecomeOptions)
 		if err != nil {
 			return nil, err
 		}

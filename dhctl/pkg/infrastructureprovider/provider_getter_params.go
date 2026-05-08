@@ -21,7 +21,6 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
@@ -93,12 +92,12 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 
 	if _, err = os.Stat(diDefaultParams.CloudProviderDir); err != nil {
 		// fallback to /tmp
-		diDefaultParams.CloudProviderDir = filepath.Join(app.DownloadDirName, "deckhouse", "candi", "cloud-providers")
+		diDefaultParams.CloudProviderDir = filepath.Join(downloadDir, "deckhouse", "candi", "cloud-providers")
 	}
 
 	if _, err = os.Stat(diDefaultParams.PluginsDir); err != nil {
 		// fallback to /tmp
-		diDefaultParams.PluginsDir = filepath.Join(app.DownloadDirName, "plugins")
+		diDefaultParams.PluginsDir = filepath.Join(downloadDir, "plugins")
 	}
 
 	logger.LogDebugF("Using default FSDIParams: %+v\n", diDefaultParams)
@@ -136,12 +135,12 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 		return "", err
 	}
 
-	tmpDir := p.TmpDir
-	logMsg := "Use passed tmp dir."
-
-	if tmpDir == "" {
-		tmpDir = app.TmpDirName
-		logMsg = "CloudProviderGetterParams tmp dir is empty. Using global default."
+	// shadow the package-level tmpDir with the per-call value when provided.
+	tmpDir := tmpDir
+	logMsg := "CloudProviderGetterParams tmp dir is empty. Using global default."
+	if p.TmpDir != "" {
+		tmpDir = p.TmpDir
+		logMsg = "Use passed tmp dir."
 	}
 
 	preparedTmpDir, err := fsutils.DoAbsolutePath(tmpDir, true)

@@ -31,7 +31,6 @@ import (
 
 	ssh "github.com/deckhouse/lib-gossh"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -398,12 +397,11 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
 			c.logDebugF("Send become pass to cmd")
-			var becomePass string
-
+			// shadow the package-level becomePass with a local that may be
+			// overridden by per-session settings.
+			becomePass := becomePass
 			if c.sshClient.Settings.BecomePass != "" {
 				becomePass = c.sshClient.Settings.BecomePass
-			} else {
-				becomePass = app.BecomePass
 			}
 			var err error
 			_, err = c.Stdin.Write([]byte(becomePass + "\n"))
@@ -666,7 +664,7 @@ func (c *SSHCommand) SetupStreamHandlers() error {
 			n, err := stderrReadPipe.Read(buf)
 
 			// TODO logboek
-			if app.IsDebug {
+			if debugEnabled {
 				os.Stderr.Write(buf[:n])
 			}
 			if c.err != nil {
@@ -745,7 +743,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 			}
 		}
 		// TODO logboek
-		if app.IsDebug {
+		if debugEnabled {
 			os.Stdout.Write(buf[m:n])
 		}
 		if c.out != nil && !isError {

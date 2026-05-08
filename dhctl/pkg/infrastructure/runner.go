@@ -27,7 +27,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -291,10 +290,10 @@ func (r *Runner) Init(ctx context.Context) error {
 			r.logger.LogInfoF("Cached infrastructure state found:\n\t%s\n\n", r.statePath)
 			if !r.allowedCachedState {
 				var isConfirm bool
-				switch app.UseTfCache {
-				case app.UseStateCacheYes:
+				switch useTfCache {
+				case UseStateCacheYes:
 					isConfirm = true
-				case app.UseStateCacheNo:
+				case UseStateCacheNo:
 					isConfirm = false
 				default:
 					isConfirm = r.confirm().

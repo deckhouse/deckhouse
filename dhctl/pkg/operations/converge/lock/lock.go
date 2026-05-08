@@ -24,7 +24,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -147,11 +146,11 @@ func IsConvergeLocked(ctx context.Context, getter kubernetes.KubeClientProviderW
 
 func GetLockLeaseConfig(identity string) *lease.LeaseLockConfig {
 	additionalInfo := ""
-	if app.SSHUser != "" {
+	if sshUser != "" {
 		info := struct {
 			SSHUser string `json:"ssh_user,omitempty"`
 		}{
-			SSHUser: app.SSHUser,
+			SSHUser: sshUser,
 		}
 
 		infoStr, err := json.Marshal(info)

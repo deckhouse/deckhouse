@@ -20,6 +20,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -33,11 +34,11 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineKubeFlags(cmd)
-	app.DefineConvergeExporterFlags(cmd)
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
+func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineConvergeExporterFlags(cmd, &opts.Converge)
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -45,12 +46,12 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 		logger := log.GetDefaultLogger()
 
 		exporter := operations.NewConvergeExporter(operations.ExporterParams{
-			Address:  app.ListenAddress,
-			Path:     app.MetricsPath,
-			Interval: app.CheckInterval,
-			TmpDir:   app.TmpDirName,
+			Address:  opts.Converge.ListenAddress,
+			Path:     opts.Converge.MetricsPath,
+			Interval: opts.Converge.CheckInterval,
+			TmpDir:   opts.Global.TmpDir,
 			Logger:   logger,
-			IsDebug:  app.IsDebug,
+			IsDebug:  opts.Global.IsDebug,
 		})
 
 		exporter.Start(ctx)
@@ -59,24 +60,24 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 	})
 }
 
-func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineKubeFlags(cmd)
-	app.DefineOutputFlag(cmd)
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
+func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineOutputFlag(cmd, &opts.Converge)
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
 		logger := log.GetDefaultLogger()
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(
 			ctx,
 			params,
-			providerinitializer.WithKubeFlagsDefined(app.KubeFlagsDefined()),
+			providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()),
 			providerinitializer.WithRequiredKubeProvider(),
 		)
 		if err != nil {
@@ -102,7 +103,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			app.GetDirConfig(),
+			opts.Global.DirConfig(),
 		)
 		if err != nil {
 			return err
@@ -114,10 +115,10 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           app.TmpDirName,
+			TmpDir:           opts.Global.TmpDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
-			IsDebug:          app.IsDebug,
+			IsDebug:          opts.Global.IsDebug,
 		})
 
 		provider, err := providerGetter(ctx, metaConfig)
@@ -137,7 +138,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		data, err := statistic.Format(app.OutputFormat)
+		data, err := statistic.Format(opts.Converge.OutputFormat)
 		if err != nil {
 			return fmt.Errorf("Failed to format check result: %w", err)
 		}

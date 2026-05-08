@@ -15,27 +15,22 @@
 package app
 
 import (
-	"time"
-
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-var (
-	ApplyInterval             = 30 * time.Minute
-	AutoConvergeListenAddress = ":9101"
-	RunningNodeName           = ""
-)
-
-func DefineAutoConvergeFlags(cmd *kingpin.CmdClause) {
+// DefineAutoConvergeFlags registers the auto-converge service flags.
+func DefineAutoConvergeFlags(cmd *kingpin.CmdClause, o *options.AutoConvergeOptions) {
 	cmd.Flag("converge-interval", "Period to converge infrastructure state").
 		Envar(configEnvName("CONVERGE_INTERVAL")).
-		DurationVar(&ApplyInterval)
+		DurationVar(&o.ApplyInterval)
 
 	cmd.Flag("listen-address", "Address to expose metrics").
 		Envar(configEnvName("LISTEN_ADDRESS")).
-		StringVar(&AutoConvergeListenAddress)
+		StringVar(&o.ListenAddress)
 
 	cmd.Flag("node-name", "Node name where running auto-converger pod").
 		Envar(configEnvName("RUNNING_NODE_NAME")).
-		StringVar(&RunningNodeName)
+		StringVar(&o.RunningNodeName)
 }

@@ -18,84 +18,55 @@ import (
 	"fmt"
 
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
-const (
-	UseStateCacheAsk = "ask"
-	UseStateCacheYes = "yes"
-	UseStateCacheNo  = "no"
-)
-
-var (
-	CacheDir   = defaultTmpAndStateDir
-	UseTfCache = "ask"
-
-	DropCache = false
-
-	CacheKubeConfig          = ""
-	CacheKubeConfigContext   = ""
-	CacheKubeConfigInCluster = false
-	CacheKubeNamespace       = ""
-	CacheKubeName            = ""
-	CacheKubeLabels          = make(map[string]string)
-
-	ResourceManagementTimeout = ""
-)
-
-func DefineCacheFlags(cmd *kingpin.CmdClause) {
+// DefineCacheFlags registers infrastructure (terraform/tofu) state-cache flags into o.
+func DefineCacheFlags(cmd *kingpin.CmdClause, o *options.CacheOptions) {
 	cmd.Flag("cache-dir", "Directory to store the cache.").
 		Envar(configEnvName("CACHE_DIR")).
-		StringVar(&CacheDir)
+		StringVar(&o.Dir)
 
 	cmd.Flag("use-cache", fmt.Sprintf(`Behaviour for using infrastructure state cache. May be:
 	%s - ask user about it (Default)
    	%s - use cache
 	%s  - don't use cache
-	`, UseStateCacheAsk, UseStateCacheYes, UseStateCacheNo)).
+	`, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo)).
 		Envar(configEnvName("USE_CACHE")).
-		Default(UseStateCacheAsk).
-		EnumVar(&UseTfCache, UseStateCacheAsk, UseStateCacheYes, UseStateCacheNo)
+		Default(options.UseStateCacheAsk).
+		EnumVar(&o.UseTfCache, options.UseStateCacheAsk, options.UseStateCacheYes, options.UseStateCacheNo)
 
 	cmd.Flag("kube-cache-store-kubeconfig", "Path to kubernetes config file for storing cache in kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_CONFIG")).
-		StringVar(&CacheKubeConfig)
+		StringVar(&o.KubeConfig)
 	cmd.Flag("kube-cachestore-kubeconfig-context", "Context from kubernetes config to connect to Kubernetes API. for storing cache in kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_CONFIG_CONTEXT")).
-		StringVar(&CacheKubeConfigContext)
+		StringVar(&o.KubeConfigContext)
 	cmd.Flag("kube-cachestore-kube-client-from-cluster", "Use in-cluster Kubernetes API access. for storing cache in kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_CLIENT_FROM_CLUSTER")).
-		BoolVar(&CacheKubeConfigInCluster)
+		BoolVar(&o.KubeConfigInCluster)
 	cmd.Flag("kube-cachestore-namespace", "Use in-cluster Kubernetes API access. for storing cache in kubernetes secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_NAMESPACE")).
-		StringVar(&CacheKubeNamespace)
+		StringVar(&o.KubeNamespace)
 	cmd.Flag("kube-cachestore-labels", "List labels for cache secrets").
 		Envar(configEnvName("CACHE_STORE_KUBE_LABELS")).
-		StringMapVar(&CacheKubeLabels)
+		StringMapVar(&o.KubeLabels)
 	cmd.Flag("kube-cachestore-name", "Name for cache secret").
 		Envar(configEnvName("CACHE_STORE_KUBE_NAME")).
-		StringVar(&CacheKubeName)
+		StringVar(&o.KubeName)
 }
 
-func DefineDropCacheFlags(cmd *kingpin.CmdClause) {
+// DefineDropCacheFlags registers --yes-i-want-to-drop-cache.
+func DefineDropCacheFlags(cmd *kingpin.CmdClause, o *options.CacheOptions) {
 	cmd.Flag("yes-i-want-to-drop-cache", "All cached information will be deleted from your local cache.").
 		Default("false").
-		BoolVar(&DropCache)
+		BoolVar(&o.DropCache)
 }
 
-func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause) {
+// DefineTFResourceManagementTimeout registers the infrastructure resource-management timeout override.
+func DefineTFResourceManagementTimeout(cmd *kingpin.CmdClause, o *options.CacheOptions) {
 	cmd.Flag("tf-resource-management-timeout", "Redefine infrastructure resource management timeouts").
 		Envar(configEnvName("DHCTL_TF_RESOURCE_MANAGEMENT_TIMEOUT")).
-		StringVar(&ResourceManagementTimeout)
-}
-
-func SetCacheDir(dir string) {
-	CacheDir = dir
-}
-
-func GetCacheDir() string {
-	return CacheDir
-}
-
-func GetDefaultCacheDir() string {
-	return defaultTmpAndStateDir
+		StringVar(&o.ResourceManagementTimeout)
 }

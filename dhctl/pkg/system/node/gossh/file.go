@@ -31,7 +31,6 @@ import (
 
 	ssh "github.com/deckhouse/lib-gossh"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -240,7 +239,7 @@ func getRemoteFilesList(client *ssh.Client, remoteFilePath string) (string, erro
 
 func CreateEmptyTmpFile() (string, error) {
 	tmpPath := filepath.Join(
-		app.TmpDirName,
+		tmpDir,
 		fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()),
 	)
 
