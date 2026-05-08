@@ -165,6 +165,10 @@ spec:
               name: cni-net-dir
             - mountPath: {{ ternary "/tmp/istio-cni" "/var/run/istio-cni" $cniLegacyTmpRunDir }}
               name: cni-log-dir
+            {{- if $cniLegacyTmpRunDir }}
+            - mountPath: /run/istio-cni
+              name: cni-log-dir
+            {{- end }}
             - mountPath: /tmp
               name: install-cni-tmp
             {{- if ($.Values.istio.internal.enableAmbientMode) }}
