@@ -742,11 +742,33 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
             # Make panel visible (remove display:none imposed by tabs__content CSS)
             panel["style"] = "display:block;"
             if label:
-                label_tag = soup.new_tag("p")
-                strong = soup.new_tag("strong")
-                strong.string = label
-                label_tag.append(strong)
-                panel.insert(0, label_tag)
+                # Find the first real child element to decide insertion strategy
+                first_child = next(
+                    (c for c in panel.children if getattr(c, "name", None)),
+                    None,
+                )
+                if first_child and first_child.name in ("ol", "ul"):
+                    # Panel starts with a list — fix the list's padding-left explicitly,
+                    # then give the label the same indent so they align pixel-perfect.
+                    _list_indent = "40px"
+                    existing_style = (first_child.get("style") or "").rstrip(";")
+                    first_child["style"] = (
+                        (existing_style + "; " if existing_style else "")
+                        + f"padding-left:{_list_indent};"
+                    )
+                    label_tag = soup.new_tag(
+                        "div",
+                        style=f"font-weight:bold; padding-left:{_list_indent}; margin:0.3em 0 0.1em 0;",
+                    )
+                    label_tag.string = label
+                    panel.insert(0, label_tag)
+                else:
+                    label_tag = soup.new_tag(
+                        "div",
+                        style="font-weight:bold; margin:0.3em 0 0.1em 0;",
+                    )
+                    label_tag.string = label
+                    panel.insert(0, label_tag)
 
         tabs_div.decompose()
 
