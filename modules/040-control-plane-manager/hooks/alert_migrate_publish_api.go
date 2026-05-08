@@ -84,14 +84,14 @@ func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) er
 		return nil
 	}
 
-	settings := new(SettingsValues).PublishAPI
-
-	err := mcSnaps[0].UnmarshalTo(settings)
+	var publishAPI *struct{}
+	err := mcSnaps[0].UnmarshalTo(&publishAPI)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
 	}
-	fmt.Println(settings)
-	if settings != nil {
+
+	fmt.Println(publishAPI)
+	if publishAPI != nil {
 		input.MetricsCollector.Set("d8_obsolete_publishapi_in_user_authn", 1,
 			map[string]string{},
 			metrics.WithGroup("D8ObsoletePublishAPIInUserAuthn"))
