@@ -183,6 +183,7 @@ resource "vsphere_virtual_machine" "master" {
   memory_share_count = lookup(local.runtime_options, "memoryShares", null)
 
   extra_config = local.vm_extra_config
+  annotation = data.vsphere_virtual_machine.template.annotation
 
   clone {
     template_uuid = data.vsphere_virtual_machine.template.id
