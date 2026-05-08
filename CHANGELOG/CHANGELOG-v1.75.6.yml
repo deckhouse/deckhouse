@@ -1,0 +1,23 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fixed enforcementAction for D8ReplicaLimits, added more template tests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19521
+dhctl:
+  fixes:
+    - summary: fix SSH preflight check for StaticInstances with password-only auth.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19555
+docs:
+  fixes:
+    - summary: Fix broken links in VPA section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19611
+    - summary: Fix visibility scope for nested details component
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19565
+    - summary: Add info about kernel requirement for containerdv2 migration.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19437
+node-manager:
+  fixes:
+    - summary: CAPI crd served version fix
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19665
+    - summary: Added cleanup for oversized MCM MachineSet revision history annotation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19652
+
