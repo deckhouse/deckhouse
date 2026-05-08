@@ -1366,6 +1366,10 @@ entries:
                 en: Admission-policy-engine module
                 ru: Модуль admission-policy-engine
               url: /architecture/security/admission-policy-engine.html
+            - title:
+                en: Cert-manager module
+                ru: Модуль cert-manager
+              url: /architecture/security/cert-manager.html
         - title:
             en: Network subsystem
             ru: Подсистема Network
