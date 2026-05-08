@@ -40,7 +40,7 @@ metadata:
   name: {{ $warningPolicyName }}
   {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
 spec:
-  failurePolicy: Fail
+  failurePolicy: Ignore
   matchConstraints:
     resourceRules:
       - apiGroups:   ["deckhouse.io"]
@@ -50,7 +50,7 @@ spec:
   validations:
     - expression: '!(has(object.spec.validationIsolationMode) && object.spec.validationIsolationMode == "IsolatedProcess")'
       reason: Forbidden
-      messageExpression: '"validationIsolationMode IsolatedProcess requires containerd v2 on target nodes; it may not work on containerd v1 or mixed-runtime clusters. See: https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/migrating.html"'
+      messageExpression: '"validationIsolationMode IsolatedProcess requires containerd v2 on target nodes; it may not work on nodes running containerd v1."'
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding

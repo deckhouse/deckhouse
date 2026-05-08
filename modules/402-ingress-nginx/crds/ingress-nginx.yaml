@@ -165,7 +165,7 @@ spec:
                     * `IsolatedFilesystem`: NGINX configuration validation is executed in a separate file system with no access to the file system of the running NGINX server, effectively limiting the attack surface. The validation scope is limited by the `ingressClass` parameter, resulting in strong validation.
                     * `IsolatedProcess`: NGINX configuration validation is executed inside a sandboxed environment where every syscall is traced. It is the most secure isolation mode limited by the `ingressClass` parameter. 
                     > **Note.** Some hardened operating system may block syscall tracing without additional configuration so this mode is optional at the moment.
-                    > **Note.** `IsolatedProcess` requires `containerd v2` on target nodes.
+                    > **Note.** `IsolatedProcess` requires [containerd v2](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/migrating.html) running on target nodes.
                     > **Note.** This mode is considered experimental.
                 annotationValidationEnabled:
                   type: boolean
@@ -1129,7 +1129,7 @@ spec:
                     * `IsolatedFilesystem`: NGINX configuration validation is executed in a separate file system with no access to the file system of the running NGINX server, effectively limiting the attack surface. The validation scope is limited by the `ingressClass` parameter, resulting in strong validation.
                     * `IsolatedProcess`: NGINX configuration validation is executed inside a sandboxed environment where every syscall is traced. It is the most secure isolation mode limited by the `ingressClass` parameter. 
                     > **Note.** Some hardened operating system may block syscall tracing without additional configuration so this mode is optional at the moment.
-                    > **Note.** `IsolatedProcess` requires `containerd v2` on target nodes.
+                    > **Note.** `IsolatedProcess` requires [containerd v2](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/migrating.html) running on target nodes.
                     > **Note.** This mode is considered experimental.
 
                 annotationValidationEnabled:
