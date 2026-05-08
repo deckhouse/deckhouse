@@ -21,7 +21,10 @@ import (
 )
 
 // TODO(nabokikhms): fix package level setters in the following PRs.
-var resourcesTimeout time.Duration
+//
+// Default matches the previous dhctl/pkg/app init() value so tests not going
+// through main() see the same behavior as before.
+var resourcesTimeout = 15 * time.Minute
 
 // SetGlobals wires in bootstrap options at startup.
 // TODO(nabokikhms): fix package level setters in the following PRs.
@@ -29,5 +32,7 @@ func SetGlobals(opts *options.Options) {
 	if opts == nil {
 		return
 	}
-	resourcesTimeout = opts.Bootstrap.ResourcesTimeout
+	if opts.Bootstrap.ResourcesTimeout > 0 {
+		resourcesTimeout = opts.Bootstrap.ResourcesTimeout
+	}
 }

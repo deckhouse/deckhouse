@@ -21,7 +21,10 @@ import (
 )
 
 // TODO(nabokikhms): fix package level setters in the following PRs.
-var deckhouseTimeout time.Duration
+//
+// Default matches the previous dhctl/pkg/app init() value so tests not going
+// through main() see the same behavior as before.
+var deckhouseTimeout = 15 * time.Minute
 
 // SetGlobals wires in bootstrap options at startup.
 // TODO(nabokikhms): fix package level setters in the following PRs.
@@ -29,5 +32,7 @@ func SetGlobals(opts *options.Options) {
 	if opts == nil {
 		return
 	}
-	deckhouseTimeout = opts.Bootstrap.DeckhouseTimeout
+	if opts.Bootstrap.DeckhouseTimeout > 0 {
+		deckhouseTimeout = opts.Bootstrap.DeckhouseTimeout
+	}
 }

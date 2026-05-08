@@ -20,11 +20,13 @@ import (
 
 // TODO(nabokikhms): fix package level setters in the following PRs.
 //
-// Set once at startup via SetGlobals from the resolved *options.Options.
+// Defaults match the previous dhctl/pkg/app init() values so that tests not
+// going through main() see the same behavior as before.
+// Set at startup via SetGlobals from the resolved *options.Options.
 var (
-	useTfCache   string
+	useTfCache   = options.UseStateCacheAsk
 	debugEnabled bool
-	tmpDir       string
+	tmpDir       = options.DefaultTmpDir()
 )
 
 // SetGlobals wires in cache/global options at startup.

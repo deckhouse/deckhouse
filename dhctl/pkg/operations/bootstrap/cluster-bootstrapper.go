@@ -300,6 +300,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	globalPreflightSuite := suites.NewGlobalSuite(suites.GlobalDeps{
 		MetaConfig:    metaConfig,
 		InstallConfig: deckhouseInstallConfig,
+		BuildInfo:     b.Options.BuildInfo,
 	})
 
 	if metaConfig.ClusterType == config.CloudClusterType {

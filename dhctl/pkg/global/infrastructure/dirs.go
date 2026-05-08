@@ -25,11 +25,13 @@ var (
 	candiDir               = deckhouseDir + "/candi"
 	infrastructureVersions = candiDir + "/terraform_versions.yml"
 
-	// downloadDir is the dhctl download directory. Set once at startup via
-	// SetDownloadDir from the resolved options.GlobalOptions. The fallback
+	// downloadDir is the dhctl download directory. Set at startup via
+	// SetDownloadDir from the resolved options.GlobalOptions; the default
+	// matches the previous dhctl/pkg/app.DownloadDirName so callers (and tests)
+	// not going through main() see the same behavior as before. The fallback
 	// resolvers below use it to locate provider/version files unpacked from
 	// the deckhouse image.
-	downloadDir = ""
+	downloadDir = filepath.Join(os.TempDir(), "dhctl")
 )
 
 func InitGlobalVars(pwd string) {
