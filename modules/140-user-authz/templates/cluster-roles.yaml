@@ -131,6 +131,25 @@
   verbs:
   {{- include "user_authz_verbs" $mode }}
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - backendtlspolicies
+  - gateways
+  - grpcroutes
+  - httproutes
+  - listenersets
+  - referencegrants
+  - tcproutes
+  - tlsroutes
+  verbs:
+  {{- include "user_authz_verbs" $mode }}
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+- apiGroups:
   - networking.k8s.io
   resources:
   - networkpolicies
@@ -297,6 +316,12 @@
   - customresourcedefinitions
   verbs:
 {{- include "user_authz_verbs" "w" }}
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  verbs:
+{{- include "user_authz_verbs" "w" }}
 {{- end -}}
 
 {{- define "user_authz_cluster_admin_rules" }}
@@ -425,4 +450,3 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_super_admin_rules" . }}
-
