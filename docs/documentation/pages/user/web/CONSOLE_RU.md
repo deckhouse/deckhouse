@@ -308,7 +308,6 @@ lang: ru
 
 ![классы хранилищ](../../images/console/system-management-storage-storage-classes.png)
 
-
 ### Подраздел «Persistent volume»
 
 Предназначен для управления Persistent volume.
