@@ -69,7 +69,7 @@ func applyModuleConfigFilterForMigration(obj *unstructured.Unstructured) (go_hoo
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert user-authn ModuleConfig: %v", err)
 	}
-	return mc, nil
+	return mc.Spec.Settings.PublishAPI, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
