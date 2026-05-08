@@ -73,7 +73,7 @@ func applyModuleConfigFilterForAlerts(obj *unstructured.Unstructured) (go_hook.F
 		return nil, fmt.Errorf("cannot convert user-authn ModuleConfig: %v", err)
 	}
 
-	return mc.Spec.Settings.PublishAPI, nil
+	return mc.Spec.Settings.PublishAPI != nil, nil
 }
 
 func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) error {
@@ -84,14 +84,13 @@ func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) er
 		return nil
 	}
 
-	var publishAPI *struct{}
-	err := mcSnaps[0].UnmarshalTo(publishAPI)
-	if err != nil {
+	var publishAPISet bool
+	if err := mcSnaps[0].UnmarshalTo(&publishAPISet); err != nil {
 		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
 	}
 
-	fmt.Println(publishAPI)
-	if publishAPI != nil {
+	fmt.Println(publishAPISet)
+	if publishAPISet {
 		input.MetricsCollector.Set("d8_obsolete_publishapi_in_user_authn", 1,
 			map[string]string{},
 			metrics.WithGroup("D8ObsoletePublishAPIInUserAuthn"))
