@@ -84,6 +84,11 @@ properties:
     default: false
     description: |
       Do not enforce any Network Policy. Just log allowed/disallowed connections.
+  hostFirewallEnabled:
+    type: boolean
+    default: true
+    description: |
+      Enables Cilium Host Firewall.
   exclusiveCNIPlugin:
     type: boolean
     default: true

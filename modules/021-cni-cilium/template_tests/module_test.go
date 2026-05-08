@@ -59,6 +59,7 @@ modules:
 `
 	cniCiliumValues = `
 bpfLBMode: "DSR"
+hostFirewallEnabled: true
 internal:
   mode: "Direct"
   masqueradeMode: "BPF"
@@ -291,6 +292,35 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 ]`))
 		})
 
+	})
+
+	Context("ConfigMap cilium-config rendering (host firewall setting)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+		})
+
+		It("Renders ConfigMap cilium-config with host firewall enabled by default", func() {
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.enable-host-firewall").String()).To(Equal("true"))
+		})
+
+		It("Renders ConfigMap cilium-config with host firewall disabled", func() {
+			f.ValuesSet("cniCilium.hostFirewallEnabled", false)
+			f.HelmRender()
+
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config")
+			Expect(cm.Exists()).To(BeTrue())
+			Expect(cm.Field("data.enable-host-firewall").String()).To(Equal("false"))
+		})
 	})
 
 	Context("ConfigMap cilium-config rendering (hubble enabled, extended metrics + flow logs)", func() {
