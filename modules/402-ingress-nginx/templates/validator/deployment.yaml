@@ -70,11 +70,6 @@ spec:
         runAsNonRoot: true
         runAsUser: 64535
         runAsGroup: 64535
-      {{- if eq $validationIsolationMode "IsolatedProcess" }}
-        sysctls:
-        - name: net.ipv4.ip_unprivileged_port_start
-          value: "0"
-      {{- end }}
       serviceAccountName: {{ $validatorServiceAccountName }}
       automountServiceAccountToken: true
       terminationGracePeriodSeconds: 420
