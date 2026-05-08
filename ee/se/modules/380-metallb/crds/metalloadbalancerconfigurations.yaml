@@ -81,14 +81,19 @@ spec:
                             type: array
                             items:
                               type: string
+                              pattern: ^([0-9]+:[0-9]+|no-export|no-advertise|local-as|none)$
                           localPref:
                             description: |-
                               BGP LOCAL_PREF attribute.
                             type: integer
+                            minimum: 0
+                            maximum: 4294967295
                           aggregationLength:
                             description: |-
                               Subnet mask for route aggregation.
                             type: integer
+                            minimum: 0
+                            maximum: 128
                     required:
                       - poolNames
                   description: |-

@@ -15,7 +15,9 @@ type MetalLoadBalancerPool struct {
 }
 
 type MetalLoadBalancerPoolSpec struct {
-	Addresses []string `json:"addresses"`
+	Addresses     []string `json:"addresses"`
+	AutoAssign    *bool    `json:"autoAssign,omitempty"`
+	AvoidBuggyIPs *bool    `json:"avoidBuggyIPs,omitempty"`
 }
 
 type MetalLoadBalancerBGPPeer struct {
@@ -53,7 +55,7 @@ type BFDProfileConfiguration struct {
 	EchoInterval     *int  `json:"echoInterval,omitempty"`
 	EchoMode         *bool `json:"echoMode,omitempty"`
 	PassiveMode      *bool `json:"passiveMode,omitempty"`
-	MinimumTTL       *int  `json:"minimumTtl,omitempty"`
+	MinimumTTL       *int  `json:"minimumTTL,omitempty"`
 }
 
 type MetalLoadBalancerConfiguration struct {
@@ -74,8 +76,8 @@ type BGPConfig struct {
 }
 
 type Advertisement struct {
-	PoolNames []string               `json:"poolNames"`
-	BGP       BGPAdvertisementConfig `json:"bgp"`
+	PoolNames []string                `json:"poolNames"`
+	BGP       *BGPAdvertisementConfig `json:"bgp,omitempty"`
 }
 
 type BGPAdvertisementConfig struct {
@@ -110,18 +112,20 @@ type BGPAdvertisementValue struct {
 
 type BFDProfileValue struct {
 	Name             string `json:"name"`
-	ReceiveInterval  *int   `json:"receiveInterval,omitempty"`
-	TransmitInterval *int   `json:"transmitInterval,omitempty"`
-	DetectMultiplier *int   `json:"detectMultiplier,omitempty"`
-	EchoInterval     *int   `json:"echoInterval,omitempty"`
-	EchoMode         *bool  `json:"echoMode,omitempty"`
-	PassiveMode      *bool  `json:"passiveMode,omitempty"`
-	MinimumTTL       *int   `json:"minimumTtl,omitempty"`
+	ReceiveInterval  int    `json:"receiveInterval"`
+	TransmitInterval int    `json:"transmitInterval"`
+	DetectMultiplier int    `json:"detectMultiplier"`
+	EchoInterval     int    `json:"echoInterval"`
+	EchoMode         bool   `json:"echoMode"`
+	PassiveMode      bool   `json:"passiveMode"`
+	MinimumTTL       int    `json:"minimumTTL"`
 }
 
 type IPAddressPoolValue struct {
-	Name      string   `json:"name"`
-	Addresses []string `json:"addresses"`
+	Name          string   `json:"name"`
+	Addresses     []string `json:"addresses"`
+	AutoAssign    *bool    `json:"autoAssign,omitempty"`
+	AvoidBuggyIPs *bool    `json:"avoidBuggyIPs,omitempty"`
 }
 
 type SecretToCopy struct {

@@ -11,6 +11,7 @@ package hooks
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -19,6 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 )
+
+var communityPattern = regexp.MustCompile(`^([0-9]+:[0-9]+|no-export|no-advertise|local-as|none)$`)
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
@@ -208,9 +211,10 @@ func migrateBGP(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		u, err := sdk.ToUnstructured(&pool)
-		if err == nil {
-			input.PatchCollector.CreateOrUpdate(u)
+		if err != nil {
+			return fmt.Errorf("failed to convert pool %q to unstructured: %w", name, err)
 		}
+		input.PatchCollector.CreateOrUpdate(u)
 	}
 
 	// 2. Migrate peers
@@ -248,9 +252,10 @@ func migrateBGP(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		u, err := sdk.ToUnstructured(&peer)
-		if err == nil {
-			input.PatchCollector.CreateOrUpdate(u)
+		if err != nil {
+			return fmt.Errorf("failed to convert peer %q to unstructured: %w", name, err)
 		}
+		input.PatchCollector.CreateOrUpdate(u)
 	}
 
 	// 3. Migrate configuration
@@ -272,19 +277,31 @@ func migrateBGP(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		for _, ba := range p.BGPAdvertisements {
-			adv := Advertisement{
-				PoolNames: []string{name},
-			}
-
 			var communities []string
 			for _, c := range ba.Communities {
+				var comm string
 				if mapped, exists := mc.BGPCommunities[c]; exists {
-					communities = append(communities, mapped)
+					comm = mapped
+				} else {
+					comm = c
+				}
+
+				// Validate against CRD regex pattern
+				if communityPattern.MatchString(comm) {
+					communities = append(communities, comm)
+				} else {
+					input.Logger.Warn("Skipping legacy community because it does not match the valid CRD pattern: " + comm)
 				}
 			}
-			adv.BGP.Communities = communities
-			adv.BGP.LocalPref = ba.LocalPref
-			adv.BGP.AggregationLength = ba.AggregationLength
+
+			adv := Advertisement{
+				PoolNames: []string{name},
+				BGP: &BGPAdvertisementConfig{
+					Communities:       communities,
+					LocalPref:         ba.LocalPref,
+					AggregationLength: ba.AggregationLength,
+				},
+			}
 
 			advs = append(advs, adv)
 		}
@@ -314,9 +331,10 @@ func migrateBGP(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		u, err := sdk.ToUnstructured(&cfg)
-		if err == nil {
-			input.PatchCollector.CreateOrUpdate(u)
+		if err != nil {
+			return fmt.Errorf("failed to convert configuration %q to unstructured: %w", "migrated-bgp", err)
 		}
+		input.PatchCollector.CreateOrUpdate(u)
 	}
 
 	return nil
