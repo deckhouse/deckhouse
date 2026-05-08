@@ -1,4 +1,10 @@
 linters-settings:
+  openapi:
+    exclude-rules:
+      enum:
+        # Real Kubernetes ClusterRole names (lowercase by RBAC conventions),
+        # set by reconcile_kubeadm_cluster_admins_binding hook; cannot be capitalized.
+        - "properties.internal.properties.kubeadmClusterAdminsTargetRoleName"
   container:
     exclude-rules:
       resources:

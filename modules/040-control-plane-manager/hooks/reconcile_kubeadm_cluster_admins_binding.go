@@ -63,9 +63,9 @@ const (
 	kubeadmClusterAdminsBindingSnapshot = "kubeadm_cluster_admins_binding"
 	userAuthzClusterAdminCRSnapshot     = "user_authz_cluster_admin_clusterrole"
 
-	clusterIsBootstrappedValuePath           = "global.clusterIsBootstrapped"
-	kubeadmTargetRoleNameValuePath           = "controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName"
-	kubeadmSupplementEnabledValuePath        = "controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled"
+	clusterIsBootstrappedValuePath    = "global.clusterIsBootstrapped"
+	kubeadmTargetRoleNameValuePath    = "controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName"
+	kubeadmSupplementEnabledValuePath = "controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled"
 )
 
 // kubeadmClusterAdminsBindingState keeps the only moving piece of the CRB — the target role.
