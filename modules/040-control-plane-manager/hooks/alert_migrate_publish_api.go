@@ -85,7 +85,7 @@ func checkMcForNonMigratedConfig(_ context.Context, input *go_hook.HookInput) er
 	}
 
 	var publishAPI *struct{}
-	err := mcSnaps[0].UnmarshalTo(&publishAPI)
+	err := mcSnaps[0].UnmarshalTo(publishAPI)
 	if err != nil {
 		return fmt.Errorf("cannot unmarshal ModuleConfig: %w", err)
 	}
