@@ -25,7 +25,7 @@ spec:
   {{- if $bfdProfile.passiveMode }}
   passiveMode: {{ $bfdProfile.passiveMode }}
   {{- end }}
-  {{- if $bfdProfile.minimumTtl }}
-  minimumTtl: {{ $bfdProfile.minimumTtl }}
+  {{- if $bfdProfile.minimumTTL }}
+  minimumTtl: {{ $bfdProfile.minimumTTL }}
   {{- end }}
 {{- end }}

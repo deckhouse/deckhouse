@@ -37,11 +37,23 @@ spec:
                 addresses:
                   items:
                     type: string
+                    pattern: ^[0-9a-fA-F.:/-]+$
                   type: array
+                  minItems: 1
                   description: |-
-                    An array of public IP address ranges. 
-                    
+                    An array of public IP address ranges.
+
                     Each range can be specified using a CIDR notation or by directly specifying the range, for example, `10.10.10.1-10.10.10.100`.
+                autoAssign:
+                  type: boolean
+                  default: true
+                  description: |-
+                    AutoAssign flag used to prevent MetalLB from automatic allocation for a pool.
+                avoidBuggyIPs:
+                  type: boolean
+                  default: false
+                  description: |-
+                    AvoidBuggyIPs prevents addresses ending with `.0` and `.255` from being used by a pool.
             status:
               type: object
           type: object
