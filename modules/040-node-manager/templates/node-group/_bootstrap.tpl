@@ -59,16 +59,17 @@ bootstrap_log_init
 {{- tpl (printf `%s
 {{ template "get-phase2" $ }}` $lib) $ctx }}
 {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl" }}
+  {{- $fetch_base_pkgs = tpl ( $fetch_base_pkgs ) $tpl_context }}
   {{- $fetch_base_pkgs = regexReplaceAll "^#!/bin/bash\nset -Eeo pipefail\n" $fetch_base_pkgs "" }}
-  {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
+  {{- $fetch_base_pkgs | nindent 0 }}
 {{- end }}
 {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 /opt/deckhouse/bin/tail-log ${TMPDIR}/bootstrap.log &
-bootstrap_job_log_pid=$!
+log_pid=$!
 {{- end }}
 get_phase2 | bash
-if [ -n "${bootstrap_job_log_pid:-}" ]; then
-  kill -9 "${bootstrap_job_log_pid}"
+if [ -n "${log_pid:-}" ]; then
+  kill -9 "${log_pid}"
 fi
 
 {{- end }}
