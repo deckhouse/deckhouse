@@ -116,7 +116,7 @@ KubeVirt взаимодействует со следующими компоне
    - следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами;
    - выполняет авторизацию запросов на получение метрик.
 
-1. [**CDI (Containerized-Data-Importer)**](cdi.html) — передает спецификацию диска и ссылку на образ для создаваемой виртуальной машины через кастомный ресурс DataVolumeTemplate. На основе шаблона DataVolumeTemplate создается ресурс DataVolume, а CDI импортирует образ диска из указанного в DataVolume/DataVolumeTemplate источника в PVC. Созданный PVC является диском виртуальной машины, управляемой KubeVirt. 
+1. [**CDI (Containerized-Data-Importer)**](cdi.html) — KubeVirt на основе спецификации диска и ссылки на образ виртуальной машины в секции DataVolumeTemplate ресурса VirtualMachine создает DataVolume. CDI импортирует в PVC образ диска из указанного в DataVolume источника. Созданный PVC является диском виртуальной машины, управляемой KubeVirt. 
 
 С KubeVirt взаимодействуют следующие внешние компоненты:
 
