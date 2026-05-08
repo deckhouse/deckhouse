@@ -1,17 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
     const navigationContainer = document.querySelector('.navigation__container');
+    const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
 
-    if (!navigationContainer) {
+    if (!navigationContainer && sidebarAndToc.length === 0) {
         return;
     }
 
-    const sidebarAndToc = document.querySelectorAll('.sidebar__wrapper-inner');
     let lastScroll = window.scrollY;
 
     function applyHeaderOffsets() {
         const header = document.querySelector('header');
         const headerHeight = header.getBoundingClientRect().height;
-        navigationContainer.style.top = `${headerHeight}px`;
+        if (navigationContainer) {
+            navigationContainer.style.top = `${headerHeight}px`;
+        }
         sidebarAndToc.forEach(e => {
             e.style.top = `${headerHeight}px`;
         });
@@ -20,14 +22,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateTop() {
         const headerHeight = applyHeaderOffsets();
-        const navigationHeight = navigationContainer.offsetHeight;
+        const navigationHeight = navigationContainer ? navigationContainer.offsetHeight : 0;
         return headerHeight + navigationHeight;
     }
 
     let isScroll = true;
 
     function hideNavigation() {
-        navigationContainer.classList.add('hidden');
+        if (navigationContainer) {
+            navigationContainer.classList.add('hidden');
+        }
         lastScroll = window.scrollY;
         sidebarAndToc.forEach(e => {
             e.classList.remove('top');
@@ -57,14 +61,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const scrollWindowTop = window.scrollY;
         if (scrollWindowTop > lastScroll) {
-            navigationContainer.classList.add('hidden');
+            if (navigationContainer) {
+                navigationContainer.classList.add('hidden');
+            }
             lastScroll = scrollWindowTop;
             sidebarAndToc.forEach(e => {
                 e.classList.remove('top');
                 e.style.removeProperty('--scroll-top');
             });
         } else {
-            navigationContainer.classList.remove('hidden');
+            if (navigationContainer) {
+                navigationContainer.classList.remove('hidden');
+            }
             lastScroll = scrollWindowTop;
             sidebarAndToc.forEach(e => {
                 e.style.setProperty('--scroll-top', `${newTopValue}px`);

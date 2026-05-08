@@ -5,9 +5,6 @@ layout: default
 <div class="container">
   {%- include nav-breadcrumbs_guides.html %}
   <div class="layout-sidebar">
-    <div class="layout-sidebar__sidebar layout-sidebar__sidebar--guides">
-        {%- include toc_in_sidebar.html %}
-    </div>
     <div class="layout-sidebar__content layout-sidebar__content--guides">
       <div class="docs">
         <h1>{{ page.title }}</h1>
@@ -18,6 +15,9 @@ layout: default
       {%- if page.feedback != false %}
        {%- include feedback.html %}
       {%- endif %}
+    </div>
+    <div class="layout-sidebar__sidebar layout-sidebar__sidebar--guides">
+        {%- include toc_in_sidebar.html %}
     </div>
   </div>
 </div>

@@ -1,8 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const body = document.querySelector('body');
   const articles = document.querySelectorAll('.button-tile');
   const selectedFiltersList = document.querySelector('.selected__filters--list');
   const filterCheckboxesTags = document.querySelector('.filter__checkboxes--tags');
   const resetButton = document.querySelector('.reset-check');
+  const applyButton = document.querySelector('.apply-filter');
+  const applyButtonBlock = document.querySelector('.filter__block--apply');
+  const openMobile =  document.querySelector('.filter__search--filter');
   const fullReset = document.createElement('div');
   fullReset.classList.add('full-reset');
   let lang = document.documentElement.lang;
@@ -261,6 +265,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked:not([data-select-all="true"])');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
+    if (applyButton) {
+      applyButton.disabled = checkedCheckboxes.length === 0;
+    }
+
     if(resetButton) {
       if (checkedCheckboxes.length > 0) {
         resetButton.classList.add('active');
@@ -438,6 +446,39 @@ document.addEventListener('DOMContentLoaded', () => {
   checkboxes.forEach(checkbox => {
     checkbox.addEventListener('change', filterArticles);
   });
+
+  if (openMobile) {
+    const filter = document.querySelector('.filter__block');
+    const hamburgerCollapse = document.querySelector('.hamburger--collapse');
+    const content = document.querySelector('.content');
+    const filterOverlay = document.createElement('div');
+    filterOverlay.className = 'sidebar-overlay filter__sidebar-overlay';
+
+    function closeFilterMobilePanel() {
+      if (filter) filter.classList.remove('show');
+      if (body) body.classList.remove('sidebar-opened');
+      if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
+      if (filterOverlay.parentNode) filterOverlay.parentNode.removeChild(filterOverlay);
+    }
+
+    openMobile.addEventListener('click', () => {
+      if (!filter) return;
+      filter.classList.add('show');
+      if (body) body.classList.add('sidebar-opened');
+      if (hamburgerCollapse) hamburgerCollapse.classList.add('show');
+      const overlayParent = content || body;
+      if (overlayParent) overlayParent.appendChild(filterOverlay);
+    });
+
+    filterOverlay.addEventListener('click', closeFilterMobilePanel);
+    if (applyButtonBlock) {
+      applyButtonBlock.addEventListener('click', () => {
+        if (applyButton && !applyButton.disabled) {
+          closeFilterMobilePanel();
+        }
+      });
+    }
+  }
 
   filterArticles();
   window.addEventListener('pageshow', () => {

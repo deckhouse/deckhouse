@@ -1,4 +1,6 @@
 @use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
 
 .block__tile {
   display: flex;
@@ -11,11 +13,11 @@
     gap: 10px;
   }
 
-  @media (max-width: 1200px) {
+  @include breakpoints.max-w(xl) {
     gap: 16px;
   }
 
-  @media (max-width: 900px) {
+  @include breakpoints.max-w(m) {
     flex-direction: column;
   }
 }
@@ -43,18 +45,26 @@
   cursor: pointer;
 
   @media (max-width: 1606px) {
-      flex-basis: calc(33.3% - 10px);
-      padding: 20px;
+    flex-basis: calc(33.3% - 10px);
+    padding: 20px;
   }
 
-  @media (max-width: 1200px) {
-      flex-basis: calc(50% - 16px);
-      padding: 24px;
+  @include breakpoints.max-w(xl) {
+    flex-basis: calc(50% - 16px);
+    padding: 24px;
+  }
+
+  @include breakpoints.max-w(l) {
+    padding: 20px;
+  }
+
+  @include breakpoints.max-w(s) {
+    padding: 16px;
   }
 
   &:hover {
-      box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.08), 0px 4px 16px 0px rgba(0, 0, 0, 0.4);
-      border-left: 4px solid variables.$primary-700;
+    box-shadow: 0px 0px 6px 0px rgba(0, 0, 0, 0.08), 0px 4px 16px 0px rgba(0, 0, 0, 0.4);
+    border-left: 4px solid variables.$primary-700;
   }
 
   &__title {
@@ -113,16 +123,26 @@
 
 .tile {
   &__title {
-    margin-top: 0;
-    margin-bottom: 24px;
+    margin: 24px 0 20px;
     font-weight: 400;
     font-size: 36px;
     line-height: 100%;
     color: #00122C;
 
-    @media (max-width: 1440px) {
-      margin-bottom: 20px;
+    @include breakpoints.max-w(xxl) {
       font-size: 30px;
+    }
+
+    @include breakpoints.max-w(m) {
+      font-size: 24px;
+    }
+
+    @include breakpoints.max-w(s) {
+      margin-top: 20px;
+    }
+
+    @include breakpoints.max-w(xxs) {
+      margin: 16px 0;
     }
   }
 
@@ -131,11 +151,23 @@
     margin-bottom: 40px;
     font-weight: variables.$font-weight-semibold;
     font-size: 18px;
-    line-height: 100%;
+    line-height: 27px;
     color: variables.$color-text-secondary;
 
-    @media (max-width: 1440px) {
-      font-size: 17px;
+    @include breakpoints.max-w(xxl) {
+      font-size: 16px;
+    }
+
+    @include breakpoints.max-w(xl) {
+      margin-bottom: 24px;
+    }
+
+    @include breakpoints.max-w(m) {
+      line-height: 22px;
+    }
+
+    @include breakpoints.max-w(s) {
+      margin-bottom: 20px;
     }
   }
 
