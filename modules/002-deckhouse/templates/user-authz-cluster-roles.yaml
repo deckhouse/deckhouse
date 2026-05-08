@@ -52,11 +52,18 @@ rules:
   - applicationpackages
   - applications
   verbs:
-  - get
-  - list
-  - watch
   - create
   - delete
   - deletecollection
   - patch
   - update
+- apiGroups:
+  - deckhouse.io
+  resourceNames:
+  - deckhouse
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch
