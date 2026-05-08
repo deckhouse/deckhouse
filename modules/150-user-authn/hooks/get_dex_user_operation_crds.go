@@ -354,6 +354,14 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 		return u, nil
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
+	// Force-terminate active sessions: with LockedUntil set on Password, Dex
+	// will refuse new logins, but already-issued access tokens stay valid until
+	// expiry and offline_access refreshes would still rotate them. Deleting
+	// OfflineSessions and RefreshTokens makes the lock immediate.
+	if _, err := invalidateLocalUserSessions(input, operation.Spec.User, "Locking user"); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -445,16 +453,48 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 		return sdk.ToUnstructured(&pass)
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
+	// Force-terminate active sessions so the user must log in again with the
+	// new hash; combined with requireResetHashOnNextSuccLogin this guarantees
+	// they hit the forced password-change form on the next authentication.
+	if _, err := invalidateLocalUserSessions(input, operation.Spec.User, "Resetting user password"); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
+	anyDeleted, err := invalidateLocalUserSessions(input, operation.Spec.User, "Resetting user 2FA")
+	if err != nil {
+		return err
+	}
+	if !anyDeleted {
+		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete", "user", operation.Spec.User)
+	}
+	return nil
+}
+
+// invalidateLocalUserSessions deletes every Dex OfflineSessions and RefreshToken
+// object that belongs to the given local user. It is shared by Lock,
+// ResetPassword and Reset2FA so that admin-initiated actions reliably terminate
+// active authenticated sessions: ongoing access tokens stop being refreshable
+// (offline_access flow becomes invalid the moment the OfflineSessions is gone)
+// and the user has to log in again — which, for ResetPassword, is the moment
+// they are presented with the forced password-change form because we set
+// Password.requireResetHashOnNextSuccLogin = true.
+//
+// Matching strategy mirrors Reset2FA history: prefer OfflineSessions.userID,
+// fall back to RefreshToken claims (userID/username/preferredUsername) for
+// sessions that don't carry userID directly. Returns whether anything was
+// actually deleted (used by Reset2FA for an informational log) and the first
+// iteration error, if any. logPrefix appears in info logs and lets each caller
+// keep its own narrative ("Locking user", "Resetting user password", etc.).
+func invalidateLocalUserSessions(input *go_hook.HookInput, username, logPrefix string) (bool, error) {
 	refreshTokensByID := make(map[string]RefreshTokenSnapshot, len(input.Snapshots.Get("refreshtokens")))
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return false, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
 		}
-		// metadata.name is the refresh token ID
 		refreshTokensByID[rt.Name] = rt
 	}
 
@@ -462,19 +502,19 @@ func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
 
 	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
 		if err != nil {
-			return fmt.Errorf("cannot iter over OfflineSessions: %v", err)
+			return anyDeleted, fmt.Errorf("cannot iter over OfflineSessions: %v", err)
 		}
 
 		matchesUser := false
 		if sess.UserID != "" {
-			matchesUser = (sess.UserID == operation.Spec.User)
+			matchesUser = (sess.UserID == username)
 		} else if len(sess.RefreshTokenIDs) > 0 {
 			for _, id := range sess.RefreshTokenIDs {
 				rt, ok := refreshTokensByID[id]
 				if !ok {
 					continue
 				}
-				if rt.ClaimsUsername == operation.Spec.User || rt.ClaimsUserID == operation.Spec.User || rt.ClaimsPreferred == operation.Spec.User {
+				if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
 					matchesUser = true
 					break
 				}
@@ -482,33 +522,26 @@ func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
 		}
 
 		if !matchesUser {
-			input.Logger.Debug("OfflineSessions does not match requested user", "offlinesession", sess.Name, "userID", sess.UserID, "requestedUser", operation.Spec.User, "refreshTokenIDs", sess.RefreshTokenIDs)
 			continue
 		}
 
-		input.Logger.Info("Resetting user 2FA: deleting OfflineSessions", "user", operation.Spec.User, "offlinesession", sess.Name)
+		input.Logger.Info(logPrefix+": deleting OfflineSessions", "user", username, "offlinesession", sess.Name)
 		input.PatchCollector.Delete("dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
 		anyDeleted = true
 	}
 
-	// Also delete refresh tokens for the user to invalidate offline_access sessions and ensure consistent 2FA reset.
 	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
 		if err != nil {
-			return fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+			return anyDeleted, fmt.Errorf("cannot iter over RefreshTokens: %v", err)
 		}
-		if rt.ClaimsUsername == operation.Spec.User || rt.ClaimsUserID == operation.Spec.User || rt.ClaimsPreferred == operation.Spec.User {
-			input.Logger.Info("Resetting user 2FA: deleting RefreshToken", "user", operation.Spec.User, "refreshtoken", rt.Name)
+		if rt.ClaimsUsername == username || rt.ClaimsUserID == username || rt.ClaimsPreferred == username {
+			input.Logger.Info(logPrefix+": deleting RefreshToken", "user", username, "refreshtoken", rt.Name)
 			input.PatchCollector.Delete("dex.coreos.com/v1", "RefreshToken", rt.Namespace, rt.Name)
 			anyDeleted = true
 		}
 	}
 
-	if !anyDeleted {
-		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete", "user", operation.Spec.User)
-		return nil
-	}
-
-	return nil
+	return anyDeleted, nil
 }
 
 // findOfflineSessionByTarget locates the OfflineSessions object that matches the
