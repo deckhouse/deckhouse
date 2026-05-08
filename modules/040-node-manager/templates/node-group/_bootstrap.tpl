@@ -39,12 +39,10 @@
   {{- end }}
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
 BOOTSTRAP_DIR="/var/lib/bashible"
 TMPDIR="/opt/deckhouse/tmp"
 mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
 export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
-
 bootstrap_log_init() {
   if [[ -z ${BOOTSTRAP_LOG:-} ]]; then
     mkdir -p /var/log/d8/bashible
@@ -53,30 +51,22 @@ bootstrap_log_init() {
     export BOOTSTRAP_LOG=1
   fi
 }
-
 bootstrap_log_init
-
 {{- $candi := "candi/bashible/lib.sh.tpl" -}}
 {{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
 {{- $lib := $context.Files.Get $deckhouse | default ($context.Files.Get $candi) -}}
 {{- $ctx := $tpl_context -}}
-{{- tpl (printf `
-%s
-{{ template "get-phase2" $ }}
-` $lib) $ctx }}
-
+{{- tpl (printf `%s
+{{ template "get-phase2" $ }}` $lib) $ctx }}
 {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl" }}
   {{- $fetch_base_pkgs = regexReplaceAll "^#!/bin/bash\nset -Eeo pipefail\n" $fetch_base_pkgs "" }}
   {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
 {{- end }}
-
 {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 /opt/deckhouse/bin/tail-log ${TMPDIR}/bootstrap.log &
 bootstrap_job_log_pid=$!
 {{- end }}
-
 get_phase2 | bash
-
 if [ -n "${bootstrap_job_log_pid:-}" ]; then
   kill -9 "${bootstrap_job_log_pid}"
 fi

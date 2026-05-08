@@ -238,7 +238,6 @@ bb-d8-node-ip() {
 bb-discover-node-name() {
   local discovered_name_file="/var/lib/bashible/discovered-node-name"
   local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
-
   if [ ! -s "$discovered_name_file" ]; then
     if [[ -s "$kubelet_crt" ]]; then
       openssl x509 -in "$kubelet_crt" \
@@ -255,8 +254,6 @@ bb-discover-node-name() {
   fi
 }
 {{- end }}
-
-
 {{- define "bb-minget" -}}
 {{- $images := .images | default (dict) -}}
 {{- $registryPackages := get $images "registrypackages" | default (dict) -}}
@@ -278,9 +275,7 @@ bb-minget-install() {
   chmod +x "$path"
 }
 {{- end }}
-
 bb-rpp-get-binary-ready() { "$1" version &>/dev/null; }
-
 bb-rpp-get-fetch() {
   if command -v d8-curl >/dev/null 2>&1; then
     d8-curl -sS -f -x "" --connect-timeout 10 --max-time 300 "http://$1"
@@ -288,7 +283,6 @@ bb-rpp-get-fetch() {
   fi
   /opt/deckhouse/bin/minget "$1"
 }
-
 bb-rpp-get-install() {
   local bin="/opt/deckhouse/bin/rpp-get"
   local digest="{{ get $registryPackages "rppGet" }}"
@@ -411,9 +405,6 @@ bb-package-remove() {
 }
 {{- end }}
 
-
-
-
 {{- define "get-phase2" -}}
 fetch_bootstrap() {
   local url="$1" token="$2" out="$3" code
@@ -440,7 +431,6 @@ fetch_bootstrap() {
       ;;
   esac
 }
-
 get_phase2() {
   local token="$(<${BOOTSTRAP_DIR}/bootstrap-token)"
   local out="${TMPDIR}/phase2-response.json"
