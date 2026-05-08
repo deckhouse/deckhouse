@@ -109,6 +109,8 @@ var _ = Describe("Module :: metallb :: helm template ::", func() {
 			Expect(ipAddressPool1.Field("spec").String()).To(MatchYAML(`
 addresses:
 - 192.168.0.0/24
+autoAssign: true
+avoidBuggyIPs: false
 `))
 
 			ipAddressPool2 := f.KubernetesResource("IPAddressPool", "d8-metallb", "mypool2")
@@ -116,6 +118,8 @@ addresses:
 			Expect(ipAddressPool2.Field("spec").String()).To(MatchYAML(`
 addresses:
 - 192.68.1.1-192.168.1.255
+autoAssign: true
+avoidBuggyIPs: false
 `))
 
 			bgpPeer0 := f.KubernetesResource("BGPPeer", "d8-metallb", "bgp-peer-0")

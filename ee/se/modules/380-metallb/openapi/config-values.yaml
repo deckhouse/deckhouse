@@ -34,12 +34,14 @@ properties:
           type: string
   speaker:
     # TODO: remove after 1.82. Speaker node selector moved to MetalLoadBalancerConfiguration CRD.
+    x-doc-deprecated: true
     type: object
-    required: ["nodeSelector"]
+    default: {}
     description: |
       Settings for the `speaker` component that implements the LoadBalancer's IPs publishing protocol for external infrastructure.
     properties:
       nodeSelector:
+        x-doc-deprecated: true
         type: object
         additionalProperties:
           type: string
@@ -256,8 +258,5 @@ properties:
       description: |
         Map of `key: value` pairs.
 x-examples:
-  - speaker:
-      nodeSelector:
-        node-role.deckhouse.io/frontend: ""
-    nodeSelector:
+  - nodeSelector:
       node-role.deckhouse.io/control-plane: ""

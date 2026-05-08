@@ -52,6 +52,8 @@ spec:
                 bfd:
                   description: |-
                     Конфигурация BFD (Bidirectional Forwarding Detection) для BGP-соседа.
+                    **Примечание:** BFD на данный момент не поддерживается, так как требует реализации BGP через FRR,
+                    которая пока недоступна в Deckhouse MetalLB. Это поле является заглушкой для использования в будущем.
                   properties:
                     receiveInterval:
                       description: |-
@@ -71,6 +73,6 @@ spec:
                     passiveMode:
                       description: |-
                         Включает пассивный режим работы BFD (не инициирует установку сессии первым).
-                    minimumTtl:
+                    minimumTTL:
                       description: |-
                         Минимально допустимое значение TTL (Time To Live) для принимаемых пакетов BFD.

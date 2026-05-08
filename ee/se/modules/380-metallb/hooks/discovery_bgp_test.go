@@ -106,23 +106,13 @@ spec:
 			Expect(f.ValuesGet("metallb.internal.addressPools").String()).To(MatchYAML(`
 - addresses:
   - 10.0.0.1-10.0.0.10
+  autoAssign: true
+  avoidBuggyIPs: false
   name: test-pool
 `))
 
 			Expect(f.ValuesGet("metallb.internal.bgpPeers").String()).To(MatchYAML(`
-- bfdProfile: bfd-test-peer
-  myASN: 65000
-  name: test-peer-node-node-1
-  nodeSelectors:
-  - matchLabels:
-      kubernetes.io/hostname: node-1
-      role: worker
-  passwordSecret: bgp-pwd-ns1-secret1
-  peerASN: 65001
-  peerAddress: 192.168.1.1
-  sourceAddress: 10.10.10.1
-- bfdProfile: bfd-test-peer
-  myASN: 65000
+- myASN: 65000
   name: test-peer-test-config
   nodeSelectors:
   - matchExpressions:
@@ -135,6 +125,16 @@ spec:
   passwordSecret: bgp-pwd-ns1-secret1
   peerASN: 65001
   peerAddress: 192.168.1.1
+- myASN: 65000
+  name: test-peer-test-config-node-node-1
+  nodeSelectors:
+  - matchLabels:
+      kubernetes.io/hostname: node-1
+      role: worker
+  passwordSecret: bgp-pwd-ns1-secret1
+  peerASN: 65001
+  peerAddress: 192.168.1.1
+  sourceAddress: 10.10.10.1
 `))
 
 			Expect(f.ValuesGet("metallb.internal.bgpAdvertisements").String()).To(MatchYAML(`
@@ -148,14 +148,11 @@ spec:
   - matchLabels:
       role: worker
   peers:
-  - test-peer
+  - test-peer-test-config-node-node-1
+  - test-peer-test-config
 `))
 
-			Expect(f.ValuesGet("metallb.internal.bfdProfiles").String()).To(MatchYAML(`
-- name: bfd-test-peer
-  receiveInterval: 300
-  transmitInterval: 300
-`))
+			Expect(f.ValuesGet("metallb.internal.bfdProfiles").String()).To(MatchYAML(`[]`))
 
 			Expect(f.ValuesGet("metallb.internal.secretsToCopy").String()).To(MatchYAML(`
 - data:
@@ -168,15 +165,15 @@ spec:
 requiredDuringSchedulingIgnoredDuringExecution:
   nodeSelectorTerms:
   - matchExpressions:
-    - key: role
-      operator: In
-      values:
-      - worker
-  - matchExpressions:
     - key: kubernetes.io/hostname
       operator: In
       values:
       - node-1
+  - matchExpressions:
+    - key: role
+      operator: In
+      values:
+      - worker
 `))
 		})
 	})
@@ -207,9 +204,13 @@ spec:
 			Expect(f.ValuesGet("metallb.internal.addressPools").String()).To(MatchYAML(`
 - addresses:
   - 2.2.2.2/32
+  autoAssign: true
+  avoidBuggyIPs: false
   name: a-pool
 - addresses:
   - 1.1.1.1/32
+  autoAssign: true
+  avoidBuggyIPs: false
   name: z-pool
 `))
 		})

@@ -175,6 +175,8 @@ spec:
 			Expect(pool.Field("spec").String()).To(MatchYAML(`
 addresses:
 - 1.1.1.1/32
+autoAssign: true
+avoidBuggyIPs: false
 `))
 
 			// Version should NOT be updated
