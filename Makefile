@@ -309,8 +309,7 @@ docs-generate-pdf: ## Generate PDF documentation.
   ##~ Options: DKP_DOC_VERSION=X.XX - version of the documentation, if not set, the version is determined from the git branch name.
   ##~ Options: ONLY_RU=1 or ONLY_EN=1 - build a single language, do not combine both.
   ##~ Outputs: PDF/deckhouse-admin-guide_{ru,en}.pdf and PDF/deckhouse-user-guide_{ru,en}.pdf
-	## GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1;
-	@GET_DOCUMENTATION_TMPDIR=/tmp/dkp-pdf; \
+	@GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1; \
 	export GET_DOCUMENTATION_TMPDIR; \
 	echo "Temporary directory: $$GET_DOCUMENTATION_TMPDIR"; \
 	bash tools/docs/pdf/get-documentation.sh && \
@@ -357,7 +356,7 @@ docs-generate-pdf: ## Generate PDF documentation.
 		-v "$(CURDIR)/PDF:/out" \
 		konstantinnezhbert/deckhouse-docs-builder:0.1 \
 		python3 get_pdf_page.py # && \
-	# rm -rf "$$GET_DOCUMENTATION_TMPDIR"
+	rm -rf "$$GET_DOCUMENTATION_TMPDIR"
 
 .PHONY: docs-external-module
 docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.
