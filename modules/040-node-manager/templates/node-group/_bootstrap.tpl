@@ -46,11 +46,11 @@ mkdir -p "${BOOTSTRAP_DIR}" "${TMPDIR}"
 export PATH="/opt/deckhouse/bin:/usr/local/bin:$PATH"
 
 bootstrap_log_init() {
-  if [[ -z ${BOOTSTRAP_LOG_INITIALIZED:-} ]]; then
+  if [[ -z ${BOOTSTRAP_LOG:-} ]]; then
     mkdir -p /var/log/d8/bashible
-    exec {bootstrap_stdout_fd}>&1
-    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${bootstrap_stdout_fd}) 2>&1
-    export BOOTSTRAP_LOG_INITIALIZED=1
+    exec {stdout_fd}>&1
+    exec > >(tee -a /var/log/d8/bashible/bootstrap.log >&${stdout_fd}) 2>&1
+    export BOOTSTRAP_LOG=1
   fi
 }
 
@@ -66,6 +66,7 @@ bootstrap_log_init
 ` $lib) $ctx }}
 
 {{- if $fetch_base_pkgs := $context.Files.Get "candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl" }}
+  {{- $fetch_base_pkgs = regexReplaceAll "^#!/bin/bash\nset -Eeo pipefail\n" $fetch_base_pkgs "" }}
   {{- tpl ( $fetch_base_pkgs ) $tpl_context | nindent 0 }}
 {{- end }}
 

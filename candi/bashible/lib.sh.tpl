@@ -279,10 +279,7 @@ bb-minget-install() {
 }
 {{- end }}
 
-bb-rpp-get-binary-ready() {
-  local version
-  version="$("$1" version 2>/dev/null)" && [[ -n $version ]]
-}
+bb-rpp-get-binary-ready() { "$1" version &>/dev/null; }
 
 bb-rpp-get-fetch() {
   if command -v d8-curl >/dev/null 2>&1; then
@@ -298,7 +295,7 @@ bb-rpp-get-install() {
   local digest_file="${BB_RP_INSTALLED_PACKAGES_STORE:-/var/cache/registrypackages}/rpp-get/digest"
   local tmp="${bin}.tmp"
   local prefix="${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID:+/${PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID}}"
-  local max_attempts=30 attempt address
+  local attempt address
   if [[ -f "$digest_file" &&
         "$(<"$digest_file")" == "$digest" ]] &&
      bb-rpp-get-binary-ready "$bin"; then
@@ -309,7 +306,7 @@ bb-rpp-get-install() {
     return 1
   fi
   mkdir -p "${bin%/*}" "${digest_file%/*}"
-  for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+  for ((attempt = 1; attempt <= 30; attempt++)); do
     for address in ${PACKAGES_PROXY_BOOTSTRAP_ADDRESSES}; do
       bb-rpp-get-fetch "${address}${prefix}/rpp-get?digest=${digest}" > "$tmp" || continue
       chmod +x "$tmp"
@@ -318,10 +315,10 @@ bb-rpp-get-install() {
       echo "$digest" > "$digest_file"
       return 0
     done
-    >&2 echo "rpp-get-install failed (${attempt}/${max_attempts}), retrying in 5 seconds"
+    >&2 echo "rpp-get-install failed (${attempt}/30), retrying in 5 seconds"
     sleep 5
   done
-  >&2 echo "rpp-get-install failed after ${max_attempts} attempts"
+  >&2 echo "rpp-get-install failed after 30 attempts"
   rm -f "$tmp"
   return 1
 }
