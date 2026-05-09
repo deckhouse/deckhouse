@@ -27,7 +27,6 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -179,12 +178,12 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -266,6 +265,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:                tmpDir,
 		Logger:                loggerFor,
 		InfrastructureContext: infrastructureContext,
+		Options:               opts,
 	}
 
 	convergeParams := &converge.Params{
@@ -294,6 +294,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		TmpDir:                     tmpDir,
 		Logger:                     loggerFor,
 		IsDebug:                    s.params.IsDebug,
+		Options:                    opts,
 	}
 
 	var sshProviderInitializer *providerinitializer.SSHProviderInitializer

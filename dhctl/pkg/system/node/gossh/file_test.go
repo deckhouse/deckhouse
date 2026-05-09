@@ -23,7 +23,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	ssh_testing "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh/testing"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
@@ -258,7 +257,7 @@ func TestSSHFileUploadBytes(t *testing.T) {
 		container.Stop()
 		os.Remove(path)
 	})
-	app.TmpDirName = os.TempDir()
+	tmpDir = os.TempDir()
 
 	t.Run("Upload bytes", func(t *testing.T) {
 		f := sshClient.File()
@@ -299,7 +298,7 @@ func TestCreateEmptyTmpFile(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				app.TmpDirName = c.tmpDirName
+				tmpDir = c.tmpDirName
 				uid := os.Geteuid()
 				if uid == 0 && c.wantErr {
 					t.Skip("Test TestCreateEmptyTmpFile was skipped, cannot try to access unaccessible dir from root user")
@@ -573,7 +572,7 @@ func TestSSHFileDownloadBytes(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				app.TmpDirName = c.tmpDirName
+				tmpDir = c.tmpDirName
 				f := sshClient.File()
 				bytes, err := f.DownloadBytes(context.Background(), c.remotePath)
 				if !c.wantErr {

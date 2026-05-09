@@ -26,11 +26,27 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
+	dhctlinfra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	dhdeckhouse "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
+	dhresources "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
+	kubeclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
+	convergelock "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
+	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	clissh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
+	clisshcmd "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
+	clisshfrontend "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
+	gossh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
+	gosshkeys "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -199,8 +215,8 @@ var (
 			Name:   "edit",
 			Help:   "Change configuration files in Kubernetes cluster conveniently and safely.",
 			Parent: "config",
-			DefineFunc: func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-				commands.DefineEditCommands(cmd, true)
+			DefineFunc: func(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+				commands.DefineEditCommands(cmd, opts, true)
 				return nil
 			},
 		},
@@ -288,6 +304,8 @@ func registerOnShutdown(title string, action onShutdownFunc) {
 func main() {
 	appContext := context.Background()
 
+	opts := options.New()
+
 	initGlobalVars()
 
 	tracesShutdownFn, err := enableTrace()
@@ -306,36 +324,62 @@ func main() {
 
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
-	app.GlobalFlags(kpApp)
+	app.GlobalFlags(kpApp, &opts.Global)
 
-	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
-		fmt.Printf("%s %s\n", app.AppName, app.AppVersion)
+	kpApp.PreAction(func(_ *kingpin.ParseContext) error {
+		// Push parsed values into packages that previously read from
+		// dhctl/pkg/app globals. They each own a single package-level setter
+		// invoked once at startup, after kingpin has populated *opts.
+		// TODO(nabokikhms): fix package level setters in the following PRs.
+		infrastructure.SetDownloadDir(opts.Global.DownloadDir)
+		infraexec.SetDebug(opts.Global.IsDebug)
+		process.SetDebug(opts.Global.IsDebug)
+		statecache.SetOptions(opts.Cache)
+		clisshcmd.SetDebug(opts.Global.IsDebug)
+		gossh.SetGlobals(opts)
+		gosshkeys.SetGlobals(opts)
+		clissh.SetGlobals(opts)
+		clisshfrontend.SetGlobals(opts)
+		sshclient.SetGlobals(opts)
+		dhctlinfra.SetGlobals(opts)
+		infrastructureprovider.SetGlobals(opts)
+		dhdeckhouse.SetGlobals(opts)
+		dhresources.SetGlobals(opts)
+		convergelock.SetGlobals(opts)
+		operations.SetGlobals(opts)
+		config.SetGlobals(opts)
+		kubeclient.SetGlobals(opts)
 		return nil
 	})
 
-	if err := registerCommands(kpApp); err != nil {
+	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
+		fmt.Printf("%s %s\n", app.AppName, opts.BuildInfo.AppVersion)
+		return nil
+	})
+
+	if err := registerCommands(kpApp, opts); err != nil {
 		panic(err)
 	}
 
-	runApplication(appContext, kpApp)
+	runApplication(appContext, kpApp, opts)
 }
 
-func runApplication(ctx context.Context, kpApp *kingpin.Application) {
-	initer := newActionIniter()
+func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *options.Options) {
+	initer := newActionIniter(opts)
 
 	// inject context.Context to kingpin.ParseContext
 	kpApp.Action(kpcontext.SetContextToAction(ctx))
 
 	kpApp.Action(func(c *kingpin.ParseContext) error {
 		initer.setParams(actionIniterParams{
-			tmpDirName:        app.TmpDirName,
-			stateCacheDirName: app.CacheDir,
+			tmpDirName:        opts.Global.TmpDir,
+			stateCacheDirName: opts.Cache.Dir,
 
-			isDebug: app.IsDebug,
+			isDebug: opts.Global.IsDebug,
 
-			loggerType:          app.LoggerType,
-			doNotWriteDebugFile: app.DoNotWriteDebugLogFile,
-			debugLogFilePath:    app.DebugLogFilePath,
+			loggerType:          opts.Global.LoggerType,
+			doNotWriteDebugFile: opts.Global.DoNotWriteDebugLogFile,
+			debugLogFilePath:    opts.Global.DebugLogFilePath,
 		})
 
 		initer.setRegisterOnShutdown(registerOnShutdown)
@@ -343,7 +387,7 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application) {
 		return initer.init(c)
 	})
 
-	kpApp.Version(app.AppVersion).Author("Flant")
+	kpApp.Version(opts.BuildInfo.AppVersion).Author("Flant")
 
 	go func() {
 		command, err := kpApp.Parse(os.Args[1:])
@@ -398,7 +442,6 @@ func initGlobalVars() {
 	// set relative path to config and template files
 	config.InitGlobalVars(dhctlPath)
 	commands.InitGlobalVars(dhctlPath)
-	app.InitGlobalVars(dhctlPath)
 	template.InitGlobalVars(dhctlPath)
 	infrastructure.InitGlobalVars(dhctlPath)
 }

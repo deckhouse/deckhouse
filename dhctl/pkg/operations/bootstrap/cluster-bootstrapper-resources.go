@@ -17,7 +17,6 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -26,20 +25,17 @@ import (
 )
 
 func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	resourcesToCreate := make(template.Resources, 0)
-	if app.ResourcesPath != "" {
+	if b.Options.Bootstrap.ResourcesPath != "" {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
-		parsedResources, err := template.ParseResources(app.ResourcesPath, nil)
+		parsedResources, err := template.ParseResources(b.Options.Bootstrap.ResourcesPath, nil)
 		if err != nil {
 			return err
 		}
 
 		resourcesToCreate = parsedResources
 	} else {
-		paths := fs.RevealWildcardPaths(app.ConfigPaths)
+		paths := fs.RevealWildcardPaths(b.Options.Global.ConfigPaths)
 		for _, cfg := range paths {
 			ress, err := template.ParseResources(cfg, nil)
 			if err != nil {

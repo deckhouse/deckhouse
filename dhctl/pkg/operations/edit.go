@@ -20,16 +20,37 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+// TODO(nabokikhms): fix package level setters in the following PRs.
+//
+// editorBinary and tmpDir mirror the dhctl/pkg/app globals this package used
+// to read directly. Set once at startup via SetGlobals.
+var (
+	editorBinary string
+	tmpDir       string
+	sanityCheck  bool
+)
+
+// SetGlobals wires in editor/global options at startup.
+// TODO(nabokikhms): fix package level setters in the following PRs.
+func SetGlobals(opts *options.Options) {
+	if opts == nil {
+		return
+	}
+	editorBinary = opts.Render.Editor
+	tmpDir = opts.Global.TmpDir
+	sanityCheck = opts.Global.SanityCheck
+}
+
 func Edit(data []byte, dc *directoryconfig.DirectoryConfig) ([]byte, error) {
 	schemaStore := config.NewSchemaStore(dc)
 
-	editor := app.Editor
+	editor := editorBinary
 	if editor == "" {
 		editor = os.Getenv("EDITOR")
 		if editor == "" {
@@ -37,7 +58,7 @@ func Edit(data []byte, dc *directoryconfig.DirectoryConfig) ([]byte, error) {
 		}
 	}
 
-	tmpFile, err := os.CreateTemp(app.TmpDirName, "dhctl-editor.*.yaml")
+	tmpFile, err := os.CreateTemp(tmpDir, "dhctl-editor.*.yaml")
 	if err != nil {
 		log.ErrorF("can't save cluster configuration: %s\n", err)
 		return nil, err

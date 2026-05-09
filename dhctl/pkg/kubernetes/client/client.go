@@ -31,7 +31,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 	"k8s.io/client-go/rest"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/local"
@@ -185,10 +185,25 @@ func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.
 	return port, nil
 }
 
+// TODO(nabokikhms): fix package level setters in the following PRs.
+//
+// kubeOpts replaces the dhctl/pkg/app globals this package used to read.
+// Set once at startup via SetGlobals from the resolved *options.Options.
+var kubeOpts options.KubeOptions
+
+// SetGlobals wires in kube options at startup.
+// TODO(nabokikhms): fix package level setters in the following PRs.
+func SetGlobals(opts *options.Options) {
+	if opts == nil {
+		return
+	}
+	kubeOpts = opts.Kube
+}
+
 func AppKubernetesInitParams() *KubernetesInitParams {
 	return &KubernetesInitParams{
-		KubeConfig:          app.KubeConfig,
-		KubeConfigContext:   app.KubeConfigContext,
-		KubeConfigInCluster: app.KubeConfigInCluster,
+		KubeConfig:          kubeOpts.Config,
+		KubeConfigContext:   kubeOpts.ConfigContext,
+		KubeConfigInCluster: kubeOpts.InCluster,
 	}
 }

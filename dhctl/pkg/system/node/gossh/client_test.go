@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	ssh_testing "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh/testing"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
@@ -123,7 +122,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 			t.Run(c.title, func(t *testing.T) {
 				var sshClient *Client
 				if c.settings.BecomePass != "" {
-					app.BecomePass = c.settings.BecomePass
+					becomePass = c.settings.BecomePass
 				}
 				sshClient = NewClient(context.Background(), c.settings, c.keys)
 				err := sshClient.OnlyPreparePrivateKeys()
@@ -381,15 +380,15 @@ func TestClientStart(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
 				os.Setenv("SSH_AUTH_SOCK", c.auth_sock)
-				app.BecomePass = ""
-				app.SSHBastionPass = ""
+				becomePass = ""
+				sshBastionPass = ""
 				var sshClient *Client
 				if c.settings != nil {
 					if c.settings.BecomePass != "" {
-						app.BecomePass = c.settings.BecomePass
+						becomePass = c.settings.BecomePass
 					}
 					if c.settings.BastionPassword != "" {
-						app.SSHBastionPass = c.settings.BastionPassword
+						sshBastionPass = c.settings.BastionPassword
 					}
 				}
 
@@ -525,7 +524,7 @@ func TestClientWithDebug(t *testing.T) {
 	os.Setenv("SSH_AUTH_SOCK", "")
 
 	// enable debug
-	app.IsDebug = true
+	debugEnabled = true
 
 	t.Run("start with debug test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{

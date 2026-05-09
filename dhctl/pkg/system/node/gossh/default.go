@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
@@ -26,21 +25,21 @@ import (
 
 func NewClientFromFlags(ctx context.Context) (*Client, error) {
 	settings := session.NewSession(session.Input{
-		AvailableHosts:  app.SSHHosts,
-		User:            app.SSHUser,
-		Port:            app.SSHPort,
-		BastionHost:     app.SSHBastionHost,
-		BastionPort:     app.SSHBastionPort,
-		BastionUser:     app.SSHBastionUser,
-		BastionPassword: app.SSHBastionPass,
-		ExtraArgs:       app.SSHExtraArgs,
+		AvailableHosts:  sshHosts,
+		User:            sshUser,
+		Port:            sshPort,
+		BastionHost:     sshBastionHost,
+		BastionPort:     sshBastionPort,
+		BastionUser:     sshBastionUser,
+		BastionPassword: sshBastionPass,
+		ExtraArgs:       sshExtraArgs,
 	})
 
 	return NewClient(ctx, settings, genssh.CollectDHCTLPrivateKeysFromFlags()), nil
 }
 
 func NewClientFromFlagsWithHosts(ctx context.Context) (*Client, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
@@ -49,7 +48,7 @@ func NewClientFromFlagsWithHosts(ctx context.Context) (*Client, error) {
 }
 
 func NewInitClientFromFlagsWithHosts(ctx context.Context, askPassword bool) (*Client, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, fmt.Errorf("Hosts not passed")
 	}
 
@@ -57,7 +56,7 @@ func NewInitClientFromFlagsWithHosts(ctx context.Context, askPassword bool) (*Cl
 }
 
 func NewInitClientFromFlags(ctx context.Context, askPassword bool) (*Client, error) {
-	if len(app.SSHHosts) == 0 {
+	if len(sshHosts) == 0 {
 		return nil, nil
 	}
 
@@ -75,10 +74,13 @@ func NewInitClientFromFlags(ctx context.Context, askPassword bool) (*Client, err
 	}
 
 	if askPassword {
-		err = terminal.AskBecomePassword()
+		err = terminal.AskBecomePassword(&pkgBecomeOptions)
 		if err != nil {
 			return nil, err
 		}
+		// keep the locally-cached become password in sync after the prompt.
+		// TODO(nabokikhms): fix package level setters in the following PRs.
+		becomePass = pkgBecomeOptions.BecomePass
 	}
 
 	return sshClient, nil

@@ -27,7 +27,6 @@ import (
 	ssh "github.com/deckhouse/lib-gossh"
 	"github.com/deckhouse/lib-gossh/agent"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -139,7 +138,7 @@ func (s *Client) Start() error {
 		if s.Settings.BastionPassword != "" {
 			bastionPass = s.Settings.BecomePass
 		} else {
-			bastionPass = app.SSHBastionPass
+			bastionPass = sshBastionPass
 		}
 
 		if len(s.privateKeys) == 0 && len(bastionPass) == 0 {
@@ -183,12 +182,11 @@ func (s *Client) Start() error {
 		log.DebugF("Connected successfully to bastion host %s\n", bastionAddr)
 	}
 
-	var becomePass string
-
+	// shadow the package-level becomePass with a local that may be overridden by
+	// per-session settings; the package-level value is the prompt fallback.
+	becomePass := becomePass
 	if s.Settings.BecomePass != "" {
 		becomePass = s.Settings.BecomePass
-	} else {
-		becomePass = app.BecomePass
 	}
 
 	if len(s.privateKeys) == 0 && len(becomePass) == 0 && socket == "" {
@@ -279,7 +277,7 @@ func (s *Client) Start() error {
 		if err != nil {
 			return err
 		}
-		if app.IsDebug {
+		if debugEnabled {
 			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConnWithDebug(targetConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
 		} else {
 			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
@@ -400,7 +398,7 @@ func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientCo
 		reqs  <-chan *ssh.Request
 	)
 
-	if app.IsDebug {
+	if debugEnabled {
 		c, chans, reqs, err = ssh.NewClientConnWithDebug(tcpConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
 	} else {
 		c, chans, reqs, err = ssh.NewClientConn(tcpConn, addr, config)

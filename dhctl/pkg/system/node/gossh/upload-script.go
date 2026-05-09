@@ -179,7 +179,7 @@ var ErrBashibleTimeout = errors.New("Timeout bashible step running")
 
 func (u *SSHUploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) ([]byte, error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
-	bundleLocalFilepath := filepath.Join(app.TmpDirName, bundleName)
+	bundleLocalFilepath := filepath.Join(tmpDir, bundleName)
 
 	// tar cpf bundle.tar -C /tmp/dhctl.1231qd23/var/lib bashible
 	err := tar.CreateTar(bundleLocalFilepath, parentDir, bundleDir)

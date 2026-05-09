@@ -23,7 +23,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -65,6 +65,11 @@ type Params struct {
 
 	CheckHasTerraformStateBeforeMigration bool
 	CacheID                               string
+
+	// Options carries the per-operation parsed configuration. RPC handlers
+	// must populate this with a fresh *options.Options to avoid sharing global
+	// state between concurrent requests.
+	Options *options.Options
 }
 
 type Converger struct {
@@ -83,8 +88,8 @@ func NewConverger(params *Params) *Converger {
 	// }
 	// }
 
-	if app.ProgressFilePath != "" {
-		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
 	}
 
 	return &Converger{
@@ -395,7 +400,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 }
 
 func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, checkInterval time.Duration) error {
-	if app.RunningNodeName == "" {
+	if c.Options == nil || c.Options.AutoConverge.RunningNodeName == "" {
 		return fmt.Errorf("Need to pass running node name. It is may taints infrastructure state while converge")
 	}
 
@@ -437,7 +442,7 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 		// never force lock
 		WithForceLock(false)
 
-	app.DeckhouseTimeout = 1 * time.Hour
+	c.Options.Bootstrap.DeckhouseTimeout = 1 * time.Hour
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:  c.TmpDir,
@@ -449,7 +454,7 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 
 	r := newRunner(inLockRunner, switcher).
 		WithCommanderUUID(c.CommanderUUID).
-		WithExcludedNodes([]string{app.RunningNodeName}).
+		WithExcludedNodes([]string{c.Options.AutoConverge.RunningNodeName}).
 		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})
 
 	converger := NewAutoConverger(r, AutoConvergerParams{

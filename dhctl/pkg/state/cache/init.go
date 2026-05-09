@@ -24,13 +24,21 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
+
+// cacheOpts holds the cache configuration sourced once at startup from
+// options.CacheOptions. Set via SetOptions before any Init call.
+var cacheOpts options.CacheOptions
+
+// SetOptions wires in cache configuration at startup.
+// Must be called once before Init / InitWithOptions.
+func SetOptions(o options.CacheOptions) { cacheOpts = o }
 
 var once sync.Once
 
@@ -43,14 +51,14 @@ var (
 var globalCache state.Cache = &cache.DummyCache{}
 
 func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state.Cache, error) {
-	tmpDir := filepath.Join(app.GetCacheDir(), stringsutil.Sha256Encode(identity))
+	tmpDir := filepath.Join(cacheOpts.Dir, stringsutil.Sha256Encode(identity))
 	log.InfoF("State cache directory: %s\n", tmpDir)
 
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
 
-	if app.CacheKubeNamespace == "" {
+	if cacheOpts.KubeNamespace == "" {
 		if opts.ResetInitialState {
 			return cache.NewStateCacheWithInitialState(tmpDir, opts.InitialState)
 		}
@@ -61,21 +69,21 @@ func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state
 
 	kubeCl := client.NewKubernetesClient()
 	err := kubeCl.Init(&client.KubernetesInitParams{
-		KubeConfig:          app.CacheKubeConfig,
-		KubeConfigContext:   app.CacheKubeConfigContext,
-		KubeConfigInCluster: app.CacheKubeConfigInCluster,
+		KubeConfig:          cacheOpts.KubeConfig,
+		KubeConfigContext:   cacheOpts.KubeConfigContext,
+		KubeConfigInCluster: cacheOpts.KubeConfigInCluster,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	secretName := identity
-	if app.CacheKubeName != "" {
-		secretName = app.CacheKubeName
+	if cacheOpts.KubeName != "" {
+		secretName = cacheOpts.KubeName
 	}
 
-	k8sCache := client.NewK8sStateCache(kubeCl, app.CacheKubeNamespace, secretName, tmpDir).
-		WithLabels(app.CacheKubeLabels)
+	k8sCache := client.NewK8sStateCache(kubeCl, cacheOpts.KubeNamespace, secretName, tmpDir).
+		WithLabels(cacheOpts.KubeLabels)
 
 	err = k8sCache.Init(ctx)
 	if err != nil {

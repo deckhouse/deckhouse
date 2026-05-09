@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
@@ -36,14 +37,14 @@ const (
 	userName    = "local"
 )
 
-func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
+func DefineSessionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}

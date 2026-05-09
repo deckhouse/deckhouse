@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	dh_config "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -83,7 +82,7 @@ func SecretEdit(
 	}
 
 	// This flag is validating by webhooks to allow editing unsafe resource's fields.
-	if app.SanityCheck {
+	if sanityCheck {
 		addUnsafeAnnotation(config)
 	}
 
@@ -113,7 +112,7 @@ func SecretEdit(
 						return err
 					}
 
-					if app.SanityCheck {
+					if sanityCheck {
 						log.InfoLn("Remove allow-unsafe annotation")
 						removeUnsafeAnnotation(config)
 

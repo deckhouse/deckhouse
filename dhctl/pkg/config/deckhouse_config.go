@@ -25,7 +25,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/uuid"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -89,13 +88,13 @@ func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
-	rawFile, err := os.ReadFile(app.VersionFile)
+	rawFile, err := os.ReadFile(versionFile)
 	if err != nil {
-		rawFile, err = os.ReadFile(filepath.Join(app.DownloadDirName, "deckhouse", "version"))
+		rawFile, err = os.ReadFile(filepath.Join(downloadDirName, "deckhouse", "version"))
 		if err != nil {
 			log.WarnF(
 				"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
-				app.VersionFile, err,
+				versionFile, err,
 			)
 			return "", false
 		}

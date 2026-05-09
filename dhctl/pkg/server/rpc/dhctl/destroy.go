@@ -27,7 +27,6 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -177,12 +176,12 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 
 	loggerFor := initDhctlLogger(ctx, p)
 
-	app.SanityCheck = true
-	app.UseTfCache = app.UseStateCacheYes
-	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
-	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.SetCacheDir(s.params.CacheDir)
-	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
+	opts := newRequestOptions(
+		s.params.CacheDir,
+		p.request.Options.CommonOptions.SkipPreflightChecks,
+		p.request.Options.ResourcesTimeout.AsDuration(),
+		p.request.Options.DeckhouseTimeout.AsDuration(),
+	)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
 	defer logBeforeExit()
@@ -282,6 +281,7 @@ func (s *Service) destroy(ctx context.Context, p *destroyParams) *pb.DestroyResu
 		SSHProvider:     sshProvider,
 		KubeProvider:    kubeProvider,
 		DirectoryConfig: s.params.DownloadDirConfig,
+		Options:         opts,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

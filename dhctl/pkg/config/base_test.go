@@ -26,7 +26,6 @@ import (
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -437,7 +436,7 @@ spec:
 }
 
 func TestParseConfigFromFiles(t *testing.T) {
-	app.VersionFile = "./mocks/version"
+	versionFile = "./mocks/version"
 	dc := &directoryconfig.DirectoryConfig{
 		DownloadDir:      "/tmp",
 		DownloadCacheDir: "/tmp/cache",

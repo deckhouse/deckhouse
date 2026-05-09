@@ -19,7 +19,6 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 )
@@ -78,7 +77,7 @@ func (s *SSHAdd) AddKeys(keys []string) error {
 		}
 	}
 
-	if app.IsDebug {
+	if debugEnabled {
 		log.DebugLn("list added keys")
 		env := []string{
 			s.AgentSettings.AuthSockEnv(),

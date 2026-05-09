@@ -27,9 +27,16 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
+
+// debugEnabled mirrors options.GlobalOptions.IsDebug for this package.
+// Set once at startup via SetDebug.
+var debugEnabled = false
+
+// SetDebug enables or disables verbose stdout/stderr passthrough on Executor.
+// Must be called once at startup before any Executor invocation.
+func SetDebug(d bool) { debugEnabled = d }
 
 // exec.Cmd executor
 
@@ -332,7 +339,7 @@ func (e *Executor) SetupStreamHandlers() error {
 			n, err := stderrReadPipe.Read(buf)
 
 			// TODO logboek
-			if e.Live || app.IsDebug {
+			if e.Live || debugEnabled {
 				os.Stderr.Write(buf[:n])
 			}
 			if e.StderrBuffer != nil {
@@ -413,7 +420,7 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 		}
 
 		// TODO logboek
-		if app.IsDebug {
+		if debugEnabled {
 			os.Stdout.Write(buf[:n])
 		}
 		if e.Live {

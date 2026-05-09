@@ -18,19 +18,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
@@ -59,10 +55,11 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 
 	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
 		Node:           nodeInterface,
-		NodeIP:         app.InternalNodeIP,
-		DevicePath:     app.DevicePath,
+		NodeIP:         b.Options.Bootstrap.InternalNodeIP,
+		DevicePath:     b.Options.Bootstrap.DevicePath,
 		MetaConfig:     metaConfig,
 		CommanderMode:  b.CommanderMode,
+		IsDebug:        b.IsDebug,
 		DirsConfig:     b.DirectoryConfig,
 		LoggerProvider: b.loggerProvider,
 	})

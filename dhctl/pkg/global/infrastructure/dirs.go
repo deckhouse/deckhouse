@@ -17,8 +17,6 @@ package infrastructure
 import (
 	"os"
 	"path/filepath"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 var (
@@ -26,6 +24,14 @@ var (
 	deckhouseDir           = "/deckhouse"
 	candiDir               = deckhouseDir + "/candi"
 	infrastructureVersions = candiDir + "/terraform_versions.yml"
+
+	// downloadDir is the dhctl download directory. Set at startup via
+	// SetDownloadDir from the resolved options.GlobalOptions; the default
+	// matches the previous dhctl/pkg/app.DownloadDirName so callers (and tests)
+	// not going through main() see the same behavior as before. The fallback
+	// resolvers below use it to locate provider/version files unpacked from
+	// the deckhouse image.
+	downloadDir = filepath.Join(os.TempDir(), "dhctl")
 )
 
 func InitGlobalVars(pwd string) {
@@ -33,6 +39,12 @@ func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
 	candiDir = deckhouseDir + "/candi"
 	infrastructureVersions = candiDir + "/terraform_versions.yml"
+}
+
+// SetDownloadDir wires in the download directory at startup. Must be called
+// before any GetInfrastructure* helper is invoked.
+func SetDownloadDir(dir string) {
+	downloadDir = dir
 }
 
 func GetDhctlPath() string {
@@ -45,7 +57,7 @@ func GetInfrastructureProviderDir(provider string) string {
 		return filepath.Join(candiDir, "cloud-providers", provider)
 	}
 
-	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "cloud-providers", provider)
+	return filepath.Join(downloadDir, "deckhouse", "candi", "cloud-providers", provider)
 }
 
 func GetInfrastructureModulesDir(provider string) string {
@@ -62,5 +74,5 @@ func GetInfrastructureVersions() string {
 		return infrastructureVersions
 	}
 
-	return filepath.Join(app.DownloadDirName, "deckhouse", "candi", "terraform_versions.yml")
+	return filepath.Join(downloadDir, "deckhouse", "candi", "terraform_versions.yml")
 }
