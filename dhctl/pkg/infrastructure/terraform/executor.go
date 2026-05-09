@@ -108,7 +108,7 @@ func (e *Executor) Init(ctx context.Context) error {
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 
 	return err
 }
@@ -134,7 +134,7 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 
 	return err
 }
@@ -172,7 +172,7 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int,
 		e.cmd.Stdout = io.Discard
 		e.cmd.Stderr = io.Discard
 	}
-	return infraexec.Exec(ctx, e.cmd, e.logger)
+	return infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 }
 
 func (e *Executor) Output(ctx context.Context, opts infrastructure.OutputOpts) ([]byte, error) {
@@ -193,7 +193,7 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
-	_, err := infraexec.Exec(ctx, e.cmd, e.logger)
+	_, err := infraexec.Exec(ctx, e.cmd, e.logger, e.params.IsDebug)
 
 	return err
 }

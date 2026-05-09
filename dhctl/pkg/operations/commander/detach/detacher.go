@@ -17,6 +17,7 @@ package detach
 import (
 	"context"
 	"fmt"
+	"time"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
@@ -35,6 +36,10 @@ type Params struct {
 	OnCheckResult         func(context.Context, *check.CheckResult) error
 	OnPhaseFunc           phases.DefaultOnPhaseFunc
 	OnProgressFunc        phases.OnProgressFunc
+
+	// ResourcesTimeout caps how long the create-resources loop waits for the
+	// detach resources to converge.
+	ResourcesTimeout time.Duration
 }
 
 type Detacher struct {
@@ -127,7 +132,7 @@ func (op *Detacher) Detach(ctx context.Context) (err error) {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil, op.Params.ResourcesTimeout)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}

@@ -180,38 +180,29 @@ func ParseConnectionConfig(
 }
 
 // ConnectionConfigParser parses an SSH connection config file and writes the
-// result back into the supplied options structs. The parser is invoked from
+// result back into the supplied options struct. The parser is invoked from
 // kingpin Action when --connection-config is set.
 type ConnectionConfigParser struct {
-	SSH    *options.SSHOptions
-	Become *options.BecomeOptions
-	Global *options.GlobalOptions
+	opts *options.Options
 }
 
 // NewConnectionConfigParser builds a parser that writes into the supplied opts.
 func NewConnectionConfigParser(opts *options.Options) *ConnectionConfigParser {
-	if opts == nil {
-		return &ConnectionConfigParser{}
-	}
-	return &ConnectionConfigParser{
-		SSH:    &opts.SSH,
-		Become: &opts.Become,
-		Global: &opts.Global,
-	}
+	return &ConnectionConfigParser{opts: opts}
 }
 
 // ParseConnectionConfigFromFile parses SSH connection config from
-// p.SSH.ConnectionConfigPath and fills the SSH/Become options with the result.
+// p.opts.SSH.ConnectionConfigPath and fills the SSH/Become options with the result.
 func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
-	if p == nil || p.SSH == nil || p.Become == nil || p.Global == nil {
-		return fmt.Errorf("ConnectionConfigParser is not fully initialized")
+	if p == nil || p.opts == nil {
+		return fmt.Errorf("ConnectionConfigParser is not initialized")
 	}
 
-	connectionConfigPath := p.SSH.ConnectionConfigPath
+	connectionConfigPath := p.opts.SSH.ConnectionConfigPath
 
 	log.DebugF("Connection config path: %s\n", connectionConfigPath)
 
-	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, p.Global.DirConfig())
+	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, p.opts.DirConfig())
 	if err != nil {
 		return fmt.Errorf("Parsing ssh config from file: %w", err)
 	}
@@ -220,7 +211,7 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 
 	keysPaths := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range cfg.SSHConfig.SSHAgentPrivateKeys {
-		f, err := os.CreateTemp(p.Global.TmpDir, "ssh-key-*")
+		f, err := os.CreateTemp(p.opts.Global.TmpDir, "ssh-key-*")
 		if err != nil {
 			return fmt.Errorf("unable to create temp file: %w", err)
 		}
@@ -253,20 +244,20 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		port = strconv.Itoa(int(*cfg.SSHConfig.SSHPort))
 	}
 
-	p.SSH.PrivateKeys = keysPaths
-	p.SSH.BastionHost = cfg.SSHConfig.SSHBastionHost
-	p.SSH.BastionPort = bastionPort
-	p.SSH.BastionUser = cfg.SSHConfig.SSHBastionUser
-	p.Become.BecomePass = cfg.SSHConfig.SudoPassword
-	p.SSH.User = cfg.SSHConfig.SSHUser
-	p.SSH.Hosts = hosts
-	p.SSH.Port = port
-	p.SSH.ExtraArgs = cfg.SSHConfig.SSHExtraArgs
-	p.SSH.BastionPass = cfg.SSHConfig.SSHBastionPassword
-	p.SSH.LegacyMode = cfg.SSHConfig.LegacyMode
-	p.SSH.ModernMode = cfg.SSHConfig.ModernMode
+	p.opts.SSH.PrivateKeys = keysPaths
+	p.opts.SSH.BastionHost = cfg.SSHConfig.SSHBastionHost
+	p.opts.SSH.BastionPort = bastionPort
+	p.opts.SSH.BastionUser = cfg.SSHConfig.SSHBastionUser
+	p.opts.Become.BecomePass = cfg.SSHConfig.SudoPassword
+	p.opts.SSH.User = cfg.SSHConfig.SSHUser
+	p.opts.SSH.Hosts = hosts
+	p.opts.SSH.Port = port
+	p.opts.SSH.ExtraArgs = cfg.SSHConfig.SSHExtraArgs
+	p.opts.SSH.BastionPass = cfg.SSHConfig.SSHBastionPassword
+	p.opts.SSH.LegacyMode = cfg.SSHConfig.LegacyMode
+	p.opts.SSH.ModernMode = cfg.SSHConfig.ModernMode
 	// todo it is ugly solution
-	p.SSH.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
+	p.opts.SSH.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
 
 	return nil
 }

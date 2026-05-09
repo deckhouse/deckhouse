@@ -212,6 +212,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 				controller.ClusterInfraOptions{
 					PhasedExecutionContext: pec,
 					TmpDir:                 params.TmpDir,
+					DownloadDir:            params.Options.Global.DownloadDir,
 					IsDebug:                params.IsDebug,
 					Logger:                 logger,
 				},
@@ -219,6 +220,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		},
 
 		sshClientProvider: params.SSHProvider,
+		sshUser:           params.Options.SSH.User,
 		tmpDir:            params.TmpDir,
 	}
 

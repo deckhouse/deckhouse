@@ -63,6 +63,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
+			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
 			IsDebug:          isDebug,
@@ -85,7 +86,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			TmpDir:          tmpDir,
 			Logger:          logger,
 			IsDebug:         isDebug,
-			DirectoryConfig: opts.Global.DirConfig(),
+			DirectoryConfig: opts.DirConfig(),
 
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
@@ -154,6 +155,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
+			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
 			IsDebug:          isDebug,
@@ -176,7 +178,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 			TmpDir:          tmpDir,
 			Logger:          logger,
 			IsDebug:         isDebug,
-			DirectoryConfig: opts.Global.DirConfig(),
+			DirectoryConfig: opts.DirConfig(),
 		})
 
 		return converger.AutoConverge(ctx, opts.AutoConverge.ListenAddress, opts.AutoConverge.ApplyInterval)
@@ -213,6 +215,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           tmpDir,
+			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           loggerFor,
 			IsDebug:          isDebug,
@@ -236,7 +239,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			TmpDir:                                tmpDir,
 			Logger:                                loggerFor,
 			IsDebug:                               isDebug,
-			DirectoryConfig:                       opts.Global.DirConfig(),
+			DirectoryConfig:                       opts.DirConfig(),
 		})
 		cacheIdentity := ""
 		if opts.Kube.InCluster {

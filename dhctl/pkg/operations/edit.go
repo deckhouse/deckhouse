@@ -20,37 +20,25 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-// TODO(nabokikhms): fix package level setters in the following PRs.
-//
-// editorBinary and tmpDir mirror the dhctl/pkg/app globals this package used
-// to read directly. Set once at startup via SetGlobals.
-var (
-	editorBinary string
-	tmpDir       string
-	sanityCheck  bool
-)
-
-// SetGlobals wires in editor/global options at startup.
-// TODO(nabokikhms): fix package level setters in the following PRs.
-func SetGlobals(opts *options.Options) {
-	if opts == nil {
-		return
-	}
-	editorBinary = opts.Render.Editor
-	tmpDir = opts.Global.TmpDir
-	sanityCheck = opts.Global.SanityCheck
+// EditOptions bundles the values Edit/SecretEdit used to read from the
+// dhctl/pkg/app globals: the editor binary, the scratch directory, and the
+// sanity-check flag. Each is optional — empty fields fall back to the same
+// defaults the globals carried (EDITOR env / "vi", os.TempDir, false).
+type EditOptions struct {
+	Editor      string
+	TmpDir      string
+	SanityCheck bool
 }
 
-func Edit(data []byte, dc *directoryconfig.DirectoryConfig) ([]byte, error) {
+func Edit(data []byte, dc *directoryconfig.DirectoryConfig, opts EditOptions) ([]byte, error) {
 	schemaStore := config.NewSchemaStore(dc)
 
-	editor := editorBinary
+	editor := opts.Editor
 	if editor == "" {
 		editor = os.Getenv("EDITOR")
 		if editor == "" {
@@ -58,7 +46,7 @@ func Edit(data []byte, dc *directoryconfig.DirectoryConfig) ([]byte, error) {
 		}
 	}
 
-	tmpFile, err := os.CreateTemp(tmpDir, "dhctl-editor.*.yaml")
+	tmpFile, err := os.CreateTemp(opts.TmpDir, "dhctl-editor.*.yaml")
 	if err != nil {
 		log.ErrorF("can't save cluster configuration: %s\n", err)
 		return nil, err

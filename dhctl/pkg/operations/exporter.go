@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -68,9 +69,10 @@ type ConvergeExporter struct {
 	GaugeMetrics    map[string]*prometheus.GaugeVec
 	CounterMetrics  map[string]*prometheus.CounterVec
 
-	tmpDir  string
-	logger  log.Logger
-	isDebug bool
+	tmpDir      string
+	downloadDir string
+	logger      log.Logger
+	isDebug     bool
 }
 
 var (
@@ -96,12 +98,16 @@ var (
 )
 
 type ExporterParams struct {
-	Address  string
-	Path     string
-	Interval time.Duration
-	TmpDir   string
-	Logger   log.Logger
-	IsDebug  bool
+	Address     string
+	Path        string
+	Interval    time.Duration
+	TmpDir      string
+	DownloadDir string
+	Logger      log.Logger
+	IsDebug     bool
+
+	// Kube is used to bootstrap the in-cluster API client.
+	Kube *options.KubeOptions
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
@@ -111,7 +117,7 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 	}
 
 	kubeCl := client.NewKubernetesClient().WithNodeInterface(ssh.NewNodeInterfaceWrapper(sshClient))
-	if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+	if err := kubeCl.Init(client.AppKubernetesInitParams(params.Kube)); err != nil {
 		panic(err)
 	}
 
@@ -120,21 +126,21 @@ func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
 		logger = log.GetDefaultLogger()
 	}
 
+	infraContext := infrastructure.NewContext(logger).WithDebug(params.IsDebug)
 	return &ConvergeExporter{
 		MetricsPath:           params.Path,
 		ListenAddress:         params.Address,
 		kubeCl:                kubeCl,
-		infrastructureContext: infrastructure.NewContext(logger),
+		infrastructureContext: infraContext,
 		CheckInterval:         params.Interval,
-
-		existedEntities: newPreviouslyExistedEntities(),
-
-		OneGaugeMetrics: make(map[string]prometheus.Gauge),
-		GaugeMetrics:    make(map[string]*prometheus.GaugeVec),
-		CounterMetrics:  make(map[string]*prometheus.CounterVec),
-		tmpDir:          params.TmpDir,
-		logger:          logger,
-		isDebug:         params.IsDebug,
+		existedEntities:       newPreviouslyExistedEntities(),
+		OneGaugeMetrics:       make(map[string]prometheus.Gauge),
+		GaugeMetrics:          make(map[string]*prometheus.GaugeVec),
+		CounterMetrics:        make(map[string]*prometheus.CounterVec),
+		tmpDir:                params.TmpDir,
+		downloadDir:           params.DownloadDir,
+		logger:                logger,
+		isDebug:               params.IsDebug,
 	}
 }
 
@@ -298,6 +304,7 @@ func (c *ConvergeExporter) getStatistic(ctx context.Context, tmpCleaner cache.Tm
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           c.tmpDir,
+		DownloadDir:      c.downloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           c.logger,
 		IsDebug:          c.isDebug,

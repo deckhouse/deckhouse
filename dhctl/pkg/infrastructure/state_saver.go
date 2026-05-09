@@ -134,7 +134,7 @@ func (s *StateSaver) FsEventHandler(event fsnotify.Event) {
 		return
 	}
 	s.debug("State file modified: %s", event.Name)
-	if debugEnabled {
+	if s.runner != nil && s.runner.isDebug {
 		fs.CreateFileBackup(event.Name)
 	}
 

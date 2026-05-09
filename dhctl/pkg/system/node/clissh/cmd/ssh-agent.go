@@ -54,7 +54,7 @@ func (a *SSHAgent) Start() error {
 		Setsid: true,
 	}
 
-	a.Executor = process.NewDefaultExecutor(a.agentCmd)
+	a.Executor = process.NewDefaultExecutor(a.agentCmd).EnableDebug(debugEnabled)
 	// a.EnableLive()
 	a.WithStdoutHandler(func(l string) {
 		log.DebugF("ssh agent: got '%s'\n", l)

@@ -68,7 +68,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 			Logger:                 logger,
 			IsDebug:                opts.Global.IsDebug,
 			ResetInitialState:      false,
-			DirectoryConfig:        opts.Global.DirConfig(),
+			DirectoryConfig:        opts.DirConfig(),
 			SSHProviderInitializer: sshProviderInitializer,
 			KubeProvider:           kubeProvider,
 			Options:                opts,

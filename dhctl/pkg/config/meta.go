@@ -68,6 +68,11 @@ type MetaConfig struct {
 	ClusterMasterEndpoints    []ClusterMasterEndpoint `json:"-"`
 	DownloadRootDir           string                  `json:"-"`
 	DownloadCacheDir          string                  `json:"-"`
+
+	// VersionFilePath is the absolute path to the deckhouse version file
+	// embedded in the installer image. Required by LoadInstallerVersion and
+	// DeckhouseInstaller.GetImageTag.
+	VersionFilePath string `json:"-"`
 }
 
 type imagesDigests map[string]map[string]interface{}
@@ -767,15 +772,14 @@ func (m *MetaConfig) LoadImagesDigests() error {
 }
 
 func (m *MetaConfig) LoadInstallerVersion() error {
-	rawFile, err := os.ReadFile(versionFile)
+	rawFile, err := os.ReadFile(m.VersionFilePath)
 	if err != nil {
-		// TODO param instead of hardcode path
-		versionFilePath := filepath.Join(downloadDirName, "deckhouse", "version")
-		rawFile, err = os.ReadFile(versionFilePath)
+		// fallback to the unpacked deckhouse image location
+		fallbackPath := filepath.Join(m.DownloadRootDir, "deckhouse", "version")
+		rawFile, err = os.ReadFile(fallbackPath)
 		if err != nil {
-			return fmt.Errorf("could not read both %s and %s: %w", versionFile, versionFilePath, err)
+			return fmt.Errorf("could not read both %s and %s: %w", m.VersionFilePath, fallbackPath, err)
 		}
-
 	}
 
 	m.InstallerVersion = strings.TrimSpace(string(rawFile))

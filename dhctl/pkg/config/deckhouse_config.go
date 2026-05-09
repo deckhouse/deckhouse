@@ -55,6 +55,13 @@ type DeckhouseInstaller struct {
 
 	InstallerVersion string
 
+	// VersionFilePath is the absolute path to the deckhouse version file
+	// embedded in the installer image. DownloadDir is the directory where
+	// the deckhouse image is unpacked (a fallback location for the version
+	// file). Both are required for GetImageTag(forceVersionTag=true).
+	VersionFilePath string
+	DownloadDir     string
+
 	CommanderMode bool
 	CommanderUUID uuid.UUID
 }
@@ -65,7 +72,7 @@ func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 	}
 	tag := c.DevBranch
 	if forceVersionTag {
-		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer()
+		versionTag, foundValidTag := ReadVersionTagFromInstallerContainer(c.VersionFilePath, c.DownloadDir)
 		if foundValidTag {
 			tag = versionTag
 		}
@@ -87,10 +94,14 @@ func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
 	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag)
 }
 
-func ReadVersionTagFromInstallerContainer() (string, bool) {
+// ReadVersionTagFromInstallerContainer reads the installer image version tag.
+// versionFile is the absolute path to the embedded version file; downloadDir
+// is the directory where the deckhouse image is unpacked (used as a fallback
+// location for the version file).
+func ReadVersionTagFromInstallerContainer(versionFile, downloadDir string) (string, bool) {
 	rawFile, err := os.ReadFile(versionFile)
 	if err != nil {
-		rawFile, err = os.ReadFile(filepath.Join(downloadDirName, "deckhouse", "version"))
+		rawFile, err = os.ReadFile(filepath.Join(downloadDir, "deckhouse", "version"))
 		if err != nil {
 			log.WarnF(
 				"Could not read %s: %v\nWill fall back to installation from release channel or dev branch.",
@@ -207,6 +218,8 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		ClusterConfig:         clusterConfig,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
 		InstallerVersion:      metaConfig.InstallerVersion,
+		VersionFilePath:       metaConfig.VersionFilePath,
+		DownloadDir:           metaConfig.DownloadRootDir,
 	}
 
 	return &installConfig, nil

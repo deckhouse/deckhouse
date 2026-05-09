@@ -98,8 +98,6 @@ func TestGetMasterNodeResult(t *testing.T) {
 }
 
 func TestCheckBaseInfrastructurePipeline(t *testing.T) {
-	tmpDir = "/tmp"
-
 	okPlan, err := os.ReadFile("./mocks/pipeline/base_infra_ok_plan.json")
 	require.NoError(t, err)
 

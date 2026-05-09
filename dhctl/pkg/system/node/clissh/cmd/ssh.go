@@ -160,7 +160,7 @@ func (s *SSH) Cmd(ctx context.Context) *exec.Cmd {
 		Setpgid: true,
 	}
 
-	s.Executor = process.NewDefaultExecutor(sshCmd)
+	s.Executor = process.NewDefaultExecutor(sshCmd).EnableDebug(debugEnabled)
 
 	return sshCmd
 }

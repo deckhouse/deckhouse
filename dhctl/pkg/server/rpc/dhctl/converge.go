@@ -222,7 +222,7 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 		err = cache.InitWithOptions(
 			ctx,
 			cachePath,
-			cache.CacheOptions{InitialState: initialState, ResetInitialState: true},
+			cache.CacheOptions{InitialState: initialState, ResetInitialState: true, Cache: opts.Cache},
 		)
 		if err != nil {
 			return fmt.Errorf("initializing cache at %s: %w", cachePath, err)
@@ -237,12 +237,15 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           tmpDir,
+		DownloadDir:      s.params.DownloadDirConfig.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           loggerFor,
 		IsDebug:          s.params.IsDebug,
 	})
 
-	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor)
+	infrastructureContext := infrastructure.NewContextWithProvider(providerGetter, loggerFor).
+		WithUseTfCache(opts.Cache.UseTfCache).
+		WithDebug(s.params.IsDebug)
 
 	var commanderUUID uuid.UUID
 	if p.request.Options.CommanderUuid != "" {

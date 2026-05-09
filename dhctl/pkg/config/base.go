@@ -91,6 +91,7 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 	}
 	metaConfig.DownloadRootDir = dc.DownloadDir
 	metaConfig.DownloadCacheDir = dc.DownloadCacheDir
+	metaConfig.VersionFilePath = dc.VersionFilePath
 
 	if metaConfig.ClusterConfig == nil {
 		return nil, fmt.Errorf("ClusterConfiguration must be provided")
@@ -197,6 +198,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
 		metaConfig.DownloadRootDir = dc.DownloadDir
 		metaConfig.DownloadCacheDir = dc.DownloadCacheDir
+		metaConfig.VersionFilePath = dc.VersionFilePath
 	}
 	schemaStore := NewSchemaStore(dc)
 

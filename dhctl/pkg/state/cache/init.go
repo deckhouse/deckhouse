@@ -32,14 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
-// cacheOpts holds the cache configuration sourced once at startup from
-// options.CacheOptions. Set via SetOptions before any Init call.
-var cacheOpts options.CacheOptions
-
-// SetOptions wires in cache configuration at startup.
-// Must be called once before Init / InitWithOptions.
-func SetOptions(o options.CacheOptions) { cacheOpts = o }
-
 var once sync.Once
 
 var (
@@ -51,6 +43,7 @@ var (
 var globalCache state.Cache = &cache.DummyCache{}
 
 func choiceCache(ctx context.Context, identity string, opts CacheOptions) (state.Cache, error) {
+	cacheOpts := opts.Cache
 	tmpDir := filepath.Join(cacheOpts.Dir, stringsutil.Sha256Encode(identity))
 	log.InfoF("State cache directory: %s\n", tmpDir)
 
@@ -117,13 +110,19 @@ func initCache(ctx context.Context, identity string, opts CacheOptions) error {
 	return err
 }
 
+// CacheOptions bundles per-call init state with the resolved
+// options.CacheOptions used to pick the on-disk vs Kubernetes cache backend.
 type CacheOptions struct {
 	InitialState      map[string][]byte
 	ResetInitialState bool
+
+	// Cache holds the resolved cache configuration (directory, kube secret
+	// settings). Required.
+	Cache options.CacheOptions
 }
 
-func Init(ctx context.Context, identity string) error {
-	return initCache(ctx, identity, CacheOptions{})
+func Init(ctx context.Context, identity string, cacheOpts options.CacheOptions) error {
+	return initCache(ctx, identity, CacheOptions{Cache: cacheOpts})
 }
 
 func InitWithOptions(ctx context.Context, identity string, opts CacheOptions) error {

@@ -116,7 +116,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{})
+		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
 		if err != nil {
 			return fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
@@ -176,11 +176,12 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 	var inLockRunner *lock.InLockRunner
 	// No need for converge-lock in commander mode for bootstrap and converge operations
 	if !c.CommanderMode {
-		inLockRunner = lock.NewInLockLocalRunner(ctx, convergeCtx, "local-converger")
+		inLockRunner = lock.NewInLockLocalRunner(ctx, convergeCtx, "local-converger", c.Options.SSH.User)
 	}
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, nil, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
+		DownloadDir:   c.Options.Global.DownloadDir,
 		Logger:        c.Logger,
 		DisableSwitch: true,
 	})
@@ -217,7 +218,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 			return nil, fmt.Errorf("Incorrect cache identity. Need to pass --ssh-host or --kube-client-from-cluster or --kubeconfig")
 		}
 
-		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{})
+		err := cache.InitWithOptions(ctx, c.CacheID, cache.CacheOptions{Cache: c.Options.Cache})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize cache %s: %w", c.CacheID, err)
 		}
@@ -354,11 +355,12 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	var inLockRunner *lock.InLockRunner
 	// No need for converge-lock in commander mode for bootstrap and converge operations
 	if !c.CommanderMode {
-		inLockRunner = lock.NewInLockLocalRunner(ctx, convergeCtx, "local-converger")
+		inLockRunner = lock.NewInLockLocalRunner(ctx, convergeCtx, "local-converger", c.Options.SSH.User)
 	}
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
 		TmpDir:        c.TmpDir,
+		DownloadDir:   c.Options.Global.DownloadDir,
 		Logger:        c.Logger,
 		IsDebug:       c.IsDebug,
 		DisableSwitch: c.NoSwitchToNodeUser,
@@ -438,16 +440,17 @@ func (c *Converger) AutoConverge(ctx context.Context, listenAddress string, chec
 	convergeCtx.WithPhaseContext(c.PhasedExecutionContext).
 		WithInfrastructureContext(c.Params.InfrastructureContext)
 
-	inLockRunner := lock.NewInLockRunner(convergeCtx, lock.AutoConvergerIdentity).
+	inLockRunner := lock.NewInLockRunner(convergeCtx, lock.AutoConvergerIdentity, c.Options.SSH.User).
 		// never force lock
 		WithForceLock(false)
 
 	c.Options.Bootstrap.DeckhouseTimeout = 1 * time.Hour
 
 	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
-		TmpDir:  c.TmpDir,
-		Logger:  c.Logger,
-		IsDebug: c.IsDebug,
+		TmpDir:      c.TmpDir,
+		DownloadDir: c.Options.Global.DownloadDir,
+		Logger:      c.Logger,
+		IsDebug:     c.IsDebug,
 	})
 
 	convergeCtx.SetClientSwitcher(switcher)

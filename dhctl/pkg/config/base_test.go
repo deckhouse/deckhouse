@@ -436,10 +436,10 @@ spec:
 }
 
 func TestParseConfigFromFiles(t *testing.T) {
-	versionFile = "./mocks/version"
 	dc := &directoryconfig.DirectoryConfig{
 		DownloadDir:      "/tmp",
 		DownloadCacheDir: "/tmp/cache",
+		VersionFilePath:  "./mocks/version",
 	}
 	t.Run("parse wildcard", func(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile(t.Context(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider(), dc)

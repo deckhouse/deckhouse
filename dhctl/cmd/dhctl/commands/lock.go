@@ -94,7 +94,7 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			return nil
 		}
 
-		cnf := lock.GetLockLeaseConfig("lock-releaser")
+		cnf := lock.GetLockLeaseConfig("lock-releaser", opts.SSH.User)
 		return lease.RemoveLease(ctx, kubeCl, cnf, confirm)
 	})
 }

@@ -24,14 +24,6 @@ var (
 	deckhouseDir           = "/deckhouse"
 	candiDir               = deckhouseDir + "/candi"
 	infrastructureVersions = candiDir + "/terraform_versions.yml"
-
-	// downloadDir is the dhctl download directory. Set at startup via
-	// SetDownloadDir from the resolved options.GlobalOptions; the default
-	// matches the previous dhctl/pkg/app.DownloadDirName so callers (and tests)
-	// not going through main() see the same behavior as before. The fallback
-	// resolvers below use it to locate provider/version files unpacked from
-	// the deckhouse image.
-	downloadDir = filepath.Join(os.TempDir(), "dhctl")
 )
 
 func InitGlobalVars(pwd string) {
@@ -41,17 +33,14 @@ func InitGlobalVars(pwd string) {
 	infrastructureVersions = candiDir + "/terraform_versions.yml"
 }
 
-// SetDownloadDir wires in the download directory at startup. Must be called
-// before any GetInfrastructure* helper is invoked.
-func SetDownloadDir(dir string) {
-	downloadDir = dir
-}
-
 func GetDhctlPath() string {
 	return dhctlPath
 }
 
-func GetInfrastructureProviderDir(provider string) string {
+// GetInfrastructureProviderDir returns the directory containing the cloud
+// provider's terraform/tofu modules. Falls back to <downloadDir>/deckhouse/candi
+// if the bundled candiDir does not exist.
+func GetInfrastructureProviderDir(provider, downloadDir string) string {
 	_, err := os.Stat(filepath.Join(candiDir, "cloud-providers", provider))
 	if err == nil {
 		return filepath.Join(candiDir, "cloud-providers", provider)
@@ -60,15 +49,18 @@ func GetInfrastructureProviderDir(provider string) string {
 	return filepath.Join(downloadDir, "deckhouse", "candi", "cloud-providers", provider)
 }
 
-func GetInfrastructureModulesDir(provider string) string {
-	return filepath.Join(GetInfrastructureProviderDir(provider), "terraform-modules")
+func GetInfrastructureModulesDir(provider, downloadDir string) string {
+	return filepath.Join(GetInfrastructureProviderDir(provider, downloadDir), "terraform-modules")
 }
 
-func GetInfrastructureModulesForRunningDir(provider, layout, module string) string {
-	return filepath.Join(GetInfrastructureProviderDir(provider), "layouts", layout, module)
+func GetInfrastructureModulesForRunningDir(provider, layout, module, downloadDir string) string {
+	return filepath.Join(GetInfrastructureProviderDir(provider, downloadDir), "layouts", layout, module)
 }
 
-func GetInfrastructureVersions() string {
+// GetInfrastructureVersions returns the path to the infrastructure-utility
+// versions file. Falls back to <downloadDir>/deckhouse/candi if the bundled
+// path does not exist.
+func GetInfrastructureVersions(downloadDir string) string {
 	_, err := os.Stat(infrastructureVersions)
 	if err == nil {
 		return infrastructureVersions

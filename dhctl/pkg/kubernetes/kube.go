@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -80,7 +81,7 @@ func GetMasterNodeGroupLabelSelector(selectors ...LabelSelector) (string, error)
 	return GetLabelSelector(withNg)
 }
 
-func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {
+func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface, kube *options.KubeOptions) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
 
 	err := log.ProcessCtx(ctx, "common", "Connect to Kubernetes API", func(ctx context.Context) error {
@@ -93,7 +94,7 @@ func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (
 		err := retry.NewLoop("Get Kubernetes API client", 45, 5*time.Second).
 			RunContext(ctx, func() error {
 				kubeCl = client.NewKubernetesClient().WithNodeInterface(nodeInterface)
-				if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams()); err != nil {
+				if err := kubeCl.InitContext(ctx, client.AppKubernetesInitParams(kube)); err != nil {
 					return fmt.Errorf("open kubernetes connection: %v", err)
 				}
 				return nil

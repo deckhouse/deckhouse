@@ -81,7 +81,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			return err
 		}
 
-		if err = cache.Init(ctx, sshClient.Check().String()); err != nil {
+		if err = cache.Init(ctx, sshClient.Check().String(), opts.Cache); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}
 
@@ -93,7 +93,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpi
 			LoggerProvider:  log.SimpleLoggerProvider(logger),
 			IsDebug:         opts.Global.IsDebug,
 			TmpDir:          opts.Global.TmpDir,
-			DirectoryConfig: opts.Global.DirConfig(),
+			DirectoryConfig: opts.DirConfig(),
 		})
 		if err != nil {
 			return err

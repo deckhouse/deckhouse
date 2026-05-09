@@ -76,7 +76,12 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, opts *options.Options, name, s
 			name, "kube-system", secret, dataKey, map[string]string{
 				"name": name,
 			},
-			opts.Global.DirConfig(),
+			opts.DirConfig(),
+			operations.EditOptions{
+				Editor:      opts.Render.Editor,
+				TmpDir:      opts.Global.TmpDir,
+				SanityCheck: opts.Global.SanityCheck,
+			},
 		)
 	})
 }
