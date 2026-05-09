@@ -133,6 +133,15 @@ jobs:
       - build_fe
 {!{ tmpl.Exec "tests_template" (slice $ctx "validators" "build_fe") | strings.Indent 4 }!}
 
+  doc_pdf_build:
+    name: Doc PDF build
+    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
+    needs:
+      - git_info
+      - doc_web_build
+    continue-on-error: true
+{!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_release_version_template") | strings.Indent 4 }!}
+
 {!{/* Autodeploy documentation to the production on push to release branch */}!}
   deploy_release_doc_prod:
     name: (Prod) Deploy release documentation

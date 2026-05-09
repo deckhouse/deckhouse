@@ -29,7 +29,7 @@ out/
 /deckhouse/deckhouse
 
 # Generated documentation PDF (make docs-generate-pdf)
-/PDF/
+pdf/
 
 # terraform and dhctl artifacts
 *-tfstate/
@@ -76,7 +76,7 @@ testing/cloud_layouts/Static/.terraform*
 testing/cloud_layouts/Static/errored*
 testing/cloud_layouts/Static/ssh-connect_str*
 testing/cloud_layouts/Static/opentofu
-testing/cloud_layouts/script-commander_test.sh  
+testing/cloud_layouts/script-commander_test.sh
 
 # dhctl dev
 dhctl/pkg/config/digests/images_digests_dev.json

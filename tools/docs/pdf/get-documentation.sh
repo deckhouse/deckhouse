@@ -31,9 +31,12 @@ export OBSERVABILITY_SOURCE_REPO=""
 export STRONGHOLD_PULL_TOKEN=""
 export DECKHOUSE_PRIVATE_REPO=""
 
-werf build documentation/web --env EE --dev --repo localhost:4999/docs
+werf build documentation/web documentation/pdf-builder --env EE --dev --repo localhost:4999/docs
 docker stop d8-doc-ee &>/dev/null
 docker rm d8-doc-ee &>/dev/null
+
+PDF_BUILDER_IMAGE=$(werf stage image documentation/pdf-builder --env EE --dev --repo localhost:4999/docs 2>/dev/null | tail -1)
+echo "PDF_BUILDER_IMAGE='${PDF_BUILDER_IMAGE}'" >> "${GET_DOCUMENTATION_TMPDIR}/env"
 
 docker create --name d8-doc-ee $(werf stage image documentation/web --env EE --dev --repo localhost:4999/docs)
 if [ $? -ne 0 ]; then

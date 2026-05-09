@@ -3252,6 +3252,161 @@ jobs:
           docker run -w /deckhouse -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} go run gotest.tools/gotestsum@latest -- -tags=validation -run Validation -timeout=${{env.TEST_TIMEOUT}} ./testing/...
     # </template: tests_template>
 
+  doc_pdf_build:
+    name: Doc PDF build
+    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
+    needs:
+      - git_info
+      - doc_web_build
+    continue-on-error: true
+    # <template: doc_pdf_build_template>
+    runs-on: [self-hosted, large]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+      # </template: checkout_full_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+      # <template: werf_install_step>
+      - name: Install werf CLI
+        uses: werf/actions/install@v2
+        with:
+          version: ${{env.WERF_VERSION}}
+      # </template: werf_install_step>
+
+
+      # <template: doc_release_version_template>
+      - name: Set documentation version
+        env:
+          CI_COMMIT_REF_NAME: ${{needs.git_info.outputs.ci_commit_ref_name}}
+        run: |
+          echo "DOC_VERSION=${CI_COMMIT_REF_NAME/release-/v}" >> $GITHUB_ENV
+      # </template: doc_release_version_template>
+
+      - name: Extract documentation and PDF builder images
+        env:
+          WERF_ENV: "EE"
+          WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
+          WERF_DIR: "docs/documentation"
+        run: |
+          type werf && source $(werf ci-env github --verbose --as-file)
+
+          STATIC_IMAGE=$(werf stage image website-docs/web/static)
+          echo "Static image: $STATIC_IMAGE"
+          docker pull "$STATIC_IMAGE"
+          TMPDIR=$(mktemp -d)
+          echo "DOCS_TMPDIR=$TMPDIR" >> $GITHUB_ENV
+          docker cp $(docker create --rm "$STATIC_IMAGE"):/app/_site/documentation "$TMPDIR/docs-dkp"
+          docker cp $(docker create --rm "$STATIC_IMAGE"):/app/_site "$TMPDIR/embedded-modules-src"
+          mkdir -p "$TMPDIR/embedded-modules"
+          cp -r "$TMPDIR/embedded-modules-src/en" "$TMPDIR/embedded-modules/en"
+          cp -r "$TMPDIR/embedded-modules-src/ru" "$TMPDIR/embedded-modules/ru"
+
+          PDF_BUILDER_IMAGE=$(werf stage image website-docs/pdf-builder)
+          echo "PDF builder image: $PDF_BUILDER_IMAGE"
+          docker pull "$PDF_BUILDER_IMAGE"
+          echo "PDF_BUILDER_IMAGE=$PDF_BUILDER_IMAGE" >> $GITHUB_ENV
+
+      - name: Generate PDF documentation
+        env:
+          DKP_DOC_VERSION: "${{ env.DOC_VERSION }}"
+        run: |
+          mkdir -p pdf
+          docker run --rm \
+            -w /app \
+            -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
+            -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
+            -v "$(pwd)/tools/docs/pdf/get_pdf_page.py:/app/get_pdf_page.py:ro" \
+            -v "$(pwd)/tools/docs/pdf/toc_style.css:/app/toc_style.css:ro" \
+            -v "$(pwd)/tools/docs/pdf/toc_template.xsl:/app/toc_template.xsl:ro" \
+            -v "${DOCS_TMPDIR}/docs-dkp:/app/content:ro" \
+            -v "${DOCS_TMPDIR}/embedded-modules:/app/embedded-modules:ro" \
+            -v "$(pwd)/docs/documentation/_data/sidebars/main.yml:/app/main.yml:ro" \
+            -v "$(pwd)/pdf:/out" \
+            "${PDF_BUILDER_IMAGE}" \
+            python3 get_pdf_page.py
+          docker run --rm \
+            -w /app \
+            -e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
+            -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
+            -e SECTION_FILTER="Using" \
+            -e GUIDE_TITLE_EN="User's guide" \
+            -e GUIDE_TITLE_RU="Руководство пользователя" \
+            -v "$(pwd)/tools/docs/pdf/get_pdf_page.py:/app/get_pdf_page.py:ro" \
+            -v "$(pwd)/tools/docs/pdf/toc_style.css:/app/toc_style.css:ro" \
+            -v "$(pwd)/tools/docs/pdf/toc_template.xsl:/app/toc_template.xsl:ro" \
+            -v "${DOCS_TMPDIR}/docs-dkp:/app/content:ro" \
+            -v "${DOCS_TMPDIR}/embedded-modules:/app/embedded-modules:ro" \
+            -v "$(pwd)/docs/documentation/_data/sidebars/main.yml:/app/main.yml:ro" \
+            -v "$(pwd)/pdf:/out" \
+            "${PDF_BUILDER_IMAGE}" \
+            python3 get_pdf_page.py
+
+      - name: Upload PDF files to S3
+        env:
+          AWS_ACCESS_KEY_ID: "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
+          AWS_SECRET_ACCESS_KEY: "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
+          S3_BUCKET: "${{ secrets.DOC_S3_BUCKET_PROD }}"
+          S3_REGION: "${{ secrets.DOC_S3_REGION }}"
+          S3_EP: "${{ secrets.DOC_S3_EP }}"
+        run: |
+          for lang in en ru; do
+            for guide in admin user; do
+              aws s3 cp \
+                "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
+                "s3://${S3_BUCKET}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
+                --endpoint-url "${S3_EP}" \
+                --region "${S3_REGION}"
+            done
+          done
+
+      - name: Cleanup temporary directory
+        if: always()
+        run: |
+          if [[ -n "${DOCS_TMPDIR}" ]]; then
+            rm -rf "${DOCS_TMPDIR}"
+          fi
+    # </template: doc_pdf_build_template>
+
 
   deploy_release_doc_prod:
     name: (Prod) Deploy release documentation

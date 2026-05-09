@@ -121,6 +121,15 @@ jobs:
       - build_fe
 {!{ tmpl.Exec "security_scan_template" (slice $ctx "main") | strings.Indent 4 }!}
 
+  doc_pdf_build:
+    name: Doc PDF build
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
+    needs:
+      - git_info
+      - doc_web_build
+    continue-on-error: true
+{!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_version_template") | strings.Indent 4 }!}
+
   web_links_test:
     name: Web links test
     if: ${{ github.repository == 'deckhouse/deckhouse' }}

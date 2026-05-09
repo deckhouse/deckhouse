@@ -1,0 +1,42 @@
+---
+image: {{ .ModuleName }}/pdf-builder
+from: {{ index $.Images "builder/debian-trixie-slim" }}
+final: false
+shell:
+  beforeInstall:
+  - |
+    apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      xz-utils \
+      fontconfig \
+      fonts-dejavu-core \
+      libxrender1 \
+      libx11-6 \
+      libxext6 \
+      libssl3 \
+      python3 \
+      python3-bs4 \
+      python3-yaml \
+    && rm -rf /var/lib/apt/lists/*
+  - |
+    curl -fsSL -o /tmp/wkhtmltox.tar.xz \
+      "https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz" \
+    && tar -xJf /tmp/wkhtmltox.tar.xz -C /opt \
+    && rm /tmp/wkhtmltox.tar.xz
+git:
+- add: /tools/docs/pdf
+  to: /app
+  includePaths:
+  - get_pdf_page.py
+  - toc_style.css
+  - toc_template.xsl
+- add: /docs/documentation/_data/sidebars
+  to: /app
+  includePaths:
+  - main.yml
+docker:
+  ENV:
+    PATH: "/opt/wkhtmltox/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    LD_LIBRARY_PATH: "/opt/wkhtmltox/lib"
+  WORKDIR: /app

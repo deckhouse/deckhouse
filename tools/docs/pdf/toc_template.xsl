@@ -6,10 +6,11 @@
   <xsl:output doctype-public="-//W3C//DTD XHTML 1.0 Strict//EN"
               doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
               indent="yes" />
+  <xsl:param name="tocHeaderText" select="'Contents'"/>
   <xsl:template match="outline:outline">
     <html>
       <head>
-        <title>Содержание</title>
+        <title><xsl:value-of select="$tocHeaderText"/></title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <style>
           h1 {
@@ -62,7 +63,7 @@
         </style>
       </head>
       <body>
-        <h1>Содержание</h1>
+        <h1><xsl:value-of select="$tocHeaderText"/></h1>
         <ul><xsl:apply-templates select="outline:item/outline:item"/></ul>
       </body>
     </html>
