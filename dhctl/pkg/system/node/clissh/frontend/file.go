@@ -29,10 +29,30 @@ import (
 
 type File struct {
 	Session *session.Session
+
+	// IsDebug toggles scp -v on every spawned scp process.
+	IsDebug bool
+	// TmpDir is the local scratch directory used by Upload/Download for
+	// transient buffer files. Empty falls back to os.TempDir() via
+	// CreateEmptyTmpFile.
+	TmpDir string
 }
 
 func NewFile(sess *session.Session) *File {
 	return &File{Session: sess}
+}
+
+// WithIsDebug toggles verbose scp logging. Returns the receiver for chaining.
+func (f *File) WithIsDebug(d bool) *File {
+	f.IsDebug = d
+	return f
+}
+
+// WithTmpDir overrides the local scratch directory used for buffer files.
+// Returns the receiver for chaining.
+func (f *File) WithTmpDir(d string) *File {
+	f.TmpDir = d
+	return f
 }
 
 func (f *File) Upload(ctx context.Context, srcPath, remotePath string) error {
@@ -40,7 +60,7 @@ func (f *File) Upload(ctx context.Context, srcPath, remotePath string) error {
 	if err != nil {
 		return err
 	}
-	scp := cmd.NewSCP(f.Session)
+	scp := cmd.NewSCP(f.Session).WithIsDebug(f.IsDebug)
 	scp.WithPreserve(true)
 	if fType == "DIR" {
 		scp.WithRecursive(true)
@@ -66,7 +86,7 @@ func (f *File) Upload(ctx context.Context, srcPath, remotePath string) error {
 
 // UploadBytes creates a tmp file and upload it to remote dstPath
 func (f *File) UploadBytes(ctx context.Context, data []byte, remotePath string) error {
-	srcPath, err := CreateEmptyTmpFile()
+	srcPath, err := CreateEmptyTmpFile(f.TmpDir)
 	if err != nil {
 		return fmt.Errorf("create source tmp file: %v", err)
 	}
@@ -82,7 +102,7 @@ func (f *File) UploadBytes(ctx context.Context, data []byte, remotePath string) 
 		return fmt.Errorf("write data to tmp file: %w", err)
 	}
 
-	scp := cmd.NewSCP(f.Session).
+	scp := cmd.NewSCP(f.Session).WithIsDebug(f.IsDebug).
 		WithSrc(srcPath).
 		WithRemoteDst(remotePath).
 		SCP(ctx).
@@ -106,7 +126,7 @@ func (f *File) UploadBytes(ctx context.Context, data []byte, remotePath string) 
 }
 
 func (f *File) Download(ctx context.Context, remotePath, dstPath string) error {
-	scp := cmd.NewSCP(f.Session)
+	scp := cmd.NewSCP(f.Session).WithIsDebug(f.IsDebug)
 	scp.WithRecursive(true)
 	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP(ctx)
 	log.DebugF("run scp: %s\n", scpCmd.Cmd().String())
@@ -124,7 +144,7 @@ func (f *File) Download(ctx context.Context, remotePath, dstPath string) error {
 
 // Download remote file and returns its content as an array of bytes.
 func (f *File) DownloadBytes(ctx context.Context, remotePath string) ([]byte, error) {
-	dstPath, err := CreateEmptyTmpFile()
+	dstPath, err := CreateEmptyTmpFile(f.TmpDir)
 	if err != nil {
 		return nil, fmt.Errorf("create target tmp file: %v", err)
 	}
@@ -135,7 +155,7 @@ func (f *File) DownloadBytes(ctx context.Context, remotePath string) ([]byte, er
 		}
 	}()
 
-	scp := cmd.NewSCP(f.Session)
+	scp := cmd.NewSCP(f.Session).WithIsDebug(f.IsDebug)
 	scpCmd := scp.WithRemoteSrc(remotePath).WithDst(dstPath).SCP(ctx)
 	log.DebugF("run scp: %s\n", scpCmd.Cmd().String())
 
@@ -156,7 +176,9 @@ func (f *File) DownloadBytes(ctx context.Context, remotePath string) ([]byte, er
 	return data, nil
 }
 
-func CreateEmptyTmpFile() (string, error) {
+// CreateEmptyTmpFile creates a unique placeholder file under tmpDir
+// (os.TempDir() if empty) and returns its path.
+func CreateEmptyTmpFile(tmpDir string) (string, error) {
 	tmpPath := filepath.Join(
 		tmpDir,
 		fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()),

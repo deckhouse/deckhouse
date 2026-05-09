@@ -36,10 +36,22 @@ import (
 
 type SSHFile struct {
 	sshClient *ssh.Client
+
+	// TmpDir is the local scratch directory used for buffer files in
+	// UploadBytes/DownloadBytes. Empty falls back to os.TempDir() via
+	// CreateEmptyTmpFile.
+	TmpDir string
 }
 
 func NewSSHFile(client *ssh.Client) *SSHFile {
 	return &SSHFile{sshClient: client}
+}
+
+// WithTmpDir overrides the local scratch directory used for buffer files.
+// Returns the receiver for chaining.
+func (f *SSHFile) WithTmpDir(d string) *SSHFile {
+	f.TmpDir = d
+	return f
 }
 
 func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error {
@@ -97,7 +109,7 @@ func (f *SSHFile) Upload(ctx context.Context, srcPath, remotePath string) error 
 
 // UploadBytes creates a tmp file and upload it to remote dstPath
 func (f *SSHFile) UploadBytes(ctx context.Context, data []byte, remotePath string) error {
-	srcPath, err := CreateEmptyTmpFile()
+	srcPath, err := CreateEmptyTmpFile(f.TmpDir)
 	if err != nil {
 		return fmt.Errorf("create source tmp file: %v", err)
 	}
@@ -173,7 +185,7 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 
 // Download remote file and returns its content as an array of bytes.
 func (f *SSHFile) DownloadBytes(ctx context.Context, remotePath string) ([]byte, error) {
-	dstPath, err := CreateEmptyTmpFile()
+	dstPath, err := CreateEmptyTmpFile(f.TmpDir)
 	if err != nil {
 		return nil, fmt.Errorf("create target tmp file: %v", err)
 	}
@@ -237,7 +249,9 @@ func getRemoteFilesList(client *ssh.Client, remoteFilePath string) (string, erro
 	return strings.TrimSpace(string(output)), err
 }
 
-func CreateEmptyTmpFile() (string, error) {
+// CreateEmptyTmpFile creates a unique placeholder file under tmpDir
+// (os.TempDir() when empty) and returns its path.
+func CreateEmptyTmpFile(tmpDir string) (string, error) {
 	tmpPath := filepath.Join(
 		tmpDir,
 		fmt.Sprintf("dhctl-scp-%d-%s.tmp", os.Getpid(), uuid.NewV4().String()),

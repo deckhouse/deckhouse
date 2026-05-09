@@ -37,10 +37,19 @@ type SCP struct {
 	Src       string
 	Preserve  bool
 	Recursive bool
+
+	// IsDebug toggles scp -v and process debug logging. Set via WithIsDebug.
+	IsDebug bool
 }
 
 func NewSCP(sess *session.Session) *SCP {
 	return &SCP{Session: sess}
+}
+
+// WithIsDebug enables verbose scp logging. Returns the receiver for chaining.
+func (s *SCP) WithIsDebug(d bool) *SCP {
+	s.IsDebug = d
+	return s
 }
 
 func (s *SCP) WithRemoteDst(path string) *SCP {
@@ -98,7 +107,7 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 		"-o", "ConnectTimeout=15",
 	}
 
-	if debugEnabled {
+	if s.IsDebug {
 		args = append(args, "-vvv")
 	}
 
@@ -170,7 +179,7 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 	// scpCmd.Stdout = os.Stdout
 	// scpCmd.Stderr = os.Stderr
 
-	s.Executor = process.NewDefaultExecutor(s.scpCmd).EnableDebug(debugEnabled)
+	s.Executor = process.NewDefaultExecutor(s.scpCmd).EnableDebug(s.IsDebug)
 
 	return s
 }

@@ -27,10 +27,19 @@ const SSHAddPath = "ssh-add"
 
 type SSHAdd struct {
 	AgentSettings *session.AgentSettings
+
+	// IsDebug toggles list-after-add diagnostics. Set via WithIsDebug.
+	IsDebug bool
 }
 
 func NewSSHAdd(sess *session.AgentSettings) *SSHAdd {
 	return &SSHAdd{AgentSettings: sess}
+}
+
+// WithIsDebug enables list-after-add diagnostics. Returns the receiver for chaining.
+func (s *SSHAdd) WithIsDebug(d bool) *SSHAdd {
+	s.IsDebug = d
+	return s
 }
 
 func (s *SSHAdd) KeyCmd(keyPath string) *exec.Cmd {
@@ -77,7 +86,7 @@ func (s *SSHAdd) AddKeys(keys []string) error {
 		}
 	}
 
-	if debugEnabled {
+	if s.IsDebug {
 		log.DebugLn("list added keys")
 		env := []string{
 			s.AgentSettings.AuthSockEnv(),

@@ -257,7 +257,7 @@ func TestSSHFileUploadBytes(t *testing.T) {
 		container.Stop()
 		os.Remove(path)
 	})
-	tmpDir = os.TempDir()
+	sshClient.WithTmpDir(os.TempDir())
 
 	t.Run("Upload bytes", func(t *testing.T) {
 		f := sshClient.File()
@@ -298,12 +298,11 @@ func TestCreateEmptyTmpFile(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				tmpDir = c.tmpDirName
 				uid := os.Geteuid()
 				if uid == 0 && c.wantErr {
 					t.Skip("Test TestCreateEmptyTmpFile was skipped, cannot try to access unaccessible dir from root user")
 				}
-				filename, err := CreateEmptyTmpFile()
+				filename, err := CreateEmptyTmpFile(c.tmpDirName)
 				if !c.wantErr {
 					require.NoError(t, err)
 					os.Remove(filename)
@@ -572,7 +571,7 @@ func TestSSHFileDownloadBytes(t *testing.T) {
 
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
-				tmpDir = c.tmpDirName
+				sshClient.WithTmpDir(c.tmpDirName)
 				f := sshClient.File()
 				bytes, err := f.DownloadBytes(context.Background(), c.remotePath)
 				if !c.wantErr {

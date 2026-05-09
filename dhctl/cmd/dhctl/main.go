@@ -31,13 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	clissh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	clisshcmd "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
-	clisshfrontend "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
-	gossh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
-	gosshkeys "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/process"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -316,20 +310,6 @@ func main() {
 	kpApp := kingpin.New(app.AppName, "A tool to create Kubernetes cluster and infrastructure.")
 	kpApp.HelpFlag.Short('h')
 	app.GlobalFlags(kpApp, &opts.Global)
-
-	kpApp.PreAction(func(_ *kingpin.ParseContext) error {
-		// Push parsed values into packages that previously read from
-		// dhctl/pkg/app globals. They each own a single package-level setter
-		// invoked once at startup, after kingpin has populated *opts.
-		// TODO(nabokikhms): fix package level setters in the following PRs.
-		clisshcmd.SetDebug(opts.Global.IsDebug)
-		gossh.SetGlobals(opts)
-		gosshkeys.SetGlobals(opts)
-		clissh.SetGlobals(opts)
-		clisshfrontend.SetGlobals(opts)
-		sshclient.SetGlobals(opts)
-		return nil
-	})
 
 	kpApp.Command("version", "Show version.").Action(func(c *kingpin.ParseContext) error {
 		fmt.Printf("%s %s\n", app.AppName, opts.BuildInfo.AppVersion)

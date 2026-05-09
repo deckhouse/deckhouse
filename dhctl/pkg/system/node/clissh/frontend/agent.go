@@ -31,10 +31,32 @@ type Agent struct {
 	AgentSettings *session.AgentSettings
 
 	Agent *cmd.SSHAgent
+
+	// IsDebug toggles ssh-add list-after-add diagnostics and propagates to the
+	// underlying SSHAgent process executor.
+	IsDebug bool
+
+	// Passphrases optionally maps key file path → passphrase, consulted when
+	// GetSSHPrivateKey hits a PassphraseMissing error before falling back to
+	// the operator terminal.
+	Passphrases map[string]string
 }
 
 func NewAgent(sess *session.AgentSettings) *Agent {
 	return &Agent{AgentSettings: sess}
+}
+
+// WithIsDebug toggles verbose ssh-add diagnostics. Returns the receiver for chaining.
+func (a *Agent) WithIsDebug(d bool) *Agent {
+	a.IsDebug = d
+	return a
+}
+
+// WithPassphrases supplies the key-path → passphrase map used as the secondary
+// source by GetSSHPrivateKey. Returns the receiver for chaining.
+func (a *Agent) WithPassphrases(p map[string]string) *Agent {
+	a.Passphrases = p
+	return a
 }
 
 func (a *Agent) Start() error {
@@ -42,12 +64,14 @@ func (a *Agent) Start() error {
 		a.Agent = &cmd.SSHAgent{
 			AgentSettings: a.AgentSettings,
 			AuthSock:      os.Getenv("SSH_AUTH_SOCK"),
+			IsDebug:       a.IsDebug,
 		}
 		return nil
 	}
 
 	a.Agent = &cmd.SSHAgent{
 		AgentSettings: a.AgentSettings,
+		IsDebug:       a.IsDebug,
 	}
 
 	log.DebugLn("agent: start ssh-agent")
@@ -67,14 +91,14 @@ func (a *Agent) Start() error {
 
 // TODO replace with x/crypto/ssh/agent ?
 func (a *Agent) AddKeys(keys []session.AgentPrivateKey) error {
-	err := addKeys(a.AgentSettings.AuthSock, keys)
+	err := a.addKeys(a.AgentSettings.AuthSock, keys)
 	if err != nil {
 		return fmt.Errorf("Add keys: %w", err)
 	}
 
-	if debugEnabled {
+	if a.IsDebug {
 		log.DebugLn("list added keys")
-		listCmd := cmd.NewSSHAdd(a.AgentSettings).ListCmd()
+		listCmd := cmd.NewSSHAdd(a.AgentSettings).WithIsDebug(a.IsDebug).ListCmd()
 
 		output, err := listCmd.CombinedOutput()
 		if err != nil {
@@ -94,7 +118,7 @@ func (a *Agent) Stop() {
 	a.Agent.Stop()
 }
 
-func addKeys(authSock string, keys []session.AgentPrivateKey) error {
+func (a *Agent) addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	conn, err := net.Dial("unix", authSock)
 	if err != nil {
 		return fmt.Errorf("Error dialing with ssh agent %s: %w", authSock, err)
@@ -104,7 +128,7 @@ func addKeys(authSock string, keys []session.AgentPrivateKey) error {
 	agentClient := agent.NewClient(conn)
 
 	for _, key := range keys {
-		privateKey, err := genssh.GetSSHPrivateKey(key.Key, key.Passphrase)
+		privateKey, err := genssh.GetSSHPrivateKey(key.Key, key.Passphrase, a.Passphrases)
 		if err != nil {
 			return err
 		}

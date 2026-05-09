@@ -26,14 +26,17 @@ import (
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 var ErrBadProxyConfig = errors.New("bad proxy config")
 
 const ProxyTunnelPort = "22323"
 
-func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, proxyUrl *url.URL) (libcon.Tunnel, error) {
+// SetupSSHTunnelToProxyAddr opens a port-forward to proxyUrl. legacyMode
+// must reflect the SSH backend the supplied client uses (legacy clissh
+// vs modern gossh) — they need different forwarding-direction syntax.
+// Pass sshclient.Config.IsLegacyMode() at the call site.
+func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, proxyUrl *url.URL, legacyMode bool) (libcon.Tunnel, error) {
 	port := proxyUrl.Port()
 	if port == "" {
 		switch proxyUrl.Scheme {
@@ -45,7 +48,7 @@ func SetupSSHTunnelToProxyAddr(ctx context.Context, sshCl libcon.SSHClient, prox
 	}
 
 	var tunnel string
-	if sshclient.IsLegacyMode() {
+	if legacyMode {
 		tunnel = strings.Join([]string{ProxyTunnelPort, proxyUrl.Hostname(), port}, ":")
 	} else {
 		tunnel = strings.Join([]string{proxyUrl.Hostname(), port, "127.0.0.1", ProxyTunnelPort}, ":")

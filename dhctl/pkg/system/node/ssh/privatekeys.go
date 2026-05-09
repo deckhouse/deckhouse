@@ -22,45 +22,26 @@ import (
 
 	ssh "github.com/deckhouse/lib-gossh"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
-// TODO(nabokikhms): fix package level setters in the following PRs.
-//
-// These package-level vars replace the dhctl/pkg/app globals this package used
-// to read directly. Set once at startup via SetGlobals from the resolved
-// *options.Options.
-var (
-	sshPrivateKeys                     []string
-	privateKeysToPassPhrasesFromConfig options.PrivateKeyFileToPassphrase
-)
-
-// SetGlobals wires in SSH options at startup.
-// TODO(nabokikhms): fix package level setters in the following PRs.
-func SetGlobals(opts *options.Options) {
-	if opts == nil {
-		return
-	}
-	sshPrivateKeys = opts.SSH.PrivateKeys
-	privateKeysToPassPhrasesFromConfig = opts.SSH.PrivateKeysToPassPhrasesFromConfig
-}
-
-func tryToExtractPassPhraseFromConfig(path string) string {
+// tryToExtractPassPhraseFromConfig looks up a passphrase for keyPath in the
+// caller-supplied map. Empty path or empty/missing entry returns "".
+func tryToExtractPassPhraseFromConfig(path string, passphrases map[string]string) string {
 	if path == "" {
 		return ""
 	}
 
-	l := len(privateKeysToPassPhrasesFromConfig)
+	l := len(passphrases)
 	log.DebugF("Passphrases map has %d passphrases\n", l)
 
 	if l == 0 {
 		return ""
 	}
 
-	p, ok := privateKeysToPassPhrasesFromConfig[path]
+	p, ok := passphrases[path]
 	if !ok || len(p) == 0 {
 		return ""
 	}
@@ -70,8 +51,10 @@ func tryToExtractPassPhraseFromConfig(path string) string {
 	return p
 }
 
-func tryToExtractPassPhraseFromConfigOrTerminal(path string) (string, error) {
-	p := tryToExtractPassPhraseFromConfig(path)
+// tryToExtractPassPhraseFromConfigOrTerminal first consults the supplied
+// passphrases map, then falls back to interactively asking the operator.
+func tryToExtractPassPhraseFromConfigOrTerminal(path string, passphrases map[string]string) (string, error) {
+	p := tryToExtractPassPhraseFromConfig(path, passphrases)
 	if len(p) > 0 {
 		return p, nil
 	}
@@ -92,16 +75,23 @@ func tryToExtractPassPhraseFromConfigOrTerminal(path string) (string, error) {
 	return string(enteredPassword), nil
 }
 
-func CollectDHCTLPrivateKeysFromFlags() []session.AgentPrivateKey {
-	keys := make([]session.AgentPrivateKey, 0, len(sshPrivateKeys))
-	for _, key := range sshPrivateKeys {
+// CollectDHCTLPrivateKeysFromFlags wraps the supplied list of private-key
+// file paths into the session.AgentPrivateKey form expected by lower-level
+// SSH clients. Passphrases are not attached here — callers that know them
+// up-front must set AgentPrivateKey.Passphrase themselves.
+func CollectDHCTLPrivateKeysFromFlags(privateKeys []string) []session.AgentPrivateKey {
+	keys := make([]session.AgentPrivateKey, 0, len(privateKeys))
+	for _, key := range privateKeys {
 		keys = append(keys, session.AgentPrivateKey{Key: key})
 	}
 
 	return keys
 }
 
-func GetSSHPrivateKey(keyPath string, passphrase string) (any, error) {
+// GetSSHPrivateKey parses the key at keyPath. Provide the up-front passphrase
+// when known; on PassphraseMissingError it consults `passphrases` (keyed by
+// path) before falling back to the operator terminal.
+func GetSSHPrivateKey(keyPath string, passphrase string, passphrases map[string]string) (any, error) {
 	log.DebugF("Parsing private ssh key %s\n", keyPath)
 
 	keyData, err := os.ReadFile(keyPath)
@@ -124,7 +114,7 @@ func GetSSHPrivateKey(keyPath string, passphrase string) (any, error) {
 		switch {
 		case errors.As(err, &passphraseMissingError):
 			var err error
-			if passphrase, err = tryToExtractPassPhraseFromConfigOrTerminal(keyPath); err != nil {
+			if passphrase, err = tryToExtractPassPhraseFromConfigOrTerminal(keyPath, passphrases); err != nil {
 				return nil, err
 			}
 			sshKey, err = ssh.ParseRawPrivateKeyWithPassphrase(keyData, []byte(passphrase))

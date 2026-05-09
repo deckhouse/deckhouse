@@ -53,6 +53,15 @@ type UploadScript struct {
 	timeout time.Duration
 
 	commanderMode bool
+
+	// IsDebug toggles ssh/scp -v on every spawned subprocess.
+	IsDebug bool
+	// BecomePass is the sudo password forwarded to NewCommand. Empty means
+	// rely on agent / passwordless sudo.
+	BecomePass string
+	// TmpDir is the local scratch directory used to materialize the bashible
+	// bundle archive before upload.
+	TmpDir string
 }
 
 func NewUploadScript(sess *session.Session, scriptPath string, args ...string) *UploadScript {
@@ -95,6 +104,39 @@ func (u *UploadScript) WithExecuteUploadDir(dir string) {
 	u.uploadDir = dir
 }
 
+// WithIsDebug toggles verbose logging on every spawned subprocess. Returns
+// the receiver for chaining.
+func (u *UploadScript) WithIsDebug(d bool) *UploadScript {
+	u.IsDebug = d
+	return u
+}
+
+// WithBecomePass supplies the sudo password forwarded to spawned commands.
+// Returns the receiver for chaining.
+func (u *UploadScript) WithBecomePass(p string) *UploadScript {
+	u.BecomePass = p
+	return u
+}
+
+// WithTmpDir overrides the local scratch directory used to materialize the
+// bashible bundle archive. Returns the receiver for chaining.
+func (u *UploadScript) WithTmpDir(d string) *UploadScript {
+	u.TmpDir = d
+	return u
+}
+
+// newFile builds a frontend.File pre-configured with the same IsDebug/TmpDir
+// the script runs under.
+func (u *UploadScript) newFile() *File {
+	return NewFile(u.Session).WithIsDebug(u.IsDebug).WithTmpDir(u.TmpDir)
+}
+
+// newCommand builds a frontend.Command pre-configured with the same
+// IsDebug/BecomePass the script runs under.
+func (u *UploadScript) newCommand(name string, args ...string) *Command {
+	return NewCommand(u.Session, name, args...).WithIsDebug(u.IsDebug).WithBecomePass(u.BecomePass)
+}
+
 func (u *UploadScript) IsSudo() bool {
 	return u.sudo
 }
@@ -107,7 +149,7 @@ func (u *UploadScript) Execute(ctx context.Context) ([]byte, error) {
 	scriptName := filepath.Base(u.ScriptPath)
 
 	remotePath := genssh.ExecuteRemoteScriptPath(u, scriptName, false)
-	err := NewFile(u.Session).Upload(ctx, u.ScriptPath, remotePath)
+	err := u.newFile().Upload(ctx, u.ScriptPath, remotePath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -115,10 +157,10 @@ func (u *UploadScript) Execute(ctx context.Context) ([]byte, error) {
 	var cmd *Command
 	scriptFullPath := u.pathWithEnv(genssh.ExecuteRemoteScriptPath(u, scriptName, true))
 	if u.sudo {
-		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
+		cmd = u.newCommand(scriptFullPath, u.Args...)
 		cmd.Sudo(ctx)
 	} else {
-		cmd = NewCommand(u.Session, scriptFullPath, u.Args...)
+		cmd = u.newCommand(scriptFullPath, u.Args...)
 		cmd.Cmd(ctx)
 	}
 
@@ -133,7 +175,7 @@ func (u *UploadScript) Execute(ctx context.Context) ([]byte, error) {
 
 	if u.cleanupAfterExec {
 		defer func() {
-			err := NewCommand(u.Session, "rm", "-f", scriptFullPath).Run(ctx)
+			err := u.newCommand("rm", "-f", scriptFullPath).Run(ctx)
 			if err != nil {
 				log.DebugF("Failed to delete uploaded script %s: %v", scriptFullPath, err)
 			}
@@ -177,7 +219,7 @@ var ErrBashibleTimeout = errors.New("Timeout bashible step running")
 
 func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) ([]byte, error) {
 	bundleName := fmt.Sprintf("bundle-%s.tar", time.Now().Format("20060102-150405"))
-	bundleLocalFilepath := filepath.Join(tmpDir, bundleName)
+	bundleLocalFilepath := filepath.Join(u.TmpDir, bundleName)
 
 	// tar cpf bundle.tar -C /tmp/dhctl.1231qd23/var/lib bashible
 	err := tar.CreateTar(bundleLocalFilepath, parentDir, bundleDir)
@@ -191,7 +233,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 	)
 
 	// upload to node's deckhouse tmp directory
-	err = NewFile(u.Session).Upload(ctx, bundleLocalFilepath, app.DeckhouseNodeTmpPath)
+	err = u.newFile().Upload(ctx, bundleLocalFilepath, app.DeckhouseNodeTmpPath)
 	if err != nil {
 		return nil, fmt.Errorf("upload: %v", err)
 	}
@@ -206,7 +248,7 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 		u.ScriptPath,
 		strings.Join(u.Args, " "),
 	)
-	bundleCmd := NewCommand(u.Session, tarCmdline)
+	bundleCmd := u.newCommand(tarCmdline)
 	bundleCmd.Sudo(ctx)
 
 	// Buffers to implement output handler logic

@@ -40,6 +40,12 @@ type Command struct {
 
 	SSHArgs []string
 
+	// IsDebug toggles ssh -vvv and process debug logging on every spawned ssh process.
+	IsDebug bool
+	// BecomePass is the password fed to remote sudo. Empty means "no sudo password".
+	// Falls back to Session.BecomePass when that is set.
+	BecomePass string
+
 	onCommandStart func()
 
 	cmd *exec.Cmd
@@ -57,12 +63,28 @@ func NewCommand(sess *session.Session, name string, arg ...string) *Command {
 	}
 
 	return &Command{
-		Executor: process.NewDefaultExecutor(cmd.NewSSH(sess).WithCommand(name, args...).Cmd(context.Background())).EnableDebug(debugEnabled),
+		Executor: process.NewDefaultExecutor(cmd.NewSSH(sess).WithCommand(name, args...).Cmd(context.Background())),
 		Session:  sess,
 		Name:     name,
 		Args:     args,
 		Env:      os.Environ(),
 	}
+}
+
+// WithIsDebug toggles verbose ssh logging on every spawned process. Returns
+// the receiver for chaining.
+func (c *Command) WithIsDebug(d bool) *Command {
+	c.IsDebug = d
+	if c.Executor != nil {
+		c.Executor = c.Executor.EnableDebug(d)
+	}
+	return c
+}
+
+// WithBecomePass supplies the sudo password. Returns the receiver for chaining.
+func (c *Command) WithBecomePass(p string) *Command {
+	c.BecomePass = p
+	return c
 }
 
 func (c *Command) WithSSHArgs(args ...string) {
@@ -88,11 +110,11 @@ func (c *Command) Sudo(ctx context.Context) {
 		"-t", // need to force tty allocation because of stdin is pipe!
 	}...)
 
-	c.cmd = cmd.NewSSH(c.Session).
+	c.cmd = cmd.NewSSH(c.Session).WithIsDebug(c.IsDebug).
 		WithArgs(args...).
 		WithCommand(sudoCmdLine).Cmd(ctx)
 
-	c.Executor = process.NewDefaultExecutor(c.cmd).EnableDebug(debugEnabled)
+	c.Executor = process.NewDefaultExecutor(c.cmd).EnableDebug(c.IsDebug)
 
 	c.WithMatchers(
 		process.NewByteSequenceMatcher("SudoPassword"),
@@ -103,9 +125,7 @@ func (c *Command) Sudo(ctx context.Context) {
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
-			// shadow the package-level becomePass with a local that may be
-			// overridden by per-session settings.
-			becomePass := becomePass
+			becomePass := c.BecomePass
 			if c.Session.BecomePass != "" {
 				becomePass = c.Session.BecomePass
 			}
@@ -135,11 +155,11 @@ func (c *Command) Sudo(ctx context.Context) {
 }
 
 func (c *Command) Cmd(ctx context.Context) {
-	c.cmd = cmd.NewSSH(c.Session).
+	c.cmd = cmd.NewSSH(c.Session).WithIsDebug(c.IsDebug).
 		WithArgs(c.SSHArgs...).
 		WithCommand(c.Name, c.Args...).Cmd(ctx)
 
-	c.Executor = process.NewDefaultExecutor(c.cmd).EnableDebug(debugEnabled)
+	c.Executor = process.NewDefaultExecutor(c.cmd).EnableDebug(c.IsDebug)
 }
 
 func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
@@ -147,7 +167,7 @@ func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("execute command %s: SSH client is undefined", c.Name)
 	}
 
-	c.cmd = cmd.NewSSH(c.Session).
+	c.cmd = cmd.NewSSH(c.Session).WithIsDebug(c.IsDebug).
 		WithArgs(c.SSHArgs...).
 		WithCommand(c.Name, c.Args...).Cmd(ctx)
 
@@ -163,7 +183,7 @@ func (c *Command) CombinedOutput(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("execute command %s: sshClient is undefined", c.Name)
 	}
 
-	c.cmd = cmd.NewSSH(c.Session).
+	c.cmd = cmd.NewSSH(c.Session).WithIsDebug(c.IsDebug).
 		//	//WithArgs().
 		WithCommand(c.Name, c.Args...).Cmd(ctx)
 

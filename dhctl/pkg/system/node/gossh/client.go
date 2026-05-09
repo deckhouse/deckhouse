@@ -35,6 +35,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
+// Config bundles the per-Client values that used to live in gossh package
+// globals — sudo password, scratch directory, debug flag and the SSH key-path
+// → passphrase fallback map.
+type Config struct {
+	BecomePass  string
+	TmpDir      string
+	IsDebug     bool
+	Passphrases map[string]string
+}
+
+// NewClient builds a gossh.Client with the supplied Session/private keys.
+// Per-Client knobs (BecomePass, TmpDir, IsDebug, Passphrases) default to
+// zero values; pass NewClientFromConfig or chain With* to set them.
 func NewClient(ctx context.Context, session *session.Session, privKeys []session.AgentPrivateKey) *Client {
 	return &Client{
 		Settings:    session,
@@ -44,6 +57,17 @@ func NewClient(ctx context.Context, session *session.Session, privKeys []session
 		ctx:         ctx,
 		silent:      false,
 	}
+}
+
+// NewClientFromConfig builds a Client and copies the per-call settings from
+// cfg onto it. Use it instead of NewClient + With* chains when the full
+// configuration is known up-front.
+func NewClientFromConfig(ctx context.Context, session *session.Session, privKeys []session.AgentPrivateKey, cfg Config) *Client {
+	return NewClient(ctx, session, privKeys).
+		WithBecomePass(cfg.BecomePass).
+		WithTmpDir(cfg.TmpDir).
+		WithIsDebug(cfg.IsDebug).
+		WithPassphrases(cfg.Passphrases)
 }
 
 type Client struct {
@@ -69,6 +93,41 @@ type Client struct {
 	sessionMutex sync.Mutex
 
 	silent bool
+
+	// BecomePass is the sudo password forwarded to spawned remote commands.
+	BecomePass string
+	// TmpDir is the local scratch directory used by SSHFile/SSHUploadScript.
+	TmpDir string
+	// IsDebug toggles ssh -vvv style logging on every spawned subprocess.
+	IsDebug bool
+	// Passphrases maps SSH private-key path → passphrase, consulted as a
+	// fallback by GetSSHPrivateKey when the operator-provided passphrase is empty.
+	Passphrases map[string]string
+}
+
+// WithBecomePass sets the sudo password. Returns the receiver for chaining.
+func (s *Client) WithBecomePass(p string) *Client {
+	s.BecomePass = p
+	return s
+}
+
+// WithTmpDir sets the local scratch directory. Returns the receiver for chaining.
+func (s *Client) WithTmpDir(d string) *Client {
+	s.TmpDir = d
+	return s
+}
+
+// WithIsDebug toggles verbose subprocess logging. Returns the receiver for chaining.
+func (s *Client) WithIsDebug(d bool) *Client {
+	s.IsDebug = d
+	return s
+}
+
+// WithPassphrases supplies the SSH key-path → passphrase fallback map. Returns
+// the receiver for chaining.
+func (s *Client) WithPassphrases(p map[string]string) *Client {
+	s.Passphrases = p
+	return s
 }
 
 func (s *Client) initSigners() error {
@@ -79,7 +138,7 @@ func (s *Client) initSigners() error {
 
 	signers := make([]ssh.Signer, 0, len(s.privateKeys))
 	for _, keypath := range s.privateKeys {
-		key, err := genssh.GetSSHPrivateKey(keypath.Key, keypath.Passphrase)
+		key, err := genssh.GetSSHPrivateKey(keypath.Key, keypath.Passphrase, s.Passphrases)
 		if err != nil {
 			return err
 		}
@@ -138,7 +197,7 @@ func (s *Client) Start() error {
 		if s.Settings.BastionPassword != "" {
 			bastionPass = s.Settings.BecomePass
 		} else {
-			bastionPass = sshBastionPass
+			bastionPass = s.Settings.BastionPassword
 		}
 
 		if len(s.privateKeys) == 0 && len(bastionPass) == 0 {
@@ -167,7 +226,7 @@ func (s *Client) Start() error {
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
 		connectToBastion := func() error {
 			log.DebugF("Connect to %s\n", fullHost)
-			bastionClient, err = DialTimeout(s.ctx, "tcp", bastionAddr, bastionConfig)
+			bastionClient, err = DialTimeout(s.ctx, "tcp", bastionAddr, bastionConfig, s.IsDebug)
 			return err
 		}
 		if s.silent {
@@ -182,9 +241,9 @@ func (s *Client) Start() error {
 		log.DebugF("Connected successfully to bastion host %s\n", bastionAddr)
 	}
 
-	// shadow the package-level becomePass with a local that may be overridden by
+	// shadow the per-Client BecomePass with a local that may be overridden by
 	// per-session settings; the package-level value is the prompt fallback.
-	becomePass := becomePass
+	becomePass := s.BecomePass
 	if s.Settings.BecomePass != "" {
 		becomePass = s.Settings.BecomePass
 	}
@@ -232,7 +291,7 @@ func (s *Client) Start() error {
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
 			log.DebugF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
-			client, err = DialTimeout(s.ctx, "tcp", addr, config)
+			client, err = DialTimeout(s.ctx, "tcp", addr, config, s.IsDebug)
 			return err
 		}
 		if s.silent {
@@ -277,7 +336,7 @@ func (s *Client) Start() error {
 		if err != nil {
 			return err
 		}
-		if debugEnabled {
+		if s.IsDebug {
 			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConnWithDebug(targetConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
 		} else {
 			targetClientConn, targetNewChan, targetReqChan, err = ssh.NewClientConn(targetConn, addr, config)
@@ -367,7 +426,9 @@ func (s *Client) restart() {
 	s.sessionList = nil
 }
 
-func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientConfig) (*ssh.Client, error) {
+// DialTimeout dials network/addr with config, optionally wrapping the SSH
+// handshake with verbose debug logging when isDebug is true.
+func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientConfig, isDebug bool) (*ssh.Client, error) {
 	d := net.Dialer{Timeout: config.Timeout}
 	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
@@ -398,7 +459,7 @@ func DialTimeout(ctx context.Context, network, addr string, config *ssh.ClientCo
 		reqs  <-chan *ssh.Request
 	)
 
-	if debugEnabled {
+	if isDebug {
 		c, chans, reqs, err = ssh.NewClientConnWithDebug(tcpConn, addr, config, logger.NewLogger(&slog.LevelVar{}))
 	} else {
 		c, chans, reqs, err = ssh.NewClientConn(tcpConn, addr, config)
@@ -440,7 +501,7 @@ func (s *Client) KubeProxy() node.KubeProxy {
 
 // File is used to upload and download files and directories
 func (s *Client) File() node.File {
-	return NewSSHFile(s.sshClient)
+	return NewSSHFile(s.sshClient).WithTmpDir(s.TmpDir)
 }
 
 // UploadScript is used to upload script and execute it on remote server

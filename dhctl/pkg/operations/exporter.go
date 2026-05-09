@@ -108,10 +108,15 @@ type ExporterParams struct {
 
 	// Kube is used to bootstrap the in-cluster API client.
 	Kube *options.KubeOptions
+
+	// SSH bundles every SSH connection setting needed to construct the
+	// initial SSH client (mode flags, hosts, bastion, sudo password,
+	// scratch directory, …).
+	SSH sshclient.Config
 }
 
 func NewConvergeExporter(params ExporterParams) *ConvergeExporter {
-	sshClient, err := sshclient.NewInitClientFromFlags(context.Background(), true)
+	sshClient, err := sshclient.NewInitClientFromConfig(context.Background(), params.SSH)
 	if err != nil {
 		panic(err)
 	}

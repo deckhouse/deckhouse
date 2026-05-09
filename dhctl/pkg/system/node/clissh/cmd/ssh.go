@@ -36,10 +36,19 @@ type SSH struct {
 	CommandArgs []string
 
 	ExitWhenTunnelFailure bool
+
+	// IsDebug toggles ssh -vvv and process debug logging. Set via WithIsDebug.
+	IsDebug bool
 }
 
 func NewSSH(sess *session.Session) *SSH {
 	return &SSH{Session: sess}
+}
+
+// WithIsDebug enables verbose ssh logging. Returns the receiver for chaining.
+func (s *SSH) WithIsDebug(d bool) *SSH {
+	s.IsDebug = d
+	return s
 }
 
 func (s *SSH) WithEnv(env ...string) *SSH {
@@ -87,7 +96,7 @@ func (s *SSH) Cmd(ctx context.Context) *exec.Cmd {
 		"-o", "PasswordAuthentication=no",
 	}
 
-	if debugEnabled {
+	if s.IsDebug {
 		args = append(args, "-vvv")
 	}
 
@@ -160,7 +169,7 @@ func (s *SSH) Cmd(ctx context.Context) *exec.Cmd {
 		Setpgid: true,
 	}
 
-	s.Executor = process.NewDefaultExecutor(sshCmd).EnableDebug(debugEnabled)
+	s.Executor = process.NewDefaultExecutor(sshCmd).EnableDebug(s.IsDebug)
 
 	return sshCmd
 }
