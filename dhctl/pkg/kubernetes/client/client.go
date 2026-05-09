@@ -185,25 +185,15 @@ func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.
 	return port, nil
 }
 
-// TODO(nabokikhms): fix package level setters in the following PRs.
-//
-// kubeOpts replaces the dhctl/pkg/app globals this package used to read.
-// Set once at startup via SetGlobals from the resolved *options.Options.
-var kubeOpts options.KubeOptions
-
-// SetGlobals wires in kube options at startup.
-// TODO(nabokikhms): fix package level setters in the following PRs.
-func SetGlobals(opts *options.Options) {
-	if opts == nil {
-		return
+// AppKubernetesInitParams builds *KubernetesInitParams from the supplied
+// kube options. Returns zero values when kube is nil.
+func AppKubernetesInitParams(kube *options.KubeOptions) *KubernetesInitParams {
+	if kube == nil {
+		return &KubernetesInitParams{}
 	}
-	kubeOpts = opts.Kube
-}
-
-func AppKubernetesInitParams() *KubernetesInitParams {
 	return &KubernetesInitParams{
-		KubeConfig:          kubeOpts.Config,
-		KubeConfigContext:   kubeOpts.ConfigContext,
-		KubeConfigInCluster: kubeOpts.InCluster,
+		KubeConfig:          kube.Config,
+		KubeConfigContext:   kube.ConfigContext,
+		KubeConfigInCluster: kube.InCluster,
 	}
 }

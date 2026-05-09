@@ -170,7 +170,7 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 	// scpCmd.Stdout = os.Stdout
 	// scpCmd.Stderr = os.Stderr
 
-	s.Executor = process.NewDefaultExecutor(s.scpCmd)
+	s.Executor = process.NewDefaultExecutor(s.scpCmd).EnableDebug(debugEnabled)
 
 	return s
 }

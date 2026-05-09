@@ -35,16 +35,7 @@ const HasChangesExitCode = 2
 // https://regex101.com/r/qtIrSj/1
 var infrastructureLogsMatcher = regexp.MustCompile(`(\s+\[(TRACE|DEBUG|INFO|WARN|ERROR)\]\s+|Use TF_LOG=TRACE|there is no package|\-\-\-\-)`)
 
-// debugEnabled controls whether the captured infrastructure utility's stderr is
-// surfaced verbatim in the returned error. Set once at startup via SetDebug
-// from the resolved options.GlobalOptions.IsDebug.
-var debugEnabled = false
-
-// SetDebug enables or disables debug output for infrastructure exec.
-// Must be called once at startup before any Exec call.
-func SetDebug(d bool) { debugEnabled = d }
-
-func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
+func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger, isDebug bool) (int, error) {
 	// Start infrastructure utility as a leader of the new process group to prevent
 	// os.Interrupt (SIGINT) signal from the shell when Ctrl-C is pressed.
 	cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -91,7 +82,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 			txt := e.Text()
 			log.DebugLn(txt)
 
-			if !debugEnabled {
+			if !isDebug {
 				if !infrastructureLogsMatcher.MatchString(txt) {
 					errBuf.WriteString(txt + "\n")
 				}
@@ -125,7 +116,7 @@ func Exec(ctx context.Context, cmd *exec.Cmd, logger log.Logger) (int, error) {
 	if err != nil && exitCode != HasChangesExitCode {
 		logger.LogErrorF("Error while process exit code: %v\n", err)
 		err = fmt.Errorf("%s", errBuf.String())
-		if debugEnabled {
+		if isDebug {
 			err = fmt.Errorf("infrastructure utility has failed in DEBUG mode, search in the output above for an error")
 		}
 	}

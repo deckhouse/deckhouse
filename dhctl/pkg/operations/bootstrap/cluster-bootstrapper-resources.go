@@ -64,6 +64,6 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, checkers, nil)
+		return resources.CreateResourcesLoop(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreate, checkers, nil, b.Options.Bootstrap.ResourcesTimeout)
 	})
 }

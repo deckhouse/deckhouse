@@ -21,6 +21,7 @@ import (
 
 	"github.com/name212/govalue"
 
+	optsdefault "github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	global "github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/fsprovider"
@@ -29,7 +30,14 @@ import (
 )
 
 type CloudProviderGetterParams struct {
-	TmpDir           string
+	// TmpDir is the working directory used by the cloud provider for transient
+	// state (terraform/tofu working tree, infra plan files). When empty, falls
+	// back to options.DefaultTmpDir().
+	TmpDir string
+	// DownloadDir locates the on-disk Deckhouse install tree (cloud-providers,
+	// plugins, infrastructure_versions.json). When empty, falls back to
+	// options.DefaultTmpDir() — same behavior as the previous global default.
+	DownloadDir      string
 	AdditionalParams cloud.ProviderAdditionalParams
 	Logger           log.Logger
 	FSDIParams       *fsprovider.DIParams
@@ -68,7 +76,12 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 		return p.FSDIParams, nil
 	}
 
-	infraVersionsFile, err := fsutils.DoAbsolutePath(global.GetInfrastructureVersions(), false)
+	dDir := p.DownloadDir
+	if dDir == "" {
+		dDir = optsdefault.DefaultTmpDir()
+	}
+
+	infraVersionsFile, err := fsutils.DoAbsolutePath(global.GetInfrastructureVersions(dDir), false)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot prepare infra versions file: %w", err)
 	}
@@ -92,12 +105,12 @@ func (p *CloudProviderGetterParams) gtFSDIParams() (*fsprovider.DIParams, error)
 
 	if _, err = os.Stat(diDefaultParams.CloudProviderDir); err != nil {
 		// fallback to /tmp
-		diDefaultParams.CloudProviderDir = filepath.Join(downloadDir, "deckhouse", "candi", "cloud-providers")
+		diDefaultParams.CloudProviderDir = filepath.Join(dDir, "deckhouse", "candi", "cloud-providers")
 	}
 
 	if _, err = os.Stat(diDefaultParams.PluginsDir); err != nil {
 		// fallback to /tmp
-		diDefaultParams.PluginsDir = filepath.Join(downloadDir, "plugins")
+		diDefaultParams.PluginsDir = filepath.Join(dDir, "plugins")
 	}
 
 	logger.LogDebugF("Using default FSDIParams: %+v\n", diDefaultParams)
@@ -135,12 +148,11 @@ func (p *CloudProviderGetterParams) getTmpDir() (string, error) {
 		return "", err
 	}
 
-	// shadow the package-level tmpDir with the per-call value when provided.
-	tmpDir := tmpDir
-	logMsg := "CloudProviderGetterParams tmp dir is empty. Using global default."
-	if p.TmpDir != "" {
-		tmpDir = p.TmpDir
-		logMsg = "Use passed tmp dir."
+	tmpDir := p.TmpDir
+	logMsg := "Use passed tmp dir."
+	if tmpDir == "" {
+		tmpDir = optsdefault.DefaultTmpDir()
+		logMsg = "CloudProviderGetterParams tmp dir is empty. Using default."
 	}
 
 	preparedTmpDir, err := fsutils.DoAbsolutePath(tmpDir, true)

@@ -260,6 +260,7 @@ type InstallDeckhouseResult struct {
 type InstallDeckhouseParams struct {
 	BeforeDeckhouseTask func() error
 	State               *State
+	DeckhouseTimeout    time.Duration
 }
 
 func InstallDeckhouse(
@@ -287,7 +288,7 @@ func InstallDeckhouse(
 			return fmt.Errorf("Set manifests in cluster flag to cache: %w", err)
 		}
 
-		err = deckhouse.WaitForReadiness(ctx, kubeCl)
+		err = deckhouse.WaitForReadiness(ctx, kubeCl, params.DeckhouseTimeout)
 		if err != nil {
 			return fmt.Errorf("Deckhouse not ready: %w", err)
 		}

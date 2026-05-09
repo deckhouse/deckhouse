@@ -661,7 +661,7 @@ func (ts *testCloudDestroyTest) assertConvergeLockSetInCache(t *testing.T, locke
 func (ts *testCloudDestroyTest) assertDestroyLocked(t *testing.T, locked bool) {
 	require.False(t, govalue.IsNil(ts.kubeCl))
 
-	lockConfig := lock.GetLockLeaseConfig("not necessary")
+	lockConfig := lock.GetLockLeaseConfig("not necessary", "")
 	lockedInCluster, err := lock.IsConvergeLocked(context.TODO(), kubernetes.NewSimpleKubeClientGetter(ts.kubeCl), lockConfig, false)
 	require.NoError(t, err, "is locked should not be error")
 

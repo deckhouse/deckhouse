@@ -301,8 +301,8 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 	})
 }
 
-func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
-	endChannel := time.After(resourcesTimeout)
+func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask, timeout time.Duration) error {
+	endChannel := time.After(timeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -368,11 +368,11 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 					"Creating resources timed out after %s: resources cannot become ready. "+
 						"This could be due to lack of worker nodes in the cluster. "+
 						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
-					resourcesTimeout,
+					timeout,
 				)
 			}
 
-			return fmt.Errorf("Creating resources failed after %s waiting", resourcesTimeout)
+			return fmt.Errorf("Creating resources failed after %s waiting", timeout)
 		case <-ticker.C:
 		}
 		attempt++

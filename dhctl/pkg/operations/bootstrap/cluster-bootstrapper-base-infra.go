@@ -42,19 +42,22 @@ func (b *ClusterBootstrapper) BaseInfrastructure(ctx context.Context) error {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
+		DownloadDir:      b.Options.Global.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger).
+		WithUseTfCache(b.Options.Cache.UseTfCache).
+		WithDebug(b.Options.Global.IsDebug)
 
 	if metaConfig.ClusterType != config.CloudClusterType {
 		return fmt.Errorf("%s", bootstrapPhaseBaseInfraNonCloudMessage)
 	}
 
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}

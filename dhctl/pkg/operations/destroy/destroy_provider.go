@@ -43,6 +43,7 @@ type infraDestroyerProvider struct {
 	cloudStateProvider func() (controller.StateLoader, cloud.ClusterInfraDestroyer, error)
 
 	sshClientProvider libcon.SSHProvider
+	sshUser           string
 	tmpDir            string
 	staticLoopsParams static.LoopsParams
 }
@@ -79,6 +80,7 @@ func (f *infraDestroyerProvider) Cloud(context.Context, *config.MetaConfig) (inf
 
 		CommanderMode: f.commanderMode,
 		SkipResources: f.skipResources,
+		SSHUser:       f.sshUser,
 	}), nil
 }
 

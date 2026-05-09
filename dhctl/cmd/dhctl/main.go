@@ -29,17 +29,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
-	dhctlinfra "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
-	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
-	dhdeckhouse "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
-	dhresources "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
-	kubeclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
-	convergelock "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	clissh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	clisshcmd "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
 	clisshfrontend "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/frontend"
@@ -331,24 +322,12 @@ func main() {
 		// dhctl/pkg/app globals. They each own a single package-level setter
 		// invoked once at startup, after kingpin has populated *opts.
 		// TODO(nabokikhms): fix package level setters in the following PRs.
-		infrastructure.SetDownloadDir(opts.Global.DownloadDir)
-		infraexec.SetDebug(opts.Global.IsDebug)
-		process.SetDebug(opts.Global.IsDebug)
-		statecache.SetOptions(opts.Cache)
 		clisshcmd.SetDebug(opts.Global.IsDebug)
 		gossh.SetGlobals(opts)
 		gosshkeys.SetGlobals(opts)
 		clissh.SetGlobals(opts)
 		clisshfrontend.SetGlobals(opts)
 		sshclient.SetGlobals(opts)
-		dhctlinfra.SetGlobals(opts)
-		infrastructureprovider.SetGlobals(opts)
-		dhdeckhouse.SetGlobals(opts)
-		dhresources.SetGlobals(opts)
-		convergelock.SetGlobals(opts)
-		operations.SetGlobals(opts)
-		config.SetGlobals(opts)
-		kubeclient.SetGlobals(opts)
 		return nil
 	})
 

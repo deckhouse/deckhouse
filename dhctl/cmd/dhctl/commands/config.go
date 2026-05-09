@@ -50,7 +50,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.Global.DirConfig(),
+			opts.DirConfig(),
 		)
 		if err != nil {
 			return err
@@ -70,7 +70,7 @@ func DefineRenderBashibleBundle(cmd *kingpin.CmdClause, opts *options.Options) *
 			templateData,
 			metaConfig.ProviderName,
 			"",
-			opts.Global.DirConfig(),
+			opts.DirConfig(),
 		)
 	}
 
@@ -94,7 +94,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.Global.DirConfig(),
+			opts.DirConfig(),
 		)
 		if err != nil {
 			return err
@@ -102,7 +102,7 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause, opts *options.Options) 
 
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.Global.DirConfig())
+		return template.PrepareBootstrap(ctx, templateController, "127.0.0.1", metaConfig, opts.DirConfig())
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -127,7 +127,7 @@ func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause, opts *options.Options) *k
 		templateController := template.NewTemplateController(opts.Render.BashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
 
-		return template.PrepareKubeadmConfig(ctx, templateController, templateData, opts.Global.DirConfig())
+		return template.PrepareKubeadmConfig(ctx, templateController, templateData, opts.DirConfig())
 	}
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
@@ -165,14 +165,14 @@ func DefineCommandParseClusterConfiguration(cmd *kingpin.CmdClause, opts *option
 				ctx,
 				string(data),
 				preparatorProvider,
-				opts.Global.DirConfig(),
+				opts.DirConfig(),
 				config.ValidateOptionStrictUnmarshal(true),
 			)
 			if err != nil {
 				return err
 			}
 		} else {
-			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, opts.Global.DirConfig())
+			metaConfig, err = config.ParseConfig(ctx, []string{opts.Render.ParseInputFile}, preparatorProvider, opts.DirConfig())
 			if err != nil {
 				return err
 			}
@@ -213,7 +213,7 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause, opts *options.
 			}
 		}
 
-		schemaStore := config.NewSchemaStore(opts.Global.DirConfig())
+		schemaStore := config.NewSchemaStore(opts.DirConfig())
 		_, err = schemaStore.Validate(&data)
 		if err != nil {
 			return fmt.Errorf("validate cloud_discovery_data: %v", err)

@@ -111,7 +111,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 			infrastructureprovider.MetaConfigPreparatorProvider(
 				infrastructureprovider.NewPreparatorProviderParams(logger),
 			),
-			opts.Global.DirConfig(),
+			opts.DirConfig(),
 		)
 		if err != nil {
 			return err
@@ -144,7 +144,7 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause, opts *options.Optio
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 
-			if err := deckhouse.WaitForReadiness(ctx, kubeCl); err != nil {
+			if err := deckhouse.WaitForReadiness(ctx, kubeCl, opts.Bootstrap.DeckhouseTimeout); err != nil {
 				return fmt.Errorf("deckhouse install: %v", err)
 			}
 

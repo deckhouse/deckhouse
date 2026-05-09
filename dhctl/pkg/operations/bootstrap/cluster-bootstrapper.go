@@ -218,16 +218,19 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
+		DownloadDir:      b.Options.Global.DownloadDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
 		Logger:           b.logger,
 		IsDebug:          b.IsDebug,
 	})
 
-	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger)
+	b.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, b.logger).
+		WithUseTfCache(b.Options.Cache.UseTfCache).
+		WithDebug(b.Options.Global.IsDebug)
 
 	// next init cache
 	cachePath := metaConfig.CachePath()
-	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState}); err != nil {
+	if err = cache.InitWithOptions(ctx, cachePath, cache.CacheOptions{InitialState: b.InitialState, ResetInitialState: b.ResetInitialState, Cache: b.Options.Cache}); err != nil {
 		// TODO: it's better to ask for confirmation here
 		return fmt.Errorf(cacheMessage, cachePath, err)
 	}
@@ -521,9 +524,10 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
-			return createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
+			return createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateBeforeDeckhouseBootstrap, nil, true, b.Options.Bootstrap.ResourcesTimeout)
 		},
-		State: bootstrapState,
+		State:            bootstrapState,
+		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
 	}
 
 	installDeckhouseResult, err := InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, deckhouseInstallConfig, installParams)
@@ -551,7 +555,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			if b.CommanderMode {
 				return action()
 			}
-			return lock.NewInLockLocalRunner(ctx, kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper").
+			return lock.NewInLockLocalRunner(ctx, kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper", b.Options.SSH.User).
 				Run(ctx, action)
 		}
 
@@ -573,7 +577,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
+	err = createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false, b.Options.Bootstrap.ResourcesTimeout)
 	if err != nil {
 		return err
 	}
@@ -744,7 +748,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	return before, after
 }
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool) error {
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool, timeout time.Duration) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
 		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
@@ -776,6 +780,6 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 			}
 		}
 
-		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)
+		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks, timeout)
 	})
 }

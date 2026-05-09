@@ -49,7 +49,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause, opts *opti
 		checker := controlplane.NewKubeProxyChecker().
 			WithLogResult(true).
 			WithAskPassword(true).
-			WithInitParams(client.AppKubernetesInitParams())
+			WithInitParams(client.AppKubernetesInitParams(&opts.Kube))
 
 		proxyClose := func() {
 			log.InfoLn("Press Ctrl+C to close proxy connection.")
@@ -119,7 +119,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause, opts *options.Opti
 			}
 			kubeCl := &client.KubernetesClient{KubeClient: kube}
 
-			return deckhouse.WaitForReadiness(ctx, kubeCl)
+			return deckhouse.WaitForReadiness(ctx, kubeCl, opts.Bootstrap.DeckhouseTimeout)
 		})
 	})
 }

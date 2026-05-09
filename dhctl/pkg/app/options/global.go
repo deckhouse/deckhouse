@@ -20,8 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 )
 
 // GlobalOptions holds settings shared by every dhctl command.
@@ -50,14 +48,6 @@ func NewGlobalOptions() GlobalOptions {
 		DownloadDir:      DefaultTmpDir(),
 		DownloadCacheDir: filepath.Join(DefaultTmpDir(), "cache"),
 		ConfigPaths:      make([]string, 0),
-	}
-}
-
-// DirConfig returns the download directory configuration derived from this options struct.
-func (o *GlobalOptions) DirConfig() *directoryconfig.DirectoryConfig {
-	return &directoryconfig.DirectoryConfig{
-		DownloadDir:      o.DownloadDir,
-		DownloadCacheDir: o.DownloadCacheDir,
 	}
 }
 

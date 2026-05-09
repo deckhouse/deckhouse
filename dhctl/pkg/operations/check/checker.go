@@ -136,12 +136,15 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           c.TmpDir,
+			DownloadDir:      c.Options.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           c.logger,
 			IsDebug:          c.IsDebug,
 		})
 
-		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, c.logger)
+		c.InfrastructureContext = infrastructure.NewContextWithProvider(providerGetter, c.logger).
+			WithUseTfCache(c.Options.Cache.UseTfCache).
+			WithDebug(c.IsDebug)
 	}
 
 	provider, err := c.InfrastructureContext.CloudProviderGetter()(ctx, metaConfig)

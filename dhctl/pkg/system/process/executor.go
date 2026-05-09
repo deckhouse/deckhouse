@@ -30,14 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
-// debugEnabled mirrors options.GlobalOptions.IsDebug for this package.
-// Set once at startup via SetDebug.
-var debugEnabled = false
-
-// SetDebug enables or disables verbose stdout/stderr passthrough on Executor.
-// Must be called once at startup before any Executor invocation.
-func SetDebug(d bool) { debugEnabled = d }
-
 // exec.Cmd executor
 
 /*
@@ -140,6 +132,9 @@ type Executor struct {
 	killError error
 
 	timeout time.Duration
+
+	// IsDebug enables verbose stdout/stderr passthrough.
+	IsDebug bool
 }
 
 func NewDefaultExecutor(cmd *exec.Cmd) *Executor {
@@ -151,6 +146,12 @@ func NewExecutor(sess *Session, cmd *exec.Cmd) *Executor {
 		Session: sess,
 		cmd:     cmd,
 	}
+}
+
+// EnableDebug turns on verbose stdout/stderr passthrough for this executor.
+func (e *Executor) EnableDebug(d bool) *Executor {
+	e.IsDebug = d
+	return e
 }
 
 func (e *Executor) EnableLive() *Executor {
@@ -339,7 +340,7 @@ func (e *Executor) SetupStreamHandlers() error {
 			n, err := stderrReadPipe.Read(buf)
 
 			// TODO logboek
-			if e.Live || debugEnabled {
+			if e.Live || e.IsDebug {
 				os.Stderr.Write(buf[:n])
 			}
 			if e.StderrBuffer != nil {
@@ -420,7 +421,7 @@ func (e *Executor) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWriteP
 		}
 
 		// TODO logboek
-		if debugEnabled {
+		if e.IsDebug {
 			os.Stdout.Write(buf[:n])
 		}
 		if e.Live {

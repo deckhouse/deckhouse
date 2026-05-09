@@ -57,7 +57,7 @@ func NewCommand(sess *session.Session, name string, arg ...string) *Command {
 	}
 
 	return &Command{
-		Executor: process.NewDefaultExecutor(cmd.NewSSH(sess).WithCommand(name, args...).Cmd(context.Background())),
+		Executor: process.NewDefaultExecutor(cmd.NewSSH(sess).WithCommand(name, args...).Cmd(context.Background())).EnableDebug(debugEnabled),
 		Session:  sess,
 		Name:     name,
 		Args:     args,
@@ -92,7 +92,7 @@ func (c *Command) Sudo(ctx context.Context) {
 		WithArgs(args...).
 		WithCommand(sudoCmdLine).Cmd(ctx)
 
-	c.Executor = process.NewDefaultExecutor(c.cmd)
+	c.Executor = process.NewDefaultExecutor(c.cmd).EnableDebug(debugEnabled)
 
 	c.WithMatchers(
 		process.NewByteSequenceMatcher("SudoPassword"),
@@ -139,7 +139,7 @@ func (c *Command) Cmd(ctx context.Context) {
 		WithArgs(c.SSHArgs...).
 		WithCommand(c.Name, c.Args...).Cmd(ctx)
 
-	c.Executor = process.NewDefaultExecutor(c.cmd)
+	c.Executor = process.NewDefaultExecutor(c.cmd).EnableDebug(debugEnabled)
 }
 
 func (c *Command) Output(ctx context.Context) ([]byte, []byte, error) {
