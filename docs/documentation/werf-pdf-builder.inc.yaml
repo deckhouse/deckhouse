@@ -1,7 +1,6 @@
 ---
 image: {{ .ModuleName }}/pdf-builder
 from: {{ index $.Images "builder/debian-trixie-slim" }}
-final: false
 shell:
   beforeInstall:
   - |
