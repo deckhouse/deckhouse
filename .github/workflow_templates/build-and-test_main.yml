@@ -128,7 +128,7 @@ jobs:
       - git_info
       - doc_web_build
     continue-on-error: true
-{!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_version_template") | strings.Indent 4 }!}
+{!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_version_template" "release") | strings.Indent 4 }!}
 
   web_links_test:
     name: Web links test

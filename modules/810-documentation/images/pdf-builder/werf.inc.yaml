@@ -1,2 +1,0 @@
-{{- $context := . }}
-{{ tpl (.Files.Get (printf "%sdocs/documentation/werf-pdf-builder.inc.yaml" .ModulePath)) $context }}

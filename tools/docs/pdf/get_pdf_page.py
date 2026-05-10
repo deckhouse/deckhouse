@@ -15,13 +15,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import yaml
 import os
 import re
 import subprocess
 import sys
-from typing import Any, List, Dict, Optional, Tuple
+import yaml
 from bs4 import BeautifulSoup
+from typing import Any, List, Dict, Optional, Tuple
 
 # Languages to build (order = PDF generation order).
 SUPPORTED_LANGS: Tuple[str, ...] = ("ru", "en")
@@ -586,6 +586,9 @@ def postprocess_extracted_docs_soup(soup: BeautifulSoup, lang: str) -> None:
     page_nav_divs = soup.find_all("div", class_="page-navigation")
     for div in page_nav_divs:
         div.decompose()
+
+    for btn in soup.find_all("button", class_=lambda c: c and "show__containers" in c):
+        btn.decompose()
 
     # Баннер про «документацию ещё не вышедшей версии Deckhouse» / EN prerelease notice
     for div in soup.find_all("div", id="notice-latest-doc-version-block"):

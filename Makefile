@@ -312,7 +312,7 @@ docs-generate-pdf: ## Generate PDF documentation.
 	@GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1; \
 	export GET_DOCUMENTATION_TMPDIR; \
 	echo "Temporary directory: $$GET_DOCUMENTATION_TMPDIR"; \
-	bash tools/docs/pdf/get-documentation.sh && \
+	WERF_REPO="localhost:4999/docs" bash tools/docs/pdf/get-documentation.sh && \
 	. "$$GET_DOCUMENTATION_TMPDIR/env" && \
 	mkdir -p "$(CURDIR)/pdf" && \
 	if [ -n "$(strip $(DKP_DOC_VERSION))" ]; then \
@@ -330,8 +330,8 @@ docs-generate-pdf: ## Generate PDF documentation.
 		-e DKP_DOC_VERSION="$$DKP_DOC_VERSION" \
 		-e ONLY_RU="$(strip $(ONLY_RU))" \
 		-e ONLY_EN="$(strip $(ONLY_EN))" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/app/docs-dkp:/app/content:ro" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/app/embedded-modules:/app/embedded-modules:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/content:/app/content:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/embedded-modules:/app/embedded-modules:ro" \
 		-v "$(CURDIR)/pdf:/out" \
 		"$$PDF_BUILDER_IMAGE" \
 		python3 get_pdf_page.py && \
@@ -344,8 +344,8 @@ docs-generate-pdf: ## Generate PDF documentation.
 		-e SECTION_FILTER="Using" \
 		-e GUIDE_TITLE_EN="User's guide" \
 		-e GUIDE_TITLE_RU="Руководство пользователя" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/app/docs-dkp:/app/content:ro" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/app/embedded-modules:/app/embedded-modules:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/content:/app/content:ro" \
+		-v "$$GET_DOCUMENTATION_TMPDIR/embedded-modules:/app/embedded-modules:ro" \
 		-v "$(CURDIR)/pdf:/out" \
 		"$$PDF_BUILDER_IMAGE" \
 		python3 get_pdf_page.py # && \

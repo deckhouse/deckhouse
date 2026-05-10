@@ -3331,20 +3331,35 @@ jobs:
           type werf && source $(werf ci-env github --verbose --as-file)
 
           STATIC_IMAGE=$(werf stage image website-docs/web/static)
+          MODULES_IMAGE=$(werf stage image website-docs/modules-embedded/static-artifact)
+          PDF_BUILDER_IMAGE=$(werf stage image website-docs/pdf-builder)
           echo "Static image: $STATIC_IMAGE"
+          echo "Modules image: $MODULES_IMAGE"
+          echo "PDF builder image: $PDF_BUILDER_IMAGE"
           docker pull "$STATIC_IMAGE"
+          docker pull "$MODULES_IMAGE"
+          docker pull "$PDF_BUILDER_IMAGE"
           TMPDIR=$(mktemp -d)
           echo "DOCS_TMPDIR=$TMPDIR" >> $GITHUB_ENV
-          docker cp $(docker create --rm "$STATIC_IMAGE"):/app/_site/documentation "$TMPDIR/docs-dkp"
-          docker cp $(docker create --rm "$STATIC_IMAGE"):/app/_site "$TMPDIR/embedded-modules-src"
-          mkdir -p "$TMPDIR/embedded-modules"
-          cp -r "$TMPDIR/embedded-modules-src/en" "$TMPDIR/embedded-modules/en"
-          cp -r "$TMPDIR/embedded-modules-src/ru" "$TMPDIR/embedded-modules/ru"
-
-          PDF_BUILDER_IMAGE=$(werf stage image website-docs/pdf-builder)
-          echo "PDF builder image: $PDF_BUILDER_IMAGE"
-          docker pull "$PDF_BUILDER_IMAGE"
           echo "PDF_BUILDER_IMAGE=$PDF_BUILDER_IMAGE" >> $GITHUB_ENV
+
+          STATIC_CID=$(docker create "$STATIC_IMAGE")
+          mkdir -p "$TMPDIR/content/en" "$TMPDIR/content/ru" "$TMPDIR/embedded-modules/en" "$TMPDIR/embedded-modules/ru"
+          docker cp "$STATIC_CID":/app/_site/en/. "$TMPDIR/content/en/"
+          docker cp "$STATIC_CID":/app/_site/ru/. "$TMPDIR/content/ru/"
+          docker cp "$STATIC_CID":/app/_site/images/. "$TMPDIR/content/images/"
+          docker cp "$STATIC_CID":/app/_site/assets/. "$TMPDIR/content/assets/"
+          docker cp "$STATIC_CID":/app/_site/en/. "$TMPDIR/embedded-modules/en/"
+          docker cp "$STATIC_CID":/app/_site/ru/. "$TMPDIR/embedded-modules/ru/"
+          docker rm "$STATIC_CID"
+
+          MODULES_CID=$(docker create "$MODULES_IMAGE")
+          docker cp "$MODULES_CID":/app/_site/en/modules/. "$TMPDIR/embedded-modules/en/modules/"
+          docker cp "$MODULES_CID":/app/_site/ru/modules/. "$TMPDIR/embedded-modules/ru/modules/"
+          docker rm "$MODULES_CID"
+
+          # Copy static images from docs/site (not included in docs/documentation images)
+          cp -r "$(pwd)/docs/site/images/." "$TMPDIR/content/images/"
 
       - name: Generate PDF documentation
         env:
@@ -3355,12 +3370,8 @@ jobs:
             -w /app \
             -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
             -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
-            -v "$(pwd)/tools/docs/pdf/get_pdf_page.py:/app/get_pdf_page.py:ro" \
-            -v "$(pwd)/tools/docs/pdf/toc_style.css:/app/toc_style.css:ro" \
-            -v "$(pwd)/tools/docs/pdf/toc_template.xsl:/app/toc_template.xsl:ro" \
-            -v "${DOCS_TMPDIR}/docs-dkp:/app/content:ro" \
+            -v "${DOCS_TMPDIR}/content:/app/content:ro" \
             -v "${DOCS_TMPDIR}/embedded-modules:/app/embedded-modules:ro" \
-            -v "$(pwd)/docs/documentation/_data/sidebars/main.yml:/app/main.yml:ro" \
             -v "$(pwd)/pdf:/out" \
             "${PDF_BUILDER_IMAGE}" \
             python3 get_pdf_page.py
@@ -3371,12 +3382,8 @@ jobs:
             -e SECTION_FILTER="Using" \
             -e GUIDE_TITLE_EN="User's guide" \
             -e GUIDE_TITLE_RU="Руководство пользователя" \
-            -v "$(pwd)/tools/docs/pdf/get_pdf_page.py:/app/get_pdf_page.py:ro" \
-            -v "$(pwd)/tools/docs/pdf/toc_style.css:/app/toc_style.css:ro" \
-            -v "$(pwd)/tools/docs/pdf/toc_template.xsl:/app/toc_template.xsl:ro" \
-            -v "${DOCS_TMPDIR}/docs-dkp:/app/content:ro" \
+            -v "${DOCS_TMPDIR}/content:/app/content:ro" \
             -v "${DOCS_TMPDIR}/embedded-modules:/app/embedded-modules:ro" \
-            -v "$(pwd)/docs/documentation/_data/sidebars/main.yml:/app/main.yml:ro" \
             -v "$(pwd)/pdf:/out" \
             "${PDF_BUILDER_IMAGE}" \
             python3 get_pdf_page.py
