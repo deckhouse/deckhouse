@@ -30,8 +30,25 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
+
+// noopCheck satisfies node.Check with stubs sufficient for destroy tests
+// (the suite never exercises the availability probe). Mirrors the minimum
+// surface of the former pkg/system/node/ssh.Check.
+type noopCheck struct {
+	sess *session.Session
+}
+
+func (c *noopCheck) WithDelaySeconds(int) node.Check                 { return c }
+func (c *noopCheck) AwaitAvailability(context.Context) error         { return nil }
+func (c *noopCheck) CheckAvailability(context.Context) error         { return nil }
+func (c *noopCheck) ExpectAvailable(context.Context) ([]byte, error) { return nil, nil }
+func (c *noopCheck) String() string {
+	if c.sess == nil {
+		return ""
+	}
+	return c.sess.String()
+}
 
 type (
 	Bastion struct {
@@ -366,11 +383,9 @@ func (c *Client) UploadScript(scriptPath string, args ...string) node.Script {
 	return errorScript(scriptPath, fmt.Sprintf("All script providers (%d) returns nil command for host: %s", len(providers), host))
 }
 
-// UploadScript is used to upload script and execute it on remote server
+// Check returns a no-op availability probe — destroy tests never exercise it.
 func (c *Client) Check() node.Check {
-	return ssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
-		return NewCommand([]byte("ok"))
-	}, c.Settings)
+	return &noopCheck{sess: c.Settings}
 }
 
 // Stop the client

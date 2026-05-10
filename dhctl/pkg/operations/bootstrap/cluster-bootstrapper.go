@@ -51,7 +51,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -322,7 +321,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		postCloudPreflightSuite := suites.NewPostCloudSuite(suites.PostCloudDeps{
 			MetaConfig:  metaConfig,
 			SSHProvider: sshProvider,
-			LegacyMode:  sshclient.ConfigFromOptions(b.Options).IsLegacyMode(),
+			LegacyMode:  b.SSHProviderInitializer.IsLegacyMode(),
 		})
 
 		preflightRunner = preflight.New(globalPreflightSuite, cloudPreflightSuite, postCloudPreflightSuite)
@@ -414,7 +413,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             metaConfig,
-			LegacyMode:             sshclient.ConfigFromOptions(b.Options).IsLegacyMode(),
+			LegacyMode:             b.SSHProviderInitializer.IsLegacyMode(),
 		}, ctx)
 		if err != nil {
 			return err
