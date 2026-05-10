@@ -318,10 +318,13 @@ docs-generate-pdf: ## Generate PDF documentation.
 	if [ -n "$(strip $(DKP_DOC_VERSION))" ]; then \
 		DKP_DOC_VERSION="$(strip $(DKP_DOC_VERSION))"; \
 	else \
-		DKP_DOC_VERSION=""; \
 		BRANCH=$$(cd "$(CURDIR)" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""); \
-		if [ "$$BRANCH" != "main" ] && echo "$$BRANCH" | grep -q 'release-'; then \
+		if [ "$$BRANCH" = "main" ]; then \
+			DKP_DOC_VERSION="latest"; \
+		elif echo "$$BRANCH" | grep -qE 'release-[0-9]+\.[0-9]+'; then \
 			DKP_DOC_VERSION=$$(echo "$$BRANCH" | sed 's/.*release-//' | sed 's/[^0-9.].*//'); \
+		else \
+			DKP_DOC_VERSION="dev"; \
 		fi; \
 	fi; \
 	docker run --rm \
@@ -342,8 +345,8 @@ docs-generate-pdf: ## Generate PDF documentation.
 		-e ONLY_RU="$(strip $(ONLY_RU))" \
 		-e ONLY_EN="$(strip $(ONLY_EN))" \
 		-e SECTION_FILTER="Using" \
-		-e GUIDE_TITLE_EN="User's guide" \
-		-e GUIDE_TITLE_RU="Руководство пользователя" \
+		-e GUIDE_TITLE_EN="User's guide" \
+		-e GUIDE_TITLE_RU="Руководство пользователя" \
 		-v "$$GET_DOCUMENTATION_TMPDIR/content:/app/content:ro" \
 		-v "$$GET_DOCUMENTATION_TMPDIR/embedded-modules:/app/embedded-modules:ro" \
 		-v "$(CURDIR)/pdf:/out" \

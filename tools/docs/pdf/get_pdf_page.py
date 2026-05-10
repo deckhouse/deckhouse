@@ -19,8 +19,10 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import yaml
 from bs4 import BeautifulSoup
+from datetime import datetime
 from typing import Any, List, Dict, Optional, Tuple
 
 # Languages to build (order = PDF generation order).
@@ -969,23 +971,105 @@ def _append_embedded_modules_to_writer(writer: "_ChunkWriter", lang: str) -> Non
             writer.write(content)
 
 
+def generate_cover_html(
+    lang: str,
+    title: str,
+    dkp_doc_version: str,
+    tmp_dir: str,
+) -> str:
+    """Writes a cover page HTML file and returns its path."""
+    if lang == "ru":
+        date_str = datetime.now().strftime("%d.%m.%Y")
+        date_label = f"Дата генерации: {date_str}"
+    else:
+        date_str = datetime.now().strftime("%B %d, %Y")
+        date_label = f"Generated: {date_str}"
+
+    if dkp_doc_version:
+        version_label = f"Версия {dkp_doc_version}" if lang == "ru" else f"Version {dkp_doc_version}"
+        version_line = f"<p class=\"version\">{version_label}</p>"
+    else:
+        version_line = ""
+
+    html = f"""<!DOCTYPE html>
+<html lang="{lang}">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {{ margin: 0; }}
+  html, body {{
+    margin: 0;
+    padding: 0;
+    width: 210mm;
+    height: 297mm;
+    font-family: DejaVu Sans, Arial, sans-serif;
+  }}
+  table.layout {{
+    width: 210mm;
+    height: 297mm;
+    border-collapse: collapse;
+  }}
+  td.center {{
+    text-align: center;
+    vertical-align: middle;
+    padding: 2cm 3cm;
+  }}
+  td.bottom {{
+    text-align: center;
+    vertical-align: bottom;
+    padding-bottom: 2cm;
+    font-size: 11pt;
+    color: #444;
+  }}
+  h1 {{
+    font-size: 24pt;
+    margin: 0 0 0.4em 0;
+    line-height: 1.3;
+  }}
+  p.version {{
+    font-size: 16pt;
+    margin: 0;
+  }}
+</style>
+</head>
+<body>
+<table class="layout">
+  <tr style="height: 85%;">
+    <td class="center">
+      <h1>{title}</h1>
+      {version_line}
+    </td>
+  </tr>
+  <tr style="height: 15%;">
+    <td class="bottom">{date_label}</td>
+  </tr>
+</table>
+</body>
+</html>
+"""
+    cover_path = os.path.join(tmp_dir, f"cover_{lang}.html")
+    with open(cover_path, "w", encoding="utf-8") as f:
+        f.write(html)
+    return cover_path
+
+
 def _wkhtml_ui_strings(
     lang: str,
     dkp_doc_version: str,
-    guide_title_en: str = "Administrator's guide",
-    guide_title_ru: str = "Справочник администратора",
+    guide_title_en: str = "Administrator's guide",
+    guide_title_ru: str = "Справочник администратора",
 ) -> Tuple[str, str, str]:
     """Header left, footer right, TOC title for wkhtmltopdf."""
     if lang == "en":
         guide_title = guide_title_en
         if dkp_doc_version:
             header_left = (
-                f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
+                f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
                 f"{guide_title} - [section]"
             )
         else:
             header_left = (
-                f"Deckhouse Kubernetes Platform. "
+                f"Deckhouse Kubernetes Platform. "
                 f"{guide_title} - [section]"
             )
         footer_right = "Page [page]"
@@ -994,7 +1078,7 @@ def _wkhtml_ui_strings(
         guide_title = guide_title_ru
         if dkp_doc_version:
             header_left = (
-                f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
+                f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
                 f"{guide_title} - [section]"
             )
         else:
@@ -1037,6 +1121,8 @@ if __name__ == "__main__":
     guide_title_ru = os.environ.get("GUIDE_TITLE_RU", "").strip() or "Справочник администратора"
     langs_to_build = selected_pdf_langs()
 
+    _cover_tmpdir = tempfile.mkdtemp(prefix="pdf-cover-")
+
     for lang in langs_to_build:
         print(f"Starting HTML content extraction ({lang})...")
         chunk_paths = process_menu_and_extract_content(
@@ -1052,6 +1138,13 @@ if __name__ == "__main__":
         header_left, footer_right, toc_header = _wkhtml_ui_strings(
             lang, dkp_doc_version, guide_title_en=guide_title_en, guide_title_ru=guide_title_ru
         )
+
+        cover_title = (
+            f"Deckhouse Kubernetes Platform {guide_title_en}"
+            if lang == "en"
+            else f"Deckhouse Kubernetes Platform {guide_title_ru}"
+        )
+        cover_path = generate_cover_html(lang, cover_title, dkp_doc_version, _cover_tmpdir)
 
         # Build page-object list: each chunk is a separate wkhtmltopdf page object.
         # This keeps individual HTML files small so Qt WebKit does not scale fonts down.
@@ -1081,6 +1174,7 @@ if __name__ == "__main__":
             "--footer-font-size", "8",
             "--footer-spacing", "3",
             "--footer-line",
+            "cover", cover_path,
             "toc",
             "--toc-header-text", toc_header,
             "--toc-text-size-shrink", "1",
