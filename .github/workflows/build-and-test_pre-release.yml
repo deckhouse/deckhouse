@@ -3337,13 +3337,14 @@ jobs:
           S3_BUCKET: "${{ secrets.DOC_S3_BUCKET_PROD }}"
           S3_REGION: "${{ secrets.DOC_S3_REGION }}"
           S3_EP: "${{ secrets.DOC_S3_EP }}"
+          DOC_VERSION: "${{ env.DOC_VERSION }}"
         run: |
           for lang in en ru; do
             for guide in admin user; do
               aws s3 cp \
                 "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
-                "s3://${S3_BUCKET}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
-                --endpoint-url "${S3_EP}" \
+                "s3://${S3_BUCKET}/deckhouse-web-production/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
+                --endpoint-url "https://${S3_EP}" \
                 --region "${S3_REGION}"
             done
           done

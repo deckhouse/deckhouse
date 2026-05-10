@@ -284,6 +284,8 @@ steps:
 {!{- $ctx := index . 0 -}!}
 {!{- $versionTmpl := index . 1 -}!}
 {!{- $buildType := index . 2 -}!}
+{!{- $env := index . 3 -}!}
+{!{- $webEnv := printf "web-%s" $env -}!}
 
 # <template: doc_pdf_build_template>
 runs-on: [self-hosted, large]
@@ -323,13 +325,14 @@ steps:
       S3_BUCKET: "${{ secrets.DOC_S3_BUCKET_PROD }}"
       S3_REGION: "${{ secrets.DOC_S3_REGION }}"
       S3_EP: "${{ secrets.DOC_S3_EP }}"
+      DOC_VERSION: "${{ env.DOC_VERSION }}"
     run: |
       for lang in en ru; do
         for guide in admin user; do
           aws s3 cp \
             "pdf/deckhouse-${guide}-guide_${lang}.pdf" \
-            "s3://${S3_BUCKET}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
-            --endpoint-url "${S3_EP}" \
+            "s3://${S3_BUCKET}/deckhouse-{!{ $webEnv }!}/${DOC_VERSION}/docs-dkp/${lang}/pdf/deckhouse-${guide}-guide.pdf" \
+            --endpoint-url "https://${S3_EP}" \
             --region "${S3_REGION}"
         done
       done

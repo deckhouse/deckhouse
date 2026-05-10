@@ -140,7 +140,7 @@ jobs:
       - git_info
       - doc_web_build
     continue-on-error: true
-{!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_release_version_template" "release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_release_version_template" "release" "production") | strings.Indent 4 }!}
 
 {!{/* Autodeploy documentation to the production on push to release branch */}!}
   deploy_release_doc_prod:
