@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -460,6 +461,7 @@ func TestParseConfigFromFiles(t *testing.T) {
 }
 
 func TestParseConfigFromCluster(t *testing.T) {
+	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
 		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.preparatorProvider, nil)
 

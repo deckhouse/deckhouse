@@ -133,6 +133,12 @@ func sendSignalAction(t *testing.T, s os.Signal, wait time.Duration) func(cmd *e
 	}
 }
 
+// testStageDelay is the per-stage sleep used by TestAction's lifecycle below.
+// Production code only uses Tomb at human-perceptible timescales — these
+// sleeps just need to be long enough for the signal-sender goroutine to land
+// in the right phase. 200ms gives plenty of headroom for scheduler jitter.
+const testStageDelay = 200 * time.Millisecond
+
 // TestAction do not run directly!
 func TestAction(t *testing.T) {
 	ready := os.Getenv(testReadyEnv)
@@ -159,18 +165,18 @@ func TestAction(t *testing.T) {
 	})
 
 	go func() {
-		time.Sleep(1 * time.Second)
+		time.Sleep(testStageDelay)
 		fmt.Printf("%s\n", ready)
 
 		RegisterOnShutdown("Test shutdown", func() {
-			time.Sleep(1 * time.Second)
+			time.Sleep(testStageDelay)
 			fmt.Printf("%s\n", shutdown)
 		})
 
-		time.Sleep(2 * time.Second)
+		time.Sleep(2 * testStageDelay)
 		fmt.Printf("%s\n", work)
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(testStageDelay)
 
 		Shutdown(exitWithCode)
 	}()
@@ -213,7 +219,7 @@ func TestTomb(t *testing.T) {
 				ready:           ready,
 				work:            work,
 				shutdown:        shutdown,
-				signalAction:    sendSignalAction(t, syscall.SIGTERM, 1500*time.Millisecond),
+				signalAction:    sendSignalAction(t, syscall.SIGTERM, 2*testStageDelay),
 				handleInterrupt: beforeInterruptMsgStr, // need to handle
 			},
 			expectedCode: 0,
@@ -230,7 +236,7 @@ func TestTomb(t *testing.T) {
 				ready:           ready,
 				work:            work,
 				shutdown:        shutdown,
-				signalAction:    sendSignalAction(t, syscall.SIGINT, 1500*time.Millisecond),
+				signalAction:    sendSignalAction(t, syscall.SIGINT, 2*testStageDelay),
 				handleInterrupt: beforeInterruptMsgStr, // need to handle
 			},
 			expectedCode: 0,
@@ -247,7 +253,7 @@ func TestTomb(t *testing.T) {
 				ready:           ready,
 				work:            work,
 				shutdown:        shutdown,
-				signalAction:    sendSignalAction(t, syscall.SIGUSR1, 1500*time.Millisecond),
+				signalAction:    sendSignalAction(t, syscall.SIGUSR1, 2*testStageDelay),
 				handleInterrupt: beforeInterruptMsgStr, // need to handle
 			},
 			expectedCode: 1,
@@ -264,7 +270,7 @@ func TestTomb(t *testing.T) {
 				ready:           ready,
 				work:            work,
 				shutdown:        shutdown,
-				signalAction:    sendSignalAction(t, syscall.SIGALRM, 1500*time.Millisecond),
+				signalAction:    sendSignalAction(t, syscall.SIGALRM, 2*testStageDelay),
 				handleInterrupt: "", // does not handle because we handle only USR1,USR2,TERM,INT in waitShutdown
 			},
 			expectedCode: 0,

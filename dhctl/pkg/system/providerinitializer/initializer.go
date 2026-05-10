@@ -63,7 +63,7 @@ func NewSSHProviderInitializer(baseProviderSettings *settings.BaseProviders, con
 		},
 	}
 
-	if len(config.Hosts) > 0 {
+	if config != nil && len(config.Hosts) > 0 {
 		initializer.provider = provider.NewDefaultSSHProvider(
 			baseProviderSettings,
 			config,
