@@ -36,6 +36,10 @@ import (
 type RegistryProxyCheck struct {
 	MetaConfig             *config.MetaConfig
 	SSHProviderInitializer *providerinitializer.SSHProviderInitializer
+	// LegacyMode reflects whether the SSH client used here runs the legacy
+	// clissh backend (true) or modern gossh (false). Set at suite
+	// construction from sshclient.Config.IsLegacyMode().
+	LegacyMode bool
 }
 
 var ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
@@ -87,7 +91,7 @@ func (c RegistryProxyCheck) Run(ctx context.Context) error {
 		return nil
 	}
 
-	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL)
+	tun, err := utils.SetupSSHTunnelToProxyAddr(ctx, wrapper.Client(), proxyURL, c.LegacyMode)
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
@@ -143,8 +147,8 @@ func checkResponseIsFromDockerRegistry(resp *http.Response) error {
 	return nil
 }
 
-func RegistryProxy(meta *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer) preflight.Check {
-	check := RegistryProxyCheck{MetaConfig: meta, SSHProviderInitializer: sshProviderInitializer}
+func RegistryProxy(meta *config.MetaConfig, sshProviderInitializer *providerinitializer.SSHProviderInitializer, legacyMode bool) preflight.Check {
+	check := RegistryProxyCheck{MetaConfig: meta, SSHProviderInitializer: sshProviderInitializer, LegacyMode: legacyMode}
 	return preflight.Check{
 		Name:        RegistryProxyCheckName,
 		Description: check.Description(),

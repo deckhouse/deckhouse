@@ -226,7 +226,7 @@ func TestUploadScriptExecuteBundle(t *testing.T) {
 	err = container.CreateDeckhouseDirs()
 	require.NoError(t, err)
 	// in tests, tmpDir doesn't exist
-	tmpDir = os.TempDir()
+	sshClient.WithTmpDir(os.TempDir())
 
 	t.Run("Upload and execute bundle to container via existing ssh client", func(t *testing.T) {
 		cases := []struct {

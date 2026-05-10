@@ -39,6 +39,9 @@ type ReverseTunnel struct {
 	Session *session.Session
 	Address string
 
+	// IsDebug toggles ssh -vvv on the spawned reverse-tunnel process.
+	IsDebug bool
+
 	tunMutex sync.Mutex
 	sshCmd   *exec.Cmd
 	started  bool
@@ -53,6 +56,13 @@ func NewReverseTunnel(sess *session.Session, address string) *ReverseTunnel {
 		Address: address,
 		errorCh: make(chan tunnelWaitResult),
 	}
+}
+
+// WithIsDebug toggles verbose ssh logging on the reverse-tunnel process.
+// Returns the receiver for chaining.
+func (t *ReverseTunnel) WithIsDebug(d bool) *ReverseTunnel {
+	t.IsDebug = d
+	return t
 }
 
 func (t *ReverseTunnel) Up() error {
@@ -73,7 +83,7 @@ func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
 
 	log.DebugF("[%d] Start reverse tunnel\n", id)
 
-	t.sshCmd = cmd.NewSSH(t.Session).
+	t.sshCmd = cmd.NewSSH(t.Session).WithIsDebug(t.IsDebug).
 		WithArgs(
 			"-N", // no command
 			"-n", // no stdin

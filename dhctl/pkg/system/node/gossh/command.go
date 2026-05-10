@@ -397,9 +397,7 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
 			c.logDebugF("Send become pass to cmd")
-			// shadow the package-level becomePass with a local that may be
-			// overridden by per-session settings.
-			becomePass := becomePass
+			becomePass := c.sshClient.BecomePass
 			if c.sshClient.Settings.BecomePass != "" {
 				becomePass = c.sshClient.Settings.BecomePass
 			}
@@ -664,7 +662,7 @@ func (c *SSHCommand) SetupStreamHandlers() error {
 			n, err := stderrReadPipe.Read(buf)
 
 			// TODO logboek
-			if debugEnabled {
+			if c.sshClient != nil && c.sshClient.IsDebug {
 				os.Stderr.Write(buf[:n])
 			}
 			if c.err != nil {
@@ -743,7 +741,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 			}
 		}
 		// TODO logboek
-		if debugEnabled {
+		if c.sshClient != nil && c.sshClient.IsDebug {
 			os.Stdout.Write(buf[m:n])
 		}
 		if c.out != nil && !isError {

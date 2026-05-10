@@ -121,10 +121,7 @@ func TestOnlyPreparePrivateKeys(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
 				var sshClient *Client
-				if c.settings.BecomePass != "" {
-					becomePass = c.settings.BecomePass
-				}
-				sshClient = NewClient(context.Background(), c.settings, c.keys)
+				sshClient = NewClient(context.Background(), c.settings, c.keys).WithBecomePass(c.settings.BecomePass)
 				err := sshClient.OnlyPreparePrivateKeys()
 				if !c.wantErr {
 					require.NoError(t, err)
@@ -380,19 +377,14 @@ func TestClientStart(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.title, func(t *testing.T) {
 				os.Setenv("SSH_AUTH_SOCK", c.auth_sock)
-				becomePass = ""
-				sshBastionPass = ""
-				var sshClient *Client
-				if c.settings != nil {
-					if c.settings.BecomePass != "" {
-						becomePass = c.settings.BecomePass
-					}
-					if c.settings.BastionPassword != "" {
-						sshBastionPass = c.settings.BastionPassword
-					}
+				becomePass := ""
+				if c.settings != nil && c.settings.BecomePass != "" {
+					becomePass = c.settings.BecomePass
 				}
-
-				sshClient = NewClient(context.Background(), c.settings, c.keys)
+				// BastionPassword is already routed through session.Settings; no
+				// extra plumbing needed. Reset sshBastionPass-equivalent by
+				// leaving the session field as supplied.
+				sshClient := NewClient(context.Background(), c.settings, c.keys).WithBecomePass(becomePass)
 				err = sshClient.Start()
 				if !c.wantErr {
 					require.NoError(t, err)
@@ -523,16 +515,13 @@ func TestClientWithDebug(t *testing.T) {
 	})
 	os.Setenv("SSH_AUTH_SOCK", "")
 
-	// enable debug
-	debugEnabled = true
-
 	t.Run("start with debug test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{
 			AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
 			User:           "user",
 			Port:           "20042"})
 		keys := []session.AgentPrivateKey{{Key: path}}
-		sshClient := NewClient(context.Background(), settings, keys)
+		sshClient := NewClient(context.Background(), settings, keys).WithIsDebug(true)
 		err := sshClient.Start()
 		require.NoError(t, err)
 		cmd := sshClient.Command("echo", "test")

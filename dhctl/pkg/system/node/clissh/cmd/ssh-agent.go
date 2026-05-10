@@ -40,6 +40,9 @@ type SSHAgent struct {
 
 	Pid      string
 	AuthSock string
+
+	// IsDebug toggles process debug logging on the underlying executor.
+	IsDebug bool
 }
 
 var SSHAgentAuthSockRe = regexp.MustCompile(`SSH_AUTH_SOCK=(.*?);`)
@@ -54,7 +57,7 @@ func (a *SSHAgent) Start() error {
 		Setsid: true,
 	}
 
-	a.Executor = process.NewDefaultExecutor(a.agentCmd).EnableDebug(debugEnabled)
+	a.Executor = process.NewDefaultExecutor(a.agentCmd).EnableDebug(a.IsDebug)
 	// a.EnableLive()
 	a.WithStdoutHandler(func(l string) {
 		log.DebugF("ssh agent: got '%s'\n", l)

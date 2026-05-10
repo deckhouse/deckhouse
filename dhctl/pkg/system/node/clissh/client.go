@@ -34,13 +34,15 @@ var (
 func initAgentInstance(
 	privateKeys []session.AgentPrivateKey,
 	initializeNewInstance bool,
+	isDebug bool,
+	passphrases map[string]string,
 ) (*frontend.Agent, error) {
 	var err error
 
 	if initializeNewInstance {
 		inst := frontend.NewAgent(&session.AgentSettings{
 			PrivateKeys: privateKeys,
-		})
+		}).WithIsDebug(isDebug).WithPassphrases(passphrases)
 
 		err = inst.Start()
 		return inst, err
@@ -50,7 +52,7 @@ func initAgentInstance(
 		if agentInstance == nil {
 			inst := frontend.NewAgent(&session.AgentSettings{
 				PrivateKeys: privateKeys,
-			})
+			}).WithIsDebug(isDebug).WithPassphrases(passphrases)
 
 			err = inst.Start()
 			if err != nil {
@@ -74,6 +76,19 @@ func initAgentInstance(
 	return agentInstance, err
 }
 
+// Config bundles the per-Client values that used to live in clissh package
+// globals — the sudo password, scratch directory, debug flag, and the SSH
+// key-path → passphrase fallback map.
+type Config struct {
+	BecomePass  string
+	TmpDir      string
+	IsDebug     bool
+	Passphrases map[string]string
+}
+
+// NewClient builds a clissh.Client with the supplied Session/private keys.
+// Per-Client knobs (BecomePass, TmpDir, IsDebug, Passphrases) default to
+// zero values; pass NewClientFromConfig or chain With* to set them.
 func NewClient(session *session.Session, privKeys []session.AgentPrivateKey, initNewAgent bool) *Client {
 	return &Client{
 		Settings:    session,
@@ -84,6 +99,17 @@ func NewClient(session *session.Session, privKeys []session.AgentPrivateKey, ini
 	}
 }
 
+// NewClientFromConfig builds a Client and copies the per-call settings from
+// cfg onto it. Use it instead of NewClient + With* chains when the full
+// configuration is known up-front.
+func NewClientFromConfig(session *session.Session, privKeys []session.AgentPrivateKey, initNewAgent bool, cfg Config) *Client {
+	return NewClient(session, privKeys, initNewAgent).
+		WithBecomePass(cfg.BecomePass).
+		WithTmpDir(cfg.TmpDir).
+		WithIsDebug(cfg.IsDebug).
+		WithPassphrases(cfg.Passphrases)
+}
+
 type Client struct {
 	Settings *session.Session
 	Agent    *frontend.Agent
@@ -91,7 +117,42 @@ type Client struct {
 	privateKeys        []session.AgentPrivateKey
 	InitializeNewAgent bool
 
+	// BecomePass is the sudo password forwarded to spawned Commands.
+	BecomePass string
+	// TmpDir is the local scratch directory used by File/UploadScript.
+	TmpDir string
+	// IsDebug toggles ssh/scp -vvv on every spawned subprocess.
+	IsDebug bool
+	// Passphrases maps SSH private-key path to passphrase, consulted as a
+	// fallback by frontend.Agent when the operator-provided passphrase is empty.
+	Passphrases map[string]string
+
 	kubeProxies []*frontend.KubeProxy
+}
+
+// WithBecomePass sets the sudo password. Returns the receiver for chaining.
+func (s *Client) WithBecomePass(p string) *Client {
+	s.BecomePass = p
+	return s
+}
+
+// WithTmpDir sets the local scratch directory. Returns the receiver for chaining.
+func (s *Client) WithTmpDir(d string) *Client {
+	s.TmpDir = d
+	return s
+}
+
+// WithIsDebug toggles verbose subprocess logging. Returns the receiver for chaining.
+func (s *Client) WithIsDebug(d bool) *Client {
+	s.IsDebug = d
+	return s
+}
+
+// WithPassphrases supplies the SSH key-path → passphrase fallback map. Returns
+// the receiver for chaining.
+func (s *Client) WithPassphrases(p map[string]string) *Client {
+	s.Passphrases = p
+	return s
 }
 
 func (s *Client) OnlyPreparePrivateKeys() error {
@@ -104,7 +165,7 @@ func (s *Client) Start() error {
 		return fmt.Errorf("possible bug in ssh client: session should be created before start")
 	}
 
-	a, err := initAgentInstance(s.privateKeys, s.InitializeNewAgent)
+	a, err := initAgentInstance(s.privateKeys, s.InitializeNewAgent, s.IsDebug, s.Passphrases)
 	if err != nil {
 		return err
 	}
@@ -118,17 +179,17 @@ func (s *Client) Start() error {
 
 // Tunnel is used to open local (L) and remote (R) tunnels
 func (s *Client) Tunnel(address string) node.Tunnel {
-	return frontend.NewTunnel(s.Settings, "L", address)
+	return frontend.NewTunnel(s.Settings, "L", address).WithIsDebug(s.IsDebug)
 }
 
 // ReverseTunnel is used to open remote (R) tunnel
 func (s *Client) ReverseTunnel(address string) node.ReverseTunnel {
-	return frontend.NewReverseTunnel(s.Settings, address)
+	return frontend.NewReverseTunnel(s.Settings, address).WithIsDebug(s.IsDebug)
 }
 
 // Command is used to run commands on remote server
 func (s *Client) Command(name string, arg ...string) node.Command {
-	return frontend.NewCommand(s.Settings, name, arg...)
+	return frontend.NewCommand(s.Settings, name, arg...).WithIsDebug(s.IsDebug).WithBecomePass(s.BecomePass)
 }
 
 // KubeProxy is used to start kubectl proxy and create a tunnel from local port to proxy port
@@ -140,18 +201,22 @@ func (s *Client) KubeProxy() node.KubeProxy {
 
 // File is used to upload and download files and directories
 func (s *Client) File() node.File {
-	return frontend.NewFile(s.Settings)
+	return frontend.NewFile(s.Settings).WithIsDebug(s.IsDebug).WithTmpDir(s.TmpDir)
 }
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) UploadScript(scriptPath string, args ...string) node.Script {
-	return frontend.NewUploadScript(s.Settings, scriptPath, args...)
+	return frontend.NewUploadScript(s.Settings, scriptPath, args...).
+		WithIsDebug(s.IsDebug).
+		WithBecomePass(s.BecomePass).
+		WithTmpDir(s.TmpDir)
 }
 
 // UploadScript is used to upload script and execute it on remote server
 func (s *Client) Check() node.Check {
+	isDebug, becomePass := s.IsDebug, s.BecomePass
 	return ssh.NewCheck(func(sess *session.Session, cmd string) node.Command {
-		return frontend.NewCommand(sess, cmd)
+		return frontend.NewCommand(sess, cmd).WithIsDebug(isDebug).WithBecomePass(becomePass)
 	}, s.Settings)
 }
 

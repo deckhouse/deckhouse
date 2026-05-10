@@ -33,6 +33,9 @@ type Tunnel struct {
 	Address string
 	sshCmd  *exec.Cmd
 
+	// IsDebug toggles ssh -vvv on the spawned tunnel process.
+	IsDebug bool
+
 	stopCh  chan struct{}
 	errorCh chan error
 }
@@ -46,12 +49,19 @@ func NewTunnel(sess *session.Session, ttype, address string) *Tunnel {
 	}
 }
 
+// WithIsDebug toggles verbose ssh logging on the tunnel process. Returns the
+// receiver for chaining.
+func (t *Tunnel) WithIsDebug(d bool) *Tunnel {
+	t.IsDebug = d
+	return t
+}
+
 func (t *Tunnel) Up() error {
 	if t.Session == nil {
 		return fmt.Errorf("up tunnel '%s': SSH client is undefined", t.String())
 	}
 
-	t.sshCmd = cmd.NewSSH(t.Session).
+	t.sshCmd = cmd.NewSSH(t.Session).WithIsDebug(t.IsDebug).
 		WithArgs(
 			// "-f", // start in background - good for scripts, but here we need to do cmd.Process.Kill()
 			"-o", "ExitOnForwardFailure=yes", // wait for connection establish before

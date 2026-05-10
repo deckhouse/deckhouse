@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
@@ -54,6 +55,7 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause, opts *o
 			Logger:      logger,
 			IsDebug:     opts.Global.IsDebug,
 			Kube:        &opts.Kube,
+			SSH:         sshclient.ConfigFromOptions(opts),
 		})
 
 		exporter.Start(ctx)
