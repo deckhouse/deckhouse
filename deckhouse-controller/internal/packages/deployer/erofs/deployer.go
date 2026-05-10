@@ -566,6 +566,10 @@ func (d *Deployer) Undeploy(ctx context.Context, deployedName string, keep bool)
 		return fmt.Errorf("check mount path '%s': %w", deployed, err)
 	}
 
+	// mounts should not be executed simultaneously
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	// Resolve the backing image before tearing down the mapper, so the
 	// deferred package-dir cleanup can target the actual download path
 	// (the parent of <package>/<version>.erofs) regardless of layout.
@@ -589,10 +593,6 @@ func (d *Deployer) Undeploy(ctx context.Context, deployedName string, keep bool)
 			logger.Warn("failed to remove downloaded images", slog.String("path", packageDir), log.Err(err))
 		}
 	}()
-
-	// mounts should not be executed simultaneously
-	d.mu.Lock()
-	defer d.mu.Unlock()
 
 	logger.Debug("unmount erofs image", slog.String("path", deployed))
 	if err := verity.Unmount(ctx, deployed); err != nil {
