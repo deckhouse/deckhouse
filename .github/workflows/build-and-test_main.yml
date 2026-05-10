@@ -1482,71 +1482,13 @@ jobs:
           echo "DOC_VERSION=${CI_COMMIT_TAG:-latest}" >> $GITHUB_ENV
       # </template: doc_version_template>
 
-      - name: Extract documentation and PDF builder images
+      - name: Generate PDF documentation
         env:
           WERF_ENV: "EE"
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
-          WERF_DIR: "docs/documentation"
-        run: |
-          type werf && source $(werf ci-env github --verbose --as-file)
-
-          STATIC_IMAGE=$(werf stage image website-docs/web/static)
-          MODULES_IMAGE=$(werf stage image website-docs/modules-embedded/static-artifact)
-          PDF_BUILDER_IMAGE=$(werf stage image website-docs/pdf-builder)
-          echo "Static image: $STATIC_IMAGE"
-          echo "Modules image: $MODULES_IMAGE"
-          echo "PDF builder image: $PDF_BUILDER_IMAGE"
-          docker pull "$STATIC_IMAGE"
-          docker pull "$MODULES_IMAGE"
-          docker pull "$PDF_BUILDER_IMAGE"
-          TMPDIR=$(mktemp -d)
-          echo "DOCS_TMPDIR=$TMPDIR" >> $GITHUB_ENV
-          echo "PDF_BUILDER_IMAGE=$PDF_BUILDER_IMAGE" >> $GITHUB_ENV
-
-          STATIC_CID=$(docker create "$STATIC_IMAGE")
-          mkdir -p "$TMPDIR/content/en" "$TMPDIR/content/ru" "$TMPDIR/embedded-modules/en" "$TMPDIR/embedded-modules/ru"
-          docker cp "$STATIC_CID":/app/_site/en/. "$TMPDIR/content/en/"
-          docker cp "$STATIC_CID":/app/_site/ru/. "$TMPDIR/content/ru/"
-          docker cp "$STATIC_CID":/app/_site/images/. "$TMPDIR/content/images/"
-          docker cp "$STATIC_CID":/app/_site/assets/. "$TMPDIR/content/assets/"
-          docker cp "$STATIC_CID":/app/_site/en/. "$TMPDIR/embedded-modules/en/"
-          docker cp "$STATIC_CID":/app/_site/ru/. "$TMPDIR/embedded-modules/ru/"
-          docker rm "$STATIC_CID"
-
-          MODULES_CID=$(docker create "$MODULES_IMAGE")
-          docker cp "$MODULES_CID":/app/_site/en/modules/. "$TMPDIR/embedded-modules/en/modules/"
-          docker cp "$MODULES_CID":/app/_site/ru/modules/. "$TMPDIR/embedded-modules/ru/modules/"
-          docker rm "$MODULES_CID"
-
-          # Copy static images from docs/site (not included in docs/documentation images)
-          cp -r "$(pwd)/docs/site/images/." "$TMPDIR/content/images/"
-
-      - name: Generate PDF documentation
-        env:
           DKP_DOC_VERSION: "${{ env.DOC_VERSION }}"
         run: |
-          mkdir -p pdf
-          docker run --rm \
-            -w /app \
-            -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
-            -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
-            -v "${DOCS_TMPDIR}/content:/app/content:ro" \
-            -v "${DOCS_TMPDIR}/embedded-modules:/app/embedded-modules:ro" \
-            -v "$(pwd)/pdf:/out" \
-            "${PDF_BUILDER_IMAGE}" \
-            python3 get_pdf_page.py
-          docker run --rm \
-            -w /app \
-            -e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
-            -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
-            -e SECTION_FILTER="Using" \
-            -e GUIDE_TITLE_EN="User's guide" \
-            -e GUIDE_TITLE_RU="Руководство пользователя" \
-            -v "${DOCS_TMPDIR}/content:/app/content:ro" \
-            -v "${DOCS_TMPDIR}/embedded-modules:/app/embedded-modules:ro" \
-            -v "$(pwd)/pdf:/out" \
-            "${PDF_BUILDER_IMAGE}" \
-            python3 get_pdf_page.py
+          make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}"
 
       - name: Upload PDF files to S3
         env:
@@ -1565,13 +1507,6 @@ jobs:
                 --region "${S3_REGION}"
             done
           done
-
-      - name: Cleanup temporary directory
-        if: always()
-        run: |
-          if [[ -n "${DOCS_TMPDIR}" ]]; then
-            rm -rf "${DOCS_TMPDIR}"
-          fi
     # </template: doc_pdf_build_template>
 
   web_links_test:

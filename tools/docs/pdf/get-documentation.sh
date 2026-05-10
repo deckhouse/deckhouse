@@ -17,8 +17,16 @@ echo "Using temporary directory ${_TMPDIR}"
 export PATH=$PATH:$PWD/bin
 
 export WERF_DIR="docs/documentation"
-export WERF_ENV="EE"
+export WERF_ENV="${WERF_ENV:-EE}"
 export WERF_DEV=true
+
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
+  # In CI: werf ci-env sets WERF_REPO automatically from GitHub Actions environment
+  type werf && source $(werf ci-env github --verbose --as-file)
+#else
+#  # Local: use localhost registry
+#  export WERF_REPO="${WERF_REPO:-localhost:4999/docs}"
+fi
 
 werf build website-docs/web/static website-docs/modules-embedded/static-artifact website-docs/pdf-builder
 

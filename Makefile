@@ -306,13 +306,13 @@ docs: bin/werf ## Run containers with the documentation.
 
 .PHONY: docs-generate-pdf
 docs-generate-pdf: ## Generate PDF documentation.
-  ##~ Options: DKP_DOC_VERSION=X.XX - version of the documentation, if not set, the version is determined from the git branch name.
+  ##~ Options: DKP_DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
   ##~ Options: ONLY_RU=1 or ONLY_EN=1 - build a single language, do not combine both.
   ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
 	@GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1; \
 	export GET_DOCUMENTATION_TMPDIR; \
 	echo "Temporary directory: $$GET_DOCUMENTATION_TMPDIR"; \
-	WERF_REPO="localhost:4999/docs" bash tools/docs/pdf/get-documentation.sh && \
+	bash tools/docs/pdf/get-documentation.sh && \
 	. "$$GET_DOCUMENTATION_TMPDIR/env" && \
 	mkdir -p "$(CURDIR)/pdf" && \
 	if [ -n "$(strip $(DKP_DOC_VERSION))" ]; then \
