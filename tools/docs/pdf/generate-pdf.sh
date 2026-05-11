@@ -27,9 +27,9 @@ fi
 set -x
 ${WERF_BINARY} build website-docs/web/static website-docs/modules-embedded/static-artifact website-docs/pdf-builder
 
-STATIC_IMAGE=$(${WERF_BINARY} stage image website-docs/web/static 2>/dev/null | tail -1)
-MODULES_IMAGE=$(${WERF_BINARY} stage image website-docs/modules-embedded/static-artifact 2>/dev/null | tail -1)
-PDF_BUILDER_IMAGE=$(${WERF_BINARY} stage image website-docs/pdf-builder 2>/dev/null | tail -1)
+STATIC_IMAGE=$(${WERF_BINARY} stage image website-docs/web/static)
+MODULES_IMAGE=$(${WERF_BINARY} stage image website-docs/modules-embedded/static-artifact)
+PDF_BUILDER_IMAGE=$(${WERF_BINARY} stage image website-docs/pdf-builder)
 echo "STATIC_IMAGE: ${STATIC_IMAGE}"
 echo "MODULES_IMAGE: ${MODULES_IMAGE}"
 echo "PDF_BUILDER_IMAGE: ${PDF_BUILDER_IMAGE}"
