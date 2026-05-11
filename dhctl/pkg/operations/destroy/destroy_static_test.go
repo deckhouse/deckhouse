@@ -47,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phase"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
@@ -1750,13 +1751,14 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	}
 
 	destroyer := &ClusterDestroyer{
-		stateCache:       stateCache,
-		configPreparator: loader,
-
-		pipeline: pipeline,
-
-		d8Destroyer:   d8Destroyer,
-		infraProvider: infraProvider,
+		state: &destroyState{
+			stateCache:       stateCache,
+			configPreparator: loader,
+			d8Destroyer:      d8Destroyer,
+			infraProvider:    infraProvider,
+			pipeline:         pipeline,
+		},
+		runner: phase.NewRunner[*destroyState](),
 	}
 
 	tst := &testStaticDestroyTest{

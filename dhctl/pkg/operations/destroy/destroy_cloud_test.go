@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phase"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
@@ -873,13 +874,14 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 	}
 
 	destroyer := &ClusterDestroyer{
-		stateCache:       stateCache,
-		configPreparator: loader,
-
-		pipeline: pipeline,
-
-		d8Destroyer:   d8Destroyer,
-		infraProvider: infraProvider,
+		state: &destroyState{
+			stateCache:       stateCache,
+			configPreparator: loader,
+			d8Destroyer:      d8Destroyer,
+			infraProvider:    infraProvider,
+			pipeline:         pipeline,
+		},
+		runner: phase.NewRunner[*destroyState](),
 	}
 
 	tst := &testCloudDestroyTest{

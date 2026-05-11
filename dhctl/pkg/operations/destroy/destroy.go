@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phase"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
@@ -142,15 +143,13 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 	return infrastructurestate.NewLazyTerraStateLoader(cached), stateLoaderKubeProvider, nil
 }
 
+// ClusterDestroyer orchestrates the destroy pipeline. The heavy
+// constructor lifting (state loader, kube/SSH providers, sub-destroyers)
+// happens once in NewClusterDestroyer; DestroyCluster simply hands the
+// resulting state to a fixed list of phases via phase.Runner.
 type ClusterDestroyer struct {
-	stateCache       dhctlstate.Cache
-	configPreparator metaConfigPopulator
-
-	pipeline phases.DefaultPipeline
-
-	d8Destroyer     *deckhouse.Destroyer
-	infraProvider   *infraDestroyerProvider
-	DirectoryConfig *directoryconfig.DirectoryConfig
+	state  *destroyState
+	runner *phase.Runner[*destroyState]
 }
 
 // NewClusterDestroyer
@@ -225,71 +224,37 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	}
 
 	return &ClusterDestroyer{
-		stateCache:       params.StateCache,
-		configPreparator: terraStateLoader,
-
-		pipeline: pipeline,
-
-		d8Destroyer:     d8Destroyer,
-		infraProvider:   infraProvider,
-		DirectoryConfig: params.DirectoryConfig,
+		state: &destroyState{
+			stateCache:       params.StateCache,
+			configPreparator: terraStateLoader,
+			d8Destroyer:      d8Destroyer,
+			infraProvider:    infraProvider,
+			pipeline:         pipeline,
+			directoryConfig:  params.DirectoryConfig,
+		},
+		runner: phase.NewRunner[*destroyState](),
 	}, nil
 }
 
-func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	return d.pipeline.Run(ctx, func(switcher phases.DefaultPipelinePhaseSwitcher) error {
-		return d.destroy(ctx, autoApprove)
-	})
+// destroyPhases is the ordered list of phases DestroyCluster runs. Keeping
+// it as a package-level slice makes the pipeline contents readable at a
+// glance and easy to extend in tests.
+var destroyPhases = []phase.Phase[*destroyState]{
+	checkCommanderUUIDPhase{},
+	populateMetaConfigPhase{},
+	chooseDestroyerPhase{},
+	prepareDestroyerPhase{},
+	deleteResourcesPhase{},
+	afterResourcesDeletePhase{},
+	finalizeResourcesPhase{},
+	cleanupBeforeDestroyPhase{},
+	destroyClusterPhase{},
+	cleanupStateCachePhase{},
 }
 
-func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error {
-	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
-		return err
-	}
-
-	// populate cluster state in cache
-	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.DirectoryConfig)
-	if err != nil {
-		return err
-	}
-
-	destroyer, err := config.DoByClusterType(ctx, metaConfig, d.infraProvider)
-	if err != nil {
-		return err
-	}
-
-	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
-
-	err = destroyer.Prepare(ctx)
-	if err != nil {
-		return err
-	}
-
-	if err := d.d8Destroyer.CheckAndDeleteResources(ctx); err != nil {
-		return err
-	}
-
-	if err := destroyer.AfterResourcesDelete(ctx); err != nil {
-		return err
-	}
-
-	// only after load and save all states into cache
-	// set resources as deleted
-	if err := d.d8Destroyer.Finalize(ctx); err != nil {
-		return err
-	}
-
-	// Stop proxy because we have already got all info from kubernetes-api
-	// also stop ssh client for cloud clusters
-	if err := destroyer.CleanupBeforeDestroy(ctx); err != nil {
-		return err
-	}
-
-	if err := destroyer.DestroyCluster(ctx, autoApprove); err != nil {
-		return err
-	}
-
-	d.stateCache.Clean(ctx)
-
-	return nil
+func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
+	d.state.autoApprove = autoApprove
+	return d.state.pipeline.Run(ctx, func(_ phases.DefaultPipelinePhaseSwitcher) error {
+		return d.runner.Run(ctx, d.state, destroyPhases)
+	})
 }
