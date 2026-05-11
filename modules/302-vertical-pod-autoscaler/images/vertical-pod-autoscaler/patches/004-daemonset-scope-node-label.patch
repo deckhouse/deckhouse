@@ -250,7 +250,7 @@ index 86ff44f69..844cf3e11 100644
  }
  
 diff --git a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go
-index 3eb484174..951a58980 100644
+index 3eb484174..7fd94d77f 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder.go
 @@ -45,6 +45,7 @@ import (
@@ -288,7 +288,7 @@ index 3eb484174..951a58980 100644
  		for _, container := range pod.Containers {
  			if err = feeder.clusterState.AddOrUpdateContainer(container.ID, container.Request); err != nil {
  				klog.V(0).InfoS("Failed to add container", "container", container.ID, "error", err)
-@@ -496,6 +499,30 @@ func (feeder *clusterStateFeeder) LoadPods() {
+@@ -496,6 +499,31 @@ func (feeder *clusterStateFeeder) LoadPods() {
  	}
  }
  
@@ -296,9 +296,6 @@ index 3eb484174..951a58980 100644
 +	podLabels := make(map[string]string, len(pod.PodLabels)+1)
 +	for k, v := range pod.PodLabels {
 +		podLabels[k] = v
-+	}
-+	if len(pod.NodeLabels) == 0 {
-+		return podLabels
 +	}
 +
 +	baseLabels := labels.Set(pod.PodLabels)
@@ -309,9 +306,13 @@ index 3eb484174..951a58980 100644
 +		if vpa.ID.Namespace != pod.ID.Namespace || !vpa.PodSelector.Matches(baseLabels) {
 +			continue
 +		}
-+		if scopeValue, found := pod.NodeLabels[vpa.Scope]; found && scopeValue != "" {
-+			podLabels[scopeutil.AggregationLabelKey(vpa.Scope)] = scopeValue
++		scopeValue := scopeutil.AbsentLabelValue
++		if pod.NodeLabels != nil {
++			if value, found := pod.NodeLabels[vpa.Scope]; found {
++				scopeValue = value
++			}
 +		}
++		podLabels[scopeutil.AggregationLabelKey(vpa.Scope)] = scopeValue
 +	}
 +	return podLabels
 +}
@@ -320,7 +321,7 @@ index 3eb484174..951a58980 100644
  	containersMetrics, err := feeder.metricsClient.GetContainersMetrics(ctx)
  	if err != nil {
 diff --git a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go
-index c84e5d0e6..51d10a8f1 100644
+index c84e5d0e6..9149a1874 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/input/cluster_feeder_test.go
 @@ -42,6 +42,7 @@ import (
@@ -331,7 +332,7 @@ index c84e5d0e6..51d10a8f1 100644
  	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
  )
  
-@@ -485,6 +486,50 @@ func TestClusterStateFeeder_LoadPods_ContainerTracking(t *testing.T) {
+@@ -485,6 +486,83 @@ func TestClusterStateFeeder_LoadPods_ContainerTracking(t *testing.T) {
  	assert.Equal(t, len(feeder.clusterState.Pods()[podWithoutInitContainersID].InitContainers), 0)
  }
  
@@ -353,30 +354,63 @@ index c84e5d0e6..51d10a8f1 100644
 +	vpaObj.Spec.Scope = "node.kubernetes.io/instance-type"
 +	assert.NoError(t, clusterState.AddOrUpdateVpa(vpaObj, selector))
 +
-+	podID := model.PodID{Namespace: "default", PodName: "agent-pod"}
-+	pod := &spec.BasicPodSpec{
-+		ID:        podID,
++	podWithValueID := model.PodID{Namespace: "default", PodName: "agent-pod-value"}
++	podWithValue := &spec.BasicPodSpec{
++		ID:        podWithValueID,
 +		PodLabels: map[string]string{"app": "daemon"},
 +		NodeName:  "node-a",
 +		NodeLabels: map[string]string{
 +			"node.kubernetes.io/instance-type": "c3.large",
 +		},
 +		Containers: []spec.BasicContainerSpec{
-+			newTestContainerSpec(podID, "agent", 100, 128*1024*1024),
++			newTestContainerSpec(podWithValueID, "agent", 100, 128*1024*1024),
++		},
++	}
++	podWithEmptyValueID := model.PodID{Namespace: "default", PodName: "agent-pod-empty"}
++	podWithEmptyValue := &spec.BasicPodSpec{
++		ID:         podWithEmptyValueID,
++		PodLabels:  map[string]string{"app": "daemon"},
++		NodeName:   "node-b",
++		NodeLabels: map[string]string{"node.kubernetes.io/instance-type": ""},
++		Containers: []spec.BasicContainerSpec{
++			newTestContainerSpec(podWithEmptyValueID, "agent", 100, 128*1024*1024),
++		},
++	}
++	podWithoutScopeLabelID := model.PodID{Namespace: "default", PodName: "agent-pod-absent"}
++	podWithoutScopeLabel := &spec.BasicPodSpec{
++		ID:         podWithoutScopeLabelID,
++		PodLabels:  map[string]string{"app": "daemon"},
++		NodeName:   "node-c",
++		NodeLabels: map[string]string{"kubernetes.io/hostname": "node-c"},
++		Containers: []spec.BasicContainerSpec{
++			newTestContainerSpec(podWithoutScopeLabelID, "agent", 100, 128*1024*1024),
 +		},
 +	}
 +
 +	feeder := clusterStateFeeder{
-+		specClient:     &testSpecClient{pods: []*spec.BasicPodSpec{pod}},
++		specClient:     &testSpecClient{pods: []*spec.BasicPodSpec{podWithValue, podWithEmptyValue, podWithoutScopeLabel}},
 +		memorySaveMode: false,
 +		clusterState:   clusterState,
 +	}
 +	feeder.LoadPods()
 +
-+	podState := clusterState.Pods()[podID]
-+	assert.NotNil(t, podState)
-+	key := clusterState.MakeAggregateStateKey(podState, "agent")
-+	assert.Equal(t, "c3.large", key.Labels().Get(scopeutil.AggregationLabelKey("node.kubernetes.io/instance-type")))
++	scopeKey := scopeutil.AggregationLabelKey("node.kubernetes.io/instance-type")
++
++	podWithValueState := clusterState.Pods()[podWithValueID]
++	assert.NotNil(t, podWithValueState)
++	keyWithValue := clusterState.MakeAggregateStateKey(podWithValueState, "agent")
++	assert.Equal(t, "c3.large", keyWithValue.Labels().Get(scopeKey))
++
++	podWithEmptyValueState := clusterState.Pods()[podWithEmptyValueID]
++	assert.NotNil(t, podWithEmptyValueState)
++	keyWithEmptyValue := clusterState.MakeAggregateStateKey(podWithEmptyValueState, "agent")
++	assert.True(t, keyWithEmptyValue.Labels().Has(scopeKey))
++	assert.Equal(t, "", keyWithEmptyValue.Labels().Get(scopeKey))
++
++	podWithoutScopeLabelState := clusterState.Pods()[podWithoutScopeLabelID]
++	assert.NotNil(t, podWithoutScopeLabelState)
++	keyWithoutScopeLabel := clusterState.MakeAggregateStateKey(podWithoutScopeLabelState, "agent")
++	assert.Equal(t, scopeutil.AbsentLabelValue, keyWithoutScopeLabel.Labels().Get(scopeKey))
 +}
 +
  func TestClusterStateFeeder_LoadPods_MemorySaverMode(t *testing.T) {
@@ -515,10 +549,10 @@ index cda2d831d..5320ca68e 100644
  		KubeClient:          kubeClient,
  		MetricsClient:       input_metrics.NewMetricsClient(source, commonFlag.VpaObjectNamespace, "default-metrics-client"),
 diff --git a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
-index e6274af72..96cde6c83 100644
+index e6274af72..4ac5f0eb5 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/model/aggregate_container_state.go
-@@ -361,6 +361,57 @@ func AggregateStateByContainerName(aggregateContainerStateMap aggregateContainer
+@@ -361,6 +361,58 @@ func AggregateStateByContainerName(aggregateContainerStateMap aggregateContainer
  	return containerNameToAggregateStateMap
  }
  
@@ -530,8 +564,9 @@ index e6274af72..96cde6c83 100644
 +	var mergedEntriesByScope map[string]map[string]bool
 +
 +	for aggregationKey, aggregation := range aggregateContainerStateMap {
-+		scopeValue := aggregationKey.Labels().Get(labelKey)
-+		if scopeValue == "" {
++		scopeLabels := aggregationKey.Labels()
++		scopeValue := scopeLabels.Get(labelKey)
++		if !scopeLabels.Has(labelKey) {
 +			continue
 +		}
 +		group, found := result[scopeValue]
@@ -710,7 +745,7 @@ index c1dce049b..6708af359 100644
  
  // SetUpdateMode updates the update mode of the VPA and aggregators under this VPA.
 diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go b/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
-index c86871fa9..9c1af4c16 100644
+index c86871fa9..38fbce7a5 100644
 --- a/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
 +++ b/vertical-pod-autoscaler/pkg/recommender/routines/recommender.go
 @@ -19,6 +19,7 @@ package routines
@@ -746,7 +781,7 @@ index c86871fa9..9c1af4c16 100644
  }
  
  func (r *recommender) GetClusterState() model.ClusterState {
-@@ -80,17 +92,108 @@ func (r *recommender) GetClusterStateFeeder() input.ClusterStateFeeder {
+@@ -80,17 +92,103 @@ func (r *recommender) GetClusterStateFeeder() input.ClusterStateFeeder {
  	return r.clusterStateFeeder
  }
  
@@ -815,7 +850,9 @@ index c86871fa9..9c1af4c16 100644
 +			})
 +		}
 +	}
-+
+ 
+-	for _, postProcessor := range r.recommendationPostProcessor {
+-		listOfResourceRecommendation = postProcessor.Process(observedVpa, listOfResourceRecommendation)
 +	if !cacheHit {
 +		for _, postProcessor := range r.recommendationPostProcessor {
 +			recommendation = postProcessor.Process(observedVpa, recommendation)
@@ -825,24 +862,17 @@ index c86871fa9..9c1af4c16 100644
 +				groups[i].ContainerRecommendations = groupRec.ContainerRecommendations
 +			}
 +		}
- 
--	for _, postProcessor := range r.recommendationPostProcessor {
--		listOfResourceRecommendation = postProcessor.Process(observedVpa, listOfResourceRecommendation)
++
 +		if isScopedDaemonSet {
 +			for i := range groups {
 +				for j := range groups[i].ContainerRecommendations {
 +					containerRec := groups[i].ContainerRecommendations[j]
-+					containerRec.Scope = scopeutil.RecommendationScope(string(observedVpa.Spec.Scope), groups[i].ScopeValue)
-+					// Compact group payload: keep only effective target and scope.
++					// Compact group payload: keep only effective target.
 +					containerRec.LowerBound = nil
 +					containerRec.UpperBound = nil
 +					containerRec.UncappedTarget = nil
 +					groups[i].ContainerRecommendations[j] = containerRec
 +				}
-+			}
-+			for i := range recommendation.ContainerRecommendations {
-+				// Summary recommendation is not scope-specific.
-+				recommendation.ContainerRecommendations[i].Scope = ""
 +			}
 +			r.setScopedRecommendationCache(vpa.ID, scopedGeneration, recommendation, groups)
 +		}
@@ -860,7 +890,7 @@ index c86871fa9..9c1af4c16 100644
  	if vpa.HasRecommendation() && !had {
  		metrics_recommender.ObserveRecommendationLatency(vpa.Created)
  	}
-@@ -108,10 +211,13 @@ func processVPAUpdate(r *recommender, vpa *model.Vpa, observedVpa *v1.VerticalPo
+@@ -108,10 +206,13 @@ func processVPAUpdate(r *recommender, vpa *model.Vpa, observedVpa *v1.VerticalPo
  	}
  
  	_, err := vpa_utils.UpdateVpaStatusIfNeeded(
@@ -875,7 +905,7 @@ index c86871fa9..9c1af4c16 100644
  }
  
  // UpdateVPAs update VPA CRD objects' status.
-@@ -231,6 +337,7 @@ func (c RecommenderFactory) Make() Recommender {
+@@ -231,6 +332,7 @@ func (c RecommenderFactory) Make() Recommender {
  		lastAggregateContainerStateGC: time.Now(),
  		lastCheckpointGC:              time.Now(),
  		updateWorkerCount:             c.UpdateWorkerCount,
@@ -1235,155 +1265,6 @@ index d7cfd66fc..62a6a815c 100644
 +
 +	return filteredGroups
 +}
-diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
-new file mode 100644
-index 000000000..9650c99c5
---- /dev/null
-+++ b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
-@@ -0,0 +1,143 @@
-+package routines
-+
-+import (
-+	"fmt"
-+	"testing"
-+	"time"
-+
-+	"github.com/stretchr/testify/assert"
-+	autoscalingv1 "k8s.io/api/autoscaling/v1"
-+	v1 "k8s.io/api/core/v1"
-+	"k8s.io/apimachinery/pkg/labels"
-+
-+	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-+	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
-+	scopeutil "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/scope"
-+	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
-+)
-+
-+var (
-+	benchmarkContainerStateMap       model.ContainerNameToAggregateStateMap
-+	benchmarkScopedContainerStateMap map[string]model.ContainerNameToAggregateStateMap
-+)
-+
-+func TestGetContainerNameToAggregateStateMapByScopeValue(t *testing.T) {
-+	cluster := model.NewClusterState(time.Minute)
-+	selector, err := labels.Parse("app=daemon")
-+	assert.NoError(t, err)
-+
-+	vpaObj := test.VerticalPodAutoscaler().
-+		WithName("scoped-vpa").
-+		WithNamespace("default").
-+		WithContainer("agent").
-+		WithTargetRef(&autoscalingv1.CrossVersionObjectReference{
-+			Kind:       "DaemonSet",
-+			Name:       "agent-ds",
-+			APIVersion: "apps/v1",
-+		}).
-+		Get()
-+	vpaObj.Spec.Scope = "node.kubernetes.io/instance-type"
-+	assert.NoError(t, cluster.AddOrUpdateVpa(vpaObj, selector))
-+
-+	scopeLabelKey := scopeutil.AggregationLabelKey(string(vpaObj.Spec.Scope))
-+
-+	podA := model.PodID{Namespace: "default", PodName: "pod-a"}
-+	cluster.AddOrUpdatePod(podA, labels.Set{
-+		"app":         "daemon",
-+		scopeLabelKey: "c3.large",
-+	}, v1.PodRunning)
-+	assert.NoError(t, cluster.AddOrUpdateContainer(model.ContainerID{PodID: podA, ContainerName: "agent"}, model.Resources{}))
-+
-+	podB := model.PodID{Namespace: "default", PodName: "pod-b"}
-+	cluster.AddOrUpdatePod(podB, labels.Set{
-+		"app":         "daemon",
-+		scopeLabelKey: "m5.large",
-+	}, v1.PodRunning)
-+	assert.NoError(t, cluster.AddOrUpdateContainer(model.ContainerID{PodID: podB, ContainerName: "agent"}, model.Resources{}))
-+
-+	key := model.VpaID{Namespace: "default", VpaName: "scoped-vpa"}
-+	vpa := cluster.VPAs()[key]
-+	assert.NotNil(t, vpa)
-+
-+	grouped := GetContainerNameToAggregateStateMapByScopeValue(vpa)
-+	assert.Contains(t, grouped, "c3.large")
-+	assert.Contains(t, grouped, "m5.large")
-+	assert.Contains(t, grouped["c3.large"], "agent")
-+	assert.Contains(t, grouped["m5.large"], "agent")
-+
-+	// Ensure container policy filter still works for grouped output.
-+	off := vpa_types.ContainerScalingModeOff
-+	vpa.ResourcePolicy = &vpa_types.PodResourcePolicy{
-+		ContainerPolicies: []vpa_types.ContainerResourcePolicy{{
-+			ContainerName: "agent",
-+			Mode:          &off,
-+		}},
-+	}
-+	grouped = GetContainerNameToAggregateStateMapByScopeValue(vpa)
-+	assert.Empty(t, grouped["c3.large"])
-+	assert.Empty(t, grouped["m5.large"])
-+}
-+
-+func BenchmarkDaemonSetAggregationNoScope1000Pods(b *testing.B) {
-+	vpa := setupDaemonSetVpaForBenchmark(b, 1000, false)
-+	b.ReportAllocs()
-+	b.ResetTimer()
-+	for i := 0; i < b.N; i++ {
-+		benchmarkContainerStateMap = GetContainerNameToAggregateStateMap(vpa)
-+	}
-+}
-+
-+func BenchmarkDaemonSetAggregationScope1000Groups(b *testing.B) {
-+	vpa := setupDaemonSetVpaForBenchmark(b, 1000, true)
-+	b.ReportAllocs()
-+	b.ResetTimer()
-+	for i := 0; i < b.N; i++ {
-+		benchmarkScopedContainerStateMap = GetContainerNameToAggregateStateMapByScopeValue(vpa)
-+	}
-+}
-+
-+func setupDaemonSetVpaForBenchmark(b *testing.B, podCount int, scoped bool) *model.Vpa {
-+	b.Helper()
-+	cluster := model.NewClusterState(time.Minute)
-+	selector, err := labels.Parse("app=daemon")
-+	if err != nil {
-+		b.Fatalf("failed to parse selector: %v", err)
-+	}
-+
-+	vpaObj := test.VerticalPodAutoscaler().
-+		WithName("benchmark-vpa").
-+		WithNamespace("default").
-+		WithContainer("agent").
-+		WithTargetRef(&autoscalingv1.CrossVersionObjectReference{
-+			Kind:       "DaemonSet",
-+			Name:       "agent-ds",
-+			APIVersion: "apps/v1",
-+		}).
-+		Get()
-+	if scoped {
-+		vpaObj.Spec.Scope = "node.kubernetes.io/instance-type"
-+	}
-+	if err := cluster.AddOrUpdateVpa(vpaObj, selector); err != nil {
-+		b.Fatalf("failed to add vpa: %v", err)
-+	}
-+
-+	scopeLabelKey := scopeutil.AggregationLabelKey(string(vpaObj.Spec.Scope))
-+	for i := 0; i < podCount; i++ {
-+		podID := model.PodID{Namespace: "default", PodName: fmt.Sprintf("pod-%d", i)}
-+		podLabels := labels.Set{"app": "daemon"}
-+		if scoped {
-+			podLabels[scopeLabelKey] = fmt.Sprintf("group-%04d", i)
-+		}
-+		cluster.AddOrUpdatePod(podID, podLabels, v1.PodRunning)
-+		if err := cluster.AddOrUpdateContainer(model.ContainerID{PodID: podID, ContainerName: "agent"}, model.Resources{}); err != nil {
-+			b.Fatalf("failed to add container for %s: %v", podID.PodName, err)
-+		}
-+	}
-+
-+	key := model.VpaID{Namespace: "default", VpaName: "benchmark-vpa"}
-+	vpa := cluster.VPAs()[key]
-+	if vpa == nil {
-+		b.Fatalf("vpa %v was not found", key)
-+	}
-+	return vpa
-+}
 diff --git a/vertical-pod-autoscaler/pkg/updater/main.go b/vertical-pod-autoscaler/pkg/updater/main.go
 index 409c72256..f7683781f 100644
 --- a/vertical-pod-autoscaler/pkg/updater/main.go
@@ -1406,50 +1287,6 @@ index 409c72256..f7683781f 100644
  		priority.NewScalingDirectionPodEvictionAdmission(),
  		targetSelectorFetcher,
  		controllerFetcher,
-diff --git a/vertical-pod-autoscaler/pkg/utils/scope/scope.go b/vertical-pod-autoscaler/pkg/utils/scope/scope.go
-new file mode 100644
-index 000000000..8e82dec57
---- /dev/null
-+++ b/vertical-pod-autoscaler/pkg/utils/scope/scope.go
-@@ -0,0 +1,38 @@
-+package scope
-+
-+import (
-+	"fmt"
-+	"hash/fnv"
-+	"strings"
-+)
-+
-+const (
-+	daemonSetKind = "DaemonSet"
-+	labelPrefix   = "__vpa_scope_"
-+)
-+
-+// IsScopedDaemonSet returns true when target is DaemonSet and scopeKey is set.
-+func IsScopedDaemonSet(kind, scopeKey string) bool {
-+	return kind == daemonSetKind && scopeKey != ""
-+}
-+
-+// AggregationLabelKey returns a deterministic synthetic pod label key for scopeKey.
-+func AggregationLabelKey(scopeKey string) string {
-+	h := fnv.New32a()
-+	_, _ = h.Write([]byte(scopeKey))
-+	return fmt.Sprintf("%s%x", labelPrefix, h.Sum32())
-+}
-+
-+// RecommendationScope builds serialized scope key-value pair.
-+func RecommendationScope(scopeKey, scopeValue string) string {
-+	return scopeKey + "=" + scopeValue
-+}
-+
-+// ParseRecommendationScope parses "<scopeKey>=<scopeValue>".
-+func ParseRecommendationScope(raw string) (string, string, bool) {
-+	parts := strings.SplitN(raw, "=", 2)
-+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-+		return "", "", false
-+	}
-+	return parts[0], parts[1], true
-+}
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/api.go b/vertical-pod-autoscaler/pkg/utils/vpa/api.go
 index 448591d22..5018a6d49 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/api.go
@@ -1569,7 +1406,7 @@ index 448591d22..5018a6d49 100644
  	}
  	return nil, nil
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
-index 565fd430d..6acb53c21 100644
+index 565fd430d..71bcb62d2 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping.go
 @@ -17,22 +17,32 @@ limitations under the License.
@@ -1686,9 +1523,6 @@ index 565fd430d..6acb53c21 100644
 +	if err != nil {
 +		return nil, err
 +	}
-+	if scopeValue == "" {
-+		return []vpa_types.RecommendedContainerResources{}, nil
-+	}
 +
 +	groupLookup := c.getGroupRecommendationLookup(vpa)
 +	if group, found := groupLookup[scopeValue]; found {
@@ -1753,13 +1587,16 @@ index 565fd430d..6acb53c21 100644
 +	}
 +
 +	if c.nodeGetter == nil {
-+		return "", nil
++		return scopeutil.AbsentLabelValue, nil
 +	}
 +	node, err := c.nodeGetter.Get(context.Background(), nodeName, metav1.GetOptions{})
 +	if err != nil {
 +		return "", fmt.Errorf("failed to resolve node label %q for node %q: %w", scopeKey, nodeName, err)
 +	}
-+	scopeValue := node.Labels[scopeKey]
++	scopeValue := scopeutil.AbsentLabelValue
++	if labelValue, found := node.Labels[scopeKey]; found {
++		scopeValue = labelValue
++	}
 +
 +	c.scopeCacheMu.Lock()
 +	c.scopeCache[cacheKey] = cachedScopeValue{value: scopeValue, cachedTime: time.Now()}
@@ -1802,10 +1639,10 @@ index 565fd430d..6acb53c21 100644
  func applyContainerLimitRange(recommendation apiv1.ResourceList,
  	containerRequests apiv1.ResourceList, containerLimits apiv1.ResourceList,
 diff --git a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
-index 8096f2d95..47835a83b 100644
+index 8096f2d95..bc9c3e17f 100644
 --- a/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
 +++ b/vertical-pod-autoscaler/pkg/utils/vpa/capping_test.go
-@@ -17,11 +17,14 @@ limitations under the License.
+@@ -17,13 +17,17 @@ limitations under the License.
  package api
  
  import (
@@ -1819,8 +1656,11 @@ index 8096f2d95..47835a83b 100644
 +	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
  
  	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
++	scopeutil "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/scope"
  	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
-@@ -1652,3 +1655,147 @@ func TestCapPodMemoryWithUnderByteSplit(t *testing.T) {
+ )
+ 
+@@ -1652,3 +1656,198 @@ func TestCapPodMemoryWithUnderByteSplit(t *testing.T) {
  		})
  	}
  }
@@ -1858,16 +1698,8 @@ index 8096f2d95..47835a83b 100644
 +		ContainerRecommendations: []vpa_types.RecommendedContainerResources{
 +			{
 +				ContainerName: containerName,
-+				Scope:         scopeKey + "=m5.large",
 +				Target: apiv1.ResourceList{
 +					apiv1.ResourceMemory: resource.MustParse("1Gi"),
-+				},
-+			},
-+			{
-+				ContainerName: containerName,
-+				Scope:         scopeKey + "=c3.large",
-+				Target: apiv1.ResourceList{
-+					apiv1.ResourceMemory: resource.MustParse("2Gi"),
 +				},
 +			},
 +		},
@@ -1924,6 +1756,28 @@ index 8096f2d95..47835a83b 100644
 +	}
 +	vpa.Status.Groups = []vpa_types.RecommendedPodResourcesGroup{
 +		{
++			ScopeValue: scopeutil.AbsentLabelValue,
++			ContainerRecommendations: []vpa_types.RecommendedContainerResources{
++				{
++					ContainerName: containerName,
++					Target: apiv1.ResourceList{
++						apiv1.ResourceMemory: resource.MustParse("32Mi"),
++					},
++				},
++			},
++		},
++		{
++			ScopeValue: "",
++			ContainerRecommendations: []vpa_types.RecommendedContainerResources{
++				{
++					ContainerName: containerName,
++					Target: apiv1.ResourceList{
++						apiv1.ResourceMemory: resource.MustParse("50Mi"),
++					},
++				},
++			},
++		},
++		{
 +			ScopeValue: "master",
 +			ContainerRecommendations: []vpa_types.RecommendedContainerResources{
 +				{
@@ -1967,4 +1821,256 @@ index 8096f2d95..47835a83b 100644
 +	if assert.Len(t, res.ContainerRecommendations, 1) {
 +		assert.Equal(t, resource.MustParse("500Mi"), res.ContainerRecommendations[0].Target[apiv1.ResourceMemory])
 +	}
++
++	podEmpty := pod.DeepCopy()
++	podEmpty.Spec.NodeName = "node-empty"
++	podAbsent := pod.DeepCopy()
++	podAbsent.Spec.NodeName = "node-absent"
++
++	processor = NewCappingRecommendationProcessorWithNodeGetter(
++		&fakeLimitRangeCalculator{},
++		&fakeNodeGetter{
++			nodes: map[string]*apiv1.Node{
++				"node-empty": {
++					ObjectMeta: metav1.ObjectMeta{
++						Name:   "node-empty",
++						Labels: map[string]string{scopeKey: ""},
++					},
++				},
++				"node-absent": {
++					ObjectMeta: metav1.ObjectMeta{
++						Name:   "node-absent",
++						Labels: map[string]string{"kubernetes.io/hostname": "node-absent"},
++					},
++				},
++			},
++		},
++	)
++
++	resEmpty, _, err := processor.Apply(vpa, podEmpty)
++	assert.NoError(t, err)
++	if assert.Len(t, resEmpty.ContainerRecommendations, 1) {
++		assert.Equal(t, resource.MustParse("50Mi"), resEmpty.ContainerRecommendations[0].Target[apiv1.ResourceMemory])
++	}
++
++	resAbsent, _, err := processor.Apply(vpa, podAbsent)
++	assert.NoError(t, err)
++	if assert.Len(t, resAbsent.ContainerRecommendations, 1) {
++		assert.Equal(t, resource.MustParse("32Mi"), resAbsent.ContainerRecommendations[0].Target[apiv1.ResourceMemory])
++	}
 +}
+diff --git a/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
+new file mode 100644
+index 000000000..392c59e17
+--- /dev/null
++++ b/vertical-pod-autoscaler/pkg/recommender/routines/vpa_scope_test.go
+@@ -0,0 +1,153 @@
++package routines
++
++import (
++	"fmt"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/assert"
++	autoscalingv1 "k8s.io/api/autoscaling/v1"
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/labels"
++
++	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
++	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
++	scopeutil "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/scope"
++	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
++)
++
++var (
++	benchmarkContainerStateMap       model.ContainerNameToAggregateStateMap
++	benchmarkScopedContainerStateMap map[string]model.ContainerNameToAggregateStateMap
++)
++
++func TestGetContainerNameToAggregateStateMapByScopeValue(t *testing.T) {
++	cluster := model.NewClusterState(time.Minute)
++	selector, err := labels.Parse("app=daemon")
++	assert.NoError(t, err)
++
++	vpaObj := test.VerticalPodAutoscaler().
++		WithName("scoped-vpa").
++		WithNamespace("default").
++		WithContainer("agent").
++		WithTargetRef(&autoscalingv1.CrossVersionObjectReference{
++			Kind:       "DaemonSet",
++			Name:       "agent-ds",
++			APIVersion: "apps/v1",
++		}).
++		Get()
++	vpaObj.Spec.Scope = "node.kubernetes.io/instance-type"
++	assert.NoError(t, cluster.AddOrUpdateVpa(vpaObj, selector))
++
++	scopeLabelKey := scopeutil.AggregationLabelKey(string(vpaObj.Spec.Scope))
++
++	podA := model.PodID{Namespace: "default", PodName: "pod-a"}
++	cluster.AddOrUpdatePod(podA, labels.Set{
++		"app":         "daemon",
++		scopeLabelKey: "c3.large",
++	}, v1.PodRunning)
++	assert.NoError(t, cluster.AddOrUpdateContainer(model.ContainerID{PodID: podA, ContainerName: "agent"}, model.Resources{}))
++
++	podB := model.PodID{Namespace: "default", PodName: "pod-b"}
++	cluster.AddOrUpdatePod(podB, labels.Set{
++		"app":         "daemon",
++		scopeLabelKey: "m5.large",
++	}, v1.PodRunning)
++	assert.NoError(t, cluster.AddOrUpdateContainer(model.ContainerID{PodID: podB, ContainerName: "agent"}, model.Resources{}))
++
++	podC := model.PodID{Namespace: "default", PodName: "pod-c"}
++	cluster.AddOrUpdatePod(podC, labels.Set{
++		"app":         "daemon",
++		scopeLabelKey: "",
++	}, v1.PodRunning)
++	assert.NoError(t, cluster.AddOrUpdateContainer(model.ContainerID{PodID: podC, ContainerName: "agent"}, model.Resources{}))
++
++	key := model.VpaID{Namespace: "default", VpaName: "scoped-vpa"}
++	vpa := cluster.VPAs()[key]
++	assert.NotNil(t, vpa)
++
++	grouped := GetContainerNameToAggregateStateMapByScopeValue(vpa)
++	assert.Contains(t, grouped, "c3.large")
++	assert.Contains(t, grouped, "m5.large")
++	assert.Contains(t, grouped, "")
++	assert.Contains(t, grouped["c3.large"], "agent")
++	assert.Contains(t, grouped["m5.large"], "agent")
++	assert.Contains(t, grouped[""], "agent")
++
++	// Ensure container policy filter still works for grouped output.
++	off := vpa_types.ContainerScalingModeOff
++	vpa.ResourcePolicy = &vpa_types.PodResourcePolicy{
++		ContainerPolicies: []vpa_types.ContainerResourcePolicy{{
++			ContainerName: "agent",
++			Mode:          &off,
++		}},
++	}
++	grouped = GetContainerNameToAggregateStateMapByScopeValue(vpa)
++	assert.Empty(t, grouped["c3.large"])
++	assert.Empty(t, grouped["m5.large"])
++	assert.Empty(t, grouped[""])
++}
++
++func BenchmarkDaemonSetAggregationNoScope1000Pods(b *testing.B) {
++	vpa := setupDaemonSetVpaForBenchmark(b, 1000, false)
++	b.ReportAllocs()
++	b.ResetTimer()
++	for i := 0; i < b.N; i++ {
++		benchmarkContainerStateMap = GetContainerNameToAggregateStateMap(vpa)
++	}
++}
++
++func BenchmarkDaemonSetAggregationScope1000Groups(b *testing.B) {
++	vpa := setupDaemonSetVpaForBenchmark(b, 1000, true)
++	b.ReportAllocs()
++	b.ResetTimer()
++	for i := 0; i < b.N; i++ {
++		benchmarkScopedContainerStateMap = GetContainerNameToAggregateStateMapByScopeValue(vpa)
++	}
++}
++
++func setupDaemonSetVpaForBenchmark(b *testing.B, podCount int, scoped bool) *model.Vpa {
++	b.Helper()
++	cluster := model.NewClusterState(time.Minute)
++	selector, err := labels.Parse("app=daemon")
++	if err != nil {
++		b.Fatalf("failed to parse selector: %v", err)
++	}
++
++	vpaObj := test.VerticalPodAutoscaler().
++		WithName("benchmark-vpa").
++		WithNamespace("default").
++		WithContainer("agent").
++		WithTargetRef(&autoscalingv1.CrossVersionObjectReference{
++			Kind:       "DaemonSet",
++			Name:       "agent-ds",
++			APIVersion: "apps/v1",
++		}).
++		Get()
++	if scoped {
++		vpaObj.Spec.Scope = "node.kubernetes.io/instance-type"
++	}
++	if err := cluster.AddOrUpdateVpa(vpaObj, selector); err != nil {
++		b.Fatalf("failed to add vpa: %v", err)
++	}
++
++	scopeLabelKey := scopeutil.AggregationLabelKey(string(vpaObj.Spec.Scope))
++	for i := 0; i < podCount; i++ {
++		podID := model.PodID{Namespace: "default", PodName: fmt.Sprintf("pod-%d", i)}
++		podLabels := labels.Set{"app": "daemon"}
++		if scoped {
++			podLabels[scopeLabelKey] = fmt.Sprintf("group-%04d", i)
++		}
++		cluster.AddOrUpdatePod(podID, podLabels, v1.PodRunning)
++		if err := cluster.AddOrUpdateContainer(model.ContainerID{PodID: podID, ContainerName: "agent"}, model.Resources{}); err != nil {
++			b.Fatalf("failed to add container for %s: %v", podID.PodName, err)
++		}
++	}
++
++	key := model.VpaID{Namespace: "default", VpaName: "benchmark-vpa"}
++	vpa := cluster.VPAs()[key]
++	if vpa == nil {
++		b.Fatalf("vpa %v was not found", key)
++	}
++	return vpa
++}
+diff --git a/vertical-pod-autoscaler/pkg/utils/scope/scope.go b/vertical-pod-autoscaler/pkg/utils/scope/scope.go
+new file mode 100644
+index 000000000..fb2ce6dc4
+--- /dev/null
++++ b/vertical-pod-autoscaler/pkg/utils/scope/scope.go
+@@ -0,0 +1,26 @@
++package scope
++
++import (
++	"fmt"
++	"hash/fnv"
++)
++
++const (
++	daemonSetKind = "DaemonSet"
++	labelPrefix   = "__vpa_scope_"
++	// AbsentLabelValue is used for scoped DaemonSet grouping when a node doesn't have scope label key.
++	AbsentLabelValue = "__absent__"
++)
++
++// IsScopedDaemonSet returns true when target is DaemonSet and scopeKey is set.
++func IsScopedDaemonSet(kind, scopeKey string) bool {
++	return kind == daemonSetKind && scopeKey != ""
++}
++
++// AggregationLabelKey returns a deterministic synthetic pod label key for scopeKey.
++func AggregationLabelKey(scopeKey string) string {
++	h := fnv.New32a()
++	_, _ = h.Write([]byte(scopeKey))
++	return fmt.Sprintf("%s%x", labelPrefix, h.Sum32())
++}
++
+diff --git a/vertical-pod-autoscaler/routines.test b/vertical-pod-autoscaler/routines.test
+new file mode 100755
+index 000000000..b2b1a7c8a
+Binary files /dev/null and b/vertical-pod-autoscaler/routines.test differ
+diff --git a/vertical-pod-autoscaler/vpa_scope.cpu.out b/vertical-pod-autoscaler/vpa_scope.cpu.out
+new file mode 100644
+index 000000000..c7329636c
+Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope.cpu.out differ
+diff --git a/vertical-pod-autoscaler/vpa_scope.mem.out b/vertical-pod-autoscaler/vpa_scope.mem.out
+new file mode 100644
+index 000000000..d3dd064fb
+Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope.mem.out differ
+diff --git a/vertical-pod-autoscaler/vpa_scope_alloc.mem.out b/vertical-pod-autoscaler/vpa_scope_alloc.mem.out
+new file mode 100644
+index 000000000..8ce6f0b6c
+Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope_alloc.mem.out differ
+diff --git a/vertical-pod-autoscaler/vpa_scope_alloc2.mem.out b/vertical-pod-autoscaler/vpa_scope_alloc2.mem.out
+new file mode 100644
+index 000000000..1428d6876
+Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope_alloc2.mem.out differ
+diff --git a/vertical-pod-autoscaler/vpa_scope_alloc3.mem.out b/vertical-pod-autoscaler/vpa_scope_alloc3.mem.out
+new file mode 100644
+index 000000000..ef08533e9
+Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope_alloc3.mem.out differ

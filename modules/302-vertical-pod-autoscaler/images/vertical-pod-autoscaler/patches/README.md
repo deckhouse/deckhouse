@@ -16,8 +16,10 @@ Adds DaemonSet scoped recommendations grouped by node label key from `spec.scope
 
 - Supports only DaemonSet targetRef with non-empty `spec.scope`.
 - Uses node label value as a recommendation group key for Prometheus-based flow.
+- Uses special `scopeValue="__absent__"` when node does not have `spec.scope` label key.
 - Uses `status.groups` as source-of-truth for scoped recommendations.
-- Stores grouped recommendations in compact form (target-focused payload).
+- Stores grouped recommendations in compact form (`containerName` + `target` only).
+- Does not duplicate `scope` inside grouped `containerRecommendations`; consumers resolve scope from `spec.scope` + `group.scopeValue`.
 - Keeps fields mutually exclusive:
   - `status.recommendation` is used only for regular VPA (including DaemonSet without `spec.scope`);
   - `status.groups` is used only for scoped DaemonSet and `status.recommendation` is not populated.
