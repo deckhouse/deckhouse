@@ -118,7 +118,7 @@ jobs:
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           DKP_DOC_VERSION: "${{ env.DOC_VERSION }}"
         run: |
-          make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}"
+          make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}" || true
 
       - name: Install awscli
         if: ${{ success() }}
