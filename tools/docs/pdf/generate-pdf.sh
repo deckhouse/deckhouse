@@ -62,20 +62,20 @@ docker rm "${MODULES_CONTAINER}" &>/dev/null
 
 cp -r "${REPO_ROOT}/docs/site/images/." "${WORK_DIR}/content/images/"
 
-# Determine DKP_DOC_VERSION
-if [ -n "${DKP_DOC_VERSION:-}" ]; then
+# Determine DOC_VERSION
+if [ -n "${DOC_VERSION:-}" ]; then
   : # already set by caller
 else
   BRANCH="$(cd "${REPO_ROOT}" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
   if [ "${BRANCH}" = "main" ]; then
-    DKP_DOC_VERSION="latest"
+    DOC_VERSION="latest"
   elif echo "${BRANCH}" | grep -qE 'release-[0-9]+\.[0-9]+'; then
-    DKP_DOC_VERSION="$(echo "${BRANCH}" | sed 's/.*release-//' | sed 's/[^0-9.].*//')"
+    DOC_VERSION="$(echo "${BRANCH}" | sed 's/.*release-//' | sed 's/[^0-9.].*//')"
   else
-    DKP_DOC_VERSION="dev"
+    DOC_VERSION="dev"
   fi
 fi
-echo "DKP_DOC_VERSION: ${DKP_DOC_VERSION}"
+echo "DOC_VERSION: ${DOC_VERSION}"
 
 PDF_OUT="${REPO_ROOT}/pdf"
 mkdir -p "${PDF_OUT}"
@@ -85,7 +85,7 @@ SIDEBAR_YAML="${REPO_ROOT}/docs/documentation/_data/sidebars/main.yml"
 docker run --rm \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
-  -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
+  -e DOC_VERSION="${DOC_VERSION}" \
   -e BUILD_LANG="${BUILD_LANG:-}" \
   -v "${WORK_DIR}/content:/app/content:ro" \
   -v "${WORK_DIR}/embedded-modules:/app/embedded-modules:ro" \
@@ -97,7 +97,7 @@ docker run --rm \
 docker run --rm \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
-  -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
+  -e DOC_VERSION="${DOC_VERSION}" \
   -e BUILD_LANG="${BUILD_LANG:-}" \
   -e SECTION_FILTER="Using" \
   -e GUIDE_TITLE_EN="User's guide" \

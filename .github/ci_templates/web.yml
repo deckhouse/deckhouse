@@ -314,9 +314,9 @@ steps:
       WERF_ENV: "development"
       WERF_REPO: "${{ steps.check_dev_registry.outputs.web_registry_path }}"
 {!{- end }!}
-      DKP_DOC_VERSION: "${{ env.DOC_VERSION }}"
+      DOC_VERSION: "${{ env.DOC_VERSION }}"
     run: |
-      make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}"
+      make docs-generate-pdf DOC_VERSION="${DOC_VERSION}"
 
   - name: Install awscli
     if: ${{ success() }}

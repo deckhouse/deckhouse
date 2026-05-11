@@ -665,14 +665,14 @@ Options:
 
 | Variable | Description |
 |----------|-------------|
-| `DKP_DOC_VERSION=X.Y` | Version string shown in PDF headers and on the cover page. Defaults to `latest` on `main`, to the version number on `release-X.Y` branches, and to `dev` on other branches. |
+| `DOC_VERSION=X.Y` | Version string shown in PDF headers and on the cover page. Defaults to `latest` on `main`, to the version number on `release-X.Y` branches, and to `dev` on other branches. |
 | `BUILD_LANG=ru` | Generate Russian PDFs only. |
 | `BUILD_LANG=en` | Generate English PDFs only. |
 
 Example:
 
 ```shell
-make docs-generate-pdf DKP_DOC_VERSION=1.67
+make docs-generate-pdf DOC_VERSION=1.67
 ```
 
 Local builds use a local Docker registry at `localhost:4999/docs` (started automatically by `make up`).

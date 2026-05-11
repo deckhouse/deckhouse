@@ -294,7 +294,7 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 MODULE_PATH ?=
 CHANNEL ?= alpha
 MODULE_VERSION ?= v0.1.0
-DKP_DOC_VERSION ?=
+DOC_VERSION ?=
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
@@ -306,10 +306,10 @@ docs: bin/werf ## Run containers with the documentation.
 
 .PHONY: docs-generate-pdf
 docs-generate-pdf: ## Generate PDF documentation.
-  ##~ Options: DKP_DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
+  ##~ Options: DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
   ##~ Options: BUILD_LANG=ru|en - build a single language only. If not set, both languages are built.
   ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
-	DKP_DOC_VERSION="$(strip $(DKP_DOC_VERSION))" \
+	DOC_VERSION="$(strip $(DOC_VERSION))" \
 	BUILD_LANG="$(strip $(BUILD_LANG))" \
 	bash tools/docs/pdf/generate-pdf.sh
 

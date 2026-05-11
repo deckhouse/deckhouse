@@ -974,7 +974,7 @@ def _append_embedded_modules_to_writer(writer: "_ChunkWriter", lang: str) -> Non
 def generate_cover_html(
     lang: str,
     title: str,
-    dkp_doc_version: str,
+    doc_version: str,
     tmp_dir: str,
 ) -> str:
     """Writes a cover page HTML file and returns its path."""
@@ -985,8 +985,8 @@ def generate_cover_html(
         date_str = datetime.now().strftime("%B %d, %Y")
         date_label = f"Generated: {date_str}"
 
-    if dkp_doc_version:
-        version_label = f"Версия {dkp_doc_version}" if lang == "ru" else f"Version {dkp_doc_version}"
+    if doc_version:
+        version_label = f"Версия {doc_version}" if lang == "ru" else f"Version {doc_version}"
         version_line = f"<p class=\"version\">{version_label}</p>"
     else:
         version_line = ""
@@ -1055,16 +1055,16 @@ def generate_cover_html(
 
 def _wkhtml_ui_strings(
     lang: str,
-    dkp_doc_version: str,
+    doc_version: str,
     guide_title_en: str = "Administrator's guide",
     guide_title_ru: str = "Справочник администратора",
 ) -> Tuple[str, str, str]:
     """Header left, footer right, TOC title for wkhtmltopdf."""
     if lang == "en":
         guide_title = guide_title_en
-        if dkp_doc_version:
+        if doc_version:
             header_left = (
-                f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
+                f"Deckhouse Kubernetes Platform {doc_version}. "
                 f"{guide_title} - [section]"
             )
         else:
@@ -1076,9 +1076,9 @@ def _wkhtml_ui_strings(
         toc_header = "Contents"
     else:
         guide_title = guide_title_ru
-        if dkp_doc_version:
+        if doc_version:
             header_left = (
-                f"Deckhouse Kubernetes Platform {dkp_doc_version}. "
+                f"Deckhouse Kubernetes Platform {doc_version}. "
                 f"{guide_title} - [section]"
             )
         else:
@@ -1112,7 +1112,7 @@ def selected_pdf_langs() -> Tuple[str, ...]:
 # === Main execution ===
 if __name__ == "__main__":
     base_pdf = os.environ.get("PDF_OUTPUT_PATH", "deckhouse-admin-guide.pdf")
-    dkp_doc_version = os.environ.get("DKP_DOC_VERSION", "").strip()
+    doc_version = os.environ.get("DOC_VERSION", "").strip()
     section_filter = os.environ.get("SECTION_FILTER", "").strip() or None
     guide_title_en = os.environ.get("GUIDE_TITLE_EN", "").strip() or "Administrator's guide"
     guide_title_ru = os.environ.get("GUIDE_TITLE_RU", "").strip() or "Справочник администратора"
@@ -1133,7 +1133,7 @@ if __name__ == "__main__":
         pdf_out = pdf_output_path_for_lang(base_pdf, lang)
         print(f"Generating PDF ({lang}) → {pdf_out}...")
         header_left, footer_right, toc_header = _wkhtml_ui_strings(
-            lang, dkp_doc_version, guide_title_en=guide_title_en, guide_title_ru=guide_title_ru
+            lang, doc_version, guide_title_en=guide_title_en, guide_title_ru=guide_title_ru
         )
 
         cover_title = (
@@ -1141,7 +1141,7 @@ if __name__ == "__main__":
             if lang == "en"
             else f"Deckhouse Kubernetes Platform {guide_title_ru}"
         )
-        cover_path = generate_cover_html(lang, cover_title, dkp_doc_version, _cover_tmpdir)
+        cover_path = generate_cover_html(lang, cover_title, doc_version, _cover_tmpdir)
 
         # Build page-object list: each chunk is a separate wkhtmltopdf page object.
         # This keeps individual HTML files small so Qt WebKit does not scale fonts down.
