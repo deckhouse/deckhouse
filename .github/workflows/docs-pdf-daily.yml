@@ -48,7 +48,7 @@ env:
 jobs:
   doc_pdf_build:
     name: Doc PDF build
-    if: ${{ github.repository == 'deckhouse/deckhouse-test-1' }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
     # <template: doc_pdf_build_template>
     runs-on: [self-hosted, large]
     steps:

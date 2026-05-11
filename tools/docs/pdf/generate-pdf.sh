@@ -36,7 +36,6 @@ echo "PDF_BUILDER_IMAGE: ${PDF_BUILDER_IMAGE}"
 [[ -n "${STATIC_IMAGE}" ]] || { echo "ERROR: STATIC_IMAGE is empty" >&2; exit 1; }
 [[ -n "${MODULES_IMAGE}" ]] || { echo "ERROR: MODULES_IMAGE is empty" >&2; exit 1; }
 [[ -n "${PDF_BUILDER_IMAGE}" ]] || { echo "ERROR: PDF_BUILDER_IMAGE is empty" >&2; exit 1; }
-set +x
 
 CONTAINER_NAME="d8-doc-${WERF_ENV,,}"
 docker stop "${CONTAINER_NAME}" &>/dev/null || true

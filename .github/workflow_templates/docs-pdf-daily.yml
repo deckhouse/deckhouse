@@ -27,5 +27,5 @@ env:
 jobs:
   doc_pdf_build:
     name: Doc PDF build
-    if: ${{ github.repository == 'deckhouse/deckhouse-test-1' }}
+    if: ${{ github.repository == 'deckhouse/deckhouse' }}
 {!{ tmpl.Exec "doc_pdf_build_template" (slice $ctx "doc_version_template" "release" "production") | strings.Indent 4 }!}
