@@ -32,10 +32,6 @@ git:
   - get_pdf_page.py
   - toc_style.css
   - toc_template.xsl
-- add: /docs/documentation/_data/sidebars
-  to: /app
-  includePaths:
-  - main.yml
 imageSpec:
   config:
     env:

@@ -81,6 +81,8 @@ echo "DKP_DOC_VERSION: ${DKP_DOC_VERSION}"
 PDF_OUT="${REPO_ROOT}/pdf"
 mkdir -p "${PDF_OUT}"
 
+SIDEBAR_YAML="${REPO_ROOT}/docs/documentation/_data/sidebars/main.yml"
+
 docker run --rm \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
@@ -89,6 +91,7 @@ docker run --rm \
   -e ONLY_EN="${ONLY_EN:-}" \
   -v "${WORK_DIR}/content:/app/content:ro" \
   -v "${WORK_DIR}/embedded-modules:/app/embedded-modules:ro" \
+  -v "${SIDEBAR_YAML}:/app/main.yml:ro" \
   -v "${PDF_OUT}:/out" \
   "${PDF_BUILDER_IMAGE}" \
   python3 get_pdf_page.py
@@ -104,6 +107,7 @@ docker run --rm \
   -e GUIDE_TITLE_RU="Руководство пользователя" \
   -v "${WORK_DIR}/content:/app/content:ro" \
   -v "${WORK_DIR}/embedded-modules:/app/embedded-modules:ro" \
+  -v "${SIDEBAR_YAML}:/app/main.yml:ro" \
   -v "${PDF_OUT}:/out" \
   "${PDF_BUILDER_IMAGE}" \
   python3 get_pdf_page.py
