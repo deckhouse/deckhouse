@@ -43,7 +43,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phase"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
@@ -840,18 +839,6 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 	phaseActionProvider := phases.NewPhaseActionProviderFromPipeline(pipeline)
 	d8State := deckhouse.NewState(stateCache)
 
-	d8Destroyer := deckhouse.NewDestroyer(deckhouse.DestroyerParams{
-		CommanderMode: params.commanderMode,
-		CommanderUUID: commanderUUID,
-		SkipResources: params.skipResources,
-
-		State: d8State,
-
-		LoggerProvider:       loggerProvider,
-		KubeProvider:         kubeClProvider,
-		PhasedActionProvider: phaseActionProvider,
-	})
-
 	i := rand.New(rand.NewSource(time.Now().UnixNano()))
 	tmpDir, err := fs.RandomTmpDirWithNRunes(rootTmpDirStatic, fmt.Sprintf("%d", i), 15)
 	require.NoError(t, err)
@@ -874,24 +861,32 @@ func createTestCloudDestroyTest(t *testing.T, params testCloudDestroyTestParams)
 	}
 
 	destroyer := &ClusterDestroyer{
-		state:    &destroyState{},
-		pipeline: pipeline,
-		runner:   phase.NewRunner[*destroyState](),
-		phases: []phase.Phase[*destroyState]{
-			checkCommanderUUIDPhase{d8Destroyer: d8Destroyer},
-			populateMetaConfigPhase{configPreparator: loader},
-			chooseDestroyerPhase{
-				infraProvider: infraProvider,
-				pipeline:      pipeline,
-			},
-			prepareDestroyerPhase{},
-			deleteResourcesPhase{d8Destroyer: d8Destroyer},
-			afterResourcesDeletePhase{},
-			finalizeResourcesPhase{d8Destroyer: d8Destroyer},
-			cleanupBeforeDestroyPhase{},
-			destroyClusterPhase{},
-			cleanupStateCachePhase{stateCache: stateCache},
+		pipeline:       pipeline,
+		stateCache:     stateCache,
+		tmpDir:         tmpDir,
+		loggerProvider: loggerProvider,
+		prepare: &prepareDestroyPhase{
+			configPreparator:     loader,
+			directoryConfig:      nil,
+			infraProvider:        infraProvider,
+			kubeProvider:         kubeClProvider,
+			deckhouseState:       d8State,
+			phasedActionProvider: phaseActionProvider,
+			loggerProvider:       loggerProvider,
+			commanderMode:        params.commanderMode,
+			commanderUUID:        commanderUUID,
+			skipResources:        params.skipResources,
 		},
+		deleteResources: &deleteResourcesPhase{
+			deckhouseState:       d8State,
+			kubeProvider:         kubeClProvider,
+			phasedActionProvider: phaseActionProvider,
+			loggerProvider:       loggerProvider,
+			commanderMode:        params.commanderMode,
+			commanderUUID:        commanderUUID,
+			skipResources:        params.skipResources,
+		},
+		destroyInfra: destroyInfraPhase{},
 	}
 
 	tst := &testCloudDestroyTest{

@@ -16,19 +16,12 @@ package destroy
 
 import "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 
-// destroyState carries only the data that flows between destroy phases.
-// Setup-time dependencies (sub-destroyers, the state cache, the pipeline,
-// …) are constructor-injected onto each phase struct instead — that keeps
-// every phase's contract visible from its own type declaration.
-//
-//   - AutoApprove: per-call input set by DestroyCluster.
-//   - MetaConfig:  produced by populateMetaConfigPhase, consumed by
-//     chooseDestroyerPhase.
-//   - ChosenDestroyer: produced by chooseDestroyerPhase, consumed by
-//     prepareDestroyerPhase / afterResourcesDeletePhase /
-//     cleanupBeforeDestroyPhase / destroyClusterPhase.
-type destroyState struct {
-	AutoApprove     bool
-	MetaConfig      *config.MetaConfig
-	ChosenDestroyer infraDestroyer
+// prepared is the value produced by prepareDestroyPhase and threaded
+// through the rest of the destroy pipeline. The chosen infraDestroyer
+// carries its own internal state across phases (e.g. static credentials
+// set up in deleteResources and reused in destroyInfra).
+type prepared struct {
+	metaConfig  *config.MetaConfig
+	clusterType string
+	destroyer   infraDestroyer
 }

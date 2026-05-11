@@ -16,16 +16,13 @@ package destroy
 
 import "context"
 
-// afterResourcesDeletePhase runs the provider hook executed once the
-// deckhouse-managed resources are gone but before the infrastructure
-// itself is torn down. For static clusters it waits for the destroyer
-// node user to disappear from every master.
-//
-// Reads state.ChosenDestroyer.
-type afterResourcesDeletePhase struct{}
+// destroyInfraPhase is the final destructive phase: tears down the
+// underlying infrastructure (tofu destroy for cloud, master-node cleanup
+// scripts for static). By this point the k8s API access from
+// deleteResourcesPhase has already been closed; static reopens a fresh
+// SSH session via SSHClientProvider for the cleanup scripts.
+type destroyInfraPhase struct{}
 
-func (afterResourcesDeletePhase) Name() string { return "after-resources-delete" }
-
-func (afterResourcesDeletePhase) Run(ctx context.Context, s *destroyState) error {
-	return s.ChosenDestroyer.AfterResourcesDelete(ctx)
+func (destroyInfraPhase) run(ctx context.Context, prep prepared, autoApprove bool) error {
+	return prep.destroyer.DestroyCluster(ctx, autoApprove)
 }
