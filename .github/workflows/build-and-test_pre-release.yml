@@ -758,7 +758,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_EE:
     name: Build EE
@@ -1064,7 +1064,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_BE:
     name: Build BE
@@ -1370,7 +1370,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_SE:
     name: Build SE
@@ -1676,7 +1676,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_SE-plus:
     name: Build SE-plus
@@ -1982,7 +1982,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
   build_CSE:
     name: Build CSE
@@ -2288,7 +2288,7 @@ jobs:
           WORKFLOW_URL: ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}/
         run: |
           bash ./.github/scripts/send-report.sh --webhook "ci_fail"
-      # </template: send_fail_report>   
+      # </template: send_fail_report>
 
 
   doc_web_build:
@@ -3254,7 +3254,7 @@ jobs:
 
   doc_pdf_build:
     name: Doc PDF build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build

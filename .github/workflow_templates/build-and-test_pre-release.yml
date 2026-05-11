@@ -59,7 +59,7 @@ jobs:
     env:
       WERF_ENV: "{!{$werfEnv}!}"
 {!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
-{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}   
+{!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 {!{ end }!}
 
   doc_web_build:
@@ -135,7 +135,7 @@ jobs:
 
   doc_pdf_build:
     name: Doc PDF build
-    if: ${{ startsWith(needs.git_info.outputs.ci_commit_ref_name, 'release-') && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ startsWith(github.ref, 'refs/heads/release') && github.repository == 'deckhouse/deckhouse' }}
     needs:
       - git_info
       - doc_web_build
