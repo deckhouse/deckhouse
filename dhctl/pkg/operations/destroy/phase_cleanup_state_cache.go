@@ -14,19 +14,22 @@
 
 package destroy
 
-import "context"
+import (
+	"context"
+
+	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
 
 // cleanupStateCachePhase wipes the local on-disk state cache after a
-// successful destroy. Survives only the tombstone key the pipeline writes
-// on completion.
-//
-// Reads: state.stateCache.
-// Writes: clears every cache key bar the post-cleanup tombstone.
-type cleanupStateCachePhase struct{}
+// successful destroy. Only the tombstone the pipeline writes on completion
+// survives.
+type cleanupStateCachePhase struct {
+	stateCache dhctlstate.Cache
+}
 
-func (cleanupStateCachePhase) Name() string { return "cleanup-state-cache" }
+func (p cleanupStateCachePhase) Name() string { return "cleanup-state-cache" }
 
-func (cleanupStateCachePhase) Run(ctx context.Context, s *destroyState) error {
-	s.stateCache.Clean(ctx)
+func (p cleanupStateCachePhase) Run(ctx context.Context, _ *destroyState) error {
+	p.stateCache.Clean(ctx)
 	return nil
 }

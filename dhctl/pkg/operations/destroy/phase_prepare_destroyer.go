@@ -20,14 +20,11 @@ import "context"
 // locks the converge lease; static destroyer creates the d8-dhctl-converger
 // node user and waits for it to land on the masters.
 //
-// Reads: state.chosenDestroyer.
-// Writes: nothing observable at this layer (sub-destroyer emits its own
-//
-//	tracked phases through PhasedActionProvider).
+// Reads state.ChosenDestroyer.
 type prepareDestroyerPhase struct{}
 
 func (prepareDestroyerPhase) Name() string { return "prepare-destroyer" }
 
 func (prepareDestroyerPhase) Run(ctx context.Context, s *destroyState) error {
-	return s.chosenDestroyer.Prepare(ctx)
+	return s.ChosenDestroyer.Prepare(ctx)
 }

@@ -14,35 +14,21 @@
 
 package destroy
 
-import (
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
-)
+import "github.com/deckhouse/deckhouse/dhctl/pkg/config"
 
-// destroyState is the per-operation bag passed through the destroy phase
-// pipeline. NewClusterDestroyer builds the "before phases run" half (the
-// sub-destroyers, state loader, pipeline); each phase reads what it needs
-// and writes its outputs (MetaConfig, ChosenInfraDestroyer) for the next.
+// destroyState carries only the data that flows between destroy phases.
+// Setup-time dependencies (sub-destroyers, the state cache, the pipeline,
+// …) are constructor-injected onto each phase struct instead — that keeps
+// every phase's contract visible from its own type declaration.
 //
-// The struct is mutated in place. Phases declared in phase_*.go must each
-// document which fields they read and write.
+//   - AutoApprove: per-call input set by DestroyCluster.
+//   - MetaConfig:  produced by populateMetaConfigPhase, consumed by
+//     chooseDestroyerPhase.
+//   - ChosenDestroyer: produced by chooseDestroyerPhase, consumed by
+//     prepareDestroyerPhase / afterResourcesDeletePhase /
+//     cleanupBeforeDestroyPhase / destroyClusterPhase.
 type destroyState struct {
-	// Setup-time dependencies, populated by NewClusterDestroyer and read by
-	// the phases. They are immutable from the phases' point of view.
-	stateCache       dhctlstate.Cache
-	configPreparator metaConfigPopulator
-	d8Destroyer      *deckhouse.Destroyer
-	infraProvider    *infraDestroyerProvider
-	pipeline         phases.DefaultPipeline
-	directoryConfig  *directoryconfig.DirectoryConfig
-
-	// Per-call inputs.
-	autoApprove bool
-
-	// Phase outputs, filled in as the pipeline runs.
-	metaConfig      *config.MetaConfig
-	chosenDestroyer infraDestroyer
+	AutoApprove     bool
+	MetaConfig      *config.MetaConfig
+	ChosenDestroyer infraDestroyer
 }

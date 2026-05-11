@@ -14,20 +14,21 @@
 
 package destroy
 
-import "context"
+import (
+	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
+)
 
 // checkCommanderUUIDPhase enforces the commander-mode UUID consistency
 // check before any destructive work begins. In non-commander mode the
 // underlying d8Destroyer call short-circuits to a no-op.
-//
-// Reads: state.d8Destroyer.
-// Writes: nothing (sub-destroyer may emit phases.CommanderUUIDWasChecked
-//
-//	through its own PhasedActionProvider).
-type checkCommanderUUIDPhase struct{}
+type checkCommanderUUIDPhase struct {
+	d8Destroyer *deckhouse.Destroyer
+}
 
-func (checkCommanderUUIDPhase) Name() string { return "check-commander-uuid" }
+func (p checkCommanderUUIDPhase) Name() string { return "check-commander-uuid" }
 
-func (checkCommanderUUIDPhase) Run(ctx context.Context, s *destroyState) error {
-	return s.d8Destroyer.CheckCommanderUUID(ctx)
+func (p checkCommanderUUIDPhase) Run(ctx context.Context, _ *destroyState) error {
+	return p.d8Destroyer.CheckCommanderUUID(ctx)
 }

@@ -21,12 +21,11 @@ import "context"
 // and runs the cleanup script. Sub-destroyer emits phases.AllNodesPhase
 // (static) or its own cloud-side markers.
 //
-// Reads: state.chosenDestroyer, state.autoApprove.
-// Writes: nothing observable here.
+// Reads state.ChosenDestroyer, state.AutoApprove.
 type destroyClusterPhase struct{}
 
 func (destroyClusterPhase) Name() string { return "destroy-cluster" }
 
 func (destroyClusterPhase) Run(ctx context.Context, s *destroyState) error {
-	return s.chosenDestroyer.DestroyCluster(ctx, s.autoApprove)
+	return s.ChosenDestroyer.DestroyCluster(ctx, s.AutoApprove)
 }

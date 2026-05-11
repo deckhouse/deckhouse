@@ -145,11 +145,15 @@ func initStateLoader(ctx context.Context, params *stateLoaderParams, kubeProvide
 
 // ClusterDestroyer orchestrates the destroy pipeline. The heavy
 // constructor lifting (state loader, kube/SSH providers, sub-destroyers)
-// happens once in NewClusterDestroyer; DestroyCluster simply hands the
-// resulting state to a fixed list of phases via phase.Runner.
+// happens once in NewClusterDestroyer; that constructor also wires every
+// phase with the dependencies it needs and stashes the resulting slice on
+// the ClusterDestroyer instance. DestroyCluster just hands the per-call
+// state to phase.Runner.
 type ClusterDestroyer struct {
-	state  *destroyState
-	runner *phase.Runner[*destroyState]
+	state    *destroyState
+	pipeline phases.DefaultPipeline
+	runner   *phase.Runner[*destroyState]
+	phases   []phase.Phase[*destroyState]
 }
 
 // NewClusterDestroyer
@@ -224,37 +228,33 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 	}
 
 	return &ClusterDestroyer{
-		state: &destroyState{
-			stateCache:       params.StateCache,
-			configPreparator: terraStateLoader,
-			d8Destroyer:      d8Destroyer,
-			infraProvider:    infraProvider,
-			pipeline:         pipeline,
-			directoryConfig:  params.DirectoryConfig,
+		state:    &destroyState{},
+		pipeline: pipeline,
+		runner:   phase.NewRunner[*destroyState](),
+		phases: []phase.Phase[*destroyState]{
+			checkCommanderUUIDPhase{d8Destroyer: d8Destroyer},
+			populateMetaConfigPhase{
+				configPreparator: terraStateLoader,
+				directoryConfig:  params.DirectoryConfig,
+			},
+			chooseDestroyerPhase{
+				infraProvider: infraProvider,
+				pipeline:      pipeline,
+			},
+			prepareDestroyerPhase{},
+			deleteResourcesPhase{d8Destroyer: d8Destroyer},
+			afterResourcesDeletePhase{},
+			finalizeResourcesPhase{d8Destroyer: d8Destroyer},
+			cleanupBeforeDestroyPhase{},
+			destroyClusterPhase{},
+			cleanupStateCachePhase{stateCache: params.StateCache},
 		},
-		runner: phase.NewRunner[*destroyState](),
 	}, nil
 }
 
-// destroyPhases is the ordered list of phases DestroyCluster runs. Keeping
-// it as a package-level slice makes the pipeline contents readable at a
-// glance and easy to extend in tests.
-var destroyPhases = []phase.Phase[*destroyState]{
-	checkCommanderUUIDPhase{},
-	populateMetaConfigPhase{},
-	chooseDestroyerPhase{},
-	prepareDestroyerPhase{},
-	deleteResourcesPhase{},
-	afterResourcesDeletePhase{},
-	finalizeResourcesPhase{},
-	cleanupBeforeDestroyPhase{},
-	destroyClusterPhase{},
-	cleanupStateCachePhase{},
-}
-
 func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
-	d.state.autoApprove = autoApprove
-	return d.state.pipeline.Run(ctx, func(_ phases.DefaultPipelinePhaseSwitcher) error {
-		return d.runner.Run(ctx, d.state, destroyPhases)
+	d.state.AutoApprove = autoApprove
+	return d.pipeline.Run(ctx, func(_ phases.DefaultPipelinePhaseSwitcher) error {
+		return d.runner.Run(ctx, d.state, d.phases)
 	})
 }

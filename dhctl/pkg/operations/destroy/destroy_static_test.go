@@ -1751,14 +1751,24 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	}
 
 	destroyer := &ClusterDestroyer{
-		state: &destroyState{
-			stateCache:       stateCache,
-			configPreparator: loader,
-			d8Destroyer:      d8Destroyer,
-			infraProvider:    infraProvider,
-			pipeline:         pipeline,
+		state:    &destroyState{},
+		pipeline: pipeline,
+		runner:   phase.NewRunner[*destroyState](),
+		phases: []phase.Phase[*destroyState]{
+			checkCommanderUUIDPhase{d8Destroyer: d8Destroyer},
+			populateMetaConfigPhase{configPreparator: loader},
+			chooseDestroyerPhase{
+				infraProvider: infraProvider,
+				pipeline:      pipeline,
+			},
+			prepareDestroyerPhase{},
+			deleteResourcesPhase{d8Destroyer: d8Destroyer},
+			afterResourcesDeletePhase{},
+			finalizeResourcesPhase{d8Destroyer: d8Destroyer},
+			cleanupBeforeDestroyPhase{},
+			destroyClusterPhase{},
+			cleanupStateCachePhase{stateCache: stateCache},
 		},
-		runner: phase.NewRunner[*destroyState](),
 	}
 
 	tst := &testStaticDestroyTest{

@@ -14,19 +14,22 @@
 
 package destroy
 
-import "context"
+import (
+	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
+)
 
 // deleteResourcesPhase asks the deckhouse destroyer to delete user
 // resources (Services, Ingresses, PVCs, etc.) from the cluster before the
 // infrastructure-level teardown begins. The skip-resources flag short-circuits
 // this inside d8Destroyer.
-//
-// Reads: state.d8Destroyer.
-// Writes: nothing (sub-destroyer emits phases.DeleteResourcesPhase).
-type deleteResourcesPhase struct{}
+type deleteResourcesPhase struct {
+	d8Destroyer *deckhouse.Destroyer
+}
 
-func (deleteResourcesPhase) Name() string { return "delete-resources" }
+func (p deleteResourcesPhase) Name() string { return "delete-resources" }
 
-func (deleteResourcesPhase) Run(ctx context.Context, s *destroyState) error {
-	return s.d8Destroyer.CheckAndDeleteResources(ctx)
+func (p deleteResourcesPhase) Run(ctx context.Context, _ *destroyState) error {
+	return p.d8Destroyer.CheckAndDeleteResources(ctx)
 }

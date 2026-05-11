@@ -14,23 +14,27 @@
 
 package destroy
 
-import "context"
+import (
+	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+)
 
 // populateMetaConfigPhase loads the cluster meta config either from the
 // commander-supplied payload (commander mode) or by re-hydrating it from
-// the state cache via the terra state loader.
-//
-// Reads: state.configPreparator, state.directoryConfig.
-// Writes: state.metaConfig.
-type populateMetaConfigPhase struct{}
+// the state cache via the terra state loader. Writes state.MetaConfig.
+type populateMetaConfigPhase struct {
+	configPreparator metaConfigPopulator
+	directoryConfig  *directoryconfig.DirectoryConfig
+}
 
-func (populateMetaConfigPhase) Name() string { return "populate-meta-config" }
+func (p populateMetaConfigPhase) Name() string { return "populate-meta-config" }
 
-func (populateMetaConfigPhase) Run(ctx context.Context, s *destroyState) error {
-	mc, err := s.configPreparator.PopulateMetaConfig(ctx, s.directoryConfig)
+func (p populateMetaConfigPhase) Run(ctx context.Context, s *destroyState) error {
+	mc, err := p.configPreparator.PopulateMetaConfig(ctx, p.directoryConfig)
 	if err != nil {
 		return err
 	}
-	s.metaConfig = mc
+	s.MetaConfig = mc
 	return nil
 }

@@ -14,17 +14,20 @@
 
 package destroy
 
-import "context"
+import (
+	"context"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
+)
 
 // finalizeResourcesPhase persists "deckhouse resources deleted" into the
 // state cache so a subsequent attempt resumes from the right point.
-//
-// Reads: state.d8Destroyer.
-// Writes: nothing (sub-destroyer emits phases.SetDeckhouseResourcesDeletedPhase).
-type finalizeResourcesPhase struct{}
+type finalizeResourcesPhase struct {
+	d8Destroyer *deckhouse.Destroyer
+}
 
-func (finalizeResourcesPhase) Name() string { return "finalize-resources" }
+func (p finalizeResourcesPhase) Name() string { return "finalize-resources" }
 
-func (finalizeResourcesPhase) Run(ctx context.Context, s *destroyState) error {
-	return s.d8Destroyer.Finalize(ctx)
+func (p finalizeResourcesPhase) Run(ctx context.Context, _ *destroyState) error {
+	return p.d8Destroyer.Finalize(ctx)
 }

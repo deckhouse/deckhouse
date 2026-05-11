@@ -20,12 +20,11 @@ import "context"
 // remaining phases no longer need — the kube proxy tunnel, the SSH client.
 // All required state has already been pulled into the cache by this point.
 //
-// Reads: state.chosenDestroyer.
-// Writes: nothing.
+// Reads state.ChosenDestroyer.
 type cleanupBeforeDestroyPhase struct{}
 
 func (cleanupBeforeDestroyPhase) Name() string { return "cleanup-before-destroy" }
 
 func (cleanupBeforeDestroyPhase) Run(ctx context.Context, s *destroyState) error {
-	return s.chosenDestroyer.CleanupBeforeDestroy(ctx)
+	return s.ChosenDestroyer.CleanupBeforeDestroy(ctx)
 }

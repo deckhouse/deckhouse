@@ -21,12 +21,11 @@ import "context"
 // itself is torn down. For static clusters it waits for the destroyer
 // node user to disappear from every master.
 //
-// Reads: state.chosenDestroyer.
-// Writes: nothing.
+// Reads state.ChosenDestroyer.
 type afterResourcesDeletePhase struct{}
 
 func (afterResourcesDeletePhase) Name() string { return "after-resources-delete" }
 
 func (afterResourcesDeletePhase) Run(ctx context.Context, s *destroyState) error {
-	return s.chosenDestroyer.AfterResourcesDelete(ctx)
+	return s.ChosenDestroyer.AfterResourcesDelete(ctx)
 }

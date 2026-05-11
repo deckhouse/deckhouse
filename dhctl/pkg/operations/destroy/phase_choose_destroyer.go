@@ -22,21 +22,23 @@ import (
 )
 
 // chooseDestroyerPhase picks the cloud or static destroyer implementation
-// based on metaConfig.ClusterType and tags the surrounding pipeline so
-// commander/progress consumers can branch on it.
+// based on state.MetaConfig.ClusterType and tags the surrounding pipeline
+// so commander/progress consumers can branch on it.
 //
-// Reads: state.metaConfig, state.infraProvider, state.pipeline.
-// Writes: state.chosenDestroyer.
-type chooseDestroyerPhase struct{}
+// Reads state.MetaConfig. Writes state.ChosenDestroyer.
+type chooseDestroyerPhase struct {
+	infraProvider *infraDestroyerProvider
+	pipeline      phases.DefaultPipeline
+}
 
-func (chooseDestroyerPhase) Name() string { return "choose-destroyer" }
+func (p chooseDestroyerPhase) Name() string { return "choose-destroyer" }
 
-func (chooseDestroyerPhase) Run(ctx context.Context, s *destroyState) error {
-	d, err := config.DoByClusterType(ctx, s.metaConfig, s.infraProvider)
+func (p chooseDestroyerPhase) Run(ctx context.Context, s *destroyState) error {
+	d, err := config.DoByClusterType(ctx, s.MetaConfig, p.infraProvider)
 	if err != nil {
 		return err
 	}
-	s.chosenDestroyer = d
-	s.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: s.metaConfig.ClusterType})
+	s.ChosenDestroyer = d
+	p.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: s.MetaConfig.ClusterType})
 	return nil
 }
