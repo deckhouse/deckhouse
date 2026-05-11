@@ -311,6 +311,7 @@ docs-generate-pdf: ## Generate PDF documentation.
   ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
 	@GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1; \
 	export GET_DOCUMENTATION_TMPDIR; \
+	trap 'rm -rf "$$GET_DOCUMENTATION_TMPDIR"' EXIT; \
 	echo "Temporary directory: $$GET_DOCUMENTATION_TMPDIR"; \
 	bash tools/docs/pdf/get-documentation.sh && \
 	. "$$GET_DOCUMENTATION_TMPDIR/env" && \
@@ -351,8 +352,7 @@ docs-generate-pdf: ## Generate PDF documentation.
 		-v "$$GET_DOCUMENTATION_TMPDIR/embedded-modules:/app/embedded-modules:ro" \
 		-v "$(CURDIR)/pdf:/out" \
 		"$$PDF_BUILDER_IMAGE" \
-		python3 get_pdf_page.py # && \
-	rm -rf "$$GET_DOCUMENTATION_TMPDIR"
+		python3 get_pdf_page.py
 
 .PHONY: docs-external-module
 docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.

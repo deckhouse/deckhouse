@@ -121,9 +121,11 @@ jobs:
           make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}"
 
       - name: Install awscli
+        if: ${{ success() }}
         run: pip install awscli
 
       - name: Upload PDF files to S3
+        if: ${{ success() }}
         env:
           AWS_ACCESS_KEY_ID: "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
           AWS_SECRET_ACCESS_KEY: "${{ secrets.DOC_S3_SECRET_ACCESS_KEY_PROD }}"
