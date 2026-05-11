@@ -318,6 +318,9 @@ steps:
     run: |
       make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}"
 
+  - name: Install awscli
+    run: pip install awscli
+
   - name: Upload PDF files to S3
     env:
       AWS_ACCESS_KEY_ID: "${{ secrets.DOC_S3_ACCESS_KEY_ID_PROD }}"
