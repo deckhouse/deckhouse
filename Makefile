@@ -309,50 +309,10 @@ docs-generate-pdf: ## Generate PDF documentation.
   ##~ Options: DKP_DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
   ##~ Options: ONLY_RU=1 or ONLY_EN=1 - build a single language, do not combine both.
   ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
-	@GET_DOCUMENTATION_TMPDIR=$$(mktemp -d "$${TMPDIR:-/tmp}/deckhouse-get-doc.XXXXXX") || exit 1; \
-	export GET_DOCUMENTATION_TMPDIR; \
-	trap 'rm -rf "$$GET_DOCUMENTATION_TMPDIR"' EXIT; \
-	echo "Temporary directory: $$GET_DOCUMENTATION_TMPDIR"; \
-	bash tools/docs/pdf/get-documentation.sh && \
-	. "$$GET_DOCUMENTATION_TMPDIR/env" && \
-	mkdir -p "$(CURDIR)/pdf" && \
-	if [ -n "$(strip $(DKP_DOC_VERSION))" ]; then \
-		DKP_DOC_VERSION="$(strip $(DKP_DOC_VERSION))"; \
-	else \
-		BRANCH=$$(cd "$(CURDIR)" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo ""); \
-		if [ "$$BRANCH" = "main" ]; then \
-			DKP_DOC_VERSION="latest"; \
-		elif echo "$$BRANCH" | grep -qE 'release-[0-9]+\.[0-9]+'; then \
-			DKP_DOC_VERSION=$$(echo "$$BRANCH" | sed 's/.*release-//' | sed 's/[^0-9.].*//'); \
-		else \
-			DKP_DOC_VERSION="dev"; \
-		fi; \
-	fi; \
-	docker run --rm \
-		-w /app \
-		-e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
-		-e DKP_DOC_VERSION="$$DKP_DOC_VERSION" \
-		-e ONLY_RU="$(strip $(ONLY_RU))" \
-		-e ONLY_EN="$(strip $(ONLY_EN))" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/content:/app/content:ro" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/embedded-modules:/app/embedded-modules:ro" \
-		-v "$(CURDIR)/pdf:/out" \
-		"$$PDF_BUILDER_IMAGE" \
-		python3 get_pdf_page.py && \
-	docker run --rm \
-		-w /app \
-		-e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
-		-e DKP_DOC_VERSION="$$DKP_DOC_VERSION" \
-		-e ONLY_RU="$(strip $(ONLY_RU))" \
-		-e ONLY_EN="$(strip $(ONLY_EN))" \
-		-e SECTION_FILTER="Using" \
-		-e GUIDE_TITLE_EN="User's guide" \
-		-e GUIDE_TITLE_RU="Руководство пользователя" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/content:/app/content:ro" \
-		-v "$$GET_DOCUMENTATION_TMPDIR/embedded-modules:/app/embedded-modules:ro" \
-		-v "$(CURDIR)/pdf:/out" \
-		"$$PDF_BUILDER_IMAGE" \
-		python3 get_pdf_page.py
+	DKP_DOC_VERSION="$(strip $(DKP_DOC_VERSION))" \
+	ONLY_RU="$(strip $(ONLY_RU))" \
+	ONLY_EN="$(strip $(ONLY_EN))" \
+	bash tools/docs/pdf/generate-pdf.sh
 
 .PHONY: docs-external-module
 docs-external-module: yq bin/werf ## Build an external module docs and run the local portal.

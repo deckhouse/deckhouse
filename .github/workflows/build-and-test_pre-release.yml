@@ -3332,7 +3332,7 @@ jobs:
 
       - name: Install awscli
         if: ${{ success() }}
-        run: pip install awscli
+        run: apt-get install -y awscli
 
       - name: Upload PDF files to S3
         if: ${{ success() }}
