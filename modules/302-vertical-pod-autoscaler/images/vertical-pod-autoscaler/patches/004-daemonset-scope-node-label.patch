@@ -2050,27 +2050,3 @@ index 000000000..fb2ce6dc4
 +	return fmt.Sprintf("%s%x", labelPrefix, h.Sum32())
 +}
 +
-diff --git a/vertical-pod-autoscaler/routines.test b/vertical-pod-autoscaler/routines.test
-new file mode 100755
-index 000000000..b2b1a7c8a
-Binary files /dev/null and b/vertical-pod-autoscaler/routines.test differ
-diff --git a/vertical-pod-autoscaler/vpa_scope.cpu.out b/vertical-pod-autoscaler/vpa_scope.cpu.out
-new file mode 100644
-index 000000000..c7329636c
-Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope.cpu.out differ
-diff --git a/vertical-pod-autoscaler/vpa_scope.mem.out b/vertical-pod-autoscaler/vpa_scope.mem.out
-new file mode 100644
-index 000000000..d3dd064fb
-Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope.mem.out differ
-diff --git a/vertical-pod-autoscaler/vpa_scope_alloc.mem.out b/vertical-pod-autoscaler/vpa_scope_alloc.mem.out
-new file mode 100644
-index 000000000..8ce6f0b6c
-Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope_alloc.mem.out differ
-diff --git a/vertical-pod-autoscaler/vpa_scope_alloc2.mem.out b/vertical-pod-autoscaler/vpa_scope_alloc2.mem.out
-new file mode 100644
-index 000000000..1428d6876
-Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope_alloc2.mem.out differ
-diff --git a/vertical-pod-autoscaler/vpa_scope_alloc3.mem.out b/vertical-pod-autoscaler/vpa_scope_alloc3.mem.out
-new file mode 100644
-index 000000000..ef08533e9
-Binary files /dev/null and b/vertical-pod-autoscaler/vpa_scope_alloc3.mem.out differ
