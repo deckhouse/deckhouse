@@ -118,6 +118,16 @@ func (i *SSHProviderInitializer) GetConfig() *sshconfig.ConnectionConfig {
 	return i.config
 }
 
+// IsLegacyMode reports whether the connection config opts the SSH backend
+// into the legacy clissh path (sshconfig.Config.ForceLegacy). Returns false
+// when the connection config is not yet initialised.
+func (i *SSHProviderInitializer) IsLegacyMode() bool {
+	if i == nil || i.config == nil || i.config.Config == nil {
+		return false
+	}
+	return i.config.Config.ForceLegacy
+}
+
 func (i *SSHProviderInitializer) CheckHosts() bool {
 	if i.config != nil {
 		if len(i.config.Hosts) > 0 {
