@@ -33,6 +33,9 @@ PDF_BUILDER_IMAGE=$(${WERF_BINARY} stage image website-docs/pdf-builder)
 echo "STATIC_IMAGE: ${STATIC_IMAGE}"
 echo "MODULES_IMAGE: ${MODULES_IMAGE}"
 echo "PDF_BUILDER_IMAGE: ${PDF_BUILDER_IMAGE}"
+[[ -n "${STATIC_IMAGE}" ]] || { echo "ERROR: STATIC_IMAGE is empty" >&2; exit 1; }
+[[ -n "${MODULES_IMAGE}" ]] || { echo "ERROR: MODULES_IMAGE is empty" >&2; exit 1; }
+[[ -n "${PDF_BUILDER_IMAGE}" ]] || { echo "ERROR: PDF_BUILDER_IMAGE is empty" >&2; exit 1; }
 set +x
 
 CONTAINER_NAME="d8-doc-${WERF_ENV,,}"
