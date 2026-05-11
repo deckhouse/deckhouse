@@ -622,3 +622,78 @@ The same as the [alert shortcode](#user-content-alert-details), but used in temp
 ```
 {{ partial "alert" ( dict "level" "warning" "content" "Markdown content..." ) }}
 ```
+
+## PDF generation
+
+The documentation can be exported to PDF. Two guides are generated: an administrator's guide and a user's guide, each in English and Russian.
+
+### Output files
+
+| File | Content |
+|------|---------|
+| `pdf/deckhouse-admin-guide_en.pdf` | Administrator's guide, English |
+| `pdf/deckhouse-admin-guide_ru.pdf` | Administrator's guide, Russian |
+| `pdf/deckhouse-user-guide_en.pdf` | User's guide, English |
+| `pdf/deckhouse-user-guide_ru.pdf` | User's guide, Russian |
+
+### How it works
+
+1. **Build werf images** — `generate-pdf.sh` builds three werf images from `docs/documentation`:
+   - `website-docs/web/static` — rendered Jekyll documentation site (HTML/CSS/assets);
+   - `website-docs/modules-embedded/static-artifact` — built-in module documentation;
+   - `website-docs/pdf-builder` — wkhtmltopdf + Python scripts for PDF rendering.
+
+2. **Export content** — static HTML is exported from the built images into a temporary directory via `docker create` + `docker cp`.
+
+3. **Generate PDF** — `docker run` executes `get_pdf_page.py` inside the `pdf-builder` image. The script reads `main.yml` from the current repository (not baked into the image) to build the document structure, then renders HTML chunks with wkhtmltopdf.
+
+4. **Upload to S3** (CI only) — the generated PDFs are uploaded to `s3://<bucket>/deckhouse-web-<env>/<version>/docs-dkp/<lang>/pdf/`.
+
+### `main.yml` sidebar file
+
+`docs/documentation/_data/sidebars/main.yml` defines the document structure (table of contents). It is mounted into the `pdf-builder` container at runtime (`-v .../main.yml:/app/main.yml:ro`) so that each branch uses its own version of the file without rebuilding the image.
+
+### Generating PDFs locally
+
+Run from the repository root:
+
+```shell
+make docs-generate-pdf
+```
+
+Options:
+
+| Variable | Description |
+|----------|-------------|
+| `DKP_DOC_VERSION=X.Y` | Version string shown in PDF headers and on the cover page. Defaults to `latest` on `main`, to the version number on `release-X.Y` branches, and to `dev` on other branches. |
+| `ONLY_RU=1` | Generate Russian PDFs only. |
+| `ONLY_EN=1` | Generate English PDFs only. |
+
+Example:
+
+```shell
+make docs-generate-pdf DKP_DOC_VERSION=1.67
+```
+
+Local builds use a local Docker registry at `localhost:4999/docs` (started automatically by `make up`).
+
+### werf image definition
+
+The `pdf-builder` image is defined in `docs/documentation/werf-pdf-builder.inc.yaml`. It is based on `debian-trixie-slim` and includes:
+
+- wkhtmltopdf 0.12.4 (generic Linux build with patched Qt WebKit);
+- Python 3 with `beautifulsoup4` and `yaml`;
+- DejaVu fonts.
+
+The image contains `get_pdf_page.py`, `toc_style.css`, and `toc_template.xsl` from `tools/docs/pdf/`. The `main.yml` sidebar file is **not** included in the image — it is mounted at runtime.
+
+### CI workflows
+
+| Workflow | Trigger | Behavior on failure |
+|----------|---------|---------------------|
+| `build-and-test_pre-release.yml` | Push to `release-*` branch | `continue-on-error: true` — pipeline stays green |
+| `docs-pdf-daily.yml` | Daily at 03:00 UTC, or manual `workflow_dispatch` | Fails the job — alerts on broken `main` |
+
+The pre-release workflow runs after `doc_web_build` completes. The daily workflow runs independently on the default branch (`main`) and generates PDFs with `DOC_VERSION=latest`.
+
+Both workflows upload PDFs to the production S3 bucket using secrets `DOC_S3_ACCESS_KEY_ID_PROD`, `DOC_S3_SECRET_ACCESS_KEY_PROD`, `DOC_S3_BUCKET_PROD`, `DOC_S3_REGION`, and `DOC_S3_EP`.
