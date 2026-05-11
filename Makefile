@@ -307,11 +307,10 @@ docs: bin/werf ## Run containers with the documentation.
 .PHONY: docs-generate-pdf
 docs-generate-pdf: ## Generate PDF documentation.
   ##~ Options: DKP_DOC_VERSION=X.XX - DKP version (used just in PDF headers and footers). If not set, the version is determined from the git branch name.
-  ##~ Options: ONLY_RU=1 or ONLY_EN=1 - build a single language, do not combine both.
+  ##~ Options: BUILD_LANG=ru|en - build a single language only. If not set, both languages are built.
   ##~ Outputs: pdf/deckhouse-admin-guide_{ru,en}.pdf and pdf/deckhouse-user-guide_{ru,en}.pdf
 	DKP_DOC_VERSION="$(strip $(DKP_DOC_VERSION))" \
-	ONLY_RU="$(strip $(ONLY_RU))" \
-	ONLY_EN="$(strip $(ONLY_EN))" \
+	BUILD_LANG="$(strip $(BUILD_LANG))" \
 	bash tools/docs/pdf/generate-pdf.sh
 
 .PHONY: docs-external-module

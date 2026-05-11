@@ -1096,20 +1096,17 @@ def _env_truthy(name: str) -> bool:
 
 
 def selected_pdf_langs() -> Tuple[str, ...]:
-    """ONLY_RU=1 or ONLY_EN=1 (via env) restricts build to one language; both set → error."""
-    only_ru = _env_truthy("ONLY_RU")
-    only_en = _env_truthy("ONLY_EN")
-    if only_ru and only_en:
+    """BUILD_LANG=ru|en restricts build to one language; unset means both."""
+    build_lang = os.environ.get("BUILD_LANG", "").strip().lower()
+    if not build_lang:
+        return SUPPORTED_LANGS
+    if build_lang not in SUPPORTED_LANGS:
         print(
-            "Error: use only one of ONLY_RU=1 or ONLY_EN=1, not both.",
+            f"Error: BUILD_LANG must be one of {SUPPORTED_LANGS}, got '{build_lang}'.",
             file=sys.stderr,
         )
         sys.exit(2)
-    if only_ru:
-        return ("ru",)
-    if only_en:
-        return ("en",)
-    return SUPPORTED_LANGS
+    return (build_lang,)
 
 
 # === Main execution ===

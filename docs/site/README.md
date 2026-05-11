@@ -666,8 +666,8 @@ Options:
 | Variable | Description |
 |----------|-------------|
 | `DKP_DOC_VERSION=X.Y` | Version string shown in PDF headers and on the cover page. Defaults to `latest` on `main`, to the version number on `release-X.Y` branches, and to `dev` on other branches. |
-| `ONLY_RU=1` | Generate Russian PDFs only. |
-| `ONLY_EN=1` | Generate English PDFs only. |
+| `BUILD_LANG=ru` | Generate Russian PDFs only. |
+| `BUILD_LANG=en` | Generate English PDFs only. |
 
 Example:
 

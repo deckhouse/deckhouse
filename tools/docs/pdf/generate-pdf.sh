@@ -24,7 +24,6 @@ else
   export WERF_DEV=true
 fi
 
-set -x
 ${WERF_BINARY} build website-docs/web/static website-docs/modules-embedded/static-artifact website-docs/pdf-builder
 
 STATIC_IMAGE=$(${WERF_BINARY} stage image website-docs/web/static)
@@ -87,8 +86,7 @@ docker run --rm \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-admin-guide.pdf \
   -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
-  -e ONLY_RU="${ONLY_RU:-}" \
-  -e ONLY_EN="${ONLY_EN:-}" \
+  -e BUILD_LANG="${BUILD_LANG:-}" \
   -v "${WORK_DIR}/content:/app/content:ro" \
   -v "${WORK_DIR}/embedded-modules:/app/embedded-modules:ro" \
   -v "${SIDEBAR_YAML}:/app/main.yml:ro" \
@@ -100,8 +98,7 @@ docker run --rm \
   -w /app \
   -e PDF_OUTPUT_PATH=/out/deckhouse-user-guide.pdf \
   -e DKP_DOC_VERSION="${DKP_DOC_VERSION}" \
-  -e ONLY_RU="${ONLY_RU:-}" \
-  -e ONLY_EN="${ONLY_EN:-}" \
+  -e BUILD_LANG="${BUILD_LANG:-}" \
   -e SECTION_FILTER="Using" \
   -e GUIDE_TITLE_EN="User's guide" \
   -e GUIDE_TITLE_RU="Руководство пользователя" \
