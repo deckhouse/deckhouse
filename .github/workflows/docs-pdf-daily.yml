@@ -49,7 +49,6 @@ jobs:
   doc_pdf_build:
     name: Doc PDF build
     if: ${{ github.repository == 'deckhouse/deckhouse-test-1' }}
-    continue-on-error: true
     # <template: doc_pdf_build_template>
     runs-on: [self-hosted, large]
     steps:
@@ -118,7 +117,7 @@ jobs:
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           DKP_DOC_VERSION: "${{ env.DOC_VERSION }}"
         run: |
-          make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}" || true
+          make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}"
 
       - name: Install awscli
         if: ${{ success() }}
