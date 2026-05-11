@@ -118,11 +118,16 @@ jobs:
           WERF_REPO: "${{ steps.check_rw_registry.outputs.web_registry_path }}"
           DKP_DOC_VERSION: "${{ env.DOC_VERSION }}"
         run: |
-          make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}" || true
+          make docs-generate-pdf DKP_DOC_VERSION="${DKP_DOC_VERSION}"
 
       - name: Install awscli
         if: ${{ success() }}
-        run: sudo apt-get install -y awscli
+        run: |
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+          unzip -q /tmp/awscliv2.zip -d /tmp/awscliv2
+          /tmp/awscliv2/aws/install -i "${HOME}/.local/aws-cli" -b "${HOME}/.local/bin"
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          rm -rf /tmp/awscliv2.zip /tmp/awscliv2
 
       - name: Upload PDF files to S3
         if: ${{ success() }}
