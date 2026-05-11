@@ -17,7 +17,6 @@ namespaces_for_integrity:
     - d8-ingress-nginx
     - d8-istio
     - d8-local-path-provisioner
-    - d8-log-shipper
     - d8-metallb
     - d8-monitoring
     - d8-multitenancy-manager

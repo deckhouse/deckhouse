@@ -1254,44 +1254,6 @@
       }
     },
     {
-      "title": "The log-shipper module",
-      "description": "Collection, filtering, and enrichment of logs in the Deckhouse Kubernetes Platform cluster.",
-      "module": "log-shipper",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "logging",
-        "observability"
-      ],
-      "editionMinimumAvailable": "ce",
-      "url": "log-shipper/",
-      "ru": {
-        "title": "Модуль log-shipper",
-        "description": "Сбор, фильтрация и обогащение логов в кластере Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "log-shipper",
-        "stage": "General Availability",
-        "subsystems": [
-          "observability"
-        ],
-        "namespace": "d8-log-shipper",
-        "descriptions": {
-          "en": "Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.",
-          "ru": "Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие)."
-        },
-        "oss": [
-          {
-            "name": "Vector",
-            "link": "https://github.com/timberio/vector",
-            "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
-            "logo": "/images/logos/vector.svg",
-            "license": "Mozilla Public License, version 2.0"
-          }
-        ]
-      }
-    },
-    {
       "title": "The loki module",
       "description": "Log storage in the Deckhouse Kubernetes Platform cluster based on Grafana Loki.",
       "module": "loki",

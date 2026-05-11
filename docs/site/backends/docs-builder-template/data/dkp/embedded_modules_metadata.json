@@ -713,27 +713,6 @@
         }
       ]
     },
-    "log-shipper": {
-      "name": "log-shipper",
-      "stage": "General Availability",
-      "subsystems": [
-        "observability"
-      ],
-      "namespace": "d8-log-shipper",
-      "descriptions": {
-        "en": "Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.",
-        "ru": "Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие)."
-      },
-      "oss": [
-        {
-          "name": "Vector",
-          "link": "https://github.com/timberio/vector",
-          "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
-          "logo": "/images/logos/vector.svg",
-          "license": "Mozilla Public License, version 2.0"
-        }
-      ]
-    },
     "loki": {
       "name": "loki",
       "stage": "Preview",
@@ -1921,9 +1900,7 @@
       "logo": "/images/logos/vector.svg",
       "license": "Mozilla Public License, version 2.0",
       "versions": [],
-      "modules": [
-        "log-shipper"
-      ]
+      "modules": []
     }
   }
 }

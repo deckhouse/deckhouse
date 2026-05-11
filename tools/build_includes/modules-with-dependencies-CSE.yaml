@@ -231,22 +231,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /modules/460-log-shipper/hooks
-  to: /deckhouse/modules/460-log-shipper/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /modules/460-log-shipper/apis
-  to: /deckhouse/modules/460-log-shipper/apis
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /modules/462-loki/hooks
   to: /deckhouse/modules/462-loki/hooks
   excludePaths:

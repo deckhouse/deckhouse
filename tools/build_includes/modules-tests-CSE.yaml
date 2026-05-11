@@ -329,17 +329,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /modules/460-log-shipper
-  to: /deckhouse/modules/460-log-shipper
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /modules/462-loki
   to: /deckhouse/modules/462-loki
   excludePaths:
