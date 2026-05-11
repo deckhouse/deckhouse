@@ -121,6 +121,7 @@ func New(logger *log.Logger, opts ...Option) *Client {
 		HistoryMax:  10,
 		Annotations: make(map[string]string),
 		Labels:      make(map[string]string),
+		Timeout:     2 * time.Minute,
 	}
 
 	// Apply any provided options
@@ -191,6 +192,8 @@ type InstallOptions struct {
 
 	ReleaseLabels map[string]string // Labels to apply to the release
 
+	ResourcesLabels map[string]string // Labels to apply to all resources
+
 	// OnTrackingEvent is an optional callback invoked with progress updates
 	// as Kubernetes resources are being tracked for readiness during install.
 	OnTrackingEvent func(name string, report progrep.ProgressReport)
@@ -209,6 +212,14 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 	var valuesSet []string
 	if len(opts.RootValues) > 0 {
 		valuesSet = append(valuesSet, opts.RootValues)
+	}
+
+	labels := maps.Clone(c.opts.Labels)
+	if len(opts.ResourcesLabels) > 0 {
+		if labels == nil {
+			labels = make(map[string]string, len(opts.ResourcesLabels))
+		}
+		maps.Copy(labels, opts.ResourcesLabels)
 	}
 
 	// reportCh receives progress reports from nelm during resource tracking.
@@ -243,7 +254,7 @@ func (c *Client) Install(ctx context.Context, namespace, releaseName string, opt
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
 		ReleaseInstallRuntimeOptions: common.ReleaseInstallRuntimeOptions{
-			ExtraLabels:             c.opts.Labels,
+			ExtraLabels:             labels,
 			ExtraAnnotations:        c.opts.Annotations,
 			NoInstallStandaloneCRDs: true,
 			ReleaseHistoryLimit:     int(c.opts.HistoryMax),
@@ -276,6 +287,14 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		valuesSet = append(valuesSet, opts.RootValues)
 	}
 
+	labels := maps.Clone(c.opts.Labels)
+	if len(opts.ResourcesLabels) > 0 {
+		if labels == nil {
+			labels = make(map[string]string, len(opts.ResourcesLabels))
+		}
+		maps.Copy(labels, opts.ResourcesLabels)
+	}
+
 	res, err := action.ChartRender(ctx, action.ChartRenderOptions{
 		KubeConnectionOptions: common.KubeConnectionOptions{
 			KubeContextCurrent: c.kubeContext,
@@ -289,7 +308,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 		DefaultChartName:       releaseName,
 		DefaultChartVersion:    "0.2.0",
 		DefaultChartAPIVersion: "v2",
-		ExtraLabels:            c.opts.Labels,
+		ExtraLabels:            labels,
 		ExtraAnnotations:       c.opts.Annotations,
 		ReleaseName:            releaseName,
 		ReleaseNamespace:       namespace,

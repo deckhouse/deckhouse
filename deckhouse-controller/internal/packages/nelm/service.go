@@ -31,7 +31,8 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/monitor"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm/drift"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -67,7 +68,7 @@ type Service struct {
 	tmpDir string // Temporary directory for values files
 
 	client         *nelm.Client // nelm client for Helm operations
-	monitorManager *monitor.Manager
+	monitorManager *drift.Manager
 
 	status *status.Service
 
@@ -75,7 +76,7 @@ type Service struct {
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
 	nelmClient := nelm.New(logger, nelm.WithLabels(map[string]string{
 		"heritage": "deckhouse",
 	}))
@@ -84,7 +85,7 @@ func NewService(cache runtimecache.Cache, callback monitor.AbsentCallback, statu
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
 		status:         status,
-		monitorManager: monitor.New(cache, nelmClient, callback, logger),
+		monitorManager: drift.New(cache, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -161,6 +162,9 @@ func (s *Service) Render(ctx context.Context, namespace string, pkg Package) (st
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
+		ResourcesLabels: map[string]string{
+			health.LabelKey: pkg.GetName(),
+		},
 	})
 }
 
@@ -235,6 +239,9 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		Path:        pkg.GetPath(),
 		ValuesPaths: []string{valuesPath},
 		RootValues:  pkg.GetRuntimeValues(),
+		ResourcesLabels: map[string]string{
+			health.LabelKey: pkg.GetName(),
+		},
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -263,10 +270,13 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		OnTrackingEvent: s.status.UpdateTracking,
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
+		RootValues:      pkg.GetRuntimeValues(),
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
-		RootValues: pkg.GetRuntimeValues(),
+		ResourcesLabels: map[string]string{
+			health.LabelKey: pkg.GetName(),
+		},
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -319,7 +329,7 @@ func (s *Service) shouldRunHelmUpgrade(ctx context.Context, namespace, releaseNa
 	}
 
 	if err = s.monitorManager.CheckResources(ctx, releaseName); err != nil {
-		if errors.Is(err, monitor.ErrAbsentManifest) {
+		if errors.Is(err, drift.ErrAbsentManifest) {
 			return true, nil
 		}
 

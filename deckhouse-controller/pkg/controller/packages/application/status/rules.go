@@ -55,14 +55,11 @@ const (
 	ConditionReady = "Ready"
 
 	// ConditionScaled reflects the runtime scaling state of the application.
-	// True at steady state. May become Unknown when the previous version was
-	// disabled before the new one was applied, when reconcile cannot trust the
-	// running state, or when a hard dependency was disabled under the running
-	// app. False when manifests failed. In some reconcile scenarios the value
-	// can be set by another controller, so it does not always follow directly
-	// from the current reconcile error.
-	// Possible reasons: RequirementsUnmet, DownloadFailed, HookInitializationFailed,
-	// HookFailed, ManifestsApplyFailed, Scaled (when True).
+	// Owned exclusively by the workload health monitor — no other condition
+	// influences this value. True at steady state, False when at least one
+	// workload is rolling out (Reconciling) or failed (Degraded), Unknown
+	// when there are no workloads to observe yet.
+	// Possible reasons: Reconciling (False), Degraded (False), Scaled (True).
 	ConditionScaled = "Scaled"
 
 	// ConditionManaged reflects whether the controller is actively managing the
@@ -135,6 +132,11 @@ func canonicalReason(internalCond, internalReason string) string {
 			return internalReason
 		}
 		return "ManifestsApplyFailed"
+	case intScaled:
+		// The health monitor is the only non-True writer of intScaled, and it
+		// produces canonical external reasons directly ("Reconciling",
+		// "Degraded"). No translation needed — pass through.
+		return internalReason
 	}
 
 	return ""
@@ -340,19 +342,14 @@ func mapReady(state condmap.State) metav1.Condition {
 	return metav1.Condition{}
 }
 
-// mapScaled mirrors the internal Scaled condition, including Unknown. Tasks set
-// Unknown when scaling state cannot be determined (e.g. the old version was
-// disabled before the new one was applied). A disabled dependency on a running
-// app forces Scaled=Unknown — the cause is external, so we cannot honestly
-// claim either True or False.
+// mapScaled mirrors the internal Scaled condition verbatim. Scaled is owned
+// by a separate controller (the workload health monitor) and is not derived
+// from any other condition — install/update/dependency signals never override
+// it. When the internal condition is absent, external Scaled is Unknown.
 func mapScaled(state condmap.State) metav1.Condition {
-	if isDependencyDisabled(state) {
-		return emit(state, ConditionScaled, metav1.ConditionUnknown, intRequirementsMet)
-	}
-
 	status, ok := state.GetIntStatus(intScaled)
 	if !ok {
-		return metav1.Condition{}
+		return metav1.Condition{Type: ConditionScaled, Status: metav1.ConditionUnknown}
 	}
 
 	return emit(state, ConditionScaled, status, intScaled)

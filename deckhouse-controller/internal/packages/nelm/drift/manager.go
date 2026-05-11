@@ -15,7 +15,7 @@
 // Package monitor provides resource monitoring for Helm releases deployed via nelm.
 // It periodically checks that all resources from a release manifest are present in the cluster,
 // helping detect configuration drift or accidental deletions.
-package monitor
+package drift
 
 import (
 	"context"
