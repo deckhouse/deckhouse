@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks/mocks"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 func TestCheckAvailabilityPorts(t *testing.T) {
@@ -69,13 +68,11 @@ func TestCheckAvailabilityPorts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testProvider := providerinitializer.NewSSHProviderInitializer(nil, nil)
 			mockNode := &mocks.MockNodeInterface{}
 			mockScript := &mocks.MockScript{}
 			tt.setupMock(mockNode, mockScript)
 
-			check := PortsCheck{SSHProviderInitializer: testProvider}
-			err := check.Run(context.Background())
+			err := checkAvailabilityPorts(context.Background(), mockNode)
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)
