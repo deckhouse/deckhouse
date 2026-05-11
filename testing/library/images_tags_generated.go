@@ -360,9 +360,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"helper":               "imageHash-localPathProvisioner-helper",
 		"localPathProvisioner": "imageHash-localPathProvisioner-localPathProvisioner",
 	},
-	"logShipper": map[string]interface{}{
-		"vector": "imageHash-logShipper-vector",
-	},
 	"loki": map[string]interface{}{
 		"loki": "imageHash-loki-loki",
 	},
