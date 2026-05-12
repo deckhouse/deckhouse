@@ -23,7 +23,10 @@ The Level 2 C4 architecture of the [`console`](/modules/console/) module and its
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Console module architecture](../../../images/architecture/deckhouse/c4-l2-deckhouse-console.png)
 
-The numbers in the diagram indicate the order in which the module components are accessed: access to `frontend`, `backend`, and `nginx` goes through the Ingress NGINX Controller, with mandatory user authentication in Dex.
+{% alert level="info" %}
+The numbers in the diagram indicate the order of the user's request passage through the `frontend`, `backend`, and `nginx` components:
+- At steps 1, 2, and 3, the request is processed by the Ingress NGINX Controller with mandatory user authentication in the unified platform authentication system, implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, refer to [the corresponding documentation section](../iam/user-authn.html).
+{% endalert %}
 
 ### Module components
 
@@ -42,8 +45,6 @@ The module consists of the following components:
    * Downloading VM disks (when the [`virtualization`](/modules/virtualization/) and [`storage-volume-data-manager`](/modules/storage-volume-data-manager/) modules are enabled).
 
 1. **Observability-gw**: Consists of a single **nginx** container and proxies requests to Grafana to embed dashboards into the platform's main web UI, as well as to work with metrics and logs for the selected project.
-
-1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, refer to the [corresponding documentation section](../iam/user-authn.html).
 
 ### Module interactions
 
@@ -85,23 +86,27 @@ The Level 2 C4 architecture of the [`documentation`](/modules/documentation/) mo
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Documentation module architecture](../../../images/architecture/deckhouse/c4-l2-deckhouse-documentation.png)
 
+{% alert level="info" %}
+The numbers on the diagram indicate the sequence of a user request passing through the `web` component:
+- Steps 1, 2, and 3 represent processing by the Ingress NGINX Controller with mandatory authentication of the user in the unified platform authentication system, implemented by the [`user-authn`](/modules/user-authn) module. For more details about the `user-authn` module architecture, see [the corresponding documentation section](../iam/user-authn.html).
+- Steps 4 and 5 perform user authorization based on Kubernetes RBAC to provide secure access.
+{% endalert %}
+
 ### Module components
 
 The module consists of the following components:
 
-1. **Documentation**: A component that provides the documentation web interface.
+- **Documentation**: A component that provides the documentation web interface.
 
     It consists of the following containers:
 
-    * **web**: Main container.
+  * **web**: Main container.
 
-    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the main container. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
+  * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to the main container. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-    * **builder**: Sidecar container that dynamically extends the documentation when new DKP modules are installed. The [Hugo](https://github.com/gohugoio/hugo) static site generator is used to render and generate the up-to-date site content.
+  * **builder**: Sidecar container that dynamically extends the documentation when new DKP modules are installed. The [Hugo](https://github.com/gohugoio/hugo) static site generator is used to render and generate the up-to-date site content.
 
       The **builder** container automatically creates and updates a Kubernetes Lease resource, placing an endpoint for documentation updates. This endpoint is used by the [`deckhouse`](/modules/deckhouse/) module controller to initiate documentation updates when modules are updated or installed. This ensures that changes are promptly rendered in the web interface.
-
-1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, refer to the [corresponding documentation section](../iam/user-authn.html).
 
 ### Module interactions
 
@@ -137,13 +142,16 @@ The Level 2 C4 architecture of the [`deckhouse-tools`](/modules/deckhouse-tools/
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4_EN --->
 ![Deckhouse-tools module architecture](../../../images/architecture/deckhouse/c4-l2-deckhouse-deckhouse-tools.png)
 
+{% alert level="info" %}
+The numbers in the diagram indicate the order in which the user's request passes through the `web` component:
+- At steps 1, 2, and 3, the request is handled by the Ingress NGINX Controller with mandatory user authentication in the unified platform authentication system, implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, see [the corresponding documentation section](../iam/user-authn.html).
+{% endalert %}
+
 ### Module components
 
 The module consists of the following components:
 
-1. **Deckhouse-tools**: Consists of a single **web** container and provides a web interface with links to download the Deckhouse CLI utility.
-
-1. **Dex-authenticator**: Performs user verification and authentication using the platform's unified authentication system implemented by the [`user-authn`](/modules/user-authn) module. For more information about the `user-authn` module architecture, refer to the [corresponding documentation section](../iam/user-authn.html).
+- **Deckhouse-tools**: Consists of a single **web** container and provides a web interface with links to download the Deckhouse CLI utility.
 
 ### Module interactions
 
