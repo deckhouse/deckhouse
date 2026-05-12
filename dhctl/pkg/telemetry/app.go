@@ -23,8 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	ottrace "go.opentelemetry.io/otel/trace"
-
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 func StartApplication(ctx context.Context) (context.Context, ottrace.Span) {
@@ -32,8 +30,6 @@ func StartApplication(ctx context.Context) (context.Context, ottrace.Span) {
 		ctx,
 		"dhctl",
 		ottrace.WithAttributes(
-			attribute.String("deckhouse.edition", app.AppEdition),
-			attribute.String("service.version", app.AppVersion),
 			attribute.String("service.instance.id", fmt.Sprintf("%s-%d", hostnameOrUnknown(), os.Getpid())),
 			attribute.StringSlice("process.argv", append([]string(nil), os.Args...)),
 			attribute.Int("process.pid", os.Getpid()),

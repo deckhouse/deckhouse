@@ -1,4 +1,4 @@
-// Copyright 2022 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
 
@@ -117,7 +118,10 @@ func (e *PostBootstrapScriptExecutor) run(ctx context.Context) (result string, e
 	return string(content), nil
 }
 
-func ValidateScriptFile(path string) error {
+func ValidateScriptFile(ctx context.Context, path string) error {
+	_, span := telemetry.StartSpan(ctx, "ValidatePostBootstrapScript")
+	defer span.End()
+
 	info, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("Cannot get stats for path %s: %v", path, err)

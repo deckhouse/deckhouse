@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/attribute"
-	ottrace "go.opentelemetry.io/otel/trace"
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
@@ -51,20 +49,8 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		ctx, span := telemetry.StartSpan(
-			ctx,
-			"dhctl/bootstrap/command",
-			ottrace.WithAttributes(
-				attribute.Int("dhctl.bootstrap.config_path_count", len(app.ConfigPaths)),
-				attribute.Bool("dhctl.bootstrap.drop_cache", app.DropCache),
-				attribute.Bool("dhctl.bootstrap.debug", app.IsDebug),
-			),
-		)
-		defer func() {
-			span.End()
-		}()
-
-		span.AddEvent("bootstrap command started")
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
 
 		logger := log.GetDefaultLogger()
 		extLogger, ok := logger.(*log.ExternalLogger)
@@ -73,14 +59,14 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(extLogger.GetLogger())
+
 		providerParams := app.ProviderParams(&opts.Global, loggerProvider)
+
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, providerParams)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
 				return err
 			}
-
-			span.AddEvent("providers initialized without cached hosts")
 		}
 
 		bootstraper := bootstrap.NewClusterBootstrapper(&bootstrap.Params{
@@ -93,14 +79,13 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 			KubeProvider:           kubeProvider,
 			Options:                opts,
 		})
+
 		err = bootstraper.Bootstrap(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("Bootstrap failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
 			return err
 		}
-
-		span.AddEvent("bootstrap command completed")
 
 		return nil
 	})

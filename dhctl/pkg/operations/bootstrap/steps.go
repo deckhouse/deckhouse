@@ -51,6 +51,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/rpp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
@@ -272,6 +273,9 @@ func InstallDeckhouse(
 	res := &InstallDeckhouseResult{}
 
 	return res, log.ProcessCtx(ctx, "bootstrap", "Install Deckhouse", func(ctx context.Context) error {
+		ctx, span := telemetry.StartSpan(ctx, "InstallDeckhouse")
+		defer span.End()
+
 		err := CheckPreventBreakAnotherBootstrappedCluster(ctx, kubeCl, config)
 		if err != nil {
 			return err
@@ -428,6 +432,9 @@ func applyPostBootstrapModuleConfigs(
 }
 
 func RunPostInstallTasks(ctx context.Context, kubeCl *client.KubernetesClient, result *InstallDeckhouseResult) error {
+	ctx, span := telemetry.StartSpan(ctx, "RunPostInstallTasks")
+	defer span.End()
+
 	if result == nil {
 		log.DebugF("Skip post install tasks because result is nil\n")
 		return nil

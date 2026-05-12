@@ -1,4 +1,4 @@
-// Copyright 2021 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge"
 	statecache "github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
@@ -43,9 +44,11 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		tmpDir := opts.Global.TmpDir
+
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
 		logger := log.GetDefaultLogger()
-		isDebug := opts.Global.IsDebug
 
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
@@ -62,11 +65,11 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 		}
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           tmpDir,
+			TmpDir:           opts.Global.TmpDir,
 			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
-			IsDebug:          isDebug,
+			IsDebug:          opts.Global.IsDebug,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -82,28 +85,31 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 					},
 				},
 			},
-			ProviderGetter:  providerGetter,
-			TmpDir:          tmpDir,
-			Logger:          logger,
-			IsDebug:         isDebug,
-			DirectoryConfig: opts.DirConfig(),
-
+			ProviderGetter:     providerGetter,
+			TmpDir:             opts.Global.TmpDir,
+			Logger:             logger,
+			IsDebug:            opts.Global.IsDebug,
+			DirectoryConfig:    opts.DirConfig(),
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
+
 		cacheIdentity := ""
 		if opts.Kube.InCluster {
 			cacheIdentity = "in-cluster"
 		}
+
 		if sshProviderInitializer != nil {
 			if sshProviderInitializer.CheckHosts() {
 				sshProvider, err := sshProviderInitializer.GetSSHProvider(ctx)
 				if err != nil {
 					return err
 				}
+
 				sshClient, err := sshProvider.Client(ctx)
 				if err != nil {
 					return err
 				}
+
 				cacheIdentity = sshClient.Check().String()
 			}
 		}
@@ -114,12 +120,14 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 				opts.Kube.ConfigContext,
 			)
 		}
-		converger.CacheID = cacheIdentity
-		_, err = converger.Converge(ctx)
 
+		converger.CacheID = cacheIdentity
+
+		_, err = converger.Converge(ctx)
 		if err != nil {
 			msg := fmt.Sprintf("Converge failed with error: %v", err)
 			cache.GetGlobalTmpCleaner().DisableCleanup(msg)
+
 			return err
 		}
 
@@ -135,16 +143,18 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		tmpDir := opts.Global.TmpDir
-		logger := log.GetDefaultLogger()
-		isDebug := opts.Global.IsDebug
 
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
+		logger := log.GetDefaultLogger()
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
 			return fmt.Errorf("cannot convert logger to ExternalLogger")
 		}
 
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
@@ -154,11 +164,11 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 		}
 
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           tmpDir,
+			TmpDir:           opts.Global.TmpDir,
 			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           logger,
-			IsDebug:          isDebug,
+			IsDebug:          opts.Global.IsDebug,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -175,9 +185,9 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 				},
 			},
 			ProviderGetter:  providerGetter,
-			TmpDir:          tmpDir,
+			TmpDir:          opts.Global.TmpDir,
 			Logger:          logger,
-			IsDebug:         isDebug,
+			IsDebug:         opts.Global.IsDebug,
 			DirectoryConfig: opts.DirConfig(),
 		})
 
@@ -193,14 +203,17 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
-		logger := log.GetDefaultLogger()
 
+		span := telemetry.SpanFromContext(ctx)
+		span.SetAttributes(opts.ToSpanAttributes()...)
+
+		logger := log.GetDefaultLogger()
 		externalLogger, ok := logger.(*log.ExternalLogger)
 		if !ok {
 			return fmt.Errorf("cannot convert logger to ExternalLogger")
 		}
-
 		loggerProvider := libdhctl_log.SimpleLoggerProvider(externalLogger.GetLogger())
+
 		params := app.ProviderParams(&opts.Global, loggerProvider)
 		sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithKubeFlagsDefined(opts.Kube.IsDefined()))
 		if err != nil {
@@ -209,16 +222,14 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			}
 		}
 
-		tmpDir := opts.Global.TmpDir
 		loggerFor := log.GetDefaultLogger()
-		isDebug := opts.Global.IsDebug
 
 		providersGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
-			TmpDir:           tmpDir,
+			TmpDir:           opts.Global.TmpDir,
 			DownloadDir:      opts.Global.DownloadDir,
 			AdditionalParams: cloud.ProviderAdditionalParams{},
 			Logger:           loggerFor,
-			IsDebug:          isDebug,
+			IsDebug:          opts.Global.IsDebug,
 		})
 
 		converger := converge.NewConverger(&converge.Params{
@@ -236,9 +247,9 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			},
 			CheckHasTerraformStateBeforeMigration: opts.Converge.CheckHasTerraformStateBeforeMigrateToTofu,
 			ProviderGetter:                        providersGetter,
-			TmpDir:                                tmpDir,
+			TmpDir:                                opts.Global.TmpDir,
 			Logger:                                loggerFor,
-			IsDebug:                               isDebug,
+			IsDebug:                               opts.Global.IsDebug,
 			DirectoryConfig:                       opts.DirConfig(),
 		})
 		cacheIdentity := ""

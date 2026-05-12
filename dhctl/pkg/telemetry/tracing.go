@@ -43,6 +43,10 @@ func StartSpan(ctx context.Context, name string, opts ...ottrace.SpanStartOption
 	return Tracer().Start(ctx, name, opts...)
 }
 
+func SpanFromContext(ctx context.Context) ottrace.Span {
+	return ottrace.SpanFromContext(ctx)
+}
+
 func traceName() string {
 	pc, _, _, ok := runtime.Caller(2)
 	if !ok {

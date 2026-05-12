@@ -1,4 +1,4 @@
-// Copyright 2023 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
+	otattribute "go.opentelemetry.io/otel/attribute"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
@@ -51,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -166,13 +168,16 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 }
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap")
+	defer span.End()
+
 	var preflightRunner *preflight.Preflight
 
 	masterAddressesForSSH := make(map[string]string)
 
 	if b.Options.Bootstrap.PostBootstrapScriptPath != "" {
 		log.DebugF("Have post bootstrap script: %s\n", b.Options.Bootstrap.PostBootstrapScriptPath)
-		if err := ValidateScriptFile(b.Options.Bootstrap.PostBootstrapScriptPath); err != nil {
+		if err := ValidateScriptFile(ctx, b.Options.Bootstrap.PostBootstrapScriptPath); err != nil {
 			return err
 		}
 	}
@@ -181,6 +186,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		log.WarnLn("--resources flag is deprecated. Please use --config flag multiple repeatedly for logical resources separation")
 		b.Options.Global.ConfigPaths = append(b.Options.Global.ConfigPaths, b.Options.Bootstrap.ResourcesPath)
 	}
+
+	ctx, configSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.LoadConfig")
+	defer configSpan.End()
 
 	// first, parse and check cluster config
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
@@ -200,6 +208,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	log.DebugLn("MetaConfig was loaded")
+	configSpan.End()
 
 	b.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
 
@@ -263,7 +272,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	metaConfig.ResourceManagementTimeout = b.Options.Cache.ResourceManagementTimeout
 
-	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)
+	deckhouseInstallConfig, err := config.PrepareDeckhouseInstallConfig(ctx, metaConfig)
 	if err != nil {
 		return err
 	}
@@ -288,6 +297,8 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	} else if shouldStop {
 		return nil
 	}
+	ctx, baseInfraSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BaseInfra")
+	defer baseInfraSpan.End()
 
 	var nodeIP string
 	var devicePath string
@@ -306,7 +317,13 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		BuildInfo:     b.Options.BuildInfo,
 	})
 
+	ctx, preflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.Preflight")
+	defer preflightSpan.End()
+
 	if metaConfig.ClusterType == config.CloudClusterType {
+		ctx, cloudPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.CloudPreflight")
+		defer cloudPreflightSpan.End()
+
 		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
 		if err != nil {
 			if !strings.Contains(err.Error(), "failed to get hosts from cache") {
@@ -409,7 +426,12 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		if err := preflightRunner.Run(ctx, preflight.PhasePostInfra); err != nil {
 			return err
 		}
+
+		cloudPreflightSpan.End()
 	} else {
+		ctx, staticPreflightSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.StaticPreflight")
+		defer staticPreflightSpan.End()
+
 		staticPreflightSuite, err := suites.NewStaticSuite(suites.StaticDeps{
 			SSHProviderInitializer: b.SSHProviderInitializer,
 			MetaConfig:             metaConfig,
@@ -445,7 +467,11 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				"first-master": connectionConfig.Hosts[0].Host,
 			})
 		}
+
+		staticPreflightSpan.End()
 	}
+
+	preflightSpan.End()
 
 	// next parse and check resources
 	// do it after bootstrap cloud because resources can be template
@@ -464,11 +490,15 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		resourcesToCreateAfterDeckhouseBootstrap = after
 	}
 
+	baseInfraSpan.End()
+
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.RegistryPackagesProxyPhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
+	ctx, registryPackagesProxySpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.RegistryPackagesProxy")
+	defer registryPackagesProxySpan.End()
 
 	if b.SSHProviderInitializer.CheckHosts() {
 		sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
@@ -486,11 +516,16 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		}
 	}
 
+	registryPackagesProxySpan.End()
+
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.ExecuteBashibleBundlePhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
+
+	ctx, bashibleBundleSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.BashibleBundle")
+	defer bashibleBundleSpan.End()
 
 	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
 	if err != nil {
@@ -511,11 +546,16 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
+	bashibleBundleSpan.End()
+
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.InstallDeckhousePhase, false, stateCache, nil); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
 	}
+
+	ctx, installDeckhouseSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.InstallDeckhouse")
+	defer installDeckhouseSpan.End()
 
 	kubeCl, err := b.KubeProvider.Client(ctx)
 	if err != nil {
@@ -526,7 +566,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
-			return createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateBeforeDeckhouseBootstrap, nil, true, b.Options.Bootstrap.ResourcesTimeout)
+			return createResources(
+				ctx,
+				&client.KubernetesClient{KubeClient: kubeCl},
+				resourcesToCreateBeforeDeckhouseBootstrap,
+				nil,
+				true,
+				b.Options.Bootstrap.ResourcesTimeout,
+			)
 		},
 		State:            bootstrapState,
 		DeckhouseTimeout: b.Options.Bootstrap.DeckhouseTimeout,
@@ -553,21 +600,39 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			return nil
 		}
 
+		ctx, additionalNodesSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.AdditionalNodes")
+		defer additionalNodesSpan.End()
+
 		localBootstraper := func(action func() error) error {
 			if b.CommanderMode {
 				return action()
 			}
-			return lock.NewInLockLocalRunner(ctx, kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}), "local-bootstraper", b.Options.SSH.User).
-				Run(ctx, action)
+
+			return lock.NewInLockLocalRunner(
+				ctx,
+				kubernetes.NewSimpleKubeClientGetter(&client.KubernetesClient{KubeClient: kubeCl}),
+				"local-bootstraper",
+				b.Options.SSH.User,
+			).Run(ctx, action)
 		}
 
 		err := localBootstraper(func() error {
-			return bootstrapAdditionalNodesForCloudCluster(ctx, &client.KubernetesClient{KubeClient: kubeCl}, metaConfig, masterAddressesForSSH, b.InfrastructureContext)
+			return bootstrapAdditionalNodesForCloudCluster(
+				ctx,
+				&client.KubernetesClient{KubeClient: kubeCl},
+				metaConfig,
+				masterAddressesForSSH,
+				b.InfrastructureContext,
+			)
 		})
 		if err != nil {
 			return err
 		}
+
+		additionalNodesSpan.End()
 	}
+
+	installDeckhouseSpan.End()
 
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.CreateResourcesPhase, false, stateCache, nil); err != nil {
 		return err
@@ -579,7 +644,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, &client.KubernetesClient{KubeClient: kubeCl}, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false, b.Options.Bootstrap.ResourcesTimeout)
+	err = createResources(
+		ctx,
+		&client.KubernetesClient{KubeClient: kubeCl},
+		resourcesToCreateAfterDeckhouseBootstrap,
+		installDeckhouseResult,
+		false,
+		b.Options.Bootstrap.ResourcesTimeout,
+	)
 	if err != nil {
 		return err
 	}
@@ -591,12 +663,17 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 
 	if b.SSHProviderInitializer.CheckHosts() && b.Options.Bootstrap.PostBootstrapScriptPath != "" {
+		ctx, postBootstrapSpan := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.PostBootstrap")
+		defer postBootstrapSpan.End()
+
 		postScriptExecutor := NewPostBootstrapScriptExecutor(b.SSHProviderInitializer, b.Options.Bootstrap.PostBootstrapScriptPath, bootstrapState).
 			WithTimeout(b.Options.Bootstrap.PostBootstrapScriptTimeout)
 
 		if err := postScriptExecutor.Execute(ctx); err != nil {
 			return err
 		}
+
+		postBootstrapSpan.End()
 	}
 
 	if shouldStop, err := b.PhasedExecutionContext.SwitchPhase(ctx, phases.FinalizationPhase, false, stateCache, nil); err != nil {
@@ -619,6 +696,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				PostBootstrapResultCacheKey,
 			)
 			log.WarnLn(`Next run of "dhctl bootstrap" will create a new Kubernetes cluster.`)
+
 			return nil
 		})
 	}
@@ -750,12 +828,24 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	return before, after
 }
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool, timeout time.Duration) error {
+func createResources(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	resourcesToCreate template.Resources,
+	result *InstallDeckhouseResult,
+	skipChecks bool,
+	timeout time.Duration,
+) error {
+	ctx, span := telemetry.StartSpan(ctx, "ClusterBootstrapper.Bootstrap.createResources")
+	defer span.End()
+
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
 		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
 
 		tasks = result.ManifestResult.WithResourcesMCTasks
+
+		span.SetAttributes(otattribute.Int("tasks_count", len(tasks)))
 
 		if len(resourcesToCreate) == 0 {
 			for _, task := range tasks {
@@ -771,6 +861,8 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 	if len(resourcesToCreate) == 0 {
 		return nil
 	}
+
+	span.SetAttributes(otattribute.Int("resources_count", len(resourcesToCreate)))
 
 	return log.ProcessCtx(ctx, "bootstrap", "Create Resources", func(ctx context.Context) error {
 		var err error

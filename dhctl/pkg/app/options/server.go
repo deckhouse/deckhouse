@@ -14,7 +14,11 @@
 
 package options
 
-import "time"
+import (
+	"time"
+
+	otattribute "go.opentelemetry.io/otel/attribute"
+)
 
 // ServerOptions configures the dhctl gRPC server.
 type ServerOptions struct {
@@ -22,4 +26,13 @@ type ServerOptions struct {
 	Address                    string
 	ParallelTasksLimit         int
 	RequestsCounterMaxDuration time.Duration
+}
+
+func (o *ServerOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("server.network", o.Network),
+		otattribute.String("server.address", o.Address),
+		otattribute.Int("server.parallelTasksLimit", o.ParallelTasksLimit),
+		otattribute.String("server.requestsCounterMaxDuration", o.RequestsCounterMaxDuration.String()),
+	}
 }

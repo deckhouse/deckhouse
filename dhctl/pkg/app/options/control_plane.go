@@ -14,8 +14,17 @@
 
 package options
 
+import otattribute "go.opentelemetry.io/otel/attribute"
+
 // ControlPlaneOptions configures the test-control-plane sub-commands.
 type ControlPlaneOptions struct {
 	Hostname string
 	IP       string
+}
+
+func (o *ControlPlaneOptions) ToSpanAttributes() []otattribute.KeyValue {
+	return []otattribute.KeyValue{
+		otattribute.String("controlPlane.hostname", o.Hostname),
+		otattribute.String("controlPlane.ip", o.IP),
+	}
 }
