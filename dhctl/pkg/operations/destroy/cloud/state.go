@@ -15,6 +15,8 @@
 package cloud
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -32,10 +34,10 @@ func NewDestroyState(stateCache state.Cache) *State {
 	}
 }
 
-func (s *State) IsConvergeLocked() (bool, error) {
-	return s.cache.InCache(convergeLocked)
+func (s *State) IsConvergeLocked(ctx context.Context) (bool, error) {
+	return s.cache.InCache(ctx, convergeLocked)
 }
 
-func (s *State) SetConvergeLocked() error {
-	return s.cache.Save(convergeLocked, []byte("yes"))
+func (s *State) SetConvergeLocked(ctx context.Context) error {
+	return s.cache.Save(ctx, convergeLocked, []byte("yes"))
 }

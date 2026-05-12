@@ -20,7 +20,6 @@ import (
 
 	changeregistry "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/change_registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers/jwt"
-	dhctlapp "github.com/deckhouse/deckhouse/dhctl/cmd/dhctl/commands"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -53,10 +52,4 @@ func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 			return changeregistry.ChangeRegistry(*newRegistry, *user, *password, *caFile, *newImageTag, *scheme, *dryRun, logger)
 		})
 	}
-
-	// dhctl parser for ClusterConfiguration and <Provider-name>ClusterConfiguration secrets
-	cmd := kpApp.Command("cluster-configuration", "Parse configuration and print it.")
-	dhctlapp.DefineCommandParseClusterConfiguration(cmd)
-	cmd = kpApp.Command("cloud-discovery-data", "Parse cloud discovery data and print it.")
-	dhctlapp.DefineCommandParseCloudDiscoveryData(cmd)
 }

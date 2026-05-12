@@ -22,6 +22,10 @@ rules:
   - modules
   - modulesources
   - moduleupdatepolicies
+  - packagerepositories
+  - packagerepositoryoperations
+  - applicationpackageversions
+  - applicationpackages
   verbs:
   - get
   - list

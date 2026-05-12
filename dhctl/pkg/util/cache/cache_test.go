@@ -21,7 +21,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 )
@@ -31,12 +30,11 @@ func TestNewTempStateCache(t *testing.T) {
 
 	dir, err := os.MkdirTemp(os.TempDir(), "dhctl-test-cache-*")
 	require.NoError(t, err)
-	app.SetCacheDir(dir)
 
 	defer os.RemoveAll(dir)
 
 	t.Run("Save load delete operations", func(t *testing.T) {
-		stateCache, err := NewTempStateCache("test-identity")
+		stateCache, err := NewTempStateCache(dir, "test-identity")
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -46,7 +44,7 @@ func TestNewTempStateCache(t *testing.T) {
 
 		tests.RunStateCacheTests(t, stateCache)
 
-		ok, err := stateCache.InCache(".tombstone")
+		ok, err := stateCache.InCache(t.Context(), ".tombstone")
 
 		require.NoError(t, err)
 		require.True(t, ok)

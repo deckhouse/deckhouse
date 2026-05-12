@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: allow-rbac-wildcards
+spec:
+  testDirectory: allow-rbac-wildcards
+  suite:
+    expectedTestBlockNames:
+      - custom-policy

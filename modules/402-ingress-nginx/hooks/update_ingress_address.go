@@ -90,7 +90,7 @@ func updateIngressAddress(_ context.Context, input *go_hook.HookInput) error {
 				},
 			},
 		}
-		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v1", "IngressNginxController",
+		input.PatchCollector.PatchWithMerge(patch, "deckhouse.io/v2", "IngressNginxController",
 			"", svc.Name, object_patch.WithIgnoreMissingObject(), object_patch.WithSubresource("/status"))
 	}
 	return nil

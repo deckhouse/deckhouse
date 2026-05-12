@@ -46,13 +46,19 @@ Use at least 4 CPUs / 8GB RAM for infrastructure nodes. For master and monitorin
 {% endalert %}
 
 The following resource minimums are recommended for infrastructure nodes, depending on their role in the cluster:
-- **Master node** — 4 CPU, 8GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
+- **Master node** — 8 CPU, 16GB RAM, 60 GB of disk space for the cluster and etcd data on a fast disk (400+ IOPS);
 - **Frontend node** — 2 CPU, 4GB RAM, 50 GB of disk space;
-- **Monitoring node** (for high-load clusters) — 4 CPU, 8GB RAM, 50 GB of disk space on a fast disk (400+ IOPS).
+- **Monitoring node** (for high-load clusters) — 6 CPU, 12GB RAM, <a href="#storage">50 / 150*</a> GB of disk space on a fast disk (400+ IOPS).
 - **System node**:
-  - 4 CPU, 8 RAM, 50 GB of disk space — if there are dedicated monitoring nodes in the cluster;
-  - 8 CPU, 16 RAM, 50 GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
+  - 4 CPU, 8 RAM, <a href="#storage">50 / 150*</a> GB of disk space — if there are dedicated monitoring nodes in the cluster;
+  - 8 CPU, 16 RAM, <a href="#storage">60 / 160*</a> GB of disk space on a fast disk (400+ IOPS) — if there are no dedicated monitoring nodes in the cluster.
 - **Worker node** — the requirements are similar to those for the master node, but largely depend on the nature of the load running on the node (nodes).
+
+Additional recommendations:<span id="storage"></span>
+
+- If system PVCs (of the `prometheus`, `upmeter` modules and others) are stored on the node's local disk, additionally allocate at least 100 GB of free space.
+- For system services (kubelet) and system pods on each worker node, reserve at least 1 CPU and 2 GB of RAM.
+- For all nodes, use fast disks with performance of at least 400 IOPS.
 
 Estimates of the resources required for the clusters to run:
 - **Regular cluster**: 3 master nodes, 2 frontend nodes, 2 system nodes. Such a configuration requires **at least 26 CPUs and 52GB RAM** along with fast 400+ IOPS disks for the master nodes.

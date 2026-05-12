@@ -18,20 +18,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
-	restore := b.applyParams()
-	defer restore()
-
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
-		app.ConfigPaths,
+		b.Options.Global.ConfigPaths,
 		infrastructureprovider.MetaConfigPreparatorProvider(
 			infrastructureprovider.NewPreparatorProviderParams(b.logger),
 		),
@@ -41,24 +36,35 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		return err
 	}
 
-	err = terminal.AskBecomePassword()
+	sshProvider, err := b.SSHProviderInitializer.GetSSHProvider(ctx)
 	if err != nil {
 		return err
 	}
-	if err := terminal.AskBastionPassword(); err != nil {
-		return err
-	}
 
-	if wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if err = wrapper.Client().Start(); err != nil {
-			return fmt.Errorf("unable to start ssh client: %w", err)
-		}
-		if err = WaitForSSHConnectionOnMaster(ctx, wrapper.Client()); err != nil {
+	sshClient, err := sshProvider.Client(ctx)
+	if err == nil {
+		if err = WaitForSSHConnectionOnMaster(ctx, sshClient); err != nil {
 			return fmt.Errorf("failed to wait for SSH connection on master: %v", err)
 		}
 	}
 
-	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, app.DevicePath, b.CommanderMode, b.DirectoryConfig); err != nil {
+	nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+	if err != nil {
+		return fmt.Errorf("Could not get NodeInterface: %w", err)
+	}
+
+	err = RunBashiblePipeline(ctx, &BashiblePipelineParams{
+		Node:           nodeInterface,
+		NodeIP:         b.Options.Bootstrap.InternalNodeIP,
+		DevicePath:     b.Options.Bootstrap.DevicePath,
+		MetaConfig:     metaConfig,
+		CommanderMode:  b.CommanderMode,
+		IsDebug:        b.IsDebug,
+		DirsConfig:     b.DirectoryConfig,
+		LoggerProvider: b.loggerProvider,
+	})
+
+	if err != nil {
 		return err
 	}
 

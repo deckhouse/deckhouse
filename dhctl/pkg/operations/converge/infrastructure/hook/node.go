@@ -42,7 +42,7 @@ func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCo
 
 	err := retry.NewLoop(title, 30, 10*time.Second).RunContext(ctx, func() error {
 		for _, check := range checkers {
-			err := log.Process(sourceCommandName, check.Name(), func() error {
+			err := log.ProcessCtx(ctx, sourceCommandName, check.Name(), func(ctx context.Context) error {
 				isReady, err := check.IsReady(ctx, nodeName)
 				if err != nil {
 					return err
@@ -72,17 +72,22 @@ func IsNodeReady(ctx context.Context, checkers []NodeChecker, nodeName, sourceCo
 }
 
 type KubeNodeReadinessChecker struct {
-	getter kubernetes.KubeClientProvider
+	getter kubernetes.KubeClientProviderWithCtx
 }
 
-func NewKubeNodeReadinessChecker(getter kubernetes.KubeClientProvider) *KubeNodeReadinessChecker {
+func NewKubeNodeReadinessChecker(getter kubernetes.KubeClientProviderWithCtx) *KubeNodeReadinessChecker {
 	return &KubeNodeReadinessChecker{
 		getter: getter,
 	}
 }
 
 func (c *KubeNodeReadinessChecker) IsReady(ctx context.Context, nodeName string) (bool, error) {
-	node, err := c.getter.KubeClient().CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	kubeClient, err := c.getter.KubeClientCtx(ctx)
+	if err != nil {
+		return false, fmt.Errorf("Could not get kube client: %w", err)
+	}
+
+	node, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

@@ -112,21 +112,19 @@ func ApplyPipeline(
 	extractFn func(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error),
 ) (*PipelineOutputs, error) {
 	var extractedData *PipelineOutputs
-	pipelineFunc := func() error {
-		err := r.Init(ctx)
-		if err != nil {
+
+	pipelineFunc := func(ctx context.Context) (err error) {
+		if err := r.Init(ctx); err != nil {
 			return err
 		}
 
-		err = r.Plan(ctx, false, false)
-		if err != nil {
+		if err := r.Plan(ctx, false, false); err != nil {
 			return err
 		}
 
 		defer func() { extractedData, err = extractFn(ctx, r) }()
 
-		err = r.Apply(ctx)
-		if err != nil {
+		if err := r.Apply(ctx); err != nil {
 			return err
 		}
 
@@ -135,7 +133,8 @@ func ApplyPipeline(
 	}
 
 	logger := r.GetLogger()
-	err := logger.LogProcess("infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+	err := logger.LogProcessCtx(ctx, "infrastructure", fmt.Sprintf("Pipeline %s for %s", r.GetStep(), name), pipelineFunc)
+
 	return extractedData, err
 }
 
@@ -150,7 +149,7 @@ func CheckPipeline(
 	var destructiveChanges *plan.DestructiveChanges
 	var infrastructurePlan map[string]any
 
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -179,7 +178,13 @@ func CheckPipeline(
 
 		return nil
 	}
-	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+
+	err := log.ProcessCtx(
+		ctx,
+		"infrastructure",
+		fmt.Sprintf("Check state %s for %s", r.GetStep(), name),
+		pipelineFunc,
+	)
 
 	logDebugPlanIfNeed(ctx, r, name, destroy)
 
@@ -208,7 +213,7 @@ func CheckBaseInfrastructurePipeline(
 	}
 	var pl map[string]any
 
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -281,7 +286,7 @@ func CheckBaseInfrastructurePipeline(
 
 		return nil
 	}
-	err := log.Process("infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
+	err := log.ProcessCtx(ctx, "infrastructure", fmt.Sprintf("Check state %s for %s", r.GetStep(), name), pipelineFunc)
 
 	logDebugPlanIfNeed(ctx, r, name, false)
 
@@ -289,7 +294,7 @@ func CheckBaseInfrastructurePipeline(
 }
 
 func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error {
-	pipelineFunc := func() error {
+	pipelineFunc := func(ctx context.Context) error {
 		err := r.Init(ctx)
 		if err != nil {
 			return err
@@ -300,13 +305,15 @@ func DestroyPipeline(ctx context.Context, r RunnerInterface, name string) error 
 			return nil
 		}
 
-		err = r.Destroy(ctx)
-		if err != nil {
-			return err
-		}
-		return nil
+		return r.Destroy(ctx)
 	}
-	return log.Process("infrastructure", fmt.Sprintf("Destroy %s for %s", r.GetStep(), name), pipelineFunc)
+
+	return log.ProcessCtx(
+		ctx,
+		"infrastructure",
+		fmt.Sprintf("Destroy %s for %s", r.GetStep(), name),
+		pipelineFunc,
+	)
 }
 
 func GetBaseInfraResult(ctx context.Context, r RunnerInterface) (*PipelineOutputs, error) {
@@ -524,7 +531,7 @@ func logDebugPlanIfNeed(ctx context.Context, r RunnerInterface, name string, des
 	resultsErrs := make(map[string]error, len(targets))
 
 	// always return nil
-	_ = log.Process("infrastructure", "Getting debug plans", func() error {
+	_ = log.ProcessCtx(ctx, "infrastructure", "Getting debug plans", func(ctx context.Context) error {
 		for _, target := range targets {
 			res, err := r.DebugPlanTarget(ctx, destroy, debugPlanStep, target)
 			if err != nil {

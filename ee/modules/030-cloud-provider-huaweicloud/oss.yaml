@@ -1,0 +1,23 @@
+- name: Huawei Cloud provider
+  link: https://github.com/kubernetes-sigs/cloud-provider-huaweicloud
+  description: Cloud Controller Manager for Huawei Cloud.
+  logo: /images/logos/huaweicloud.svg
+  license: Apache License 2.0
+  id: ccm-huaweicloud
+  version: v0.26.9
+
+- name: Huawei CSI driver
+  link: https://github.com/huaweicloud/huaweicloud-csi-driver
+  description: CSI driver for Huawei Cloud EVS and SFS.
+  logo: /images/logos/huaweicloud.svg
+  license: Apache License 2.0
+  id: csi-huaweicloud
+  version: evs-0.1.11
+
+- name: Huawei Terraform provider
+  link: https://github.com/huaweicloud/terraform-provider-huaweicloud
+  description: Terraform provider for Huawei Cloud.
+  logo: /images/logos/terraform.svg
+  license: Mozilla Public License 2.0
+  id: terraform-provider-huaweicloud
+  version: "1.69.0"

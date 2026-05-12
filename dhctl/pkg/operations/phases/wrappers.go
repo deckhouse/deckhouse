@@ -15,6 +15,7 @@
 package phases
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -38,7 +39,7 @@ type (
 	PhaseAction[OperationPhaseDataT any] interface {
 		// Run
 		// if action should stop run should return ErrShouldStop
-		Run(phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error
+		Run(ctx context.Context, phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error
 		CompleteSub(phase OperationSubPhase) error
 	}
 
@@ -75,8 +76,8 @@ func NewDefaultPhaseActionProviderWithStateCache(context DefaultPhasedExecutionC
 	}
 }
 
-func (a *PhaseActionWithStateCache[OperationPhaseDataT]) Run(phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error {
-	if shouldStop, err := a.phaseContext.StartPhase(phase, isCritical, a.stateCache); err != nil {
+func (a *PhaseActionWithStateCache[OperationPhaseDataT]) Run(ctx context.Context, phase OperationPhase, isCritical bool, action ActionFunc[OperationPhaseDataT]) error {
+	if shouldStop, err := a.phaseContext.StartPhase(ctx, phase, isCritical, a.stateCache); err != nil {
 		return err
 	} else if shouldStop {
 		return ErrShouldStop
@@ -88,7 +89,7 @@ func (a *PhaseActionWithStateCache[OperationPhaseDataT]) Run(phase OperationPhas
 		return err
 	}
 
-	return a.phaseContext.CompletePhase(a.stateCache, completeData)
+	return a.phaseContext.CompletePhase(ctx, a.stateCache, completeData)
 }
 
 func (a *PhaseActionWithStateCache[OperationPhaseDataT]) CompleteSub(phase OperationSubPhase) error {
@@ -98,7 +99,7 @@ func (a *PhaseActionWithStateCache[OperationPhaseDataT]) CompleteSub(phase Opera
 
 type dummyPhaseAction[OperationPhaseDataT any] struct{}
 
-func (a *dummyPhaseAction[OperationPhaseDataT]) Run(_ OperationPhase, _ bool, action ActionFunc[OperationPhaseDataT]) error {
+func (a *dummyPhaseAction[OperationPhaseDataT]) Run(_ context.Context, _ OperationPhase, _ bool, action ActionFunc[OperationPhaseDataT]) error {
 	_, err := action()
 	return err
 }
@@ -117,7 +118,7 @@ func newPhaseActionWithError[OperationPhaseDataT any](err error) PhaseAction[Ope
 	}
 }
 
-func (a *phaseActionWithError[OperationPhaseDataT]) Run(phase OperationPhase, _ bool, _ ActionFunc[OperationPhaseDataT]) error {
+func (a *phaseActionWithError[OperationPhaseDataT]) Run(ctx context.Context, phase OperationPhase, _ bool, _ ActionFunc[OperationPhaseDataT]) error {
 	return fmt.Errorf("Phase '%s' cannot be run: %w", phase, a.err)
 }
 
@@ -126,7 +127,7 @@ func (a *phaseActionWithError[OperationPhaseDataT]) CompleteSub(phase OperationS
 }
 
 type (
-	PipelinePhaseSwitcher[OperationPhaseDataT any] func(phase OperationPhase, isCritical bool, completedPhaseData OperationPhaseDataT) error
+	PipelinePhaseSwitcher[OperationPhaseDataT any] func(ctx context.Context, phase OperationPhase, isCritical bool, completedPhaseData OperationPhaseDataT) error
 
 	PipelineAction[OperationPhaseDataT any] func(switcher PipelinePhaseSwitcher[OperationPhaseDataT]) error
 
@@ -134,7 +135,7 @@ type (
 		// Run
 		// should return ErrPipelineAlreadyFinished if call after run
 		// should return ErrPipelineAlreadyStarted if call run inside run
-		Run(action PipelineAction[OperationPhaseDataT]) error
+		Run(ctx context.Context, action PipelineAction[OperationPhaseDataT]) error
 		GetLastState() DhctlState
 		// ActionInPipeline
 		// can return with actions which returns ErrPipelineDidNotStart if call before call run
@@ -201,7 +202,7 @@ func newDummyPipeline[OperationPhaseDataT any](opts ...PipelineOptsFunc) Pipelin
 	return NewPipelineWithStateCache[OperationPhaseDataT](nil, nil, opts...)
 }
 
-func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(action PipelineAction[OperationPhaseDataT]) error {
+func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(ctx context.Context, action PipelineAction[OperationPhaseDataT]) error {
 	if p.isFinished() {
 		return p.wrapError(ErrPipelineAlreadyFinished)
 	}
@@ -210,7 +211,7 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(action PipelineAction[
 		return p.wrapError(ErrPipelineAlreadyStarted)
 	}
 
-	if err := p.initPipeline(); err != nil {
+	if err := p.initPipeline(ctx); err != nil {
 		return err
 	}
 
@@ -218,13 +219,13 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) Run(action PipelineAction[
 	defer p.setFinished()
 
 	defer func() {
-		p.finalize()
+		p.finalize(ctx)
 	}()
 
 	err := action(p.phaseSwitcher)
 
 	if govalue.IsNil(err) {
-		return p.complete()
+		return p.complete(ctx)
 	}
 
 	if errors.Is(err, ErrShouldStop) {
@@ -266,12 +267,12 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) ActionInPipeline() PhaseAc
 	return NewPhaseActionWithStateCache(p.phaseContext, p.stateCache)
 }
 
-func (p *PipelineWithStateCache[OperationPhaseDataT]) phaseSwitcher(phase OperationPhase, isCritical bool, completedPhaseData OperationPhaseDataT) error {
+func (p *PipelineWithStateCache[OperationPhaseDataT]) phaseSwitcher(ctx context.Context, phase OperationPhase, isCritical bool, completedPhaseData OperationPhaseDataT) error {
 	if govalue.IsNil(p.phaseContext) {
 		return nil
 	}
 
-	if shouldStop, err := p.phaseContext.SwitchPhase(phase, isCritical, p.stateCache, completedPhaseData); err != nil {
+	if shouldStop, err := p.phaseContext.SwitchPhase(ctx, phase, isCritical, p.stateCache, completedPhaseData); err != nil {
 		return err
 	} else if shouldStop {
 		return ErrShouldStop
@@ -280,30 +281,30 @@ func (p *PipelineWithStateCache[OperationPhaseDataT]) phaseSwitcher(phase Operat
 	return nil
 }
 
-func (p *PipelineWithStateCache[OperationPhaseDataT]) complete() error {
+func (p *PipelineWithStateCache[OperationPhaseDataT]) complete(ctx context.Context) error {
 	if govalue.IsNil(p.phaseContext) {
 		return nil
 	}
 
-	return p.phaseContext.CompletePipeline(p.stateCache)
+	return p.phaseContext.CompletePipeline(ctx, p.stateCache)
 }
 
-func (p *PipelineWithStateCache[OperationPhaseDataT]) finalize() {
+func (p *PipelineWithStateCache[OperationPhaseDataT]) finalize(ctx context.Context) {
 	if govalue.IsNil(p.phaseContext) {
 		return
 	}
 
-	if err := p.phaseContext.Finalize(p.stateCache); err != nil {
+	if err := p.phaseContext.Finalize(ctx, p.stateCache); err != nil {
 		log.SafeProvideLogger(p.opts.LoggerProvider).LogWarnF("Cannot finalize pipeline '%s': %v\n", p.opts.PipelineName, err)
 	}
 }
 
-func (p *PipelineWithStateCache[OperationPhaseDataT]) initPipeline() error {
+func (p *PipelineWithStateCache[OperationPhaseDataT]) initPipeline(ctx context.Context) error {
 	if govalue.IsNil(p.phaseContext) {
 		return nil
 	}
 
-	if err := p.phaseContext.InitPipeline(p.stateCache); err != nil {
+	if err := p.phaseContext.InitPipeline(ctx, p.stateCache); err != nil {
 		return p.wrapError(fmt.Errorf("cannot init pipline: %w", err))
 	}
 

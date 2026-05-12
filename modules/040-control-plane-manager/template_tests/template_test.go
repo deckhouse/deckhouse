@@ -136,6 +136,10 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     kubernetesVersion: 1.15.4
 `
 	const moduleValues = `
+  apiserver:
+    publishAPI:
+      ingress: {}
+      loadBalancer: {}
   internal:
     effectiveKubernetesVersion: "1.32"
     etcdServers:
@@ -146,6 +150,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     rolloutEpoch: 1857
     nodesCount: 0
     kubeSchedulerExtenders: []
+    authn: {}
+    selfSignedCA: {}
 `
 
 	const defultAudience = "https://kubernetes.default.svc.cluster.local"
@@ -157,9 +163,14 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
   serviceAccount:
     issuer: https://api.example.com
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
@@ -168,12 +179,17 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIAudiences:
       - https://api.example.com
       - https://bob.com
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 	const moduleValuesAdditionalIssuerOnly = `
@@ -183,7 +199,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIIssuers:
@@ -197,7 +218,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     additionalAPIIssuers:
       - https://api.example.com
@@ -213,7 +239,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://api.example.com
     additionalAPIIssuers:
@@ -231,7 +262,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     issuer: https://kubernetes.default.svc.cluster.local
     additionalAPIIssuers:
@@ -248,7 +284,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   serviceAccount:
     additionalAPIIssuers:
       - https://kubernetes.default.svc.cluster.local
@@ -265,6 +306,12 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 	const apiServerWithOidcFull = `
@@ -274,8 +321,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn:
     oidcIssuerURL: https://dex.example.com
     oidcCA: |
@@ -290,8 +342,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn:
     oidcIssuerURL: https://dex.example.com
 `
@@ -303,8 +360,13 @@ internal:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authn: {}
 `
 	f := SetupHelmConfig(`controlPlaneManager: {}`)
@@ -828,6 +890,8 @@ resources:
 		testKubeadmVersion := func(k8sVersion, expectedApiVersion string) {
 			testValues := fmt.Sprintf(`
 internal:
+  authn: {}
+  selfSignedCA: {}
   effectiveKubernetesVersion: "%s"
   etcdServers:
     - https://192.168.199.186:2379
@@ -835,6 +899,10 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `, k8sVersion)
 
 			BeforeEach(func() {
@@ -879,10 +947,15 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
   audit:
     webhookURL: "https://audit.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
@@ -901,7 +974,12 @@ internal:
     - master-0
   pkiChecksum: checksum
   rolloutEpoch: 1857
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
 `
@@ -918,7 +996,12 @@ internal:
   audit:
     webhookURL: "https://audit.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
+  authn: {}
+  selfSignedCA: {}
 apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
   authz:
     webhookURL: "https://authz.example.com"
     webhookCA: "LS0tLS1CRUdJTi..."
@@ -1051,6 +1134,12 @@ internal:
   rolloutEpoch: 1857
   nodesCount: %d
   kubeSchedulerExtenders: []
+  authn: {}
+  selfSignedCA: {}
+apiserver:
+  publishAPI:
+    ingress: {}
+    loadBalancer: {}
 `
 
 				testValues := fmt.Sprintf(testValuesTemplate, nodesCount)
@@ -1087,5 +1176,119 @@ internal:
 		testTerminatedPodGcThreshold(299, "3000")
 		testTerminatedPodGcThreshold(300, "6000")
 		testTerminatedPodGcThreshold(500, "6000")
+	})
+
+	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
+		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is false", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.ValuesSet("controlPlaneManager.rootKubeconfigSymlink", false)
+				f.HelmRender()
+			})
+
+			It("should set NODE_ADMIN_KUBECONFIG env var to false in DaemonSet", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+
+				containers := ds.Field("spec.template.spec.containers").Array()
+				foundEnv := false
+				for _, container := range containers {
+					if container.Get("name").String() != "control-plane-manager" {
+						continue
+					}
+					for _, env := range container.Get("env").Array() {
+						if env.Get("name").String() == "NODE_ADMIN_KUBECONFIG" {
+							foundEnv = true
+							Expect(env.Get("value").String()).To(Equal("false"))
+						}
+					}
+				}
+				Expect(foundEnv).To(BeTrue())
+			})
+		})
+
+		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is true", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.ValuesSet("controlPlaneManager.rootKubeconfigSymlink", true)
+				f.HelmRender()
+			})
+
+			It("should not set NODE_ADMIN_KUBECONFIG env var in DaemonSet", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+
+				containers := ds.Field("spec.template.spec.containers").Array()
+				for _, container := range containers {
+					if container.Get("name").String() != "control-plane-manager" {
+						continue
+					}
+					for _, env := range container.Get("env").Array() {
+						Expect(env.Get("name").String()).ToNot(Equal("NODE_ADMIN_KUBECONFIG"))
+					}
+				}
+			})
+		})
+
+		Context("when user-authz is not enabled but controlPlaneManager.rootKubeconfigSymlink is false", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.rootKubeconfigSymlink", false)
+				f.HelmRender()
+			})
+
+			It("should not set NODE_ADMIN_KUBECONFIG (parameter ignored without user-authz module)", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+
+				containers := ds.Field("spec.template.spec.containers").Array()
+				for _, container := range containers {
+					if container.Get("name").String() != "control-plane-manager" {
+						continue
+					}
+					for _, env := range container.Get("env").Array() {
+						Expect(env.Get("name").String()).ToNot(Equal("NODE_ADMIN_KUBECONFIG"))
+					}
+				}
+			})
+		})
+	})
+
+	Context("kubeadm ClusterRoleBinding for admin.conf", func() {
+		Context("when user-authz module is disabled", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should bind kubeadm:cluster-admins to cluster-admin", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
+				Expect(crb.Exists()).To(BeTrue())
+				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
+			})
+		})
+
+		Context("when user-authz module is enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["user-authz"]`)
+				f.HelmRender()
+			})
+
+			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add supplement binding", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
+				Expect(main.Exists()).To(BeTrue())
+				Expect(main.Field("roleRef.name").String()).To(Equal("user-authz:cluster-admin"))
+
+				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
+				Expect(sup.Exists()).To(BeTrue())
+				Expect(sup.Field("roleRef.name").String()).To(Equal("d8:control-plane-manager:admin-kubeconfig-supplement"))
+
+				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
+				Expect(supCR.Exists()).To(BeTrue())
+			})
+		})
 	})
 })

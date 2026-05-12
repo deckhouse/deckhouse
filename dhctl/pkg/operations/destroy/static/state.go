@@ -15,6 +15,7 @@
 package static
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -40,16 +41,16 @@ func NewDestroyState(stateCache state.Cache) *State {
 	}
 }
 
-func (s *State) SaveNodeUser(credentials *NodesWithCredentials) error {
-	if err := s.cache.SaveStruct(nodeUserKey, credentials); err != nil {
+func (s *State) SaveNodeUser(ctx context.Context, credentials *NodesWithCredentials) error {
+	if err := s.cache.SaveStruct(ctx, nodeUserKey, credentials); err != nil {
 		return fmt.Errorf("Cannot save node user credentials for static destroyer: %w", err)
 	}
 
 	return nil
 }
 
-func (s *State) NodeUser() (*NodesWithCredentials, error) {
-	exists, err := s.cache.InCache(nodeUserKey)
+func (s *State) NodeUser(ctx context.Context) (*NodesWithCredentials, error) {
+	exists, err := s.cache.InCache(ctx, nodeUserKey)
 
 	if err != nil {
 		return nil, err
@@ -61,23 +62,23 @@ func (s *State) NodeUser() (*NodesWithCredentials, error) {
 
 	creds := NodesWithCredentials{}
 
-	if err := s.cache.LoadStruct(nodeUserKey, &creds); err != nil {
+	if err := s.cache.LoadStruct(ctx, nodeUserKey, &creds); err != nil {
 		return nil, fmt.Errorf("Cannot load node user credentials for static destroyer: %w", err)
 	}
 
 	return &creds, nil
 }
 
-func (s *State) SetNodeUserExists() error {
-	if err := s.cache.Save(nodeUserExistsKey, []byte("yes")); err != nil {
+func (s *State) SetNodeUserExists(ctx context.Context) error {
+	if err := s.cache.Save(ctx, nodeUserExistsKey, []byte("yes")); err != nil {
 		return fmt.Errorf("Cannot save node user exists flag for static destroyer: %w", err)
 	}
 
 	return nil
 }
 
-func (s *State) IsNodeUserExists() bool {
-	if exists, err := s.cache.InCache(nodeUserExistsKey); err != nil || !exists {
+func (s *State) IsNodeUserExists(ctx context.Context) bool {
+	if exists, err := s.cache.InCache(ctx, nodeUserExistsKey); err != nil || !exists {
 		return false
 	}
 

@@ -15,6 +15,8 @@
 package proxy
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -22,7 +24,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
@@ -39,11 +44,42 @@ type Proxy struct {
 	config         Config
 }
 
+type RPPClientBinaryServer struct {
+	server   *http.Server
+	listener net.Listener
+	logger   log.Logger
+}
+
+type RPPClientBinaryServerOptions struct {
+	Listener           net.Listener
+	Logger             log.Logger
+	ClientConfigGetter registry.ClientConfigGetter
+	RegistryClient     registry.Client
+	SignCheck          bool
+	ClusterUUID        string
+}
+
+type rppBinaryHandler struct {
+	logger         log.Logger
+	configGetter   registry.ClientConfigGetter
+	registryClient registry.Client
+	signCheck      bool
+	binaryName     string
+	expectedPath   string
+}
+
+const (
+	rppBinaryName = "rpp-get"
+)
+
+var errEmptyRegistryConfig = errors.New("empty registry config")
+
 func NewProxy(server *http.Server,
 	listener net.Listener,
 	clientConfigGetter registry.ClientConfigGetter,
 	logger log.Logger,
-	registryClient registry.Client, opts ...ProxyOption) *Proxy {
+	registryClient registry.Client, opts ...ProxyOption,
+) *Proxy {
 	p := &Proxy{
 		server:         server,
 		listener:       listener,
@@ -63,6 +99,30 @@ func NewProxy(server *http.Server,
 	return p
 }
 
+func NewRPPClientBinaryServerFromRegistry(opts RPPClientBinaryServerOptions) *RPPClientBinaryServer {
+	handler := &rppBinaryHandler{
+		logger:         opts.Logger,
+		configGetter:   opts.ClientConfigGetter,
+		registryClient: opts.RegistryClient,
+		signCheck:      opts.SignCheck,
+		binaryName:     rppBinaryName,
+		expectedPath:   path.Join("/", normalizeBootstrapClusterUUID(opts.ClusterUUID), rppBinaryName),
+	}
+
+	return &RPPClientBinaryServer{
+		server: &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      300 * time.Second,
+			IdleTimeout:       30 * time.Second,
+			MaxHeaderBytes:    4 << 10,
+		},
+		listener: opts.Listener,
+		logger:   opts.Logger,
+	}
+}
+
 type Config struct {
 	SignCheck bool
 }
@@ -75,13 +135,14 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.config = Config{}
 	}
 	http.HandleFunc("/package", func(w http.ResponseWriter, r *http.Request) {
+		requestIP := getRequestIP(r)
+
 		if r.Method != http.MethodHead && r.Method != http.MethodGet {
-			p.logger.Error("method not allowed")
+			p.logger.Errorf("method %s from client %s is not allowed", r.Method, requestIP)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		requestIP := getRequestIP(r)
 		digest := r.URL.Query().Get("digest")
 		repository := r.URL.Query().Get("repository")
 		additionalPath := r.URL.Query().Get("path")
@@ -99,8 +160,8 @@ func (p *Proxy) Serve(cfg *Config) {
 		p.logger.Infof("%s", logEntry)
 
 		if digest == "" {
-			p.logger.Error("missing digest")
-			http.Error(w, "missing digest", http.StatusBadRequest)
+			p.logger.Errorf("request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
+			http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
 			return
 		}
 
@@ -109,7 +170,7 @@ func (p *Proxy) Serve(cfg *Config) {
 			defer packageReader.Close()
 		}
 		if err != nil {
-			p.logger.Error(err.Error())
+			p.logger.Errorf("get package %q for client %s: %v", digest, requestIP, err)
 			if errors.Is(err, registry.ErrPackageNotFound) {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
@@ -146,6 +207,14 @@ func (p *Proxy) Serve(cfg *Config) {
 	}
 }
 
+func (s *RPPClientBinaryServer) Serve() {
+	s.logger.Debugf("Starting rpp-get listener: %s", s.listener.Addr())
+
+	if err := s.server.Serve(s.listener); err != nil && err != http.ErrServerClosed {
+		s.logger.Error(err.Error())
+	}
+}
+
 // StopProxy stops proxy server but does not call os.Exit
 func (p *Proxy) StopProxy() {
 	p.logger.Infof("graceful shutdown packages proxy listener: %s", p.listener.Addr())
@@ -161,6 +230,15 @@ func (p *Proxy) Stop() {
 	if err != nil && err != http.ErrServerClosed {
 		p.logger.Error(err.Error())
 		os.Exit(1)
+	}
+}
+
+func (s *RPPClientBinaryServer) Stop() {
+	s.logger.Infof("graceful shutdown rpp-get listener: %s", s.listener.Addr())
+
+	err := s.server.Shutdown(context.Background())
+	if err != nil && err != http.ErrServerClosed {
+		s.logger.Error(err.Error())
 	}
 }
 
@@ -207,12 +285,10 @@ func (p *Proxy) getPackage(ctx context.Context, digest string, repository string
 		if err == nil {
 			return
 		}
-		// if cache set returns error, log it and directly copy content from registryReader to pipeWriter
-		p.logger.Error(err.Error())
-		// Copy remaining data to pipe
+		p.logger.Errorf("cache set for digest %q: %v", digest, err)
 		_, err = io.Copy(pipeWriter, registryReader)
 		if err != nil {
-			p.logger.Error(err.Error())
+			p.logger.Errorf("copy registry reader to pipe for digest %q: %v", digest, err)
 		}
 	}()
 
@@ -250,4 +326,115 @@ func getRequestIP(r *http.Request) string {
 		IPAddress = r.RemoteAddr
 	}
 	return IPAddress
+}
+
+func (h *rppBinaryHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestIP := getRequestIP(r)
+
+	if r.URL.Path != h.expectedPath {
+		h.logger.Warnf("rpp-get request from client %s for unexpected path %q, expected %q", requestIP, r.URL.Path, h.expectedPath)
+		http.NotFound(w, r)
+		return
+	}
+
+	if r.Method != http.MethodGet {
+		h.logger.Warnf("rpp-get request from client %s with method %s is not allowed", requestIP, r.Method)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	digest := r.URL.Query().Get("digest")
+	if digest == "" {
+		h.logger.Warnf("rpp-get request from client %s: query %q is missing required parameter \"digest\"", requestIP, r.URL.RawQuery)
+		http.Error(w, "missing required query parameter \"digest\"", http.StatusBadRequest)
+		return
+	}
+
+	h.logger.Infof("Received rpp-get request with digest %q from client %s", digest, requestIP)
+
+	binary, err := h.fetchBinary(r.Context(), digest)
+	if err != nil {
+		h.writeFetchError(w, digest, requestIP, err)
+		return
+	}
+
+	h.writeBinaryResponse(w, binary)
+	h.logger.Infof("rpp-get binary for digest %q sent successfully to client %s, size %d", digest, requestIP, len(binary))
+}
+
+func (h *rppBinaryHandler) fetchBinary(ctx context.Context, digest string) ([]byte, error) {
+	registryConfig, err := h.configGetter.Get(registry.DefaultRepository)
+	if err != nil {
+		return nil, fmt.Errorf("get registry config: %w", err)
+	}
+	if registryConfig == nil {
+		return nil, errEmptyRegistryConfig
+	}
+	registryConfig.SignCheck = h.signCheck
+
+	_, _, packageReader, err := h.registryClient.GetPackage(ctx, h.logger, registryConfig, digest, "")
+	if err != nil {
+		return nil, err
+	}
+	defer packageReader.Close()
+
+	binary, err := extractTarGzFile(packageReader, h.binaryName)
+	if err != nil {
+		return nil, fmt.Errorf("extract %s binary: %w", h.binaryName, err)
+	}
+
+	return binary, nil
+}
+
+func (h *rppBinaryHandler) writeFetchError(w http.ResponseWriter, digest, requestIP string, err error) {
+	if errors.Is(err, registry.ErrPackageNotFound) {
+		h.logger.Warnf("rpp-get package %q requested by client %s was not found", digest, requestIP)
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	h.logger.Errorf("fetch %s package %q requested by client %s: %v", h.binaryName, digest, requestIP, err)
+	http.Error(w, "internal server error", http.StatusInternalServerError)
+}
+
+func (h *rppBinaryHandler) writeBinaryResponse(w http.ResponseWriter, binary []byte) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, h.binaryName))
+	w.Header().Set("Content-Length", strconv.Itoa(len(binary)))
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	if _, err := w.Write(binary); err != nil {
+		h.logger.Errorf("write %s response: %v", h.binaryName, err)
+	}
+}
+
+func normalizeBootstrapClusterUUID(clusterUUID string) string {
+	return strings.Trim(strings.TrimSpace(clusterUUID), "/")
+}
+
+func extractTarGzFile(reader io.Reader, fileName string) ([]byte, error) {
+	gzipReader, err := gzip.NewReader(reader)
+	if err != nil {
+		return nil, fmt.Errorf("read gzip stream: %w", err)
+	}
+	defer gzipReader.Close()
+
+	tarReader := tar.NewReader(gzipReader)
+	for {
+		header, err := tarReader.Next()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, fmt.Errorf("file %q not found in archive", fileName)
+			}
+
+			return nil, err
+		}
+
+		if header.Typeflag != tar.TypeReg || path.Base(header.Name) != fileName {
+			continue
+		}
+
+		return io.ReadAll(tarReader)
+	}
 }

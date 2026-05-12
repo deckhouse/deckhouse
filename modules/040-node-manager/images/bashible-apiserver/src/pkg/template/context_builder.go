@@ -65,6 +65,7 @@ type BashibleContextData struct {
 	VersionMap map[string]interface{}       `json:"versionMap" yaml:"versionMap"`
 	Registry   map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy      map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	Deckhouse  deckhouse                    `json:"deckhouse" yaml:"deckhouse"`
 }
 
 // Map returns context data as map[string]interface{} for proper yaml marshalling
@@ -79,6 +80,7 @@ func (bd BashibleContextData) Map() map[string]interface{} {
 	result["registry"] = bd.Registry
 	result["versionMap"] = bd.VersionMap
 	result["proxy"] = bd.Proxy
+	result["deckhouse"] = bd.Deckhouse
 	if bashibleData, ok := bd.VersionMap["bashible"]; ok {
 		result["bashible"] = bashibleData
 	}
@@ -133,21 +135,29 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Images:           cb.imagesDigests,
 		Registry:         cb.registryData,
 		Proxy:            cb.clusterInputData.Proxy,
+		Deckhouse:        cb.clusterInputData.Deckhouse,
 	}
 
 	ngMap := make(map[string][]byte)
 	errorsMap := make(map[string]error)
 	hashMap := make(map[string]hash.Hash, len(cb.clusterInputData.NodeGroups))
+	clusterMasterKubeAPIEndpoints, clusterMasterRPPAddresses, clusterMasterRPPBootstrapAddresses := clusterMasterEndpointAddresses(cb.clusterInputData.ClusterMasterEndpoints)
 
 	commonContext := &tplContextCommon{
-		versionMapWrapper: versionMapFromMap(cb.versionMap),
-		RunType:           "Normal",
+		versionMapWrapper:                  versionMapFromMap(cb.versionMap),
+		RunType:                            "Normal",
+		ClusterUUID:                        cb.clusterInputData.ClusterUUID,
+		ClusterMasterEndpoints:             cb.clusterInputData.ClusterMasterEndpoints,
+		ClusterMasterKubeAPIEndpoints:      clusterMasterKubeAPIEndpoints,
+		ClusterMasterRPPAddresses:          clusterMasterRPPAddresses,
+		ClusterMasterRPPBootstrapAddresses: clusterMasterRPPBootstrapAddresses,
 		Normal: normal{
 			PodSubnetNodeCIDRPrefix: cb.clusterInputData.PodSubnetNodeCIDRPrefix,
 			ClusterDomain:           cb.clusterInputData.ClusterDomain,
 			ClusterDNSAddress:       cb.clusterInputData.ClusterDNSAddress,
 			BootstrapTokens:         cb.clusterInputData.BootstrapTokens,
 			APIServerEndpoints:      cb.clusterInputData.APIServerEndpoints,
+			ClusterMasterEndpoints:  cb.clusterInputData.ClusterMasterEndpoints,
 			APIServerProxyCerts:     cb.clusterInputData.APIServerProxyCerts,
 			KubernetesCA:            cb.clusterInputData.KubernetesCA,
 			ModuleSourcesCA:         cb.moduleSourcesCA,
@@ -155,6 +165,7 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 		Registry:                   cb.registryData,
 		Images:                     cb.imagesDigests,
 		Proxy:                      cb.clusterInputData.Proxy,
+		Deckhouse:                  cb.clusterInputData.Deckhouse,
 		PackagesProxy:              cb.clusterInputData.PackagesProxy,
 		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
 	}
@@ -194,10 +205,16 @@ func (cb *ContextBuilder) Build() (BashibleContextData, map[string][]byte, map[s
 
 func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nodeGroup, versionMap map[string]interface{}, bundleNgContext *bundleNGContext) (bashibleContext, error) {
 	bc := bashibleContext{
-		KubernetesVersion: ng.KubernetesVersion(),
+		KubernetesVersion:                  ng.KubernetesVersion(),
+		ClusterUUID:                        cb.clusterInputData.ClusterUUID,
+		ClusterMasterEndpoints:             cb.clusterInputData.ClusterMasterEndpoints,
+		ClusterMasterKubeAPIEndpoints:      bundleNgContext.tplContextCommon.ClusterMasterKubeAPIEndpoints,
+		ClusterMasterRPPAddresses:          bundleNgContext.tplContextCommon.ClusterMasterRPPAddresses,
+		ClusterMasterRPPBootstrapAddresses: bundleNgContext.tplContextCommon.ClusterMasterRPPBootstrapAddresses,
 		Normal: map[string]interface{}{
-			"apiserverEndpoints":  bundleNgContext.tplContextCommon.Normal.APIServerEndpoints,
-			"apiserverProxyCerts": bundleNgContext.tplContextCommon.Normal.APIServerProxyCerts,
+			"apiserverEndpoints":     bundleNgContext.tplContextCommon.Normal.APIServerEndpoints,
+			"clusterMasterEndpoints": bundleNgContext.tplContextCommon.Normal.ClusterMasterEndpoints,
+			"apiserverProxyCerts":    bundleNgContext.tplContextCommon.Normal.APIServerProxyCerts,
 		},
 		NodeGroup: ng,
 		RunType:   "Normal",
@@ -205,6 +222,7 @@ func (cb *ContextBuilder) newBashibleContext(checksumCollector hash.Hash, ng nod
 		Images:                     cb.imagesDigests,
 		Registry:                   cb.registryData,
 		Proxy:                      cb.clusterInputData.Proxy,
+		Deckhouse:                  cb.clusterInputData.Deckhouse,
 		CloudProviderType:          cb.getCloudProvider(),
 		PackagesProxy:              cb.clusterInputData.PackagesProxy,
 		AllowedKubeletFeatureGates: cb.clusterInputData.AllowedKubeletFeatureGates,
@@ -340,6 +358,26 @@ func versionMapFromMap(m map[string]interface{}) versionMapWrapper {
 	return res
 }
 
+func clusterMasterEndpointAddresses(endpoints []clusterMasterEndpoint) ([]string, []string, []string) {
+	kubeAPIEndpoints := make([]string, 0, len(endpoints))
+	rppAddresses := make([]string, 0, len(endpoints))
+	rppBootstrapAddresses := make([]string, 0, len(endpoints))
+
+	for _, endpoint := range endpoints {
+		if endpoint.KubeAPIPort != 0 {
+			kubeAPIEndpoints = append(kubeAPIEndpoints, fmt.Sprintf("%s:%d", endpoint.Address, endpoint.KubeAPIPort))
+		}
+		if endpoint.RPPServerPort != 0 {
+			rppAddresses = append(rppAddresses, fmt.Sprintf("%s:%d", endpoint.Address, endpoint.RPPServerPort))
+		}
+		if endpoint.RPPBootstrapServerPort != 0 {
+			rppBootstrapAddresses = append(rppBootstrapAddresses, fmt.Sprintf("%s:%d", endpoint.Address, endpoint.RPPBootstrapServerPort))
+		}
+	}
+
+	return kubeAPIEndpoints, rppAddresses, rppBootstrapAddresses
+}
+
 type nodeGroup map[string]interface{}
 
 func (ng nodeGroup) Name() string {
@@ -369,16 +407,22 @@ func (ng nodeGroup) CRIType() string {
 }
 
 type bashibleContext struct {
-	ConfigurationChecksum string      `json:"configurationChecksum" yaml:"configurationChecksum"`
-	KubernetesVersion     string      `json:"kubernetesVersion" yaml:"kubernetesVersion"`
-	Normal                interface{} `json:"normal" yaml:"normal"`
-	NodeGroup             nodeGroup   `json:"nodeGroup" yaml:"nodeGroup"`
-	RunType               string      `json:"runType" yaml:"runType"` // Normal
+	ConfigurationChecksum              string                  `json:"configurationChecksum" yaml:"configurationChecksum"`
+	KubernetesVersion                  string                  `json:"kubernetesVersion" yaml:"kubernetesVersion"`
+	ClusterUUID                        string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
+	ClusterMasterEndpoints             []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
+	ClusterMasterKubeAPIEndpoints      []string                `json:"clusterMasterKubeAPIEndpoints,omitempty" yaml:"clusterMasterKubeAPIEndpoints,omitempty"`
+	ClusterMasterRPPAddresses          []string                `json:"clusterMasterRPPAddresses,omitempty" yaml:"clusterMasterRPPAddresses,omitempty"`
+	ClusterMasterRPPBootstrapAddresses []string                `json:"clusterMasterRPPBootstrapAddresses,omitempty" yaml:"clusterMasterRPPBootstrapAddresses,omitempty"`
+	Normal                             interface{}             `json:"normal" yaml:"normal"`
+	NodeGroup                          nodeGroup               `json:"nodeGroup" yaml:"nodeGroup"`
+	RunType                            string                  `json:"runType" yaml:"runType"` // Normal
 
 	// Enrich with images and registry
 	Images                     map[string]map[string]string `json:"images" yaml:"images"`
 	Registry                   map[string]interface{}       `json:"registry" yaml:"registry"`
 	Proxy                      map[string]interface{}       `json:"proxy" yaml:"proxy"`
+	Deckhouse                  deckhouse                    `json:"deckhouse" yaml:"deckhouse"`
 	CloudProviderType          string                       `json:"cloudProviderType" yaml:"cloudProviderType"`
 	PackagesProxy              map[string]interface{}       `json:"packagesProxy" yaml:"packagesProxy"`
 	AllowedKubeletFeatureGates []string                     `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
@@ -420,13 +464,19 @@ type versionMapWrapper struct {
 type tplContextCommon struct {
 	versionMapWrapper
 
-	RunType string `json:"runType" yaml:"runType"`
-	Normal  normal `json:"normal" yaml:"normal"`
+	RunType                            string                  `json:"runType" yaml:"runType"`
+	ClusterUUID                        string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
+	ClusterMasterEndpoints             []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
+	ClusterMasterKubeAPIEndpoints      []string                `json:"clusterMasterKubeAPIEndpoints,omitempty" yaml:"clusterMasterKubeAPIEndpoints,omitempty"`
+	ClusterMasterRPPAddresses          []string                `json:"clusterMasterRPPAddresses,omitempty" yaml:"clusterMasterRPPAddresses,omitempty"`
+	ClusterMasterRPPBootstrapAddresses []string                `json:"clusterMasterRPPBootstrapAddresses,omitempty" yaml:"clusterMasterRPPBootstrapAddresses,omitempty"`
+	Normal                             normal                  `json:"normal" yaml:"normal"`
 
 	Images   map[string]map[string]string `json:"images" yaml:"images"`
 	Registry map[string]interface{}       `json:"registry" yaml:"registry"`
 
 	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Deckhouse                  deckhouse              `json:"deckhouse" yaml:"deckhouse"`
 	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
 	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }
@@ -445,29 +495,46 @@ type bundleNGContext struct {
 }
 
 type normal struct {
-	PodSubnetNodeCIDRPrefix string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
-	ClusterDomain           string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress       string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	BootstrapTokens         map[string]string      `json:"bootstrapTokens" yaml:"bootstrapTokens"`
-	APIServerEndpoints      []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	APIServerProxyCerts     map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
-	KubernetesCA            string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	ModuleSourcesCA         map[string]string      `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
+	PodSubnetNodeCIDRPrefix string                  `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain           string                  `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress       string                  `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	BootstrapTokens         map[string]string       `json:"bootstrapTokens" yaml:"bootstrapTokens"`
+	APIServerEndpoints      []string                `json:"apiserverEndpoints,omitempty" yaml:"apiserverEndpoints,omitempty"` // Deprecated
+	ClusterMasterEndpoints  []clusterMasterEndpoint `json:"clusterMasterEndpoints" yaml:"clusterMasterEndpoints"`
+	APIServerProxyCerts     map[string]interface{}  `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA            string                  `json:"kubernetesCA" yaml:"kubernetesCA"`
+	ModuleSourcesCA         map[string]string       `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
+}
+
+type clusterMasterEndpoint struct {
+	Address                string `json:"address" yaml:"address"`
+	KubeAPIPort            int    `json:"kubeApiPort" yaml:"kubeApiPort"`
+	RPPServerPort          int    `json:"rppServerPort" yaml:"rppServerPort"`
+	RPPBootstrapServerPort int    `json:"rppBootstrapServerPort" yaml:"rppBootstrapServerPort"`
+}
+
+type deckhouse struct {
+	Channel string `json:"channel" yaml:"channel"`
+	Version string `json:"version" yaml:"version"`
+	Edition string `json:"edition" yaml:"edition"`
 }
 
 type inputData struct {
-	PodSubnetNodeCIDRPrefix    string                 `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
-	ClusterDomain              string                 `json:"clusterDomain" yaml:"clusterDomain"`
-	ClusterDNSAddress          string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
-	CloudProvider              interface{}            `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
-	Proxy                      map[string]interface{} `json:"proxy,omitempty" yaml:"proxy,omitempty"`
-	BootstrapTokens            map[string]string      `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
-	PackagesProxy              map[string]interface{} `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
-	APIServerEndpoints         []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	APIServerProxyCerts        map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
-	KubernetesCA               string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
-	AllowedBundles             []string               `json:"allowedBundles" yaml:"allowedBundles"`
-	NodeGroups                 []nodeGroup            `json:"nodeGroups" yaml:"nodeGroups"`
-	Freq                       interface{}            `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
-	AllowedKubeletFeatureGates []string               `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
+	Deckhouse                  deckhouse               `json:"deckhouse" yaml:"deckhouse"`
+	PodSubnetNodeCIDRPrefix    string                  `json:"podSubnetNodeCIDRPrefix" yaml:"podSubnetNodeCIDRPrefix"`
+	ClusterDomain              string                  `json:"clusterDomain" yaml:"clusterDomain"`
+	ClusterDNSAddress          string                  `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
+	ClusterUUID                string                  `json:"clusterUUID,omitempty" yaml:"clusterUUID,omitempty"`
+	ClusterMasterEndpoints     []clusterMasterEndpoint `json:"clusterMasterEndpoints,omitempty" yaml:"clusterMasterEndpoints,omitempty"`
+	CloudProvider              interface{}             `json:"cloudProvider,omitempty" yaml:"cloudProvider,omitempty"`
+	Proxy                      map[string]interface{}  `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	BootstrapTokens            map[string]string       `json:"bootstrapTokens,omitempty" yaml:"bootstrapTokens,omitempty"`
+	PackagesProxy              map[string]interface{}  `json:"packagesProxy,omitempty" yaml:"packagesProxy,omitempty"`
+	APIServerEndpoints         []string                `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
+	APIServerProxyCerts        map[string]interface{}  `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
+	KubernetesCA               string                  `json:"kubernetesCA" yaml:"kubernetesCA"`
+	AllowedBundles             []string                `json:"allowedBundles" yaml:"allowedBundles"`
+	NodeGroups                 []nodeGroup             `json:"nodeGroups" yaml:"nodeGroups"`
+	Freq                       interface{}             `json:"NodeStatusUpdateFrequency,omitempty" yaml:"NodeStatusUpdateFrequency,omitempty"`
+	AllowedKubeletFeatureGates []string                `json:"allowedKubeletFeatureGates,omitempty" yaml:"allowedKubeletFeatureGates,omitempty"`
 }

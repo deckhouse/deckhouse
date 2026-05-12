@@ -59,6 +59,10 @@ import:
   to: /images_digests.json
   before: install
 {{- end }}
+- from: {{ index $.Images "minget" }}
+  add: /usr/bin/minget
+  to: /minget
+  before: install
 mount:
 {{ include "mount points for golang builds" . }}
 secrets:
@@ -70,6 +74,8 @@ shell:
 {{- if $context.includeImagesDigests }}
   - cp /images_digests.json pkg/config/digests/images_digests.json
 {{- end }}
+  - mkdir -p pkg/minget/embed
+  - cp /minget pkg/minget/embed/minget
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - RPP_SIGN_CHECK={{- $rppSignCheck }} D8_VERSION={{- $context.CI_COMMIT_TAG }} DEFAULT_KUBERNETES_VERSION={{- $context.DEFAULT_KUBERNETES_VERSION }} make build
 {{- end }}

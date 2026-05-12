@@ -13,6 +13,13 @@ copy_content:
 soon:
   en: "soon..."
   ru: "скоро..."
+getting_started_nav:
+  gui_installer:
+    en: Using the graphical installer
+    ru: С помощью графического установщика
+  manual_cli:
+    en: Manually from the command line
+    ru: Вручную из командной строки
 ce: Community Edition
 be: Basic Edition
 se: Standard Edition

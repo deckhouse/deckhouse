@@ -113,22 +113,60 @@ properties:
           webhookCA:
             description: |
               CA webhook'а авторизации.
-      loadBalancer:
+      publishAPI:
         description: |
-          Создание сервиса `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.
+          Настройки публикации доступа к API-серверу Kubernetes.
         properties:
-          annotations:
-            description: |
-              Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
-              > **Внимание.** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
-          sourceRanges:
-            description: |
-              Список CIDR, которым разрешен доступ к API.
+          ingress:
+            description: 'Настройки для публикации API через Ingress.'
+            properties:
+              enabled:
+                description: 'Если указать `true`, в namespace `kube-system` кластера будет создан Ingress-ресурс `kubernetes-api`, который откроет публичный доступ к API-серверу.'
+              ingressClass:
+                description: 'Ingress-класс, который будет использован для публикации API Kubernetes через Ingress.'
+              whitelistSourceRanges:
+                description: 'Список адресов в формате CIDR, которым разрешено подключение к API-серверу.'
+              addKubeconfigGeneratorEntry:
+                description: 'Если указать `false`, будет удалена запись в kubeconfig-generator.'
+              https:
+                description: 'Режим работы HTTPS для Ingress API-сервера.'
+                properties:
+                  mode:
+                    description: |
+                      Режим выдачи сертификатов для данного Ingress-ресурса.
 
-              Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
-          port:
-            description: |
-              Внешний порт TCP-балансировщика.
+                      В случае использования режима `SelfSigned`, для Ingress-ресурса будет выпущен сертификат подписанный CA.
+
+                      Получить выпущенный сертификат можно следующей командой: `d8 k -n kube-system get secrets kubernetes-api-ca-key-pair -oyaml`.
+
+                      В случае использования режима `Global` будут применены политики из глобальной настройки `global.modules.https.mode`. То есть если в глобальной настройке стоит режим `CertManager` с ClusterIssuer `letsencrypt`, для Ingress-ресурса будет заказан сертификат Let's Encrypt.
+                  global:
+                    description: 'Дополнительный параметр для режима `Global`.'
+                    properties:
+                      kubeconfigGeneratorMasterCA:
+                        description: |
+                          Если перед Ingress-контроллером есть внешний балансировщик, который терминирует HTTPS-трафик с использованием непубличного сертификата, укажите цепочку CA в этом параметре. Она будет добавлена в сгенерированные файлы конфигурации kubectl.
+
+                          Если вы используете в кластере сертификаты, выдаваемые c помощью модуля `cert-manager` и Let's Encrypt, следует в качестве значения установить пустую строку `""`.
+
+                          В качестве CA допускается указать непосредственно сертификат внешнего балансировщика. В таком случае нужно помнить, что обновление сертификата на балансировщике сделает невалидными ранее сгенерированные файлы конфигурации kubectl.
+          loadBalancer:
+            description: 'Настройки для публикации API через service с типом LoadBalancer.'
+            properties: 
+              enabled:
+                description: 'Если указать `true`, будет создан сервис `kube-system/d8-control-plane-apiserver` с типом `LoadBalancer`.'
+              annotations:
+                description: |
+                  Аннотации, которые будут проставлены сервису для гибкой настройки балансировщика.
+                  > **Внимание.** Модуль не учитывает особенности указания аннотаций в различных облаках. Если аннотации для заказа LoadBalancer'а применяются только при создании сервиса, для обновления подобных параметров вам необходимо будет удалить и добавить параметр `apiserver.loadBalancer`.
+              sourceRanges:
+                description: |
+                  Список CIDR, которым разрешен доступ к API.
+
+                  Облачный провайдер может не поддерживать данную опцию и игнорировать ее.
+              port:
+                description: |
+                  Внешний порт TCP-балансировщика.
       auditPolicyEnabled:
         description: |
           Применяет [дополнительные политики аудита](faq.html#как-настроить-дополнительные-политики-аудита) с конфигурацией из Secret'а `kube-system/audit-policy`.
@@ -147,10 +185,25 @@ properties:
               Путь к директории. Действует только в случае `output: "File"`.
       encryptionEnabled:
         description: |
-          Включает режим [encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
+          Включает шифрование данных в etcd ([Encrypting secret data at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/)).
 
-          Генерирует Secret `kube-system/d8-secret-encryption-key`, содержащий ключ шифрования.
-          > **Важно!** Этот режим нельзя отключить!
+          При включении создаётся Secret `kube-system/d8-secret-encryption-key` с ключом шифрования.
+
+          Включение этого параметра автоматически активирует feature gate `CRDSensitiveData` для `kube-apiserver`,
+          который защищает поля кастомных ресурсов, помеченные маркером `x-kubernetes-sensitive-data: true`,
+          через шифрование в etcd, фильтрацию полей через субресурс `<resource>/sensitive` на основе RBAC
+          и маскировку значений в журнале аудита.
+
+          > **Внимание.** После включения этот параметр нельзя отключить.
+  rootKubeconfigSymlink:
+    description: |
+      Поддерживать ли символическую ссылку `/root/.kube/config` на `/etc/kubernetes/admin.conf` на узлах control-plane.
+
+      Когда включён модуль [user-authz](/modules/user-authz/) и этот параметр равен `false`, символическая ссылка удаляется, в подах `control-plane-manager` выставляется переменная окружения `NODE_ADMIN_KUBECONFIG` соответствующим образом. Для доступа к API с узла используйте `d8 k` с `--kubeconfig=/etc/kubernetes/admin.conf` (или другие учётные данные).
+
+      Если модуль `user-authz` выключен, `control-plane-manager` этот параметр не учитывает и сохраняет поведение по умолчанию (симлинк создаётся).
+
+      Переключение обратно на `true` восстанавливает симлинк при следующем цикле согласования.
   etcd:
     description: |
       Параметры etcd.

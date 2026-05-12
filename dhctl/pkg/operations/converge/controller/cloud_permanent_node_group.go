@@ -74,11 +74,16 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 		index++
 	}
 
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
+	}
+
 	err = log.Process("infrastructure", fmt.Sprintf("Pipelines %s for %s-%s-%v", c.layoutStep, metaConfig.ClusterPrefix, c.name, nodesIndexToCreate), func() error {
 		var err error
 		nodesToWait, err = operations.ParallelBootstrapAdditionalNodes(
 			ctx.Ctx(),
-			ctx.KubeClient(),
+			kubeClient,
 			metaConfig,
 			nodesIndexToCreate,
 			c.layoutStep,
@@ -93,7 +98,7 @@ func (c *CloudPermanentNodeGroupController) addNodes(ctx *context.Context) error
 	if err != nil {
 		return err
 	}
-	return entity.WaitForNodesListBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodesToWait, nil)
+	return entity.WaitForNodesListBecomeReady(ctx.Ctx(), kubeClient, nodesToWait, nil)
 }
 
 func (c *CloudPermanentNodeGroupController) beforeUpdateNodes(*context.Context) error {
@@ -116,6 +121,11 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	if err != nil {
 		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, nodeName)
 		return nil
+	}
+
+	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
+	if err != nil {
+		return fmt.Errorf("Could not get kube client: %w", err)
 	}
 
 	nodeGroupName := c.name
@@ -152,12 +162,12 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 		return global.ErrConvergeInterrupted
 	}
 
-	err = infrastructurestate.SaveNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, c.name, outputs.InfrastructureState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
+	err = infrastructurestate.SaveNodeInfrastructureState(ctx.Ctx(), kubeClient, nodeName, c.name, outputs.InfrastructureState, nodeGroupSettingsFromConfig, log.GetDefaultLogger())
 	if err != nil {
 		return err
 	}
 
-	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), ctx.KubeClient(), nodeName)
+	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
 func (c *CloudPermanentNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {

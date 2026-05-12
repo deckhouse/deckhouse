@@ -38,14 +38,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
-	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
-	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
+	erofsdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/erofs"
+	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
-	taskapplysettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/applysettings"
+	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
 	taskenable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/enable"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
@@ -83,7 +83,7 @@ type Runtime struct {
 	hookEventHandler *hookevent.Handler // Routes Kube/schedule events into hook tasks
 	queueService     *queue.Service     // Per-package task queues with retry
 	nelmService      *nelm.Service      // Helm release management and drift monitoring
-	installer        installerI         // Downloads and mounts package images
+	deployer         deployerI          // Deploys and undeploys package images
 
 	status      *status.Service     // Tracks per-package condition chain
 	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
@@ -103,11 +103,10 @@ type Runtime struct {
 	logger *log.Logger
 }
 
-// installerI abstracts package image operations (download, mount, unmount).
-type installerI interface {
-	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
-	Install(ctx context.Context, downloaded, deployed, name, version string) error
-	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
+// deployerI abstracts package image deployment to and removal from the filesystem.
+type deployerI interface {
+	Deploy(ctx context.Context, repo registry.Remote, downloaded, deployed, packageName, name, version string) error
+	Undeploy(ctx context.Context, downloaded, deployed, name string, keep bool) error
 }
 
 // moduleManagerI provides access to global values for version getters and bootstrap checks.
@@ -135,12 +134,12 @@ func New(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Contain
 	reg := registry.NewService(dc, logger)
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.installer = symlinkinstaller.NewInstaller(reg, logger)
+	r.deployer = symlinkdeploy.NewDeployer(reg, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.installer = erofsinstaller.NewInstaller(reg, logger)
+		r.deployer = erofsdeploy.NewDeployer(reg, logger)
 	}
 
 	// Initialize scheduler with enabling/disabling callbacks
@@ -492,9 +491,9 @@ func (r *Runtime) Run() {
 }
 
 // schedulePackage handles scheduler enable events by enqueueing
-// ApplySettings → Startup → Run tasks for the named package.
+// Configure → Startup → Run tasks for the named package.
 //
-// ApplySettings reads the latest pending settings from the Store and validates/applies
+// Configure reads the latest pending settings from the Store and validates/applies
 // them to the loaded package instance. This is the single point where settings reach
 // the runtime — both initial load and settings-only changes flow through here.
 //
@@ -521,13 +520,13 @@ func (r *Runtime) schedulePackage(name string) {
 	settings := r.packages.GetPendingSettings(name)
 
 	if pkg := r.apps[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, pkg.GetNamespace(), r.nelmService, r.status, r.logger), onDone)
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
-		r.queueService.Enqueue(ctx, name, taskapplysettings.NewTask(pkg, settings, r.status, r.logger))
+		r.queueService.Enqueue(ctx, name, taskconfigure.NewTask(pkg, settings, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskenable.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger), onDone)
 	}

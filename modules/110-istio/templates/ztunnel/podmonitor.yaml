@@ -3,7 +3,7 @@
 {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 
 {{- if (.Values.global.enabledModules | has "operator-prometheus") }}
-{{- if and ($.Values.istio.internal.enableAmbientMode) ($supportsAmbient) }}
+{{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor

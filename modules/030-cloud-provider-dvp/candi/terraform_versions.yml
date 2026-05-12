@@ -1,5 +1,4 @@
 opentofu: 1.9.4
-
 kubernetes:
   namespace: hashicorp
   cloudName: DVP

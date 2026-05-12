@@ -112,13 +112,14 @@ help:
 
 TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
-GATOR_VERSION = 3.9.0
+GATOR_VERSION = 3.22.0
+OPA_VERSION = 1.15.1
 GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
 
 ##@ General
 
-deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/werf bin/gh ## Install dev dependencies.
+deps: bin/golangci-lint bin/trivy bin/regcopy bin/jq bin/yq bin/crane bin/promtool bin/gator bin/opa bin/werf bin/gh ## Install dev dependencies.
 
 ##@ Security
 bin:
@@ -144,14 +145,24 @@ bin/gator: bin/gator-${GATOR_VERSION}/gator
 	rm -f bin/gator
 	ln -s /deckhouse/bin/gator-${GATOR_VERSION}/gator bin/gator
 
+bin/opa-${OPA_VERSION}/opa:
+	mkdir -p bin/opa-${OPA_VERSION}
+	curl -sSfL https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_${GOHOSTOS}_${GOHOSTARCH}_static -o bin/opa-${OPA_VERSION}/opa
+	chmod +x bin/opa-${OPA_VERSION}/opa
+
+.PHONY: bin/opa
+bin/opa: bin/opa-${OPA_VERSION}/opa
+	rm -f bin/opa
+	ln -s /deckhouse/bin/opa-${OPA_VERSION}/opa bin/opa
+
 .PHONY: bin/yq
 bin/yq: bin ## Install yq deps for update-patchversion script.
 	curl -sSfL https://github.com/mikefarah/yq/releases/download/v4.25.3/yq_$(YQ_PLATFORM)_$(YQ_ARCH) -o bin/yq && chmod +x bin/yq
 
 .PHONY: tests-modules dmt-lint tests-openapi tests-controller tests-webhooks
-tests-modules: ## Run unit tests for modules hooks and templates.
+tests-modules: bin/gator bin/opa gotestsum ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
-	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
+	$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
 dmt-lint:
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
@@ -162,19 +173,19 @@ dmt-lint:
 tests-openapi: ## Run tests against modules openapi values schemas.
 	go test -timeout=${TESTS_TIMEOUT} -vet=off ./testing/openapi_cases/
 
-tests-controller: ## Run deckhouse-controller unit tests.
-	go test -timeout=${TESTS_TIMEOUT} -cover -race ./deckhouse-controller/... -v
+tests-controller: gotestsum ## Run deckhouse-controller unit tests.
+	$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} ./deckhouse-controller/... -v
 
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
 
 .PHONY: test-all
-test-all: go-check
-	$(call iterateAllGoModules,Running go test with race and cover in,go test -cover -race -timeout=${TESTS_TIMEOUT} ./...)
+test-all: go-check gotestsum
+	$(call iterateAllGoModules,Running go test with race and cover in,$(GOTESTSUM) -- -cover -race -timeout=${TESTS_TIMEOUT} ./...)
 
 .PHONY: test-draft-all
-test-draft-all: go-check
-	$(call iterateAllGoModules,Running go test in,go test ./...)
+test-draft-all: go-check gotestsum
+	$(call iterateAllGoModules,Running go test in,$(GOTESTSUM) -- ./...)
 
 .PHONY: validate
 validate: ## Check common patterns through all modules.
@@ -207,12 +218,16 @@ define iterateAllGoModules
 endef
 
 .PHONY: lint-all
-lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+lint-all: golangci-lint check-dhctl-cmd-drift ## Run golangci-lint run in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
 	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
+
+.PHONY: check-dhctl-cmd-drift
+check-dhctl-cmd-drift: ## Verify dhctl ↔ deckhouse-controller CLI command-builder duplicates are in sync.
+	@bash tools/check-dhctl-cmd-drift.sh
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
@@ -527,14 +542,16 @@ CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
 YQ = $(LOCALBIN)/yq
+GOTESTSUM = $(LOCALBIN)/gotestsum
 
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.29.20
+DECKHOUSE_CLI_VERSION ?= v0.29.29
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.33.8
 YQ_VERSION ?= v4.47.2
+GOTESTSUM_VERSION ?= v1.13.0
 
 ## Generate werf
 .PHONY: generate-werf
@@ -662,6 +679,11 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 yq: $(YQ) ## Download yq locally if necessary.
 $(YQ): $(LOCALBIN)
 	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
+
+.PHONY: gotestsum
+gotestsum: $(GOTESTSUM) ## Download gotestsum locally if necessary.
+$(GOTESTSUM): $(LOCALBIN)
+	$(call go-install-tool,$(GOTESTSUM),gotest.tools/gotestsum,$(GOTESTSUM_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

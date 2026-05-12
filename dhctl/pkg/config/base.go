@@ -57,10 +57,6 @@ var (
 )
 
 func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig, opts ...ValidateOption) (*MetaConfig, error) {
-	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
-	if err != nil {
-		return nil, err
-	}
 	if dc == nil {
 		return nil, fmt.Errorf("directory config is nil")
 	}
@@ -95,6 +91,7 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 	}
 	metaConfig.DownloadRootDir = dc.DownloadDir
 	metaConfig.DownloadCacheDir = dc.DownloadCacheDir
+	metaConfig.VersionFilePath = dc.VersionFilePath
 
 	if metaConfig.ClusterConfig == nil {
 		return nil, fmt.Errorf("ClusterConfiguration must be provided")
@@ -104,7 +101,7 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		return nil, err
 	}
 
-	if err := metaConfig.LoadImagesDigests(imagesDigestsJSONFIle); err != nil {
+	if err := metaConfig.LoadImagesDigests(); err != nil {
 		return nil, err
 	}
 
@@ -151,17 +148,14 @@ func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaCon
 func ParseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig) (*MetaConfig, error) {
 	var metaConfig *MetaConfig
 	var err error
-	err = log.Process("common", "Get Cluster configuration", func() error {
+
+	return metaConfig, log.ProcessCtx(ctx, "common", "Get Cluster configuration", func(ctx context.Context) error {
 		return retry.NewLoop("Get Cluster configuration from Kubernetes cluster", 10, 5*time.Second).
 			RunContext(ctx, func() error {
 				metaConfig, err = parseConfigFromCluster(ctx, kubeCl, preparatorProvider, dc)
 				return err
 			})
 	})
-	if err != nil {
-		return nil, err
-	}
-	return metaConfig, nil
 }
 
 func ParseConfigInCluster(ctx context.Context, kubeCl *client.KubernetesClient, preparatorProvider MetaConfigPreparatorProvider, dc *directoryconfig.DirectoryConfig) (*MetaConfig, error) {
@@ -204,6 +198,7 @@ func parseConfigFromCluster(ctx context.Context, kubeCl *client.KubernetesClient
 		metaConfig.DeckhouseConfig.RegistryCA = conf.GetCA()
 		metaConfig.DownloadRootDir = dc.DownloadDir
 		metaConfig.DownloadCacheDir = dc.DownloadCacheDir
+		metaConfig.VersionFilePath = dc.VersionFilePath
 	}
 	schemaStore := NewSchemaStore(dc)
 
@@ -576,4 +571,8 @@ func PrepareCandiDir(ctx context.Context, kubeCl *client.KubernetesClient, logge
 	}
 
 	return prepareCandiDir(ctx, conf, dc)
+}
+
+func GetRPPSignCheck() bool {
+	return RppSignCheck == "true"
 }

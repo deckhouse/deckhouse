@@ -78,6 +78,44 @@ func renewKubeconfigs() error {
 			return err
 		}
 	}
+
+	if err := hardenAdminKubeconfigs(); err != nil {
+		log.Warn("failed to restrict kubeconfig file permissions", slog.Any("error", err))
+	}
+
+	return nil
+}
+
+// hardenAdminKubeconfigs restricts file permissions on admin kubeconfig files
+// to prevent unauthorized access. Both admin.conf and super-admin.conf are
+// restricted to 0600 (owner read/write only).
+func hardenAdminKubeconfigs() error {
+	kubeconfigFiles := []string{"super-admin.conf", "admin.conf"}
+
+	for _, name := range kubeconfigFiles {
+		path := filepath.Join(kubernetesConfigPath, name)
+		fi, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return fmt.Errorf("stat %s: %w", path, err)
+		}
+
+		currentMode := fi.Mode().Perm()
+		if currentMode == 0o600 {
+			continue
+		}
+
+		log.Info("restricting kubeconfig file permissions",
+			slog.String("path", path),
+			slog.String("from", fmt.Sprintf("%04o", currentMode)),
+			slog.String("to", "0600"))
+
+		if err := os.Chmod(path, 0o600); err != nil {
+			return fmt.Errorf("chmod %s: %w", path, err)
+		}
+	}
 	return nil
 }
 
@@ -211,6 +249,11 @@ func updateRootKubeconfig() error {
 	}
 
 	originalPath := filepath.Join(kubernetesConfigPath, "admin.conf")
+
+	if !config.NodeAdminKubeconfig {
+		return removeRootKubeconfigSymlink(path, originalPath)
+	}
+
 	log.Info("update root user kubeconfig", slog.String("path", path))
 	if _, err := os.Stat(path); err == nil {
 		p, err := filepath.EvalSymlinks(path)
@@ -227,6 +270,37 @@ func updateRootKubeconfig() error {
 	}
 
 	return os.Symlink(originalPath, path)
+}
+
+// removeRootKubeconfigSymlink removes the /root/.kube/config symlink only if it
+// points to admin.conf. User-created files are left untouched.
+func removeRootKubeconfigSymlink(path, adminConfPath string) error {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	if fi.Mode()&os.ModeSymlink == 0 {
+		log.Info("root kubeconfig is not a symlink, leaving as is", slog.String("path", path))
+		return nil
+	}
+
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		log.Warn("cannot resolve root kubeconfig symlink, skipping removal", slog.String("path", path), slog.Any("error", err))
+		return nil
+	}
+
+	if target != adminConfPath {
+		log.Info("root kubeconfig symlink does not point to admin.conf, leaving as is", slog.String("path", path), slog.String("target", target))
+		return nil
+	}
+
+	log.Info("removing root kubeconfig symlink to admin.conf (NODE_ADMIN_KUBECONFIG=false)", slog.String("path", path))
+	return os.Remove(path)
 }
 
 func checkKubeletConfig() error {

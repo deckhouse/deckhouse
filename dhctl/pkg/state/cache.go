@@ -14,22 +14,24 @@
 
 package state
 
+import "context"
+
 const TombstoneKey = ".tombstone"
 
 type Cache interface {
-	Save(string, []byte) error
-	SaveStruct(string, interface{}) error
+	Save(context.Context, string, []byte) error
+	SaveStruct(context.Context, string, interface{}) error
 
-	Load(string) ([]byte, error)
-	LoadStruct(string, interface{}) error
+	Load(context.Context, string) ([]byte, error)
+	LoadStruct(context.Context, string, interface{}) error
 
-	Delete(string)
-	Clean()
-	CleanWithExceptions(excludeKeys ...string)
+	Delete(context.Context, string)
+	Clean(ctx context.Context)
+	CleanWithExceptions(ctx context.Context, excludeKeys ...string)
 
 	GetPath(string) string
-	Iterate(func(string, []byte) error) error
-	InCache(string) (bool, error)
+	Iterate(context.Context, func(string, []byte) error) error
+	InCache(context.Context, string) (bool, error)
 
 	NeedIntermediateSave() bool
 

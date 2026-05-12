@@ -376,7 +376,25 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/rpp-get/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/007-registrypackages/images/systemctl-power-commands-wrapper/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/007-registrypackages/images/tail-log/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -709,6 +727,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/150-user-authn/images/user-api/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/160-multitenancy-manager/images/multitenancy-manager/src"
   labels:
   - "type/dependencies"
@@ -836,6 +863,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/402-ingress-nginx/images/proxy-failover-iptables/failover"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/402-ingress-nginx/images/sandbox/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

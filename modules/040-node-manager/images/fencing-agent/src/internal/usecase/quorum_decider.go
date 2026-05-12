@@ -45,6 +45,20 @@ func (qd *QuorumDecider) ShouldFeed(numMembers int) bool {
 	return numMembers >= quorum
 }
 
+func (qd *QuorumDecider) Quorum() int {
+	qd.mtx.RLock()
+	defer qd.mtx.RUnlock()
+
+	return qd.nodesNumber.TotalNodes/2 + 1
+}
+
+func (qd *QuorumDecider) TotalNodes() int {
+	qd.mtx.RLock()
+	defer qd.mtx.RUnlock()
+
+	return qd.nodesNumber.TotalNodes
+}
+
 func (qd *QuorumDecider) SetTotalNodes(nodesNumber domain.NodeGroupState) {
 	qd.mtx.Lock()
 	defer qd.mtx.Unlock()

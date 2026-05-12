@@ -35,15 +35,24 @@ rules:
   - patch
 # Nodes - read and update for labels/taints
 - apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  verbs:
+  - get
+  - list
+  - delete
+- apiGroups:
   - ""
   resources:
   - nodes
   verbs:
+  - delete
   - get
   - list
-  - watch
-  - update
   - patch
+  - update
+  - watch
 # Secrets - read for configuration checksums and cloud provider data
 - apiGroups:
   - ""
@@ -53,7 +62,27 @@ rules:
   - get
   - list
   - watch
-# Events - create for NodeGroup events
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - pods/eviction
+  verbs:
+  - create
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - get
 - apiGroups:
   - ""
   - events.k8s.io
@@ -72,7 +101,7 @@ rules:
   - get
   - list
   - watch
-# CAPI Machine and MachineDeployment - read for status calculation
+# CAPI Machine
 - apiGroups:
   - cluster.x-k8s.io
   resources:
@@ -82,6 +111,50 @@ rules:
   - get
   - list
   - watch
+  - update
+  - patch
+  - delete
+# MCM Machine
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines/status
+  - machines
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines/status
+  verbs:
+  - get
+  - list
+  - watch
+# Instance lifecycle and status reconciliation
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - patch
+  - delete
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances/status
+  verbs:
+  - get
+  - patch
+  - update
 # ModuleConfig - read for validation (customTolerationKeys)
 - apiGroups:
   - deckhouse.io
@@ -109,6 +182,14 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -119,6 +200,20 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: d8:node-manager:node-controller
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-controller:rbac-proxy
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:rbac-proxy
 subjects:
 - kind: ServiceAccount
   name: node-controller

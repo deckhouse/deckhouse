@@ -185,15 +185,9 @@ func TestCheckKernelVersionWGCiliumRequirements(t *testing.T) {
 		},
 		{
 			name:          "Version parsing ok and not met requirements",
-			inVerStr:      "5.15.15",
+			inVerStr:      "5.15.15+deb13+1-cloud-amd64",
 			expectCondMet: false,
 			expectError:   false,
-		},
-		{
-			name:          "Version parsing failed",
-			inVerStr:      "6.8.4.15",
-			expectCondMet: false,
-			expectError:   true,
 		},
 	}
 	for _, test := range testCases {
@@ -224,6 +218,99 @@ func TestCheckKernelVersionWGCiliumRequirements(t *testing.T) {
 				if !isKernelVersionMeet {
 					t.Fatalf("expected true but received false")
 				}
+			}
+		})
+	}
+}
+
+func TestToSemver(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			input:    "6.1.0+deb13+1-cloud-amd64",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0-custom-build+abc",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0-38-amd64",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0beta1",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0-rc1",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0~rc1",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6",
+			expected: "6.0.0",
+		},
+		{
+			input:    "6.",
+			expected: "6.0.0",
+		},
+		{
+			input:    ".",
+			expected: "0.0.0",
+		},
+		{
+			input:    "",
+			expected: "0.0.0",
+		},
+		{
+			input:    "unknown",
+			expected: "0.0.0",
+		},
+		{
+			input:    "6.1.0-very-long-suffix-with-many-parts-and-build-metadata-xyz123",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0+20240101+git+sha+dirty",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0_beta",
+			expected: "6.1.0",
+		},
+		{
+			input:    "6.1.0.beta",
+			expected: "6.1.0",
+		},
+		{
+			input:    "v6.1.0",
+			expected: "6.1.0",
+		},
+		{
+			input:    "kernel-6.1.0",
+			expected: "6.1.0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := toSemver(tt.input)
+			if got != tt.expected {
+				t.Fatalf("toSemver(%q) = %q, want %q", tt.input, got, tt.expected)
 			}
 		})
 	}

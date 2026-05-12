@@ -1,0 +1,30 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: allowed-apparmor-profiles
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].securityContext.appArmorProfile
+      level: container
+      description: AppArmor profile configured in container securityContext
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+
+    - path: metadata.annotations["container.apparmor.security.beta.kubernetes.io/*"]
+      level: container
+      description: AppArmor profile configured via container annotation
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+
+    - path: spec.securityContext.appArmorProfile
+      level: pod
+      description: AppArmor profile configured in pod securityContext
+      requiredScenarios: [positive, negative, absent]
+  speFields:
+    - path: spec.securityContext.appArmorProfile.allowedValues
+      level: container
+      description: SPE override for allowed AppArmor profiles
+      requiredScenarios: [speMatch, speMismatch, speAbsent, speContainerSpecific]
+  applicableTracks:
+    functional: true
+    spePod: true
+    speContainer: true

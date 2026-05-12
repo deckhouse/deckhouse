@@ -17,6 +17,9 @@ package detach
 import (
 	"context"
 	"fmt"
+	"time"
+
+	libcon "github.com/deckhouse/lib-connection/pkg"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -24,16 +27,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
 type Params struct {
 	DeleteDetachResources DetachResources
 	CreateDetachResources DetachResources
-	OnCheckResult         func(*check.CheckResult) error
+	OnCheckResult         func(context.Context, *check.CheckResult) error
 	OnPhaseFunc           phases.DefaultOnPhaseFunc
 	OnProgressFunc        phases.OnProgressFunc
+
+	// ResourcesTimeout caps how long the create-resources loop waits for the
+	// detach resources to converge.
+	ResourcesTimeout time.Duration
 }
 
 type Detacher struct {
@@ -41,7 +47,7 @@ type Detacher struct {
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	AgentModuleName string
-	SSHClient       node.SSHClient
+	SSHProvider     libcon.SSHProvider
 	Checker         *check.Checker
 }
 
@@ -50,34 +56,34 @@ type DetachResources struct {
 	Values   map[string]any
 }
 
-func NewDetacher(checker *check.Checker, sshClient node.SSHClient, params *Params) *Detacher {
+func NewDetacher(checker *check.Checker, sshProvider libcon.SSHProvider, params *Params) *Detacher {
 	return &Detacher{
 		Params: params,
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
 			phases.OperationCommanderDetach, params.OnPhaseFunc, params.OnProgressFunc,
 		),
-		SSHClient: sshClient,
-		Checker:   checker,
+		SSHProvider: sshProvider,
+		Checker:     checker,
 	}
 }
 
-func (op *Detacher) Detach(ctx context.Context) error {
+func (op *Detacher) Detach(ctx context.Context) (err error) {
 	providerCleanup := func() error {
 		return nil
 	}
 
 	stateCache := cache.Global()
 
-	if err := op.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+	if err := op.PhasedExecutionContext.InitPipeline(ctx, stateCache); err != nil {
 		return err
 	}
 	defer func() {
-		_ = op.PhasedExecutionContext.Finalize(stateCache)
+		_ = op.PhasedExecutionContext.Finalize(ctx, stateCache)
 	}()
 
-	_, _ = op.PhasedExecutionContext.StartPhase(phases.CommanderDetachCheckPhase, false, stateCache)
+	_, _ = op.PhasedExecutionContext.StartPhase(ctx, phases.CommanderDetachCheckPhase, false, stateCache)
 
-	err := log.Process("commander/detach", "Check cluster", func() error {
+	err = log.ProcessCtx(ctx, "commander/detach", "Check cluster", func(ctx context.Context) error {
 		op.Checker.SetExternalPhasedContext(op.PhasedExecutionContext)
 
 		checkRes, cleanup, err := op.Checker.Check(ctx)
@@ -87,7 +93,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		}
 
 		if op.OnCheckResult != nil {
-			if err := op.OnCheckResult(checkRes); err != nil {
+			if err := op.OnCheckResult(ctx, checkRes); err != nil {
 				return fmt.Errorf("oncheckResult callback failed: %w", err)
 			}
 		}
@@ -105,9 +111,9 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		return err
 	}
 
-	_, _ = op.PhasedExecutionContext.SwitchPhase(phases.CommanderDetachDetachPhase, false, stateCache, nil)
+	_, _ = op.PhasedExecutionContext.SwitchPhase(ctx, phases.CommanderDetachDetachPhase, false, stateCache, nil)
 
-	err = log.Process("commander/detach", "Update resources", func() error {
+	err = log.ProcessCtx(ctx, "commander/detach", "Update resources", func(ctx context.Context) error {
 		detachResources, err := template.ParseResourcesContent(
 			op.CreateDetachResources.Template,
 			op.CreateDetachResources.Values,
@@ -126,7 +132,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 			return fmt.Errorf("unable to get resource checkers: %w", err)
 		}
 
-		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil)
+		err = resources.CreateResourcesLoop(ctx, kubeClient, detachResources, checkers, nil, op.Params.ResourcesTimeout)
 		if err != nil {
 			return fmt.Errorf("unable to create resources: %w", err)
 		}
@@ -137,7 +143,7 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		return err
 	}
 
-	err = log.Process("commander/detach", "Remove commander resources", func() error {
+	err = log.ProcessCtx(ctx, "commander/detach", "Remove commander resources", func(ctx context.Context) error {
 		detachResources, err := template.ParseResourcesContent(
 			op.DeleteDetachResources.Template,
 			op.DeleteDetachResources.Values,

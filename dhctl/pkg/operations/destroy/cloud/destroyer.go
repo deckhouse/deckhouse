@@ -41,6 +41,10 @@ type DestroyerParams struct {
 
 	CommanderMode bool
 	SkipResources bool
+
+	// SSHUser is recorded into the converge lock lease as the holder identity
+	// (informational only).
+	SSHUser string
 }
 
 type Destroyer struct {
@@ -66,7 +70,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 		return nil
 	}
 
-	locked, err := d.params.State.IsConvergeLocked()
+	locked, err := d.params.State.IsConvergeLocked(ctx)
 	if err != nil {
 		return err
 	}
@@ -80,7 +84,7 @@ func (d *Destroyer) Prepare(ctx context.Context) error {
 		return err
 	}
 
-	if err := d.params.State.SetConvergeLocked(); err != nil {
+	if err := d.params.State.SetConvergeLocked(ctx); err != nil {
 		// try to unlock because we cannot save in state
 		d.unlockConverge(true)
 		return err
@@ -135,7 +139,7 @@ func (d *Destroyer) lockConverge(ctx context.Context) error {
 	}
 
 	// todo refactor lock converge with ctx
-	unlockConverge, err := lock.LockConverge(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer")
+	unlockConverge, err := lock.LockConverge(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), "local-destroyer", d.params.SSHUser)
 	if err != nil {
 		return err
 	}

@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -265,13 +264,13 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
 			Manifest: func() interface{} { return nil },
-			CreateFunc: func(manifest interface{}) error {
+			CreateFunc: func(ctx context.Context, manifest interface{}) error {
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
+			UpdateFunc: func(ctx context.Context, manifest interface{}) error {
 				content, err := docCopy.MarshalJSON()
 				if err != nil {
 					return err
@@ -284,12 +283,13 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 			},
 		}
 
-		err := manifestTask.CreateOrUpdateSilent()
+		err := manifestTask.CreateOrUpdateSilent(ctx)
 		if err != nil {
 			if strings.Contains(err.Error(), "the server could not find the requested resource") {
 				c.kubeCl.InvalidateDiscoveryCache()
 			}
 		}
+
 		return err
 	})
 }
@@ -301,8 +301,8 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 	})
 }
 
-func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
-	endChannel := time.After(app.ResourcesTimeout)
+func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask, timeout time.Duration) error {
+	endChannel := time.After(timeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -321,7 +321,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 		}
 	}
 
-	_ = log.Process("Create Resources", "Resources to create", func() error {
+	_ = log.ProcessCtx(ctx, "Create Resources", "Resources to create", func(ctx context.Context) error {
 		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
 		return nil
 	})
@@ -349,16 +349,18 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 			if len(createdResources) > 0 {
 				msg["created"] = createdResources
 			}
-			logResources(msg)
+			logResources(ctx, msg)
 		}
 		if ready && err == nil {
 			return nil
 		}
 
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-endChannel:
 			if len(resources) > 0 {
-				_ = log.Process("Create Resources", "Failed to create", func() error {
+				_ = log.ProcessCtx(ctx, "Create Resources", "Failed to create", func(ctx context.Context) error {
 					log.WarnF("%s\n", strings.Join(remained, "\n"))
 					return nil
 				})
@@ -366,19 +368,19 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 					"Creating resources timed out after %s: resources cannot become ready. "+
 						"This could be due to lack of worker nodes in the cluster. "+
 						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
-					app.ResourcesTimeout,
+					timeout,
 				)
 			}
 
-			return fmt.Errorf("Creating resources failed after %s waiting", app.ResourcesTimeout)
+			return fmt.Errorf("Creating resources failed after %s waiting", timeout)
 		case <-ticker.C:
 		}
 		attempt++
 	}
 }
 
-func logResources(res map[string][]string) {
-	_ = log.Process("Create Resources", "Resource readiness check", func() error {
+func logResources(ctx context.Context, res map[string][]string) {
+	_ = log.ProcessCtx(ctx, "Create Resources", "Resource readiness check", func(ctx context.Context) error {
 		remained, ok := res["remained"]
 		if ok {
 			for i, s := range remained {
@@ -386,11 +388,12 @@ func logResources(res map[string][]string) {
 					remained = slices.Delete(remained, i, i+1)
 				}
 			}
-			_ = log.Process("Create Resources", "Resource not ready", func() error {
+			_ = log.ProcessCtx(ctx, "Create Resources", "Resource not ready", func(ctx context.Context) error {
 				log.InfoF("%s\n", strings.Join(remained, "\n"))
 				return nil
 			})
 		}
+
 		created, ok := res["created"]
 		if ok {
 			for i, s := range created {
@@ -398,7 +401,7 @@ func logResources(res map[string][]string) {
 					created = slices.Delete(created, i, i+1)
 				}
 			}
-			_ = log.Process("Create Resources", "Resource ready", func() error {
+			_ = log.ProcessCtx(ctx, "Create Resources", "Resource ready", func(ctx context.Context) error {
 				log.InfoF("%s\n", strings.Join(created, "\n"))
 				return nil
 			})

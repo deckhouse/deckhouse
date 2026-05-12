@@ -4,7 +4,7 @@
 **/000-common/images/cni-**                                      @apolovov
 **/000-common/images/coredns                                     @apolovov
 **/000-common/images/crane                                       @sprait
-**/000-common/images/csi-**                                      @AleksZimin
+**/000-common/images/csi-**                                      @AleksZimin @duckhawk @szhem
 **/000-common/images/debug-container                             @apolovov
 **/000-common/images/iptables-wrapper                            @apolovov
 **/000-common/images/kube-rbac-proxy                             @AlwxSin
@@ -41,11 +41,11 @@
 021-cni-cilium/                                                  @AndreyPavlovFlant @apolovov
 025-static-routing-manager/                                      @AndreyPavlovFlant @apolovov
 030-cloud-provider-*/                                            @aleksey-su @pabateman
-031-local-path-provisioner/                                      @AleksZimin @duckhawk
+031-local-path-provisioner/                                      @AleksZimin @duckhawk @szhem
 035-cni-flannel/                                                 @AndreyPavlovFlant @apolovov
 035-cni-simple-bridge/                                           @AndreyPavlovFlant @apolovov
 036-kube-proxy/                                                  @AndreyPavlovFlant @apolovov
-038-registry/                                                    @RaveNoX
+038-registry/                                                    @nabokihms @vadimartynov
 039-registry-packages-proxy/                                     @name212 @090809
 040-control-plane-manager/                                       @sprait
 040-node-manager/                                                @name212 @090809
@@ -63,6 +63,7 @@
 **/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu     @serg-su
 **/040-node-manager/templates/nvidia-gpu                         @serg-su
 **/040-node-manager/hooks/fencing**                              @yalosev @ergoz
+**/040-node-manager/e2e/fencing**                                @yalosev @ergoz
 040-terraform-manager/                                           @name212 @090809
 **/040-terraform-manager/images                                  @aleksey-su @pabateman
 **/040-terraform-manager/images/base-terraform-manager           @name212 @090809
@@ -111,7 +112,7 @@ candi/version_map.yml                    @sprait
 candi/cloud-providers/                   @aleksey-su @pabateman
 candi/terraform_versions.yml             @aleksey-su @pabateman
 cloud-controller-manager/                @aleksey-su @pabateman
-csi/                                     @AleksZimin @duckhawk
+csi/                                     @AleksZimin @duckhawk @szhem
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @name212 @090809
 docs/                                    @z9r5
@@ -124,4 +125,4 @@ testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su @pabateman
-go_lib/registry/                         @RaveNoX
+go_lib/registry/                         @nabokihms @vadimartynov

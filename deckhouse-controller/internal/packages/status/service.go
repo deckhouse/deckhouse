@@ -19,6 +19,7 @@ import (
 	"slices"
 	"sync"
 
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/werf/nelm/pkg/legacy/progrep"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,8 +27,6 @@ import (
 const (
 	// ConditionRequirementsMet indicates package requirements validation passed
 	ConditionRequirementsMet ConditionType = "RequirementsMet"
-	// ConditionDownloaded indicates package image was successfully downloaded from registry
-	ConditionDownloaded ConditionType = "Downloaded"
 	// ConditionReadyOnFilesystem indicates package was successfully mounted and accessible
 	ConditionReadyOnFilesystem ConditionType = "ReadyOnFilesystem"
 	// ConditionReadyInRuntime indicates package is fully loaded and operational in runtime
@@ -40,11 +39,11 @@ const (
 	ConditionReadyInCluster ConditionType = "ReadyInCluster"
 	// ConditionSettingsValid checks the settings passed openAPI validation
 	ConditionSettingsValid ConditionType = "SettingsValid"
-	// ConditionWaitConverge indicates that the package wait converge
-	ConditionWaitConverge ConditionType = "WaitConverge"
+	// ConditionPending indicates that the package wait converge
+	ConditionPending ConditionType = "Pending"
 
-	// ConditionReasonManifestsApply indicates that nelm is applying manifests to the cluster
-	ConditionReasonManifestsApply ConditionReason = "ManifestsApply"
+	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
+	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
 )
 
 // Error wraps an error with associated status conditions
@@ -72,9 +71,10 @@ type Service struct {
 
 // Status represents the current state of a package
 type Status struct {
-	Version    string      `json:"version"`
-	Conditions []Condition `json:"conditions"`
-	Tracking   Tracking    `json:"tracking"`
+	Version    string            `json:"version"`
+	Conditions []Condition       `json:"conditions"`
+	Tracking   Tracking          `json:"tracking"`
+	Settings   addonutils.Values `json:"settings,omitempty"`
 }
 
 type Tracking struct {
@@ -102,7 +102,6 @@ func NewService() *Service {
 func newStatus() *Status {
 	return &Status{
 		Conditions: []Condition{
-			{Type: ConditionDownloaded, Status: metav1.ConditionUnknown},
 			{Type: ConditionReadyOnFilesystem, Status: metav1.ConditionUnknown},
 			{Type: ConditionRequirementsMet, Status: metav1.ConditionUnknown},
 			{Type: ConditionReadyInRuntime, Status: metav1.ConditionUnknown},
@@ -138,6 +137,7 @@ func (s *Service) GetStatus(name string) Status {
 		Version:    status.Version,
 		Conditions: condsCopy,
 		Tracking:   status.Tracking,
+		Settings:   status.Settings,
 	}
 }
 
@@ -204,8 +204,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		return
 	}
 
-	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
-	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: ConditionReasonManifestsApply})
+	s.statuses[name].setCondition(Condition{Type: ConditionHelmApplied, Status: metav1.ConditionFalse, Reason: ConditionReasonApplyingManifests})
+	s.statuses[name].setCondition(Condition{Type: ConditionReadyInCluster, Status: metav1.ConditionFalse, Reason: ConditionReasonApplyingManifests})
 
 	for i := len(report.StageReports) - 1; i >= 0; i-- {
 		r := report.StageReports[i]
@@ -230,6 +230,20 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.ch <- name
 }
 
+// UpdateSettings stores the effective settings of a package.
+// Does not notify — the caller pairs this with SetConditionTrue which notifies.
+func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	st, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	st.Settings = settings
+}
+
 // ClearRuntimeConditions sets runtime conditions to unknown
 func (s *Service) ClearRuntimeConditions(name string) {
 	s.mu.Lock()
@@ -245,7 +259,7 @@ func (s *Service) ClearRuntimeConditions(name string) {
 		ConditionHooksProcessed,
 		ConditionReadyInCluster,
 		ConditionReadyInRuntime,
-		ConditionWaitConverge,
+		ConditionPending,
 	}
 
 	for idx, condition := range s.statuses[name].Conditions {

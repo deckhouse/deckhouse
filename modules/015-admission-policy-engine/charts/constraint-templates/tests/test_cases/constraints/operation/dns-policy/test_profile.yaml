@@ -1,0 +1,9 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: dns-policy
+spec:
+  testDirectory: dns-policy
+  suite:
+    expectedTestBlockNames:
+      - d8dnspolicy

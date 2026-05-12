@@ -14,3 +14,11 @@ Hubble UI:
 ## 002--gomod-gosum.backend.patch
 
 Updated go dependencies to fix vulnerabilities.
+
+## 003--auth.backend.patch
+
+Added backend authorization logic.
+
+## 003--auth.frontend.patch
+
+Added frontend authorization logic.

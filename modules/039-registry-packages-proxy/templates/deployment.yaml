@@ -3,6 +3,8 @@ cpu: 10m
 memory: 30Mi
 {{- end }}
 
+{{- $rppGetBootstrapPort := 4282 }}
+
 {{- if and (.Values.global.enabledModules | has "vertical-pod-autoscaler") (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -57,6 +59,7 @@ spec:
     metadata:
       labels:
         app: registry-packages-proxy
+        security.deckhouse.io/security-policy-exception: registry-packages-proxy
       annotations:
         kubectl.kubernetes.io/default-exec-container: registry-packages-proxy
         kubectl.kubernetes.io/default-logs-container: registry-packages-proxy
@@ -76,13 +79,15 @@ spec:
       serviceAccountName: registry-packages-proxy
       containers:
       - name: registry-packages-proxy
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" . | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "registryPackagesProxy") }}
         imagePullPolicy: IfNotPresent
         args:
         - "--listen-address=127.0.0.1:5080"
+        - "--rpp-get-binary-listen-address=:{{ $rppGetBootstrapPort }}"
         - "--cache-directory=/cache"
         - "--cache-retention-size=1Gi"
+        - "--cluster-uuid={{ .Values.global.discovery.clusterUUID | default "" }}"
         env:
         {{- include "helm_lib_envs_for_proxy" . | nindent 8 }}
         - name: GOGC
@@ -120,6 +125,9 @@ spec:
           - containerPort: 4219
             hostPort: 4219
             name: https
+          - containerPort: {{ $rppGetBootstrapPort }}
+            hostPort: {{ $rppGetBootstrapPort }}
+            name: bootstrap
         env:
           - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
             valueFrom:

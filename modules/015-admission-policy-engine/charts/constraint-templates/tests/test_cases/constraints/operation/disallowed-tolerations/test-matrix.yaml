@@ -1,0 +1,115 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: disallowed-tolerations
+spec:
+  suiteName: d8disallowedtolerations
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory:
+    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+  namedExceptions: {}
+  blocks:
+    - name: d8disallowedtolerations
+      gatorBlock: d8disallowedtolerations
+      defaultObjectBase: ""
+      template: ../../templates/operation/disallowed-tolerations.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        - name: allowed-no-tolerations
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.tolerations[]
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+                namespace: default
+              spec:
+                containers:
+                  - name: c
+                    image: nginx
+        - name: disallowed-toleration-key
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.tolerations[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: default
+              spec:
+                tolerations:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: Exists
+                containers:
+                  - name: c
+                    image: nginx
+        - name: disallowed-toleration-equal
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.tolerations[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-equal
+                namespace: default
+              spec:
+                tolerations:
+                  - key: dedicated
+                    operator: Equal
+                    value: gpu
+                containers:
+                  - name: c
+                    image: nginx
+        - name: disallowed-toleration-noexecute-exists
+          violations: "yes"
+          assertionMessage: ""
+          fields:
+            - path: spec.tolerations[]
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-noexecute-exists
+                namespace: default
+              spec:
+                tolerations:
+                  - operator: Exists
+                    effect: NoExecute
+                containers:
+                  - name: c
+                    image: nginx

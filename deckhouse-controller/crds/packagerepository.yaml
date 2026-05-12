@@ -21,7 +21,7 @@ spec:
     - jsonPath: .status.syncTime
       name: Sync
       type: date
-    - jsonPath: .status.conditions[?(@.type=='LastOperationScanFinished')].message
+    - jsonPath: .status.conditions[?(@.type=='LastScanSucceeded')].message
       name: MSG
       type: string
     - jsonPath: .status.packagesCount
@@ -171,6 +171,9 @@ spec:
               packagesCount:
                 description: Total number of packages in this repository.
                 type: integer
+              partialScanAvailable:
+                description: Indicates whether the registry supports pagination for tag listing.
+                type: boolean
               phase:
                 description: Current phase of the repository.
                 type: string

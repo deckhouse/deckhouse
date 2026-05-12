@@ -114,6 +114,12 @@ type ApplicationStatus struct {
 	// +optional
 	Tracking runtime.RawExtension `json:"tracking"`
 
+	// LastAppliedConfiguration is the effective settings (user configuration merged
+	// with config-schema defaults) that drove the most recent successful apply.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
+	LastAppliedConfiguration runtime.RawExtension `json:"lastAppliedConfiguration"`
+
 	// Conditions represent the latest available observations of the application's state.
 	// +optional
 	// +patchMergeKey=type

@@ -12,6 +12,7 @@
   {{- $revision := get $versionInfo "revision"}}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $fullVersion := get $versionInfo "fullVersion" }}
+  {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
   {{- if (hasPrefix "1.25" $fullVersion) }}  {{/* Checks if fullVersion starts with "1.25" */}}
     {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -149,8 +150,17 @@ spec:
 
     {{- if or $.Values.istio.federation.enabled $.Values.istio.multicluster.enabled }}
       caCertificates:
-      {{- range $metadata := $.Values.istio.internal.remotePublicMetadata }}
-      - pem: {{ $metadata.rootCA | quote }}
+      {{- range $federation := $.Values.istio.internal.federations }}
+      {{- with $federation.rootCA }}
+      - pem: {{ . | quote }}
+        trustDomains:
+          - {{ $federation.trustDomain }}
+      {{- end }}
+      {{- end }}
+      {{- range $multicluster := $.Values.istio.internal.multiclusters }}
+      {{- with $multicluster.rootCA }}
+      - pem: {{ . | quote }}
+      {{- end }}
       {{- end }}
     {{- end }}
 
@@ -160,13 +170,12 @@ spec:
         enabled: {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
       enabled: true
       env:
-        PILOT_SKIP_VALIDATE_TRUST_DOMAIN: "true"
         ISTIO_MULTIROOT_MESH: "true"
         ENABLE_ENHANCED_RESOURCE_SCOPING: "true"
   {{- if $.Values.istio.enableHTTP10 }}
         PILOT_HTTP10: "1"
   {{- end }}
-  {{- if ($.Values.istio.internal.enableAmbientMode) }}
+  {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
         PILOT_ENABLE_AMBIENT: "true"
   {{- end }}
       autoscaleEnabled: false

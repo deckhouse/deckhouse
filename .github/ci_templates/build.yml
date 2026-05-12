@@ -28,7 +28,7 @@ check_changelog:
 {!{- $ctx := index . 0 -}!}
 {!{- $buildType := index . 1 -}!}
 # <template: build_template>
-{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+{!{- if eq $buildType "release" }!}
 runs-on: [self-hosted, stage]
 {!{- else }!}
 runs-on: [self-hosted, large]
@@ -51,19 +51,16 @@ steps:
   {!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken" "password" "DECKHOUSE_REGISTRY_STAGE_PASSWORD" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "SOURCE_REPO_GIT" "SOURCE_REPO_GIT" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "CLOUD_PROVIDERS_SOURCE_REPO" "CLOUD_PROVIDERS_SOURCE_REPO" ) $secrets -}!}
+  {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "OBSERVABILITY_SOURCE_REPO" "OBSERVABILITY_SOURCE_REPO" ) $secrets -}!}
   {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_pull_secret" "DECKHOUSE_PRIVATE_REPO" "DECKHOUSE_PRIVATE_REPO" ) $secrets -}!}
   {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
   {!{ tmpl.Exec "checkout_full_step" $ctx | strings.Indent 2 }!}
-  {!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+  {!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
   {!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
-  {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
+  {!{- if eq $buildType "release" }!}
   {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
   {!{- end }!}
-  {!{ if eq $buildType "release" }!}
-  {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
-  {!{ end }!}
   {!{ tmpl.Exec "werf_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "d8cli_install_step" $ctx | strings.Indent 2 }!}
   {!{ tmpl.Exec "add_ssh_keys" $ctx | strings.Indent 2 }!}
@@ -86,18 +83,19 @@ steps:
     id: build
     env:
       WERF_PARALLEL_TASKS_LIMIT: 3
+      WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
 {!{- if eq $buildType "dev" }!}
       WERF_DISABLE_PUBLISH_TAG_CACHE_SYNC: 1
 {!{- end }!}
-{!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
-      DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
-      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-{!{- end }!}
-{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
       DECKHOUSE_DEV_REGISTRY_USER : ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
       DECKHOUSE_DEV_REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
       DEV_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+{!{- end }!}
+{!{- if eq $buildType "release" }!}
+      DECKHOUSE_REGISTRY_STAGE_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+      DECKHOUSE_REGISTRY_STAGE_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
 {!{- end }!}
 {!{- if eq $buildType "release" }!}
       GHCR_IO_REGISTRY_USER: ${{ github.actor }}
@@ -108,6 +106,7 @@ steps:
 {!{- end }!}
       SOURCE_REPO: "${{ steps.secrets.outputs.SOURCE_REPO_GIT }}"
       CLOUD_PROVIDERS_SOURCE_REPO: "${{ steps.secrets.outputs.CLOUD_PROVIDERS_SOURCE_REPO }}"
+      OBSERVABILITY_SOURCE_REPO: "${{ steps.secrets.outputs.OBSERVABILITY_SOURCE_REPO }}"
       DECKHOUSE_PRIVATE_REPO: "${{ steps.secrets.outputs.DECKHOUSE_PRIVATE_REPO }}"
       COSIGN_KEY: ${{ steps.secrets.outputs.COSIGN_KEY }}
       COSIGN_VAULT_ADDRESS: "https://seguro.flant.com"
@@ -119,7 +118,7 @@ steps:
 {!{- else }!}
       CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
 {!{- end }!}
-{!{- if or (eq $buildType "dev") (eq $buildType "main") }!}
+{!{- if or (eq $buildType "dev") (eq $buildType "main") (eq $buildType "pre-release") }!}
       COSIGN_VAULT_KEY: "dh-2025-aug-dev"
       COSIGN_TRANSIT_SECRET_ENGINE_PATH: "dh-signer-dev"
       COSIGN_AUTH_ROLE: "dh-signer-dev_dh-signer-dev"
@@ -174,8 +173,8 @@ steps:
       # CE/EE/FE -> ce/ee/fe
       REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
 
-    {!{- if or (eq $buildType "release") (eq $buildType "pre-release") }!}
-      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+    {!{- if eq $buildType "release" }!}
+      STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
       export WERF_REPO="${STAGE_REGISTRY_PATH}"
     {!{- else }!}
@@ -185,13 +184,11 @@ steps:
     {!{- end }!}
     {!{ if eq $buildType "release" }!}
       # Registry path to publish images for Git tags.
-      if [[ -n ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
-      SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+      if [[ -n ${DECKHOUSE_REGISTRY_STAGE_HOST:-} ]] ; then
+      SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse"
       else
       SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
       fi
-      # Release tag build, set deckhouse registry as final
-      export WERF_FINAL_REPO="${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}"
 
       # The Git tag may contain a '+' sign, so use slugify for this situation.
       # Slugify doesn't change a tag with safe-only characters.
@@ -261,34 +258,6 @@ steps:
       # Filter out data from build report
       egrep -v '(DockerRepo|DockerImageName)' images_tags_werf.json > images_tags_werf_filtered.json
       mv images_tags_werf_filtered.json images_tags_werf.json
-
-  - name: Check DKP images manifests in public registry
-    if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-    id: check_images
-    env:
-      CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
-      DECKHOUSE_REGISTRY_READ_HOST: ${{secrets.DECKHOUSE_REGISTRY_READ_HOST}}
-    run: |
-      EDITION=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]')
-
-      ./tools/check-release-images.sh --tag ${CI_COMMIT_REF_SLUG} --edition ${EDITION} --images-path ${DECKHOUSE_REGISTRY_READ_HOST}/deckhouse/
-
-  {!{ if eq $buildType "release" }!}
-  - uses: {!{ index (ds "actions") "actions/setup-python" }!}
-    with:
-      python-version: '3.12.3'
-
-  - name: Copy attestations
-    if: ${{ github.repository == 'deckhouse/deckhouse' && startsWith(github.ref, 'refs/tags/v') }}
-    env:
-      DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-      STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-    run: |
-      export REGISTRY_FROM="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
-      export REGISTRY_TO="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${WERF_ENV,,}"
-      export IMAGES_TAGS_PATH=./images_tags_werf.json
-      python .github/scripts/python/copy_attestations.py
-  {!{- end }!}
 
   - name: Save build report
     if: ${{ always() && (steps.build.outcome == 'success' || steps.build.outcome == 'failure') }}

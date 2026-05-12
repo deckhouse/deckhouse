@@ -8,8 +8,8 @@ title: "Управление control plane: FAQ"
 
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
-В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
-Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
+В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -44,7 +44,7 @@ spec:
 ```
 
 {% alert level="info" %}
-При добавлении новых master-узлов с помощью CAPS и изменении в NodeGroup `master` количества master-узлов (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) учитывайте следующее:
+При добавлении новых master-узлов с помощью CAPS и изменении в NodeGroup `master` количества master-узлов (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) учитывайте следующее:
 
 При бутстрапе кластера в конфигурации указывается первый master-узел, на который происходит установка.
 Если после бутстрапа нужно сделать мультимастер и добавить master-узлы с помощь CAPS, в параметре `spec.staticInstances.count` NodeGroup `master` необходимо указать количество узлов на один меньше желаемого.
@@ -53,7 +53,7 @@ spec:
 {% endalert %}
 
 В остальном добавление master-узла в статический или гибридный кластер аналогично добавлению обычного узла.
-Воспользуйтесь для этого соответствующими [примерами](../node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
+Воспользуйтесь для этого соответствующими [примерами](/modules/node-manager/examples.html#добавление-статического-узла-в-кластер). Все необходимые действия по настройке компонентов control plane кластера на новом узле будут выполнены автоматически, дождитесь их завершения — появления master-узлов в статусе `Ready`.
 
 <div id='как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master'></div>
 
@@ -71,7 +71,7 @@ spec:
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -196,7 +196,7 @@ spec:
 
 1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -245,7 +245,7 @@ spec:
 
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
+1. Убедитесь, что в кластере нет [алертов](/modules/prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
 1. Убедитесь, что очередь Deckhouse пуста:
 
    ```shell
@@ -384,7 +384,7 @@ spec:
    Измените настройки облачного провайдера:
 
    * В параметре `masterNodeGroup.replicas` укажите `2`.
-   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node.deckhouse.io/etcd-arbiter: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
 
      ```yaml
      nodeGroups:
@@ -436,7 +436,7 @@ spec:
 
 Чтобы настроить режим HA c двумя master-узлами и arbiter-узлом в статическом кластере, выполните следующие действия:
 
-1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node.deckhouse.io/etcd-arbiter: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -706,6 +706,73 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
 
    > При появлении ошибки из-за таймаута увеличивайте значение параметра `–command-timeout` из команды выше, пока дефрагментация не выполнится успешно.
 
+## Модель административного доступа к кластеру
+
+Модуль control-plane-manager поддерживает несколько файлов kubeconfig на master-узлах. Понимание их назначения важно для безопасного администрирования кластера.
+
+### Файлы kubeconfig на master-узлах
+
+| Файл | Идентификация | Назначение |
+| --- | --- | --- |
+| `/etc/kubernetes/admin.conf` | `kubernetes-admin` (группа `kubeadm:cluster-admins`) | Машинный kubeconfig для внутренних операций kubeadm (join, обновление). При включённом модуле [user-authz](/modules/user-authz/) RBAC использует `user-authz:cluster-admin` и дополнительную ClusterRole; при выключенном `user-authz` группа привязана к встроенной роли `cluster-admin`. |
+| `/etc/kubernetes/super-admin.conf` | `kubernetes-super-admin` (группа `system:masters`) | Аварийный доступ (break-glass). Обходит RBAC полностью. Ограничьте доступ к файлу сценариями восстановления. |
+| `/etc/kubernetes/controller-manager.conf` | `system:kube-controller-manager` | Используется kube-controller-manager. |
+| `/etc/kubernetes/scheduler.conf` | `system:kube-scheduler` | Используется kube-scheduler. |
+
+### Административный доступ на основе RBAC
+
+Начиная с Kubernetes 1.29, kubeadm генерирует `admin.conf` с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления ClusterRoleBinding `kubeadm:cluster-admins` (или нескольких привязок).
+
+Если модуль [user-authz](/modules/user-authz/) **выключен**, Deckhouse привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
+
+Если модуль **user-authz** **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
+
+### Рекомендуемый административный доступ
+
+Когда модуль [user-authn](/modules/user-authn/) включён, используйте персонализированный kubeconfig на основе OIDC, получаемый через kubeconfig-генератор. Это обеспечивает индивидуальную ответственность и журнал аудита.
+
+Когда `user-authn` отключён, администраторы могут явно использовать admin kubeconfig на master-узле:
+
+```bash
+d8 k --kubeconfig=/etc/kubernetes/admin.conf <команда>
+```
+
+### Символическая ссылка root kubeconfig
+
+По умолчанию модуль CPM создаёт символическую ссылку `/root/.kube/config` -> `/etc/kubernetes/admin.conf` на master-узлах, что позволяет root-пользователю запускать `d8 k` без указания `--kubeconfig`.
+
+Когда модуль **user-authz** включён, это поведение можно отключить, задав `rootKubeconfigSymlink: false` в конфигурации модуля **control-plane-manager**:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    rootKubeconfigSymlink: false
+```
+
+Если модуль **user-authz** выключен, CPM этот параметр не использует и сохраняет поведение по умолчанию (симлинк создаётся).
+
+При отключении симлинка (при включённом **user-authz**) ссылка удаляется, если она указывала на `admin.conf`. Используйте персонализированные учётные данные или явно указывайте `--kubeconfig`.
+
+### Усиление безопасности
+
+Модуль CPM автоматически ограничивает права доступа к файлам `admin.conf` и `super-admin.conf` до `0600` (чтение/запись только для владельца) при каждом цикле согласования. Это предотвращает несанкционированный доступ к этим конфиденциальным учётным данным.
+
+### Аварийный доступ (break-glass)
+
+В экстренных ситуациях (ошибки конфигурации RBAC, отказ webhook'ов) используйте `super-admin.conf`:
+
+```bash
+d8 k --kubeconfig=/etc/kubernetes/super-admin.conf <команда>
+```
+
+Эти учётные данные обходят все проверки RBAC. Используйте их только в крайнем случае и ограничьте круг лиц с доступом к файлу.
+
 ## Как настроить дополнительные политики аудита?
 
 1. Включите параметр [auditPolicyEnabled](configuration.html#parameters-apiserver-auditpolicyenabled) в настройках модуля:
@@ -716,7 +783,7 @@ Finished defragmenting etcd member[https://localhost:2379]. took 848.948927ms
    metadata:
      name: control-plane-manager
    spec:
-     version: 1
+     version: 2
      settings:
        apiserver:
          auditPolicyEnabled: true
@@ -762,7 +829,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -781,7 +848,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     apiserver:
       auditPolicyEnabled: true
@@ -791,7 +858,7 @@ spec:
 
 ### Как работать с журналом аудита?
 
-Предполагается, что на master-узлах установлен «скрейпер логов»: [log-shipper](../log-shipper/cr.html#clusterloggingconfig), `promtail`, `filebeat`,  который будет мониторить файл с логами:
+Предполагается, что на master-узлах установлен «скрейпер логов»: [log-shipper](/modules/log-shipper/cr.html#clusterloggingconfig), `promtail`, `filebeat`,  который будет мониторить файл с логами:
 
 ```bash
 /var/log/kube-audit/audit.log
@@ -841,7 +908,7 @@ kind: ModuleConfig
 metadata:
   name: control-plane-manager
 spec:
-  version: 1
+  version: 2
   settings:
     nodeMonitorGracePeriodSeconds: 10
     failedNodePodEvictionTimeoutSeconds: 50
@@ -1310,3 +1377,49 @@ Kubelet использует клиентский TLS-сертификат (`/va
    ```shell
    kubeadm certs renew all
    ```
+
+## Как защитить чувствительные поля кастомных ресурсов?
+
+Для защиты чувствительных полей (паролей, токенов или ключей) в схемах ресурсов от несанкционированного доступа через API,
+хранения в etcd в незашифрованном виде и попадания в журнал аудита используйте feature gate `CRDSensitiveData`
+совместно с маркером схемы `x-kubernetes-sensitive-data`.
+
+Чтобы включить защиту полей, выполните следующие действия:
+
+1. Включите шифрование etcd с помощью [параметра `apiserver.encryptionEnabled`](configuration.html#parameters-apiserver-encryptionenabled) в настройках модуля. Feature gate `CRDSensitiveData` включается автоматически одновременно с шифрованием — его не следует указывать вручную.
+
+   {% alert level="warning" %}
+   Включение параметра `apiserver.encryptionEnabled` необратимо и приводит к перезапуску `kube-apiserver`.
+   {% endalert %}
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: control-plane-manager
+   spec:
+     version: 2
+     enabled: true
+     settings:
+       apiserver:
+         encryptionEnabled: true
+   ```
+
+1. Отметьте чувствительные поля в схеме ресурсов маркером `x-kubernetes-sensitive-data: true`.
+
+   Маркер должен находиться на поле типа `string`, `integer`, `number`, `boolean`, `object` или `array` (маркер на `object` или `array` делает чувствительным всё поддерево); также поддерживаются поля с `x-kubernetes-int-or-string: true`.
+
+   Маркер нельзя указывать на корне схемы (узел `openAPIV3Schema`) и внутри веток `anyOf`, `oneOf`, `allOf`, `not`.
+
+1. Для пользователей и ServiceAccount, которым нужен доступ к полным данным, добавьте в правила RBAC
+   разрешение на субресурс `<resource>/sensitive`.
+
+### Применяемые меры защиты
+
+| Защита | Описание |
+| ------ | -------- |
+| Шифрование в etcd | Весь ресурс шифруется при хранении с помощью трансформера AES-CBC (аналогично Kubernetes Secrets). |
+| Фильтрация полей в API | Чувствительные поля удаляются из ответов на запросы `get`, `list` и `watch`, если у вызывающей стороны нет прав на субресурс `<resource>/sensitive`. |
+| Маскировка в журнале аудита | Значения чувствительных полей заменяются на `"******"` во всех событиях аудита, независимо от прав RBAC и уровня аудита. |
+
+Полный пример конфигурации и результатов доступен в разделе [«Примеры»](examples.html#защита-ресурсов-с-чувствительными-полями).

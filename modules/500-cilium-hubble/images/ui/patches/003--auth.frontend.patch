@@ -1,0 +1,472 @@
+diff --git a/src/api/auth-user-info.ts b/src/api/auth-user-info.ts
+new file mode 100644
+index 00000000..3512bb45
+--- /dev/null
++++ b/src/api/auth-user-info.ts
+@@ -0,0 +1,42 @@
++export type AuthUserInfo = {
++  username: string;
++};
++
++/**
++ * GET /api/info when ENABLE_AUTH is true on the backend. Returns null if the
++ * endpoint is absent, the request fails, or the response is not a successful JSON body.
++ */
++export async function fetchAuthUserInfo(apiRoot: string): Promise<AuthUserInfo | null> {
++  const base = apiRoot.replace(/\/+$/, '');
++  const url = `${base}/info`;
++
++  try {
++    const res = await fetch(url, {
++      method: 'GET',
++      credentials: 'include',
++      headers: { Accept: 'application/json' },
++    });
++
++    if (!res.ok) {
++      return null;
++    }
++
++    const data: unknown = await res.json();
++    if (
++      typeof data !== 'object' ||
++      data === null ||
++      typeof (data as { username?: unknown }).username !== 'string'
++    ) {
++      return null;
++    }
++
++    const username = (data as { username: string }).username.trim();
++    if (username.length === 0) {
++      return null;
++    }
++
++    return { username };
++  } catch {
++    return null;
++  }
++}
+diff --git a/src/api/customprotocol/control-stream.ts b/src/api/customprotocol/control-stream.ts
+index 411b24b1..e46c9dc4 100644
+--- a/src/api/customprotocol/control-stream.ts
++++ b/src/api/customprotocol/control-stream.ts
+@@ -54,7 +54,8 @@ export class ControlStream extends Stream<Handlers> {
+   }
+ 
+   private emitNamespaces(nss?: uipb.GetControlStreamResponse_NamespaceStates) {
+-    const changes = nss?.namespaces.reduce((acc, ns) => {
++    const pbNamespaces = nss?.namespaces ?? [];
++    const changes = pbNamespaces.reduce((acc, ns) => {
+       const nsDesc = helpers.namespaces.fromPb(ns.namespace);
+       if (nsDesc == null) return acc;
+ 
+@@ -64,8 +65,6 @@ export class ControlStream extends Stream<Handlers> {
+       });
+     }, [] as NamespaceChange[]);
+ 
+-    if (!changes?.length) return;
+-
+     this.emit(Event.NamespaceChanges, changes);
+   }
+ 
+diff --git a/src/components/ServiceMapApp/WelcomeScreen.scss b/src/components/ServiceMapApp/WelcomeScreen.scss
+index 492af190..8557a957 100644
+--- a/src/components/ServiceMapApp/WelcomeScreen.scss
++++ b/src/components/ServiceMapApp/WelcomeScreen.scss
+@@ -64,3 +64,24 @@
+   display: flex;
+   justify-content: flex-start;
+ }
++
++.errorPanel {
++  margin: 20px 24px 0;
++  max-width: 520px;
++  text-align: center;
++}
++
++.errorTitle {
++  margin: 0 0 12px;
++  font-size: 16px;
++  line-height: 22px;
++  font-weight: 600;
++  color: #c23030;
++}
++
++.errorDetail {
++  margin: 0;
++  font-size: 14px;
++  line-height: 20px;
++  color: #5c7080;
++}
+diff --git a/src/components/ServiceMapApp/WelcomeScreen.tsx b/src/components/ServiceMapApp/WelcomeScreen.tsx
+index 29f58ff9..95ef86b7 100644
+--- a/src/components/ServiceMapApp/WelcomeScreen.tsx
++++ b/src/components/ServiceMapApp/WelcomeScreen.tsx
+@@ -1,4 +1,4 @@
+-import React from 'react';
++import React, { useEffect, useState } from 'react';
+ import { Spinner } from '@blueprintjs/core';
+ import { observer } from 'mobx-react';
+ 
+@@ -8,30 +8,58 @@ import { NamespaceSelectorDropdown } from '../TopBar/NamespaceSelectorDropdown';
+ import css from './WelcomeScreen.scss';
+ import hubbleLogo from '~/assets/images/hubble-logo.png';
+ 
++const NAMESPACES_WAIT_MS = 5_000;
++
+ export interface Props {
+   namespaces: NamespaceDescriptor[];
+   onNamespaceChange: (namespace: NamespaceDescriptor) => void;
++  hasReceivedControlStreamNamespaceBatch: boolean;
+ }
+ 
+ export const WelcomeScreen = observer(function WelcomeScreen(props: Props) {
+   const someNamespacesLoaded = props.namespaces.length > 0;
++  const [timedOut, setTimedOut] = useState(false);
++
++  useEffect(() => {
++    if (someNamespacesLoaded) {
++      setTimedOut(false);
++      return;
++    }
++
++    const id = window.setTimeout(() => setTimedOut(true), NAMESPACES_WAIT_MS);
++    return () => window.clearTimeout(id);
++  }, [someNamespacesLoaded]);
++
++  const showEmptyError = !someNamespacesLoaded && (props.hasReceivedControlStreamNamespaceBatch || timedOut);
+ 
+   return (
+     <div className={css.wrapper}>
+       <div className={css.content}>
+         <img src={hubbleLogo} className={css.logo} />
+         <h1 className={css.title}>Welcome!</h1>
+-        <p className={css.description}>To begin select one of the namespaces:</p>
+-        {someNamespacesLoaded ? (
+-          <NamespaceSelectorDropdown
+-            namespaces={props.namespaces}
+-            currentNamespace={null}
+-            onChange={props.onNamespaceChange}
+-          />
+-        ) : (
+-          <div className={css.spinnerWrapper}>
+-            <Spinner size={48} intent="primary" />
++        {showEmptyError ? (
++          <div className={css.errorPanel} role="alert">
++            <p className={css.errorTitle}>No namespaces available</p>
++            <p className={css.errorDetail}>
++              Hubble did not report any namespaces you can open. Check that your account is allowed to see namespaces,
++                and that the cluster has namespaces to observe.
++            </p>
+           </div>
++        ) : (
++          <>
++            <p className={css.description}>To begin select one of the namespaces:</p>
++            {someNamespacesLoaded ? (
++              <NamespaceSelectorDropdown
++                namespaces={props.namespaces}
++                currentNamespace={null}
++                onChange={props.onNamespaceChange}
++              />
++            ) : (
++              <div className={css.spinnerWrapper}>
++                <Spinner size={48} intent="primary" />
++              </div>
++            )}
++          </>
+         )}
+       </div>
+     </div>
+diff --git a/src/components/ServiceMapApp/index.tsx b/src/components/ServiceMapApp/index.tsx
+index 2ecc11a3..119eea8f 100644
+--- a/src/components/ServiceMapApp/index.tsx
++++ b/src/components/ServiceMapApp/index.tsx
+@@ -176,6 +176,7 @@ export const ServiceMapApp = observer(function ServiceMapApp() {
+         <WelcomeScreen
+           namespaces={store.availableNamespaces}
+           onNamespaceChange={ns => ui.controls.namespaceChanged(ns?.namespace)}
++          hasReceivedControlStreamNamespaceBatch={store.namespaces.hasReceivedControlStreamNamespaceBatch}
+         />
+       </div>
+     );
+diff --git a/src/components/TopBar/index.tsx b/src/components/TopBar/index.tsx
+index 3079cc3d..49903efd 100644
+--- a/src/components/TopBar/index.tsx
++++ b/src/components/TopBar/index.tsx
+@@ -1,5 +1,9 @@
+-import React from 'react';
++import React, { useEffect, useState } from 'react';
+ import { observer } from 'mobx-react';
++import { Icon } from '@blueprintjs/core';
++
++import { useApplication } from '~/application';
++import { fetchAuthUserInfo } from '~/api/auth-user-info';
+ 
+ import { Verdict } from '~/domain/hubble';
+ import { FilterEntry } from '~/domain/filtering';
+@@ -13,6 +17,8 @@ import { VisualFiltersDropdown } from './VisualFiltersDropdown';
+ import { NamespaceSelectorDropdown } from './NamespaceSelectorDropdown';
+ import { ConnectionIndicator } from './ConnectionIndicator';
+ 
++import { LOGOUT_PATH } from '~/router/LogoutRedirect';
++
+ import css from './styles.scss';
+ 
+ export interface Props {
+@@ -37,7 +43,35 @@ export interface Props {
+   onShowPrometheusAppToggle: () => void;
+ }
+ 
++type AuthAreaState =
++  | { phase: 'loading' }
++  | { phase: 'off' }
++  | { phase: 'on'; username: string };
++
+ export const TopBar = observer(function TopBar(props: Props) {
++  const { dataLayer } = useApplication();
++  const [authArea, setAuthArea] = useState<AuthAreaState>({ phase: 'loading' });
++
++  useEffect(() => {
++    let cancelled = false;
++
++    void (async () => {
++      const info = await fetchAuthUserInfo(dataLayer.getApiBaseUrl());
++      if (cancelled) {
++        return;
++      }
++      if (info == null) {
++        setAuthArea({ phase: 'off' });
++      } else {
++        setAuthArea({ phase: 'on', username: info.username });
++      }
++    })();
++
++    return () => {
++      cancelled = true;
++    };
++  }, [dataLayer]);
++
+   const RenderedFilters = (
+     <>
+       <div className={css.spacer} />
+@@ -76,6 +110,18 @@ export const TopBar = observer(function TopBar(props: Props) {
+         <div className={css.spacer} />
+ 
+         <ConnectionIndicator transferState={props.transferState} />
++
++        {authArea.phase === 'on' ? (
++          <>
++            <div className={css.spacer} />
++            <div className={css.spacer} />
++            <span className={css.userName} title={authArea.username}>
++              {authArea.username}
++            </span>
++            <div className={css.spacer} />
++            <a href={LOGOUT_PATH} className={css.signOffLink}><Icon icon="log-out" className={css.signOffIcon} iconSize={14} /></a>
++          </>
++        ) : null}
+       </div>
+     </div>
+   );
+diff --git a/src/components/TopBar/styles.scss b/src/components/TopBar/styles.scss
+index f33cf0df..dba519cb 100644
+--- a/src/components/TopBar/styles.scss
++++ b/src/components/TopBar/styles.scss
+@@ -43,6 +43,41 @@
+     @include row(flex-end, center);
+   }
+ 
++  .userName {
++    flex-shrink: 1;
++    max-width: 220px;
++    overflow: hidden;
++    text-overflow: ellipsis;
++    white-space: nowrap;
++    font-size: 14px;
++    line-height: 30px;
++    font-weight: 500;
++    color: #5c7080;
++  }
++
++  .signOffLink {
++    display: inline-flex;
++    align-items: center;
++    gap: 6px;
++    flex-shrink: 0;
++    font-size: 14px;
++    line-height: 30px;
++    font-weight: 500;
++    color: #5c7080;
++    text-decoration: none;
++    cursor: pointer;
++
++    &:hover {
++      color: #c23030;
++      text-decoration: none;
++    }
++  }
++
++  .signOffIcon {
++    flex-shrink: 0;
++    color: inherit;
++  }
++
+   .namespacesDropdownButton {
+     display: flex;
+     flex-wrap: nowrap;
+diff --git a/src/data-layer/controls.ts b/src/data-layer/controls.ts
+index fc5d7830..a20054f5 100644
+--- a/src/data-layer/controls.ts
++++ b/src/data-layer/controls.ts
+@@ -58,6 +58,7 @@ export class Controls extends EventEmitter<Handlers> {
+     this.controlStream = this.backendAPI
+       .controlStream()
+       .onNamespaceChanges(nsChanges => {
++        this.store.namespaces.markControlStreamNamespaceBatchReceived();
+         nsChanges.forEach(nsChange => {
+           const { namespace: nsDescriptor } = nsChange;
+           this.store.applyNamespaceChange(nsDescriptor);
+diff --git a/src/data-layer/data-layer.ts b/src/data-layer/data-layer.ts
+index b0fe448b..6f9da7a4 100644
+--- a/src/data-layer/data-layer.ts
++++ b/src/data-layer/data-layer.ts
+@@ -54,12 +54,13 @@ export class DataLayer extends EventEmitter<Handlers> {
+       useJSON: opts.customProtocolMessagesInJSON,
+     });
+ 
+-    return new DataLayer(opts.store, backendAPI);
++    return new DataLayer(opts.store, backendAPI, opts.customProtocolBaseURL);
+   }
+ 
+   constructor(
+     private store: Store,
+     private backendAPI: BackendAPI,
++    private readonly customProtocolBaseURL: string,
+   ) {
+     super(true);
+ 
+@@ -73,6 +74,10 @@ export class DataLayer extends EventEmitter<Handlers> {
+     mobx.makeObservable(this);
+   }
+ 
++  public getApiBaseUrl(): string {
++    return this.customProtocolBaseURL.replace(/\/+$/, '');
++  }
++
+   private get commonOpts(): Options {
+     return {
+       store: this.store,
+diff --git a/src/router/LogoutRedirect.tsx b/src/router/LogoutRedirect.tsx
+new file mode 100644
+index 00000000..b0984015
+--- /dev/null
++++ b/src/router/LogoutRedirect.tsx
+@@ -0,0 +1,58 @@
++import React, { useEffect } from 'react';
++
++/**
++ * Registered at /logout so the SPA router does not show a 404 when the user
++ * lands on /logout (e.g. after a full-page navigation or ingress routing the first
++ * request to the SPA shell). Performs a same-origin GET with redirect: 'manual'
++ * so ingress / oauth2-proxy can respond with 302 + Set-Cookie without loading
++ * more client bundle for the redirect target.
++ */
++export const LOGOUT_PATH = '/logout';
++
++export function LogoutRedirect() {
++  useEffect(() => {
++    let cancelled = false;
++
++    const run = async () => {
++      try {
++        const res = await fetch(LOGOUT_PATH, {
++          method: 'GET',
++          credentials: 'include',
++          redirect: 'manual',
++        });
++        if (cancelled) {
++          return;
++        }
++
++        const next = res.headers.get('Location');
++        if (next) {
++          window.location.replace(next);
++          return;
++        }
++      } catch {}
++      if (!cancelled) {
++        window.location.replace('/');
++      }
++    };
++
++    void run();
++    return () => {
++      cancelled = true;
++    };
++  }, []);
++
++  return (
++    <div
++      style={{
++        display: 'flex',
++        alignItems: 'center',
++        justifyContent: 'center',
++        minHeight: '40vh',
++        fontSize: 14,
++        color: '#5c7080',
++      }}
++    >
++      Logout…
++    </div>
++  );
++}
+diff --git a/src/router/Routes.tsx b/src/router/Routes.tsx
+index 891f6fff..3a0ba98e 100644
+--- a/src/router/Routes.tsx
++++ b/src/router/Routes.tsx
+@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+ import { ServiceMapApp } from '~/components/ServiceMapApp';
+ 
+ import { Router, ApplicationPath } from './router';
++import { LogoutRedirect } from './LogoutRedirect';
+ 
+ export type Props = {
+   router: Router;
+@@ -20,6 +21,10 @@ export const Routes = function Routes(props: Props) {
+           path: ApplicationPath.ServiceMap,
+           element: <ServiceMapApp />,
+         },
++        {
++          path: 'logout',
++          element: <LogoutRedirect />,
++        },
+       ],
+     },
+   ]);
+diff --git a/src/store/stores/namespace.ts b/src/store/stores/namespace.ts
+index 252d522b..6d4e9f27 100644
+--- a/src/store/stores/namespace.ts
++++ b/src/store/stores/namespace.ts
+@@ -7,12 +7,22 @@ export class NamespaceStore {
+   private _relayNamespaces: Map<string, NamespaceDescriptor> = new Map();
+   private _currentNamespace: string | null = null;
+ 
++  private _hasReceivedControlStreamNamespaceBatch = false;
++
+   constructor() {
+     makeAutoObservable(this, void 0, {
+       autoBind: true,
+     });
+   }
+ 
++  public get hasReceivedControlStreamNamespaceBatch(): boolean {
++    return this._hasReceivedControlStreamNamespaceBatch;
++  }
++
++  public markControlStreamNamespaceBatchReceived(): void {
++    this._hasReceivedControlStreamNamespaceBatch = true;
++  }
++
+   public clear() {
+     this._relayNamespaces.clear();
+   }
