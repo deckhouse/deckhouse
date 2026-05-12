@@ -93,7 +93,7 @@ Virtualization-controller взаимодействует со следующим
 1. **Kube-apiserver**:
 
    - отправляет измененные [кастомные ресурсы модуля virtualization](/modules/virtualization/cr.html) через сайдкар-контейнер proxy, который переименовывает метаданные из API-группы `internal.virtualization.deckhouse.io` в API-группу `kubevirt.io`;
-   - выполнятет авторизацию запросов на получение метрик.
+   - выполняет авторизацию запросов на получение метрик.
 
 С virtualization controller/API взаимодействуют следующие внешние компоненты:
 
