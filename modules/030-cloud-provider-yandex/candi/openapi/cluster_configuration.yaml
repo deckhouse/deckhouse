@@ -94,7 +94,6 @@ apiVersions:
               enum:
               - ru-central1-a
               - ru-central1-b
-              - ru-central1-d
             uniqueItems: true
           instanceClass:
             type: object
@@ -161,7 +160,6 @@ apiVersions:
                     ```yaml
                     - <RU-CENTRAL1-A-IP-ADDRESS>
                     - <RU-CENTRAL1-B-IP-ADDRESS>
-                    - <RU-CENTRAL1-D-IP-ADDRESS>
                     ```
 
                   - The number of elements in the `externalIPAddresses` array must equal the number of nodes in the group (the `replicas` parameter). To automatically order public IP addresses in the zone, use the value `Auto` in the list of the `externalIPAddresses` parameter at the corresponding position (matching the order of zones).
@@ -188,7 +186,6 @@ apiVersions:
                   ```yaml
                   - <RU-CENTRAL1-A-SUBNET-ID>
                   - <RU-CENTRAL1-B-SUBNET-ID>
-                  - <RU-CENTRAL1-D-SUBNET-ID>
                   ```
                 items:
                   type: string
@@ -237,7 +234,6 @@ apiVersions:
                 enum:
                 - ru-central1-a
                 - ru-central1-b
-                - ru-central1-d
               uniqueItems: true
             nodeTemplate:
               description: |
@@ -337,7 +333,6 @@ apiVersions:
         x-examples:
           - ru-central1-a: e2lu8r1tbbtryhdpa9ro
             ru-central1-b: e2lu8r1tbbtryhdpa9ro
-            ru-central1-d: e2lu8r1tbbtryhdpa9ro
         additionalProperties:
           type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
@@ -483,7 +478,6 @@ apiVersions:
           enum:
             - ru-central1-a
             - ru-central1-b
-            - ru-central1-d
         uniqueItems: true
     oneOf:
     - required: [layout]

@@ -18,7 +18,6 @@ locals {
   zone_to_subnet = length(local.mapping) == 0 ? {
     "ru-central1-a" = length(data.yandex_vpc_subnet.kube_a) > 0 ? data.yandex_vpc_subnet.kube_a[0] : object({})
     "ru-central1-b" = length(data.yandex_vpc_subnet.kube_b) > 0 ? data.yandex_vpc_subnet.kube_b[0] : object({})
-    "ru-central1-d" = length(data.yandex_vpc_subnet.kube_d) > 0 ? data.yandex_vpc_subnet.kube_d[0] : object({})
   } : data.yandex_vpc_subnet.existing
 
   actual_zones    = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(keys(local.zone_to_subnet), var.providerClusterConfiguration.zones)) : keys(local.zone_to_subnet)
@@ -47,11 +46,6 @@ data "yandex_vpc_subnet" "kube_a" {
 data "yandex_vpc_subnet" "kube_b" {
   count = length(local.mapping) == 0 ? 1 : 0
   name  = "${local.prefix}-b"
-}
-
-data "yandex_vpc_subnet" "kube_d" {
-  count = length(local.mapping) == 0 ? 1 : 0
-  name  = "${local.prefix}-d"
 }
 
 resource "yandex_vpc_address" "addr" {
