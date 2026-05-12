@@ -221,7 +221,7 @@ func mergeStorageDomains(
 
 		for i := range result {
 			if result[i].Name == sc.Name {
-				result[i].isEnabled = isEnabled
+				result[i].IsEnabled = isEnabled
 				result[i].IsDefault = isDefault
 				break
 			}
