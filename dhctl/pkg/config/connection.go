@@ -25,7 +25,8 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -178,33 +179,39 @@ func ParseConnectionConfig(
 	return config, nil
 }
 
-type ConnectionConfigParser struct{}
-
-func NewConnectionConfigParser() *ConnectionConfigParser {
-	return &ConnectionConfigParser{}
+// ConnectionConfigParser parses an SSH connection config file and writes the
+// result back into the supplied options struct. The parser is invoked from
+// kingpin Action when --connection-config is set.
+type ConnectionConfigParser struct {
+	opts *options.Options
 }
 
-// ParseConnectionConfigFromFile parses SSH connection config from file (app.ConnectionConfigPath)
-// and fills app.SSH* variables with corresponding data.
+// NewConnectionConfigParser builds a parser that writes into the supplied opts.
+func NewConnectionConfigParser(opts *options.Options) *ConnectionConfigParser {
+	return &ConnectionConfigParser{opts: opts}
+}
+
+// ParseConnectionConfigFromFile parses SSH connection config from
+// p.opts.SSH.ConnectionConfigPath and fills the SSH/Become options with the result.
 func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
-	if p == nil {
-		return fmt.Errorf("ConnectionConfigParser is nil")
+	if p == nil || p.opts == nil {
+		return fmt.Errorf("ConnectionConfigParser is not initialized")
 	}
 
-	connectionConfigPath := app.ConnectionConfigPath
+	connectionConfigPath := p.opts.SSH.ConnectionConfigPath
 
 	log.DebugF("Connection config path: %s\n", connectionConfigPath)
 
-	cfg, err := parseConnectionConfigFromFile(connectionConfigPath)
+	cfg, err := parseConnectionConfigFromFile(connectionConfigPath, p.opts.DirConfig())
 	if err != nil {
 		return fmt.Errorf("Parsing ssh config from file: %w", err)
 	}
 
-	pathToPassPhrase := make(app.PrivateKeyFileToPassphrase)
+	pathToPassPhrase := make(options.PrivateKeyFileToPassphrase)
 
 	keysPaths := make([]string, 0, len(cfg.SSHConfig.SSHAgentPrivateKeys))
 	for _, key := range cfg.SSHConfig.SSHAgentPrivateKeys {
-		f, err := os.CreateTemp(app.TmpDirName, "ssh-key-*")
+		f, err := os.CreateTemp(p.opts.Global.TmpDir, "ssh-key-*")
 		if err != nil {
 			return fmt.Errorf("unable to create temp file: %w", err)
 		}
@@ -237,25 +244,25 @@ func (p *ConnectionConfigParser) ParseConnectionConfigFromFile() error {
 		port = strconv.Itoa(int(*cfg.SSHConfig.SSHPort))
 	}
 
-	app.SSHPrivateKeys = keysPaths
-	app.SSHBastionHost = cfg.SSHConfig.SSHBastionHost
-	app.SSHBastionPort = bastionPort
-	app.SSHBastionUser = cfg.SSHConfig.SSHBastionUser
-	app.BecomePass = cfg.SSHConfig.SudoPassword
-	app.SSHUser = cfg.SSHConfig.SSHUser
-	app.SSHHosts = hosts
-	app.SSHPort = port
-	app.SSHExtraArgs = cfg.SSHConfig.SSHExtraArgs
-	app.SSHBastionPass = cfg.SSHConfig.SSHBastionPassword
-	app.SSHLegacyMode = cfg.SSHConfig.LegacyMode
-	app.SSHModernMode = cfg.SSHConfig.ModernMode
+	p.opts.SSH.PrivateKeys = keysPaths
+	p.opts.SSH.BastionHost = cfg.SSHConfig.SSHBastionHost
+	p.opts.SSH.BastionPort = bastionPort
+	p.opts.SSH.BastionUser = cfg.SSHConfig.SSHBastionUser
+	p.opts.Become.BecomePass = cfg.SSHConfig.SudoPassword
+	p.opts.SSH.User = cfg.SSHConfig.SSHUser
+	p.opts.SSH.Hosts = hosts
+	p.opts.SSH.Port = port
+	p.opts.SSH.ExtraArgs = cfg.SSHConfig.SSHExtraArgs
+	p.opts.SSH.BastionPass = cfg.SSHConfig.SSHBastionPassword
+	p.opts.SSH.LegacyMode = cfg.SSHConfig.LegacyMode
+	p.opts.SSH.ModernMode = cfg.SSHConfig.ModernMode
 	// todo it is ugly solution
-	app.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
+	p.opts.SSH.PrivateKeysToPassPhrasesFromConfig = pathToPassPhrase
 
 	return nil
 }
 
-func parseConnectionConfigFromFile(path string) (*ConnectionConfig, error) {
+func parseConnectionConfigFromFile(path string, dirConfig *directoryconfig.DirectoryConfig) (*ConnectionConfig, error) {
 	configData, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("loading connection config file: %v", err)
@@ -263,7 +270,7 @@ func parseConnectionConfigFromFile(path string) (*ConnectionConfig, error) {
 
 	return ParseConnectionConfig(
 		string(configData),
-		NewSchemaStore(app.GetDirConfig()),
+		NewSchemaStore(dirConfig),
 		ValidateOptionValidateExtensions(true),
 	)
 }

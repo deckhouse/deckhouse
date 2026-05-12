@@ -32,7 +32,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	cloudstatus "github.com/deckhouse/node-controller/internal/controller/nodegroup/cloud_status"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
@@ -54,9 +56,9 @@ type Status struct {
 
 func (r *Status) SetupWatches(w register.Watcher) {
 	w.Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(ngcommon.NodeToNodeGroup), builder.WithPredicates(ngcommon.NodeHasGroupLabelPredicate()))
-	w.Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
+	w.Watches(&mcmv1alpha1.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.MCMMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
-	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
+	w.Watches(&capiv1beta2.Machine{}, handler.EnqueueRequestsFromMapFunc(ngcommon.MachineToNodeGroup))
 	w.Watches(ngcommon.NewUnstructured(ngcommon.CAPIMachineDeploymentGVK), handler.EnqueueRequestsFromMapFunc(ngcommon.MachineDeploymentToNodeGroup))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(nodecommon.ChecksumSecretPredicate()))
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.secretToAllNodeGroups), builder.WithPredicates(predicate.NewPredicateFuncs(func(obj client.Object) bool {

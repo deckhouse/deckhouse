@@ -1,4 +1,5 @@
 {{- $mcmVersion := include "get_oss_version_by_id" (list "mcm" $ )  -}}
+{{- if ne $.Env "CSE" }}
 
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -45,3 +46,4 @@ shell:
   - go build -o machine-controller-manager cmd/machine-controller-manager/controller_manager.go
   - chown 64535:64535 machine-controller-manager
   - chmod 0700 machine-controller-manager
+{{- end }}

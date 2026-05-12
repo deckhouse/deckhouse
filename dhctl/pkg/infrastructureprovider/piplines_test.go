@@ -26,15 +26,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/gcp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/tests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
 
 func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 	testName := "TestPipelineGetMasterOutputsNoStrict"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {
@@ -237,9 +236,7 @@ func TestPipelineGetMasterOutputsNoStrict(t *testing.T) {
 func TestPipelineGetMasterIPs(t *testing.T) {
 	testName := "TestPipelineGetMasterIPs"
 
-	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skipf("Skipping %s test", testName)
-	}
+	tests.RequireProviderEnv(t)
 
 	params := getTestCloudProviderGetterParams(t, testName)
 	defer func() {

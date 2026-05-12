@@ -95,6 +95,44 @@ If the target version (set with the [kubernetesVersion](/products/kubernetes-pla
   - Successful downgrading is only guaranteed for a single version down from the maximum minor version of the control plane ever used in the cluster.
   - kubelets on the cluster nodes are downgraded first, followed by the control plane components.
 
+## Exposing the Kubernetes API
+
+The kube-apiserver component is only available within the internal cluster network by default. This module solves the problem of providing simple and secure external access to the Kubernetes API from outside the cluster.
+
+### Via Ingress
+
+By configuring the [`apiserver.publishAPI.ingress`](configuration.html#parameters-apiserver-publishapi-ingress) parameters, you can publish the API server on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+During configuration, you can specify:
+
+* The list of network addresses and subnets from which connections are allowed;
+* The Ingress controller on which the publication occurs;
+* Whether to use a manually provided TLS certificate, one obtained via cert-manager, or an automatic self-signed certificate.
+
+By default, a special CA certificate will be generated and a kubeconfig generator will be automatically configured.
+
+### Via a Service of type LoadBalancer
+
+By configuring the [`apiserver.publishAPI.loadBalancer`](configuration.html#parameters-apiserver-publishapi-loadbalancer) parameters, you can create a service of type LoadBalancer named `kube-system/d8-control-plane-apiserver`.
+
+During configuration, you can specify:
+
+* The list of network addresses and subnets from which connections are allowed;
+* The external port of the service;
+* Annotations on the service for load balancer provider settings.
+
+## Exposing the Kubernetes API over Ingress
+
+The kube-apiserver component (without advanced configuration) is only accessible in the internal cluster network. This module enables easy and secure access to Kubernetes API from outside the cluster. The API server is exposed on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
+
+When configuring, you can:
+
+* list network addresses from which connection is allowed;
+* list groups that are allowed to access the API server;
+* specify Ingress-controller to authenticate on.
+
+By default, a special CA certificate will be generated and the kubeconfig generator will be automatically configured.
+
 ## Auditing
 
 Kubernetes [Auditing](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/) can help you if you need to keep track of operations in your Namespaces or troubleshoot the cluster. You can configure it by setting the appropriate [Audit Policy](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy). As the result you will have the log file `/var/log/kube-audit/audit.log` containing audit events according to the configured Policy.

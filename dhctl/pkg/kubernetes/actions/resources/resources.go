@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -302,8 +301,8 @@ func (c *Creator) runSingleMCTask(ctx context.Context, task actions.ModuleConfig
 	})
 }
 
-func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask) error {
-	endChannel := time.After(app.ResourcesTimeout)
+func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, resources template.Resources, checkers []Checker, tasks []actions.ModuleConfigTask, timeout time.Duration) error {
+	endChannel := time.After(timeout)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -369,11 +368,11 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 					"Creating resources timed out after %s: resources cannot become ready. "+
 						"This could be due to lack of worker nodes in the cluster. "+
 						"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
-					app.ResourcesTimeout,
+					timeout,
 				)
 			}
 
-			return fmt.Errorf("Creating resources failed after %s waiting", app.ResourcesTimeout)
+			return fmt.Errorf("Creating resources failed after %s waiting", timeout)
 		case <-ticker.C:
 		}
 		attempt++

@@ -1195,6 +1195,10 @@ entries:
                 ru: Обзор
               url: /architecture/deckhouse/
             - title:
+                en: Web interface modules
+                ru: Модули веб-интерфейса
+              url: /architecture/deckhouse/web-modules.html
+            - title:
                 en: Direct mode of registry module
                 ru: Режим Direct модуля registry
               url: /architecture/deckhouse/registry-direct-mode.html
@@ -1370,6 +1374,10 @@ entries:
                 en: Admission-policy-engine module
                 ru: Модуль admission-policy-engine
               url: /architecture/security/admission-policy-engine.html
+            - title:
+                en: Cert-manager module
+                ru: Модуль cert-manager
+              url: /architecture/security/cert-manager.html
         - title:
             en: Network subsystem
             ru: Подсистема Network

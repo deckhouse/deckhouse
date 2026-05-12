@@ -15,149 +15,70 @@
 package app
 
 import (
-	"errors"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 const (
 	AppName = "dhctl"
-	// NodeDeckhouseDirectoryPath deckhouse operating directory path.
+
+	// Node directory layout used inside the deckhouse container.
 	NodeDeckhouseDirectoryPath = "/opt/deckhouse"
-
-	// DeckhouseNodeTmpPath deckhouse directory for temporary files.
-	DeckhouseNodeTmpPath = NodeDeckhouseDirectoryPath + "/tmp"
-	// DeckhouseNodeBinPath deckhouse directory for binary files.
-	DeckhouseNodeBinPath = NodeDeckhouseDirectoryPath + "/bin"
+	DeckhouseNodeTmpPath       = NodeDeckhouseDirectoryPath + "/tmp"
+	DeckhouseNodeBinPath       = NodeDeckhouseDirectoryPath + "/bin"
 )
 
-var (
-	deckhouseDir = "/deckhouse"
-	VersionFile  = deckhouseDir + "/version"
-	EditionFile  = deckhouseDir + "/edition"
-)
-
-var defaultTmpAndStateDir = filepath.Join(os.TempDir(), "dhctl")
-
-var (
-	TmpDirName = defaultTmpAndStateDir
-	// AppVersion is overridden in CI environment via a linker "-X" flag with a CI commit tag or just "dev" if there is none.
-	// "local" is kept for manual builds only
-	AppVersion = "local"
-	AppEdition = "local"
-
-	ConfigPaths = make([]string, 0)
-	SanityCheck = false
-	LoggerType  = "pretty"
-	IsDebug     = false
-
-	DoNotWriteDebugLogFile = false
-	DebugLogFilePath       = ""
-	ProgressFilePath       = ""
-	DownloadDirName        = TmpDirName
-	DownloadCacheDirName   = filepath.Join(DownloadDirName, "cache")
-)
-
-func init() {
-	if os.Getenv("DHCTL_DEBUG") == "yes" {
-		IsDebug = true
-	}
-	setVar(&AppVersion, VersionFile)
-	setVar(&AppEdition, EditionFile)
-}
-
-func setVar(env *string, filePath string) {
-	file, err := os.OpenFile(filePath, os.O_RDONLY, 0644)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-	buf := make([]byte, 30)
-	n, err := file.Read(buf)
-	if n > 0 && (errors.Is(err, io.EOF) || err == nil) {
-		*env = strings.TrimSpace(string(buf[:n]))
-		*env = strings.ReplaceAll(*env, "\n", "")
-	}
-}
-
-func GlobalFlags(cmd *kingpin.Application) {
+// GlobalFlags registers application-wide flags into cmd, writing into o.
+func GlobalFlags(cmd *kingpin.Application, o *options.GlobalOptions) {
 	cmd.Flag("logger-type", "Format logs output of a dhctl in different ways.").
 		Envar(configEnvName("LOGGER_TYPE")).
 		Default("pretty").
-		EnumVar(&LoggerType, "pretty", "json")
+		EnumVar(&o.LoggerType, "pretty", "json")
 	cmd.Flag("tmp-dir", "Set temporary directory for debug purposes.").
 		Envar(configEnvName("TMP_DIR")).
-		Default(TmpDirName).
-		StringVar(&TmpDirName)
+		Default(o.TmpDir).
+		StringVar(&o.TmpDir)
 	cmd.Flag("do-not-write-debug-log-file", `Skip write debug log into file in tmp-dir`).
 		Envar(configEnvName("DO_NOT_WRITE_DEBUG_LOG")).
 		Default("false").
-		BoolVar(&DoNotWriteDebugLogFile)
+		BoolVar(&o.DoNotWriteDebugLogFile)
 	cmd.Flag("debug-log-file-path", `Write debug log into passed file instead of standard file path ${DHCTL_TMP_DIR}/state-dir/operation-data.log`).
 		Envar(configEnvName("DEBUG_LOG_FILE_PATH")).
 		Default("").
-		StringVar(&DebugLogFilePath)
+		StringVar(&o.DebugLogFilePath)
 	cmd.Flag("progress-log-file-path", `If specified, DHCTL will write operation progress in jsonl format`).
 		Envar(configEnvName("PROGRESS_LOG_FILE_PATH")).
 		Default("").
-		StringVar(&ProgressFilePath)
+		StringVar(&o.ProgressFilePath)
 	cmd.Flag("download-dir", "Set directory for downloaded images and it's content").
 		Envar(configEnvName("DOWNLOAD_DIR")).
-		Default(DownloadDirName).
-		StringVar(&DownloadDirName)
+		Default(o.DownloadDir).
+		StringVar(&o.DownloadDir)
 	cmd.Flag("download-cache-dir", "Set directory for downloaded images layers cache.").
 		Envar(configEnvName("DOWNLOAD_CACHE_DIR")).
-		Default(DownloadCacheDirName).
-		StringVar(&DownloadCacheDirName)
+		Default(o.DownloadCacheDir).
+		StringVar(&o.DownloadCacheDir)
 }
 
-func DefineConfigFlags(cmd *kingpin.CmdClause) {
+// DefineConfigFlags registers --config (required).
+func DefineConfigFlags(cmd *kingpin.CmdClause, o *options.GlobalOptions) {
 	cmd.Flag("config", `Path to a file with bootstrap configuration and declared Kubernetes resources in YAML format.
 It can be go-template file (for only string keys!). Passed data contains next keys:
   cloudDiscovery - the data discovered by applying infrastructure creation utility and getting its output. It depends on the cloud provider.
 `).
 		Required().
 		Envar(configEnvName("CONFIG")).
-		StringsVar(&ConfigPaths)
+		StringsVar(&o.ConfigPaths)
 }
 
-func DefineSanityFlags(cmd *kingpin.CmdClause) {
+// DefineSanityFlags registers the destructive-action confirmation flag.
+func DefineSanityFlags(cmd *kingpin.CmdClause, o *options.GlobalOptions) {
 	cmd.Flag("yes-i-am-sane-and-i-understand-what-i-am-doing", "You should double check what you are doing here.").
 		Default("false").
-		BoolVar(&SanityCheck)
+		BoolVar(&o.SanityCheck)
 }
 
 func configEnvName(name string) string {
 	return "DHCTL_CLI_" + name
-}
-
-func InitGlobalVars(pwd string) {
-	deckhouseDir = pwd + "/deckhouse"
-	VersionFile = deckhouseDir + "/version"
-	EditionFile = deckhouseDir + "/edition"
-}
-
-func SetTmpDir(tmpDir string) {
-	TmpDirName = tmpDir
-}
-
-func GetTmpDir() string {
-	return TmpDirName
-}
-
-func GetDefaultTmpDir() string {
-	return defaultTmpAndStateDir
-}
-
-func GetDirConfig() *directoryconfig.DirectoryConfig {
-	return &directoryconfig.DirectoryConfig{
-		DownloadDir:      DownloadDirName,
-		DownloadCacheDir: DownloadCacheDirName,
-	}
 }

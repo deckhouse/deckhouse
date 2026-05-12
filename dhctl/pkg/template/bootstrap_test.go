@@ -17,6 +17,7 @@ package template
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -53,7 +54,7 @@ func TestPrepareBootstrapUsesDefaultClusterMasterEndpoints(t *testing.T) {
 	require.NotContains(t, content, `local minget_b64=`)
 	require.NotContains(t, content, `export MINGET_B64=`)
 	require.Contains(t, content, `PACKAGES_PROXY_BOOTSTRAP_CLUSTER_UUID=""`)
-	require.Contains(t, content, `export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="127.0.0.1:4300"`)
+	require.Contains(t, content, fmt.Sprintf(`export PACKAGES_PROXY_BOOTSTRAP_ADDRESSES="127.0.0.1:%d"`, testRPPBootstrapServerPort))
 	require.NotContains(t, content, "PACKAGES_PROXY_KUBE_APISERVER_ENDPOINTS")
 	require.Contains(t, content, `export PACKAGES_PROXY_ADDRESSES="127.0.0.1:5444"`)
 }

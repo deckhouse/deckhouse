@@ -14,9 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Reconciles ClusterRoleBinding kubeadm:cluster-admins when ModuleConfig user-authz changes (roleRef is immutable).
-// Lives in control-plane-manager so the hook runs whenever this module is enabled (unlike user-authz-specific hooks).
-
+// reconcile_kubeadm_cluster_admins_binding is the SINGLE SOURCE OF TRUTH for ClusterRoleBinding
+// kubeadm:cluster-admins reconciliation. It evaluates three independent signals:
+//
+//  1. user-authz module is enabled (module.IsEnabled / global.enabledModules);
+//  2. the cluster has finished its first bootstrap (global.clusterIsBootstrapped);
+//  3. ClusterRole user-authz:cluster-admin is observed in the API right now.
+//
+// Only when all three are true the binding flips to user-authz:cluster-admin; otherwise it stays
+// on cluster-admin (kubeadm-default wildcard). The supplement (extra ClusterRole bound to the same
+// kubeadm:cluster-admins group) is enabled while user-authz is on (single gate).
+//
+// The hook publishes its decision into Helm values so templates/rbac-for-us.yaml renders verbatim
+// and does NOT re-evaluate the gates:
+//
+//	controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName  string
+//	controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled bool
+//
+// Why a hook is needed at all: ClusterRoleBinding.roleRef is immutable in Kubernetes RBAC, Helm
+// SSA cannot mutate it. We Delete+Create via PatchCollector on OnBeforeHelm, before Helm runs.
+// On a failed Create after Delete the next reconcile (CRB delete-event or OnBeforeHelm tick)
+// hits the create-only path and self-heals.
 package hooks
 
 import (
@@ -27,15 +45,13 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
-	rbac "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 )
 
@@ -43,122 +59,137 @@ const (
 	kubeadmClusterAdminsBindingName      = "kubeadm:cluster-admins"
 	clusterAdminWildcardClusterRoleName  = "cluster-admin"
 	userAuthzClusterAdminClusterRoleName = "user-authz:cluster-admin"
+
+	kubeadmClusterAdminsBindingSnapshot = "kubeadm_cluster_admins_binding"
+	userAuthzClusterAdminCRSnapshot     = "user_authz_cluster_admin_clusterrole"
+
+	clusterIsBootstrappedValuePath    = "global.clusterIsBootstrapped"
+	kubeadmTargetRoleNameValuePath    = "controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName"
+	kubeadmSupplementEnabledValuePath = "controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled"
 )
 
+// kubeadmClusterAdminsBindingState keeps the only moving piece of the CRB — the target role.
+type kubeadmClusterAdminsBindingState struct {
+	RoleRefName string `json:"roleRefName"`
+}
+
+// userAuthzClusterAdminCRState is just a presence marker (snapshot length > 0 == role exists).
+type userAuthzClusterAdminCRState struct {
+	Name string `json:"name"`
+}
+
+func filterKubeadmClusterAdminsBinding(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	var crb rbacv1.ClusterRoleBinding
+	if err := sdk.FromUnstructured(obj, &crb); err != nil {
+		return nil, fmt.Errorf("convert ClusterRoleBinding %s: %w", obj.GetName(), err)
+	}
+	return kubeadmClusterAdminsBindingState{RoleRefName: crb.RoleRef.Name}, nil
+}
+
+func filterUserAuthzClusterAdminCR(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	return userAuthzClusterAdminCRState{Name: obj.GetName()}, nil
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        moduleQueue,
+	Queue:        moduleQueue + "/reconcile_kubeadm_cluster_admins_binding",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
-			Name:       "user_authz_module_config",
-			ApiVersion: "deckhouse.io/v1alpha1",
-			Kind:       "ModuleConfig",
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"user-authz"},
-			},
-			FilterFunc: filterUserAuthzModuleConfig,
+			Name:                         kubeadmClusterAdminsBindingSnapshot,
+			ApiVersion:                   "rbac.authorization.k8s.io/v1",
+			Kind:                         "ClusterRoleBinding",
+			NameSelector:                 &types.NameSelector{MatchNames: []string{kubeadmClusterAdminsBindingName}},
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			FilterFunc:                   filterKubeadmClusterAdminsBinding,
+		},
+		{
+			Name:                         userAuthzClusterAdminCRSnapshot,
+			ApiVersion:                   "rbac.authorization.k8s.io/v1",
+			Kind:                         "ClusterRole",
+			NameSelector:                 &types.NameSelector{MatchNames: []string{userAuthzClusterAdminClusterRoleName}},
+			ExecuteHookOnEvents:          ptr.To(true),
+			ExecuteHookOnSynchronization: ptr.To(true),
+			FilterFunc:                   filterUserAuthzClusterAdminCR,
 		},
 	},
-}, dependency.WithExternalDependencies(reconcileKubeadmClusterAdminsBindingHook))
+}, reconcileKubeadmClusterAdminsBindingHook)
 
-func filterUserAuthzModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	enabled, found, err := unstructured.NestedBool(obj.Object, "spec", "enabled")
+func reconcileKubeadmClusterAdminsBindingHook(_ context.Context, input *go_hook.HookInput) error {
+	userAuthzEnabled := module.IsEnabled("user-authz", input)
+	clusterBootstrapped := input.Values.Get(clusterIsBootstrappedValuePath).Bool()
+
+	userAuthzCRSnaps, err := sdkobjectpatch.UnmarshalToStruct[userAuthzClusterAdminCRState](input.Snapshots, userAuthzClusterAdminCRSnapshot)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("unmarshal %s snapshot: %w", userAuthzClusterAdminCRSnapshot, err)
 	}
-	if !found {
-		return false, nil
-	}
-	return enabled, nil
-}
+	userAuthzCRAvailable := len(userAuthzCRSnaps) > 0
 
-func userAuthzEnabledFromSnapshot(input *go_hook.HookInput) bool {
-	enabledSnaps, err := sdkobjectpatch.UnmarshalToStruct[bool](input.Snapshots, "user_authz_module_config")
-	if err != nil || len(enabledSnaps) == 0 {
-		return module.IsEnabled("user-authz", input)
-	}
-	return enabledSnaps[len(enabledSnaps)-1]
-}
-
-func reconcileKubeadmClusterAdminsBindingHook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	kubeCl, err := dc.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("kubernetes client: %w", err)
-	}
-
-	return syncKubeadmClusterAdminsClusterRoleBinding(ctx, input.Logger, kubeCl, userAuthzEnabledFromSnapshot(input))
-}
-
-// syncKubeadmClusterAdminsClusterRoleBinding keeps ClusterRoleBinding kubeadm:cluster-admins aligned with
-// user-authz enablement (roleRef is immutable, so the binding is recreated when the desired role changes).
-func syncKubeadmClusterAdminsClusterRoleBinding(
-	ctx context.Context,
-	logger go_hook.Logger,
-	kubeCl kubernetes.Interface,
-	userAuthzModuleEnabled bool,
-) error {
 	desiredRoleName := clusterAdminWildcardClusterRoleName
-	if userAuthzModuleEnabled {
+	if userAuthzEnabled && clusterBootstrapped && userAuthzCRAvailable {
 		desiredRoleName = userAuthzClusterAdminClusterRoleName
 	}
 
-	desiredCRB := &rbac.ClusterRoleBinding{
+	// Single source of truth: publish the already-made decision into values so the Helm template
+	// renders verbatim. Helm picks up values updates of OnBeforeHelm hooks before rendering.
+	input.Values.Set(kubeadmTargetRoleNameValuePath, desiredRoleName)
+	input.Values.Set(kubeadmSupplementEnabledValuePath, userAuthzEnabled)
+
+	logger := input.Logger.With(
+		slog.String("name", kubeadmClusterAdminsBindingName),
+		slog.String("desiredRoleRef", desiredRoleName),
+		slog.Bool("userAuthzEnabled", userAuthzEnabled),
+		slog.Bool("clusterBootstrapped", clusterBootstrapped),
+		slog.Bool("userAuthzCRAvailable", userAuthzCRAvailable),
+	)
+
+	bindingSnaps, err := sdkobjectpatch.UnmarshalToStruct[kubeadmClusterAdminsBindingState](input.Snapshots, kubeadmClusterAdminsBindingSnapshot)
+	if err != nil {
+		return fmt.Errorf("unmarshal %s snapshot: %w", kubeadmClusterAdminsBindingSnapshot, err)
+	}
+
+	desiredCRB := buildKubeadmClusterAdminsBinding(desiredRoleName)
+
+	if len(bindingSnaps) == 0 {
+		logger.Info("creating clusterrolebinding")
+		input.PatchCollector.Create(desiredCRB)
+		return nil
+	}
+
+	current := bindingSnaps[len(bindingSnaps)-1]
+	if current.RoleRefName == desiredRoleName {
+		return nil
+	}
+
+	logger.Info("rebinding clusterrolebinding", slog.String("from", current.RoleRefName))
+	input.PatchCollector.Delete(rbacv1.SchemeGroupVersion.String(), "ClusterRoleBinding", "", kubeadmClusterAdminsBindingName)
+	input.PatchCollector.Create(desiredCRB)
+	return nil
+}
+
+// buildKubeadmClusterAdminsBinding renders the desired ClusterRoleBinding state.
+// Labels are intentionally minimal (only heritage/module): Helm SSA reconciles its full label set
+// on the next pass and we deliberately do not imitate Helm-managed metadata here.
+func buildKubeadmClusterAdminsBinding(roleName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
 			Kind:       "ClusterRoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: kubeadmClusterAdminsBindingName,
 			Labels: map[string]string{
 				"heritage": "deckhouse",
+				"module":   "control-plane-manager",
 			},
 		},
-		RoleRef: rbac.RoleRef{
-			APIGroup: rbac.GroupName,
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
-			Name:     desiredRoleName,
+			Name:     roleName,
 		},
-		Subjects: []rbac.Subject{
-			{
-				Kind: rbac.GroupKind,
-				Name: kubeadmClusterAdminsBindingName,
-			},
+		Subjects: []rbacv1.Subject{
+			{Kind: rbacv1.GroupKind, Name: kubeadmClusterAdminsBindingName},
 		},
 	}
-
-	existing, err := kubeCl.RbacV1().ClusterRoleBindings().Get(ctx, kubeadmClusterAdminsBindingName, metav1.GetOptions{})
-	if apierrors.IsNotFound(err) {
-		logger.Info("creating clusterrolebinding",
-			slog.String("name", kubeadmClusterAdminsBindingName),
-			slog.String("roleRef", desiredRoleName))
-		_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, desiredCRB, metav1.CreateOptions{})
-		if err != nil {
-			return fmt.Errorf("create clusterrolebinding %s: %w", kubeadmClusterAdminsBindingName, err)
-		}
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("get clusterrolebinding %s: %w", kubeadmClusterAdminsBindingName, err)
-	}
-
-	if existing.RoleRef.Name == desiredRoleName {
-		return nil
-	}
-
-	logger.Info("rebinding clusterrolebinding",
-		slog.String("name", kubeadmClusterAdminsBindingName),
-		slog.String("from", existing.RoleRef.Name),
-		slog.String("to", desiredRoleName))
-
-	err = kubeCl.RbacV1().ClusterRoleBindings().Delete(ctx, kubeadmClusterAdminsBindingName, metav1.DeleteOptions{})
-	if err != nil {
-		return fmt.Errorf("delete clusterrolebinding %s: %w", kubeadmClusterAdminsBindingName, err)
-	}
-
-	_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, desiredCRB, metav1.CreateOptions{})
-	if err != nil {
-		return fmt.Errorf("create clusterrolebinding %s: %w", kubeadmClusterAdminsBindingName, err)
-	}
-
-	return nil
 }

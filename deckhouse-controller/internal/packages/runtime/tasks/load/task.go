@@ -119,10 +119,10 @@ func (t *task) Execute(ctx context.Context) error {
 		Err: errors.New("wait for converge done"),
 		Conditions: []status.Condition{
 			{
-				Type:    status.ConditionWaitConverge,
+				Type:    status.ConditionPending,
 				Status:  metav1.ConditionTrue,
-				Reason:  "WaitConverge",
-				Message: "wait for converge done",
+				Reason:  "Pending",
+				Message: "wait processing",
 			},
 		},
 	})

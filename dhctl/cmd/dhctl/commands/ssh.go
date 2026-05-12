@@ -26,19 +26,20 @@ import (
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
-func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
+func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
@@ -70,14 +71,14 @@ func DefineTestSSHConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	})
 }
 
-func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestSCPCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	var SrcPath string
 	var DstPath string
 	var Data string
 	var Direction string
 
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 
 	cmd.Flag("src", "source path").Short('s').StringVar(&SrcPath)
 	cmd.Flag("dst", "destination path").Short('d').StringVar(&DstPath)
@@ -87,7 +88,7 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
@@ -151,12 +152,12 @@ func DefineTestSCPCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	})
 }
 
-func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineTestUploadExecCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
 	var ScriptPath string
 	var Sudo bool
 
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 	cmd.Flag("script", "source path").
 		StringVar(&ScriptPath)
 	cmd.Flag("sudo", "source path").Short('s').
@@ -165,7 +166,7 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}
@@ -209,9 +210,9 @@ func DefineTestUploadExecCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	})
 }
 
-func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, nil)
-	app.DefineBecomeFlags(cmd)
+func DefineTestBundle(cmd *kingpin.CmdClause, opts *options.Options) *kingpin.CmdClause {
+	app.DefineSSHFlags(cmd, &opts.SSH, nil)
+	app.DefineBecomeFlags(cmd, &opts.Become)
 
 	var bundleDirFlag string
 	var scriptNameFlag string
@@ -226,7 +227,7 @@ func DefineTestBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
 
-		params, err := app.DefaultProviderParams()
+		params, err := app.DefaultProviderParams(&opts.Global)
 		if err != nil {
 			return err
 		}

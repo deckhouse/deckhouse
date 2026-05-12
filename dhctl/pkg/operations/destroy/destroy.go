@@ -23,7 +23,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/directoryconfig"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
@@ -76,6 +76,11 @@ type Params struct {
 	LoggerProvider  log.LoggerProvider
 	IsDebug         bool
 	DirectoryConfig *directoryconfig.DirectoryConfig
+
+	// Options carries the per-operation parsed configuration. RPC handlers
+	// must populate this with a fresh *options.Options to avoid sharing global
+	// state between concurrent requests.
+	Options *options.Options
 }
 
 func (p *Params) getExecutionContext() phases.DefaultPhasedExecutionContext {
@@ -157,8 +162,8 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 	logger := log.SafeProvideLogger(params.LoggerProvider)
 
-	if app.ProgressFilePath != "" {
-		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
+	if params.Options != nil && params.Options.Global.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(params.Options.Global.ProgressFilePath)
 	}
 
 	pec := params.getExecutionContext()
@@ -207,6 +212,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 				controller.ClusterInfraOptions{
 					PhasedExecutionContext: pec,
 					TmpDir:                 params.TmpDir,
+					DownloadDir:            params.Options.Global.DownloadDir,
 					IsDebug:                params.IsDebug,
 					Logger:                 logger,
 				},
@@ -214,6 +220,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		},
 
 		sshClientProvider: params.SSHProvider,
+		sshUser:           params.Options.SSH.User,
 		tmpDir:            params.TmpDir,
 	}
 

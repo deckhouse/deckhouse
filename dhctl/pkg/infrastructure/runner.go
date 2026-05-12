@@ -27,7 +27,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -111,6 +111,29 @@ type Runner struct {
 	infraExecutor Executor
 
 	hook InfraActionHook
+
+	// useTfCache controls how the runner reacts when a previously cached
+	// infrastructure state is found on disk. Empty string means "ask";
+	// matches options.UseStateCache* values otherwise.
+	useTfCache string
+
+	// isDebug enables backup of intermediate state files written by the
+	// state saver fsnotify handler.
+	isDebug bool
+}
+
+// WithUseTfCache sets how the runner reacts to a cached infrastructure state.
+// Pass options.UseStateCacheYes/No/Ask. Returns the runner for chaining.
+func (r *Runner) WithUseTfCache(useTfCache string) *Runner {
+	r.useTfCache = useTfCache
+	return r
+}
+
+// WithDebug toggles debug-mode side effects (e.g. state file backups).
+// Returns the runner for chaining.
+func (r *Runner) WithDebug(d bool) *Runner {
+	r.isDebug = d
+	return r
 }
 
 func NewRunner(cfg *config.MetaConfig, stateCache state.Cache, executor Executor) *Runner {
@@ -291,10 +314,10 @@ func (r *Runner) Init(ctx context.Context) error {
 			r.logger.LogInfoF("Cached infrastructure state found:\n\t%s\n\n", r.statePath)
 			if !r.allowedCachedState {
 				var isConfirm bool
-				switch app.UseTfCache {
-				case app.UseStateCacheYes:
+				switch r.useTfCache {
+				case options.UseStateCacheYes:
 					isConfirm = true
-				case app.UseStateCacheNo:
+				case options.UseStateCacheNo:
 					isConfirm = false
 				default:
 					isConfirm = r.confirm().

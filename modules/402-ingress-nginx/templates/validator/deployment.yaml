@@ -8,10 +8,10 @@
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resourcesManagement := $crd.spec.resourcesManagement | default dict }}
 {{- $validationIsolationMode := $crd.spec.validationIsolationMode | default "NoIsolation" }}
-{{- $validationIsolationEnabled := eq $controllerVersion "1.14" }}
-{{- $fullValidation := and $validationIsolationEnabled (not (eq $validationIsolationMode "NoIsolation")) }}
+{{- $validationIsolationSupported := or (eq $controllerVersion "1.14") (eq $controllerVersion "1.15") }}
+{{- $validationIsolationEnabled := and $validationIsolationSupported (not (eq $validationIsolationMode "NoIsolation")) }}
 {{- $validatorServiceAccountName := "validator" }}
-{{- if $fullValidation }}
+{{- if $validationIsolationEnabled }}
   {{- $validatorServiceAccountName = "validator-full" }}
 {{- end }}
 {{- $logLevels := dict "Error" 0 "Warn" 1 "Info" 2 "Extended" 3 "Debug" 4 "Trace" 5 }}
@@ -196,7 +196,7 @@ spec:
           - --validating-webhook=:8443
           - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt
           - --validating-webhook-key=/etc/nginx/webhook-ssl/tls.key
-          {{- if not $fullValidation }}
+          {{- if not $validationIsolationEnabled }}
           - --watch-namespace=d8-ingress-nginx
           {{- else }}
           - --controller-class={{ printf "ingress-nginx.deckhouse.io/%s" $crd.spec.ingressClass }}

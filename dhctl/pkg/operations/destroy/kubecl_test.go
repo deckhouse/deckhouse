@@ -27,12 +27,13 @@ import (
 	libdhctl_log "github.com/deckhouse/lib-dhctl/pkg/log"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
 	logger := libdhctl_log.NewDummyLogger(false)
 	loggerProvider := libdhctl_log.SimpleLoggerProvider(logger)
-	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: app.IsDebug, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: app.GetDefaultTmpDir()}
+	params := settings.ProviderParams{LoggerProvider: loggerProvider, IsDebug: false, NodeTmpPath: app.DeckhouseNodeTmpPath, NodeBinPath: app.DeckhouseNodeBinPath, TmpDir: options.DefaultTmpDir()}
 	baseProviderSettings := settings.NewBaseProviders(params)
 
 	sshProvider := testCreateDefaultTestSSHProvider(session.Host{Host: "host"}, false)

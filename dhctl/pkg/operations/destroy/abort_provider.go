@@ -44,8 +44,12 @@ type GetAbortDestroyerParams struct {
 	LoggerProvider    log.LoggerProvider
 
 	TmpDir        string
+	DownloadDir   string
 	IsDebug       bool
 	CommanderMode bool
+	// SSHUser is recorded into the converge lock lease as the holder identity
+	// (informational only).
+	SSHUser string
 
 	overridePhaseProvider phases.DefaultActionProvider
 	staticLoopsParams     static.LoopsParams
@@ -102,6 +106,7 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 		controller.ClusterInfraOptions{
 			PhasedExecutionContext: a.params.PhasedExecutionContext,
 			TmpDir:                 a.params.TmpDir,
+			DownloadDir:            a.params.DownloadDir,
 			Logger:                 logger,
 			IsDebug:                a.params.IsDebug,
 		},
@@ -116,6 +121,7 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 		StateLoader:  terraStateLoader,
 
 		CommanderMode: a.params.CommanderMode,
+		SSHUser:       a.params.SSHUser,
 
 		// for abort we cannot have resources
 		SkipResources: true,
