@@ -289,7 +289,7 @@ properties:
                   External LoadBalancer TCP port.
       auditPolicyEnabled:
         type: boolean
-        default: false
+        default: true
         description: |
           Set the [audit policies](faq.html#how-do-i-configure-additional-audit-policies) using the configuration from the `kube-system/audit-policy` Secret.
       basicAuditPolicyEnabled:

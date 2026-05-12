@@ -72,7 +72,7 @@ properties:
     properties:
       enabled:
         type: boolean
-        default: false
+        default: true
         description: Enable the Trivy provider.
       allowedSeverityLevels:
         type: array
