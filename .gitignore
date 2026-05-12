@@ -21,6 +21,7 @@
 .settings
 .idea/
 .vscode
+.cursor
 __debug_bin*
 venv/
 out/

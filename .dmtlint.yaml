@@ -1,5 +1,9 @@
 global:
   linters-settings:
+    openapi:
+      rules:
+        bilingual:
+          impact: warn
     module:
       rules:
         license:

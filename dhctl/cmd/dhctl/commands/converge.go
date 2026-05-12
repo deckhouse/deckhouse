@@ -90,6 +90,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 			Logger:             logger,
 			IsDebug:            opts.Global.IsDebug,
 			DirectoryConfig:    opts.DirConfig(),
+			Options:         opts,
 			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
 
@@ -189,6 +190,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 			Logger:          logger,
 			IsDebug:         opts.Global.IsDebug,
 			DirectoryConfig: opts.DirConfig(),
+			Options:         opts,
 		})
 
 		return converger.AutoConverge(ctx, opts.AutoConverge.ListenAddress, opts.AutoConverge.ApplyInterval)
@@ -251,6 +253,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 			Logger:                                loggerFor,
 			IsDebug:                               opts.Global.IsDebug,
 			DirectoryConfig:                       opts.DirConfig(),
+			Options:                               opts,
 		})
 		cacheIdentity := ""
 		if opts.Kube.InCluster {
