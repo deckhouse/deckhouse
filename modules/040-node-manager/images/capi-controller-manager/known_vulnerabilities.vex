@@ -17,6 +17,24 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-24051 невозможно эксплуатировать в рамках Deckhouse, поскольку она не оказывает влияния на системы под управлением Linux. Данная проблема безопасности связана с выполнением команды ioreg, которая является специфичной для операционной системы macOS (Darwin) и отсутствует в ядре Linux.",
       "timestamp": "2026-04-01T10:20:24.189832Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558"
+      },
+      "products": [
+        {"@id": "pkg:golang/github.com/docker/cli@v25.0.6+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v27.1.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.1+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.0.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.2.2+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.3.3+incompatible"},
+        {"@id": "pkg:golang/github.com/docker/cli@v28.5.1+incompatible"}
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker CLI Windows plugin search path vulnerability - Уязвимость CWE-427 (Uncontrolled Search Path Element) в Docker CLI затрагивает исключительно среду Microsoft Windows: поиск бинарных плагинов в каталоге C:\\ProgramData\\Docker\\cli-plugins может позволить подмену исполняемых файлов. Компонент registry-packages-proxy эксплуатируется в среде Kubernetes на базе Linux, официальное описание CVE указывает, что уязвимость не затрагивает бинарные файлы под платформы, отличные от Windows (non-Windows binaries). Таким образом, в рамках текущей эксплуатационной модели уязвимый код не входит в исполняемый путь и возможность эксплуатации исключена.",
+      "timestamp": "2026-03-05T12:00:00Z"
     }
   ],
   "timestamp": "2025-10-10T08:22:16Z",
