@@ -46,7 +46,7 @@ jobs:
       - git_info
     env:
       WERF_ENV: "FE"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "pre-release" "FE") | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}
 
 {!{ range $werfEnv := slice "CE" "EE" "BE" "SE" "SE-plus" "CSE" }!}
@@ -58,7 +58,7 @@ jobs:
       - build_fe
     env:
       WERF_ENV: "{!{$werfEnv}!}"
-{!{ tmpl.Exec "build_template" (slice $ctx "pre-release") | strings.Indent 4 }!}
+{!{ tmpl.Exec "build_template" (slice $ctx "pre-release" $werfEnv) | strings.Indent 4 }!}
 {!{ tmpl.Exec "send_fail_report" . | strings.Indent 6 }!}   
 {!{ end }!}
 
