@@ -471,7 +471,7 @@ spec:
 
 ### Configuring TLS parameters with BackendTLSPolicy
 
-If traffic from the gateway to the backend must use TLS, create a **BackendTLSPolicy** object in the namespace of the backend **Service** object. The example below shows an HTTPRoute object, a backend **Service** object with a named port, a ConfigMap with a CA bundle, and a **BackendTLSPolicy** object that configures TLS validation for that backend:
+If traffic from the gateway to the backend must use TLS, create a BackendTLSPolicy object in the namespace of the backend Service object. The example below shows an HTTPRoute object, a backend Service object with a named port, a ConfigMap with a CA bundle, and a BackendTLSPolicy object that configures TLS validation for that backend:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -548,7 +548,7 @@ Because the current Gateway API specification does not yet cover all features re
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON object with additional response headers (for example `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`). |
 | `alb.network.deckhouse.io/session-affinity` | JSON for cookie session affinity (`mode`, `path`, `cookieName`, `ttl`, etc.); not every field is required (for example `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`). |
 | `alb.network.deckhouse.io/hash-key` | For example `source-ip`: consistent hashing for Service backends of the HTTPRoute object. |
-| `alb.network.deckhouse.io/service-upstream` | `"true"`: traffic to the upstream goes through the corresponding **Service** object instead of directly to pods. |
+| `alb.network.deckhouse.io/service-upstream` | `"true"`: traffic to the upstream goes through the corresponding Service object instead of directly to pods. |
 | `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` with htpasswd data for HTTP basic auth on this route. |
 | `alb.network.deckhouse.io/satisfy` | `all` or `any`: defines whether both checks must be satisfied (whitelist and basic-auth) or only one of them (default `all`). |
 | `alb.network.deckhouse.io/auth-url` | Defines the URL of the external authentication service. |
