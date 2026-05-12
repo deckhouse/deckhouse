@@ -175,7 +175,8 @@ steps:
     {!{- if eq $buildType "release" }!}
       STAGE_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/${REGISTRY_SUFFIX}"
       export REGISTRY_PATH="${STAGE_REGISTRY_PATH}"
-      export WERF_REPO="${STAGE_REGISTRY_PATH}"
+      export WERF_REPO="${DECKHOUSE_REGISTRY_STAGE_HOST}/deckhouse/common"
+      export WERF_FINAL_REPO="${STAGE_REGISTRY_PATH}"
     {!{- else }!}
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
