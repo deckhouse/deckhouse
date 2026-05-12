@@ -17,4 +17,4 @@ extractedLinksMax: 0
 * [`operator-trivy`](/modules/operator-trivy/) — позволяет периодически сканировать кластер DKP на наличие уязвимостей;
 * [`cert-manager`](/modules/cert-manager/) — управляет TLS-сертификатами в кластере;
 * [`secrets-store-integration`](/modules/secrets-store-integration/) — реализует доставку секретов в приложения Kubernetes-кластера путем подключения секретов, ключей и сертификатов из внешних хранилищ;
-* [`secret-copier`](/modules/secret-copier/) — автоматически копирует секреты в неймспейсы кластера.
+* [`secret-copier`](/modules/secret-copier/) — автоматически копирует секреты в пространства имён кластера.
