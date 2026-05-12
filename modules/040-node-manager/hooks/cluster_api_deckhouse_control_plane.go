@@ -35,7 +35,7 @@ var _ = sdk.RegisterFunc(
 		Kubernetes: []go_hook.KubernetesConfig{
 			{
 				Name:       "control_plane",
-				ApiVersion: "infrastructure.cluster.x-k8s.io/v1alpha1",
+				ApiVersion: "infrastructure.cluster.x-k8s.io/v1beta2",
 				Kind:       "DeckhouseControlPlane",
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
@@ -71,6 +71,9 @@ func updateControlPlane(_ context.Context, input *go_hook.HookInput) error {
 			"initialized":                 true,
 			"ready":                       true,
 			"externalManagedControlPlane": true,
+			"initialization": map[string]interface{}{
+				"controlPlaneInitialized": true,
+			},
 		},
 	}
 	for controlPlane, err := range sdkobjectpatch.SnapshotIter[controlPlane](input.Snapshots.Get("control_plane")) {

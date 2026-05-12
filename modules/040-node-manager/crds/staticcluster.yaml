@@ -6,7 +6,7 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.20.0
   labels:
     cluster.x-k8s.io/provider: infrastructure-static
-    cluster.x-k8s.io/v1beta2: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1beta2
     heritage: deckhouse
     module: node-manager
   name: staticclusters.infrastructure.cluster.x-k8s.io
@@ -19,7 +19,7 @@ spec:
     singular: staticcluster
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - name: v1beta2
       schema:
         openAPIV3Schema:
           description: StaticCluster is the Schema for the Cluster API Provider Static.

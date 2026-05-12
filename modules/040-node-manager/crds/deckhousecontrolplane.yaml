@@ -8,7 +8,7 @@ metadata:
     heritage: deckhouse
     module: node-manager
     cluster.x-k8s.io/provider: infrastructure-deckhouse
-    cluster.x-k8s.io/v1beta1: v1alpha1
+    cluster.x-k8s.io/v1beta2: v1beta2
   name: deckhousecontrolplanes.infrastructure.cluster.x-k8s.io
 spec:
   group: infrastructure.cluster.x-k8s.io
@@ -19,7 +19,7 @@ spec:
     singular: deckhousecontrolplane
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - name: v1beta2
       schema:
         openAPIV3Schema:
           description: DeckhouseControlPlane is the Schema for the Cluster API
@@ -52,6 +52,13 @@ spec:
                     for initial contact. This may occur before the control plane is
                     fully ready.
                   type: boolean
+                initialization:
+                  description: Initialization contains the initialization status of the control plane.
+                  type: object
+                  properties:
+                    controlPlaneInitialized:
+                      description: ControlPlaneInitialized is true when the control plane has been initialized.
+                      type: boolean
                 ready:
                   description: Ready is true when the control plane is ready.
                   type: boolean

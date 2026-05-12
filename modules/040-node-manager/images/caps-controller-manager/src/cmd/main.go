@@ -42,7 +42,7 @@ import (
 
 	deckhousev1alpha1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "caps-controller-manager/api/deckhouse.io/v1alpha2"
-	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	infrav1 "caps-controller-manager/api/infrastructure/v1beta2"
 	"caps-controller-manager/internal/client"
 	deckhouseiocontroller "caps-controller-manager/internal/controller/deckhouse.io"
 	infrastructurecontroller "caps-controller-manager/internal/controller/infrastructure"

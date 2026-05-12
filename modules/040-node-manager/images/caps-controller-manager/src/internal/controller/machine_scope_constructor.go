@@ -26,7 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	clientpkg "sigs.k8s.io/controller-runtime/pkg/client"
 
-	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
+	infrav1 "caps-controller-manager/api/infrastructure/v1beta2"
 	"caps-controller-manager/internal/scope"
 )
 

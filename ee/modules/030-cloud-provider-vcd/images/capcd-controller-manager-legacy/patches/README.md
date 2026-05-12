@@ -20,7 +20,10 @@ Files:
 
 Changes:
 
-- Update dependencies
+- Update Go version: 1.20 → 1.24.0
+- Update go-vcloud-director SDK: v2.15.0 → v2.21.0 (required for compatibility with cloud-controller-manager-legacy which uses v2.21.0 for patch 005)
+- Update sigs.k8s.io/yaml: v1.3.0 → v1.4.0
+- Note: SDK v2.21.0 is compatible with controller-runtime v0.14.5 when used without replace directive for cloud-provider-for-cloud-director
 
 ### 003-klog.patch
 
@@ -32,18 +35,18 @@ Changes:
 
 - Update klog to klog/v2 in other files
 
-### 005-add-vcdmachine-spec-template-org.patch
+### 004-add-vcdmachine-spec-template-org.patch
 
 Files:
 
-- controllers/vcdmachine_controller.go
 - api/v1beta2/vcdmachine_types.go
 
 Changes:
 
-- Add TemplateOrg field to VCDMachine spec
+- Add TemplateOrg field to VCDMachineSpec
+- Note: TemplateOrg parameter is not used in AddNewVM call in v1.2.0 as the SDK version doesn't support it yet
 
-### 006-add-metadata.patch
+### 005-add-metadata.patch
 
 Files:
 
@@ -61,4 +64,22 @@ Files:
 
 Changes:
 
-- Add metadata field for VM
+- Add VCDMachineMetadata type with constants for metadata types (String, Number, Boolean, DateTime)
+- Add VCDMachineMetadata struct with fields: Key, Value, Type, UserAccess, IsSystem
+- Add Metadata field to VCDMachineSpec as array of VCDMachineMetadata
+- Implement metadata application logic in vcdmachine_controller after VM creation
+- Add convertMetadataType helper function to convert metadata types to VCD SDK types
+- Add DeepCopy methods for VCDMachineMetadata in generated code
+- Update CRD manifests with metadata field definitions
+
+### 006-handle-dhcp-empty-ip.patch
+
+Files:
+
+- controllers/vcdmachine_controller.go
+
+Changes:
+
+- Handle `primaryNetwork.IPAddress == ""` in DHCP mode as a transient condition.
+- Requeue with delay and informational log while waiting for DHCP lease.
+- Keep existing strict behavior for non-DHCP allocation modes.

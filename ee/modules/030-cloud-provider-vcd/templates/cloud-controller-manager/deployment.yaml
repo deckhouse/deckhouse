@@ -40,11 +40,11 @@ checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/registra
   {{- $ccmImageName = "cloudControllerManager" -}}
 {{- end -}}
 
-{{- $ccmEnabledControllers := "cloud-node,cloud-node-lifecycle" -}}
+{{- $ccmEnabledControllers := "cloud-node-controller,cloud-node-lifecycle-controller" -}}
 {{- if hasKey .Values.cloudProviderVcd.internal.discoveryData "loadBalancer" -}}
   {{- if hasKey .Values.cloudProviderVcd.internal.discoveryData.loadBalancer "enabled" -}}
     {{- if .Values.cloudProviderVcd.internal.discoveryData.loadBalancer.enabled -}}
-      {{- $ccmEnabledControllers = printf "%s,service" $ccmEnabledControllers -}}
+      {{- $ccmEnabledControllers = printf "%s,service-lb-controller" $ccmEnabledControllers -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}
