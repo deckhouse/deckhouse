@@ -82,7 +82,6 @@ jobs:
       security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
-
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
       build_BE: ${{ steps.pr_props.outputs.build_BE }}

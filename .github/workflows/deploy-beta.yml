@@ -191,7 +191,6 @@ jobs:
           fi
 
 
-
   enable_CE:
     if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
     name: Enable CE
@@ -370,8 +369,6 @@ jobs:
             echo "The cooldown has expired"
             exit 1
           fi
-
-
       - name: Set cooldown for release (CE)
         if: ${{ github.event.inputs.cooldown }}
         env:
@@ -498,7 +495,6 @@ jobs:
 
           echo "⚓️ 📤 [$(date -u)] Push '${SOURCE_RELEASE_VERSION_IMAGE}' image with cooldown."
           docker image push ${SOURCE_RELEASE_VERSION_IMAGE}
-
 
 
       - name: Publish release images for CE

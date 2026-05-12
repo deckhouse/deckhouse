@@ -72,7 +72,6 @@ jobs:
       security_rootless_scan: ${{ steps.pr_props.outputs.security_rootless_scan }}
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
-
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
       build_BE: ${{ steps.pr_props.outputs.build_BE }}
@@ -665,8 +664,6 @@ jobs:
         run: rm images_tags_werf.json
 
     # </template: build_template>
-
-
 
   build_CE:
     name: Build CE
@@ -2407,7 +2404,6 @@ jobs:
             publish_image 'dev' "${REGISTRY_PATH}" "${IMAGE_TAG}"
             publish_image 'dev/install' "${REGISTRY_PATH}/install" "${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${REGISTRY_PATH}/install-standalone" "${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${REGISTRY_PATH}/e2e-opentofu-eks" "${IMAGE_TAG}"
 
             # For release branches, also push release-channel to dev
             if [[ ${WERF_ENV,,} == "fe" && "${CI_COMMIT_BRANCH}" =~ release-([0-9]+\.[0-9]+) ]]; then
@@ -3560,7 +3556,6 @@ jobs:
       - git_info
       - pull_request_info
       - build_fe
-
       - build_CE
       - build_EE
       - build_BE

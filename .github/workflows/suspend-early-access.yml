@@ -248,7 +248,6 @@ jobs:
       # </template: login_rw_registry_step>
 
 
-
       - name: Publish suspend images for CE
         if: ${{ needs.detect_editions.outputs.DEPLOY_CE == 'true' }}
         env:
