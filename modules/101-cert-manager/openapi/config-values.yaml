@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /modules/101-cert-manager/openapi/config-values.yaml
+# /ee/cse/modules/101-cert-manager/openapi/config-values.yaml
 type: object
 description: The module does not have any mandatory parameters.
 properties:
@@ -187,7 +191,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -213,7 +217,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -231,7 +235,7 @@ properties:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                default: "64Mi"      
+                default: "64Mi"
         x-examples:
           - requests:
               cpu: "100m"
@@ -256,7 +260,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -280,7 +284,7 @@ properties:
             default: {}
             required:
               - cpu
-              - memory            
+              - memory
             properties:
               cpu:
                 oneOf:
@@ -298,7 +302,7 @@ properties:
                   - type: string
                     pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                   - type: number
-                default: "64Mi"    
+                default: "64Mi"
         x-examples:
           - requests:
               cpu: "100m"
