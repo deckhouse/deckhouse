@@ -220,6 +220,20 @@ func testAPIServerConfiguration(t *testing.T) {
 					if !strings.Contains(manifest, "--authorization-config") {
 						t.Errorf("Expected authorization-config not found in %s", name)
 					}
+					if strings.Contains(manifest, "--authorization-mode") {
+						t.Errorf("Unexpected authorization-mode found in %s", name)
+					}
+					for _, expected := range []string{
+						"seccompProfile:",
+						"failureThreshold: 8",
+						"initialDelaySeconds: 10",
+						"timeoutSeconds: 15",
+						"failureThreshold: 24",
+					} {
+						if !strings.Contains(manifest, expected) {
+							t.Errorf("Expected static pod default %s not found in %s", expected, name)
+						}
+					}
 				}
 			})
 
