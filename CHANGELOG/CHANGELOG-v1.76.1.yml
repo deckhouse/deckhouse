@@ -1,0 +1,5 @@
+docs:
+  fixes:
+    - summary: New screenshots have been added to the Console documentation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19697
+
