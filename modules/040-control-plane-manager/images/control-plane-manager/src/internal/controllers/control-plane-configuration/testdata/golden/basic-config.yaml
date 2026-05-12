@@ -23,13 +23,13 @@ status:
   components:
     etcd:
       checksums: {}
-      lastObservedAt: null
+      lastCertObserveTime: null
     kube-apiserver:
       checksums: {}
-      lastObservedAt: null
+      lastCertObserveTime: null
     kube-controller-manager:
       checksums: {}
-      lastObservedAt: null
+      lastCertObserveTime: null
     kube-scheduler:
       checksums: {}
-      lastObservedAt: null
+      lastCertObserveTime: null
