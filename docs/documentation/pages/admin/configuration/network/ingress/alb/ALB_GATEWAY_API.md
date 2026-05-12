@@ -81,7 +81,7 @@ Otherwise, the module only configures and manages Gateway objects associated wit
 
 The process of publishing an application includes the following steps:
 
-1. [Creating a Gateway object](#creating-a-gateway-object) using the [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) resource(cluster-scoped) or the [ALBInstance](/modules/alb/cr.html#albinstance) resource (namespaced).
+1. [Creating a Gateway object](#creating-a-gateway-object) using the [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) resource (cluster-scoped) or the [ALBInstance](/modules/alb/cr.html#albinstance) resource (namespaced).
 1. [Create a ListenerSet object](#creating-listenerset-objects-to-manage-the-handling-of-incoming-requests) (manages the reception of incoming requests), which is bound to the Gateway object created in the previous step.
 1. [Create objects (routes)](#creating-routes-and-configuring-routing) to route incoming requests to the application and bind them to the ListenerSet. The HTTPRoute, GRPCRoute, TCPRoute, and TLSRoute objects are used for routing (the appropriate one is selected based on the type of traffic to the published application).
 

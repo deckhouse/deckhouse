@@ -75,7 +75,9 @@ spec:
 
 Этот сценарий предполагает, что объект ClusterALBInstance уже создан администратором кластера и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого объекта Gateway (шлюза), через который будет публиковаться приложение.
 
-Затем создайте объект ListenerSet, который будет привязан к нужному Gateway (параметр `spec.parentRef.name`) и объекты (маршруты) HTTPRoute для маршрутизации входящих запросов к приложению. Пример:
+Затем создайте объект ListenerSet, который будет привязан к нужному Gateway (параметр `spec.parentRef.name`) и объекты (маршруты) HTTPRoute для маршрутизации входящих запросов к приложению.
+
+Пример:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -559,7 +561,7 @@ spec:
 | `alb.network.deckhouse.io/rewrite-target` | Позволяет переопределять пути для правил с типом `RegularExpression` используя regex capture groups (например `/my-path/\1`). |
 | `alb.network.deckhouse.io/buffer-max-request-bytes` | Определяет размер буфера, который допускается использовать в случае буферизации запросов (по умолчанию Envoy Proxy не буферизует запросы). |
 | `alb.network.deckhouse.io/limit-rps` | Лимит RPS на маршрут. |
-| `alb.network.deckhouse.io/backend-tls-settings` | Например {"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": ""}; позволяет явно указать параметры TLS подключения к upstream. |
+| `alb.network.deckhouse.io/backend-tls-settings` | Например, {"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": ""} позволяет явно указать параметры TLS подключения к upstream. |
 
 ## Публикация приложений средствами Istio
 
