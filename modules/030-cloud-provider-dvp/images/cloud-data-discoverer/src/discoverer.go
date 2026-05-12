@@ -38,7 +38,7 @@ import (
 const (
 	stableDefaultAnnotation = "storageclass.kubernetes.io/is-default-class"
 	betaDefaultAnnotation   = "storageclass.beta.kubernetes.io/is-default-class"
-	skipSCAnnotation		= "dvp-provider.deckhouse.io/skip-storage-class"
+	skipSCAnnotation		= "cloud-provider.deckhouse.io/skip-storage-class"
 )
 
 type CloudConfig struct {
