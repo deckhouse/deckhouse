@@ -919,6 +919,18 @@ apiserver:
 					Expect(command).ToNot(ContainSubstring("authorization-mode"))
 					Expect(command).ToNot(ContainSubstring("authorization-webhook-config-file"))
 				}
+				Expect(pod.Spec.SecurityContext).ToNot(BeNil())
+				Expect(pod.Spec.SecurityContext.SeccompProfile).ToNot(BeNil())
+				Expect(pod.Spec.SecurityContext.SeccompProfile.Type).To(Equal(corev1.SeccompProfileTypeRuntimeDefault))
+				Expect(pod.Spec.Containers[0].ReadinessProbe.FailureThreshold).To(BeEquivalentTo(3))
+				Expect(pod.Spec.Containers[0].ReadinessProbe.PeriodSeconds).To(BeEquivalentTo(1))
+				Expect(pod.Spec.Containers[0].ReadinessProbe.TimeoutSeconds).To(BeEquivalentTo(15))
+				Expect(pod.Spec.Containers[0].LivenessProbe.FailureThreshold).To(BeEquivalentTo(8))
+				Expect(pod.Spec.Containers[0].LivenessProbe.InitialDelaySeconds).To(BeEquivalentTo(10))
+				Expect(pod.Spec.Containers[0].LivenessProbe.TimeoutSeconds).To(BeEquivalentTo(15))
+				Expect(pod.Spec.Containers[0].StartupProbe.FailureThreshold).To(BeEquivalentTo(24))
+				Expect(pod.Spec.Containers[0].StartupProbe.InitialDelaySeconds).To(BeEquivalentTo(10))
+				Expect(pod.Spec.Containers[0].StartupProbe.TimeoutSeconds).To(BeEquivalentTo(15))
 
 			})
 		})

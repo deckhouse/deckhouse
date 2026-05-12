@@ -223,6 +223,17 @@ func testAPIServerConfiguration(t *testing.T) {
 					if strings.Contains(manifest, "--authorization-mode") {
 						t.Errorf("Unexpected authorization-mode found in %s", name)
 					}
+					for _, expected := range []string{
+						"seccompProfile:",
+						"failureThreshold: 8",
+						"initialDelaySeconds: 10",
+						"timeoutSeconds: 15",
+						"failureThreshold: 24",
+					} {
+						if !strings.Contains(manifest, expected) {
+							t.Errorf("Expected kubeadm static pod default %s not found in %s", expected, name)
+						}
+					}
 				}
 			})
 
