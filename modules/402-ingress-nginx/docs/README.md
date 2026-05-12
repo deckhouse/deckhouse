@@ -34,14 +34,22 @@ The module allows the following protocols to be used for receiving and further r
 - Proxy Protocol: Support for receiving Proxy Protocol traffic is provided through the use of [the corresponding inlets](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet);
 - SSL Passthrough: End-to-end SSL traffic routing is supported via [the corresponding inlets](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-inlet).
 
-Currently, our `ingress-nginx` implementation does not support TCP/UDP traffic routing (`tcp-services/udp-services` functionality). To route TCP/UDP traffic, we recommend using the native Kubernetes solution: NodePort Service.
+Currently, our `ingress-nginx` implementation does not support TCP/UDP traffic routing (`tcp-services/udp-services` functionality). To route TCP/UDP traffic, we recommend using the native Kubernetes [NodePort Service](https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport) or consider using [`alb`](/modules/alb/) module to route traffic using Gateway API approach (available since DKP 1.76 version).
 
 ## Using HTTPS
 
 The module allows you to manage HTTPS security policies for each Ingress NGINX Controller, including:
 
 - HSTS parameters;
-- Available SSL/TLS versions and encryption protocols. By default TLSv1.2 and TLSv1.3, and strong cipher suites are used, with [the option to configure legacy versions](cr.html#ingressnginxcontroller-v1-spec-legacyssl).
+- Available SSL/TLS versions and encryption protocols.
+
+By default controllers of all versions use TLSv1.2 and TLSv1.3 with [the option to configure legacy versions](cr.html#ingressnginxcontroller-v1-spec-legacyssl). In case of using TLSv1.2 the following protocols are used:
+- Key Exchange: ECDHE, DHE;
+- Authentication: ECDSA, RSA;
+- Encryption (AEAD): AES-GCM (128/256), ChaCha20-Poly1305;
+- Integrity (MAC): SHA256, SHA384.
+
+When using TLSv1.3 the available cipher suites are defined by the OpenSSL library (version 3.3.3+).
 
 The `ingress-nginx` module is integrated with with the [`cert-manager`](/modules/cert-manager/) module. Thus, it can request SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
 
