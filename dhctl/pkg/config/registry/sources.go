@@ -60,9 +60,9 @@ type initConfiguration struct {
 	Deckhouse *init_config.Config `json:"deckhouse" yaml:"deckhouse"`
 }
 
-// ParsJSONInitConfig parses an InitConfiguration from JSON and returns its registry config.
+// ParseJSONInitConfig parses an InitConfiguration from JSON and returns its registry config.
 // Returns nil if the input is empty or contains no registry fields.
-func ParsJSONInitConfig(rawJSON []byte) (*init_config.Config, error) {
+func ParseJSONInitConfig(rawJSON []byte) (*init_config.Config, error) {
 	if len(rawJSON) == 0 {
 		return nil, nil
 	}
@@ -78,9 +78,9 @@ func ParsJSONInitConfig(rawJSON []byte) (*init_config.Config, error) {
 	return deckhouse, nil
 }
 
-// ParsYAMLInitConfig parses an InitConfiguration from YAML and returns its registry config.
+// ParseYAMLInitConfig parses an InitConfiguration from YAML and returns its registry config.
 // Returns nil if the input is empty or contains no registry fields.
-func ParsYAMLInitConfig(rawYAML []byte) (*init_config.Config, error) {
+func ParseYAMLInitConfig(rawYAML []byte) (*init_config.Config, error) {
 	if len(rawYAML) == 0 {
 		return nil, nil
 	}
@@ -96,9 +96,9 @@ func ParsYAMLInitConfig(rawYAML []byte) (*init_config.Config, error) {
 	return deckhouse, nil
 }
 
-// ParsJSONDeckhouseMC parses a DeckhouseModuleConfig from JSON and returns its registry settings.
+// ParseJSONDeckhouseMC parses a DeckhouseModuleConfig from JSON and returns its registry settings.
 // Returns nil if the input is empty or the registry section is absent.
-func ParsJSONDeckhouseMC(rawJSON []byte) (*module_config.DeckhouseSettings, error) {
+func ParseJSONDeckhouseMC(rawJSON []byte) (*module_config.DeckhouseSettings, error) {
 	if len(rawJSON) == 0 {
 		return nil, nil
 	}
@@ -109,9 +109,9 @@ func ParsJSONDeckhouseMC(rawJSON []byte) (*module_config.DeckhouseSettings, erro
 	return v.Spec.Settings.Registry, nil
 }
 
-// ParsYAMLDeckhouseMC parses a DeckhouseModuleConfig from YAML and returns its registry settings.
+// ParseYAMLDeckhouseMC parses a DeckhouseModuleConfig from YAML and returns its registry settings.
 // Returns nil if the input is empty or the registry section is absent.
-func ParsYAMLDeckhouseMC(rawYAML []byte) (*module_config.DeckhouseSettings, error) {
+func ParseYAMLDeckhouseMC(rawYAML []byte) (*module_config.DeckhouseSettings, error) {
 	if len(rawYAML) == 0 {
 		return nil, nil
 	}

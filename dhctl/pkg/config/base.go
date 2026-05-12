@@ -525,7 +525,7 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 
 		switch kind {
 		case InitConfigurationKind:
-			ret, err := registry.ParsYAMLInitConfig([]byte(doc))
+			ret, err := registry.ParseYAMLInitConfig([]byte(doc))
 
 			if err != nil {
 				return nil, err
@@ -539,7 +539,7 @@ func RegistryConfigProvider(docsFetcher func() ([]string, error)) (*registry.Con
 				continue
 			}
 
-			ret, err := registry.ParsYAMLDeckhouseMC([]byte(doc))
+			ret, err := registry.ParseYAMLDeckhouseMC([]byte(doc))
 			if err != nil {
 				return nil, err
 			}
