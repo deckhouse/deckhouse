@@ -55,6 +55,16 @@ lang: ru
 
 В подразделе «Обновление» содержится информация о релизах.
 
+![Релизы](../../images/console/releases.png)
+
+Также здесь можно просмотреть информацию об API в формате Swagger.
+
+![Релизы](../../images/console/swagger-1.png)
+
+![Релизы](../../images/console/swagger-2.png)
+
+![Релизы](../../images/console/swagger-3.png)
+
 ### Модули
 
 В подразделе «Модули» перечислены запущенные и отключенные модули. Для поиска необходимого модуля предусмотрен фильтр.
@@ -274,6 +284,24 @@ lang: ru
 ![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core-new.png)
 
 ![Квоты](../../images/console/projects-user-namespaces-commander-project-1-resourcequotas-core.png)
+
+## Доступ
+
+### Подраздел «Операции над пользователями»
+
+Предоставляет интерфейс для управления пользователями.
+
+![Операции над пользователями](../../images/console/operation-with-users-1.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-2.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-3.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-4.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-5.png)
+
+![Операции над пользователями](../../images/console/operation-with-users-6.png)
 
 ## Сеть
 
