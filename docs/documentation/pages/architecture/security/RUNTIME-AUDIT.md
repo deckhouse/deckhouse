@@ -55,8 +55,6 @@ When a new rule is added, Falco automatically reloads the configuration.
 
 ## New architecture
 
-> This functionality is experimental and may change in future releases.
-
 The proposed solution is intended to build a unified pipeline for working with security events extracted from the logs of applications and Kubernetes infrastructure components.
 
 Key idea: a security event is information from logs of various services, normalized into a single contract.
@@ -136,40 +134,7 @@ The architecture separates three stages of the pipeline: **collection**, **proce
 
 ### Processing pipeline
 
-```mermaid
-flowchart LR
-  A[Log sources] --> Get
-  Get --> Parsing
-  Parsing --> Enrich
-  Enrich --> Filter
-  Filter --> Storage1
-  Filter --> Storage2
-  Filter --> Storage3
-
-  subgraph Storage1 ["Event storage 1"]
-  end
-  subgraph Storage2 ["Event storage 2"]
-  end
-  subgraph Storage3 ["Event storage 3"]
-  end
-  subgraph Get [Log collection<br/>log-shipper]
-    direction TB
-    Get1["Identify log records that may contain security events"] --> Get2["Send logs to security-events-shipper"]
-  end
-  subgraph Parsing [Log processing<br/>gateway]
-    direction TB
-    P1["Log processing (parsing)"] --> P2["Extract security events"]
-  end
-  subgraph Enrich [Log transformation<br/>gateway]
-    direction TB
-    E1["Transform into a unified format"] --> E2["Enrich with additional data"]
-  end
-  subgraph Filter [Filtering and delivery<br/>gateway]
-    direction TB
-    F1["Filter events by severity and source"] --> F2["Send to storage"]
-  end
-```
-
+![Processing pipeline](../../images/architecture/security/runtime-audit-security-events-en.png)
 ### Log collection
 
 Collection is performed via the auxiliary `log-shipper` module:

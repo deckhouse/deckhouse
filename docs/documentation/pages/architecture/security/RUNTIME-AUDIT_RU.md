@@ -63,9 +63,6 @@ DKP запускает объединённые в DaemonSet агенты Falco 
 
 ## Новая архитектура
 
-> Данный функционал является экспериментальным и может быть изменён в следующих версиях.
-
-
 Предлагаемое решение предназначено для построения единого контура работы с событиями безопасности, извлекаемыми из логов приложений и инфраструктурных компонентов Kubernetes.
 
 Ключевая идея: событие безопасности — это информация из логов разных сервисов, нормализованная в единый контракт.
@@ -145,39 +142,7 @@ DKP запускает объединённые в DaemonSet агенты Falco 
 
 ### Пайплайн обработки
 
-```mermaid
-flowchart LR
-  A[Источники логов] --> Get
-  Get --> Parsing
-  Parsing --> Enrich
-  Enrich --> Filter
-  Filter --> Storage1 
-  Filter --> Storage2
-  Filter --> Storage3
-
-  subgraph Storage1 ["Хранилище логов 1"]
-  end
-  subgraph Storage2 ["Хранилище логов 2"]
-  end
-  subgraph Storage3 ["Хранилище логов 3"]
-  end
-  subgraph Get [Cбор ло гов<br/>log-shipper]
-    direction TB
-    Get1["Определение логовых записей потенциально содержащих события безопасности"] --> Get2["Отправка логов в security-events-shipper"]
-  end
-  subgraph Parsing [Обработка логов <br/>gateway]
-    direction TB
-    P1["Обработка логов (парсинг)"] --> P2["Извлечение событий безопасности"]
-  end
-  subgraph Enrich [Преобразование логов <br/>gateway]
-    direction TB
-    E1["Преобразование в единый формат"] --> E2["Обогащение дополнительными данными"]
-  end
-  subgraph Filter [Фильтрация и отправка<br/>gateway]
-    direction TB
-    F1["Фильтрация событий по severity и источнику"] --> F2["Отправка в хранилище"]
-  end
-```
+![Processing pipeline](../../images/architecture/security/runtime-audit-security-events-ru.png)
 
 ### Сбор логов
 
