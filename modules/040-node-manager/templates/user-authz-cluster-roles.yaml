@@ -5,7 +5,7 @@
 # - Node Feature Discovery resources
 # - Machine Controller Manager resources
 # - Cluster API resources
-# - node-manager infrastructure resources
+# - Cluster API infrastructure resources
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -90,10 +90,26 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
+  - deckhouseclusters
   - deckhousecontrolplanes
+  - deckhousemachines
+  - deckhousemachinetemplates
+  - dynamixclusters
+  - dynamixmachines
+  - dynamixmachinetemplates
+  - huaweicloudclusters
+  - huaweicloudmachines
+  - huaweicloudmachinetemplates
   - staticclusters
   - staticmachines
   - staticmachinetemplates
+  - vcdclusters
+  - vcdclustertemplates
+  - vcdmachines
+  - vcdmachinetemplates
+  - zvirtclusters
+  - zvirtmachines
+  - zvirtmachinetemplates
   verbs:
   - get
   - list
@@ -125,7 +141,7 @@ rules:
 # - Node Feature Discovery resources
 # - Machine Controller Manager resources
 # - Cluster API resources
-# - static node infrastructure resources
+# - Cluster API infrastructure resources
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -195,8 +211,26 @@ rules:
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
   resources:
+  - deckhouseclusters
+  - deckhousecontrolplanes
+  - deckhousemachines
+  - deckhousemachinetemplates
+  - dynamixclusters
+  - dynamixmachines
+  - dynamixmachinetemplates
+  - huaweicloudclusters
+  - huaweicloudmachines
+  - huaweicloudmachinetemplates
+  - staticclusters
   - staticmachines
   - staticmachinetemplates
+  - vcdclusters
+  - vcdclustertemplates
+  - vcdmachines
+  - vcdmachinetemplates
+  - zvirtclusters
+  - zvirtmachines
+  - zvirtmachinetemplates
   verbs:
   - get
   - list
