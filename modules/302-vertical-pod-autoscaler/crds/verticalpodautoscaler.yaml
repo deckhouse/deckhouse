@@ -85,6 +85,7 @@ spec:
               scope:
                 description: |-
                   Scope controls additional recommendation partitioning for DaemonSet targets.
+                  
                   The value must be a node label key (for example: `node.kubernetes.io/instance-type`).
                 type: string
               resourcePolicy:
@@ -372,7 +373,9 @@ spec:
                               The most recent recommended resources target
                               computed by the autoscaler for the controlled pods, based
                               only on actual resource usage, not taking into account
-                              the `ContainerResourcePolicy`. May differ from the Recommendation
+                              the `ContainerResourcePolicy`.
+                              
+                              May differ from the Recommendation
                               if the actual resource usage causes the target to violate
                               the `ContainerResourcePolicy` (lower than MinAllowed or
                               higher that MaxAllowed). Used only as status indication,
@@ -386,8 +389,9 @@ spec:
                               pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                               x-kubernetes-int-or-string: true
                             description: |-
-                              Maximum recommended amount of resources. Observes
-                              `ContainerResourcePolicy`. Any resources allocated beyond
+                              Maximum recommended amount of resources.
+                              
+                              Observes `ContainerResourcePolicy`. Any resources allocated beyond
                               this value are likely wasted. This value may be larger
                               than the maximum amount of application is actually capable
                               of consuming.

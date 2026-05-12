@@ -39,10 +39,10 @@ spec:
               scope:
                 description: |-
                   Включает scoped-режим рекомендаций для `targetRef.kind=DaemonSet`.
-                  Значение должно быть ключом лейбла ноды (например, `node.kubernetes.io/instance-type`).
+                  Значение должно быть ключом лейбла узла (например, `node.kubernetes.io/instance-type`).
 
                   В scoped-режиме рекомендации группируются по `status.groups[].scopeValue`.
-                  Для остальных workload'ов и для DaemonSet без `scope` используется обычное поле `status.recommendation`.
+                  Для остальной нагрузки и для DaemonSet без `scope` используется обычное поле `status.recommendation`.
               resourcePolicy:
                 description: |-
                   Управляет тем, как автоскейлер вычисляет рекомендуемые ресурсы. Политика ресурсов может использоваться для установки ограничений на рекомендации для отдельных контейнеров.
@@ -153,16 +153,19 @@ spec:
               groups:
                 description: |-
                   Сгруппированные рекомендации по значениям `spec.scope` для scoped DaemonSet.
+                  
                   В этом режиме `status.groups` является источником истины, а `status.recommendation` не заполняется.
                 items:
                   properties:
                     scopeValue:
                       description: |-
-                        Значение нодового лейбла `spec.scope`, для которого рассчитана группа.
-                        Специальное значение `__absent__` означает, что у ноды отсутствует ключ лейбла `spec.scope`.
+                        Значение лейбла `spec.scope` узла, для которого рассчитана группа.
+
+                        Специальное значение `__absent__` означает, что у узла отсутствует ключ лейбла `spec.scope`.
                     containerRecommendations:
                       description: |-
                         Рекомендации по контейнерам для группы.
+                        
                         В scoped-режиме поле хранится в компактном виде (в первую очередь `containerName` и `target`).
                       items:
                         properties:
@@ -171,10 +174,12 @@ spec:
                           scope:
                             description: |-
                               Необязательное поле совместимости.
+                              
                               Для scoped DaemonSet фактическая область рекомендации определяется через `spec.scope` + `scopeValue` группы.
               recommendation:
                 description: |-
                   Последнее вычисленное количество ресурсов, рекомендованных автоскейлером для контролируемых подов.
+                  
                   Используется для обычного режима (Deployment/StatefulSet/DaemonSet без `spec.scope`).
                 properties:
                   containerRecommendations:
