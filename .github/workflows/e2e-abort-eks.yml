@@ -339,7 +339,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -696,7 +696,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -1053,7 +1053,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -1410,7 +1410,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -1767,7 +1767,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -2124,7 +2124,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -2481,7 +2481,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -2838,7 +2838,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -3195,7 +3195,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -3552,7 +3552,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -3909,7 +3909,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
@@ -4266,7 +4266,7 @@ jobs:
 
       - name: "Download state"
         id: download_artifact_with_state
-        uses: dawidd6/action-download-artifact@v2.23.0
+        uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
           run_id: ${{github.event.inputs.run_id}}
